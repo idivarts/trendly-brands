@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest --watchAll",
-    "postinstall": "npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants"
+    "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants"
   },
   "jest": {
     "preset": "jest-expo"
