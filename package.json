@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "jest --watchAll"
+    "test": "jest --watchAll",
+    "postinstall": "npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants"
   },
   "jest": {
     "preset": "jest-expo"
