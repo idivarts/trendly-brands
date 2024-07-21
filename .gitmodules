@@ -1,0 +1,9 @@
+[submodule "shared-uis"]
+	path = shared-uis
+	url = git@github.com:idivarts/shared-uis.git
+[submodule "shared-constants"]
+	path = shared-constants
+	url = git@github.com:idivarts/shared-constants.git
+[submodule "shared-libs"]
+	path = shared-libs
+	url = git@github.com:idivarts/shared-libs.git
