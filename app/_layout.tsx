@@ -4,9 +4,11 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { AuthContextProvider, CloudMessagingContextProvider, FirebaseStorageContextProvider, NotificationContextProvider } from '@/contexts';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -42,10 +44,22 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthContextProvider>
+      <GestureHandlerRootView>
+        <FirebaseStorageContextProvider>
+          <NotificationContextProvider>
+            <CloudMessagingContextProvider>
+              <RootLayoutStack />
+            </CloudMessagingContextProvider>
+          </NotificationContextProvider>
+        </FirebaseStorageContextProvider>
+      </GestureHandlerRootView>
+    </AuthContextProvider>
+  );
 }
 
-function RootLayoutNav() {
+const RootLayoutStack = () => {
   const colorScheme = useColorScheme();
 
   return (
