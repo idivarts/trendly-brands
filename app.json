@@ -14,14 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "pro.trendly.brands"
+      "bundleIdentifier": "pro.trendly.brands",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "pro.trendly.brands"
+      "package": "pro.trendly.brands",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
