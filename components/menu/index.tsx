@@ -9,7 +9,6 @@ const Menu = () => {
 
   return (
     <View>
-      <Text>Menu</Text>
       <Button
         onPress={() => {
           signOut();

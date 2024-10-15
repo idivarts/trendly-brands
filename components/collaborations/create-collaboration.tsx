@@ -4,7 +4,7 @@ import { View } from "../theme/Themed";
 const CreateCollaboration = () => {
   return (
     <View>
-      <Text>Create Collaboration</Text>
+      <Text>Create a Collaboration</Text>
     </View>
   );
 };

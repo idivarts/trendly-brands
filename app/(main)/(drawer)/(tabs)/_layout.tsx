@@ -1,6 +1,6 @@
 import React from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
@@ -71,6 +71,12 @@ const TabLayout = () => {
       />
       <Tabs.Screen
         name="create-collaboration"
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push("modal");
+          },
+        })}
         options={{
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="plus-circle" color={color} />,

@@ -17,9 +17,9 @@ const ScreensLayout = () => {
           }}
         />
         <Stack.Screen
-          name="create-collaboration"
+          name="menu"
           options={{
-            presentation: "modal",
+            headerShown: false,
           }}
         />
       </Stack>
