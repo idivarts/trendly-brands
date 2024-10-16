@@ -1,4 +1,4 @@
-import { Button, Modal, Platform } from "react-native";
+import { Alert, Button, Linking, Modal, Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { IconButton } from "react-native-paper";
@@ -23,7 +23,14 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   const openGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      alert('We need camera permissions');
+      Alert.alert(
+        'Permission Required',
+        'Please grant permissions from settings',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
       return;
     }
 

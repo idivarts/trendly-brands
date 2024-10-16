@@ -28,7 +28,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const openGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      alert('We need camera permissions');
+      alert('Media library access is required to select images, videos, or documents');
       return;
     }
 
