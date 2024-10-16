@@ -4,9 +4,9 @@ import React from "react";
 import { Appbar } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
-import CreateCollaboration from "@/components/collaborations/create-collaboration";
+import Menu from "@/components/menu";
 
-const CreateCollaborationScreen = () => {
+const MenuScreen = () => {
   const theme = useTheme();
   const navigation = useNavigation();
 
@@ -28,13 +28,13 @@ const CreateCollaborationScreen = () => {
         />
 
         <Appbar.Content
-          title="Create Collaboration"
+          title="Menu"
           color={Colors(theme).text}
         />
       </Appbar.Header>
-      <CreateCollaboration />
+      <Menu />
     </AppLayout>
   );
 };
 
-export default CreateCollaborationScreen;
+export default MenuScreen;
