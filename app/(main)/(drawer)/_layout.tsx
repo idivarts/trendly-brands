@@ -11,11 +11,8 @@ const DrawerLayout = () => {
       backBehavior="history"
       drawerContent={() => <DrawerMenuContent />}
       screenOptions={{
-        drawerType: "permanent",
+        drawerType: xl ? "permanent" : "slide",
         headerShown: false,
-        drawerStyle: {
-          display: xl ? 'flex' : 'none', // Hide the drawer on tablet, and mobile screens
-        },
         headerLeft: () => xl ? null : <BackButton />,
       }}
     >

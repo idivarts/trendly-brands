@@ -98,7 +98,7 @@ const RootLayoutStack = () => {
         }}
       >
         <Stack.Screen name="(public)" options={{ headerShown: false }} />
-        {!session ? (
+        {session ? (
           <Stack.Screen name="(main)" options={{ headerShown: false }} />
         ) : (
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

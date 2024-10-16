@@ -6,9 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { View } from '@/components/theme/Themed';
 
-interface DrawerToggleButtonProps extends React.ComponentProps<typeof Pressable> { }
+interface DrawerToggleButtonProps extends React.ComponentProps<typeof Pressable> {
+  icon?: React.ReactNode;
+}
 
 const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({
+  icon,
   ...props
 }) => {
   const navigation = useNavigation();
@@ -27,15 +30,19 @@ const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({
           alignItems: 'center',
         }}
       >
-        <Ionicons
-          name='menu'
-          size={26}
-          style={[{
-            marginLeft: 14,
-            color: Colors(theme).text,
-            marginBottom: -2,
-          }]}
-        />
+        {
+          icon ?? (
+            <Ionicons
+              name={'menu'}
+              size={26}
+              style={[{
+                marginLeft: 14,
+                color: Colors(theme).text,
+                marginBottom: -2,
+              }]}
+            />
+          )
+        }
       </View>
     </Pressable>
   )

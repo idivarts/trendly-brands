@@ -9,6 +9,8 @@ import { useTheme } from "@react-navigation/native";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import MenuIcon from "@/components/ui/menu-icon";
 import { View } from "@/components/theme/Themed";
+import DrawerToggleButton from "@/components/ui/drawer-toggle-button/DrawerToggleButton";
+import { Octicons } from "@expo/vector-icons";
 
 const TabBarIcon = (props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -44,6 +46,21 @@ const TabLayout = () => {
           title: "Explore Influencers",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="handshake-o" color={color} />
+          ),
+          headerLeft: () => (
+            <DrawerToggleButton
+              icon={
+                <Octicons
+                  name="arrow-switch"
+                  size={26}
+                  style={{
+                    marginLeft: 14,
+                    color: Colors(theme).text,
+                    marginBottom: -2,
+                  }}
+                />
+              }
+            />
           ),
           headerRight: () => (
             <View
