@@ -1,5 +1,4 @@
-import { Text } from "react-native-paper";
-import { View } from "../theme/Themed";
+import { Text, View } from "../theme/Themed";
 
 const Messages = () => {
   return (

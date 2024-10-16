@@ -1,4 +1,5 @@
-import { Button, Text, View } from "react-native";
+import { Button } from "react-native";
+import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { DUMMY_MANAGER_CREDENTIALS } from "@/constants/Manager";
 

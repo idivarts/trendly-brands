@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/theme/useColorScheme';
 import { AuthContextProvider, CloudMessagingContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from '@/contexts';
+import { Provider } from 'react-native-paper';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -46,15 +47,17 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-      <AuthContextProvider>
-        <FirebaseStorageContextProvider>
-          <NotificationContextProvider>
-            <CloudMessagingContextProvider>
-              <RootLayoutStack />
-            </CloudMessagingContextProvider>
-          </NotificationContextProvider>
-        </FirebaseStorageContextProvider>
-      </AuthContextProvider>
+      <Provider>
+        <AuthContextProvider>
+          <FirebaseStorageContextProvider>
+            <NotificationContextProvider>
+              <CloudMessagingContextProvider>
+                <RootLayoutStack />
+              </CloudMessagingContextProvider>
+            </NotificationContextProvider>
+          </FirebaseStorageContextProvider>
+        </AuthContextProvider>
+      </Provider>
     </GestureHandlerRootView>
   );
 }

@@ -11,6 +11,7 @@ import MenuIcon from "@/components/ui/menu-icon";
 import { View } from "@/components/theme/Themed";
 import DrawerToggleButton from "@/components/ui/drawer-toggle-button/DrawerToggleButton";
 import { Octicons } from "@expo/vector-icons";
+import BrandSwitcher from "@/components/ui/brand-switcher";
 
 const TabBarIcon = (props: {
   name: React.ComponentProps<typeof FontAwesome>["name"];
@@ -48,19 +49,22 @@ const TabLayout = () => {
             <TabBarIcon name="handshake-o" color={color} />
           ),
           headerLeft: () => (
-            <DrawerToggleButton
-              icon={
-                <Octicons
-                  name="arrow-switch"
-                  size={26}
-                  style={{
-                    marginLeft: 14,
-                    color: Colors(theme).text,
-                    marginBottom: -2,
-                  }}
-                />
-              }
-            />
+            xl ? (
+              <BrandSwitcher />
+            ) : (
+              <DrawerToggleButton
+                icon={
+                  <Octicons
+                    name="arrow-switch"
+                    size={26}
+                    style={{
+                      marginLeft: 14,
+                      color: Colors(theme).text,
+                      marginBottom: -2,
+                    }}
+                  />
+                }
+              />)
           ),
           headerRight: () => (
             <View

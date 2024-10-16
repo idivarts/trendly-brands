@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { Text, View } from "@/components/theme/Themed";
 import { DrawerContentScrollView } from "@react-navigation/drawer";
 import { APP_NAME } from "@/constants/App";
 import DrawerMenuItem from "./DrawerMenuItem";
