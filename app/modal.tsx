@@ -1,35 +1,40 @@
-import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet } from 'react-native';
+import AppLayout from "@/layouts/app-layout";
+import { useNavigation } from "expo-router";
+import React from "react";
+import { Appbar } from "react-native-paper";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/constants/Colors";
+import CreateCollaboration from "@/components/collaborations/create-collaboration";
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+const CreateCollaborationScreen = () => {
+  const theme = useTheme();
+  const navigation = useNavigation();
 
-export default function ModalScreen() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Modal</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/modal.tsx" />
+    <AppLayout>
+      <Appbar.Header
+        style={{
+          backgroundColor: Colors(theme).background,
+          elevation: 0,
+        }}
+        statusBarHeight={0}
+      >
+        <Appbar.Action
+          icon="arrow-left"
+          color={Colors(theme).text}
+          onPress={() => {
+            navigation.goBack();
+          }}
+        />
 
-      {/* Use a light status bar on iOS to account for the black space above the modal */}
-      <StatusBar style={Platform.OS === 'ios' ? 'light' : 'auto'} />
-    </View>
+        <Appbar.Content
+          title="Create Collaboration"
+          color={Colors(theme).text}
+        />
+      </Appbar.Header>
+      <CreateCollaboration />
+    </AppLayout>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
-});
+export default CreateCollaborationScreen;
