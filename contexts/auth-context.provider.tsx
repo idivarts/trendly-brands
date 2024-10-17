@@ -50,7 +50,7 @@ export const useAuthContext = () => useContext(AuthContext);
 export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const [[isLoading, session], setSession] = useStorageState("id");
+  const [[isLoading, session], setSession] = useStorageState("manager");
   const [manager, setManager] = useState<Manager | null>(null);
   const router = useRouter();
 
@@ -126,12 +126,17 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           pushNotifications: true,
           theme: "light",
         },
+        pushNotificationToken: {
+          ios: [],
+          android: [],
+          web: [],
+        }
       });
 
       setSession(managerCredential.user.uid);
 
       // For non-existing managers, redirect to the onboarding screen.
-      router.replace("/questions");
+      router.replace("/explore-influencers");
       Toaster.success("Signed Up Successfully!");
     } catch (error) {
       console.error("Error signing up: ", error);
