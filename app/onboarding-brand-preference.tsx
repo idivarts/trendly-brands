@@ -4,6 +4,7 @@ import { DUMMY_MANAGER_CREDENTIALS } from "@/constants/Manager";
 import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import fnStyles from "@/styles/onboarding/preference.styles";
+import { AuthApp } from "@/utils/auth";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -24,12 +25,12 @@ const BrandPreferenceScreen = () => {
     fashion: false,
   });
 
-  const { signIn } = useAuthContext();
+  const { firebaseSignIn } = useAuthContext();
   const theme = useTheme();
   const styles = fnStyles(theme);
 
   const handleSignUp = () => {
-    signIn(DUMMY_MANAGER_CREDENTIALS.email, DUMMY_MANAGER_CREDENTIALS.password);
+    firebaseSignIn(AuthApp.currentUser?.uid || "");
   };
 
   const [infoSheetVisible, setInfoSheetVisible] = useState(false);

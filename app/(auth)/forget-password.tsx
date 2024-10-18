@@ -4,6 +4,10 @@ import { useRouter } from "expo-router";
 import * as React from "react";
 import { View, StyleSheet, Image, Text } from "react-native";
 import { TextInput, Button } from "react-native-paper";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { AuthApp } from "@/utils/auth";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Toast from "react-native-toast-message";
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState("");
@@ -11,9 +15,28 @@ const ForgotPasswordScreen = () => {
   const theme = useTheme();
   const styles = fnStyles(theme);
 
+  const handleResetPassword = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
+    sendPasswordResetEmail(AuthApp, email)
+      .then(() => {
+        Toaster.success("Password reset email sent successfully");
+        router.navigate("Login");
+      })
+      .catch((error) => {
+        Toaster.error(error.message);
+      });
+  };
+
   return (
     <View style={styles.container}>
       {/* Logo Section */}
+      <Toast />
       <Image
         source={require("../../assets/images/logo.png")} // Replace with your actual logo path
         style={styles.logo}
@@ -37,7 +60,7 @@ const ForgotPasswordScreen = () => {
       <Button
         mode="contained"
         onPress={() => {
-          router.navigate("Login");
+          handleResetPassword();
         }}
         style={styles.button}
         labelStyle={styles.buttonText}

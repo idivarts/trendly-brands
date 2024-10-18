@@ -8,12 +8,20 @@ import {
 } from "react";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useRouter } from "expo-router";
-import { doc, getDoc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { Manager } from "@/types/Manager";
 import { AuthApp } from "@/utils/auth";
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -28,7 +36,10 @@ interface AuthContextProps {
   signIn: (email: string, password: string) => void;
   signOutManager: () => void;
   signUp: (name: string, email: string, password: string) => void;
-  updateManager: (managerId: string, manager: Partial<Manager>) => Promise<void>;
+  updateManager: (
+    managerId: string,
+    manager: Partial<Manager>
+  ) => Promise<void>;
   manager: Manager | null;
 }
 
@@ -85,9 +96,21 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         email,
         password
       );
+
+      if (!email || !password) {
+        Toaster.error("Please enter your email and password.");
+        return;
+      }
+
+      if (!managerCredential.user.emailVerified) {
+        Toaster.error("Please verify your email first.");
+        sendEmailVerification(managerCredential.user);
+        return;
+      }
+
       setSession(managerCredential.user.uid);
 
-      await analyticsLogEvent('signed_in', {
+      await analyticsLogEvent("signed_in", {
         id: managerCredential.user.uid,
         name: managerCredential.user.displayName,
         email: managerCredential.user.email,
@@ -103,50 +126,57 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   };
 
   const signUp = async (name: string, email: string, password: string) => {
-    try {
-      const managerCredential = await createUserWithEmailAndPassword(
-        AuthApp,
-        email,
-        password
-      );
-
-      await setDoc(doc(FirestoreDB, "managers", managerCredential.user.uid), {
-        name,
-        email,
-        location: "",
-        phoneNumber: "",
-        preferences: {
-          question1: "",
-          question2: "",
-          question3: "",
-        },
-        profileImage: "",
-        settings: {
-          emailNotifications: true,
-          pushNotifications: true,
-          theme: "light",
-        },
-        pushNotificationToken: {
-          ios: [],
-          android: [],
-          web: [],
-        }
-      });
-
-      setSession(managerCredential.user.uid);
-
-      // For non-existing managers, redirect to the onboarding screen.
-      router.replace("/explore-influencers");
-      Toaster.success("Signed Up Successfully!");
-    } catch (error) {
-      console.error("Error signing up: ", error);
-      Toaster.error("Error signing up. Please try again.");
+    if (!name || !email || !password) {
+      Toaster.error("Please fill in all fields.");
+      return;
     }
+    const user = await createUserWithEmailAndPassword(AuthApp, email, password)
+      .then(async (userCredential) => {
+        const colRef = collection(FirestoreDB, "managers");
+        const docRef = doc(colRef, userCredential.user.uid);
+
+        let userData = {
+          name: name,
+          email: email,
+        };
+
+        await setDoc(docRef, userData);
+
+        await sendEmailVerification(userCredential.user).then(() => {
+          Toaster.success("Verification email sent successfully.");
+        });
+
+        const checkVerification = async () => {
+          await userCredential.user.reload();
+          if (userCredential.user.emailVerified) {
+            router.replace("/onboarding-your-brand");
+          } else {
+            setTimeout(checkVerification, 2000);
+          }
+        };
+        checkVerification();
+      })
+      .catch((error) => {
+        let errorMessage = "An unknown error occurred. Please try again.";
+        switch (error.code) {
+          case "auth/email-already-in-use":
+            errorMessage = "The email address is already in use.";
+            break;
+          case "auth/invalid-email":
+            errorMessage = "The email address is not valid.";
+            break;
+          case "auth/weak-password":
+            errorMessage = "The password is too weak.";
+            break;
+          default:
+            errorMessage = error.message;
+        }
+        Toaster.error(errorMessage);
+      });
   };
 
   const firebaseSignIn = async (token: string) => {
     setSession(token);
-
     router.replace("/explore-influencers");
     Toaster.success("Signed In Successfully!");
   };
@@ -162,7 +192,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       .then(() => {
         setSession("");
 
-        analyticsLogEvent('signed_out', {
+        analyticsLogEvent("signed_out", {
           id: manager?.id,
           email: manager?.email,
         });

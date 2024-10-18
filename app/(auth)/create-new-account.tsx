@@ -4,6 +4,8 @@ import { View, StyleSheet, Image, Text } from "react-native";
 import { TextInput, Button } from "react-native-paper";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
+import { useAuthContext } from "@/contexts";
+import Toast from "react-native-toast-message";
 
 const SignUpScreen = () => {
   const [name, setName] = useState("");
@@ -13,9 +15,11 @@ const SignUpScreen = () => {
   const router = useRouter();
   const theme = useTheme();
   const styles = fnStyles(theme);
+  const { signUp } = useAuthContext();
 
   return (
     <View style={styles.container}>
+      <Toast />
       {/* Logo Section */}
       <Image
         source={require("../../assets/images/logo.png")}
@@ -60,8 +64,8 @@ const SignUpScreen = () => {
         />
         <TextInput
           label="Confirm Password"
-          value={password}
-          onChangeText={setPassword}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
           secureTextEntry
           mode="outlined"
           style={styles.input}
@@ -71,7 +75,7 @@ const SignUpScreen = () => {
         {/* Sign Up Button */}
         <Button
           mode="contained"
-          onPress={() => router.navigate("onboarding-your-brand")}
+          onPress={() => signUp(name, email, password)}
           style={styles.button}
           labelStyle={styles.buttonText}
         >
