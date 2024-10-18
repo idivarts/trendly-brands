@@ -1,17 +1,17 @@
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
-import Menu from "@/components/menu";
+import Preferences from "@/components/preferences";
 import ScreenHeader from "@/components/ui/screen-header";
 
-const MenuScreen = () => {
+const PreferencesScreen = () => {
   return (
     <AppLayout>
       <ScreenHeader
-        title="Menu"
+        title="Preferences"
       />
-      <Menu />
+      <Preferences />
     </AppLayout>
   );
 };
 
-export default MenuScreen;
+export default PreferencesScreen;
