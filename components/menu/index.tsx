@@ -8,12 +8,6 @@ import { useRouter } from "expo-router";
 import { MENU_ITEMS } from "@/constants/Menu";
 import { ImageBackground } from "react-native";
 
-const UserData = {
-  name: "John Doe",
-  email: "john.doe@gmail.com",
-  profileImage: "https://randomuser.me/api/portraits/men/1.jpg",
-};
-
 const BRAND_DATA = {
   brandImage: "https://images.unsplash.com/photo-1557683316-973673baf926",
 };
@@ -25,6 +19,7 @@ const Menu = () => {
 
   const {
     signOutManager: signOut,
+    manager,
   } = useAuthContext();
 
   return (
@@ -78,7 +73,7 @@ const Menu = () => {
           {
             MENU_ITEMS.map((item, index) => (
               <View
-                key={index}
+                key={item.id}
                 style={styles.menuRow}
               >
                 <Text
@@ -101,21 +96,21 @@ const Menu = () => {
           >
             <Avatar.Image
               source={{
-                uri: UserData.profileImage || PLACEHOLDER_PERSON_IMAGE,
+                uri: manager?.profileImage || PLACEHOLDER_PERSON_IMAGE,
               }}
               size={56}
               style={styles.avatar}
             />
             <View style={styles.textContainer}>
               <Text style={styles.titleText}>
-                {UserData.name}
+                {manager?.name}
               </Text>
               <Text
                 style={{
                   opacity: 0.8,
                 }}
               >
-                {UserData.email}
+                {manager?.email}
               </Text>
             </View>
           </View>
