@@ -12,15 +12,21 @@ const ScreensLayout = () => {
       >
         <Stack.Screen
           name="notifications"
-          options={{
-            headerShown: false,
-          }}
         />
         <Stack.Screen
           name="menu"
-          options={{
-            headerShown: false,
-          }}
+        />
+        <Stack.Screen
+          name="brand-profile"
+        />
+        <Stack.Screen
+          name="preferences"
+        />
+        <Stack.Screen
+          name="settings"
+        />
+        <Stack.Screen
+          name="billing"
         />
       </Stack>
     </AppLayout>

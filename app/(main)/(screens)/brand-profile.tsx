@@ -1,17 +1,17 @@
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
-import Menu from "@/components/menu";
+import BrandProfile from "@/components/brand-profile";
 import ScreenHeader from "@/components/ui/screen-header";
 
-const MenuScreen = () => {
+const BrandProfileScreen = () => {
   return (
     <AppLayout>
       <ScreenHeader
-        title="Menu"
+        title="Brand Profile"
       />
-      <Menu />
+      <BrandProfile />
     </AppLayout>
   );
 };
 
-export default MenuScreen;
+export default BrandProfileScreen;

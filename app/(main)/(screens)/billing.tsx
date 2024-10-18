@@ -1,17 +1,17 @@
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
-import Menu from "@/components/menu";
+import Billing from "@/components/billing";
 import ScreenHeader from "@/components/ui/screen-header";
 
-const MenuScreen = () => {
+const BillingScreen = () => {
   return (
     <AppLayout>
       <ScreenHeader
-        title="Menu"
+        title="Billing"
       />
-      <Menu />
+      <Billing />
     </AppLayout>
   );
 };
 
-export default MenuScreen;
+export default BillingScreen;
