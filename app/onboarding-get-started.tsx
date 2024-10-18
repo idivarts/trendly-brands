@@ -7,12 +7,13 @@ import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Button, TouchableOpacity } from "react-native";
 import { Menu, Provider } from "react-native-paper";
+import { AuthApp } from "@/utils/auth";
 
 const GetStartedScreen = () => {
   const [hearAboutUs, setHearAboutUs] = useState("");
   const [useFor, setUseFor] = useState("");
   const [volumeOfCollaboration, setVolumeOfCollaboration] = useState("");
-  const { signIn } = useAuthContext();
+  const { firebaseSignIn } = useAuthContext();
   const theme = useTheme();
   const styles = fnStyles(theme);
 
@@ -30,7 +31,7 @@ const GetStartedScreen = () => {
   const closeMenu3 = () => setVisible3(false);
 
   const handleSignUp = () => {
-    signIn(DUMMY_MANAGER_CREDENTIALS.email, DUMMY_MANAGER_CREDENTIALS.password);
+    firebaseSignIn(AuthApp.currentUser?.uid || "");
   };
 
   return (

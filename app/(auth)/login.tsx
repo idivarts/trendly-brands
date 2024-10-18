@@ -6,21 +6,25 @@ import { TextInput, Button } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { useTheme } from "@react-navigation/native";
 import fnStyles from "@/styles/login.styles";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Toast from "react-native-toast-message";
 
 const LoginScreen = () => {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [error, setError] = React.useState("");
   const router = useRouter();
   const { signIn } = useAuthContext();
   const theme = useTheme();
   const styles = fnStyles(theme);
 
   const handleSignIn = () => {
-    signIn(DUMMY_MANAGER_CREDENTIALS.email, DUMMY_MANAGER_CREDENTIALS.password);
+    signIn(email, password);
   };
 
   return (
     <View style={styles.container}>
+      <Toast />
       {/* Logo Section */}
       <Image
         source={require("../../assets/images/logo.png")} // Replace with your actual logo path
@@ -85,6 +89,5 @@ const LoginScreen = () => {
     </View>
   );
 };
-
 
 export default LoginScreen;
