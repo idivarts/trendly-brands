@@ -26,6 +26,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { analyticsLogEvent } from "@/utils/analytics";
+import { checkTestUsers } from "@/utils/test-users";
 
 interface AuthContextProps {
   firebaseSignIn: (token: string) => void;
@@ -102,7 +103,9 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         return;
       }
 
-      if (!managerCredential.user.emailVerified) {
+      const testUsers = checkTestUsers(email);
+
+      if (!testUsers && !managerCredential.user.emailVerified) {
         Toaster.error("Please verify your email first.");
         sendEmailVerification(managerCredential.user);
         return;
