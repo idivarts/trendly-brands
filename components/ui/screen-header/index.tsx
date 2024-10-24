@@ -6,11 +6,13 @@ import { Appbar } from "react-native-paper";
 interface ScreenHeaderProps {
   action?: () => void;
   title: string;
+  rightAction?: () => void;
 }
 
 const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   action,
   title,
+  rightAction,
 }) => {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -20,6 +22,12 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       action();
     } else {
       navigation.goBack();
+    }
+  }
+
+  const handleRightAction = () => {
+    if (rightAction) {
+      rightAction();
     }
   }
 
@@ -41,6 +49,16 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         title={title}
         color={Colors(theme).text}
       />
+
+      {
+        rightAction && (
+          <Appbar.Action
+            icon="plus"
+            color={Colors(theme).text}
+            onPress={handleRightAction}
+          />
+        )
+      }
     </Appbar.Header>
   );
 };

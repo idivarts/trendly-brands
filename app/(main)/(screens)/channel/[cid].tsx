@@ -1,3 +1,4 @@
+import AddMember from "@/components/channel/add-member";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import { useLocalSearchParams } from "expo-router";
@@ -9,6 +10,7 @@ import { Channel, MessageInput, MessageList, useChatContext } from "stream-chat-
 const ChannelScreen = () => {
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const { cid } = useLocalSearchParams<{ cid: string }>();
+  const [modalVisible, setModalVisible] = useState(false);
 
   const { client } = useChatContext();
 
@@ -39,9 +41,15 @@ const ChannelScreen = () => {
     <Channel channel={channel} audioRecordingEnabled>
       <ScreenHeader
         title={channel?.data?.name || 'Chat'}
+        rightAction={() => setModalVisible(true)}
       />
       <MessageList />
       <MessageInput />
+      <AddMember
+        channelId={channel.cid}
+        setVisible={setModalVisible}
+        visible={modalVisible}
+      />
     </Channel>
   );
 }
