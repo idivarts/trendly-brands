@@ -10,19 +10,16 @@ import { Platform } from "react-native";
 import { PermissionsAndroid } from 'react-native';
 import { useAuthContext } from "./auth-context.provider";
 import { newToken } from "@/utils/token";
-import { useStorageState } from "@/hooks";
 import { StreamChat } from "stream-chat";
 
 const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
 
 interface CloudMessagingContextProps {
   getToken: () => Promise<string>;
-  pushToken: string | null;
 }
 
 const CloudMessagingContext = createContext<CloudMessagingContextProps>({
   getToken: async () => "",
-  pushToken: "",
 });
 
 export const useCloudMessagingContext = () => useContext(CloudMessagingContext);
@@ -30,7 +27,6 @@ export const useCloudMessagingContext = () => useContext(CloudMessagingContext);
 export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const [[, pushToken], setPushToken] = useStorageState("current_push_token");
   const {
     session,
     manager: user,
@@ -61,10 +57,18 @@ export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
     return token;
   };
 
+  const registerPushToken = async (
+    token: string,
+  ) => {
+    const push_provider = 'firebase';
+    const push_provider_name = 'TrendlyFirebase';
+    client.addDevice(token, push_provider, user?.id, push_provider_name);
+  };
+
   const initNotification = async () => {
     await requestUserPermission();
-    await getToken();
-    await registerPushToken();
+    const token = await getToken();
+    await registerPushToken(token);
 
     messaging()
       .getInitialNotification()
@@ -74,14 +78,6 @@ export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
         }
       });
   }
-
-  const registerPushToken = async () => {
-    const token = await messaging().getToken();
-    const push_provider = 'firebase';
-    const push_provider_name = 'TrendlyFirebase';
-    setPushToken(token);
-    client.addDevice(token, push_provider, user?.id, push_provider_name);
-  };
 
   useEffect(() => {
     if (session && Platform.OS === 'android') {
@@ -116,7 +112,6 @@ export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
     <CloudMessagingContext.Provider
       value={{
         getToken,
-        pushToken,
       }}
     >
       {children}
