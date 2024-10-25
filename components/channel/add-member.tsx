@@ -1,20 +1,33 @@
 import { TextInput } from "react-native-paper";
 import AddModal from "./add-modal";
+import { Channel as ChannelType } from "stream-chat";
+import { useState } from "react";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface AddMemberProps {
-  channelId: string;
+  channel: ChannelType;
   setVisible: (visible: boolean) => void;
   visible: boolean;
 }
 
 const AddMember: React.FC<AddMemberProps> = ({
-  channelId,
+  channel,
   setVisible,
   visible,
 }) => {
+  const [userId, setUserId] = useState('');
+
+  const addMember = async () => {
+    // User id should exist on the get stream
+    await channel.addMembers([userId]);
+    Toaster.success('Member added successfully');
+    setVisible(false);
+    setUserId('');
+  }
+
   return (
     <AddModal
-      action={() => { }}
+      action={addMember}
       actionLabel="Add"
       title="Add Member"
       content={
@@ -22,6 +35,8 @@ const AddMember: React.FC<AddMemberProps> = ({
           <TextInput
             label="User id"
             mode="flat"
+            onChangeText={setUserId}
+            value={userId}
           />
         </>
       }

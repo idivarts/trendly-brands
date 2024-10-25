@@ -7,6 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "eas-build-pre-install": "./eas-prebuild.sh",
     "test": "jest --watchAll",
     "build": "expo export -p web",
     "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants"
@@ -23,6 +24,7 @@
     "@react-native-community/netinfo": "11.3.1",
     "@react-native-firebase/analytics": "^21.0.0",
     "@react-native-firebase/app": "^21.0.0",
+    "@react-native-firebase/functions": "^21.0.0",
     "@react-native-firebase/messaging": "^21.0.0",
     "@react-native-picker/picker": "^2.8.1",
     "@react-navigation/drawer": "^6.7.2",
@@ -31,6 +33,7 @@
     "expo": "~51.0.21",
     "expo-av": "^14.0.7",
     "expo-build-properties": "^0.12.5",
+    "expo-dev-client": "~4.0.28",
     "expo-document-picker": "^12.0.2",
     "expo-file-system": "~17.0.1",
     "expo-font": "~12.0.9",

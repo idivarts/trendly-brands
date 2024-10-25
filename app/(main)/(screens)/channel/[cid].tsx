@@ -46,7 +46,7 @@ const ChannelScreen = () => {
       <MessageList />
       <MessageInput />
       <AddMember
-        channelId={channel.cid}
+        channel={channel}
         setVisible={setModalVisible}
         visible={modalVisible}
       />

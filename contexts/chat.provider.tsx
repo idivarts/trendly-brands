@@ -6,6 +6,7 @@ import {
 import { StreamChat } from "stream-chat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
+import functions from '@react-native-firebase/functions';
 
 const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
 
@@ -18,25 +19,15 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({
     manager: user,
   } = useAuthContext();
 
-  // const connect = async () => {
-  //   await client.connectUser(
-  //     {
-  //       id: user?.id as string,
-  //       name: user?.name as string,
-  //       image: user?.profileImage as string || '',
-  //     },
-  //     client.devToken('devrathore'),
-  //   ).then(() => {
-  //     setIsReady(true);
-  //   });
-
-  // const channel = client.channel('messaging', 'general', {
-  //   name: 'General Chat',
-  // });
-  // await channel.watch();
-  // }
-
   useEffect(() => {
+    let newToken;
+
+    functions()
+      .httpsCallable('health')()
+      .then(response => {
+        newToken = response;
+      });
+
     const connect = async () => {
       await client.connectUser(
         {
@@ -59,20 +50,6 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({
       }
     };
   }, [user?.id]);
-
-  // if (!isReady) {
-  //   return (
-  //     <View
-  //       style={{
-  //         alignItems: 'center',
-  //         flex: 1,
-  //         justifyContent: 'center',
-  //       }}
-  //     >
-  //       <ActivityIndicator />
-  //     </View>
-  //   )
-  // }
 
   return (
     <OverlayProvider>

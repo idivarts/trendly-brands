@@ -1,8 +1,8 @@
 import { Modal } from "react-native";
 import { Text, View } from "../theme/Themed";
-import Colors from "@/constants/Colors";
 import { Button, IconButton } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
+import stylesFn from "@/styles/modal/AddModal.styles";
 
 interface AddModalProps {
   action: () => void;
@@ -22,6 +22,7 @@ const AddModal: React.FC<AddModalProps> = ({
   visible,
 }) => {
   const theme = useTheme();
+  const styles = stylesFn(theme);
 
   return (
     <Modal
@@ -29,61 +30,30 @@ const AddModal: React.FC<AddModalProps> = ({
       visible={visible}
       onDismiss={() => setVisible(false)}
       transparent={true}
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "flex-end",
-      }}
+      style={styles.modal}
     >
       <View
-        style={{
-          flex: 1,
-          justifyContent: "flex-end",
-          backgroundColor: Colors(theme).transparent,
-          gap: 12,
-        }}
+        style={styles.modalContainer}
       >
         <View
-          style={{
-            minHeight: 280,
-            gap: 10,
-            backgroundColor: Colors(theme).aliceBlue,
-            borderTopRightRadius: 10,
-            borderTopLeftRadius: 10,
-            padding: 10,
-          }}
+          style={styles.modalContent}
         >
           <View
-            style={{
-              backgroundColor: Colors(theme).transparent,
-              position: "relative",
-            }}
+            style={styles.modalTitleContainer}
           >
             <Text
-              style={{
-                paddingTop: 15,
-                textAlign: "center",
-                fontSize: 20,
-                fontWeight: "bold",
-              }}
+              style={styles.modalTitle}
             >
               {title}
             </Text>
             <IconButton
               icon="close"
               onPress={() => setVisible(false)}
-              style={{
-                position: "absolute",
-                right: 0,
-                top: 0,
-              }}
+              style={styles.closeButton}
             />
           </View>
           <View
-            style={{
-              gap: 10,
-              backgroundColor: Colors(theme).transparent,
-            }}
+            style={styles.modalInputContainer}
           >
             {content}
           </View>
