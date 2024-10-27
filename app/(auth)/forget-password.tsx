@@ -26,7 +26,7 @@ const ForgotPasswordScreen = () => {
     sendPasswordResetEmail(AuthApp, email)
       .then(() => {
         Toaster.success("Password reset email sent successfully");
-        router.navigate("Login");
+        router.navigate("/(auth)/login");
       })
       .catch((error) => {
         Toaster.error(error.message);
@@ -71,7 +71,10 @@ const ForgotPasswordScreen = () => {
       {/* Back to Login Prompt */}
       <Text style={styles.loginText}>
         Remember your password?{" "}
-        <Text style={styles.loginLink} onPress={() => router.navigate("login")}>
+        <Text
+          style={styles.loginLink}
+          onPress={() => router.navigate("/(auth)/login")}
+        >
           Login
         </Text>
       </Text>

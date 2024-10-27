@@ -6,7 +6,7 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useAuthContext } from "@/contexts";
 
 interface BottomSheetActionsProps {
-  cardType: "influencerType" | "promotionType";
+  cardType: "influencerType" | "promotionType" | "influencerCard";
   cardId?: string;
   isVisible: boolean;
   snapPointsRange: [string, string];
@@ -59,6 +59,30 @@ const BottomSheetActions = ({
               animi error saepe aperiam, doloremque quasi.
             </Text>
           </View>
+        );
+
+      case "influencerCard":
+        return (
+          <List.Section>
+            <List.Item
+              title="View Profile"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+            <List.Item
+              title="Send Message"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+            <List.Item
+              title="Block Influencer"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+          </List.Section>
         );
 
       default:

@@ -93,6 +93,7 @@ const RootLayoutStack = () => {
 
     if (session && inMainGroup) {
       // Redirect to main group path if signed in
+      //@ts-ignore
       router.replace(pathname);
     } else if (session) {
       // Redirect to main group if signed in

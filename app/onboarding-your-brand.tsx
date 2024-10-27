@@ -105,7 +105,7 @@ const OnboardingScreen = () => {
 
         await setDoc(docRef, brandData);
 
-        router.navigate("onboarding-brand-preference");
+        router.navigate("/onboarding-brand-preference");
       }
     } catch (error) {
       console.error("Error creating brand: ", error);

@@ -13,14 +13,13 @@ type DrawerMenuItemProps = {
   tab: Tab;
 };
 
-const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({
-  tab,
-}) => {
+const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
 
   return (
+    //@ts-ignore
     <Pressable onPress={() => router.push(tab.href)}>
       <View
         style={{
