@@ -146,7 +146,7 @@ const BrandPreferenceScreen = () => {
           <Button
             mode="contained"
             onPress={() => {
-              router.navigate("onboarding-get-started");
+              router.navigate("/onboarding-get-started");
             }}
             buttonColor={Colors(theme).primary}
             labelStyle={styles.submitButtonLabel}

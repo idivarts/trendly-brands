@@ -180,13 +180,13 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
   const firebaseSignIn = async (token: string) => {
     setSession(token);
+    const user = await getManager(token);
     router.replace("/explore-influencers");
     Toaster.success("Signed In Successfully!");
   };
 
   const firebaseSignUp = async (token: string) => {
     setSession(token);
-    router.replace("/questions");
     Toaster.success("Signed Up Successfully!");
   };
 
