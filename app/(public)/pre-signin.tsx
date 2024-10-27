@@ -81,10 +81,10 @@ const PreSignIn = () => {
                   () => {}
                 )} */}
                 {renderSocialButton("person-add", "Create New Account", () => {
-                  router.push("create-new-account");
+                  router.push("/create-new-account");
                 })}
                 {renderSocialButton("mail-open", "Login", () => {
-                  router.push("login");
+                  router.push("/login");
                 })}
               </View>
             )}

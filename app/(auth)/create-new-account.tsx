@@ -86,7 +86,10 @@ const SignUpScreen = () => {
       {/* Login Prompt */}
       <Text style={styles.loginText}>
         Already have an account?{" "}
-        <Text style={styles.loginLink} onPress={() => router.navigate("login")}>
+        <Text
+          style={styles.loginLink}
+          onPress={() => router.navigate("/(auth)/login")}
+        >
           Login
         </Text>
       </Text>

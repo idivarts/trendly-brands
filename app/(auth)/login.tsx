@@ -73,7 +73,7 @@ const LoginScreen = () => {
           Don't have an account?{" "}
           <Text
             style={styles.footerLink}
-            onPress={() => router.navigate("create-new-account")}
+            onPress={() => router.navigate("/create-new-account")}
           >
             Sign Up
           </Text>
@@ -81,7 +81,7 @@ const LoginScreen = () => {
 
         <Text
           style={styles.footerLink}
-          onPress={() => router.navigate("forget-password")}
+          onPress={() => router.navigate("/forget-password")}
         >
           Forgot Password?
         </Text>

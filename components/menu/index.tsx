@@ -1,7 +1,10 @@
 import { Avatar, Button } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
 import { useAuthContext } from "@/contexts";
-import { PLACEHOLDER_IMAGE, PLACEHOLDER_PERSON_IMAGE } from "@/constants/Placeholder";
+import {
+  PLACEHOLDER_IMAGE,
+  PLACEHOLDER_PERSON_IMAGE,
+} from "@/constants/Placeholder";
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -17,15 +20,10 @@ const Menu = () => {
   const styles = stylesFn(theme);
   const router = useRouter();
 
-  const {
-    signOutManager: signOut,
-    manager,
-  } = useAuthContext();
+  const { signOutManager: signOut, manager } = useAuthContext();
 
   return (
-    <View
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <ImageBackground
         source={{
           uri: "https://images.unsplash.com/photo-1557683316-973673baf926",
@@ -39,17 +37,9 @@ const Menu = () => {
         size={72}
         style={styles.brandAvatar}
       />
-      <View
-        style={styles.menuItemsContainer}
-      >
-        <View
-          style={styles.topRow}
-        >
-          <Text
-            style={styles.brandName}
-          >
-            Apple
-          </Text>
+      <View style={styles.menuItemsContainer}>
+        <View style={styles.topRow}>
+          <Text style={styles.brandName}>Apple</Text>
           <View
             style={{
               flexDirection: "row",
@@ -67,33 +57,23 @@ const Menu = () => {
             </Button>
           </View>
         </View>
-        <View
-          style={styles.middleRow}
-        >
-          {
-            MENU_ITEMS.map((item, index) => (
-              <View
-                key={item.id}
-                style={styles.menuRow}
+        <View style={styles.middleRow}>
+          {MENU_ITEMS.map((item, index) => (
+            <View key={item.id} style={styles.menuRow}>
+              <Text
+                style={styles.menuRowText}
+                onPress={() => {
+                  //@ts-ignore
+                  router.push(item.href);
+                }}
               >
-                <Text
-                  style={styles.menuRowText}
-                  onPress={() => {
-                    router.push(item.href);
-                  }}
-                >
-                  {item.title}
-                </Text>
-              </View>
-            ))
-          }
+                {item.title}
+              </Text>
+            </View>
+          ))}
         </View>
-        <View
-          style={styles.bottomRow}
-        >
-          <View
-            style={styles.userProfileContainer}
-          >
+        <View style={styles.bottomRow}>
+          <View style={styles.userProfileContainer}>
             <Avatar.Image
               source={{
                 uri: manager?.profileImage || PLACEHOLDER_PERSON_IMAGE,
@@ -102,9 +82,7 @@ const Menu = () => {
               style={styles.avatar}
             />
             <View style={styles.textContainer}>
-              <Text style={styles.titleText}>
-                {manager?.name}
-              </Text>
+              <Text style={styles.titleText}>{manager?.name}</Text>
               <Text
                 style={{
                   opacity: 0.8,

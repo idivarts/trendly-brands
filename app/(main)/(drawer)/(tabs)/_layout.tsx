@@ -48,7 +48,7 @@ const TabLayout = () => {
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="handshake-o" color={color} />
           ),
-          headerLeft: () => (
+          headerLeft: () =>
             xl ? (
               <BrandSwitcher />
             ) : (
@@ -64,8 +64,8 @@ const TabLayout = () => {
                     }}
                   />
                 }
-              />)
-          ),
+              />
+            ),
           headerRight: () => (
             <View
               style={{
@@ -84,9 +84,7 @@ const TabLayout = () => {
         name="collaborations"
         options={{
           title: "Collaborations",
-          tabBarIcon: ({ color }) => (
-            <TabBarIcon name="group" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <TabBarIcon name="group" color={color} />,
           headerRight: () => <NotificationIcon />,
         }}
       />
@@ -95,12 +93,14 @@ const TabLayout = () => {
         listeners={() => ({
           tabPress: (e) => {
             e.preventDefault();
-            router.push("modal");
+            router.push("/modal");
           },
         })}
         options={{
           headerShown: false,
-          tabBarIcon: ({ color }) => <TabBarIcon name="plus-circle" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="plus-circle" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
