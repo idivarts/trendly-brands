@@ -6,7 +6,6 @@ import {
 import { StreamChat } from "stream-chat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
-import functions from '@react-native-firebase/functions';
 
 const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
 
@@ -20,14 +19,6 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({
   } = useAuthContext();
 
   useEffect(() => {
-    let newToken;
-
-    functions()
-      .httpsCallable('health')()
-      .then(response => {
-        newToken = response;
-      });
-
     const connect = async () => {
       await client.connectUser(
         {
