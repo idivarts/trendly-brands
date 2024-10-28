@@ -67,6 +67,7 @@ const ExploreInfluencers = () => {
         keyExtractor={(item) => item.toString()}
         contentContainerStyle={{
           padding: 16,
+          paddingBottom: 100,
         }}
         ListHeaderComponent={
           <SearchComponent

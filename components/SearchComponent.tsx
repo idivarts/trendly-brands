@@ -31,13 +31,14 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
     <View style={[styles.searchContainer]}>
       <Searchbar
         placeholder="Search"
+        placeholderTextColor={Colors(theme).gray100}
         value={localQuery}
         onChangeText={handleChangeText}
         style={[
           styles.searchInput,
           { backgroundColor: Colors(theme).platinum },
         ]}
-        iconColor={Colors(theme).lightgray}
+        iconColor={Colors(theme).gray100}
       />
       <TouchableOpacity
         onPress={() => {
@@ -47,7 +48,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         <Ionicons
           name="options-outline"
           size={24}
-          color={Colors(theme).lightgray}
+          color={Colors(theme).gray100}
           style={styles.icon}
         />
       </TouchableOpacity>
