@@ -1,4 +1,5 @@
 import { ChannelList } from "stream-chat-expo";
+import { Channel as ChannelType } from "stream-chat";
 
 import { router } from "expo-router";
 import { useAuthContext } from "@/contexts";
@@ -8,9 +9,11 @@ import AddGroup from "@/components/channel/add-group";
 import { useState } from "react";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import { Searchbar } from "react-native-paper";
 
 const ChannelListScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
   const theme = useTheme();
 
   const {
@@ -21,6 +24,24 @@ const ChannelListScreen = () => {
     return null;
   }
 
+  const handleSearchChange = (text: string) => {
+    setSearchInput(text);
+  }
+
+  const customChannelFilterFunction = (channels: ChannelType[]) => {
+    if (!channels) {
+      return [];
+    }
+
+    if (!searchInput) {
+      return channels;
+    }
+
+    return channels.filter((channel) => {
+      return channel.data?.name?.toLowerCase().includes(searchInput.toLowerCase());
+    });
+  };
+
   return (
     <View
       style={{
@@ -28,7 +49,25 @@ const ChannelListScreen = () => {
         position: "relative",
       }}
     >
+      <View
+        style={{
+          padding: 15,
+          paddingTop: 20,
+        }}
+      >
+        <Searchbar
+          onChangeText={handleSearchChange}
+          placeholder="Search"
+          value={searchInput}
+          style={[
+            {
+              backgroundColor: Colors(theme).platinum
+            },
+          ]}
+        />
+      </View>
       <ChannelList
+        channelRenderFilterFn={customChannelFilterFunction}
         filters={{
           members: { $in: [user?.id as string] },
         }}

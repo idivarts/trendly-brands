@@ -20,7 +20,6 @@ const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({
   return (
     <Pressable
       {...props}
-      key={0}
       onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
     >
       <View

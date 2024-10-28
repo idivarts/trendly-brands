@@ -3,11 +3,11 @@ import { DrawerContentScrollView } from "@react-navigation/drawer";
 import { APP_NAME } from "@/constants/App";
 import DrawerMenuItem from "./DrawerMenuItem";
 import { useBreakpoints } from "@/hooks";
-import { BRANDS } from "@/constants/Brands";
 import BrandItem from "./BrandItem";
-import { useState } from "react";
 import { DrawerActions } from "@react-navigation/native";
 import { useNavigation } from "expo-router";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Brand } from "@/types/Brand";
 
 interface DrawerMenuContentProps { }
 
@@ -36,10 +36,15 @@ const DRAWER_MENU_CONTENT_ITEMS = [
 
 const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const { xl } = useBreakpoints();
-  const [selectedBrand, setSelectedBrand] = useState<string>(BRANDS[0]);
   const navigation = useNavigation();
 
-  const handleBrandChange = (brand: string) => {
+  const {
+    brands,
+    selectedBrand,
+    setSelectedBrand,
+  } = useBrandContext();
+
+  const handleBrandChange = (brand: Brand) => {
     setSelectedBrand(brand);
     navigation.dispatch(DrawerActions.closeDrawer())
   };
@@ -76,12 +81,12 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
                 key={index}
                 tab={tab}
               />
-            )) : BRANDS.map((brand) => (
+            )) : brands.map((brand) => (
               <BrandItem
-                key={brand}
+                key={brand.id.toString()}
                 onPress={() => handleBrandChange(brand)}
-                title={brand}
-                active={selectedBrand === brand}
+                title={brand.name}
+                active={selectedBrand?.id === brand.id}
               />
             ))}
           </View>

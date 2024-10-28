@@ -29,7 +29,7 @@ const TabLayout = () => {
       screenOptions={{
         tabBarActiveTintColor: Colors(theme).primary,
         headerShown: useClientOnlyValue(false, true),
-        tabBarShowLabel: xl,
+        tabBarShowLabel: true,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
           display: xl ? "none" : "flex", // Hide the tab bar on desktop screens
@@ -98,6 +98,7 @@ const TabLayout = () => {
         })}
         options={{
           headerShown: false,
+          title: "Create Collaborations",
           tabBarIcon: ({ color }) => (
             <TabBarIcon name="plus-circle" color={color} />
           ),
