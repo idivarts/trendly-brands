@@ -17,6 +17,8 @@ import { useTheme } from "@react-navigation/native";
 import {
   PinchGestureHandler,
   PinchGestureHandlerGestureEvent,
+  TapGestureHandler,
+  State,
 } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedGestureHandler,
@@ -36,6 +38,7 @@ const InfluencerCard = (props: any) => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   // Animation values for zoom
   const scale = useSharedValue(1);
@@ -47,7 +50,6 @@ const InfluencerCard = (props: any) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
 
-  // Handle pinch gesture for zoom
   const pinchHandler =
     useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
       onStart: (event) => {
@@ -78,6 +80,9 @@ const InfluencerCard = (props: any) => {
 
   const handleIndexChange = (index: number) => {
     setCurrentIndex(index);
+    setIsSwiping(true);
+    // Reset swiping state after a short delay
+    setTimeout(() => setIsSwiping(false), 150);
     Object.values(videoRefs.current).forEach((videoRef) => {
       if (videoRef) {
         videoRef.seek(0);
@@ -86,25 +91,37 @@ const InfluencerCard = (props: any) => {
     });
   };
 
+  const handleImagePress = (uri: string) => {
+    if (!isSwiping) {
+      setSelectedImage(uri);
+      setIsZoomed(true);
+    }
+  };
+
   const renderMediaItem = ({ item, index }: any) => {
     if (item.type === "image") {
       return (
-        <TouchableOpacity
-          onPress={() => {
-            setSelectedImage(item.uri);
-            setIsZoomed(true);
+        <TapGestureHandler
+          onHandlerStateChange={({ nativeEvent }) => {
+            if (nativeEvent.state === State.ACTIVE) {
+              handleImagePress(item.uri);
+            }
           }}
         >
-          <Image source={{ uri: item.uri }} style={styles.media} />
-        </TouchableOpacity>
+          <Animated.View>
+            <Image source={{ uri: item.uri }} style={styles.media} />
+          </Animated.View>
+        </TapGestureHandler>
       );
     } else {
       return (
         <TouchableOpacity
           onPress={() => {
-            setMuted(!muted);
-            if (index === currentIndex) {
-              setIsPlaying(!isPlaying);
+            if (!isSwiping) {
+              setMuted(!muted);
+              if (index === currentIndex) {
+                setIsPlaying(!isPlaying);
+              }
             }
           }}
         >
@@ -128,6 +145,7 @@ const InfluencerCard = (props: any) => {
     }
   };
 
+  // Rest of the component remains the same...
   return (
     <>
       <Card style={styles.card}>
@@ -248,7 +266,6 @@ const InfluencerCard = (props: any) => {
   );
 };
 
-// Add these new styles to your stylesFn
 const additionalStyles = StyleSheet.create({
   modalContainer: {
     flex: 1,
