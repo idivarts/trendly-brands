@@ -11,10 +11,13 @@ import { useRouter } from "expo-router";
 import { MENU_ITEMS } from "@/constants/Menu";
 import { ImageBackground, Pressable } from "react-native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useState } from "react";
+import ConfirmationModal from "../ui/modal/ConfirmationModal";
 
 const Menu = () => {
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const router = useRouter();
 
   const {
@@ -22,6 +25,11 @@ const Menu = () => {
   } = useBrandContext();
 
   const { signOutManager: signOut, manager } = useAuthContext();
+
+  const handleSignOut = () => {
+    setLogoutModalVisible(false);
+    signOut();
+  }
 
   return (
     <View style={styles.container}>
@@ -115,13 +123,21 @@ const Menu = () => {
             mode="contained"
             style={styles.menuButton}
             onPress={() => {
-              signOut();
+              setLogoutModalVisible(true);
             }}
           >
             Logout
           </Button>
         </View>
       </View>
+      <ConfirmationModal
+        cancelAction={() => setLogoutModalVisible(false)}
+        confirmAction={handleSignOut}
+        confirmText="Logout"
+        description="Are you sure you want to logout?"
+        setVisible={setLogoutModalVisible}
+        visible={logoutModalVisible}
+      />
     </View>
   );
 };

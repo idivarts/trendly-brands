@@ -1,25 +1,23 @@
 import { useTheme } from "@react-navigation/native";
-import { Pressable } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
 import stylesFn from "@/styles/brand-item/BrandItem.styles";
 import { Avatar, IconButton } from "react-native-paper";
 
-interface BrandItemProps {
+interface BrandActionItemProps {
   active?: boolean;
-  image?: string;
-  menu?: boolean;
+  icon?: string;
   onPress: () => void;
-  showImage?: boolean;
+  showChevron?: boolean;
   title: string;
 }
 
-const BrandItem: React.FC<BrandItemProps> = ({
+const BrandActionItem: React.FC<BrandActionItemProps> = ({
   active,
-  image,
-  menu,
+  icon,
   onPress,
-  showImage = false,
+  showChevron = true,
   title,
 }) => {
   const theme = useTheme();
@@ -31,24 +29,28 @@ const BrandItem: React.FC<BrandItemProps> = ({
         style={[
           styles.container,
           {
+            borderTopColor: Colors(theme).aliceBlue,
+            borderTopWidth: StyleSheet.hairlineWidth,
             backgroundColor: active ? Colors(theme).primary : Colors(theme).background,
           },
         ]}
       >
         <View
           style={{
-            alignItems: "center",
-            backgroundColor: Colors(theme).transparent,
             flexDirection: "row",
             gap: 10,
+            alignItems: "center",
+            backgroundColor: Colors(theme).transparent,
           }}
         >
           {
-            showImage && (
-              <Avatar.Image
+            icon && (
+              <Avatar.Icon
+                icon={icon}
                 size={32}
-                source={{
-                  uri: image ?? "https://images.unsplash.com/photo-1557683316-973673baf926",
+                color={Colors(theme).text}
+                style={{
+                  backgroundColor: Colors(theme).transparent,
                 }}
               />
             )
@@ -65,9 +67,9 @@ const BrandItem: React.FC<BrandItemProps> = ({
           </Text>
         </View>
         {
-          menu && (
+          showChevron && (
             <IconButton
-              icon="dots-vertical"
+              icon="chevron-right"
               size={20}
               iconColor={active ? Colors(theme).white : Colors(theme).text}
             />
@@ -78,4 +80,4 @@ const BrandItem: React.FC<BrandItemProps> = ({
   );
 };
 
-export default BrandItem;
+export default BrandActionItem;
