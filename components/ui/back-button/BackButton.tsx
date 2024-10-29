@@ -16,7 +16,6 @@ const BackButton: React.FC<BackButtonProps> = ({
 
   return (
     <Pressable
-      key={0}
       onPress={() => navigation.goBack()}
     >
       <View

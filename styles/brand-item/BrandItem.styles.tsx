@@ -4,10 +4,19 @@ import { StyleSheet } from "react-native";
 
 const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors(theme).aliceBlue,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingLeft: 14,
+    paddingVertical: 4,
+  },
+  innerContainer: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center"
   },
   text: {
     textAlign: "center",

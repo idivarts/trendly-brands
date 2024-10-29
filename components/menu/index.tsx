@@ -9,18 +9,27 @@ import stylesFn from "@/styles/menu/MenuItem.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { MENU_ITEMS } from "@/constants/Menu";
-import { ImageBackground } from "react-native";
-
-const BRAND_DATA = {
-  brandImage: "https://images.unsplash.com/photo-1557683316-973673baf926",
-};
+import { ImageBackground, Pressable } from "react-native";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useState } from "react";
+import ConfirmationModal from "../ui/modal/ConfirmationModal";
 
 const Menu = () => {
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const router = useRouter();
 
+  const {
+    selectedBrand,
+  } = useBrandContext();
+
   const { signOutManager: signOut, manager } = useAuthContext();
+
+  const handleSignOut = () => {
+    setLogoutModalVisible(false);
+    signOut();
+  }
 
   return (
     <View style={styles.container}>
@@ -32,29 +41,36 @@ const Menu = () => {
       />
       <Avatar.Image
         source={{
-          uri: BRAND_DATA.brandImage || PLACEHOLDER_IMAGE,
+          uri: selectedBrand?.image || PLACEHOLDER_IMAGE,
         }}
         size={72}
         style={styles.brandAvatar}
       />
       <View style={styles.menuItemsContainer}>
-        <View style={styles.topRow}>
-          <Text style={styles.brandName}>Apple</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-            }}
-          >
-            <Button
-              mode="contained"
-              style={styles.menuButton}
-              onPress={() => {
-                router.push("/brand-profile");
+        <View
+          style={{
+            gap: 10,
+            alignItems: "flex-end",
+          }}
+        >
+          <View style={styles.topRow}>
+            <Text style={styles.brandName}>{selectedBrand?.name}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "flex-start",
               }}
             >
-              View Profile
-            </Button>
+              <Button
+                mode="contained"
+                style={styles.menuButton}
+                onPress={() => {
+                  router.push("/brand-profile");
+                }}
+              >
+                View Profile
+              </Button>
+            </View>
           </View>
         </View>
         <View style={styles.middleRow}>
@@ -73,36 +89,55 @@ const Menu = () => {
           ))}
         </View>
         <View style={styles.bottomRow}>
-          <View style={styles.userProfileContainer}>
-            <Avatar.Image
-              source={{
-                uri: manager?.profileImage || PLACEHOLDER_PERSON_IMAGE,
-              }}
-              size={56}
-              style={styles.avatar}
-            />
-            <View style={styles.textContainer}>
-              <Text style={styles.titleText}>{manager?.name}</Text>
-              <Text
-                style={{
-                  opacity: 0.8,
+          <Pressable
+            onPress={() => {
+              router.push("/profile");
+            }}
+          >
+            <View style={styles.userProfileContainer}>
+              <Avatar.Image
+                source={{
+                  uri: manager?.profileImage || PLACEHOLDER_PERSON_IMAGE,
                 }}
-              >
-                {manager?.email}
-              </Text>
+                size={56}
+                style={styles.avatar}
+              />
+              <View style={styles.textContainer}>
+                <Text style={styles.titleText}>{manager?.name}</Text>
+                <Text
+                  style={{
+                    opacity: 0.8,
+                  }}
+                >
+                  {manager?.email}
+                </Text>
+              </View>
+              <Avatar.Icon
+                icon="chevron-right"
+                size={28}
+                style={styles.chevron}
+              />
             </View>
-          </View>
+          </Pressable>
           <Button
             mode="contained"
             style={styles.menuButton}
             onPress={() => {
-              signOut();
+              setLogoutModalVisible(true);
             }}
           >
             Logout
           </Button>
         </View>
       </View>
+      <ConfirmationModal
+        cancelAction={() => setLogoutModalVisible(false)}
+        confirmAction={handleSignOut}
+        confirmText="Logout"
+        description="Are you sure you want to logout?"
+        setVisible={setLogoutModalVisible}
+        visible={logoutModalVisible}
+      />
     </View>
   );
 };

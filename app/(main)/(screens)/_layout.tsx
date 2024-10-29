@@ -13,6 +13,8 @@ const ScreensLayout = () => {
         <Stack.Screen name="notifications" />
         <Stack.Screen name="menu" />
         <Stack.Screen name="brand-profile" />
+        <Stack.Screen name="create-brand" />
+        <Stack.Screen name="profile" />
         <Stack.Screen name="CollaborationHistory" />
         <Stack.Screen name="preferences" />
         <Stack.Screen name="settings" />

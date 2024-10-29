@@ -28,7 +28,11 @@
         "backgroundColor": "#ffffff"
       },
       "package": "pro.trendly.brands",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -61,6 +65,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "216ab7b2-ff17-4ef6-93c6-43e47153f54e"
+      }
     }
   }
 }

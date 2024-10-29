@@ -1,5 +1,6 @@
-import { BRANDS } from "@/constants/Brands";
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Brand } from "@/types/Brand";
 import { Octicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { useState } from "react";
@@ -9,11 +10,16 @@ import { Menu } from "react-native-paper";
 const BrandSwitcher = () => {
   const [visible, setVisible] = useState(false);
   const theme = useTheme();
-  const [selectedBrand, setSelectedBrand] = useState<string>(BRANDS[0]);
+
+  const {
+    brands,
+    selectedBrand,
+    setSelectedBrand,
+  } = useBrandContext();
 
   const openMenu = () => setVisible(true);
 
-  const handleBrandChange = (brand: string) => {
+  const handleBrandChange = (brand: Brand) => {
     setSelectedBrand(brand);
     setVisible(false);
   }
@@ -38,14 +44,14 @@ const BrandSwitcher = () => {
       }
     >
       {
-        BRANDS.map((brand) => (
+        brands.map((brand) => (
           <Menu.Item
-            key={brand}
+            key={brand.id}
             style={{
-              backgroundColor: brand === selectedBrand ? Colors(theme).primary : Colors(theme).background,
+              backgroundColor: brand.id === selectedBrand?.id ? Colors(theme).primary : Colors(theme).background,
             }}
             onPress={() => handleBrandChange(brand)}
-            title={brand}
+            title={brand.name}
           />
         ))
       }

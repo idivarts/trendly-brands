@@ -10,6 +10,9 @@ import { Platform } from "react-native";
 import { PermissionsAndroid } from 'react-native';
 import { useAuthContext } from "./auth-context.provider";
 import { newToken } from "@/utils/token";
+import { StreamChat } from "stream-chat";
+
+const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
 
 interface CloudMessagingContextProps {
   getToken: () => Promise<string>;
@@ -54,9 +57,18 @@ export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
     return token;
   };
 
+  const registerPushToken = async (
+    token: string,
+  ) => {
+    const push_provider = 'firebase';
+    const push_provider_name = 'TrendlyFirebase';
+    client.addDevice(token, push_provider, user?.id, push_provider_name);
+  };
+
   const initNotification = async () => {
     await requestUserPermission();
-    await getToken();
+    const token = await getToken();
+    await registerPushToken(token);
 
     messaging()
       .getInitialNotification()

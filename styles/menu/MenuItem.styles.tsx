@@ -21,7 +21,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   brandName: {
     fontSize: 20,
-    textAlign: "right",
+    textAlign: "left",
   },
   menuItemsContainer: {
     flex: 1,
@@ -61,6 +61,10 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   titleText: {
     fontSize: 16,
+  },
+  chevron: {
+    backgroundColor: Colors(theme).background,
+    color: Colors(theme).primary,
   },
   menuButton: {
     backgroundColor: Colors(theme).primary,
