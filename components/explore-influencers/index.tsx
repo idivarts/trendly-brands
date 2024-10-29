@@ -57,14 +57,14 @@ const ExploreInfluencers = () => {
     <AppLayout>
       <FlatList
         data={filteredInfluencers}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <InfluencerCard
-            key={item}
+            key={index}
             ToggleModal={ToggleModal}
             influencer={item}
           />
         )}
-        keyExtractor={(item) => item.toString()}
+        keyExtractor={(item, index) => index.toString()}
         contentContainerStyle={{
           padding: 16,
           paddingBottom: 100,

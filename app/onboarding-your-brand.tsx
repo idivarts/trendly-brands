@@ -70,7 +70,7 @@ const OnboardingScreen = () => {
   const handleSubmit = async () => {
     try {
       const user = AuthApp.currentUser;
-      if (!brandName || !role || !industry || !website || !image) {
+      if (!brandName || !role || !industry || !website) {
         Toaster.error("Please fill in all fields.");
         return;
       }
@@ -80,32 +80,31 @@ const OnboardingScreen = () => {
         let brandData = {
           name: brandName,
           image: "",
-          members: [
-            {
-              brandId: "",
-              managerId: user.uid,
-              permissions: {
-                read: true,
-                write: true,
-                admin: true,
-              },
-            },
-          ],
+          profile: {
+            industry,
+            website,
+          },
         };
 
         const docRef = await addDoc(colRef, brandData);
-        brandData.members[0].brandId = docRef.id;
 
-        const storageRef = ref(StorageApp, `brands/${docRef.id}/profile.jpg`);
-        const response = await fetch(image);
-        const blob = await response.blob();
-        await uploadBytes(storageRef, blob);
+        const managerRef = doc(
+          FirestoreDB,
+          "brands",
+          docRef.id,
+          "members",
+          user.uid
+        );
 
-        brandData.image = await getDownloadURL(storageRef);
+        await setDoc(managerRef, {
+          managerId: user.uid,
+          role,
+        });
 
-        await setDoc(docRef, brandData);
-
-        router.navigate("/onboarding-brand-preference");
+        router.navigate({
+          pathname: "/onboarding-brand-preference",
+          params: { brandId: docRef.id },
+        });
       }
     } catch (error) {
       console.error("Error creating brand: ", error);

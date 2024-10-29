@@ -14,6 +14,11 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { useTheme } from "@react-navigation/native";
+import { addDoc, collection } from "firebase/firestore";
+import { FirestoreDB } from "@/utils/firestore";
+import { AuthApp } from "@/utils/auth";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Toast from "react-native-toast-message";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -46,9 +51,71 @@ const CreateCollaborationScreen = () => {
     setIsModalVisible(false);
   };
 
+  const submitCollaboration = async () => {
+    try {
+      if (!AuthApp.currentUser) {
+        console.error("User not logged in");
+      }
+
+      if (
+        !collaborationName ||
+        !aboutCollab ||
+        !budgetMin ||
+        !budgetMax ||
+        !promotionType ||
+        !collabType ||
+        !numInfluencers ||
+        !platform ||
+        !location
+      ) {
+        Toaster.error("Please fill all fields");
+        return;
+      }
+
+      const collabRef = collection(FirestoreDB, "collaborations");
+      const docRef = await addDoc(collabRef, {
+        name: collaborationName,
+        brandId: "67ryGx7V6ybMeCzQremS",
+        managerId: AuthApp.currentUser?.uid,
+        description: aboutCollab,
+        timeStamp: Date.now(),
+        budget: {
+          min: budgetMin,
+          max: budgetMax,
+        },
+        promotionType,
+        collaborationType: collabType,
+        numberOfInfluencersNeeded: numInfluencers,
+        platform,
+        location: {
+          type: location,
+          ...(location === "Physical" && {
+            name: "locationName",
+            latlong: {
+              lat: mapRegion.latitude,
+              long: mapRegion.longitude,
+            },
+          }),
+        },
+        externalLinks: links,
+      });
+
+      console.log("Document written with ID: ", docRef.id);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   if (screen === 1) {
     return (
       <AppLayout>
+        <View
+          style={{
+            zIndex: 1000,
+          }}
+        >
+          <Toast />
+        </View>
         <ScrollView
           style={styles.container}
           contentContainerStyle={{
@@ -123,7 +190,25 @@ const CreateCollaborationScreen = () => {
             <RadioButton.Item label="Instagram" value="Instagram" />
             <RadioButton.Item label="YouTube" value="YouTube" />
           </RadioButton.Group>
-          <Button mode="contained" onPress={() => setScreen(2)}>
+          <Button
+            mode="contained"
+            onPress={() => {
+              if (
+                !collaborationName ||
+                !aboutCollab ||
+                !budgetMin ||
+                !budgetMax ||
+                !numInfluencers ||
+                !promotionType ||
+                !collabType ||
+                !platform
+              ) {
+                Toaster.error("Please fill all fields");
+                return;
+              }
+              setScreen(2);
+            }}
+          >
             Next
           </Button>
         </ScrollView>
@@ -138,6 +223,23 @@ const CreateCollaborationScreen = () => {
           style={styles.container}
           contentContainerStyle={styles.contentContainer}
         >
+          <View
+            style={{
+              zIndex: 1000,
+            }}
+          >
+            <Toast />
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <IconButton icon="arrow-left" onPress={() => setScreen(1)} />
+            <Title style={styles.title}>Create a Collaboration</Title>
+          </View>
+
           <Paragraph style={styles.paragraph}>Location</Paragraph>
           <RadioButton.Group
             onValueChange={(newValue) => setLocation(newValue)}
@@ -174,10 +276,7 @@ const CreateCollaborationScreen = () => {
             </Paragraph>
           ))}
 
-          <Button
-            mode="contained"
-            onPress={() => console.log("Collaboration Posted")}
-          >
+          <Button mode="contained" onPress={() => submitCollaboration()}>
             Post
           </Button>
 
