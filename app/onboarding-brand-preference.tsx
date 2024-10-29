@@ -6,20 +6,22 @@ import AppLayout from "@/layouts/app-layout";
 import fnStyles from "@/styles/onboarding/preference.styles";
 import { AuthApp } from "@/utils/auth";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Checkbox, Button, IconButton } from "react-native-paper";
+import { collection, doc, setDoc } from "firebase/firestore";
+import { FirestoreDB } from "@/utils/firestore";
 
 const BrandPreferenceScreen = () => {
   // State for checkboxes
-  const [promotionType, setPromotionType] = useState({
+  const [promotionType, setPromotionType] = useState<any>({
     paid: false,
     unpaid: false,
     barter: false,
   });
 
-  const [influencerType, setInfluencerType] = useState({
+  const [influencerType, setInfluencerType] = useState<any>({
     comedy: false,
     beauty: false,
     fashion: false,
@@ -46,6 +48,36 @@ const BrandPreferenceScreen = () => {
   // Toggling Influencer Type
   const toggleInfluencerType = (type: any) => {
     setInfluencerType((prev: any) => ({ ...prev, [type]: !prev[type] }));
+  };
+  const params = useLocalSearchParams();
+
+  const handleSubmit = () => {
+    try {
+      const { brandId } = params;
+      if (brandId) {
+        const brandRef = doc(FirestoreDB, "brands", brandId);
+        setDoc(
+          brandRef,
+          {
+            preferences: {
+              promotionType: Object.keys(promotionType).filter(
+                (key) => promotionType[key]
+              ),
+              influencerCategory: Object.keys(influencerType).filter(
+                (key) => influencerType[key]
+              ),
+            },
+          },
+          { merge: true }
+        );
+        router.push({
+          pathname: "/onboarding-get-started",
+          params: { brandId },
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -145,9 +177,7 @@ const BrandPreferenceScreen = () => {
         <View style={styles.bottomButtonContainer}>
           <Button
             mode="contained"
-            onPress={() => {
-              router.navigate("/onboarding-get-started");
-            }}
+            onPress={handleSubmit}
             buttonColor={Colors(theme).primary}
             labelStyle={styles.submitButtonLabel}
             contentStyle={styles.submitButtonContent}

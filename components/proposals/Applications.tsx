@@ -49,75 +49,21 @@ const Applications = () => {
   const fetchProposals = async () => {
     try {
       const collaborationCol = collection(FirestoreDB, "collaborations");
-      const collabSnapshot = await getDocs(collaborationCol);
-      let totalNotPendingApplications = 0;
-
-      const proposalsWithApplications = await Promise.all(
-        collabSnapshot.docs.map(async (doc) => {
-          const collab = {
-            id: doc.id,
-            brandId: doc.data().brandId,
-            ...doc.data(),
-          };
-          const brandDoc = firebaseDoc(
-            collection(FirestoreDB, "brands"),
-            collab.brandId
-          );
-          const brandData = await getDoc(brandDoc);
-          if (!brandData.exists()) {
-            return null;
-          }
-
-          const applicationCol = collection(
-            FirestoreDB,
-            "collaborations",
-            collab.id,
-            "applications"
-          );
-          const applicationSnapshot = query(
-            applicationCol,
-            where("userId", "==", "PjoQGkMJATUjo3nxL4t7Dj80wOD3")
-          );
-          const applicationData = await getDocs(applicationSnapshot).then(
-            (querySnapshot) => {
-              return querySnapshot.docs.map((doc) => ({
-                id: doc.id,
-                userId: doc.data().userId,
-                status: doc.data().status,
-                ...doc.data(),
-              }));
-            }
-          );
-
-          if (applicationData.length === 0) {
-            return null;
-          }
-
-          const userApplications = applicationData.filter(
-            (application) =>
-              application.userId === "PjoQGkMJATUjo3nxL4t7Dj80wOD3"
-          );
-
-          const notPendingApplications = userApplications.filter(
-            (application) => application.status !== "pending"
-          ).length;
-
-          totalNotPendingApplications += notPendingApplications;
-
-          return {
-            ...collab,
-            applications: applicationData,
-            brandName: brandData.data().name,
-          };
-        })
+      const q = query(
+        collaborationCol,
+        where("brandId", "==", "67ryGx7V6ybMeCzQremS")
       );
-
-      const validProposals = proposalsWithApplications.filter((proposal) => {
-        return proposal !== null;
+      const querySnapshot = await getDocs(q);
+      const proposals: any[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = {
+          ...doc.data(),
+          id: doc.id,
+        };
+        proposals.push(data);
       });
 
-      setProposals(validProposals);
-      setNotPendingProposals(totalNotPendingApplications);
+      setProposals(proposals);
     } catch (error) {
       console.error("Error fetching proposals: ", error);
     } finally {
@@ -128,14 +74,6 @@ const Applications = () => {
   useEffect(() => {
     fetchProposals();
   }, [user]);
-
-  const pendingProposals = useMemo(
-    () =>
-      proposals.filter((proposal) => {
-        return proposal.applications[0].status === "pending";
-      }),
-    [proposals]
-  );
 
   if (isLoading) {
     return (
@@ -195,9 +133,9 @@ const Applications = () => {
             New Collaborations
           </Button>
         </View>
-      ) : pendingProposals.length !== 0 ? (
+      ) : (
         <FlatList
-          data={pendingProposals}
+          data={proposals}
           renderItem={({ item }) => (
             <JobCard
               name={item.name}
@@ -242,7 +180,7 @@ const Applications = () => {
                       },
                     ]}
                   >
-                    Looking for past applications
+                    Looking for past collaborations
                   </Text>
                   <View
                     style={{
@@ -260,7 +198,7 @@ const Applications = () => {
                       }}
                       style={{}}
                     >
-                      <Text>View Past Applications</Text>
+                      <Text>View Past collaborations</Text>
                     </Link>
                   </View>
                 </View>
@@ -275,86 +213,6 @@ const Applications = () => {
             />
           }
         />
-      ) : (
-        <>
-          {pendingProposals.length === 0 && notPendingProposals !== 0 && (
-            <View
-              style={{
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 50,
-              }}
-            >
-              <Image
-                source={{ uri: "https://via.placeholder.com/150" }}
-                width={150}
-                height={150}
-                style={{
-                  borderRadius: 10,
-                }}
-              />
-              <View
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <Text style={styles.title}>No Applications found</Text>
-              </View>
-
-              <Button
-                onPress={() => router.push("/collaborations")}
-                style={{
-                  backgroundColor: Colors(theme).platinum,
-                  padding: 5,
-                  borderRadius: 5,
-                }}
-                textColor={Colors(theme).text}
-              >
-                New Collaborations
-              </Button>
-              <View
-                style={{
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 20,
-                }}
-              >
-                <Text
-                  style={[
-                    styles.title,
-                    {
-                      marginBottom: 10,
-                      color: Colors(theme).text,
-                    },
-                  ]}
-                >
-                  Looking for past applications
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: Colors(theme).card,
-                    padding: 10,
-                    borderRadius: 5,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <Link
-                    href={{
-                      pathname: "/(main)/(drawer)/(tabs)/explore-influencers",
-                    }}
-                    style={{}}
-                  >
-                    <Text>View Past Applications</Text>
-                  </Link>
-                </View>
-              </View>
-            </View>
-          )}
-        </>
       )}
       {isVisible && (
         <BottomSheetActions

@@ -27,6 +27,7 @@ export default (theme: Theme) => ({
   notificationDot: "red",
   platinum: "#DBDBDB",
   primary: "#1976d2",
+  gray100: "#555",
   white: "#ffffff",
   transparent: "transparent",
 });

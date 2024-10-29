@@ -8,6 +8,9 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, Button, TouchableOpacity } from "react-native";
 import { Menu, Provider } from "react-native-paper";
 import { AuthApp } from "@/utils/auth";
+import { router, useLocalSearchParams } from "expo-router";
+import { doc, setDoc } from "firebase/firestore";
+import { FirestoreDB } from "@/utils/firestore";
 
 const GetStartedScreen = () => {
   const [hearAboutUs, setHearAboutUs] = useState("");
@@ -32,6 +35,31 @@ const GetStartedScreen = () => {
 
   const handleSignUp = () => {
     firebaseSignIn(AuthApp.currentUser?.uid || "");
+  };
+
+  const params = useLocalSearchParams();
+
+  const handleSubmit = () => {
+    try {
+      const { brandId } = params;
+      if (brandId) {
+        const brandRef = doc(FirestoreDB, "brands", brandId);
+        setDoc(
+          brandRef,
+          {
+            survey: {
+              source: hearAboutUs,
+              purpose: useFor,
+              collaborationValue: volumeOfCollaboration,
+            },
+          },
+          { merge: true }
+        );
+        router.push("/(main)/explore-influencers");
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -176,7 +204,7 @@ const GetStartedScreen = () => {
           <TouchableOpacity
             style={styles.button}
             onPress={() => {
-              handleSignUp();
+              handleSubmit();
             }}
           >
             <Text style={styles.buttonText}>Take me in</Text>
