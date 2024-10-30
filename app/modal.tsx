@@ -19,6 +19,7 @@ import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -36,6 +37,7 @@ const CreateCollaborationScreen = () => {
   const styles = stylesFn(theme);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [newLinkName, setNewLinkName] = useState("");
+  const { selectedBrand } = useBrandContext();
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
@@ -75,7 +77,7 @@ const CreateCollaborationScreen = () => {
       const collabRef = collection(FirestoreDB, "collaborations");
       const docRef = await addDoc(collabRef, {
         name: collaborationName,
-        brandId: "67ryGx7V6ybMeCzQremS",
+        brandId: selectedBrand ? selectedBrand.id : "",
         managerId: AuthApp.currentUser?.uid,
         description: aboutCollab,
         timeStamp: Date.now(),
@@ -98,9 +100,8 @@ const CreateCollaborationScreen = () => {
           }),
         },
         externalLinks: links,
+        status: "active",
       });
-
-      console.log("Document written with ID: ", docRef.id);
     } catch (error) {
       console.error(error);
     }

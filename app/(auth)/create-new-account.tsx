@@ -6,6 +6,7 @@ import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import { useAuthContext } from "@/contexts";
 import Toast from "react-native-toast-message";
+import Colors from "@/constants/Colors";
 
 const SignUpScreen = () => {
   const [name, setName] = useState("");
@@ -39,7 +40,7 @@ const SignUpScreen = () => {
           onChangeText={setName}
           mode="outlined"
           style={styles.input}
-          theme={{ colors: { primary: "#000" } }} // Simplified input styling
+          theme={{ colors: { primary: Colors(theme).text } }}
         />
 
         {/* Email Field */}
@@ -49,7 +50,7 @@ const SignUpScreen = () => {
           onChangeText={setEmail}
           mode="outlined"
           style={styles.input}
-          theme={{ colors: { primary: "#000" } }}
+          theme={{ colors: { primary: Colors(theme).text } }}
         />
 
         {/* Password Field */}
@@ -60,7 +61,7 @@ const SignUpScreen = () => {
           secureTextEntry
           mode="outlined"
           style={styles.input}
-          theme={{ colors: { primary: "#000" } }}
+          theme={{ colors: { primary: Colors(theme).text } }}
         />
         <TextInput
           label="Confirm Password"
@@ -69,7 +70,7 @@ const SignUpScreen = () => {
           secureTextEntry
           mode="outlined"
           style={styles.input}
-          theme={{ colors: { primary: "#000" } }}
+          theme={{ colors: { primary: Colors(theme).text } }}
         />
 
         {/* Sign Up Button */}

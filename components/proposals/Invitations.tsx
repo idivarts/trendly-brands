@@ -20,13 +20,14 @@ import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
 import { Button } from "react-native-paper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 
 const Invitations = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [proposals, setProposals] = useState<any[]>([]);
   const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
-  const [invitations, setInvitations] = useState<any[]>([]);
-  const [notPendingInvitations, setNotPendingInvitations] = useState<number>();
-  const [refreshing, setRefreshing] = useState(false);
+  const [notPendingProposals, setNotPendingProposals] = useState<number>();
+  const { selectedBrand } = useBrandContext();
 
   const openBottomSheet = (id: string) => {
     setIsVisible(true);
@@ -39,82 +40,67 @@ const Invitations = () => {
   const user = AuthApp.currentUser;
 
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchInvitations = async () => {
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchProposals();
+    setRefreshing(false);
+  };
+
+  const fetchProposals = async () => {
     try {
       const collaborationCol = collection(FirestoreDB, "collaborations");
-      const collabSnapshot = await getDocs(collaborationCol);
-      let totalNotPendingInvitations = 0;
+      const q = query(
+        collaborationCol,
+        where("brandId", "==", selectedBrand?.id)
+      );
+      const querySnapshot = await getDocs(q);
 
-      // Map over the collaborations to fetch applications for each collaboration
-      const invitationsWithApplications = await Promise.all(
-        collabSnapshot.docs.map(async (doc) => {
-          const collab = {
-            id: doc.id,
-            brandId: doc.data().brandId,
+      const proposals = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const data = {
             ...doc.data(),
+            id: doc.id,
           };
-          const brandDoc = firebaseDoc(
-            collection(FirestoreDB, "brands"),
-            collab.brandId
-          );
-          const brandData = await getDoc(brandDoc);
-          if (!brandData.exists()) {
-            return null;
-          }
 
-          // Fetch applications for the current collaboration
+          // Fetch applications
           const applicationCol = collection(
             FirestoreDB,
             "collaborations",
-            collab.id,
-            "invitations"
+            data.id,
+            "applications"
           );
-          const applicationSnapshot = query(
-            applicationCol,
-            where("userId", "==", "09cNbHT14AYyy1t2joVL3aMeRMm1")
+          const applicationSnapshot = await getDocs(applicationCol);
+          const applications = applicationSnapshot.docs.map((appDoc) =>
+            appDoc.data()
           );
-
-          const applicationData = await getDocs(applicationSnapshot).then(
-            (querySnapshot) => {
-              return querySnapshot.docs.map((doc) => ({
-                id: doc.id,
-                userId: doc.data().userId,
-                status: doc.data().status,
-                ...doc.data(),
-              }));
-            }
-          );
-
-          const userApplications = applicationData.filter(
-            (application) =>
-              application.userId === "PjoQGkMJATUjo3nxL4t7Dj80wOD3"
-          );
-
-          const notPendingApplications = userApplications.filter(
-            (application) => application.status !== "pending"
+          const acceptedApplications = applications.filter(
+            (application) => application.status === "accepted"
           ).length;
 
-          totalNotPendingInvitations += notPendingApplications;
-
-          if (applicationData.length === 0) {
-            return null;
-          }
+          // Fetch invitations
+          const invitationCol = collection(
+            FirestoreDB,
+            "collaborations",
+            data.id,
+            "invitations"
+          );
+          const invitationSnapshot = await getDocs(invitationCol);
+          const invitations = invitationSnapshot.docs.map((invDoc) =>
+            invDoc.data()
+          );
 
           return {
-            ...collab,
-            applications: applicationData[0],
-            brandName: brandData.data().name,
+            ...data,
+            applications: applications.length,
+            invitations: invitations.length,
+            acceptedApplications,
           };
         })
       );
 
-      const validProposals = invitationsWithApplications.filter(
-        (proposal) => proposal !== null
-      );
-
-      setInvitations(validProposals);
-      setNotPendingInvitations(totalNotPendingInvitations);
+      setProposals(proposals);
     } catch (error) {
       console.error("Error fetching proposals: ", error);
     } finally {
@@ -123,22 +109,12 @@ const Invitations = () => {
   };
 
   useEffect(() => {
-    fetchInvitations();
+    fetchProposals();
   }, [user]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchInvitations();
-    setRefreshing(false);
-  };
-
-  const pendingInvitations = useMemo(
-    () =>
-      invitations.filter((invitation) => {
-        return invitation.applications.status === "pending";
-      }),
-    [invitations]
-  );
+  const filteredProposals = useMemo(() => {
+    return proposals.filter((proposal) => proposal.status === "inactive");
+  }, [proposals]);
 
   if (isLoading) {
     return (
@@ -156,7 +132,7 @@ const Invitations = () => {
         width: "100%",
       }}
     >
-      {pendingInvitations.length === 0 && notPendingInvitations === 0 ? (
+      {proposals.length === 0 ? (
         <View
           style={{
             justifyContent: "center",
@@ -180,17 +156,14 @@ const Invitations = () => {
               gap: 10,
             }}
           >
-            <Text style={styles.title}>No Invitations found</Text>
+            <Text style={styles.title}>No Collaborations found</Text>
             <Text style={styles.subtitle}>
-              Go to the Collaborations page to start applying for new
-              collaborations
+              Go to the New Collaborations page to start creating new
+              Collaborations
             </Text>
           </View>
-          {/* <TouchableOpacity onPress={() => router.push("/collaborations")}>
-                          <Text style={styles.title}>New Collaborations</Text>
-                        </TouchableOpacity> */}
           <Button
-            onPress={() => router.push("/collaborations")}
+            onPress={() => router.push("/modal")}
             style={{
               backgroundColor: Colors(theme).platinum,
               padding: 5,
@@ -201,21 +174,22 @@ const Invitations = () => {
             New Collaborations
           </Button>
         </View>
-      ) : pendingInvitations.length !== 0 ? (
+      ) : (
         <FlatList
-          data={pendingInvitations}
+          data={filteredProposals}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <JobCard
-              id={item.id}
               name={item.name}
+              id={item.id}
               brandName={item.brandName}
-              onOpenBottomSheet={openBottomSheet}
               description={item.description}
               brandId={item.brandId}
               budget={{
                 min: Number(item.budget.min),
                 max: Number(item.budget.max),
               }}
+              onOpenBottomSheet={openBottomSheet}
               cardType="proposal"
               collaborationType={item.collaborationType}
               location={item.location}
@@ -224,54 +198,14 @@ const Invitations = () => {
               platform={item.platform}
               promotionType={item.promotionType}
               timeStamp={item.timeStamp}
-              applications={undefined}
-              invitations={undefined}
+              applications={item.applications}
+              invitations={item.invitations}
+              acceptedApplications={item.acceptedApplications}
+              status={item.status}
             />
           )}
           keyExtractor={(item, index) => index.toString()}
           style={{ height: "100%", width: "100%" }}
-          ListFooterComponent={
-            <View
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 20,
-              }}
-            >
-              {notPendingInvitations !== 0 && (
-                <View>
-                  <Text
-                    style={[
-                      styles.title,
-                      {
-                        marginBottom: 10,
-                        color: Colors(theme).text,
-                      },
-                    ]}
-                  >
-                    Looking for past invitations
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: Colors(theme).card,
-                      padding: 10,
-                      borderRadius: 5,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Link
-                      href={{
-                        pathname: "/(drawer)/(tabs)/explore-influencers",
-                      }}
-                    >
-                      <Text>View Past Invitations</Text>
-                    </Link>
-                  </View>
-                </View>
-              )}
-            </View>
-          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -280,48 +214,6 @@ const Invitations = () => {
             />
           }
         />
-      ) : (
-        <View>
-          {pendingInvitations.length === 0 && notPendingInvitations !== 0 && (
-            <View
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 20,
-              }}
-            >
-              <Text
-                style={[
-                  styles.title,
-                  {
-                    marginBottom: 10,
-                    color: Colors(theme).text,
-                  },
-                ]}
-              >
-                Looking for past invitations
-              </Text>
-              <View
-                style={{
-                  backgroundColor: Colors(theme).card,
-                  padding: 10,
-                  borderRadius: 5,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Link
-                  href={{
-                    pathname: "/(drawer)/(tabs)/explore-influencers",
-                  }}
-                  style={{}}
-                >
-                  <Text>View Past Invitations</Text>
-                </Link>
-              </View>
-            </View>
-          )}
-        </View>
       )}
       {isVisible && (
         <BottomSheetActions

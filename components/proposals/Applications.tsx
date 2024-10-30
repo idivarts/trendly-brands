@@ -20,12 +20,15 @@ import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
 import { Button } from "react-native-paper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import Toast from "react-native-toast-message";
 
 const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
   const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
   const [notPendingProposals, setNotPendingProposals] = useState<number>();
+  const { selectedBrand } = useBrandContext();
 
   const openBottomSheet = (id: string) => {
     setIsVisible(true);
@@ -51,17 +54,52 @@ const Applications = () => {
       const collaborationCol = collection(FirestoreDB, "collaborations");
       const q = query(
         collaborationCol,
-        where("brandId", "==", "67ryGx7V6ybMeCzQremS")
+        where("brandId", "==", selectedBrand?.id)
       );
       const querySnapshot = await getDocs(q);
-      const proposals: any[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = {
-          ...doc.data(),
-          id: doc.id,
-        };
-        proposals.push(data);
-      });
+
+      const proposals = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const data = {
+            ...doc.data(),
+            id: doc.id,
+          };
+
+          // Fetch applications
+          const applicationCol = collection(
+            FirestoreDB,
+            "collaborations",
+            data.id,
+            "applications"
+          );
+          const applicationSnapshot = await getDocs(applicationCol);
+          const applications = applicationSnapshot.docs.map((appDoc) =>
+            appDoc.data()
+          );
+          const acceptedApplications = applications.filter(
+            (application) => application.status === "accepted"
+          ).length;
+
+          // Fetch invitations
+          const invitationCol = collection(
+            FirestoreDB,
+            "collaborations",
+            data.id,
+            "invitations"
+          );
+          const invitationSnapshot = await getDocs(invitationCol);
+          const invitations = invitationSnapshot.docs.map((invDoc) =>
+            invDoc.data()
+          );
+
+          return {
+            ...data,
+            applications: applications.length,
+            invitations: invitations.length,
+            acceptedApplications,
+          };
+        })
+      );
 
       setProposals(proposals);
     } catch (error) {
@@ -74,6 +112,10 @@ const Applications = () => {
   useEffect(() => {
     fetchProposals();
   }, [user]);
+
+  const filteredProposals = useMemo(() => {
+    return proposals.filter((proposal) => proposal.status !== "inactive");
+  }, [proposals]);
 
   if (isLoading) {
     return (
@@ -91,7 +133,14 @@ const Applications = () => {
         width: "100%",
       }}
     >
-      {proposals.length === 0 && notPendingProposals === 0 ? (
+      <View
+        style={{
+          zIndex: 1000,
+        }}
+      >
+        <Toast />
+      </View>
+      {filteredProposals.length === 0 ? (
         <View
           style={{
             justifyContent: "center",
@@ -115,14 +164,14 @@ const Applications = () => {
               gap: 10,
             }}
           >
-            <Text style={styles.title}>No Applications found</Text>
+            <Text style={styles.title}>No Collaborations found</Text>
             <Text style={styles.subtitle}>
-              Go to the Collaborations page to start applying for new
-              collaborations
+              Go to the New Collaborations page to start creating new
+              Collaborations
             </Text>
           </View>
           <Button
-            onPress={() => router.push("/collaborations")}
+            onPress={() => router.push("/modal")}
             style={{
               backgroundColor: Colors(theme).platinum,
               padding: 5,
@@ -135,7 +184,8 @@ const Applications = () => {
         </View>
       ) : (
         <FlatList
-          data={proposals}
+          data={filteredProposals}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <JobCard
               name={item.name}
@@ -156,55 +206,17 @@ const Applications = () => {
               platform={item.platform}
               promotionType={item.promotionType}
               timeStamp={item.timeStamp}
-              applications={undefined}
-              invitations={undefined}
+              applications={item.applications}
+              invitations={item.invitations}
+              acceptedApplications={item.acceptedApplications}
+              status={item.status}
             />
           )}
+          contentContainerStyle={{
+            paddingBottom: 100,
+          }}
           keyExtractor={(item, index) => index.toString()}
           style={{ height: "100%", width: "100%" }}
-          ListFooterComponent={
-            <View
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 20,
-              }}
-            >
-              {notPendingProposals !== 0 && (
-                <View>
-                  <Text
-                    style={[
-                      styles.title,
-                      {
-                        marginBottom: 10,
-                      },
-                    ]}
-                  >
-                    Looking for past collaborations
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: Colors(theme).card,
-
-                      padding: 10,
-                      borderRadius: 5,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Link
-                      href={{
-                        pathname: "/(main)/(drawer)/(tabs)/explore-influencers",
-                      }}
-                      style={{}}
-                    >
-                      <Text>View Past collaborations</Text>
-                    </Link>
-                  </View>
-                </View>
-              )}
-            </View>
-          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -217,7 +229,7 @@ const Applications = () => {
       {isVisible && (
         <BottomSheetActions
           cardId={selectedCollabId || ""}
-          cardType="influencerCard"
+          cardType="activeCollab"
           isVisible={isVisible}
           onClose={closeBottomSheet}
           snapPointsRange={["20%", "50%"]}

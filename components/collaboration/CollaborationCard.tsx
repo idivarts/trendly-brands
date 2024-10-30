@@ -18,6 +18,7 @@ export interface CollaborationAdCardProps extends ICollaboration {
   id: string;
   brandHireRate?: string;
   cardType: "collaboration" | "proposal" | "invitation";
+  acceptedApplications?: number;
   onOpenBottomSheet: (id: string) => void;
 }
 
@@ -78,13 +79,13 @@ const JobCard = (props: CollaborationAdCardProps) => {
           show applied, invited and shortlisted chips
            */}
           <Chip style={styles.chip} mode="outlined">
-            Applied: 20
+            Applied: {props.applications}
           </Chip>
           <Chip style={styles.chip} mode="outlined">
-            Invited: 30
+            Invited: {props.invitations}
           </Chip>
           <Chip style={styles.chip} mode="outlined">
-            Shortlisted: 5
+            Shortlisted: {props.acceptedApplications}
           </Chip>
         </View>
 

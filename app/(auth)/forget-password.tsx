@@ -8,6 +8,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
+import Colors from "@/constants/Colors";
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState("");
@@ -53,7 +54,7 @@ const ForgotPasswordScreen = () => {
         onChangeText={setEmail}
         mode="outlined"
         style={styles.input}
-        theme={{ colors: { primary: "#000" } }}
+        theme={{ colors: { primary: Colors(theme).text } }}
       />
 
       {/* Reset Password Button */}

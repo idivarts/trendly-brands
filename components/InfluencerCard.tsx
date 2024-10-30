@@ -9,7 +9,7 @@ import {
   Dimensions,
   Modal,
 } from "react-native";
-import { Card, Avatar, IconButton } from "react-native-paper";
+import { Card, Avatar, IconButton, Chip } from "react-native-paper";
 import Carousel from "react-native-reanimated-carousel";
 import Video from "react-native-video";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
@@ -28,10 +28,33 @@ import Animated, {
 } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
+import { influencers } from "@/constants/Influencers";
 
 const { width } = Dimensions.get("window");
 
-const InfluencerCard = (props: any) => {
+interface InfluencerCardPropsType {
+  influencer: {
+    name: string;
+    handle: string;
+    profilePic: string;
+    media: {
+      type: string;
+      uri: string;
+    }[];
+    followers: number | string;
+    reach: number | string;
+    rating: number | string;
+    bio: string;
+    jobsCompleted: number | string;
+    successRate: number | string;
+  };
+  type: string;
+  alreadyInvited?: boolean;
+  ToggleModal: () => void;
+  ToggleMessageModal?: () => void;
+}
+
+const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [bioExpanded, setBioExpanded] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -155,6 +178,21 @@ const InfluencerCard = (props: any) => {
             <Text style={styles.name}>{influencer.name}</Text>
             <Text style={styles.handle}>{influencer.handle}</Text>
           </View>
+          {props.type === "invitation" &&
+            (props.alreadyInvited ? (
+              <Chip icon="check">Invited</Chip>
+            ) : (
+              <Chip
+                icon="plus"
+                onPress={() => {
+                  if (props.ToggleMessageModal) {
+                    props.ToggleMessageModal();
+                  }
+                }}
+              >
+                Invite
+              </Chip>
+            ))}
           <IconButton
             icon="dots-horizontal"
             onPress={() => {
@@ -166,7 +204,7 @@ const InfluencerCard = (props: any) => {
         <View style={styles.carouselContainer}>
           <Carousel
             loop
-            width={380}
+            width={Dimensions.get("window").width - 45}
             height={250}
             data={influencer.media}
             renderItem={renderMediaItem}

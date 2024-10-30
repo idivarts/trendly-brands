@@ -1,11 +1,6 @@
 import { Brand } from "@/types/Brand";
 import { FirestoreDB } from "@/utils/firestore";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import React, {
   useContext,
   createContext,
@@ -30,37 +25,35 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
-  const {
-    manager,
-  } = useAuthContext();
+  const { manager } = useAuthContext();
 
   useEffect(() => {
     if (!manager?.id) return;
 
-    const brandsCollection = collection(FirestoreDB, 'brands');
+    const brandsCollection = collection(FirestoreDB, "brands");
+    const brandsWithManagerId: Brand[] = [];
 
     const unsubscribe = onSnapshot(brandsCollection, (brandsSnapshot) => {
-      const brandsWithManagerId: Brand[] = [];
-
       brandsSnapshot.docs.forEach((brandDoc) => {
-        const membersCollection = collection(brandDoc.ref, 'members');
-        const membersQuery = query(membersCollection, where('managerId', '==', manager?.id));
+        const membersCollection = collection(brandDoc.ref, "members");
+        const membersQuery = query(
+          membersCollection,
+          where("managerId", "==", manager?.id)
+        );
 
         onSnapshot(membersQuery, (membersSnapshot) => {
           if (!membersSnapshot.empty) {
             brandsWithManagerId.push({
-              ...brandDoc.data() as Brand,
+              ...(brandDoc.data() as Brand),
               id: brandDoc.id,
             });
           }
 
           setBrands(brandsWithManagerId);
+
+          setSelectedBrand(brandsWithManagerId[0]);
         });
       });
-
-      if (brandsWithManagerId.length !== 0) {
-        setSelectedBrand(brandsWithManagerId[0]);
-      }
     });
 
     return () => unsubscribe();

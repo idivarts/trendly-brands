@@ -14,6 +14,17 @@ export const stylesFn = (theme: Theme) =>
       paddingHorizontal: 16,
       borderRadius: 10,
     },
+    chipContainer: {
+      flexDirection: "row",
+    },
+    chip: {
+      marginHorizontal: 5,
+      height: 30,
+    },
+    contentContainer: {
+      flex: 1,
+      paddingHorizontal: 10,
+    },
     profileImage: {
       height: 100,
       marginVertical: 5,
@@ -40,7 +51,8 @@ export const stylesFn = (theme: Theme) =>
     statsContainer: {
       flexDirection: "row",
       justifyContent: "center",
-      marginTop: 12,
+      flexWrap: "wrap",
+      gap: 8,
     },
     applyButton: {
       marginVertical: 16,
@@ -68,5 +80,38 @@ export const stylesFn = (theme: Theme) =>
     },
     paragraph: {
       color: Colors(theme).text,
+    },
+    messageModalContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    messageModalContent: {
+      width: "80%",
+      padding: 20,
+      backgroundColor: "white",
+      borderRadius: 10,
+      alignItems: "center",
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      marginBottom: 10,
+    },
+    messageInput: {
+      width: "100%",
+      height: 100,
+      borderColor: "#ccc",
+      borderWidth: 1,
+      borderRadius: 5,
+      padding: 10,
+      marginBottom: 15,
+      textAlignVertical: "top",
+    },
+    buttonContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      width: "100%",
     },
   });

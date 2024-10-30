@@ -55,6 +55,7 @@ const BrandPreferenceScreen = () => {
     try {
       const { brandId } = params;
       if (brandId) {
+        //@ts-ignore
         const brandRef = doc(FirestoreDB, "brands", brandId);
         setDoc(
           brandRef,
