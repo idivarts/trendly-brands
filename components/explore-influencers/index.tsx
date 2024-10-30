@@ -60,6 +60,7 @@ const ExploreInfluencers = () => {
         renderItem={({ item, index }) => (
           <InfluencerCard
             key={index}
+            type="explore"
             ToggleModal={ToggleModal}
             influencer={item}
           />

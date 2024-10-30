@@ -1,13 +1,32 @@
 import React from "react";
-import { Modal, Pressable, StyleSheet, View, Text } from "react-native";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  View,
+  Text,
+  Button,
+  TextInput,
+} from "react-native";
 import { List } from "react-native-paper";
 import { useRouter } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useAuthContext } from "@/contexts";
+import { FirestoreDB } from "@/utils/firestore";
+import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Toast from "react-native-toast-message";
+import { AuthApp } from "@/utils/auth";
 
 interface BottomSheetActionsProps {
-  cardType: "influencerType" | "promotionType" | "influencerCard";
-  cardId?: string;
+  cardType:
+    | "influencerType"
+    | "promotionType"
+    | "influencerCard"
+    | "applicationCard"
+    | "invitationCard"
+    | "activeCollab";
+  cardId?: any;
   isVisible: boolean;
   snapPointsRange: [string, string];
   onClose: () => void;
@@ -22,6 +41,9 @@ const BottomSheetActions = ({
 }: BottomSheetActionsProps) => {
   const router = useRouter();
   const sheetRef = React.useRef<BottomSheet>(null);
+  const [isMessageModalVisible, setIsMessageModalVisible] =
+    React.useState(false);
+  const [message, setMessage] = React.useState("");
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -34,6 +56,66 @@ const BottomSheetActions = ({
       sheetRef.current.close();
     }
     onClose(); // Close the modal after the bottom sheet closes
+  };
+
+  const handleAcceptApplication = async () => {
+    try {
+      const applicationRef = doc(
+        FirestoreDB,
+        "collaborations",
+        cardId.collaborationID,
+        "applications",
+        cardId.applicationID
+      );
+      await updateDoc(applicationRef, {
+        status: "accepted",
+      }).then(() => {
+        handleClose();
+        Toaster.success("Application accepted successfully");
+      });
+    } catch (error) {
+      console.log(error);
+      handleClose();
+      Toaster.error("Failed to accept application");
+    }
+  };
+
+  const handleRejectApplication = async () => {
+    try {
+      const applicationRef = doc(
+        FirestoreDB,
+        "collaborations",
+        cardId.collaborationID,
+        "applications",
+        cardId.applicationID
+      );
+      await updateDoc(applicationRef, {
+        status: "rejected",
+      }).then(() => {
+        handleClose();
+        Toaster.success("Application rejected successfully");
+      });
+    } catch (error) {
+      console.log(error);
+      handleClose();
+      Toaster.error("Failed to reject application");
+    }
+  };
+
+  const delistCollaboration = async () => {
+    try {
+      const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
+      await updateDoc(collaborationRef, {
+        status: "inactive",
+      }).then(() => {
+        handleClose();
+        Toaster.success("Collaboration delisted successfully");
+      });
+    } catch (error) {
+      console.log(error);
+      handleClose();
+      Toaster.error("Failed to delist collaboration");
+    }
   };
 
   const renderContent = () => {
@@ -80,6 +162,71 @@ const BottomSheetActions = ({
               title="Block Influencer"
               onPress={() => {
                 handleClose();
+              }}
+            />
+          </List.Section>
+        );
+
+      case "applicationCard":
+        return (
+          <List.Section>
+            <List.Item
+              title="Send Message"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+            <List.Item
+              title="Accept Application"
+              onPress={() => {
+                handleAcceptApplication();
+              }}
+            />
+            <List.Item
+              title="Reject Application"
+              onPress={() => {
+                handleRejectApplication();
+              }}
+            />
+          </List.Section>
+        );
+
+      case "invitationCard":
+        return (
+          <List.Section>
+            <List.Item
+              title="View Profile"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+            <List.Item
+              title="Send Message"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+            <List.Item
+              title="Invite to Collaboration"
+              onPress={() => {
+                setIsMessageModalVisible(true);
+              }}
+            />
+          </List.Section>
+        );
+      case "activeCollab":
+        return (
+          <List.Section>
+            <List.Item
+              title="View Collaboration"
+              onPress={() => {
+                handleClose();
+              }}
+            />
+            <List.Item
+              title="Delist Collaboration"
+              onPress={() => {
+                delistCollaboration();
               }}
             />
           </List.Section>

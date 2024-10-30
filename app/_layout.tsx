@@ -22,6 +22,7 @@ import {
 } from "@/contexts";
 import { Provider } from "react-native-paper";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
+import { BrandContextProvider } from "@/contexts/brand-context.provider";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -64,9 +65,11 @@ export default function RootLayout() {
           <FirebaseStorageContextProvider>
             <NotificationContextProvider>
               <CloudMessagingContextProvider>
-                <AutocompleteDropdownContextProvider>
-                  <RootLayoutStack />
-                </AutocompleteDropdownContextProvider>
+                <BrandContextProvider>
+                  <AutocompleteDropdownContextProvider>
+                    <RootLayoutStack />
+                  </AutocompleteDropdownContextProvider>
+                </BrandContextProvider>
               </CloudMessagingContextProvider>
             </NotificationContextProvider>
           </FirebaseStorageContextProvider>

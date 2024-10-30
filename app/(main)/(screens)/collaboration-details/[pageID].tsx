@@ -4,8 +4,10 @@ import { doc, getDoc } from "firebase/firestore";
 import { useLocalSearchParams } from "expo-router";
 import { FirestoreDB } from "@/utils/firestore";
 import AppLayout from "@/layouts/app-layout";
-import { ActivityIndicator } from "react-native-paper";
+import { ActivityIndicator, Chip } from "react-native-paper";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { View } from "@/components/theme/Themed";
+import { ScrollView, StyleSheet } from "react-native";
 
 interface Collaboration extends ICollaboration {
   brandName: string;
@@ -19,7 +21,7 @@ const CollaborationDetailsScreen = () => {
     undefined
   ); // Explicit type
   const [loading, setLoading] = useState(true);
-
+  const [activeTab, setActiveTab] = useState("Overview");
   const fetchCollaboration = async () => {
     if (!pageID) return;
     try {
@@ -31,6 +33,8 @@ const CollaborationDetailsScreen = () => {
       const brandRef = doc(FirestoreDB, "brands", data.brandId);
       const brandSnapshot = await getDoc(brandRef);
       const brandData = brandSnapshot.data();
+
+      console.log("This is ", data);
 
       setCollaboration({
         ...data,
@@ -59,8 +63,17 @@ const CollaborationDetailsScreen = () => {
   if (!collaboration) return null;
 
   return (
-    <CollaborationPage collaborationDetail={collaboration} pageID={pageID} />
+    <AppLayout>
+      {activeTab === "Overview" && (
+        <CollaborationPage
+          collaborationDetail={collaboration}
+          pageID={pageID}
+        />
+      )}
+    </AppLayout>
   );
 };
 
 export default CollaborationDetailsScreen;
+
+const styles = StyleSheet.create({});

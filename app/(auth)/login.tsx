@@ -8,6 +8,7 @@ import { useTheme } from "@react-navigation/native";
 import fnStyles from "@/styles/login.styles";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
+import Colors from "@/constants/Colors";
 
 const LoginScreen = () => {
   const [email, setEmail] = React.useState("");
@@ -43,7 +44,7 @@ const LoginScreen = () => {
         onChangeText={setEmail}
         mode="outlined"
         style={styles.input}
-        theme={{ colors: { primary: "#000" } }}
+        theme={{ colors: { primary: Colors(theme).text } }}
       />
 
       {/* Password Input Field */}
@@ -54,7 +55,7 @@ const LoginScreen = () => {
         secureTextEntry
         mode="outlined"
         style={styles.input}
-        theme={{ colors: { primary: "#000" } }}
+        theme={{ colors: { primary: Colors(theme).text } }}
       />
 
       {/* Login Button */}

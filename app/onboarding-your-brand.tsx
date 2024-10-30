@@ -138,7 +138,7 @@ const OnboardingScreen = () => {
           onChangeText={setBrandName}
           mode="outlined"
           style={styles.input}
-          theme={{ colors: { text: "#000", placeholder: "#000" } }}
+          theme={{ colors: { primary: Colors(theme).text } }}
         />
 
         <View
@@ -211,7 +211,7 @@ const OnboardingScreen = () => {
           onChangeText={setWebsite}
           mode="outlined"
           style={styles.input}
-          theme={{ colors: { text: "#000", placeholder: "#000" } }}
+          theme={{ colors: { primary: Colors(theme).text } }}
         />
 
         <Button
