@@ -34,8 +34,6 @@ const CollaborationDetailsScreen = () => {
       const brandSnapshot = await getDoc(brandRef);
       const brandData = brandSnapshot.data();
 
-      console.log("This is ", data);
-
       setCollaboration({
         ...data,
         brandName: brandData?.name || "Unknown Brand",
