@@ -33,9 +33,9 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
+    flexWrap: "wrap",
+    rowGap: 10,
+    columnGap: 10,
     marginTop: 10,
-  },
-  markAsReadButton: {
-    marginLeft: 10,
   },
 });

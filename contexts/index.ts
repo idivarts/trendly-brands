@@ -13,17 +13,23 @@ import {
 } from "./notification-context.provider";
 import { ChatProvider } from "./chat.provider";
 import { ChatContextProvider, useChatContext } from "./chat-context.provider";
+import {
+  CollaborationContextProvider,
+  useCollaborationContext,
+} from "./collaboration-context.provider";
 
 export {
   AuthContextProvider,
   ChatContextProvider,
   ChatProvider,
   CloudMessagingContextProvider,
+  CollaborationContextProvider,
   FirebaseStorageContextProvider,
   NotificationContextProvider,
   useAuthContext,
   useChatContext,
   useCloudMessagingContext,
+  useCollaborationContext,
   useFirebaseStorageContext,
   useNotificationContext,
 };

@@ -5,7 +5,15 @@ import { Appbar } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
 import Notifications from "@/components/notifications";
-import { useAuthContext, useNotificationContext } from "@/contexts";
+import {
+  useAuthContext,
+  useChatContext as useChat,
+  useCollaborationContext,
+  useNotificationContext
+} from "@/contexts";
+import { useChatContext } from "stream-chat-expo";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+
 
 const NotificationsScreen = () => {
   const theme = useTheme();
@@ -19,6 +27,15 @@ const NotificationsScreen = () => {
     managerNotifications,
     updateManagerNotification,
   } = useNotificationContext();
+  const {
+    createGroupWithMembers,
+  } = useChat();
+  const {
+    client,
+  } = useChatContext();
+  const {
+    getCollaborationById,
+  } = useCollaborationContext();
 
   const onMarkAsRead = (notificationId: string) => {
     updateManagerNotification(
@@ -28,6 +45,19 @@ const NotificationsScreen = () => {
         isRead: true,
       },
     );
+  };
+
+  const onCreateGroup = async (
+    collaborationId: string,
+    userId: string,
+  ) => {
+    const collaborationData = await getCollaborationById(collaborationId);
+    createGroupWithMembers(client, collaborationData.name, [
+      client.user?.id as string,
+      userId,
+    ]).then(() => {
+      Toaster.success("Group created successfully");
+    });
   };
 
   return (
@@ -63,6 +93,7 @@ const NotificationsScreen = () => {
       <Notifications
         notifications={managerNotifications}
         onMarkAsRead={onMarkAsRead}
+        onCreateGroup={onCreateGroup}
       />
     </AppLayout>
   );

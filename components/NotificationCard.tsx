@@ -7,10 +7,17 @@ import { useRouter } from "expo-router";
 
 interface NotificationCardProps {
   avatar: string;
-  collaborationId: string;
+  data: {
+    collaborationId?: string;
+    groupId?: string;
+    userId?: string;
+  };
   description: string;
-  groupId: string;
   isRead: boolean;
+  onCreateGroup: (
+    collaborationId: string,
+    userId: string,
+  ) => void;
   onMarkAsRead: () => void;
   time: number;
   title: string;
@@ -18,10 +25,10 @@ interface NotificationCardProps {
 
 export const NotificationCard: React.FC<NotificationCardProps> = ({
   avatar,
-  collaborationId,
+  data,
   description,
-  groupId,
   isRead,
+  onCreateGroup,
   onMarkAsRead,
   time,
   title,
@@ -32,10 +39,10 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
 
   let action: string | undefined;
 
-  if (collaborationId) {
-    action = `/collaboration-details/${collaborationId}`;
-  } else if (groupId) {
-    action = `/channel/${groupId}`; // TODO: Save the groupId or cid in the database
+  if (data.collaborationId) {
+    action = `/collaboration-details/${data.collaborationId}`;
+  } else if (data.groupId) {
+    action = `/channel/${data.groupId}`; // TODO: Save the groupId or cid in the database
   }
 
   return (
@@ -74,6 +81,22 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
         </View>
       </View>
       <View style={styles.actions}>
+        {
+          data.userId && !isRead && (
+            <Button
+              mode="contained"
+              onPress={() => {
+                onCreateGroup(
+                  data.collaborationId as string,
+                  data.userId as string
+                );
+                onMarkAsRead();
+              }}
+            >
+              Create Group
+            </Button>
+          )
+        }
         {action && (
           <Button
             mode="contained"
@@ -89,7 +112,6 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
           <Button
             mode="outlined"
             onPress={onMarkAsRead}
-            style={styles.markAsReadButton}
           >
             Mark as Read
           </Button>
