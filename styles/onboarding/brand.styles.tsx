@@ -9,11 +9,18 @@ const fnStyles = (theme: Theme) =>
       padding: 20,
       backgroundColor: Colors(theme).background,
     },
+    headlineContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 40,
+    },
+    backButton: {
+      marginLeft: -10,
+    },
     headline: {
       fontSize: 30,
       fontWeight: "bold",
-      marginBottom: 40,
-
       color: Colors(theme).text,
     },
     autocompleteContainer: {

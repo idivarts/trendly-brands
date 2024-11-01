@@ -2,15 +2,14 @@ import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   Image,
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
-import { TextInput, Button } from "react-native-paper";
+import { TextInput, Button, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import AutocompleteInput from "react-native-autocomplete-input";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import fnStyles from "@/styles/onboarding/brand.styles";
@@ -36,6 +35,9 @@ const OnboardingScreen = () => {
   const [activeDropdown, setActiveDropdown] = useState<any>(null);
   const theme = useTheme();
   const styles = fnStyles(theme);
+  const {
+    firstBrand,
+  } = useLocalSearchParams();
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -121,7 +123,23 @@ const OnboardingScreen = () => {
         >
           <Toast />
         </View>
-        <Text style={styles.headline}>Onboarding</Text>
+        <View
+          style={styles.headlineContainer}
+        >
+          {
+            firstBrand !== "true" && (
+              <IconButton
+                style={styles.backButton}
+                icon="arrow-left"
+                onPress={() => router.back()}
+                size={24}
+              />
+            )
+          }
+          <Text style={styles.headline}>
+            {firstBrand === "true" ? "Onboarding" : "Create New Brand"}
+          </Text>
+        </View>
         <Button
           mode="outlined"
           onPress={pickImage}
