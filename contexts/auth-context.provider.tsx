@@ -152,14 +152,13 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const checkVerification = async () => {
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
+            setSession(userCredential.user.uid);
             router.replace("/onboarding-your-brand");
           } else {
             setTimeout(checkVerification, 2000);
           }
         };
         checkVerification();
-
-        setSession(userCredential.user.uid);
       })
       .catch((error) => {
         let errorMessage = "An unknown error occurred. Please try again.";
