@@ -133,7 +133,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       Toaster.error("Please fill in all fields.");
       return;
     }
-    const user = await createUserWithEmailAndPassword(AuthApp, email, password)
+    await createUserWithEmailAndPassword(AuthApp, email, password)
       .then(async (userCredential) => {
         const colRef = collection(FirestoreDB, "managers");
         const docRef = doc(colRef, userCredential.user.uid);
@@ -158,6 +158,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           }
         };
         checkVerification();
+
+        setSession(userCredential.user.uid);
       })
       .catch((error) => {
         let errorMessage = "An unknown error occurred. Please try again.";
@@ -194,6 +196,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     signOut(AuthApp)
       .then(() => {
         setSession("");
+        setManager(null);
 
         analyticsLogEvent("signed_out", {
           id: manager?.id,
