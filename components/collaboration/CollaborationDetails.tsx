@@ -209,7 +209,13 @@ const CollaborationPage = (props: any) => {
       {
         // Application Tab
         activeTab === "Application" && (
-          <CollaborationApplicationPage pageID={props.pageID} />
+          <CollaborationApplicationPage
+            pageID={props.pageID}
+            collaboration={{
+              id: props.pageID,
+              name: props.collaborationDetail.name,
+            }}
+          />
         )
       }
       {activeTab === "Invitation" && (

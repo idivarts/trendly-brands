@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Image, StyleSheet, ScrollView, FlatList } from "react-native";
+import { View, Image, FlatList } from "react-native";
 import {
   Text,
-  Chip,
-  Appbar,
-  Card,
-  Paragraph,
-  IconButton,
-  Button,
   ActivityIndicator,
 } from "react-native-paper";
 
@@ -111,11 +105,12 @@ const CollaborationApplicationPage = (props: any) => {
               setSelectedApplication({
                 applicationID: item.applicationID,
                 collaborationID: props.pageID,
+                influencerID: item.id,
               });
             }}
           />
         )}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.id + index}
         style={{
           padding: 16,
           paddingBottom: 100,
@@ -124,6 +119,9 @@ const CollaborationApplicationPage = (props: any) => {
       {isVisible && (
         <BottomSheetActions
           cardType="applicationCard"
+          data={{
+            collaboration: props.collaboration
+          }}
           isVisible={isVisible}
           onClose={() => setIsVisible(false)}
           snapPointsRange={["30%", "50%"]}

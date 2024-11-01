@@ -133,7 +133,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       Toaster.error("Please fill in all fields.");
       return;
     }
-    const user = await createUserWithEmailAndPassword(AuthApp, email, password)
+    await createUserWithEmailAndPassword(AuthApp, email, password)
       .then(async (userCredential) => {
         const colRef = collection(FirestoreDB, "managers");
         const docRef = doc(colRef, userCredential.user.uid);
@@ -152,7 +152,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const checkVerification = async () => {
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
-            router.replace("/onboarding-your-brand");
+            setSession(userCredential.user.uid);
+            router.replace("/onboarding-your-brand?firstBrand=true");
           } else {
             setTimeout(checkVerification, 2000);
           }
@@ -194,6 +195,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     signOut(AuthApp)
       .then(() => {
         setSession("");
+        setManager(null);
 
         analyticsLogEvent("signed_out", {
           id: manager?.id,

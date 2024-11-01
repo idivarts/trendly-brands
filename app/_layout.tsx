@@ -16,6 +16,7 @@ import { useColorScheme } from "@/components/theme/useColorScheme";
 import {
   AuthContextProvider,
   CloudMessagingContextProvider,
+  CollaborationContextProvider,
   FirebaseStorageContextProvider,
   NotificationContextProvider,
   useAuthContext,
@@ -66,9 +67,11 @@ export default function RootLayout() {
             <NotificationContextProvider>
               <CloudMessagingContextProvider>
                 <BrandContextProvider>
-                  <AutocompleteDropdownContextProvider>
-                    <RootLayoutStack />
-                  </AutocompleteDropdownContextProvider>
+                  <CollaborationContextProvider>
+                    <AutocompleteDropdownContextProvider>
+                      <RootLayoutStack />
+                    </AutocompleteDropdownContextProvider>
+                  </CollaborationContextProvider>
                 </BrandContextProvider>
               </CloudMessagingContextProvider>
             </NotificationContextProvider>

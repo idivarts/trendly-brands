@@ -5,27 +5,24 @@ import {
   StyleSheet,
   View,
   Text,
-  Button,
-  TextInput,
 } from "react-native";
 import { List } from "react-native-paper";
-import { useRouter } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { useAuthContext } from "@/contexts";
+import { useChatContext as useChat, useNotificationContext } from "@/contexts";
 import { FirestoreDB } from "@/utils/firestore";
-import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Toast from "react-native-toast-message";
-import { AuthApp } from "@/utils/auth";
+import { useChatContext } from "stream-chat-expo";
 
 interface BottomSheetActionsProps {
   cardType:
-    | "influencerType"
-    | "promotionType"
-    | "influencerCard"
-    | "applicationCard"
-    | "invitationCard"
-    | "activeCollab";
+  | "influencerType"
+  | "promotionType"
+  | "influencerCard"
+  | "applicationCard"
+  | "invitationCard"
+  | "activeCollab";
+  data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
   snapPointsRange: [string, string];
@@ -35,15 +32,22 @@ interface BottomSheetActionsProps {
 const BottomSheetActions = ({
   cardType,
   cardId,
+  data,
   isVisible,
   snapPointsRange,
   onClose,
 }: BottomSheetActionsProps) => {
-  const router = useRouter();
   const sheetRef = React.useRef<BottomSheet>(null);
   const [isMessageModalVisible, setIsMessageModalVisible] =
     React.useState(false);
-  const [message, setMessage] = React.useState("");
+
+  const { client } = useChatContext();
+  const {
+    createGroupWithMembers,
+  } = useChat();
+  const {
+    createNotification,
+  } = useNotificationContext();
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -70,7 +74,28 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
+        createGroupWithMembers(client, data.collaboration.name, [
+          client.user?.id as string,
+          cardId.influencerID,
+        ]).then(() => {
+          createNotification(
+            cardId.influencerID,
+            {
+              data: {
+                collaborationId: data.collaboration.id,
+              },
+              title: "Application Accepted",
+              description: `Your application for ${data.collaboration.name} has been accepted`,
+              timeStamp: Date.now(),
+              isRead: false,
+              type: "application-accepted",
+            },
+            "users"
+          );
+        });
+
         handleClose();
+
         Toaster.success("Application accepted successfully");
       });
     } catch (error) {
