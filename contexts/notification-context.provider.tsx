@@ -6,12 +6,18 @@ import {
   useEffect,
 } from "react";
 
-import { collection, query, doc, orderBy, updateDoc, onSnapshot } from "firebase/firestore";
+import { collection, query, doc, orderBy, updateDoc, onSnapshot, addDoc } from "firebase/firestore";
 import { Notification } from "@/types/Notification";
 import { FirestoreDB } from "@/utils/firestore";
 import { useAuthContext } from "./auth-context.provider";
+import { INotifications } from "@/shared-libs/firestore/trendly-pro/models/notifications";
 
 interface NotificationContextProps {
+  createNotification: (
+    userId: string,
+    notification: INotifications,
+    userType?: string,
+  ) => Promise<void>;
   managerNotifications: Notification[];
   unreadNotifications: number;
   updateManagerNotification: (
@@ -73,6 +79,24 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
     };
   }, [manager]);
 
+  const createNotification = async (
+    userId: string,
+    notification: INotifications,
+    userType: string = "managers",
+  ) => {
+    const userRef = doc(FirestoreDB, userType, userId);
+    const notificationsRef = collection(userRef, "notifications");
+
+    await addDoc(notificationsRef, {
+      data: notification.data,
+      description: notification.description,
+      isRead: notification.isRead,
+      timeStamp: notification.timeStamp,
+      title: notification.title,
+      type: notification.type,
+    });
+  }
+
   const updateManagerNotification = async (
     managerId: string,
     notificationId: string,
@@ -87,6 +111,7 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <NotificationContext.Provider
       value={{
+        createNotification,
         managerNotifications,
         unreadNotifications,
         updateManagerNotification,

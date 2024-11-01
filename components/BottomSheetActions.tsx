@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { List } from "react-native-paper";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { useChatContext as useChat } from "@/contexts";
+import { useChatContext as useChat, useNotificationContext } from "@/contexts";
 import { FirestoreDB } from "@/utils/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -45,6 +45,9 @@ const BottomSheetActions = ({
   const {
     createGroupWithMembers,
   } = useChat();
+  const {
+    createNotification,
+  } = useNotificationContext();
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -74,11 +77,25 @@ const BottomSheetActions = ({
         createGroupWithMembers(client, data.collaboration.name, [
           client.user?.id as string,
           cardId.influencerID,
-        ]);
-
-        // TODO: Send notification to influencer
+        ]).then(() => {
+          createNotification(
+            cardId.influencerID,
+            {
+              data: {
+                collaborationId: data.collaboration.id,
+              },
+              title: "Application Accepted",
+              description: `Your application for ${data.collaboration.name} has been accepted`,
+              timeStamp: Date.now(),
+              isRead: false,
+              type: "application-accepted",
+            },
+            "users"
+          );
+        });
 
         handleClose();
+
         Toaster.success("Application accepted successfully");
       });
     } catch (error) {

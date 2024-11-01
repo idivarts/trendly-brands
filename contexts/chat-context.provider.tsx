@@ -38,8 +38,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 
     await channel.create();
     await channel.watch();
-
-    Toaster.success('Group created successfully');
   }
 
   return (

@@ -212,6 +212,7 @@ const CollaborationPage = (props: any) => {
           <CollaborationApplicationPage
             pageID={props.pageID}
             collaboration={{
+              id: props.pageID,
               name: props.collaborationDetail.name,
             }}
           />
