@@ -6,7 +6,7 @@ import {
   useEffect,
 } from "react";
 
-import { collection, query, doc, orderBy, updateDoc, onSnapshot, addDoc } from "firebase/firestore";
+import { collection, query, doc, orderBy, updateDoc, onSnapshot, addDoc, where, getDocs, writeBatch } from "firebase/firestore";
 import { Notification } from "@/types/Notification";
 import { FirestoreDB } from "@/utils/firestore";
 import { useAuthContext } from "./auth-context.provider";
@@ -19,6 +19,7 @@ interface NotificationContextProps {
     userType?: string,
   ) => Promise<void>;
   managerNotifications: Notification[];
+  markAllNotificationsAsRead: (managerId: string) => Promise<void>;
   unreadNotifications: number;
   updateManagerNotification: (
     managerId: string,
@@ -108,11 +109,40 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
     await updateDoc(notificationRef, data);
   }
 
+  const markAllNotificationsAsRead = async (
+    managerId: string,
+  ) => {
+    try {
+      const managerRef = doc(FirestoreDB, "managers", managerId);
+      const notificationsRef = collection(managerRef, "notifications");
+
+      const unreadNotificationsQuery = query(notificationsRef, where("isRead", "==", false));
+
+      const unreadSnapshot = await getDocs(unreadNotificationsQuery);
+
+      if (unreadSnapshot.empty) {
+        return;
+      }
+
+      const batch = writeBatch(FirestoreDB);
+
+      unreadSnapshot.forEach((notificationDoc) => {
+        const notificationRef = notificationDoc.ref;
+        batch.update(notificationRef, { isRead: true });
+      });
+
+      await batch.commit();
+    } catch (error) {
+      console.error("Error updating notifications: ", error);
+    }
+  }
+
   return (
     <NotificationContext.Provider
       value={{
         createNotification,
         managerNotifications,
+        markAllNotificationsAsRead,
         unreadNotifications,
         updateManagerNotification,
       }}
