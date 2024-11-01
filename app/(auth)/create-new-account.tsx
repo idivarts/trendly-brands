@@ -1,6 +1,15 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { View, StyleSheet, Image, Text } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Image,
+  Text,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+} from "react-native";
 import { TextInput, Button } from "react-native-paper";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
@@ -18,83 +27,92 @@ const SignUpScreen = () => {
   const styles = fnStyles(theme);
   const { signUp } = useAuthContext();
 
+  const windowHeight = Dimensions.get("window").height;
+
   return (
-    <View style={styles.container}>
-      <Toast />
-      {/* Logo Section */}
-      <Image
-        source={require("../../assets/images/logo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-
-      {/* Title */}
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subTitle}>Welcome to Trendly Brands</Text>
-
-      {/* Name Field */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          label="Name"
-          value={name}
-          onChangeText={setName}
-          mode="outlined"
-          style={styles.input}
-          theme={{ colors: { primary: Colors(theme).text } }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{
+          minHeight: windowHeight,
+          paddingBottom: 30,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Toast />
+        {/* Logo Section */}
+        <Image
+          source={require("../../assets/images/logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
         />
-
-        {/* Email Field */}
-        <TextInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          mode="outlined"
-          style={styles.input}
-          theme={{ colors: { primary: Colors(theme).text } }}
-        />
-
-        {/* Password Field */}
-        <TextInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          mode="outlined"
-          style={styles.input}
-          theme={{ colors: { primary: Colors(theme).text } }}
-        />
-        <TextInput
-          label="Confirm Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          mode="outlined"
-          style={styles.input}
-          theme={{ colors: { primary: Colors(theme).text } }}
-        />
-
-        {/* Sign Up Button */}
-        <Button
-          mode="contained"
-          onPress={() => signUp(name, email, password)}
-          style={styles.button}
-          labelStyle={styles.buttonText}
-        >
-          SIGN UP
-        </Button>
-      </View>
-
-      {/* Login Prompt */}
-      <Text style={styles.loginText}>
-        Already have an account?{" "}
-        <Text
-          style={styles.loginLink}
-          onPress={() => router.navigate("/(auth)/login")}
-        >
-          Login
+        {/* Title */}
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subTitle}>Welcome to Trendly Brands</Text>
+        {/* Name Field */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            mode="outlined"
+            style={styles.input}
+            theme={{ colors: { primary: Colors(theme).text } }}
+          />
+          {/* Email Field */}
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            mode="outlined"
+            style={styles.input}
+            theme={{ colors: { primary: Colors(theme).text } }}
+          />
+          {/* Password Field */}
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            mode="outlined"
+            style={styles.input}
+            theme={{ colors: { primary: Colors(theme).text } }}
+          />
+          <TextInput
+            label="Confirm Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            mode="outlined"
+            style={styles.input}
+            theme={{ colors: { primary: Colors(theme).text } }}
+          />
+          {/* Sign Up Button */}
+          <Button
+            mode="contained"
+            onPress={() => signUp(name, email, password)}
+            style={styles.button}
+            labelStyle={styles.buttonText}
+          >
+            SIGN UP
+          </Button>
+        </View>
+        {/* Login Prompt */}
+        <Text style={styles.loginText}>
+          Already have an account?{" "}
+          <Text
+            style={styles.loginLink}
+            onPress={() => router.navigate("/(auth)/login")}
+          >
+            Login
+          </Text>
         </Text>
-      </Text>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

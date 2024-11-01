@@ -6,8 +6,6 @@ const fnStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      justifyContent: "center",
-      padding: 20,
       backgroundColor: Colors(theme).background,
     },
     inputContainer: {
@@ -18,6 +16,7 @@ const fnStyles = (theme: Theme) =>
       alignSelf: "center",
       width: 100,
       height: 100,
+      marginTop: 20,
     },
     title: {
       textAlign: "center",
