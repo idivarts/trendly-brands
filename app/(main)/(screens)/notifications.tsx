@@ -7,13 +7,11 @@ import Colors from "@/constants/Colors";
 import Notifications from "@/components/notifications";
 import {
   useAuthContext,
-  useChatContext as useChat,
   useCollaborationContext,
   useNotificationContext
 } from "@/contexts";
-import { useChatContext } from "stream-chat-expo";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-
+import { useChatHook } from "@/hooks/use-chat";
 
 const NotificationsScreen = () => {
   const theme = useTheme();
@@ -29,10 +27,8 @@ const NotificationsScreen = () => {
   } = useNotificationContext();
   const {
     createGroupWithMembers,
-  } = useChat();
-  const {
     client,
-  } = useChatContext();
+  } = useChatHook();
   const {
     getCollaborationById,
   } = useCollaborationContext();
@@ -52,7 +48,9 @@ const NotificationsScreen = () => {
     userId: string,
   ) => {
     const collaborationData = await getCollaborationById(collaborationId);
+    // @ts-ignore
     createGroupWithMembers(client, collaborationData.name, [
+      // @ts-ignore
       client.user?.id as string,
       userId,
     ]).then(() => {

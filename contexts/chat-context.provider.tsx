@@ -1,52 +1,35 @@
+
+import { Platform } from "react-native";
 import {
-  useContext,
-  createContext,
-  type PropsWithChildren,
-} from "react";
-import { DefaultGenerics, StreamChat } from "stream-chat";
+  useChatContext as useChatContextWeb,
+  ChatContextProvider as ChatContextProviderWeb
+} from "./chat-context.provider.web";
+import {
+  useChatContext as useChatContextNative,
+  ChatContextProvider as ChatContextProviderNative
+} from "./chat-context.provider.native";
+import { PropsWithChildren } from "react";
 
-import Toaster from "@/shared-uis/components/toaster/Toaster";
+export const useChatContext = () => {
+  if (Platform.OS === 'web') {
+    return useChatContextWeb();
+  }
 
-interface ChatContextProps {
-  createGroupWithMembers: (
-    client: StreamChat<DefaultGenerics>,
-    groupName: string,
-    members: string[],
-  ) => Promise<void>;
-}
-
-const ChatContext = createContext<ChatContextProps>(null!);
-
-export const useChatContext = () => useContext(ChatContext);
+  return useChatContextNative();
+};
 
 export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const createGroupWithMembers = async (
-    client: StreamChat<DefaultGenerics>,
-    groupName: string,
-    members: string[],
-  ) => {
-    const channel = client.channel(
-      'messaging',
-      groupName.toLowerCase().replace(/\s+/g, '-'),
-      {
-        name: groupName,
-        members,
-      },
-    );
-
-    await channel.create();
-    await channel.watch();
+  if (Platform.OS === 'web') {
+    return (
+      <ChatContextProviderWeb>{children}</ChatContextProviderWeb>
+    )
   }
 
   return (
-    <ChatContext.Provider
-      value={{
-        createGroupWithMembers,
-      }}
-    >
-      {children}
-    </ChatContext.Provider>
+    <ChatContextProviderNative>{children}</ChatContextProviderNative>
   );
 };
+
+export default ChatContextProvider;

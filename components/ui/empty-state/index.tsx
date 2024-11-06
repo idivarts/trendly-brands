@@ -33,7 +33,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       style={styles.container}
     >
       <Image
-        source={image ?? require("../../../assets/images/placeholder-image.jpg")}
+        source={image ?? require("@/assets/images/placeholder-image.jpg")}
         width={50}
         height={50}
         style={styles.image}
