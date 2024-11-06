@@ -107,7 +107,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
     // Reset swiping state after a short delay
     setTimeout(() => setIsSwiping(false), 150);
     Object.values(videoRefs.current).forEach((videoRef) => {
-      if (videoRef) {
+      if (videoRef && videoRef.seek) {
         videoRef.seek(0);
         setIsPlaying(false);
       }
