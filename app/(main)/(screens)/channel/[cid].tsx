@@ -1,13 +1,13 @@
-import ChannelListNative from "@/components/channel/channel-list";
-import ChannelListWeb from "@/components/channel/channel-list.web";
+import ChannelNative from "@/components/channel/channel";
+import ChannelWeb from "@/components/channel/channel.web";
 import { Platform } from "react-native";
 
 const ChannelScreen = () => {
   if (Platform.OS === 'web') {
-    return <ChannelListWeb />
+    return <ChannelWeb />
   }
   return (
-    <ChannelListNative />
+    <ChannelNative />
   );
 }
 
