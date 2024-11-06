@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Card, Avatar, IconButton, Chip } from "react-native-paper";
 import Carousel from "react-native-reanimated-carousel";
-import Video from "react-native-video";
+import { ResizeMode, Video } from "expo-av";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
 import {
@@ -156,11 +156,11 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             }}
             source={require("../assets/videos/ForBiggerJoyrides.mp4")}
             style={styles.media}
-            resizeMode="cover"
-            repeat
-            muted={muted}
-            paused={!isPlaying || currentIndex !== index}
-            controls
+            resizeMode={ResizeMode.COVER}
+            isLooping
+            isMuted={muted}
+            shouldPlay={isPlaying}
+            useNativeControls
             onError={(error) => console.log("Video Error:", error)}
           />
         </TouchableOpacity>
