@@ -48,7 +48,4 @@ export const stylesFn = (theme: Theme) =>
       color: Colors(theme).text,
       marginBottom: 5,
     },
-    applyButton: {
-      marginTop: 20,
-    },
   });

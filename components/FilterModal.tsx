@@ -80,143 +80,152 @@ const CollaborationFilter = ({
   const snapPoints = useMemo(() => ["25%", "50%", "75%", "100%"], []);
 
   return (
-    <BottomSheet
-      ref={sheetRef}
-      index={isVisible ? 1 : -1} // Controls visibility of BottomSheet
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      backdropComponent={(backdropProps) => (
-        <BottomSheetBackdrop
-          {...backdropProps}
-          disappearsOnIndex={-1}
-          appearsOnIndex={1}
-          pressBehavior="close"
-          style={styles.backdrop}
-        />
-      )}
-      onClose={onClose}
-    >
-      <BottomSheetView style={styles.container}>
-        <ScrollView
-          contentContainerStyle={{
-            padding: 16,
-            paddingBottom: 100,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
+    <>
+      <BottomSheet
+        ref={sheetRef}
+        index={isVisible ? 1 : -1} // Controls visibility of BottomSheet
+        snapPoints={snapPoints}
+        enablePanDownToClose
+        backdropComponent={(backdropProps) => (
+          <BottomSheetBackdrop
+            {...backdropProps}
+            disappearsOnIndex={-1}
+            appearsOnIndex={1}
+            pressBehavior="close"
+            style={styles.backdrop}
+          />
+        )}
+        onClose={onClose}
+      >
+        <BottomSheetView style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>Filter</Text>
+
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors(theme).text} />
             </TouchableOpacity>
           </View>
-
-          {/* Categories Section */}
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <View style={styles.chipContainer}>
-            {influencerType.map((category) => (
-              <Chip
-                key={category}
-                selected={localInfluencerType === category}
-                onPress={() => setLocalInfluencerType(category)}
-                style={styles.chip}
-              >
-                {category}
-              </Chip>
-            ))}
-          </View>
-
-          {/* Follower Section */}
-          <Text style={styles.sectionTitle}>Followers</Text>
-          <View style={styles.salaryContainer}>
-            <Text style={styles.salaryLabel}>
-              Min Followers: {localFollowersRange[0].toLocaleString() || "0"}
-            </Text>
-          </View>
-          <View style={styles.salaryContainer}>
-            <Text style={styles.salaryLabel}>
-              Max Followers: {localFollowersRange[1].toLocaleString() || "0"}
-            </Text>
-            <MultiSlider
-              values={localFollowersRange}
-              sliderLength={300}
-              onValuesChange={(values) => setLocalFollowersRange(values)}
-              min={0}
-              max={1000000}
-              step={1000}
-              allowOverlap
-              snapped
-            />
-          </View>
-
-          <Text style={styles.sectionTitle}>Reach</Text>
-          <View style={styles.salaryContainer}>
-            <Text style={styles.salaryLabel}>
-              Min Reach: {localFollowersRange[0].toLocaleString() || "0"}
-            </Text>
-          </View>
-          <View style={styles.salaryContainer}>
-            <Text style={styles.salaryLabel}>
-              Max Reach: {localFollowersRange[1].toLocaleString() || "0"}
-            </Text>
-            <MultiSlider
-              values={localReachRange}
-              sliderLength={300}
-              onValuesChange={(values) => setLocalReachRange(values)}
-              min={0}
-              max={1000000}
-              step={1000}
-              allowOverlap
-              snapped
-            />
-          </View>
-
-          <Text style={styles.sectionTitle}>Engagement</Text>
-          <View style={styles.salaryContainer}>
-            <Text style={styles.salaryLabel}>
-              Min Engagement: {localEngagementRange[0].toLocaleString() || "0"}
-            </Text>
-          </View>
-          <View style={styles.salaryContainer}>
-            <Text style={styles.salaryLabel}>
-              Max Engagement: {localEngagementRange[1].toLocaleString() || "0"}
-            </Text>
-            <MultiSlider
-              values={localEngagementRange}
-              sliderLength={300}
-              onValuesChange={(values) => setLocalEngagementRange(values)}
-              min={0}
-              max={1000000}
-              step={1000}
-              allowOverlap
-              snapped
-            />
-          </View>
-
-          <Text style={styles.sectionTitle}>Job Types</Text>
-          <View style={styles.chipContainer}>
-            {collaborationType.map((jobType) => (
-              <Chip
-                key={jobType}
-                selected={localCollaborationType === jobType}
-                onPress={() => setLocalCollaborationType(jobType)}
-                style={styles.chip}
-              >
-                {jobType}
-              </Chip>
-            ))}
-          </View>
-
-          <Button
-            mode="contained"
-            onPress={applyFilters}
-            style={styles.applyButton}
+          <ScrollView
+            contentContainerStyle={{
+              padding: 16,
+            }}
+            showsVerticalScrollIndicator={false}
           >
-            Apply Filters
-          </Button>
-        </ScrollView>
-      </BottomSheetView>
-    </BottomSheet>
+            {/* Categories Section */}
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <View style={styles.chipContainer}>
+              {influencerType.map((category, index) => (
+                <Chip
+                  key={index}
+                  selected={localInfluencerType === category}
+                  onPress={() => setLocalInfluencerType(category)}
+                  style={styles.chip}
+                >
+                  {category}
+                </Chip>
+              ))}
+            </View>
+
+            {/* Follower Section */}
+            <Text style={styles.sectionTitle}>Followers</Text>
+            <View style={styles.salaryContainer}>
+              <Text style={styles.salaryLabel}>
+                Min Followers: {localFollowersRange[0].toLocaleString() || "0"}
+              </Text>
+            </View>
+            <View style={styles.salaryContainer}>
+              <Text style={styles.salaryLabel}>
+                Max Followers: {localFollowersRange[1].toLocaleString() || "0"}
+              </Text>
+              <MultiSlider
+                values={localFollowersRange}
+                sliderLength={300}
+                onValuesChange={(values) => setLocalFollowersRange(values)}
+                min={0}
+                max={1000000}
+                step={1000}
+                allowOverlap
+                snapped
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>Reach</Text>
+            <View style={styles.salaryContainer}>
+              <Text style={styles.salaryLabel}>
+                Min Reach: {localFollowersRange[0].toLocaleString() || "0"}
+              </Text>
+            </View>
+            <View style={styles.salaryContainer}>
+              <Text style={styles.salaryLabel}>
+                Max Reach: {localFollowersRange[1].toLocaleString() || "0"}
+              </Text>
+              <MultiSlider
+                values={localReachRange}
+                sliderLength={300}
+                onValuesChange={(values) => setLocalReachRange(values)}
+                min={0}
+                max={1000000}
+                step={1000}
+                allowOverlap
+                snapped
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>Engagement</Text>
+            <View style={styles.salaryContainer}>
+              <Text style={styles.salaryLabel}>
+                Min Engagement:{" "}
+                {localEngagementRange[0].toLocaleString() || "0"}
+              </Text>
+            </View>
+            <View style={styles.salaryContainer}>
+              <Text style={styles.salaryLabel}>
+                Max Engagement:{" "}
+                {localEngagementRange[1].toLocaleString() || "0"}
+              </Text>
+              <MultiSlider
+                values={localEngagementRange}
+                sliderLength={300}
+                onValuesChange={(values) => setLocalEngagementRange(values)}
+                min={0}
+                max={1000000}
+                step={1000}
+                allowOverlap
+                snapped
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>Job Types</Text>
+            <View style={styles.chipContainer}>
+              {collaborationType.map((jobType, index) => (
+                <Chip
+                  key={index}
+                  selected={localCollaborationType === jobType}
+                  onPress={() => setLocalCollaborationType(jobType)}
+                  style={styles.chip}
+                >
+                  {jobType}
+                </Chip>
+              ))}
+            </View>
+          </ScrollView>
+        </BottomSheetView>
+      </BottomSheet>
+      <TouchableOpacity
+        onPress={applyFilters}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          width: "100%",
+          padding: 20,
+          backgroundColor: Colors(theme).background,
+          borderTopWidth: 1,
+          borderTopColor: Colors(theme).border,
+        }}
+      >
+        <Button mode="contained">Apply</Button>
+      </TouchableOpacity>
+    </>
   );
 };
 

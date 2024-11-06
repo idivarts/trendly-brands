@@ -60,7 +60,7 @@ export const stylesFn = (theme: Theme) =>
     },
     statChip: {
       marginHorizontal: 8,
-      backgroundColor: Colors(theme).lightgray,
+      backgroundColor: Colors(theme).background,
     },
     infoCard: {
       marginBottom: 16,

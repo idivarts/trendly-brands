@@ -10,7 +10,7 @@
     "eas-build-pre-install": "./eas-prebuild.sh",
     "test": "jest --watchAll",
     "build": "expo export -p web",
-    "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants"
+    "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants && node react-native-web-fix.js"
   },
   "jest": {
     "preset": "jest-expo"
