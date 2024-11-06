@@ -7,7 +7,7 @@ import { StreamChat } from "stream-chat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
 import { useTheme } from "@react-navigation/native";
-import useStreamTheme from "@/hooks/use-stream-theme";
+import { useStreamTheme } from "@/hooks";
 
 const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
 

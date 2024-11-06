@@ -11,7 +11,7 @@ import {
   useNotificationContext
 } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useChatHook } from "@/hooks/use-chat";
+import { useChatHook } from "@/hooks";
 
 const NotificationsScreen = () => {
   const theme = useTheme();
