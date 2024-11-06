@@ -6,6 +6,7 @@ interface ChatContextProps {
     groupName: string,
     members: string[],
   ) => Promise<void>;
+  client: any;
 }
 
 const ChatContext = createContext<ChatContextProps>(null!);
@@ -15,6 +16,8 @@ export const useChatContext = () => useContext(ChatContext);
 export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
+  const client: any = null;
+
   const createGroupWithMembers = async (
     client: any,
     groupName: string,
@@ -27,6 +30,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     <ChatContext.Provider
       value={{
         createGroupWithMembers,
+        client: null,
       }}
     >
       {children}

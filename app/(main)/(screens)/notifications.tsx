@@ -7,11 +7,11 @@ import Colors from "@/constants/Colors";
 import Notifications from "@/components/notifications";
 import {
   useAuthContext,
+  useChatContext,
   useCollaborationContext,
   useNotificationContext
 } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useChatHook } from "@/hooks";
 
 const NotificationsScreen = () => {
   const theme = useTheme();
@@ -26,9 +26,10 @@ const NotificationsScreen = () => {
     updateManagerNotification,
   } = useNotificationContext();
   const {
-    createGroupWithMembers,
     client,
-  } = useChatHook();
+    createGroupWithMembers,
+  } = useChatContext();
+
   const {
     getCollaborationById,
   } = useCollaborationContext();

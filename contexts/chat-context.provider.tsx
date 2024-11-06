@@ -1,13 +1,13 @@
 
 import { Platform } from "react-native";
 import {
-  useChatContext as useChatContextWeb,
-  ChatContextProvider as ChatContextProviderWeb
-} from "./chat-context.provider.web";
-import {
+  ChatContextProvider as ChatProviderNative,
   useChatContext as useChatContextNative,
-  ChatContextProvider as ChatContextProviderNative
 } from "./chat-context.provider.native";
+import {
+  ChatContextProvider as ChatProviderWeb,
+  useChatContext as useChatContextWeb,
+} from "./chat-context.provider.web";
 import { PropsWithChildren } from "react";
 
 export const useChatContext = () => {
@@ -23,12 +23,12 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 }) => {
   if (Platform.OS === 'web') {
     return (
-      <ChatContextProviderWeb>{children}</ChatContextProviderWeb>
+      <ChatProviderWeb>{children}</ChatProviderWeb>
     )
   }
 
   return (
-    <ChatContextProviderNative>{children}</ChatContextProviderNative>
+    <ChatProviderNative>{children}</ChatProviderNative>
   );
 };
 

@@ -8,11 +8,10 @@ import {
 } from "react-native";
 import { List } from "react-native-paper";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { useNotificationContext } from "@/contexts";
+import { useChatContext, useNotificationContext } from "@/contexts";
 import { FirestoreDB } from "@/utils/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useChatHook } from "@/hooks";
 
 interface BottomSheetActionsProps {
   cardType:
@@ -44,7 +43,7 @@ const BottomSheetActions = ({
   const {
     createGroupWithMembers,
     client,
-  } = useChatHook();
+  } = useChatContext();
   const {
     createNotification,
   } = useNotificationContext();
