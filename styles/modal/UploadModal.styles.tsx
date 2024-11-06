@@ -50,6 +50,7 @@ const stylesFn = (theme: Theme) =>
     },
     title: {
       marginBottom: 16,
+      color: Colors(theme).text,
     },
     input: {
       marginBottom: 16,
@@ -65,6 +66,7 @@ const stylesFn = (theme: Theme) =>
     },
     paragraph: {
       marginVertical: 8,
+      color: Colors(theme).text,
     },
     counter: {
       flexDirection: "row",

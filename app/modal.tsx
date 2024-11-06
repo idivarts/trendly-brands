@@ -10,6 +10,7 @@ import {
   RadioButton,
   Modal,
   Portal,
+  PaperProvider,
 } from "react-native-paper";
 import MapView, { Marker } from "react-native-maps";
 import stylesFn from "@/styles/modal/UploadModal.styles";
@@ -20,6 +21,7 @@ import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import Colors from "@/constants/Colors";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -129,12 +131,21 @@ const CreateCollaborationScreen = () => {
             value={collaborationName}
             onChangeText={(text) => setCollaborationName(text)}
             style={styles.input}
+            textColor={Colors(theme).text}
+            theme={{
+              colors: {
+                primary: Colors(theme).primary,
+                placeholder: Colors(theme).text,
+                text: Colors(theme).text,
+              },
+            }}
           />
           <TextInput
             label="About this Collaboration"
             value={aboutCollab}
             onChangeText={(text) => setAboutCollab(text)}
             multiline
+            textColor={Colors(theme).text}
             style={styles.input}
           />
           <View style={styles.budgetContainer}>
@@ -143,11 +154,13 @@ const CreateCollaborationScreen = () => {
               value={budgetMin}
               onChangeText={(text) => setBudgetMin(text)}
               style={styles.budgetInput}
+              textColor={Colors(theme).text}
             />
             <TextInput
               label="Budget Max"
               value={budgetMax}
               onChangeText={(text) => setBudgetMax(text)}
+              textColor={Colors(theme).text}
               style={styles.budgetInput}
             />
           </View>
@@ -159,7 +172,7 @@ const CreateCollaborationScreen = () => {
               icon="minus"
               onPress={() => setNumInfluencers(Math.max(1, numInfluencers - 1))}
             />
-            <Paragraph>{numInfluencers}</Paragraph>
+            <Paragraph style={styles.paragraph}>{numInfluencers}</Paragraph>
             <IconButton
               icon="plus"
               onPress={() => setNumInfluencers(numInfluencers + 1)}
@@ -170,26 +183,74 @@ const CreateCollaborationScreen = () => {
             onValueChange={(newValue) => setPromotionType(newValue)}
             value={promotionType}
           >
-            <RadioButton.Item label="Type 1" value="type1" />
-            <RadioButton.Item label="Type 2" value="type2" />
-            <RadioButton.Item label="Type 3" value="type3" />
+            <RadioButton.Item
+              label="Type 1"
+              value="type1"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
+            <RadioButton.Item
+              label="Type 2"
+              value="type2"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
+            <RadioButton.Item
+              label="Type 3"
+              value="type3"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
           </RadioButton.Group>
           <Paragraph style={styles.paragraph}>Collaboration Type</Paragraph>
           <RadioButton.Group
             onValueChange={(newValue) => setCollabType(newValue)}
             value={collabType}
           >
-            <RadioButton.Item label="Collab 1" value="collab1" />
-            <RadioButton.Item label="Collab 2" value="collab2" />
-            <RadioButton.Item label="Collab 3" value="collab3" />
+            <RadioButton.Item
+              label="Collab 1"
+              value="collab1"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
+            <RadioButton.Item
+              label="Collab 2"
+              value="collab2"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
+            <RadioButton.Item
+              label="Collab 3"
+              value="collab3"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
           </RadioButton.Group>
           <Paragraph style={styles.paragraph}>Platform</Paragraph>
           <RadioButton.Group
             onValueChange={(newValue) => setPlatform(newValue)}
             value={platform}
           >
-            <RadioButton.Item label="Instagram" value="Instagram" />
-            <RadioButton.Item label="YouTube" value="YouTube" />
+            <RadioButton.Item
+              label="Instagram"
+              value="Instagram"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
+            <RadioButton.Item
+              label="YouTube"
+              value="YouTube"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
           </RadioButton.Group>
           <Button
             mode="contained"
@@ -246,8 +307,20 @@ const CreateCollaborationScreen = () => {
             onValueChange={(newValue) => setLocation(newValue)}
             value={location}
           >
-            <RadioButton.Item label="Remote" value="Remote" />
-            <RadioButton.Item label="Physical" value="Physical" />
+            <RadioButton.Item
+              label="Remote"
+              value="Remote"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
+            <RadioButton.Item
+              label="Physical"
+              value="Physical"
+              labelStyle={{
+                color: Colors(theme).text,
+              }}
+            />
           </RadioButton.Group>
 
           {location === "Physical" && (
