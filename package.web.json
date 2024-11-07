@@ -10,7 +10,7 @@
     "eas-build-pre-install": "./eas-prebuild.sh",
     "test": "jest --watchAll",
     "build": "expo export -p web",
-    "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants && node react-native-web-fix.js"
+    "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants"
   },
   "jest": {
     "preset": "jest-expo"
@@ -65,8 +65,7 @@
     "react-native-swiper": "^1.6.0",
     "react-native-toast-message": "^2.2.1",
     "react-native-video": "^6.7.0",
-    "react-native-web": "~0.19.10",
-    "stream-chat-expo": "^5.41.2"
+    "react-native-web": "~0.19.10"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

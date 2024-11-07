@@ -99,18 +99,22 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             </Text>
           </View>
           <View>
-            <Searchbar
-              onChangeText={handleSearchChange}
-              placeholder="Search"
-              value={search}
-              style={[
-                {
-                  marginHorizontal: 14,
-                  marginBottom: 8,
-                  backgroundColor: Colors(theme).platinum
-                },
-              ]}
-            />
+            {
+              !xl && (
+                <Searchbar
+                  onChangeText={handleSearchChange}
+                  placeholder="Search"
+                  value={search}
+                  style={[
+                    {
+                      marginHorizontal: 14,
+                      marginBottom: 8,
+                      backgroundColor: Colors(theme).platinum
+                    },
+                  ]}
+                />
+              )
+            }
             {xl ? DRAWER_MENU_CONTENT_ITEMS.map((tab, index) => (
               <DrawerMenuItem
                 key={index}

@@ -8,11 +8,10 @@ import {
 } from "react-native";
 import { List } from "react-native-paper";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { useChatContext as useChat, useNotificationContext } from "@/contexts";
+import { useChatContext, useNotificationContext } from "@/contexts";
 import { FirestoreDB } from "@/utils/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useChatContext } from "stream-chat-expo";
 
 interface BottomSheetActionsProps {
   cardType:
@@ -41,10 +40,10 @@ const BottomSheetActions = ({
   const [isMessageModalVisible, setIsMessageModalVisible] =
     React.useState(false);
 
-  const { client } = useChatContext();
   const {
     createGroupWithMembers,
-  } = useChat();
+    client,
+  } = useChatContext();
   const {
     createNotification,
   } = useNotificationContext();
@@ -74,7 +73,9 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
+        // @ts-ignore
         createGroupWithMembers(client, data.collaboration.name, [
+          // @ts-ignore
           client.user?.id as string,
           cardId.influencerID,
         ]).then(() => {
