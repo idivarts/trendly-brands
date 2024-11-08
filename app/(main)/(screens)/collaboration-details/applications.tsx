@@ -42,6 +42,7 @@ const CollaborationApplicationPage = (props: any) => {
           const userRef = doc(FirestoreDB, "users", application.userId);
           const userFetch = await getDoc(userRef);
           return {
+            ...application,
             ...userFetch.data(),
             id: userFetch.id,
             applicationID: application.id,
@@ -87,12 +88,7 @@ const CollaborationApplicationPage = (props: any) => {
               profilePic: item.profileImage,
               name: item.name,
               handle: item.handle || "@handle",
-              media: [
-                {
-                  type: "image",
-                  uri: item.profileImage,
-                },
-              ],
+              media: item.attachments,
               followers: item.backend ? item.backend.followers : 1000,
               reach: item.backend ? item.backend.reach : 10000,
               rating: item.backend ? item.backend.rating : 4.5,
