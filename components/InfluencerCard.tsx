@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  Platform,
 } from "react-native";
 import { Card, Avatar, IconButton, Chip } from "react-native-paper";
 import Carousel from "react-native-reanimated-carousel";
@@ -132,7 +133,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           }}
         >
           <Animated.View>
-            <Image source={{ uri: item.uri }} style={styles.media} />
+            <Image source={{ uri: item.url }} style={styles.media} />
           </Animated.View>
         </TapGestureHandler>
       );
@@ -154,7 +155,13 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                 videoRefs.current[index] = ref;
               }
             }}
-            source={require("../assets/videos/ForBiggerJoyrides.mp4")}
+            source={
+              item.appleUrl
+                ? {
+                    uri: Platform.OS === "ios" ? item.appleUrl : item.playUrl,
+                  }
+                : require("../assets/videos/ForBiggerJoyrides.mp4")
+            }
             style={styles.media}
             resizeMode="cover"
             repeat
