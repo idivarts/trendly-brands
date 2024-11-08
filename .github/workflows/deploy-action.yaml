@@ -22,6 +22,11 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm i
+    - name: Load Config JS
+      env:
+        FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_FIREBASE_CONFIG }}
+      run: |
+        echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
     - run: npm run build
     - name: serverless deploy
       uses: serverless/github-action@v3.2
