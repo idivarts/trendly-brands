@@ -3,7 +3,7 @@ import JobCard from "@/components/collaboration/CollaborationCard";
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
-import { useTheme } from "@react-navigation/native";
+import { useIsFocused, useTheme } from "@react-navigation/native";
 import { Link, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -14,7 +14,7 @@ import {
   doc as firebaseDoc,
   getDoc,
 } from "firebase/firestore";
-import { ActivityIndicator, FlatList, Image } from "react-native";
+import { ActivityIndicator, FlatList, Image, Platform } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
@@ -51,6 +51,10 @@ const Applications = () => {
 
   const fetchProposals = async () => {
     try {
+      if (!selectedBrand) {
+        console.log("No selected brand");
+        return;
+      }
       const collaborationCol = collection(FirestoreDB, "collaborations");
       const q = query(
         collaborationCol,
@@ -111,7 +115,7 @@ const Applications = () => {
 
   useEffect(() => {
     fetchProposals();
-  }, [user]);
+  }, [user, selectedBrand]);
 
   const filteredProposals = useMemo(() => {
     return proposals.filter((proposal) => proposal.status !== "inactive");
@@ -131,6 +135,7 @@ const Applications = () => {
     <View
       style={{
         width: "100%",
+        flex: 1,
       }}
     >
       <View
@@ -146,6 +151,7 @@ const Applications = () => {
             justifyContent: "center",
             alignItems: "center",
             gap: 50,
+            flex: 1, // Allow center content to take up available space
           }}
         >
           <Image
@@ -183,48 +189,50 @@ const Applications = () => {
           </Button>
         </View>
       ) : (
-        <FlatList
-          data={filteredProposals}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <JobCard
-              name={item.name}
-              id={item.id}
-              brandName={item.brandName}
-              description={item.description}
-              brandId={item.brandId}
-              budget={{
-                min: Number(item.budget.min),
-                max: Number(item.budget.max),
-              }}
-              onOpenBottomSheet={openBottomSheet}
-              cardType="proposal"
-              collaborationType={item.collaborationType}
-              location={item.location}
-              managerId="managerId"
-              numberOfInfluencersNeeded={1}
-              platform={item.platform}
-              promotionType={item.promotionType}
-              timeStamp={item.timeStamp}
-              applications={item.applications}
-              invitations={item.invitations}
-              acceptedApplications={item.acceptedApplications}
-              status={item.status}
-            />
-          )}
-          contentContainerStyle={{
-            paddingBottom: 100,
-          }}
-          keyExtractor={(item, index) => index.toString()}
-          style={{ height: "100%", width: "100%" }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[Colors(theme).primary]} // Customize color based on theme
-            />
-          }
-        />
+        <View style={{ flex: 1 }}>
+          <FlatList
+            data={filteredProposals}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <JobCard
+                name={item.name}
+                id={item.id}
+                brandName={item.brandName}
+                description={item.description}
+                brandId={item.brandId}
+                budget={{
+                  min: Number(item.budget.min),
+                  max: Number(item.budget.max),
+                }}
+                onOpenBottomSheet={openBottomSheet}
+                cardType="proposal"
+                collaborationType={item.collaborationType}
+                location={item.location}
+                managerId="managerId"
+                numberOfInfluencersNeeded={1}
+                platform={item.platform}
+                promotionType={item.promotionType}
+                timeStamp={item.timeStamp}
+                applications={item.applications}
+                invitations={item.invitations}
+                acceptedApplications={item.acceptedApplications}
+                status={item.status}
+              />
+            )}
+            keyExtractor={(item, index) => index.toString()}
+            style={{ flexGrow: 1 }} // Allow FlatList to grow within available space
+            contentContainerStyle={{
+              paddingBottom: 100,
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[Colors(theme).primary]} // Customize color based on theme
+              />
+            }
+          />
+        </View>
       )}
       {isVisible && (
         <BottomSheetActions

@@ -1,6 +1,12 @@
 import AppLayout from "@/layouts/app-layout";
 import React, { useState } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+} from "react-native";
 import {
   TextInput,
   Button,
@@ -22,6 +28,9 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Colors from "@/constants/Colors";
+import { router } from "expo-router";
+import BackButton from "@/components/ui/back-button/BackButton";
+import { Ionicons } from "@expo/vector-icons";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -103,6 +112,8 @@ const CreateCollaborationScreen = () => {
         },
         externalLinks: links,
         status: "active",
+      }).then(() => {
+        router.push("/collaborations");
       });
     } catch (error) {
       console.error(error);
@@ -125,7 +136,21 @@ const CreateCollaborationScreen = () => {
             paddingVertical: 16,
           }}
         >
-          <Title style={styles.title}>Create a Collaboration</Title>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 16,
+              gap: 16,
+            }}
+          >
+            {Platform.OS === "web" && (
+              <TouchableOpacity onPress={() => router.push("/collaborations")}>
+                <Ionicons name="arrow-back" size={24} color="black" />
+              </TouchableOpacity>
+            )}
+            <Title style={styles.title}>Create a Collaboration</Title>
+          </View>
           <TextInput
             label="Collaboration Name"
             value={collaborationName}

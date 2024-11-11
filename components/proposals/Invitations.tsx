@@ -110,7 +110,7 @@ const Invitations = () => {
 
   useEffect(() => {
     fetchProposals();
-  }, [user]);
+  }, [user, selectedBrand]);
 
   const filteredProposals = useMemo(() => {
     return proposals.filter((proposal) => proposal.status === "inactive");
