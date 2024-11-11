@@ -13,6 +13,7 @@ import {
   where,
   doc as firebaseDoc,
   getDoc,
+  orderBy,
 } from "firebase/firestore";
 import { ActivityIndicator, FlatList, Image, Platform } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
@@ -58,7 +59,8 @@ const Applications = () => {
       const collaborationCol = collection(FirestoreDB, "collaborations");
       const q = query(
         collaborationCol,
-        where("brandId", "==", selectedBrand?.id)
+        where("brandId", "==", selectedBrand?.id),
+        orderBy("timeStamp", "desc")
       );
       const querySnapshot = await getDocs(q);
 
@@ -120,10 +122,6 @@ const Applications = () => {
   const filteredProposals = useMemo(() => {
     return proposals.filter((proposal) => proposal.status !== "inactive");
   }, [proposals]);
-
-  filteredProposals.sort((a, b) => {
-    return new Date(b.timeStamp).getTime() - new Date(a.timeStamp).getTime();
-  });
 
   if (isLoading) {
     return (
