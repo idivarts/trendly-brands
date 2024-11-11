@@ -121,6 +121,10 @@ const Applications = () => {
     return proposals.filter((proposal) => proposal.status !== "inactive");
   }, [proposals]);
 
+  filteredProposals.sort((a, b) => {
+    return new Date(b.timeStamp).getTime() - new Date(a.timeStamp).getTime();
+  });
+
   if (isLoading) {
     return (
       <AppLayout>

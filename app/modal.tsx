@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
+  Text,
   TouchableOpacity,
 } from "react-native";
 import {
@@ -113,7 +114,7 @@ const CreateCollaborationScreen = () => {
         externalLinks: links,
         status: "active",
       }).then(() => {
-        router.push("/collaborations");
+        setScreen(3);
       });
     } catch (error) {
       console.error(error);
@@ -401,6 +402,25 @@ const CreateCollaborationScreen = () => {
             </Button>
           </Modal>
         </ScrollView>
+      </AppLayout>
+    );
+  }
+
+  if (screen === 3) {
+    return (
+      <AppLayout>
+        <View style={styles.container3}>
+          <IconButton
+            icon="check-circle"
+            size={100}
+            iconColor="green"
+            style={styles.checkIcon}
+          />
+          <Text style={styles.title}>Collaboration Posted</Text>
+          <Text style={styles.description}>
+            Your collaboration has been successfully posted.
+          </Text>
+        </View>
       </AppLayout>
     );
   }
