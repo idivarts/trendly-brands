@@ -53,7 +53,6 @@ const Applications = () => {
   const fetchProposals = async () => {
     try {
       if (!selectedBrand) {
-        console.log("No selected brand");
         return;
       }
       const collaborationCol = collection(FirestoreDB, "collaborations");
