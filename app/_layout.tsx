@@ -24,6 +24,7 @@ import {
 import { Provider } from "react-native-paper";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
+import CustomPaperTheme from "@/constants/Theme";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -61,23 +62,21 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-      <Provider>
-        <AuthContextProvider>
-          <FirebaseStorageContextProvider>
-            <NotificationContextProvider>
-              <CloudMessagingContextProvider>
-                <BrandContextProvider>
-                  <CollaborationContextProvider>
-                    <AutocompleteDropdownContextProvider>
-                      <RootLayoutStack />
-                    </AutocompleteDropdownContextProvider>
-                  </CollaborationContextProvider>
-                </BrandContextProvider>
-              </CloudMessagingContextProvider>
-            </NotificationContextProvider>
-          </FirebaseStorageContextProvider>
-        </AuthContextProvider>
-      </Provider>
+      <AuthContextProvider>
+        <FirebaseStorageContextProvider>
+          <NotificationContextProvider>
+            <CloudMessagingContextProvider>
+              <BrandContextProvider>
+                <CollaborationContextProvider>
+                  <AutocompleteDropdownContextProvider>
+                    <RootLayoutStack />
+                  </AutocompleteDropdownContextProvider>
+                </CollaborationContextProvider>
+              </BrandContextProvider>
+            </CloudMessagingContextProvider>
+          </NotificationContextProvider>
+        </FirebaseStorageContextProvider>
+      </AuthContextProvider>
     </GestureHandlerRootView>
   );
 }
