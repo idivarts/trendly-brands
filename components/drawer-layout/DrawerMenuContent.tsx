@@ -127,6 +127,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
               />
             )) : filteredBrands.map((brand) => (
               <BrandItem
+                active={selectedBrand?.id === brand.id}
                 image={brand.image}
                 key={brand.id.toString()}
                 menu={true}

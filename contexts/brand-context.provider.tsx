@@ -16,7 +16,11 @@ interface BrandContextProps {
   setSelectedBrand: React.Dispatch<React.SetStateAction<Brand | undefined>>;
 }
 
-const BrandContext = createContext<BrandContextProps>(null!);
+const BrandContext = createContext<BrandContextProps>({
+  brands: [],
+  selectedBrand: undefined,
+  setSelectedBrand: () => { },
+});
 
 export const useBrandContext = () => useContext(BrandContext);
 
@@ -51,7 +55,9 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 
           setBrands(brandsWithManagerId);
 
-          setSelectedBrand(brandsWithManagerId[0]);
+          if (brandsWithManagerId.length > 0 && !selectedBrand) {
+            setSelectedBrand(brandsWithManagerId[0]);
+          }
         });
       });
     });

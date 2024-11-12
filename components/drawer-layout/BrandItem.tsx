@@ -50,6 +50,9 @@ const BrandItem: React.FC<BrandItemProps> = ({
                 source={{
                   uri: image ?? "https://images.unsplash.com/photo-1557683316-973673baf926",
                 }}
+                style={{
+                  backgroundColor: active ? Colors(theme).white : Colors(theme).primary,
+                }}
               />
             )
           }
