@@ -145,7 +145,12 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             ios: [],
             android: [],
             web: [],
-          }
+          },
+          settings: {
+            theme: "light",
+            emailNotification: true,
+            pushNotification: true,
+          },
         };
 
         await setDoc(docRef, userData);

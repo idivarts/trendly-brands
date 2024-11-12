@@ -17,6 +17,7 @@ const fnStyles = (theme: Theme) =>
       width: 100,
       height: 100,
       marginTop: 20,
+      zIndex: -1,
     },
     title: {
       textAlign: "center",

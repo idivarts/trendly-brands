@@ -4,29 +4,27 @@ import { Stack } from "expo-router";
 
 const MainLayout = () => {
   return (
-    <BrandContextProvider>
-      <ChatContextProvider>
-        <Stack
-          screenOptions={{
-            animation: "ios",
+    <ChatContextProvider>
+      <Stack
+        screenOptions={{
+          animation: "ios",
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen
+          name="(drawer)"
+          options={{
             headerShown: false,
           }}
-        >
-          <Stack.Screen
-            name="(drawer)"
-            options={{
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="(screens)"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack>
-      </ChatContextProvider>
-    </BrandContextProvider>
+        />
+        <Stack.Screen
+          name="(screens)"
+          options={{
+            headerShown: false,
+          }}
+        />
+      </Stack>
+    </ChatContextProvider>
   );
 };
 
