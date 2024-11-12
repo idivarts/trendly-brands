@@ -61,23 +61,21 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-      <Provider>
-        <AuthContextProvider>
-          <FirebaseStorageContextProvider>
-            <NotificationContextProvider>
-              <CloudMessagingContextProvider>
-                <BrandContextProvider>
-                  <CollaborationContextProvider>
-                    <AutocompleteDropdownContextProvider>
-                      <RootLayoutStack />
-                    </AutocompleteDropdownContextProvider>
-                  </CollaborationContextProvider>
-                </BrandContextProvider>
-              </CloudMessagingContextProvider>
-            </NotificationContextProvider>
-          </FirebaseStorageContextProvider>
-        </AuthContextProvider>
-      </Provider>
+      <AuthContextProvider>
+        <FirebaseStorageContextProvider>
+          <NotificationContextProvider>
+            <CloudMessagingContextProvider>
+              <BrandContextProvider>
+                <CollaborationContextProvider>
+                  <AutocompleteDropdownContextProvider>
+                    <RootLayoutStack />
+                  </AutocompleteDropdownContextProvider>
+                </CollaborationContextProvider>
+              </BrandContextProvider>
+            </CloudMessagingContextProvider>
+          </NotificationContextProvider>
+        </FirebaseStorageContextProvider>
+      </AuthContextProvider>
     </GestureHandlerRootView>
   );
 }
