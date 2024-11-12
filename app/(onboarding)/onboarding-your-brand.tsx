@@ -104,7 +104,7 @@ const OnboardingScreen = () => {
         });
 
         router.navigate({
-          pathname: "/onboarding-brand-preference",
+          pathname: "/(onboarding)/onboarding-brand-preference",
           params: { brandId: docRef.id },
         });
       }

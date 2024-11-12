@@ -72,7 +72,7 @@ const BrandPreferenceScreen = () => {
           { merge: true }
         );
         router.push({
-          pathname: "/onboarding-get-started",
+          pathname: "/(onboarding)/onboarding-get-started",
           params: { brandId },
         });
       }

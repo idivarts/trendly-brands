@@ -92,10 +92,11 @@ const RootLayoutStack = () => {
   useEffect(() => {
     const inAuthGroup = segments[0] === "(auth)";
     const inMainGroup = segments[0] === "(main)";
+    const inOnboardingGroup = segments[0] === "(onboarding)";
 
     if (isLoading) return;
 
-    if (session && inMainGroup) {
+    if (session && (inMainGroup || inOnboardingGroup)) {
       // Redirect to main group path if signed in
       //@ts-ignore
       router.replace(pathname);
