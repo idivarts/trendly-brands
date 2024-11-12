@@ -55,7 +55,9 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 
           setBrands(brandsWithManagerId);
 
-          setSelectedBrand(brandsWithManagerId[0]);
+          if (brandsWithManagerId.length > 0 && !selectedBrand) {
+            setSelectedBrand(brandsWithManagerId[0]);
+          }
         });
       });
     });
