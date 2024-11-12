@@ -35,9 +35,10 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     if (!manager?.id) return;
 
     const brandsCollection = collection(FirestoreDB, "brands");
-    const brandsWithManagerId: Brand[] = [];
 
     const unsubscribe = onSnapshot(brandsCollection, (brandsSnapshot) => {
+      const brandsWithManagerId: Brand[] = [];
+
       brandsSnapshot.docs.forEach((brandDoc) => {
         const membersCollection = collection(brandDoc.ref, "members");
         const membersQuery = query(
