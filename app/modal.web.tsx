@@ -16,15 +16,15 @@ import {
   RadioButton,
   Modal,
 } from "react-native-paper";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMapEvents,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+// import {
+//   MapContainer,
+//   TileLayer,
+//   Marker,
+//   Popup,
+//   useMapEvents,
+// } from "react-leaflet";
+// import L from "leaflet";
+// import "leaflet/dist/leaflet.css";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { useTheme } from "@react-navigation/native";
 import { addDoc, collection } from "firebase/firestore";
@@ -38,16 +38,16 @@ import { router } from "expo-router";
 import BackButton from "@/components/ui/back-button/BackButton";
 import { Ionicons } from "@expo/vector-icons";
 
-const customIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+// const customIcon = new L.Icon({
+//   iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+//   iconRetinaUrl:
+//     "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+//   shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+//   iconSize: [25, 41],
+//   iconAnchor: [12, 41],
+//   popupAnchor: [1, -34],
+//   shadowSize: [41, 41],
+// });
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -137,15 +137,15 @@ const CreateCollaborationScreen = () => {
     }
   };
 
-  const MapClickHandler = () => {
-    useMapEvents({
-      click(e: any) {
-        const { lat, lng } = e.latlng;
-        setMapRegion((prev) => ({ ...prev, latitude: lat, longitude: lng }));
-      },
-    });
-    return null;
-  };
+  // const MapClickHandler = () => {
+  //   useMapEvents({
+  //     click(e: any) {
+  //       const { lat, lng } = e.latlng;
+  //       setMapRegion((prev) => ({ ...prev, latitude: lat, longitude: lng }));
+  //     },
+  //   });
+  //   return null;
+  // };
 
   if (screen === 1) {
     return (
@@ -376,24 +376,25 @@ const CreateCollaborationScreen = () => {
           </RadioButton.Group>
 
           {location === "Physical" && (
-            <MapContainer
-              style={{ height: 300 }}
-              bounds={
-                [
-                  [mapRegion.latitude - 0.01, mapRegion.longitude - 0.01],
-                  [mapRegion.latitude + 0.01, mapRegion.longitude + 0.01],
-                ] as any
-              }
-            >
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker
-                position={[mapRegion.latitude, mapRegion.longitude]}
-                icon={customIcon}
-              >
-                <Popup>Location</Popup>
-              </Marker>
-              <MapClickHandler />
-            </MapContainer>
+            null
+            // <MapContainer
+            //   style={{ height: 300 }}
+            //   bounds={
+            //     [
+            //       [mapRegion.latitude - 0.01, mapRegion.longitude - 0.01],
+            //       [mapRegion.latitude + 0.01, mapRegion.longitude + 0.01],
+            //     ] as any
+            //   }
+            // >
+            //   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            //   <Marker
+            //     position={[mapRegion.latitude, mapRegion.longitude]}
+            //     icon={customIcon}
+            //   >
+            //     <Popup>Location</Popup>
+            //   </Marker>
+            //   <MapClickHandler />
+            // </MapContainer>
           )}
 
           <Button
