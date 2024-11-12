@@ -29,6 +29,11 @@ const BrandSwitcher = () => {
       visible={visible}
       anchorPosition="top"
       onDismiss={() => setVisible(false)}
+      contentStyle={{
+        paddingVertical: 0,
+        borderRadius: 4,
+        overflow: "hidden",
+      }}
       anchor={
         <Pressable onPress={openMenu}>
           <Octicons
@@ -49,6 +54,10 @@ const BrandSwitcher = () => {
             key={brand.id}
             style={{
               backgroundColor: brand.id === selectedBrand?.id ? Colors(theme).primary : Colors(theme).background,
+              margin: 0,
+            }}
+            titleStyle={{
+              color: brand.id === selectedBrand?.id ? Colors(theme).white : Colors(theme).text,
             }}
             onPress={() => handleBrandChange(brand)}
             title={brand.name}

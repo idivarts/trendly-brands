@@ -71,8 +71,10 @@ const BrandPreferenceScreen = () => {
           },
           { merge: true }
         );
+        setPromotionType({ paid: false, unpaid: false, barter: false });
+        setInfluencerType({ comedy: false, beauty: false, fashion: false });
         router.push({
-          pathname: "/onboarding-get-started",
+          pathname: "/(onboarding)/onboarding-get-started",
           params: { brandId },
         });
       }

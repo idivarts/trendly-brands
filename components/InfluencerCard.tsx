@@ -133,44 +133,35 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           }}
         >
           <Animated.View>
-            <Image source={{ uri: item.url }} style={styles.media} />
+            <Image
+              source={{ uri: item.url || item.uri }}
+              style={styles.media}
+            />
           </Animated.View>
         </TapGestureHandler>
       );
     } else {
       return (
-        <TouchableOpacity
-          onPress={() => {
-            if (!isSwiping) {
-              setMuted(!muted);
-              if (index === currentIndex) {
-                setIsPlaying(!isPlaying);
-              }
+        <Video
+          ref={(ref) => {
+            if (ref) {
+              videoRefs.current[index] = ref;
             }
           }}
-        >
-          <Video
-            ref={(ref) => {
-              if (ref) {
-                videoRefs.current[index] = ref;
-              }
-            }}
-            source={
-              item.appleUrl
-                ? {
-                    uri: Platform.OS === "ios" ? item.appleUrl : item.playUrl,
-                  }
-                : require("../assets/videos/ForBiggerJoyrides.mp4")
-            }
-            style={styles.media}
-            resizeMode={ResizeMode.COVER}
-            isLooping
-            isMuted={muted}
-            shouldPlay={isPlaying}
-            useNativeControls
-            onError={(error) => console.log("Video Error:", error)}
-          />
-        </TouchableOpacity>
+          source={
+            item.appleUrl
+              ? {
+                  uri: Platform.OS === "ios" ? item.appleUrl : item.playUrl,
+                }
+              : require("../assets/videos/ForBiggerJoyrides.mp4")
+          }
+          style={styles.media}
+          resizeMode={ResizeMode.COVER}
+          isLooping={false}
+          shouldPlay={false}
+          useNativeControls
+          onError={(error) => console.log("Video Error:", error)}
+        />
       );
     }
   };

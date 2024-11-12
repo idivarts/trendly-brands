@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  Text,
   TouchableOpacity,
 } from "react-native";
 import {
@@ -16,10 +15,16 @@ import {
   IconButton,
   RadioButton,
   Modal,
-  Portal,
-  PaperProvider,
 } from "react-native-paper";
-import MapView, { Marker } from "react-native-maps";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { useTheme } from "@react-navigation/native";
 import { addDoc, collection } from "firebase/firestore";
@@ -32,6 +37,17 @@ import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import BackButton from "@/components/ui/back-button/BackButton";
 import { Ionicons } from "@expo/vector-icons";
+
+const customIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -87,7 +103,7 @@ const CreateCollaborationScreen = () => {
       }
 
       const collabRef = collection(FirestoreDB, "collaborations");
-      const docRef = await addDoc(collabRef, {
+      await addDoc(collabRef, {
         name: collaborationName,
         brandId: selectedBrand ? selectedBrand.id : "",
         managerId: AuthApp.currentUser?.uid,
@@ -114,11 +130,21 @@ const CreateCollaborationScreen = () => {
         externalLinks: links,
         status: "active",
       }).then(() => {
-        setScreen(3);
+        router.push("/collaborations");
       });
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const MapClickHandler = () => {
+    useMapEvents({
+      click(e: any) {
+        const { lat, lng } = e.latlng;
+        setMapRegion((prev) => ({ ...prev, latitude: lat, longitude: lng }));
+      },
+    });
+    return null;
   };
 
   if (screen === 1) {
@@ -170,7 +196,7 @@ const CreateCollaborationScreen = () => {
             label="About this Collaboration"
             value={aboutCollab}
             onChangeText={(text) => setAboutCollab(text)}
-            multiline
+            // multiline
             textColor={Colors(theme).text}
             style={styles.input}
           />
@@ -350,15 +376,24 @@ const CreateCollaborationScreen = () => {
           </RadioButton.Group>
 
           {location === "Physical" && (
-            <View style={styles.mapContainer}>
-              <MapView
-                style={styles.map}
-                region={mapRegion}
-                onRegionChangeComplete={(region) => setMapRegion(region)}
+            <MapContainer
+              style={{ height: 300 }}
+              bounds={
+                [
+                  [mapRegion.latitude - 0.01, mapRegion.longitude - 0.01],
+                  [mapRegion.latitude + 0.01, mapRegion.longitude + 0.01],
+                ] as any
+              }
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <Marker
+                position={[mapRegion.latitude, mapRegion.longitude]}
+                icon={customIcon}
               >
-                <Marker coordinate={mapRegion} />
-              </MapView>
-            </View>
+                <Popup>Location</Popup>
+              </Marker>
+              <MapClickHandler />
+            </MapContainer>
           )}
 
           <Button
@@ -380,47 +415,28 @@ const CreateCollaborationScreen = () => {
             Post
           </Button>
 
-          <Modal
-            visible={isModalVisible}
-            onDismiss={() => setIsModalVisible(false)}
-            contentContainerStyle={styles.modalContainer}
-          >
-            <TextInput
-              label="Link Name"
-              value={newLinkName}
-              onChangeText={setNewLinkName}
-              style={styles.input}
-            />
-            <TextInput
-              label="Link URL"
-              value={newLinkUrl}
-              onChangeText={setNewLinkUrl}
-              style={styles.input}
-            />
-            <Button mode="contained" onPress={addLink}>
-              Add Link
-            </Button>
-          </Modal>
         </ScrollView>
-      </AppLayout>
-    );
-  }
-
-  if (screen === 3) {
-    return (
-      <AppLayout>
-        <View style={styles.container3}>
-          <IconButton
-            icon="check-circle"
-            size={100}
-            iconColor="green"
-            style={styles.checkIcon}
+        <Modal
+          visible={isModalVisible}
+          onDismiss={() => setIsModalVisible(false)}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <TextInput
+            label="Link Name"
+            value={newLinkName}
+            onChangeText={setNewLinkName}
+            style={styles.input}
           />
-          <Text style={styles.title}>Collaboration Posted</Text>
-          <Text style={styles.description}>
-            Your collaboration has been successfully posted.
-          </Text>
-        </View>
+          <TextInput
+            label="Link URL"
+            value={newLinkUrl}
+            onChangeText={setNewLinkUrl}
+            style={styles.input}
+          />
+          <Button mode="contained" onPress={addLink}>
+            Add Link
+          </Button>
+        </Modal>
       </AppLayout>
     );
   }
