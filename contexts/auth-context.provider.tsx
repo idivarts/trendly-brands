@@ -141,6 +141,11 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         let userData = {
           name: name,
           email: email,
+          pushNotificationToken: {
+            ios: [],
+            android: [],
+            web: [],
+          }
         };
 
         await setDoc(docRef, userData);
@@ -153,7 +158,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
             setSession(userCredential.user.uid);
-            router.replace("/onboarding-your-brand?firstBrand=true");
+            router.replace("/(onboarding)/onboarding-your-brand?firstBrand=true");
           } else {
             setTimeout(checkVerification, 2000);
           }

@@ -143,7 +143,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           icon="plus"
           showChevron={false}
           onPress={() => {
-            router.push("/onboarding-your-brand");
+            router.push("/(onboarding)/onboarding-your-brand");
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
           title="Create New Brand"
