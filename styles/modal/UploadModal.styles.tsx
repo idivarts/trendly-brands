@@ -48,8 +48,15 @@ const stylesFn = (theme: Theme) =>
       paddingVertical: 16,
       flexGrow: 1,
     },
+    container3: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "#fff",
+      paddingHorizontal: 24,
+    },
+
     title: {
-      marginBottom: 16,
       color: Colors(theme).text,
     },
     input: {
@@ -73,9 +80,23 @@ const stylesFn = (theme: Theme) =>
       alignItems: "center",
       marginBottom: 16,
     },
+    checkIcon: {
+      marginBottom: 16,
+    },
+    button: {
+      marginTop: 16,
+      paddingVertical: 6,
+      width: "100%",
+    },
     mapContainer: {
       height: 200,
       marginBottom: 16,
+    },
+    description: {
+      fontSize: 16,
+      color: "#555",
+      marginBottom: 24,
+      textAlign: "center",
     },
     map: {
       flex: 1,
