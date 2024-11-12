@@ -3,6 +3,7 @@ import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
+  useTheme,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
@@ -24,6 +25,7 @@ import {
 import { Provider } from "react-native-paper";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
+import CustomPaperTheme from "@/constants/Themes/Theme";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -82,6 +84,7 @@ export default function RootLayout() {
 
 const RootLayoutStack = () => {
   const colorScheme = useColorScheme();
+  const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const segments = useSegments();
@@ -114,28 +117,32 @@ const RootLayoutStack = () => {
 
   return (
     <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          animation: "ios",
-          headerShown: false,
-        }}
+      <Provider
+        theme={CustomPaperTheme(theme)}
       >
-        <Stack.Screen name="(public)" options={{ headerShown: false }} />
-        {session ? (
-          <Stack.Screen name="(main)" options={{ headerShown: false }} />
-        ) : (
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        )}
-        <Stack.Screen name="index" />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen
-          name="modal"
-          options={{
-            presentation: "modal",
-            gestureEnabled: true,
+        <Stack
+          screenOptions={{
+            animation: "ios",
+            headerShown: false,
           }}
-        />
-      </Stack>
+        >
+          <Stack.Screen name="(public)" options={{ headerShown: false }} />
+          {session ? (
+            <Stack.Screen name="(main)" options={{ headerShown: false }} />
+          ) : (
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          )}
+          <Stack.Screen name="index" />
+          <Stack.Screen name="+not-found" />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: "modal",
+              gestureEnabled: true,
+            }}
+          />
+        </Stack>
+      </Provider>
     </ThemeProvider>
   );
 };

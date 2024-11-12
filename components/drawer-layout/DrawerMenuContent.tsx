@@ -20,22 +20,27 @@ interface DrawerMenuContentProps { }
 const DRAWER_MENU_CONTENT_ITEMS = [
   {
     href: "/explore-influencers",
+    icon: "handshake-o",
     label: "Explore Influencers",
   },
   {
     href: "/collaborations",
+    icon: "group",
     label: "Collaborations",
   },
   {
     href: "/create-collaboration",
+    icon: "plus-circle",
     label: "Create Collaboration",
   },
   {
     href: "/messages",
+    icon: "comments",
     label: "Messages",
   },
   {
     href: "/contracts",
+    icon: "file-text-o",
     label: "Contracts",
   },
 ];

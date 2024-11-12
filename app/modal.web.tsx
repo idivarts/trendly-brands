@@ -196,7 +196,7 @@ const CreateCollaborationScreen = () => {
             label="About this Collaboration"
             value={aboutCollab}
             onChangeText={(text) => setAboutCollab(text)}
-            multiline
+            // multiline
             textColor={Colors(theme).text}
             style={styles.input}
           />
@@ -415,28 +415,28 @@ const CreateCollaborationScreen = () => {
             Post
           </Button>
 
-          <Modal
-            visible={isModalVisible}
-            onDismiss={() => setIsModalVisible(false)}
-            contentContainerStyle={styles.modalContainer}
-          >
-            <TextInput
-              label="Link Name"
-              value={newLinkName}
-              onChangeText={setNewLinkName}
-              style={styles.input}
-            />
-            <TextInput
-              label="Link URL"
-              value={newLinkUrl}
-              onChangeText={setNewLinkUrl}
-              style={styles.input}
-            />
-            <Button mode="contained" onPress={addLink}>
-              Add Link
-            </Button>
-          </Modal>
         </ScrollView>
+        <Modal
+          visible={isModalVisible}
+          onDismiss={() => setIsModalVisible(false)}
+          contentContainerStyle={styles.modalContainer}
+        >
+          <TextInput
+            label="Link Name"
+            value={newLinkName}
+            onChangeText={setNewLinkName}
+            style={styles.input}
+          />
+          <TextInput
+            label="Link URL"
+            value={newLinkUrl}
+            onChangeText={setNewLinkUrl}
+            style={styles.input}
+          />
+          <Button mode="contained" onPress={addLink}>
+            Add Link
+          </Button>
+        </Modal>
       </AppLayout>
     );
   }

@@ -3,9 +3,11 @@ import { usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
+import { FontAwesome } from "@expo/vector-icons";
 
 type Tab = {
   href: string;
+  icon: string;
   label: string;
 };
 
@@ -30,8 +32,25 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
           borderBottomColor: Colors(theme).aliceBlue,
           paddingHorizontal: 24,
           paddingVertical: 14,
+          flexDirection: "row",
+          gap: 12,
+          alignItems: "center",
+          justifyContent: "flex-start"
         }}
       >
+        <FontAwesome
+          name={tab.icon as any}
+          color={
+            tab.href.includes(pathname)
+              ? Colors(theme).white
+              : Colors(theme).gray100
+          }
+          style={{
+            width: 32,
+            textAlign: "center",
+          }}
+          size={28}
+        />
         <Text
           style={{
             color: tab.href.includes(pathname)

@@ -9,7 +9,10 @@ interface ChatContextProps {
   client: any;
 }
 
-const ChatContext = createContext<ChatContextProps>(null!);
+const ChatContext = createContext<ChatContextProps>({
+  createGroupWithMembers: async () => { },
+  client: null,
+});
 
 export const useChatContext = () => useContext(ChatContext);
 
