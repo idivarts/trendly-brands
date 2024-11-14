@@ -135,7 +135,7 @@ const RootLayoutStack = () => {
           <Stack.Screen name="index" />
           <Stack.Screen name="+not-found" />
           <Stack.Screen
-            name="modal"
+            name="(modal)/create-collaboration"
             options={{
               presentation: "modal",
               gestureEnabled: true,
