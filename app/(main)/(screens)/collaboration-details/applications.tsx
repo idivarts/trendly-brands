@@ -108,7 +108,7 @@ const CollaborationApplicationPage = (props: any) => {
         )}
         keyExtractor={(item, index) => item.id + index}
         style={{
-          padding: 16,
+          paddingHorizontal: 2,
           paddingBottom: 100,
         }}
       />

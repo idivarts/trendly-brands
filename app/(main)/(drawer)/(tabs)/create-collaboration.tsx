@@ -3,7 +3,9 @@ import { useRouter } from "expo-router";
 const CreateCollaborationScreen = () => {
   const router = useRouter();
 
-  return router.push("/modal");
+  router.push("/(modal)/create-collaboration");
+
+  return null;
 };
 
 export default CreateCollaborationScreen;

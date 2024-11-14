@@ -1,13 +1,11 @@
 import React from "react";
-import { View, Image, StyleSheet, ScrollView } from "react-native";
+import { View, Image, ScrollView } from "react-native";
 import {
   Text,
   Chip,
   Appbar,
   Card,
   Paragraph,
-  IconButton,
-  Button,
 } from "react-native-paper";
 import AppLayout from "@/layouts/app-layout";
 import { router, useLocalSearchParams } from "expo-router";
@@ -66,189 +64,207 @@ const CollaborationPage = (props: any) => {
           color={Colors(theme).text}
         />
       </Appbar.Header>
-      <ScrollView
-        contentContainerStyle={styles.chipContainer}
+      <View
         style={{
-          height: 50,
-          flexGrow: 0,
+          flex: 1,
         }}
-        horizontal
       >
-        <Chip
-          selected={activeTab === "Overview"}
-          onPress={() => setActiveTab("Overview")}
-          style={styles.chip}
+        <ScrollView
+          contentContainerStyle={styles.chipContainer}
+          style={{
+            maxHeight: 30,
+          }}
+          horizontal
         >
-          Overview
-        </Chip>
-        <Chip
-          selected={activeTab === "Application"}
-          onPress={() => setActiveTab("Application")}
-          style={styles.chip}
-        >
-          Application
-        </Chip>
-        <Chip
-          selected={activeTab === "Invitation"}
-          onPress={() => setActiveTab("Invitation")}
-          style={styles.chip}
-        >
-          Invitation
-        </Chip>
-        <Chip
-          selected={activeTab === "Settings"}
-          onPress={() => setActiveTab("Settings")}
-          style={styles.chip}
-        >
-          Settings
-        </Chip>
-      </ScrollView>
-      {activeTab === "Overview" && (
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          {/* Collaboration Details */}
-          <Card style={styles.profileCard}>
-            <Image
-              source={{
-                uri:
-                  props.logo ||
-                  "https://cdn.pixabay.com/photo/2022/09/21/17/02/blue-background-7470781_640.jpg",
-              }}
-              style={styles.profileImage}
-            />
-            <Card.Content style={styles.profileContent}>
-              <Text variant="headlineMedium" style={styles.name}>
-                {props.collaborationDetail.name}
-              </Text>
-              <Text variant="bodyMedium" style={styles.brandName}>
-                {props.collaborationDetail.brandName}
-              </Text>
-              <Text variant="bodySmall" style={styles.shortDescription}>
-                {props.collaborationDetail.description}
-              </Text>
-              {/* <Button
-              mode="contained"
-              style={styles.applyButton}
-              onPress={() => {
-                router.push(`/apply-now/${props.pageID}`);
-              }}
-            >
-              Apply Now
-            </Button> */}
-              <View style={styles.statsContainer}>
-                <Chip
-                  icon="checkbox-marked-circle"
-                  style={styles.statChip}
-                  textStyle={{
-                    fontSize: 12,
-                    color: Colors(theme).text,
-                  }}
-                >
-                  {props.collaborationDetail.appliedCount} Applied
-                </Chip>
-                <Chip
-                  icon="eye"
-                  style={styles.statChip}
-                  textStyle={{
-                    fontSize: 12,
-                    color: Colors(theme).text,
-                  }}
-                >
-                  {props.collaborationDetail.brandViewed} Reviewed
-                </Chip>
-                <Chip
-                  icon="map-marker"
-                  style={styles.statChip}
-                  textStyle={{
-                    fontSize: 12,
-                    color: Colors(theme).text,
-                  }}
-                >
-                  {props.collaborationDetail.location.type === "Remote"
-                    ? "Remote"
-                    : props.collaborationDetail.location.name}
-                </Chip>
-              </View>
-            </Card.Content>
-          </Card>
-
-          {/* Ad Description Section */}
-          <Card style={styles.infoCard}>
-            {/* <Card.Title title="Ad Description" /> */}
-            <View>
-              <Text variant="headlineSmall" style={styles.cardName}>
-                Ad Description
-              </Text>
-            </View>
-            <Card.Content>
-              <Paragraph style={styles.brandName}>
-                {" "}
-                {props.collaborationDetail.description}
-              </Paragraph>
-            </Card.Content>
-          </Card>
-
-          {/* About Brand Section */}
-          <Card style={styles.infoCard}>
-            {/* <Card.Title title="About Brand" /> */}
-            <View>
-              <Text variant="headlineSmall" style={styles.cardName}>
-                About Brand
-              </Text>
-            </View>
-            <Card.Content>
-              <Paragraph style={styles.brandName}>
-                {props.collaborationDetail.description}
-              </Paragraph>
-            </Card.Content>
-          </Card>
-
-          {/* Platform Section */}
-          <Card style={styles.infoCard}>
-            {/* <Card.Title title="Platform" /> */}
-            <View>
-              <Text variant="headlineSmall" style={styles.cardName}>
-                Platform
-              </Text>
-            </View>
-            <Card.Content>
-              <Paragraph style={styles.paragraph}>Instagram</Paragraph>
-            </Card.Content>
-          </Card>
-
-          {/* Payment Details Section */}
-          <Card style={styles.infoCard}>
-            {/* <Card.Title title="Payment Details" /> */}
-            <View>
-              <Text variant="headlineSmall" style={styles.cardName}>
-                Payment Details
-              </Text>
-            </View>
-            <Card.Content>
-              <Paragraph style={styles.brandName}>
-                Cost: {props.collaborationDetail.budget.min}
-              </Paragraph>
-              <Paragraph style={styles.brandName}>
-                Payment Verified: True
-              </Paragraph>
-            </Card.Content>
-          </Card>
+          <Chip
+            selected={activeTab === "Overview"}
+            onPress={() => setActiveTab("Overview")}
+            style={styles.chip}
+          >
+            Overview
+          </Chip>
+          <Chip
+            selected={activeTab === "Application"}
+            onPress={() => setActiveTab("Application")}
+            style={styles.chip}
+          >
+            Application
+          </Chip>
+          <Chip
+            selected={activeTab === "Invitation"}
+            onPress={() => setActiveTab("Invitation")}
+            style={styles.chip}
+          >
+            Invitation
+          </Chip>
+          <Chip
+            selected={activeTab === "Settings"}
+            onPress={() => setActiveTab("Settings")}
+            style={styles.chip}
+          >
+            Settings
+          </Chip>
         </ScrollView>
-      )}
-      {
-        // Application Tab
-        activeTab === "Application" && (
-          <CollaborationApplicationPage
-            pageID={props.pageID}
-            collaboration={{
-              id: props.pageID,
-              name: props.collaborationDetail.name,
-            }}
-          />
-        )
-      }
-      {activeTab === "Invitation" && (
-        <CollaborationInvitationPage pageID={props.pageID} />
-      )}
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          style={{
+            flex: 1,
+          }}
+        >
+          {
+            activeTab === "Overview" && (
+              <>
+                {/* Collaboration Details */}
+                <Card style={styles.profileCard}>
+                  <Image
+                    source={{
+                      uri:
+                        props.logo ||
+                        "https://cdn.pixabay.com/photo/2022/09/21/17/02/blue-background-7470781_640.jpg",
+                    }}
+                    style={styles.profileImage}
+                  />
+                  <Card.Content style={styles.profileContent}>
+                    <Text variant="headlineMedium" style={styles.name}>
+                      {props.collaborationDetail.name}
+                    </Text>
+                    <Text variant="bodyMedium" style={styles.brandName}>
+                      {props.collaborationDetail.brandName}
+                    </Text>
+                    <Text variant="bodySmall" style={styles.shortDescription}>
+                      {props.collaborationDetail.description}
+                    </Text>
+                    {/*
+                    <Button
+                      mode="contained"
+                      style={styles.applyButton}
+                      onPress={() => {
+                        router.push(`/apply-now/${props.pageID}`);
+                      }}
+                    >
+                      Apply Now
+                    </Button>
+                  */}
+                    <View style={styles.statsContainer}>
+                      <Chip
+                        icon="checkbox-marked-circle"
+                        style={styles.statChip}
+                        textStyle={{
+                          fontSize: 12,
+                          color: Colors(theme).text,
+                        }}
+                      >
+                        {props.collaborationDetail.appliedCount} Applied
+                      </Chip>
+                      <Chip
+                        icon="eye"
+                        style={styles.statChip}
+                        textStyle={{
+                          fontSize: 12,
+                          color: Colors(theme).text,
+                        }}
+                      >
+                        {props.collaborationDetail.brandViewed} Reviewed
+                      </Chip>
+                      <Chip
+                        icon="map-marker"
+                        style={styles.statChip}
+                        textStyle={{
+                          fontSize: 12,
+                          color: Colors(theme).text,
+                        }}
+                      >
+                        {props.collaborationDetail.location.type === "Remote"
+                          ? "Remote"
+                          : props.collaborationDetail.location.name}
+                      </Chip>
+                    </View>
+                  </Card.Content>
+                </Card>
+
+                {/* Ad Description Section */}
+                <Card style={styles.infoCard}>
+                  {/* <Card.Title title="Ad Description" /> */}
+                  <View>
+                    <Text variant="headlineSmall" style={styles.cardName}>
+                      Ad Description
+                    </Text>
+                  </View>
+                  <Card.Content>
+                    <Paragraph style={styles.brandName}>
+                      {" "}
+                      {props.collaborationDetail.description}
+                    </Paragraph>
+                  </Card.Content>
+                </Card>
+
+                {/* About Brand Section */}
+                <Card style={styles.infoCard}>
+                  {/* <Card.Title title="About Brand" /> */}
+                  <View>
+                    <Text variant="headlineSmall" style={styles.cardName}>
+                      About Brand
+                    </Text>
+                  </View>
+                  <Card.Content>
+                    <Paragraph style={styles.brandName}>
+                      {props.collaborationDetail.description}
+                    </Paragraph>
+                  </Card.Content>
+                </Card>
+
+                {/* Platform Section */}
+                <Card style={styles.infoCard}>
+                  {/* <Card.Title title="Platform" /> */}
+                  <View>
+                    <Text variant="headlineSmall" style={styles.cardName}>
+                      Platform
+                    </Text>
+                  </View>
+                  <Card.Content>
+                    <Paragraph style={styles.paragraph}>Instagram</Paragraph>
+                  </Card.Content>
+                </Card>
+
+                {/* Payment Details Section */}
+                <Card style={styles.infoCard}>
+                  {/* <Card.Title title="Payment Details" /> */}
+                  <View>
+                    <Text variant="headlineSmall" style={styles.cardName}>
+                      Payment Details
+                    </Text>
+                  </View>
+                  <Card.Content>
+                    <Paragraph style={styles.brandName}>
+                      Cost: {props.collaborationDetail.budget.min}
+                    </Paragraph>
+                    <Paragraph style={styles.brandName}>
+                      Payment Verified: True
+                    </Paragraph>
+                  </Card.Content>
+                </Card>
+              </>
+            )
+          }
+          {
+            // Application Tab
+            activeTab === "Application" && (
+              <CollaborationApplicationPage
+                pageID={props.pageID}
+                collaboration={{
+                  id: props.pageID,
+                  name: props.collaborationDetail.name,
+                }}
+              />
+            )
+          }
+          {
+            activeTab === "Invitation" && (
+              <CollaborationInvitationPage pageID={props.pageID} />
+            )
+          }
+        </ScrollView>
+      </View>
       <BottomSheetActions
         cardId={props.pageID}
         cardType="influencerCard"

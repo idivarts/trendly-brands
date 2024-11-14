@@ -47,9 +47,11 @@ const BrandItem: React.FC<BrandItemProps> = ({
             showImage && (
               <Avatar.Image
                 size={32}
-                source={{
-                  uri: image ?? "https://images.unsplash.com/photo-1557683316-973673baf926",
-                }}
+                source={
+                  image ? {
+                    uri: image,
+                  } : require("@/assets/images/placeholder-image.jpg")
+                }
                 style={{
                   backgroundColor: active ? Colors(theme).white : Colors(theme).primary,
                 }}

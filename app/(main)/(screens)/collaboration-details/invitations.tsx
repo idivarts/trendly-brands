@@ -198,7 +198,7 @@ const CollaborationInvitationPage = (props: any) => {
         )}
         keyExtractor={(item) => item.id}
         style={{
-          padding: 16,
+          paddingHorizontal: 2,
           paddingBottom: 100,
         }}
       />
