@@ -6,7 +6,7 @@ import {
   useTheme,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack, usePathname, useRouter, useSegments } from "expo-router";
+import { Stack, useLocalSearchParams, usePathname, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
@@ -26,6 +26,7 @@ import { Provider } from "react-native-paper";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import CustomPaperTheme from "@/constants/Themes/Theme";
+import { queryParams } from "@/utils/url";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -87,6 +88,7 @@ const RootLayoutStack = () => {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const params = useLocalSearchParams();
   const segments = useSegments();
   const { isLoading, session, manager } = useAuthContext();
 
@@ -102,7 +104,7 @@ const RootLayoutStack = () => {
     if (session && (inMainGroup || inOnboardingGroup)) {
       // Redirect to main group path if signed in
       //@ts-ignore
-      router.replace(pathname);
+      router.replace(`${pathname}${queryParams(params)}`);
     } else if (session) {
       // Redirect to main group if signed in
       router.replace("/explore-influencers");
