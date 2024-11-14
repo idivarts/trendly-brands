@@ -2,15 +2,16 @@ import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import fnStyles from "@/styles/onboarding/get-started.styles";
-import { DUMMY_MANAGER_CREDENTIALS } from "@/constants/Manager";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Button, TouchableOpacity } from "react-native";
-import { Menu, Provider } from "react-native-paper";
+import { View, Text, Button, TouchableOpacity } from "react-native";
+import { Menu } from "react-native-paper";
 import { AuthApp } from "@/utils/auth";
 import { router, useLocalSearchParams } from "expo-router";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Brand } from "@/types/Brand";
 
 const GetStartedScreen = () => {
   const [hearAboutUs, setHearAboutUs] = useState("");
@@ -39,13 +40,17 @@ const GetStartedScreen = () => {
 
   const params = useLocalSearchParams();
 
-  const handleSubmit = () => {
+  const {
+    setSelectedBrand,
+  } = useBrandContext();
+
+  const handleSubmit = async () => {
     try {
       const { brandId } = params;
       if (brandId) {
         //@ts-ignore
         const brandRef = doc(FirestoreDB, "brands", brandId);
-        setDoc(
+        await setDoc(
           brandRef,
           {
             survey: {
@@ -56,6 +61,14 @@ const GetStartedScreen = () => {
           },
           { merge: true }
         );
+
+        const brandData = await getDoc(brandRef);
+
+        setSelectedBrand({
+          ...(brandData.data() as Brand),
+          id: brandRef.id,
+        });
+
         router.push("/(main)/explore-influencers");
       }
     } catch (error) {

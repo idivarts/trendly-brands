@@ -16,7 +16,11 @@ interface BrandContextProps {
   setSelectedBrand: React.Dispatch<React.SetStateAction<Brand | undefined>>;
 }
 
-const BrandContext = createContext<BrandContextProps>(null!);
+const BrandContext = createContext<BrandContextProps>({
+  brands: [],
+  selectedBrand: undefined,
+  setSelectedBrand: () => { },
+});
 
 export const useBrandContext = () => useContext(BrandContext);
 
@@ -31,9 +35,10 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     if (!manager?.id) return;
 
     const brandsCollection = collection(FirestoreDB, "brands");
-    const brandsWithManagerId: Brand[] = [];
 
     const unsubscribe = onSnapshot(brandsCollection, (brandsSnapshot) => {
+      const brandsWithManagerId: Brand[] = [];
+
       brandsSnapshot.docs.forEach((brandDoc) => {
         const membersCollection = collection(brandDoc.ref, "members");
         const membersQuery = query(
@@ -51,12 +56,18 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 
           setBrands(brandsWithManagerId);
 
-          setSelectedBrand(brandsWithManagerId[0]);
+          if (brandsWithManagerId.length > 0 && !selectedBrand) {
+            setSelectedBrand(brandsWithManagerId[0]);
+          }
         });
       });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      setSelectedBrand(undefined);
+      setBrands([]);
+    };
   }, [manager?.id]);
 
   return (

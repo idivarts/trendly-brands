@@ -1,12 +1,10 @@
 import { useAuthContext } from "@/contexts";
-import { DUMMY_MANAGER_CREDENTIALS } from "@/constants/Manager";
 import * as React from "react";
-import { View, StyleSheet, Image, Text } from "react-native";
+import { View, Image, Text } from "react-native";
 import { TextInput, Button } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { useTheme } from "@react-navigation/native";
 import fnStyles from "@/styles/login.styles";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
 import Colors from "@/constants/Colors";
 
@@ -28,7 +26,7 @@ const LoginScreen = () => {
       <Toast />
       {/* Logo Section */}
       <Image
-        source={require("../../assets/images/logo.png")} // Replace with your actual logo path
+        source={require("@/assets/images/logo.png")} // Replace with your actual logo path
         style={styles.logo}
         resizeMode="contain"
       />

@@ -31,6 +31,7 @@
     "@react-navigation/drawer": "^6.7.2",
     "@react-navigation/native": "^6.0.2",
     "@stream-io/flat-list-mvcp": "^0.10.3",
+    "@vis.gl/react-google-maps": "^1.4.0",
     "date-fns": "^4.1.0",
     "expo": "~51.0.21",
     "expo-av": "^14.0.7",
@@ -42,6 +43,7 @@
     "expo-image-manipulator": "~12.0.5",
     "expo-image-picker": "^15.0.7",
     "expo-linking": "~6.3.1",
+    "expo-location": "~17.0.1",
     "expo-router": "~3.5.18",
     "expo-secure-store": "^13.0.2",
     "expo-splash-screen": "~0.27.5",
@@ -65,9 +67,7 @@
     "react-native-swiper": "^1.6.0",
     "react-native-toast-message": "^2.2.1",
     "react-native-video": "^6.7.0",
-    "react-native-web": "~0.19.10",
-    "leaflet": "^1.9.4",
-    "react-leaflet": "^4.2.1"
+    "react-native-web": "~0.19.10"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

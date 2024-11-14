@@ -34,15 +34,20 @@ const Menu = () => {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={{
-          uri: "https://images.unsplash.com/photo-1557683316-973673baf926",
-        }}
+        source={
+          selectedBrand?.image ? {
+            uri: selectedBrand.image,
+          } : require("@/assets/images/cover-placeholder-image.png")
+        }
+        resizeMode="cover"
         style={styles.backgroundImage}
       />
       <Avatar.Image
-        source={{
-          uri: selectedBrand?.image || PLACEHOLDER_IMAGE,
-        }}
+        source={
+          selectedBrand?.image ? {
+            uri: selectedBrand.image,
+          } : require("@/assets/images/placeholder-image.jpg")
+        }
         size={72}
         style={styles.brandAvatar}
       />
@@ -96,9 +101,11 @@ const Menu = () => {
           >
             <View style={styles.userProfileContainer}>
               <Avatar.Image
-                source={{
-                  uri: manager?.profileImage || PLACEHOLDER_PERSON_IMAGE,
-                }}
+                source={
+                  manager?.profileImage ? {
+                    uri: manager?.profileImage,
+                  } : require("@/assets/images/placeholder-person-image.png")
+                }
                 size={56}
                 style={styles.avatar}
               />

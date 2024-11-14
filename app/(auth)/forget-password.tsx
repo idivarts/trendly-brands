@@ -2,7 +2,7 @@ import fnStyles from "@/styles/forget-password.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import * as React from "react";
-import { View, StyleSheet, Image, Text } from "react-native";
+import { View, Image, Text } from "react-native";
 import { TextInput, Button } from "react-native-paper";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { AuthApp } from "@/utils/auth";
@@ -39,7 +39,7 @@ const ForgotPasswordScreen = () => {
       {/* Logo Section */}
       <Toast />
       <Image
-        source={require("../../assets/images/logo.png")} // Replace with your actual logo path
+        source={require("@/assets/images/logo.png")} // Replace with your actual logo path
         style={styles.logo}
         resizeMode="contain"
       />

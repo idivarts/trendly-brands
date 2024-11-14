@@ -93,7 +93,7 @@ const TabLayout = () => {
         listeners={() => ({
           tabPress: (e) => {
             e.preventDefault();
-            router.push("/modal");
+            router.push("/(modal)/create-collaboration");
           },
         })}
         options={{

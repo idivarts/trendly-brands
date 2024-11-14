@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   TouchableOpacity,
-  TouchableWithoutFeedback,
 } from "react-native";
 import { TextInput, Button, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -13,16 +12,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import fnStyles from "@/styles/onboarding/brand.styles";
-import Colors from "@/constants/Colors";
 import { Industries as industries } from "@/constants/Industries";
 import { roles } from "@/constants/Roles";
 import { AuthApp } from "@/utils/auth";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
-import { StorageApp } from "@/utils/firebase-storage";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import Toast from "react-native-toast-message";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/constants/Colors";
 
 const OnboardingScreen = () => {
   const [brandName, setBrandName] = useState("");
@@ -167,7 +164,7 @@ const OnboardingScreen = () => {
         >
           <AutocompleteInput
             data={filteredRoles}
-            defaultValue={role}
+            value={role}
             onChangeText={filterRoles}
             onFocus={() => setActiveDropdown("role")}
             placeholder="Your Role at Company"
@@ -176,6 +173,9 @@ const OnboardingScreen = () => {
               keyExtractor: (_, idx) => idx.toString(),
               renderItem: ({ item }) => (
                 <TouchableOpacity
+                  style={{
+                    backgroundColor: Colors(theme).background,
+                  }}
                   onPress={() => {
                     setRole(item);
                     setFilteredRoles([]);
@@ -185,6 +185,10 @@ const OnboardingScreen = () => {
                   <Text style={styles.itemText}>{item}</Text>
                 </TouchableOpacity>
               ),
+            }}
+            style={{
+              backgroundColor: Colors(theme).inputBackground,
+              color: Colors(theme).text,
             }}
             inputContainerStyle={styles.autocompleteInputContainer}
             listContainerStyle={styles.autocompleteListContainer}
@@ -199,7 +203,7 @@ const OnboardingScreen = () => {
         >
           <AutocompleteInput
             data={filteredIndustries}
-            defaultValue={industry}
+            value={industry}
             onChangeText={filterIndustries}
             onFocus={() => setActiveDropdown("industry")}
             placeholder="Select Industry"
@@ -207,7 +211,10 @@ const OnboardingScreen = () => {
               keyboardShouldPersistTaps: "always",
               keyExtractor: (_, idx) => idx.toString(),
               renderItem: ({ item }) => (
-                <TouchableWithoutFeedback
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: Colors(theme).background,
+                  }}
                   onPress={() => {
                     setIndustry(item);
                     setFilteredIndustries([]);
@@ -215,8 +222,12 @@ const OnboardingScreen = () => {
                   }}
                 >
                   <Text style={styles.itemText}>{item}</Text>
-                </TouchableWithoutFeedback>
+                </TouchableOpacity>
               ),
+            }}
+            style={{
+              backgroundColor: Colors(theme).inputBackground,
+              color: Colors(theme).text,
             }}
             inputContainerStyle={styles.autocompleteInputContainer}
             listContainerStyle={styles.autocompleteListContainer}

@@ -7,7 +7,7 @@ import stylesFn from "@/styles/tab1.styles";
 import { useTheme } from "@react-navigation/native";
 import AppLayout from "@/layouts/app-layout";
 import { slides } from "@/constants/Slides";
-import Colors from "@/constants/Themes/Colors";
+import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
 
 const PreSignIn = () => {
