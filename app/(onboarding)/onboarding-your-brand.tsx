@@ -19,8 +19,6 @@ import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import Toast from "react-native-toast-message";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { Brand } from "@/types/Brand";
 import Colors from "@/constants/Colors";
 
 const OnboardingScreen = () => {
@@ -37,10 +35,6 @@ const OnboardingScreen = () => {
   const {
     firstBrand,
   } = useLocalSearchParams();
-
-  const {
-    setSelectedBrand,
-  } = useBrandContext();
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -104,11 +98,6 @@ const OnboardingScreen = () => {
         await setDoc(managerRef, {
           managerId: user.uid,
           role,
-        });
-
-        setSelectedBrand({
-          ...(brandData as Brand),
-          id: docRef.id,
         });
 
         router.navigate({
