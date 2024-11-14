@@ -25,8 +25,10 @@ jobs:
     - name: Load Config JS
       env:
         FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_FIREBASE_CONFIG }}
+        ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
       run: |
         echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
+        echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
     - run: npm run build
     - name: serverless deploy
       uses: serverless/github-action@v3.2
