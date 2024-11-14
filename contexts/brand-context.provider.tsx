@@ -63,7 +63,11 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
       });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      setSelectedBrand(undefined);
+      setBrands([]);
+    };
   }, [manager?.id]);
 
   return (

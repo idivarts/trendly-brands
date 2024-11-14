@@ -2,10 +2,10 @@ import { PropsWithChildren, useMemo } from "react";
 import { Platform, SafeAreaView, StatusBar, StyleSheet } from "react-native";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 
-import Colors from "@/constants/Themes/Colors";
+import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 
-interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> {}
+interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> { }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const theme = useTheme();

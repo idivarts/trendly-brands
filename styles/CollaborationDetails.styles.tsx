@@ -6,6 +6,7 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     scrollContainer: {
       padding: 16,
+      flex: 1,
     },
     profileCard: {
       alignItems: "center",

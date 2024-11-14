@@ -1,4 +1,4 @@
-import Colors from "@/constants/Themes/Colors";
+import Colors from "@/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -26,6 +26,7 @@ const fnStyles = (theme: Theme) =>
     autocompleteContainer: {
       marginBottom: 20,
       zIndex: 1,
+      backgroundColor: Colors(theme).inputBackground,
     },
     autocompleteInputContainer: {
       borderWidth: 1,

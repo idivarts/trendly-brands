@@ -1,6 +1,6 @@
 import { DefaultTheme as PaperDefaultTheme } from "react-native-paper";
 import { Theme } from "@react-navigation/native";
-import Colors from "./Colors";
+import Colors from "../Colors";
 
 const CustomPaperTheme = (theme: Theme) => ({
   ...PaperDefaultTheme,

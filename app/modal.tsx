@@ -1,12 +1,10 @@
 import AppLayout from "@/layouts/app-layout";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   ScrollView,
-  StyleSheet,
   Platform,
   Text,
-  TouchableOpacity,
 } from "react-native";
 import {
   TextInput,
@@ -16,8 +14,6 @@ import {
   IconButton,
   RadioButton,
   Modal,
-  Portal,
-  PaperProvider,
 } from "react-native-paper";
 import MapView, { Marker } from "react-native-maps";
 import stylesFn from "@/styles/modal/UploadModal.styles";
@@ -30,8 +26,7 @@ import Toast from "react-native-toast-message";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
-import BackButton from "@/components/ui/back-button/BackButton";
-import { Ionicons } from "@expo/vector-icons";
+import * as Location from 'expo-location';
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -57,6 +52,25 @@ const CreateCollaborationScreen = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+
+  useEffect(() => {
+    async function getCurrentLocation() {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setMapRegion({
+        ...mapRegion,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    }
+
+    getCurrentLocation();
+  }, []);
 
   const addLink = () => {
     setLinks([...links, { name: newLinkName, url: newLinkUrl }]);
@@ -115,6 +129,10 @@ const CreateCollaborationScreen = () => {
         status: "active",
       }).then(() => {
         setScreen(3);
+        setTimeout(() => {
+          router.dismiss(1);
+          router.push("/collaborations");
+        }, 3000);
       });
     } catch (error) {
       console.error(error);
@@ -142,13 +160,14 @@ const CreateCollaborationScreen = () => {
               flexDirection: "row",
               alignItems: "center",
               marginBottom: 16,
-              gap: 16,
             }}
           >
             {Platform.OS === "web" && (
-              <TouchableOpacity onPress={() => router.push("/collaborations")}>
-                <Ionicons name="arrow-back" size={24} color="black" />
-              </TouchableOpacity>
+              <IconButton
+                icon="arrow-left"
+                onPress={() => router.push("/collaborations")}
+                iconColor={Colors(theme).text}
+              />
             )}
             <Title style={styles.title}>Create a Collaboration</Title>
           </View>
@@ -324,7 +343,11 @@ const CreateCollaborationScreen = () => {
               alignItems: "center",
             }}
           >
-            <IconButton icon="arrow-left" onPress={() => setScreen(1)} />
+            <IconButton
+              icon="arrow-left"
+              onPress={() => setScreen(1)}
+              iconColor={Colors(theme).text}
+            />
             <Title style={styles.title}>Create a Collaboration</Title>
           </View>
 
