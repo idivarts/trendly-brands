@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Card, Avatar, IconButton, Chip } from "react-native-paper";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
@@ -53,6 +54,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [bioExpanded, setBioExpanded] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Animation values for zoom
   const scale = useSharedValue(1);
@@ -94,6 +96,20 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const onImagePress = (data: any) => {
     setSelectedImage(data); // TODO: data -> uri
     setIsZoomed(true);
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+
+  if (loading) {
+    return <ActivityIndicator />;
   }
 
   // Rest of the component remains the same...
