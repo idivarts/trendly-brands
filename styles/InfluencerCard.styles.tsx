@@ -58,8 +58,8 @@ export const stylesFn = (theme: Theme) =>
       backgroundColor: "#333333",
     },
     media: {
-      height: 250,
       borderRadius: 10,
+      alignSelf: "center",
     },
     stats: {
       flexDirection: "row",

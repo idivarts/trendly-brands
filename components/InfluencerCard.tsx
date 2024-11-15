@@ -1,25 +1,20 @@
 import { router } from "expo-router";
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
   Modal,
-  Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Card, Avatar, IconButton, Chip } from "react-native-paper";
-import Carousel from "react-native-reanimated-carousel";
-import { ResizeMode, Video } from "expo-av";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
 import {
   PinchGestureHandler,
   PinchGestureHandlerGestureEvent,
-  TapGestureHandler,
-  State,
 } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedGestureHandler,
@@ -29,7 +24,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
-import { influencers } from "@/constants/Influencers";
+import CarouselNative from "./ui/carousel/carousel";
 
 const { width } = Dimensions.get("window");
 
@@ -57,19 +52,15 @@ interface InfluencerCardPropsType {
 
 const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [bioExpanded, setBioExpanded] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [muted, setMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isZoomed, setIsZoomed] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isSwiping, setIsSwiping] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Animation values for zoom
   const scale = useSharedValue(1);
   const focalX = useSharedValue(0);
   const focalY = useSharedValue(0);
 
-  const videoRefs = useRef<{ [key: number]: any }>({});
   const influencer = props.influencer;
   const theme = useTheme();
   const styles = stylesFn(theme);
@@ -102,69 +93,24 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
     };
   });
 
-  const handleIndexChange = (index: number) => {
-    setCurrentIndex(index);
-    setIsSwiping(true);
-    // Reset swiping state after a short delay
-    setTimeout(() => setIsSwiping(false), 150);
-    Object.values(videoRefs.current).forEach((videoRef) => {
-      if (videoRef && videoRef.seek) {
-        videoRef.seek(0);
-        setIsPlaying(false);
-      }
-    });
-  };
+  const onImagePress = (data: any) => {
+    setSelectedImage(data); // TODO: data -> uri
+    setIsZoomed(true);
+  }
 
-  const handleImagePress = (uri: string) => {
-    if (!isSwiping) {
-      setSelectedImage(uri);
-      setIsZoomed(true);
-    }
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
 
-  const renderMediaItem = ({ item, index }: any) => {
-    if (item.type === "image") {
-      return (
-        <TapGestureHandler
-          onHandlerStateChange={({ nativeEvent }) => {
-            if (nativeEvent.state === State.ACTIVE) {
-              handleImagePress(item.uri);
-            }
-          }}
-        >
-          <Animated.View>
-            <Image
-              source={{ uri: item.url || item.uri }}
-              style={styles.media}
-            />
-          </Animated.View>
-        </TapGestureHandler>
-      );
-    } else {
-      return (
-        <Video
-          ref={(ref) => {
-            if (ref) {
-              videoRefs.current[index] = ref;
-            }
-          }}
-          source={
-            item.appleUrl
-              ? {
-                  uri: Platform.OS === "ios" ? item.appleUrl : item.playUrl,
-                }
-              : require("../assets/videos/ForBiggerJoyrides.mp4")
-          }
-          style={styles.media}
-          resizeMode={ResizeMode.COVER}
-          isLooping={false}
-          shouldPlay={false}
-          useNativeControls
-          onError={(error) => console.log("Video Error:", error)}
-        />
-      );
-    }
-  };
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+
+  if (loading) {
+    return <ActivityIndicator />;
+  }
 
   // Rest of the component remains the same...
   return (
@@ -199,30 +145,10 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           />
         </View>
 
-        <View style={styles.carouselContainer}>
-          <Carousel
-            loop
-            width={Dimensions.get("window").width - 45}
-            height={250}
-            data={influencer.media}
-            renderItem={renderMediaItem}
-            onSnapToItem={handleIndexChange}
-            style={{
-              padding: 10,
-            }}
-          />
-          <View style={styles.indicatorContainer}>
-            {influencer.media.map((_: any, index: any) => (
-              <View
-                key={index}
-                style={[
-                  styles.indicatorDot,
-                  currentIndex === index && styles.activeDot,
-                ]}
-              />
-            ))}
-          </View>
-        </View>
+        <CarouselNative
+          data={influencer.media}
+          onImagePress={onImagePress}
+        />
 
         <View style={styles.stats}>
           <View style={styles.statItem}>
