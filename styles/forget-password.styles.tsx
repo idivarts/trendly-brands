@@ -29,14 +29,12 @@ const fnStyles = (theme: Theme) =>
     },
     button: {
       marginTop: 20,
-      backgroundColor: Colors(theme).primary,
       paddingVertical: 10,
       borderRadius: 8,
     },
     buttonText: {
       fontWeight: "bold",
       fontSize: 16,
-      color: Colors(theme).text,
     },
     loginText: {
       textAlign: "center",

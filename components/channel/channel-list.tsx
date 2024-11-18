@@ -58,6 +58,7 @@ const ChannelListNative = () => {
         <Searchbar
           onChangeText={handleSearchChange}
           placeholder="Search"
+          placeholderTextColor={Colors(theme).gray100}
           value={searchInput}
           style={[
             {

@@ -181,8 +181,6 @@ const BrandPreferenceScreen = () => {
           <Button
             mode="contained"
             onPress={handleSubmit}
-            buttonColor={Colors(theme).primary}
-            labelStyle={styles.submitButtonLabel}
             contentStyle={styles.submitButtonContent}
           >
             Submit

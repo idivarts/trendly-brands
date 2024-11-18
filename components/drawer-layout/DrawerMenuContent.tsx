@@ -100,6 +100,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             <Searchbar
               onChangeText={handleSearchChange}
               placeholder="Search"
+              placeholderTextColor={Colors(theme).gray100}
               value={search}
               style={[
                 {

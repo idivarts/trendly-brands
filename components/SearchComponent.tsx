@@ -48,7 +48,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         <Ionicons
           name="options-outline"
           size={24}
-          color={Colors(theme).gray100}
+          color={Colors(theme).text}
           style={styles.icon}
         />
       </TouchableOpacity>

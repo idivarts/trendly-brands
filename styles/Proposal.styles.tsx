@@ -1,3 +1,4 @@
+import Colors from "@/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -15,7 +16,7 @@ export const stylesFn = (theme: Theme) =>
     titleActive: {
       fontSize: 20,
       fontWeight: "bold",
-      color: "rgb(120, 69, 172)",
+      color: Colors(theme).primary,
       textDecorationLine: "underline",
     },
     subtitle: {

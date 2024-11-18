@@ -54,7 +54,6 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [bioExpanded, setBioExpanded] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // Animation values for zoom
   const scale = useSharedValue(1);
@@ -96,20 +95,6 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const onImagePress = (data: any) => {
     setSelectedImage(data); // TODO: data -> uri
     setIsZoomed(true);
-  }
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
-
-  if (loading) {
-    return <ActivityIndicator />;
   }
 
   // Rest of the component remains the same...
@@ -155,7 +140,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             <MaterialCommunityIcons
               name="account-group"
               size={20}
-              color={theme.colors.primary}
+              color={Colors(theme).primary}
             />
             <Text style={styles.statsText}>
               {influencer.followers} Followers
@@ -165,7 +150,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             <MaterialCommunityIcons
               name="radar"
               size={20}
-              color={theme.colors.primary}
+              color={Colors(theme).primary}
             />
             <Text style={styles.statsText}>{influencer.reach} Reach</Text>
           </View>
@@ -173,7 +158,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             <MaterialCommunityIcons
               name="star"
               size={20}
-              color={theme.colors.primary}
+              color={Colors(theme).primary}
             />
             <Text style={styles.statsText}>{influencer.rating} Rating</Text>
           </View>

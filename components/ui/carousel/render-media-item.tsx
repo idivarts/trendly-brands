@@ -83,7 +83,7 @@ const RenderMediaItem: React.FC<RenderMediaItemProps> = ({
       isLooping={false}
       shouldPlay={false}
       useNativeControls
-      onError={(error) => console.log("Video Error:", error)}
+      onError={(error) => console.error("Video Error:", error)}
     />
   );
 };

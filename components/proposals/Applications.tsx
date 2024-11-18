@@ -178,7 +178,7 @@ const Applications = () => {
             </Text>
           </View>
           <Button
-            onPress={() => router.push("/modal")}
+            onPress={() => router.push("/(modal)/create-collaboration")}
             style={{
               backgroundColor: Colors(theme).platinum,
               padding: 5,
@@ -186,7 +186,7 @@ const Applications = () => {
             }}
             textColor={Colors(theme).text}
           >
-            New Collaborations
+            New Collaboration
           </Button>
         </View>
       ) : (

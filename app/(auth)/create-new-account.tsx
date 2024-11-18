@@ -98,7 +98,7 @@ const SignUpScreen = () => {
             style={styles.button}
             labelStyle={styles.buttonText}
           >
-            SIGN UP
+            Signup
           </Button>
         </View>
         {/* Login Prompt */}

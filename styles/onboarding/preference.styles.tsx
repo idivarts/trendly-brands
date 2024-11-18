@@ -46,7 +46,6 @@ const fnStyles = (theme: Theme) =>
       right: 20,
     },
     submitButtonLabel: {
-      color: Colors(theme).text,
     },
     submitButtonContent: {
       height: 50,

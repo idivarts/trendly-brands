@@ -130,6 +130,7 @@ const Invitations = () => {
     <View
       style={{
         width: "100%",
+        flex: 1,
       }}
     >
       {proposals.length === 0 ? (
@@ -138,6 +139,7 @@ const Invitations = () => {
             justifyContent: "center",
             alignItems: "center",
             gap: 50,
+            flex: 1,
           }}
         >
           <Image
@@ -163,7 +165,7 @@ const Invitations = () => {
             </Text>
           </View>
           <Button
-            onPress={() => router.push("/modal")}
+            onPress={() => router.push("/(modal)/create-collaboration")}
             style={{
               backgroundColor: Colors(theme).platinum,
               padding: 5,
@@ -171,7 +173,7 @@ const Invitations = () => {
             }}
             textColor={Colors(theme).text}
           >
-            New Collaborations
+            New Collaboration
           </Button>
         </View>
       ) : (

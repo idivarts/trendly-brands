@@ -72,7 +72,7 @@ const GetStartedScreen = () => {
         router.push("/(main)/explore-influencers");
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 

@@ -69,7 +69,7 @@ const CollaborationInvitationPage = (props: any) => {
       const alreadyInvited = influencers.map((influencer) => influencer.id);
       setAlreadyInvited(alreadyInvited);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ const CollaborationInvitationPage = (props: any) => {
         fetchInvitations();
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       Toaster.error("Failed to send invitation");
     } finally {
       setMessage("");

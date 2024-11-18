@@ -51,7 +51,7 @@ const CollaborationApplicationPage = (props: any) => {
       );
       setInfluencers(influencers);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }

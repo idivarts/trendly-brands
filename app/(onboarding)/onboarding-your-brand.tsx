@@ -247,8 +247,6 @@ const OnboardingScreen = () => {
           mode="contained"
           onPress={handleSubmit}
           style={styles.submitButton}
-          buttonColor={Colors(theme).primary}
-          textColor={Colors(theme).text}
         >
           Submit
         </Button>

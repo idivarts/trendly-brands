@@ -100,7 +100,7 @@ const BottomSheetActions = ({
         Toaster.success("Application accepted successfully");
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       handleClose();
       Toaster.error("Failed to accept application");
     }
@@ -122,7 +122,7 @@ const BottomSheetActions = ({
         Toaster.success("Application rejected successfully");
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       handleClose();
       Toaster.error("Failed to reject application");
     }
@@ -138,7 +138,7 @@ const BottomSheetActions = ({
         Toaster.success("Collaboration delisted successfully");
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       handleClose();
       Toaster.error("Failed to delist collaboration");
     }

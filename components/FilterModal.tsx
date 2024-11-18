@@ -96,6 +96,12 @@ const CollaborationFilter = ({
           />
         )}
         onClose={onClose}
+        handleStyle={{
+          backgroundColor: Colors(theme).background,
+        }}
+        handleIndicatorStyle={{
+          backgroundColor: Colors(theme).text,
+        }}
       >
         <BottomSheetView style={styles.container}>
           <View style={styles.header}>
@@ -146,6 +152,9 @@ const CollaborationFilter = ({
                 step={1000}
                 allowOverlap
                 snapped
+                selectedStyle={{
+                  backgroundColor: Colors(theme).primary,
+                }}
               />
             </View>
 
@@ -168,6 +177,9 @@ const CollaborationFilter = ({
                 step={1000}
                 allowOverlap
                 snapped
+                selectedStyle={{
+                  backgroundColor: Colors(theme).primary,
+                }}
               />
             </View>
 
@@ -192,6 +204,9 @@ const CollaborationFilter = ({
                 step={1000}
                 allowOverlap
                 snapped
+                selectedStyle={{
+                  backgroundColor: Colors(theme).primary,
+                }}
               />
             </View>
 
