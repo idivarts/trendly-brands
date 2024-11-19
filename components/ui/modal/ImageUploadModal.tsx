@@ -1,7 +1,7 @@
-import { Alert, Button, Linking, Modal, Platform } from "react-native";
+import { Alert, Linking, Modal, Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { IconButton } from "react-native-paper";
+import { Button, IconButton } from "react-native-paper";
 
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
@@ -100,9 +100,11 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
             />
           </View>
           <Button
-            title="Cancel"
+            mode="contained"
             onPress={removeImage}
-          />
+          >
+            Cancel
+          </Button>
         </View>
       </View>
     </Modal>
