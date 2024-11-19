@@ -1,26 +1,23 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import JobCard from "@/components/collaboration/CollaborationCard";
-import { Text, View } from "@/components/theme/Themed";
+import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
-import { Link, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   getDocs,
   query,
   where,
-  doc as firebaseDoc,
-  getDoc,
 } from "firebase/firestore";
-import { ActivityIndicator, FlatList, Image } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
-import { Button } from "react-native-paper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import EmptyState from "../ui/empty-state";
 
 const Invitations = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -134,48 +131,12 @@ const Invitations = () => {
       }}
     >
       {proposals.length === 0 ? (
-        <View
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 50,
-            flex: 1,
-          }}
-        >
-          <Image
-            source={{ uri: "https://via.placeholder.com/150" }}
-            width={150}
-            height={150}
-            style={{
-              borderRadius: 10,
-            }}
-          />
-          <View
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <Text style={styles.title}>No Collaborations found</Text>
-            <Text style={styles.subtitle}>
-              Go to the New Collaborations page to start creating new
-              Collaborations
-            </Text>
-          </View>
-          <Button
-            onPress={() => router.push("/(modal)/create-collaboration")}
-            style={{
-              backgroundColor: Colors(theme).platinum,
-              padding: 5,
-              borderRadius: 5,
-            }}
-            textColor={Colors(theme).text}
-          >
-            New Collaboration
-          </Button>
-        </View>
+        <EmptyState
+          hideAction
+          image={require("@/assets/images/illustration5.png")}
+          subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
+          title="No Invitations yet"
+        />
       ) : (
         <FlatList
           data={filteredProposals}

@@ -1,6 +1,6 @@
 import { Text, View } from "@/components/theme/Themed";
 import AppLayout from "@/layouts/app-layout";
-import { useIsFocused, useTheme } from "@react-navigation/native";
+import { useTheme } from "@react-navigation/native";
 import { useState } from "react";
 import { TouchableOpacity } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";

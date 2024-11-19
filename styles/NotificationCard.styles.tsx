@@ -5,12 +5,12 @@ import { StyleSheet } from "react-native";
 export const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 16,
+    gap: 8,
     backgroundColor: Colors(theme).background,
   },
   card: {
-    marginVertical: 8,
-    padding: 10,
+    padding: 16,
     backgroundColor: Colors(theme).card,
   },
   row: {
@@ -18,7 +18,7 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
     alignItems: "center",
   },
   content: {
-    marginLeft: 10,
+    marginLeft: 16,
     flex: 1,
     color: Colors(theme).text,
   },

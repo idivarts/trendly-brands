@@ -1,4 +1,3 @@
-import Colors from "@/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -7,6 +6,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    gap: 20,
   },
   contentContainer: {
     display: "flex",
@@ -16,18 +16,17 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   image: {
     borderRadius: 10,
+    maxWidth: 256,
+    maxHeight: 256,
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
+    textAlign: 'center'
   },
   subtitle: {
     fontSize: 16,
-  },
-  action: {
-    backgroundColor: Colors(theme).platinum,
-    padding: 5,
-    borderRadius: 5,
+    textAlign: 'center'
   },
 });
 
