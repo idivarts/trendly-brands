@@ -49,7 +49,6 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
           name="options-outline"
           size={24}
           color={Colors(theme).text}
-          style={styles.icon}
         />
       </TouchableOpacity>
     </View>
@@ -61,15 +60,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 25,
-
+    gap: 12,
     width: "100%",
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-  },
-  icon: {
-    marginHorizontal: 5,
   },
 });
 

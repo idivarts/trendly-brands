@@ -107,6 +107,9 @@ const CollaborationApplicationPage = (props: any) => {
           />
         )}
         keyExtractor={(item, index) => item.id + index}
+        contentContainerStyle={{
+          gap: 8,
+        }}
         style={{
           paddingHorizontal: 2,
           paddingBottom: 100,

@@ -181,7 +181,6 @@ const BrandPreferenceScreen = () => {
           <Button
             mode="contained"
             onPress={handleSubmit}
-            contentStyle={styles.submitButtonContent}
           >
             Submit
           </Button>

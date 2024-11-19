@@ -4,8 +4,8 @@ import AppLayout from "@/layouts/app-layout";
 import fnStyles from "@/styles/onboarding/get-started.styles";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
-import { View, Text, Button, TouchableOpacity } from "react-native";
-import { Menu } from "react-native-paper";
+import { View, Text, TouchableOpacity } from "react-native";
+import { Button, Menu } from "react-native-paper";
 import { AuthApp } from "@/utils/auth";
 import { router, useLocalSearchParams } from "expo-router";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -83,12 +83,12 @@ const GetStartedScreen = () => {
         <View style={styles.headerContainer}>
           <Text style={styles.headline}>Get Started</Text>
           <Button
-            title="Skip"
             onPress={() => {
               handleSignUp();
             }}
-            color={Colors(theme).text}
-          />
+          >
+            Skip
+          </Button>
         </View>
 
         {/* Question 1: Where did you hear about us */}
@@ -208,21 +208,17 @@ const GetStartedScreen = () => {
 
         {/* Footer buttons */}
         <View style={styles.footer}>
-          {/* <Button
-            title="Take me in"
+          <Button
+            mode="contained"
             onPress={() => {
-              signIn("testuser@gmail.com", "password");
+              handleSignUp();
             }}
-            color="#000"
-          /> */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              handleSubmit();
+            style={{
+              width: "100%",
             }}
           >
-            <Text style={styles.buttonText}>Take me in</Text>
-          </TouchableOpacity>
+            Take me in
+          </Button>
         </View>
       </View>
     </AppLayout>

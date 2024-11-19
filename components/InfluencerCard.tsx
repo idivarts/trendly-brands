@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
-  ActivityIndicator,
 } from "react-native";
 import { Card, Avatar, IconButton, Chip } from "react-native-paper";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
@@ -22,9 +21,11 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Colors from "@/constants/Colors";
 import CarouselNative from "./ui/carousel/carousel";
+import { convertToKUnits } from "@/utils/conversion";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faBullseye, faStar, faUsers, faMessage } from "@fortawesome/free-solid-svg-icons";
 
 const { width } = Dimensions.get("window");
 
@@ -101,7 +102,11 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   return (
     <>
       <Card style={styles.card}>
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+          ]}
+        >
           <Avatar.Image size={50} source={{ uri: influencer.profilePic }} />
           <View style={styles.nameContainer}>
             <Text style={styles.name}>{influencer.name}</Text>
@@ -135,58 +140,68 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           onImagePress={onImagePress}
         />
 
-        <View style={styles.stats}>
-          <View style={styles.statItem}>
-            <MaterialCommunityIcons
-              name="account-group"
-              size={20}
-              color={Colors(theme).primary}
-            />
-            <Text style={styles.statsText}>
-              {influencer.followers} Followers
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <MaterialCommunityIcons
-              name="radar"
-              size={20}
-              color={Colors(theme).primary}
-            />
-            <Text style={styles.statsText}>{influencer.reach} Reach</Text>
-          </View>
-          <View style={styles.statItem}>
-            <MaterialCommunityIcons
-              name="star"
-              size={20}
-              color={Colors(theme).primary}
-            />
-            <Text style={styles.statsText}>{influencer.rating} Rating</Text>
-          </View>
-          <View style={styles.statItem}>
-            <MaterialCommunityIcons
-              name="message"
-              size={28}
-              color={Colors(theme).primary}
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
-          <Text numberOfLines={bioExpanded ? undefined : 2} style={styles.bio}>
-            {influencer.bio}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            return router.push("/(main)/CollaborationHistory");
-          }}
+        <View
+          style={styles.content}
         >
-          <Text style={styles.jobHistory}>
-            {influencer.jobsCompleted} Jobs completed ({influencer.successRate}{" "}
-            success rate)
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.stats}>
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <FontAwesomeIcon
+                  icon={faUsers}
+                  color={Colors(theme).primary}
+                  size={20}
+                />
+                <Text style={styles.statsText}>
+                  {convertToKUnits(Number(influencer.followers))}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <FontAwesomeIcon
+                  icon={faBullseye}
+                  color={Colors(theme).primary}
+                  size={20}
+                />
+                <Text style={styles.statsText}>
+                  {convertToKUnits(Number(influencer.reach))}
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <FontAwesomeIcon
+                  icon={faStar}
+                  color={Colors(theme).primary}
+                  size={20}
+                />
+                <Text style={styles.statsText}>
+                  {influencer.rating}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.statItem}>
+              <FontAwesomeIcon
+                icon={faMessage}
+                color={Colors(theme).primary}
+                size={20}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
+            <Text numberOfLines={bioExpanded ? undefined : 2} style={styles.bio}>
+              {influencer.bio}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              return router.push("/(main)/CollaborationHistory");
+            }}
+          >
+            <Text style={styles.jobHistory}>
+              {influencer.jobsCompleted} Jobs completed ({influencer.successRate}{" "}
+              success rate)
+            </Text>
+          </TouchableOpacity>
+        </View>
       </Card>
 
       <Modal visible={isZoomed} transparent={true} animationType="fade">

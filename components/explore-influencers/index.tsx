@@ -69,6 +69,7 @@ const ExploreInfluencers = () => {
         contentContainerStyle={{
           padding: 16,
           paddingBottom: 100,
+          gap: 8,
         }}
         ListHeaderComponent={
           <SearchComponent

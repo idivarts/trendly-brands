@@ -6,7 +6,6 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     card: {
       borderRadius: 16,
-      padding: 10,
       marginVertical: 8,
       marginHorizontal: 5,
       backgroundColor: Colors(theme).card,
@@ -55,14 +54,9 @@ export const stylesFn = (theme: Theme) =>
     chipRow: {
       flexDirection: "row",
       flexWrap: "wrap",
-      marginVertical: 8,
-    },
-    chip: {
-      marginHorizontal: 4,
+      marginTop: 12,
       marginBottom: 4,
-    },
-    divider: {
-      marginVertical: 10,
+      gap: 6,
     },
     actionRow: {
       flexDirection: "row",

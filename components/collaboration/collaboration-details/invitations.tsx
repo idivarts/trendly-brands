@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Image,
-  StyleSheet,
-  ScrollView,
   FlatList,
   Modal,
   TextInput,
@@ -11,11 +9,6 @@ import {
 } from "react-native";
 import {
   Text,
-  Chip,
-  Appbar,
-  Card,
-  Paragraph,
-  IconButton,
   ActivityIndicator,
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
@@ -200,6 +193,9 @@ const CollaborationInvitationPage = (props: any) => {
         style={{
           paddingHorizontal: 2,
           paddingBottom: 100,
+        }}
+        contentContainerStyle={{
+          gap: 8,
         }}
       />
       <Modal

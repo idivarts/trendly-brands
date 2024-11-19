@@ -246,7 +246,6 @@ const OnboardingScreen = () => {
         <Button
           mode="contained"
           onPress={handleSubmit}
-          style={styles.submitButton}
         >
           Submit
         </Button>

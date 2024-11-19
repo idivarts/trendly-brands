@@ -171,7 +171,7 @@ const BottomSheetActions = ({
 
       case "influencerCard":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 20 }}>
             <List.Item
               title="View Profile"
               onPress={() => {
@@ -195,7 +195,7 @@ const BottomSheetActions = ({
 
       case "applicationCard":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 20 }}>
             <List.Item
               title="Send Message"
               onPress={() => {
@@ -219,7 +219,7 @@ const BottomSheetActions = ({
 
       case "invitationCard":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 20 }}>
             <List.Item
               title="View Profile"
               onPress={() => {
@@ -242,7 +242,7 @@ const BottomSheetActions = ({
         );
       case "activeCollab":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 20 }}>
             <List.Item
               title="View Collaboration"
               onPress={() => {

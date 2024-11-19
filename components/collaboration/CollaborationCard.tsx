@@ -78,13 +78,13 @@ const JobCard = (props: CollaborationAdCardProps) => {
           {/* 
           show applied, invited and shortlisted chips
            */}
-          <Chip style={styles.chip} mode="outlined">
+          <Chip mode="outlined">
             Applied: {props.applications}
           </Chip>
-          <Chip style={styles.chip} mode="outlined">
+          <Chip mode="outlined">
             Invited: {props.invitations}
           </Chip>
-          <Chip style={styles.chip} mode="outlined">
+          <Chip mode="outlined">
             Shortlisted: {props.acceptedApplications}
           </Chip>
         </View>
