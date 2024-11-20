@@ -9,11 +9,14 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
     backgroundColor: Colors(theme).background,
   },
   contentContainer: {
-    gap: 8,
+    gap: 16,
+    paddingBottom: 24,
   },
   card: {
     padding: 16,
+    borderRadius: 10,
     backgroundColor: Colors(theme).card,
+    shadowColor: Colors(theme).transparent,
   },
   row: {
     flexDirection: "row",
