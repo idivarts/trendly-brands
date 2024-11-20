@@ -1,13 +1,15 @@
-import React, { useState } from "react";
-import { View, TouchableOpacity } from "react-native";
-import { Text, Card, Divider, Chip } from "react-native-paper";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import React from "react";
+import { View, Pressable } from "react-native";
+import { Text, Card } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/CollaborationCard.styles";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { router } from "expo-router";
 import { formatDistanceToNow } from "date-fns";
 import Colors from "@/constants/Colors";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faEllipsis } from "@fortawesome/free-solid-svg-icons";
+import Tag from "../ui/tag";
 
 export interface CollaborationAdCardProps extends ICollaboration {
   name: string;
@@ -23,7 +25,6 @@ export interface CollaborationAdCardProps extends ICollaboration {
 }
 
 const JobCard = (props: CollaborationAdCardProps) => {
-  const [bookmarked, setBookmarked] = useState(false);
   const theme = useTheme();
   const styles = stylesFn(theme);
   const datePosted = new Date(props.timeStamp);
@@ -45,26 +46,23 @@ const JobCard = (props: CollaborationAdCardProps) => {
             style={{
               display: "flex",
               flexDirection: "row",
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
             }}
           >
-            <TouchableOpacity
+            <Pressable
               onPress={() => {
                 props.onOpenBottomSheet(props.id);
               }}
-              style={{
-                padding: 10,
-              }}
             >
-              <Ionicons
-                name="ellipsis-horizontal"
-                size={30}
-                color={Colors(theme).platinum}
+              <FontAwesomeIcon
+                icon={faEllipsis}
+                size={24}
+                color={Colors(theme).text}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
-
-        {/* Short Description */}
 
         {/* Posted Date and Cost */}
         <View style={styles.infoRow}>
@@ -75,18 +73,15 @@ const JobCard = (props: CollaborationAdCardProps) => {
 
         {/* Payment Verified, Promotion and Collaboration Type */}
         <View style={styles.chipRow}>
-          {/* 
-          show applied, invited and shortlisted chips
-           */}
-          <Chip mode="outlined">
+          <Tag mode="outlined">
             Applied: {props.applications}
-          </Chip>
-          <Chip mode="outlined">
+          </Tag>
+          <Tag mode="outlined">
             Invited: {props.invitations}
-          </Chip>
-          <Chip mode="outlined">
+          </Tag>
+          <Tag mode="outlined">
             Shortlisted: {props.acceptedApplications}
-          </Chip>
+          </Tag>
         </View>
 
         {/* Influencers Needed, Applied Count, AI Success Rate, Brand Hire Rate */}

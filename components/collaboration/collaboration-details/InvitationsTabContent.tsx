@@ -1,115 +1,57 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
-  Image,
   FlatList,
   Modal,
   TextInput,
-  Button,
+  ActivityIndicator,
 } from "react-native";
 import {
   Text,
-  ActivityIndicator,
+  Button,
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
-import { stylesFn } from "@/styles/CollaborationDetails.styles";
+import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import InfluencerCard from "@/components/InfluencerCard";
 import { FirestoreDB } from "@/utils/firestore";
-import { collection, doc, getDoc, getDocs, addDoc } from "firebase/firestore";
+import { addDoc, collection } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
 import Toast from "react-native-toast-message";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { useInfluencers } from "@/hooks/request";
+import EmptyState from "@/components/ui/empty-state";
 
-const CollaborationInvitationPage = (props: any) => {
+const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const [isVisible, setIsVisible] = useState(false);
-  const [influencers, setInfluencers] = useState<any>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedInfluencer, setSelectedInfluencer] = useState<any>(null);
-  const [alreadyInvited, setAlreadyInvited] = useState<any>([]);
   const [isMessageModalVisible, setIsMessageModalVisible] = useState(false);
   const [message, setMessage] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+  const {
+    isInitialLoading,
+    checkIfAlreadyInvited,
+    fetchInitialInfluencers,
+    setInfluencers,
+    fetchMoreInfluencers,
+    influencers,
+    isLoading,
+  } = useInfluencers({
+    pageID: props.pageID,
+  });
 
-  const fetchInvitations = async () => {
+  const handleCollaborationInvite = async () => {
     try {
+      setIsInviting(true);
       const invitationRef = collection(
         FirestoreDB,
         "collaborations",
         props.pageID,
         "invitations"
       );
-      const invitationFetch = await getDocs(invitationRef);
-      const invitations = invitationFetch.docs.map((doc) => {
-        return {
-          ...doc.data(),
-          id: doc.id,
-        } as any;
-      });
 
-      const influencers = await Promise.all(
-        invitations.map(async (invitation) => {
-          const userRef = doc(FirestoreDB, "users", invitation.userId);
-          const userFetch = await getDoc(userRef);
-          return {
-            ...userFetch.data(),
-            id: userFetch.id,
-          } as any;
-        })
-      );
-
-      const alreadyInvited = influencers.map((influencer) => influencer.id);
-      setAlreadyInvited(alreadyInvited);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchInfluencers = async () => {
-    const influencerRef = collection(FirestoreDB, "users");
-    const influencerFetch = await getDocs(influencerRef);
-    const influencers = influencerFetch.docs.map((doc) => {
-      return {
-        ...doc.data(),
-        id: doc.id,
-      } as any;
-    });
-    setInfluencers(influencers);
-  };
-
-  const filterInfluencers = () => {
-    if (alreadyInvited.length === 0) return influencers;
-    return influencers.map((influencer: any) => {
-      if (alreadyInvited.includes(influencer.id)) {
-        return {
-          ...influencer,
-          alreadyInvited: true,
-        };
-      } else {
-        return {
-          ...influencer,
-          alreadyInvited: false,
-        };
-      }
-    });
-  };
-
-  useEffect(() => {
-    fetchInvitations();
-    fetchInfluencers();
-  }, []);
-
-  const handleInviteCollaboration = async () => {
-    try {
-      const invitationRef = collection(
-        FirestoreDB,
-        "collaborations",
-        props.pageID,
-        "invitations"
-      );
       const invitationPayload = {
         userId: selectedInfluencer.influencerID,
         managerId: AuthApp.currentUser?.uid,
@@ -121,18 +63,17 @@ const CollaborationInvitationPage = (props: any) => {
       await addDoc(invitationRef, invitationPayload).then(() => {
         setIsMessageModalVisible(false);
         Toaster.success("Invitation sent successfully");
-        fetchInfluencers();
-        fetchInvitations();
       });
     } catch (error) {
       console.error(error);
       Toaster.error("Failed to send invitation");
     } finally {
       setMessage("");
+      setIsInviting(false);
     }
   };
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <View
         style={{
@@ -147,16 +88,32 @@ const CollaborationInvitationPage = (props: any) => {
     );
   }
 
-  return influencers.length !== 0 ? (
+  if (influencers.length === 0) {
+    return (
+      <EmptyState
+        subtitle="No invitations yet. Check back later."
+        image={require("@/assets/images/illustration5.png")}
+        hideAction
+      />
+    );
+  };
+
+  return (
     <>
       <Toast />
       <FlatList
-        data={filterInfluencers()}
+        refreshing={isLoading}
+        onRefresh={() => {
+          setInfluencers([]);
+          fetchInitialInfluencers();
+        }}
+        data={influencers}
         renderItem={({ item }) => (
           <InfluencerCard
             type="invitation"
-            alreadyInvited={item.alreadyInvited}
+            alreadyInvited={checkIfAlreadyInvited}
             influencer={{
+              id: item.id,
               profilePic: item.profileImage,
               name: item.name,
               handle: item.handle || "@handle",
@@ -189,13 +146,23 @@ const CollaborationInvitationPage = (props: any) => {
             }}
           />
         )}
+        ListFooterComponent={
+          isLoading ? (
+            <ActivityIndicator
+              size="large"
+            />
+          ) : null
+        }
+        onEndReached={fetchMoreInfluencers}
+        onEndReachedThreshold={0.1}
         keyExtractor={(item) => item.id}
         style={{
-          paddingHorizontal: 2,
+          paddingTop: 8,
+          paddingHorizontal: 16,
           paddingBottom: 100,
         }}
         contentContainerStyle={{
-          gap: 8,
+          gap: 16,
         }}
       />
       <Modal
@@ -217,59 +184,36 @@ const CollaborationInvitationPage = (props: any) => {
             />
             <View style={styles.buttonContainer}>
               <Button
-                title="Send Invitation"
-                onPress={handleInviteCollaboration}
-              />
+                mode="contained"
+                onPress={handleCollaborationInvite}
+                loading={isInviting}
+              >
+                Send Invitation
+              </Button>
               <Button
-                title="Cancel"
-                color="red"
+                mode="outlined"
                 onPress={() => setIsMessageModalVisible(false)}
-              />
+              >
+                Cancel
+              </Button>
             </View>
           </View>
         </View>
       </Modal>
-      {isVisible && (
-        <BottomSheetActions
-          cardType="invitationCard"
-          isVisible={isVisible}
-          onClose={() => setIsVisible(false)}
-          snapPointsRange={["30%", "80%"]}
-          cardId={selectedInfluencer}
-          key={selectedInfluencer.collaborationID}
-        />
-      )}
+      {
+        isVisible && (
+          <BottomSheetActions
+            cardType="invitationCard"
+            isVisible={isVisible}
+            onClose={() => setIsVisible(false)}
+            snapPointsRange={["30%", "80%"]}
+            cardId={selectedInfluencer}
+            key={selectedInfluencer.collaborationID}
+          />
+        )
+      }
     </>
-  ) : (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 40,
-      }}
-    >
-      <Image
-        source={{
-          uri:
-            props.logo ||
-            "https://cdni.iconscout.com/illustration/premium/thumb/connection-lost-illustration-download-in-svg-png-gif-file-formats--404-error-empty-state-page-not-found-pack-design-development-illustrations-6632144.png?f=webp",
-        }}
-        style={{
-          height: 200,
-          width: 200,
-        }}
-      />
-      <Text
-        style={{
-          fontSize: 16,
-          color: theme.colors.text,
-        }}
-      >
-        No invitations yet. Check back later.
-      </Text>
-    </View>
   );
 };
 
-export default CollaborationInvitationPage;
+export default InvitationsTabContent;

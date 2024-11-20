@@ -1,14 +1,16 @@
 import React, { useState, useRef, useMemo } from "react";
 import { View, TouchableOpacity, ScrollView } from "react-native";
 import { Text, Chip, Button } from "react-native-paper";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import BottomSheet, {
   BottomSheetView,
   BottomSheetBackdrop,
 } from "@gorhom/bottom-sheet";
-import { stylesFn } from "@/styles/FilterModal.styles";
 import { useTheme } from "@react-navigation/native";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
+import { faClose } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+
+import { stylesFn } from "@/styles/FilterModal.styles";
 import Colors from "@/constants/Colors";
 
 interface CollaborationFilterProps {
@@ -108,10 +110,17 @@ const CollaborationFilter = ({
             <Text style={styles.title}>Filter</Text>
 
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors(theme).text} />
+              <FontAwesomeIcon
+                color={Colors(theme).text}
+                icon={faClose}
+                size={24}
+              />
             </TouchableOpacity>
           </View>
           <ScrollView
+            style={{
+              flex: 1,
+            }}
             contentContainerStyle={{
               padding: 16,
             }}
@@ -223,23 +232,22 @@ const CollaborationFilter = ({
                 </Chip>
               ))}
             </View>
+            <View
+              style={{
+                width: "100%",
+                padding: 20,
+              }}
+            >
+              <Button
+                mode="contained"
+                onPress={applyFilters}
+              >
+                Apply
+              </Button>
+            </View>
           </ScrollView>
         </BottomSheetView>
       </BottomSheet>
-      <TouchableOpacity
-        onPress={applyFilters}
-        style={{
-          position: "absolute",
-          bottom: 0,
-          width: "100%",
-          padding: 20,
-          backgroundColor: Colors(theme).background,
-          borderTopWidth: 1,
-          borderTopColor: Colors(theme).border,
-        }}
-      >
-        <Button mode="contained">Apply</Button>
-      </TouchableOpacity>
     </>
   );
 };

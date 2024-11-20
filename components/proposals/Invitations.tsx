@@ -130,64 +130,77 @@ const Invitations = () => {
         flex: 1,
       }}
     >
-      {proposals.length === 0 ? (
-        <EmptyState
-          hideAction
-          image={require("@/assets/images/illustration5.png")}
-          subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
-          title="No Invitations yet"
-        />
-      ) : (
-        <FlatList
-          data={filteredProposals}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <JobCard
-              name={item.name}
-              id={item.id}
-              brandName={item.brandName}
-              description={item.description}
-              brandId={item.brandId}
-              budget={{
-                min: Number(item.budget.min),
-                max: Number(item.budget.max),
-              }}
-              onOpenBottomSheet={openBottomSheet}
-              cardType="proposal"
-              collaborationType={item.collaborationType}
-              location={item.location}
-              managerId="managerId"
-              numberOfInfluencersNeeded={1}
-              platform={item.platform}
-              promotionType={item.promotionType}
-              timeStamp={item.timeStamp}
-              applications={item.applications}
-              invitations={item.invitations}
-              acceptedApplications={item.acceptedApplications}
-              status={item.status}
-            />
-          )}
-          keyExtractor={(item, index) => index.toString()}
-          style={{ height: "100%", width: "100%" }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[Colors(theme).primary]} // Customize color based on theme
-            />
-          }
-        />
-      )}
-      {isVisible && (
-        <BottomSheetActions
-          cardId={selectedCollabId || ""}
-          cardType="influencerCard"
-          isVisible={isVisible}
-          onClose={closeBottomSheet}
-          snapPointsRange={["20%", "50%"]}
-          key={selectedCollabId}
-        />
-      )}
+      {
+        proposals.length === 0 ? (
+          <EmptyState
+            hideAction
+            image={require("@/assets/images/illustration5.png")}
+            subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
+            title="No Invitations yet"
+          />
+        ) : (
+          <FlatList
+            data={filteredProposals}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <JobCard
+                name={item.name}
+                id={item.id}
+                brandName={item.brandName}
+                description={item.description}
+                brandId={item.brandId}
+                budget={{
+                  min: Number(item.budget.min),
+                  max: Number(item.budget.max),
+                }}
+                onOpenBottomSheet={openBottomSheet}
+                cardType="proposal"
+                collaborationType={item.collaborationType}
+                location={item.location}
+                managerId="managerId"
+                numberOfInfluencersNeeded={1}
+                platform={item.platform}
+                promotionType={item.promotionType}
+                timeStamp={item.timeStamp}
+                applications={item.applications}
+                invitations={item.invitations}
+                acceptedApplications={item.acceptedApplications}
+                status={item.status}
+              />
+            )}
+            keyExtractor={(item, index) => index.toString()}
+            style={{
+              flexGrow: 1,
+              paddingTop: 8,
+              paddingHorizontal: 16,
+              paddingBottom: 100,
+            }}
+            contentContainerStyle={{
+              gap: 16,
+              paddingBottom: 24,
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[Colors(theme).primary]} // Customize color based on theme
+              />
+            }
+          />
+        )
+      }
+      {
+        isVisible && (
+          <BottomSheetActions
+            cardId={selectedCollabId || ""}
+            cardType="influencerCard"
+            isVisible={isVisible}
+            onClose={closeBottomSheet}
+            snapPointsRange={["20%", "50%"]}
+            key={selectedCollabId}
+          />
+        )
+      }
     </View>
   );
 };

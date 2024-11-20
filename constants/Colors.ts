@@ -15,6 +15,8 @@ export default (theme: Theme) => ({
         inputBackground: "#1b1b1b",
         primary: "#538BA6",
         onSurface: "#538BA6",
+        tag: "#5f6368",
+        tagForeground: "#f1f3f4",
       }
     : {
         text: "#000",
@@ -25,6 +27,8 @@ export default (theme: Theme) => ({
         inputBackground: "#fff",
         primary: "#054463",
         onSurface: "#054463",
+        tag: "#f1f3f4",
+        tagForeground: "#5f6368",
       }),
   aliceBlue: "#E9F1F7",
   amber: "#FFBF00",

@@ -14,7 +14,7 @@ type EmptyStateProps = {
   image?: string | NodeRequire;
   style?: any;
   subtitle?: string;
-  title: string;
+  title?: string;
 };
 
 const EmptyState: React.FC<EmptyStateProps> = ({

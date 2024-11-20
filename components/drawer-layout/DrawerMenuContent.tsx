@@ -113,9 +113,10 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
               value={search}
               style={[
                 {
+                  borderRadius: 15,
                   marginHorizontal: 14,
                   marginBottom: 8,
-                  backgroundColor: Colors(theme).platinum
+                  backgroundColor: Colors(theme).aliceBlue
                 },
               ]}
             />
@@ -128,7 +129,11 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           gap: 6,
         }}
       >
-        <View>
+        <View
+          style={{
+            paddingTop: 8,
+          }}
+        >
           {xl ? DRAWER_MENU_CONTENT_ITEMS.map((tab, index) => (
             <DrawerMenuItem
               key={index}

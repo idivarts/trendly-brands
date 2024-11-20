@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  Pressable,
 } from "react-native";
-import { Card, Avatar, IconButton, Chip } from "react-native-paper";
+import { Card, Avatar } from "react-native-paper";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
 import {
@@ -25,12 +26,15 @@ import Colors from "@/constants/Colors";
 import CarouselNative from "./ui/carousel/carousel";
 import { convertToKUnits } from "@/utils/conversion";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faBullseye, faStar, faUsers, faMessage } from "@fortawesome/free-solid-svg-icons";
+import { faBullseye, faStar, faUsers, faMessage, faEllipsis } from "@fortawesome/free-solid-svg-icons";
+import { imageUrl } from "@/utils/url";
+import Tag from "./ui/tag";
 
 const { width } = Dimensions.get("window");
 
 interface InfluencerCardPropsType {
   influencer: {
+    id: string;
     name: string;
     handle: string;
     profilePic: string;
@@ -46,7 +50,7 @@ interface InfluencerCardPropsType {
     successRate: number | string;
   };
   type: string;
-  alreadyInvited?: boolean;
+  alreadyInvited?: (influencerId: string) => Promise<boolean>;
   ToggleModal: () => void;
   ToggleMessageModal?: () => void;
 }
@@ -55,6 +59,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [bioExpanded, setBioExpanded] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isInvited, setIsInvited] = useState(false);
 
   // Animation values for zoom
   const scale = useSharedValue(1);
@@ -98,6 +103,14 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
     setIsZoomed(true);
   }
 
+  useEffect(() => {
+    if (props?.alreadyInvited) {
+      props.alreadyInvited(props.influencer.id).then((invited) => {
+        setIsInvited(invited);
+      });
+    }
+  }, []);
+
   // Rest of the component remains the same...
   return (
     <>
@@ -107,16 +120,23 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             styles.header,
           ]}
         >
-          <Avatar.Image size={50} source={{ uri: influencer.profilePic }} />
+          <Avatar.Image
+            size={50}
+            source={imageUrl(influencer.profilePic)}
+          />
           <View style={styles.nameContainer}>
             <Text style={styles.name}>{influencer.name}</Text>
             <Text style={styles.handle}>{influencer.handle}</Text>
           </View>
           {props.type === "invitation" &&
-            (props.alreadyInvited ? (
-              <Chip icon="check">Invited</Chip>
+            (isInvited ? (
+              <Tag
+                icon="check"
+              >
+                Invited
+              </Tag>
             ) : (
-              <Chip
+              <Tag
                 icon="plus"
                 onPress={() => {
                   if (props.ToggleMessageModal) {
@@ -125,14 +145,22 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                 }}
               >
                 Invite
-              </Chip>
+              </Tag>
             ))}
-          <IconButton
-            icon="dots-horizontal"
+          <Pressable
             onPress={() => {
               props.ToggleModal();
             }}
-          />
+            style={{
+              paddingHorizontal: 10,
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faEllipsis}
+              size={24}
+              color={Colors(theme).text}
+            />
+          </Pressable>
         </View>
 
         <CarouselNative
@@ -180,7 +208,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               <FontAwesomeIcon
                 icon={faMessage}
                 color={Colors(theme).primary}
-                size={20}
+                size={18}
               />
             </View>
           </View>
@@ -217,7 +245,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           </TouchableOpacity>
           <PinchGestureHandler onGestureEvent={pinchHandler}>
             <Animated.Image
-              source={{ uri: selectedImage || "" }}
+              source={imageUrl(selectedImage || "")}
               style={[additionalStyles.zoomedImage, animatedImageStyle]}
               resizeMode="contain"
             />

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { Searchbar, TextInput } from "react-native-paper";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { View, StyleSheet } from "react-native";
+import { Button, Searchbar } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faSliders } from "@fortawesome/free-solid-svg-icons";
 
 interface SearchComponentProps {
   ToggleModal?: (show: boolean) => void;
@@ -36,21 +37,33 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         onChangeText={handleChangeText}
         style={[
           styles.searchInput,
-          { backgroundColor: Colors(theme).platinum },
+          {
+            borderRadius: 15,
+            backgroundColor: Colors(theme).aliceBlue,
+          },
         ]}
         iconColor={Colors(theme).gray100}
       />
-      <TouchableOpacity
+      <Button
+        mode="contained"
         onPress={() => {
           if (ToggleModal) ToggleModal(true);
         }}
+        style={{
+          borderRadius: 15,
+          paddingTop: 6,
+          paddingHorizontal: 4,
+          paddingBottom: 4,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <Ionicons
-          name="options-outline"
+        <FontAwesomeIcon
+          color={Colors(theme).white}
+          icon={faSliders}
           size={24}
-          color={Colors(theme).text}
         />
-      </TouchableOpacity>
+      </Button>
     </View>
   );
 };

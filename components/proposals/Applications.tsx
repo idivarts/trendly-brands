@@ -59,6 +59,7 @@ const Applications = () => {
         where("brandId", "==", selectedBrand?.id),
         orderBy("timeStamp", "desc")
       );
+
       const querySnapshot = await getDocs(q);
 
       const proposals = await Promise.all(
@@ -185,9 +186,15 @@ const Applications = () => {
                 />
               )}
               keyExtractor={(item, index) => index.toString()}
-              style={{ flexGrow: 1 }} // Allow FlatList to grow within available space
-              contentContainerStyle={{
+              style={{
+                flexGrow: 1,
+                paddingTop: 8,
+                paddingHorizontal: 16,
                 paddingBottom: 100,
+              }}
+              contentContainerStyle={{
+                gap: 16,
+                paddingBottom: 24,
               }}
               refreshControl={
                 <RefreshControl

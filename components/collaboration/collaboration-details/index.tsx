@@ -3,8 +3,13 @@ import { doc, getDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { ActivityIndicator } from "react-native-paper";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import CollaborationDetailsContent from "./CollaborationDetailsContent";
 import { View } from "@/components/theme/Themed";
+import TopTabNavigation from "@/components/ui/top-tab-navigation";
+import ApplicationsTabContent from "./ApplicationsTabContent";
+import InvitationsTabContent from "./InvitationsTabContent";
+import OverviewTabContent from "./OverviewTabContent";
+import SettingsTabContent from "./SettingsTabContent";
+import CollaborationHeader from "../CollaborationHeader";
 
 interface Collaboration extends ICollaboration {
   brandName: string;
@@ -21,9 +26,9 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 }) => {
   const [collaboration, setCollaboration] = useState<Collaboration | undefined>(
     undefined
-  ); // Explicit type
+  );
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("Overview");
+
   const fetchCollaboration = async () => {
     if (!pageID) return;
     try {
@@ -49,6 +54,49 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     }
   };
 
+  const tabs = [
+    {
+      id: "Overview",
+      title: "Overview",
+      component: (
+        <OverviewTabContent
+          collaboration={collaboration as Collaboration}
+          // logo={collaboration?.logo}
+          logo={""}
+        />
+      ),
+    },
+    {
+      id: "Applications",
+      title: "Applications",
+      component: (
+        <ApplicationsTabContent
+          pageID={pageID}
+          collaboration={{
+            id: pageID,
+            name: collaboration?.name,
+          }}
+        />
+      ),
+    },
+    {
+      id: "Invitations",
+      title: "Invitations",
+      component: (
+        <InvitationsTabContent
+          pageID={pageID}
+        />
+      ),
+    },
+    {
+      id: "Settings",
+      title: "Settings",
+      component: (
+        <SettingsTabContent />
+      ),
+    }
+  ];
+
   useEffect(() => {
     fetchCollaboration();
   }, [pageID]);
@@ -69,16 +117,18 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   if (!collaboration) return null;
 
   return (
-    <>
-      {
-        activeTab === "Overview" && (
-          <CollaborationDetailsContent
-            collaborationDetail={collaboration}
-            pageID={pageID}
-          />
-        )
-      }
-    </>
+    <View
+      style={{
+        flex: 1,
+      }}
+    >
+      <CollaborationHeader
+        collaboration={collaboration}
+      />
+      <TopTabNavigation
+        tabs={tabs}
+      />
+    </View>
   );
 };
 

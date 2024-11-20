@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { View, Image, FlatList } from "react-native";
+import { View, FlatList } from "react-native";
 import {
-  Text,
   ActivityIndicator,
 } from "react-native-paper";
 
 import { useTheme } from "@react-navigation/native";
-import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import InfluencerCard from "@/components/InfluencerCard";
 import { FirestoreDB } from "@/utils/firestore";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
 import Toast from "react-native-toast-message";
+import EmptyState from "@/components/ui/empty-state";
 
-const CollaborationApplicationPage = (props: any) => {
+const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
-  const styles = stylesFn(theme);
   const [isVisible, setIsVisible] = useState(false);
   const [influencers, setInfluencers] = useState<any>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +74,17 @@ const CollaborationApplicationPage = (props: any) => {
     );
   }
 
-  return influencers.length !== 0 ? (
+  if (influencers.length === 0) {
+    return (
+      <EmptyState
+        subtitle="No applications yet. Check back later."
+        image={require("@/assets/images/illustration6.png")}
+        hideAction
+      />
+    );
+  };
+
+  return (
     <>
       <Toast />
       <FlatList
@@ -85,6 +93,7 @@ const CollaborationApplicationPage = (props: any) => {
           <InfluencerCard
             type="application"
             influencer={{
+              id: item.id,
               profilePic: item.profileImage,
               name: item.name,
               handle: item.handle || "@handle",
@@ -111,54 +120,27 @@ const CollaborationApplicationPage = (props: any) => {
           gap: 8,
         }}
         style={{
-          paddingHorizontal: 2,
+          paddingHorizontal: 16,
           paddingBottom: 100,
         }}
       />
-      {isVisible && (
-        <BottomSheetActions
-          cardType="applicationCard"
-          data={{
-            collaboration: props.collaboration
-          }}
-          isVisible={isVisible}
-          onClose={() => setIsVisible(false)}
-          snapPointsRange={["30%", "50%"]}
-          cardId={selectedApplication}
-          key={selectedApplication?.applicationID}
-        />
-      )}
+      {
+        isVisible && (
+          <BottomSheetActions
+            cardType="applicationCard"
+            data={{
+              collaboration: props.collaboration
+            }}
+            isVisible={isVisible}
+            onClose={() => setIsVisible(false)}
+            snapPointsRange={["30%", "50%"]}
+            cardId={selectedApplication}
+            key={selectedApplication?.applicationID}
+          />
+        )
+      }
     </>
-  ) : (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 40,
-      }}
-    >
-      <Image
-        source={{
-          uri:
-            props.logo ||
-            "https://cdni.iconscout.com/illustration/premium/thumb/connection-lost-illustration-download-in-svg-png-gif-file-formats--404-error-empty-state-page-not-found-pack-design-development-illustrations-6632144.png?f=webp",
-        }}
-        style={{
-          height: 200,
-          width: 200,
-        }}
-      />
-      <Text
-        style={{
-          fontSize: 16,
-          color: theme.colors.text,
-        }}
-      >
-        No applications yet. Check back later.
-      </Text>
-    </View>
   );
 };
 
-export default CollaborationApplicationPage;
+export default ApplicationsTabContent;

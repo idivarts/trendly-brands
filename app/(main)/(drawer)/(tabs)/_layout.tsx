@@ -19,7 +19,7 @@ import {
 import {
   faFileSignature,
   faPlusCircle,
-  faRefresh,
+  faRightLeft,
 } from "@fortawesome/free-solid-svg-icons";
 
 const TabLayout = () => {
@@ -35,6 +35,7 @@ const TabLayout = () => {
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
           display: xl ? "none" : "flex", // Hide the tab bar on desktop screens
+          paddingHorizontal: 8,
         },
         headerTitleAlign: "left",
         headerTitleStyle: {
@@ -62,8 +63,8 @@ const TabLayout = () => {
                 icon={
                   <FontAwesomeIcon
                     color={Colors(theme).text}
-                    icon={faRefresh}
-                    size={26}
+                    icon={faRightLeft}
+                    size={24}
                     style={{
                       marginLeft: 14,
                       color: Colors(theme).text,

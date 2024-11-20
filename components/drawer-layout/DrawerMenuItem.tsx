@@ -39,19 +39,6 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
           justifyContent: "flex-start"
         }}
       >
-        {/* <FontAwesome
-          name={tab.icon as any}
-          color={
-            tab.href.includes(pathname)
-              ? Colors(theme).white
-              : Colors(theme).gray100
-          }
-          style={{
-            width: 32,
-            textAlign: "center",
-          }}
-          size={28}
-        /> */}
         <FontAwesomeIcon
           icon={tab.icon}
           color={

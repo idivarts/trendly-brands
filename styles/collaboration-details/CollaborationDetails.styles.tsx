@@ -1,19 +1,12 @@
-import Colors from "@/constants/Colors";
-import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
+import { Theme } from "@react-navigation/native";
+import Colors from "@/constants/Colors";
 
 export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     scrollContainer: {
       padding: 16,
       flex: 1,
-    },
-    profileCard: {
-      alignItems: "center",
-      backgroundColor: Colors(theme).card,
-      marginBottom: 16,
-      paddingHorizontal: 16,
-      borderRadius: 10,
     },
     chipContainer: {
       flexDirection: "row",
@@ -27,16 +20,10 @@ export const stylesFn = (theme: Theme) =>
       paddingHorizontal: 10,
     },
     profileImage: {
-      height: 100,
-      marginVertical: 5,
-    },
-    profileContent: {
-      alignItems: "center",
-    },
-    name: {
-      fontWeight: "bold",
-      fontSize: 20,
-      color: Colors(theme).text,
+      height: 160,
+      marginBottom: 10,
+      borderTopRightRadius: 10,
+      borderTopLeftRadius: 10,
     },
     brandName: {
       fontSize: 16,
@@ -59,19 +46,11 @@ export const stylesFn = (theme: Theme) =>
       marginVertical: 16,
       borderRadius: 25,
     },
-    statChip: {
-      marginHorizontal: 8,
-      backgroundColor: Colors(theme).background,
-    },
     infoCard: {
-      marginBottom: 16,
+      minWidth: "100%",
       backgroundColor: Colors(theme).card,
       borderRadius: 10,
-      shadowColor: Colors(theme).black,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 5,
-      elevation: 3,
+      shadowColor: Colors(theme).transparent,
     },
     cardName: {
       fontSize: 16,
@@ -103,7 +82,7 @@ export const stylesFn = (theme: Theme) =>
     messageInput: {
       width: "100%",
       height: 100,
-      borderColor: "#ccc",
+      borderColor: Colors(theme).border,
       borderWidth: 1,
       borderRadius: 5,
       padding: 10,

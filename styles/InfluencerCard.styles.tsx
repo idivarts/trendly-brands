@@ -5,8 +5,9 @@ import { StyleSheet } from "react-native";
 export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     card: {
-      marginVertical: 10,
       backgroundColor: Colors(theme).card,
+      shadowColor: Colors(theme).transparent,
+      borderRadius: 10,
     },
     header: {
       padding: 16,
