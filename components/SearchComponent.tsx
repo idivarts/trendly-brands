@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View, StyleSheet } from "react-native";
-import { Button, Searchbar } from "react-native-paper";
+import { View, StyleSheet, Pressable } from "react-native";
+import { Searchbar } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -44,18 +44,17 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         ]}
         iconColor={Colors(theme).gray100}
       />
-      <Button
-        mode="contained"
+      <Pressable
         onPress={() => {
           if (ToggleModal) ToggleModal(true);
         }}
         style={{
           borderRadius: 15,
-          paddingTop: 6,
-          paddingHorizontal: 4,
-          paddingBottom: 4,
+          paddingVertical: 16,
+          paddingHorizontal: 18,
           alignItems: "center",
           justifyContent: "center",
+          backgroundColor: Colors(theme).primary,
         }}
       >
         <FontAwesomeIcon
@@ -63,7 +62,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
           icon={faSliders}
           size={24}
         />
-      </Button>
+      </Pressable>
     </View>
   );
 };

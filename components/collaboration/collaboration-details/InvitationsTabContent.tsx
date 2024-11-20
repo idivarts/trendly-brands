@@ -21,6 +21,7 @@ import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useInfluencers } from "@/hooks/request";
 import EmptyState from "@/components/ui/empty-state";
+import Colors from "@/constants/Colors";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -157,13 +158,18 @@ const InvitationsTabContent = (props: any) => {
         onEndReachedThreshold={0.1}
         keyExtractor={(item) => item.id}
         style={{
-          paddingTop: 8,
-          paddingHorizontal: 16,
-          paddingBottom: 100,
+          paddingBottom: 16,
         }}
-        contentContainerStyle={{
-          gap: 16,
-        }}
+        ItemSeparatorComponent={
+          () => (
+            <View
+              style={{
+                height: 16,
+                backgroundColor: Colors(theme).aliceBlue,
+              }}
+            />
+          )
+        }
       />
       <Modal
         visible={isMessageModalVisible}

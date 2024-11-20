@@ -127,6 +127,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       />
       <TopTabNavigation
         tabs={tabs}
+        size="compact"
       />
     </View>
   );

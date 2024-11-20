@@ -121,7 +121,7 @@ const ApplicationsTabContent = (props: any) => {
         }}
         style={{
           paddingHorizontal: 16,
-          paddingBottom: 100,
+          paddingBottom: 16,
         }}
       />
       {

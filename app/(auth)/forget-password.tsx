@@ -63,8 +63,6 @@ const ForgotPasswordScreen = () => {
         onPress={() => {
           handleResetPassword();
         }}
-        style={styles.button}
-        labelStyle={styles.buttonText}
       >
         Reset Password
       </Button>

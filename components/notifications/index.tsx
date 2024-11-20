@@ -36,7 +36,10 @@ const Notifications: React.FC<NotificationsProps> = ({
             />
           </View >
         ) : (
-          <ScrollView style={styles.container}>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.contentContainer}
+          >
             {
               notifications.map((item) => (
                 <NotificationCard

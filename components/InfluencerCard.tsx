@@ -111,10 +111,12 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
     }
   }, []);
 
-  // Rest of the component remains the same...
   return (
     <>
-      <Card style={styles.card}>
+      <Card
+        style={styles.card}
+        mode="contained"
+      >
         <View
           style={[
             styles.header,
@@ -150,9 +152,6 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           <Pressable
             onPress={() => {
               props.ToggleModal();
-            }}
-            style={{
-              paddingHorizontal: 10,
             }}
           >
             <FontAwesomeIcon

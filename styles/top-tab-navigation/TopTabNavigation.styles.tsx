@@ -40,6 +40,16 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
   activeTabText: {
     color: Colors(theme).white,
   },
+  compactTabScroll: {
+    maxHeight: 62,
+  },
+  compactTab: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  compactText: {
+    fontSize: 14,
+  },
   tabContent: {
     flex: 1,
   },

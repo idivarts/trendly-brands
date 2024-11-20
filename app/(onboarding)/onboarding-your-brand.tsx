@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
+  Pressable,
 } from "react-native";
 import { TextInput, Button, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -168,11 +168,12 @@ const OnboardingScreen = () => {
             onChangeText={filterRoles}
             onFocus={() => setActiveDropdown("role")}
             placeholder="Your Role at Company"
+            placeholderTextColor={Colors(theme).text}
             flatListProps={{
               keyboardShouldPersistTaps: "always",
               keyExtractor: (_, idx) => idx.toString(),
               renderItem: ({ item }) => (
-                <TouchableOpacity
+                <Pressable
                   style={{
                     backgroundColor: Colors(theme).background,
                   }}
@@ -183,7 +184,7 @@ const OnboardingScreen = () => {
                   }}
                 >
                   <Text style={styles.itemText}>{item}</Text>
-                </TouchableOpacity>
+                </Pressable>
               ),
             }}
             style={{
@@ -207,11 +208,12 @@ const OnboardingScreen = () => {
             onChangeText={filterIndustries}
             onFocus={() => setActiveDropdown("industry")}
             placeholder="Select Industry"
+            placeholderTextColor={Colors(theme).text}
             flatListProps={{
               keyboardShouldPersistTaps: "always",
               keyExtractor: (_, idx) => idx.toString(),
               renderItem: ({ item }) => (
-                <TouchableOpacity
+                <Pressable
                   style={{
                     backgroundColor: Colors(theme).background,
                   }}
@@ -222,7 +224,7 @@ const OnboardingScreen = () => {
                   }}
                 >
                   <Text style={styles.itemText}>{item}</Text>
-                </TouchableOpacity>
+                </Pressable>
               ),
             }}
             style={{

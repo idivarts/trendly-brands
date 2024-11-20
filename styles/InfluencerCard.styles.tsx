@@ -6,18 +6,21 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     card: {
       backgroundColor: Colors(theme).card,
-      shadowColor: Colors(theme).transparent,
+      shadowColor: Colors(theme).white,
       borderRadius: 10,
+      paddingVertical: 16,
     },
     header: {
-      padding: 16,
-      paddingRight: 8,
+      paddingBottom: 16,
+      paddingHorizontal: 16,
+      gap: 10,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
     },
     content: {
-      padding: 16,
+      paddingTop: 8,
+      paddingHorizontal: 16,
     },
     statItem: {
       alignItems: "center",
@@ -25,14 +28,13 @@ export const stylesFn = (theme: Theme) =>
       gap: 2,
     },
     statsText: {
-      marginLeft: 5, // Adds spacing between the icon and the text
+      marginLeft: 5,
       color: Colors(theme).text,
       fontSize: 12,
     },
 
     nameContainer: {
       flex: 1,
-      marginLeft: 10,
     },
     name: {
       fontSize: 16,
@@ -43,7 +45,6 @@ export const stylesFn = (theme: Theme) =>
       color: "gray",
     },
     carouselContainer: {
-      paddingHorizontal: 8,
       backgroundColor: Colors(theme).card,
       width: "100%",
     },
@@ -66,7 +67,6 @@ export const stylesFn = (theme: Theme) =>
       backgroundColor: "#333333",
     },
     media: {
-      borderRadius: 10,
       alignSelf: "center",
     },
     stats: {

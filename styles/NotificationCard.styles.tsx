@@ -6,8 +6,10 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    gap: 8,
     backgroundColor: Colors(theme).background,
+  },
+  contentContainer: {
+    gap: 8,
   },
   card: {
     padding: 16,

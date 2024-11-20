@@ -173,7 +173,7 @@ const Invitations = () => {
               flexGrow: 1,
               paddingTop: 8,
               paddingHorizontal: 16,
-              paddingBottom: 100,
+              paddingBottom: 16,
             }}
             contentContainerStyle={{
               gap: 16,

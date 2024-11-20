@@ -10,10 +10,12 @@ interface TopTabNavigationProps {
     title: string;
     component: React.ReactNode;
   }[];
+  size?: "compact" | "default";
 }
 
 const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   tabs,
+  size = "default",
 }) => {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [tabLayout, setTabLayout] = useState<any>({});
@@ -59,15 +61,21 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabScroll}
+        style={[
+          styles.tabScroll,
+          size === "compact" && styles.compactTabScroll,
+        ]}
         contentContainerStyle={styles.tabScrollContainer}
       >
-        <View style={styles.tabContainer}>
+        <View
+          style={styles.tabContainer}
+        >
           {tabs.map((tab, index) => (
             <Pressable
               key={tab.id}
               style={[
                 styles.tab,
+                size === "compact" && styles.compactTab,
                 {
                   backgroundColor: activeTab === tab ? Colors(theme).primary : 'transparent',
                 }
@@ -88,7 +96,8 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
             >
               <Text style={[
                 styles.tabText,
-                activeTab === tab && styles.activeTabText
+                activeTab === tab && styles.activeTabText,
+                size === "compact" && styles.compactText,
               ]}>
                 {tab.title}
               </Text>
