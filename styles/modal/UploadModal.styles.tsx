@@ -55,30 +55,39 @@ const stylesFn = (theme: Theme) =>
       backgroundColor: "#fff",
       paddingHorizontal: 24,
     },
-
+    iconButton: {
+      backgroundColor: Colors(theme).primary,
+      borderRadius: 10,
+      marginHorizontal: 0,
+      color: Colors(theme).white,
+      padding: 8,
+    },
+    iconButtonContent: {
+      paddingHorizontal: 16,
+    },
+    selectContainer: {
+      gap: 8,
+    },
     title: {
       color: Colors(theme).text,
     },
     input: {
-      marginBottom: 16,
       backgroundColor: Colors(theme).background,
     },
     budgetContainer: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      gap: 16,
     },
     budgetInput: {
-      width: "48%",
+      flex: 1,
       backgroundColor: Colors(theme).background,
     },
     paragraph: {
-      marginVertical: 8,
       color: Colors(theme).text,
     },
     counter: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 16,
     },
     checkIcon: {
       marginBottom: 16,
@@ -105,6 +114,7 @@ const stylesFn = (theme: Theme) =>
       backgroundColor: Colors(theme).background,
       zIndex: 100,
       padding: 20,
+      gap: 16,
       margin: 16,
       borderRadius: 8,
     },
