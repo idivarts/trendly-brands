@@ -6,6 +6,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 16,
     gap: 20,
   },
   contentContainer: {

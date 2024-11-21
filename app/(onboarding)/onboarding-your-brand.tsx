@@ -17,7 +17,6 @@ import { roles } from "@/constants/Roles";
 import { AuthApp } from "@/utils/auth";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
-import Toast from "react-native-toast-message";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/constants/Colors";
 
@@ -113,13 +112,6 @@ const OnboardingScreen = () => {
   return (
     <AppLayout>
       <View style={styles.container}>
-        <View
-          style={{
-            zIndex: 10,
-          }}
-        >
-          <Toast />
-        </View>
         <View
           style={styles.headlineContainer}
         >

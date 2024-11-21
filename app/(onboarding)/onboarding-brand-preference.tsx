@@ -90,11 +90,10 @@ const BrandPreferenceScreen = () => {
         <View style={styles.headerContainer}>
           <Text style={styles.headline}>Brand Preferences</Text>
           <Button
-            mode="text"
+            mode="contained"
             onPress={() => {
               handleSignUp();
             }}
-            labelStyle={styles.skipButtonLabel}
           >
             Skip
           </Button>

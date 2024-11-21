@@ -16,7 +16,6 @@ import InfluencerCard from "@/components/InfluencerCard";
 import { FirestoreDB } from "@/utils/firestore";
 import { addDoc, collection } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
-import Toast from "react-native-toast-message";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useInfluencers } from "@/hooks/request";
@@ -101,7 +100,6 @@ const InvitationsTabContent = (props: any) => {
 
   return (
     <>
-      <Toast />
       <FlatList
         refreshing={isLoading}
         onRefresh={() => {

@@ -9,7 +9,6 @@ import InfluencerCard from "@/components/InfluencerCard";
 import { FirestoreDB } from "@/utils/firestore";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
-import Toast from "react-native-toast-message";
 import EmptyState from "@/components/ui/empty-state";
 
 const ApplicationsTabContent = (props: any) => {
@@ -86,7 +85,6 @@ const ApplicationsTabContent = (props: any) => {
 
   return (
     <>
-      <Toast />
       <FlatList
         data={influencers}
         renderItem={({ item }) => (

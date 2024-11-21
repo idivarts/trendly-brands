@@ -73,13 +73,13 @@ const JobCard = (props: CollaborationAdCardProps) => {
 
         {/* Payment Verified, Promotion and Collaboration Type */}
         <View style={styles.chipRow}>
-          <Tag mode="outlined">
+          <Tag>
             Applied: {props.applications}
           </Tag>
-          <Tag mode="outlined">
+          <Tag>
             Invited: {props.invitations}
           </Tag>
-          <Tag mode="outlined">
+          <Tag>
             Shortlisted: {props.acceptedApplications}
           </Tag>
         </View>

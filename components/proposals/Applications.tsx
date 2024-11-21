@@ -19,7 +19,6 @@ import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import Toast from "react-native-toast-message";
 import EmptyState from "../ui/empty-state";
 
 const Applications = () => {
@@ -138,13 +137,6 @@ const Applications = () => {
         flex: 1,
       }}
     >
-      <View
-        style={{
-          zIndex: 1000,
-        }}
-      >
-        <Toast />
-      </View>
       {
         filteredProposals.length === 0 ? (
           <EmptyState

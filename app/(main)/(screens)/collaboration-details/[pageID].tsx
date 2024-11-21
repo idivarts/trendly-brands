@@ -1,32 +1,19 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import CollaborationDetails from "@/components/collaboration/collaboration-details";
-import BackButton from "@/components/ui/back-button/BackButton";
-import Colors from "@/constants/Colors";
-import AppLayout from "@/layouts/app-layout"
-import { useTheme } from "@react-navigation/native";
+import ScreenHeader from "@/components/ui/screen-header";
+import AppLayout from "@/layouts/app-layout";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Appbar } from "react-native-paper"
 
 const CollaborationDetailsScreen = () => {
-  const theme = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const pageID = useLocalSearchParams().pageID;
 
   return (
     <AppLayout>
-      <Appbar.Header
-        statusBarHeight={0}
-        style={{
-          backgroundColor: Colors(theme).background,
-        }}
-      >
-        <BackButton />
-        <Appbar.Content
-          title="Collaboration Details"
-          color={Colors(theme).text}
-        />
-      </Appbar.Header>
+      <ScreenHeader
+        title="Collaboration Details"
+      />
       <CollaborationDetails
         pageID={pageID as string}
       />

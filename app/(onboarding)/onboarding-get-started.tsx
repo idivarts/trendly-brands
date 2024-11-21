@@ -83,6 +83,7 @@ const GetStartedScreen = () => {
         <View style={styles.headerContainer}>
           <Text style={styles.headline}>Get Started</Text>
           <Button
+            mode="contained"
             onPress={() => {
               handleSignUp();
             }}

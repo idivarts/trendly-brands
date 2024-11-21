@@ -19,7 +19,6 @@ import { addDoc, collection } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Toast from "react-native-toast-message";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
@@ -153,13 +152,6 @@ const CreateCollaborationScreen = () => {
   if (screen === 1) {
     return (
       <AppLayout>
-        <View
-          style={{
-            zIndex: 1000,
-          }}
-        >
-          <Toast />
-        </View>
         <ScrollView
           contentContainerStyle={{
             paddingVertical: 16,
@@ -326,13 +318,6 @@ const CreateCollaborationScreen = () => {
           style={styles.container}
           contentContainerStyle={styles.contentContainer}
         >
-          <View
-            style={{
-              zIndex: 1000,
-            }}
-          >
-            <Toast />
-          </View>
           <View
             style={{
               flexDirection: "row",
