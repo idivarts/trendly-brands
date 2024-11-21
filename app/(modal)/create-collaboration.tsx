@@ -128,7 +128,7 @@ const CreateCollaborationScreen = () => {
         location: {
           type: location,
           ...(location === "Physical" && {
-            name: "locationName",
+            name: "locationName", // TODO: Add location name using geocoding API
             latlong: {
               lat: mapRegion.latitude,
               long: mapRegion.longitude,

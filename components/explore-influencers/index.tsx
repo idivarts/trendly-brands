@@ -86,7 +86,7 @@ const ExploreInfluencers = () => {
         ListHeaderComponent={
           <View
             style={{
-              paddingHorizontal: 12,
+              paddingHorizontal: 16,
             }}
           >
             <SearchComponent
