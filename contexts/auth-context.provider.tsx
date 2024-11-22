@@ -162,8 +162,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const checkVerification = async () => {
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
-            setSession(userCredential.user.uid);
             router.replace("/(onboarding)/onboarding-your-brand?firstBrand=true");
+            setSession(userCredential.user.uid);
           } else {
             setTimeout(checkVerification, 2000);
           }
