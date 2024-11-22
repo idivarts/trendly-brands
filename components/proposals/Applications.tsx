@@ -1,28 +1,25 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import JobCard from "@/components/collaboration/CollaborationCard";
-import { Text, View } from "@/components/theme/Themed";
+import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
-import { useIsFocused, useTheme } from "@react-navigation/native";
-import { Link, router } from "expo-router";
+import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   getDocs,
   query,
   where,
-  doc as firebaseDoc,
-  getDoc,
   orderBy,
 } from "firebase/firestore";
-import { ActivityIndicator, FlatList, Image, Platform } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
-import { Button } from "react-native-paper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import Toast from "react-native-toast-message";
+import EmptyState from "../ui/empty-state";
 
 const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -61,6 +58,7 @@ const Applications = () => {
         where("brandId", "==", selectedBrand?.id),
         orderBy("timeStamp", "desc")
       );
+
       const querySnapshot = await getDocs(q);
 
       const proposals = await Promise.all(
@@ -139,112 +137,80 @@ const Applications = () => {
         flex: 1,
       }}
     >
-      <View
-        style={{
-          zIndex: 1000,
-        }}
-      >
-        <Toast />
-      </View>
-      {filteredProposals.length === 0 ? (
-        <View
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 50,
-            flex: 1, // Allow center content to take up available space
-          }}
-        >
-          <Image
-            source={{ uri: "https://via.placeholder.com/150" }}
-            width={150}
-            height={150}
-            style={{
-              borderRadius: 10,
-            }}
+      {
+        filteredProposals.length === 0 ? (
+          <EmptyState
+            image={require("@/assets/images/illustration6.png")}
+            subtitle="Start Applying today and get exclusive collabs"
+            title="No Applications yet"
+            action={() => router.push("/collaborations")}
+            actionLabel="Explore Collaborations"
           />
-          <View
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <Text style={styles.title}>No Collaborations found</Text>
-            <Text style={styles.subtitle}>
-              Go to the New Collaborations page to start creating new
-              Collaborations
-            </Text>
+        ) : (
+          <View style={{ flex: 1 }}>
+            <FlatList
+              data={filteredProposals}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <JobCard
+                  name={item.name}
+                  id={item.id}
+                  brandName={item.brandName}
+                  description={item.description}
+                  brandId={item.brandId}
+                  budget={{
+                    min: Number(item.budget.min),
+                    max: Number(item.budget.max),
+                  }}
+                  onOpenBottomSheet={openBottomSheet}
+                  cardType="proposal"
+                  collaborationType={item.collaborationType}
+                  location={item.location}
+                  managerId="managerId"
+                  numberOfInfluencersNeeded={1}
+                  platform={item.platform}
+                  promotionType={item.promotionType}
+                  timeStamp={item.timeStamp}
+                  applications={item.applications}
+                  invitations={item.invitations}
+                  acceptedApplications={item.acceptedApplications}
+                  status={item.status}
+                />
+              )}
+              keyExtractor={(item, index) => index.toString()}
+              style={{
+                flexGrow: 1,
+                paddingTop: 8,
+                paddingHorizontal: 16,
+                paddingBottom: 16,
+              }}
+              contentContainerStyle={{
+                gap: 16,
+                paddingBottom: 24,
+              }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  colors={[Colors(theme).primary]} // Customize color based on theme
+                />
+              }
+            />
           </View>
-          <Button
-            onPress={() => router.push("/modal")}
-            style={{
-              backgroundColor: Colors(theme).platinum,
-              padding: 5,
-              borderRadius: 5,
-            }}
-            textColor={Colors(theme).text}
-          >
-            New Collaborations
-          </Button>
-        </View>
-      ) : (
-        <View style={{ flex: 1 }}>
-          <FlatList
-            data={filteredProposals}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <JobCard
-                name={item.name}
-                id={item.id}
-                brandName={item.brandName}
-                description={item.description}
-                brandId={item.brandId}
-                budget={{
-                  min: Number(item.budget.min),
-                  max: Number(item.budget.max),
-                }}
-                onOpenBottomSheet={openBottomSheet}
-                cardType="proposal"
-                collaborationType={item.collaborationType}
-                location={item.location}
-                managerId="managerId"
-                numberOfInfluencersNeeded={1}
-                platform={item.platform}
-                promotionType={item.promotionType}
-                timeStamp={item.timeStamp}
-                applications={item.applications}
-                invitations={item.invitations}
-                acceptedApplications={item.acceptedApplications}
-                status={item.status}
-              />
-            )}
-            keyExtractor={(item, index) => index.toString()}
-            style={{ flexGrow: 1 }} // Allow FlatList to grow within available space
-            contentContainerStyle={{
-              paddingBottom: 100,
-            }}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[Colors(theme).primary]} // Customize color based on theme
-              />
-            }
+        )
+      }
+      {
+        isVisible && (
+          <BottomSheetActions
+            cardId={selectedCollabId || ""}
+            cardType="activeCollab"
+            isVisible={isVisible}
+            onClose={closeBottomSheet}
+            snapPointsRange={["20%", "50%"]}
+            key={selectedCollabId}
           />
-        </View>
-      )}
-      {isVisible && (
-        <BottomSheetActions
-          cardId={selectedCollabId || ""}
-          cardType="activeCollab"
-          isVisible={isVisible}
-          onClose={closeBottomSheet}
-          snapPointsRange={["20%", "50%"]}
-          key={selectedCollabId}
-        />
-      )}
+        )
+      }
     </View>
   );
 };

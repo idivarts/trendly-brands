@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
+  Pressable,
 } from "react-native";
 import { TextInput, Button, IconButton } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -17,7 +17,6 @@ import { roles } from "@/constants/Roles";
 import { AuthApp } from "@/utils/auth";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
-import Toast from "react-native-toast-message";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/constants/Colors";
 
@@ -114,13 +113,6 @@ const OnboardingScreen = () => {
     <AppLayout>
       <View style={styles.container}>
         <View
-          style={{
-            zIndex: 10,
-          }}
-        >
-          <Toast />
-        </View>
-        <View
           style={styles.headlineContainer}
         >
           {
@@ -168,11 +160,12 @@ const OnboardingScreen = () => {
             onChangeText={filterRoles}
             onFocus={() => setActiveDropdown("role")}
             placeholder="Your Role at Company"
+            placeholderTextColor={Colors(theme).text}
             flatListProps={{
               keyboardShouldPersistTaps: "always",
               keyExtractor: (_, idx) => idx.toString(),
               renderItem: ({ item }) => (
-                <TouchableOpacity
+                <Pressable
                   style={{
                     backgroundColor: Colors(theme).background,
                   }}
@@ -183,7 +176,7 @@ const OnboardingScreen = () => {
                   }}
                 >
                   <Text style={styles.itemText}>{item}</Text>
-                </TouchableOpacity>
+                </Pressable>
               ),
             }}
             style={{
@@ -207,11 +200,12 @@ const OnboardingScreen = () => {
             onChangeText={filterIndustries}
             onFocus={() => setActiveDropdown("industry")}
             placeholder="Select Industry"
+            placeholderTextColor={Colors(theme).text}
             flatListProps={{
               keyboardShouldPersistTaps: "always",
               keyExtractor: (_, idx) => idx.toString(),
               renderItem: ({ item }) => (
-                <TouchableOpacity
+                <Pressable
                   style={{
                     backgroundColor: Colors(theme).background,
                   }}
@@ -222,7 +216,7 @@ const OnboardingScreen = () => {
                   }}
                 >
                   <Text style={styles.itemText}>{item}</Text>
-                </TouchableOpacity>
+                </Pressable>
               ),
             }}
             style={{
@@ -246,9 +240,6 @@ const OnboardingScreen = () => {
         <Button
           mode="contained"
           onPress={handleSubmit}
-          style={styles.submitButton}
-          buttonColor={Colors(theme).primary}
-          textColor={Colors(theme).text}
         >
           Submit
         </Button>

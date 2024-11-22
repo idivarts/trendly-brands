@@ -5,12 +5,9 @@ import { StyleSheet } from "react-native";
 export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     card: {
-      borderRadius: 16,
-      padding: 10,
-      marginVertical: 8,
-      marginHorizontal: 5,
+      borderRadius: 10,
       backgroundColor: Colors(theme).card,
-      elevation: 2,
+      shadowColor: Colors(theme).transparent,
     },
     bottomSheetContent: {
       position: "absolute",
@@ -22,14 +19,10 @@ export const stylesFn = (theme: Theme) =>
       justifyContent: "space-between",
       alignItems: "center",
     },
-    bookmarkIcon: {
-      marginLeft: "auto",
-    },
     collabName: {
       fontSize: 18,
       fontWeight: "bold",
-      marginTop: 10,
-      maxWidth: "80%",
+      flex: 1,
       color: Colors(theme).text,
     },
     brandName: {
@@ -55,14 +48,8 @@ export const stylesFn = (theme: Theme) =>
     chipRow: {
       flexDirection: "row",
       flexWrap: "wrap",
-      marginVertical: 8,
-    },
-    chip: {
-      marginHorizontal: 4,
-      marginBottom: 4,
-    },
-    divider: {
-      marginVertical: 10,
+      marginTop: 12,
+      gap: 16,
     },
     actionRow: {
       flexDirection: "row",

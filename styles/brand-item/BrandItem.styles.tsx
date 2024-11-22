@@ -11,7 +11,8 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors(theme).aliceBlue,
     paddingLeft: 14,
-    paddingVertical: 4,
+    paddingRight: 8,
+    paddingVertical: 12,
   },
   innerContainer: {
     flexDirection: "row",

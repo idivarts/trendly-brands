@@ -1,10 +1,8 @@
 import AppLayout from "@/layouts/app-layout";
 import React, { useEffect, useState } from "react";
 import {
-  View,
   ScrollView,
   Platform,
-  Text,
 } from "react-native";
 import {
   TextInput,
@@ -15,18 +13,20 @@ import {
   RadioButton,
   Modal,
 } from "react-native-paper";
-import MapView, { Marker } from "react-native-maps";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { useTheme } from "@react-navigation/native";
 import { addDoc, collection } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Toast from "react-native-toast-message";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Colors from "@/constants/Colors";
 import { router } from "expo-router";
 import * as Location from 'expo-location';
+import Select, { SelectItem } from "@/components/ui/select";
+import { Text, View } from "@/components/theme/Themed";
+import CreateCollaborationMap from "@/components/collaboration/create-collaboration/CreateCollaborationMap";
+import { COLLAB_TYPES, PLATFORM_TYPES, PROMOTION_TYPES } from "@/constants/CreateCollaborationForm";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -34,9 +34,14 @@ const CreateCollaborationScreen = () => {
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [numInfluencers, setNumInfluencers] = useState(1);
-  const [promotionType, setPromotionType] = useState("");
-  const [collabType, setCollabType] = useState("");
-  const [platform, setPlatform] = useState("Instagram");
+  const [promotionType, setPromotionType] = useState<SelectItem[]>([]);
+  const [collabType, setCollabType] = useState<SelectItem[]>([]);
+  const [platform, setPlatform] = useState([
+    {
+      label: "Instagram",
+      value: "Instagram",
+    },
+  ]);
   const [location, setLocation] = useState("Remote");
   const [links, setLinks] = useState<any[]>([]);
   const [screen, setScreen] = useState(1);
@@ -73,6 +78,11 @@ const CreateCollaborationScreen = () => {
   }, []);
 
   const addLink = () => {
+    if (!newLinkName || !newLinkUrl) {
+      Toaster.error("Please fill all fields");
+      return;
+    }
+
     setLinks([...links, { name: newLinkName, url: newLinkUrl }]);
     setNewLinkName("");
     setNewLinkUrl("");
@@ -101,7 +111,7 @@ const CreateCollaborationScreen = () => {
       }
 
       const collabRef = collection(FirestoreDB, "collaborations");
-      const docRef = await addDoc(collabRef, {
+      await addDoc(collabRef, {
         name: collaborationName,
         brandId: selectedBrand ? selectedBrand.id : "",
         managerId: AuthApp.currentUser?.uid,
@@ -111,14 +121,14 @@ const CreateCollaborationScreen = () => {
           min: budgetMin,
           max: budgetMax,
         },
-        promotionType,
-        collaborationType: collabType,
+        promotionType: promotionType[0].value,
+        collaborationType: collabType[0].value,
         numberOfInfluencersNeeded: numInfluencers,
-        platform,
+        platform: platform[0].value,
         location: {
           type: location,
           ...(location === "Physical" && {
-            name: "locationName",
+            name: "locationName", // TODO: Add location name using geocoding API
             latlong: {
               lat: mapRegion.latitude,
               long: mapRegion.longitude,
@@ -142,38 +152,33 @@ const CreateCollaborationScreen = () => {
   if (screen === 1) {
     return (
       <AppLayout>
-        <View
-          style={{
-            zIndex: 1000,
-          }}
-        >
-          <Toast />
-        </View>
         <ScrollView
-          style={styles.container}
           contentContainerStyle={{
             paddingVertical: 16,
+            gap: 16,
           }}
+          style={styles.container}
         >
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
-              marginBottom: 16,
             }}
           >
-            {Platform.OS === "web" && (
-              <IconButton
-                icon="arrow-left"
-                onPress={() => router.push("/collaborations")}
-                iconColor={Colors(theme).text}
-              />
-            )}
+            {
+              Platform.OS === "web" && (
+                <IconButton
+                  icon="arrow-left"
+                  iconColor={Colors(theme).text}
+                  onPress={() => router.push("/collaborations")}
+                />
+              )
+            }
             <Title style={styles.title}>Create a Collaboration</Title>
           </View>
           <TextInput
             label="Collaboration Name"
-            value={collaborationName}
+            mode="outlined"
             onChangeText={(text) => setCollaborationName(text)}
             style={styles.input}
             textColor={Colors(theme).text}
@@ -184,119 +189,102 @@ const CreateCollaborationScreen = () => {
                 text: Colors(theme).text,
               },
             }}
+            value={collaborationName}
           />
           <TextInput
             label="About this Collaboration"
-            value={aboutCollab}
+            mode="outlined"
+            // multiline
             onChangeText={(text) => setAboutCollab(text)}
-            multiline
-            textColor={Colors(theme).text}
             style={styles.input}
+            textColor={Colors(theme).text}
+            value={aboutCollab}
           />
           <View style={styles.budgetContainer}>
             <TextInput
               label="Budget Min"
-              value={budgetMin}
+              mode="outlined"
               onChangeText={(text) => setBudgetMin(text)}
               style={styles.budgetInput}
               textColor={Colors(theme).text}
+              value={budgetMin}
             />
             <TextInput
               label="Budget Max"
-              value={budgetMax}
+              mode="outlined"
               onChangeText={(text) => setBudgetMax(text)}
-              textColor={Colors(theme).text}
               style={styles.budgetInput}
+              textColor={Colors(theme).text}
+              value={budgetMax}
             />
           </View>
-          <Paragraph style={styles.paragraph}>
-            Number of Influencers Involved
-          </Paragraph>
-          <View style={styles.counter}>
-            <IconButton
-              icon="minus"
-              onPress={() => setNumInfluencers(Math.max(1, numInfluencers - 1))}
-            />
-            <Paragraph style={styles.paragraph}>{numInfluencers}</Paragraph>
-            <IconButton
-              icon="plus"
-              onPress={() => setNumInfluencers(numInfluencers + 1)}
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 16,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Paragraph style={styles.paragraph}>
+              Number of Influencers Involved:
+            </Paragraph>
+            <View style={styles.counter}>
+              <IconButton
+                icon="minus"
+                iconColor={Colors(theme).white}
+                onPress={() => setNumInfluencers(Math.max(1, numInfluencers - 1))}
+                style={styles.iconButton}
+              />
+              <View
+                style={styles.iconButtonContent}
+              >
+                <Text
+                  style={{
+                    color: Colors(theme).primary,
+                  }}
+                >
+                  {numInfluencers}
+                </Text>
+              </View>
+              <IconButton
+                icon="plus"
+                iconColor={Colors(theme).white}
+                onPress={() => setNumInfluencers(numInfluencers + 1)}
+                style={styles.iconButton}
+              />
+            </View>
+          </View>
+          <View
+            style={styles.selectContainer}
+          >
+            <Paragraph style={styles.paragraph}>Promotion Type:</Paragraph>
+            <Select
+              items={PROMOTION_TYPES}
+              onSelect={(selectedItems) => setPromotionType(selectedItems)}
+              value={promotionType}
             />
           </View>
-          <Paragraph style={styles.paragraph}>Promotion Type</Paragraph>
-          <RadioButton.Group
-            onValueChange={(newValue) => setPromotionType(newValue)}
-            value={promotionType}
+          <View
+            style={styles.selectContainer}
           >
-            <RadioButton.Item
-              label="Type 1"
-              value="type1"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
+            <Paragraph style={styles.paragraph}>Collaboration Type:</Paragraph>
+            <Select
+              items={COLLAB_TYPES}
+              onSelect={(selectedItems) => setCollabType(selectedItems)}
+              value={collabType}
             />
-            <RadioButton.Item
-              label="Type 2"
-              value="type2"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-            <RadioButton.Item
-              label="Type 3"
-              value="type3"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-          </RadioButton.Group>
-          <Paragraph style={styles.paragraph}>Collaboration Type</Paragraph>
-          <RadioButton.Group
-            onValueChange={(newValue) => setCollabType(newValue)}
-            value={collabType}
+          </View>
+          <View
+            style={styles.selectContainer}
           >
-            <RadioButton.Item
-              label="Collab 1"
-              value="collab1"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
+            <Paragraph style={styles.paragraph}>Platform:</Paragraph>
+            <Select
+              items={PLATFORM_TYPES}
+              onSelect={(selectedItems) => setPlatform(selectedItems)}
+              value={platform}
             />
-            <RadioButton.Item
-              label="Collab 2"
-              value="collab2"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-            <RadioButton.Item
-              label="Collab 3"
-              value="collab3"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-          </RadioButton.Group>
-          <Paragraph style={styles.paragraph}>Platform</Paragraph>
-          <RadioButton.Group
-            onValueChange={(newValue) => setPlatform(newValue)}
-            value={platform}
-          >
-            <RadioButton.Item
-              label="Instagram"
-              value="Instagram"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-            <RadioButton.Item
-              label="YouTube"
-              value="YouTube"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-          </RadioButton.Group>
+          </View>
           <Button
             mode="contained"
             onPress={() => {
@@ -332,13 +320,6 @@ const CreateCollaborationScreen = () => {
         >
           <View
             style={{
-              zIndex: 1000,
-            }}
-          >
-            <Toast />
-          </View>
-          <View
-            style={{
               flexDirection: "row",
               alignItems: "center",
             }}
@@ -351,38 +332,48 @@ const CreateCollaborationScreen = () => {
             <Title style={styles.title}>Create a Collaboration</Title>
           </View>
 
-          <Paragraph style={styles.paragraph}>Location</Paragraph>
-          <RadioButton.Group
-            onValueChange={(newValue) => setLocation(newValue)}
-            value={location}
-          >
-            <RadioButton.Item
-              label="Remote"
-              value="Remote"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-            <RadioButton.Item
-              label="Physical"
-              value="Physical"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-          </RadioButton.Group>
+          <View>
+            <Paragraph
+              style={[
+                styles.paragraph,
+                {
+                  paddingLeft: 16,
+                }
+              ]}
+            >
+              Location:
+            </Paragraph>
+            <RadioButton.Group
+              onValueChange={(newValue) => setLocation(newValue)}
+              value={location}
+            >
+              <RadioButton.Item
+                mode="android"
+                label="Remote"
+                value="Remote"
+                labelStyle={{
+                  color: Colors(theme).text,
+                }}
+              />
+              <RadioButton.Item
+                mode="android"
+                label="Physical"
+                value="Physical"
+                labelStyle={{
+                  color: Colors(theme).text,
+                }}
+              />
+            </RadioButton.Group>
+          </View>
 
-          {location === "Physical" && (
-            <View style={styles.mapContainer}>
-              <MapView
-                style={styles.map}
-                region={mapRegion}
-                onRegionChangeComplete={(region) => setMapRegion(region)}
-              >
-                <Marker coordinate={mapRegion} />
-              </MapView>
-            </View>
-          )}
+          {
+            location === "Physical" && (
+              <CreateCollaborationMap
+                mapRegion={mapRegion}
+                onMapRegionChange={(region) => setMapRegion(region)}
+              />
+            )
+          }
 
           <Button
             mode="contained"
@@ -393,38 +384,45 @@ const CreateCollaborationScreen = () => {
           >
             Add Link
           </Button>
-          {links.map((link, index) => (
-            <Paragraph key={index}>
-              {link.name}: {link.url}
-            </Paragraph>
-          ))}
+          {
+            links.map((link, index) => (
+              <Paragraph key={index}>
+                {link.name}: {link.url}
+              </Paragraph>
+            ))
+          }
 
           <Button mode="contained" onPress={() => submitCollaboration()}>
             Post
           </Button>
-
-          <Modal
-            visible={isModalVisible}
-            onDismiss={() => setIsModalVisible(false)}
-            contentContainerStyle={styles.modalContainer}
-          >
-            <TextInput
-              label="Link Name"
-              value={newLinkName}
-              onChangeText={setNewLinkName}
-              style={styles.input}
-            />
-            <TextInput
-              label="Link URL"
-              value={newLinkUrl}
-              onChangeText={setNewLinkUrl}
-              style={styles.input}
-            />
-            <Button mode="contained" onPress={addLink}>
-              Add Link
-            </Button>
-          </Modal>
         </ScrollView>
+
+        <Modal
+          contentContainerStyle={styles.modalContainer}
+          onDismiss={() => setIsModalVisible(false)}
+          visible={isModalVisible}
+        >
+          <TextInput
+            label="Link Name"
+            mode="outlined"
+            onChangeText={setNewLinkName}
+            style={styles.input}
+            value={newLinkName}
+          />
+          <TextInput
+            label="Link URL"
+            mode="outlined"
+            onChangeText={setNewLinkUrl}
+            style={styles.input}
+            value={newLinkUrl}
+          />
+          <Button
+            mode="contained"
+            onPress={addLink}
+          >
+            Add Link
+          </Button>
+        </Modal>
       </AppLayout>
     );
   }

@@ -13,33 +13,42 @@ import BrandActionItem from "./BrandActionItem";
 import Colors from "@/constants/Colors";
 import { useEffect, useState } from "react";
 import { Searchbar } from "react-native-paper";
+import {
+  faHandshake,
+  faComment,
+  faStar,
+} from "@fortawesome/free-regular-svg-icons";
+import {
+  faFileSignature,
+  faPlusCircle,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface DrawerMenuContentProps { }
 
 const DRAWER_MENU_CONTENT_ITEMS = [
   {
     href: "/explore-influencers",
-    icon: "handshake-o",
+    icon: faHandshake,
     label: "Explore Influencers",
   },
   {
     href: "/collaborations",
-    icon: "group",
+    icon: faStar,
     label: "Collaborations",
   },
   {
     href: "/create-collaboration",
-    icon: "plus-circle",
+    icon: faPlusCircle,
     label: "Create Collaboration",
   },
   {
     href: "/messages",
-    icon: "comments",
+    icon: faComment,
     label: "Messages",
   },
   {
     href: "/contracts",
-    icon: "file-text-o",
+    icon: faFileSignature,
     label: "Contracts",
   },
 ];
@@ -100,12 +109,14 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             <Searchbar
               onChangeText={handleSearchChange}
               placeholder="Search"
+              placeholderTextColor={Colors(theme).gray100}
               value={search}
               style={[
                 {
+                  borderRadius: 15,
                   marginHorizontal: 14,
                   marginBottom: 8,
-                  backgroundColor: Colors(theme).platinum
+                  backgroundColor: Colors(theme).aliceBlue
                 },
               ]}
             />
@@ -118,7 +129,11 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           gap: 6,
         }}
       >
-        <View>
+        <View
+          style={{
+            paddingTop: 8,
+          }}
+        >
           {xl ? DRAWER_MENU_CONTENT_ITEMS.map((tab, index) => (
             <DrawerMenuItem
               key={index}

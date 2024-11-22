@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { Searchbar, TextInput } from "react-native-paper";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { View, StyleSheet, Pressable } from "react-native";
+import { Searchbar } from "react-native-paper";
 import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
+import { Theme, useTheme } from "@react-navigation/native";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faSliders } from "@fortawesome/free-solid-svg-icons";
 
 interface SearchComponentProps {
   ToggleModal?: (show: boolean) => void;
@@ -16,6 +17,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
 }) => {
   const [localQuery, setLocalQuery] = useState("");
   const theme = useTheme();
+  const styles = stylesFn(theme);
 
   const handleChangeText = (query: string) => {
     setLocalQuery(query);
@@ -34,43 +36,47 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         placeholderTextColor={Colors(theme).gray100}
         value={localQuery}
         onChangeText={handleChangeText}
-        style={[
-          styles.searchInput,
-          { backgroundColor: Colors(theme).platinum },
-        ]}
+        style={styles.searchInput}
         iconColor={Colors(theme).gray100}
       />
-      <TouchableOpacity
+      <Pressable
         onPress={() => {
           if (ToggleModal) ToggleModal(true);
         }}
+        style={styles.filterButton}
       >
-        <Ionicons
-          name="options-outline"
+        <FontAwesomeIcon
+          color={Colors(theme).white}
+          icon={faSliders}
           size={24}
-          color={Colors(theme).gray100}
-          style={styles.icon}
         />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 25,
-
+    gap: 12,
     width: "100%",
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
+    borderRadius: 15,
+    backgroundColor: Colors(theme).aliceBlue,
   },
-  icon: {
-    marginHorizontal: 5,
-  },
+  filterButton: {
+    borderRadius: 15,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors(theme).primary,
+  }
 });
 
 export default SearchComponent;

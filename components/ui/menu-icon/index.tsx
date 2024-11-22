@@ -4,6 +4,8 @@ import { useTheme } from "@react-navigation/native";
 import { Link } from "expo-router";
 import { Pressable } from "react-native";
 import { View } from "../../theme/Themed";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faNavicon } from "@fortawesome/free-solid-svg-icons";
 
 const MenuIcon: React.FC = () => {
   const theme = useTheme();
@@ -18,10 +20,10 @@ const MenuIcon: React.FC = () => {
               marginRight: 15,
             }}
           >
-            <FontAwesome
-              name="navicon"
-              size={25}
+            <FontAwesomeIcon
               color={Colors(theme).text}
+              icon={faNavicon}
+              size={24}
               style={{
                 zIndex: 0,
                 opacity: pressed ? 0.5 : 1,

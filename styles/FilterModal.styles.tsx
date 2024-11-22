@@ -6,7 +6,8 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      padding: 20,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
       backgroundColor: Colors(theme).background,
     },
     header: {

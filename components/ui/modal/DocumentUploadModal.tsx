@@ -1,11 +1,11 @@
-import { Button, Modal, Platform } from "react-native";
+import { Modal, Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from 'expo-document-picker';
 
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
-import { IconButton } from "react-native-paper";
+import { Button, IconButton } from "react-native-paper";
 
 interface DocumentUploadModalProps {
   onDocumentUpload: (url: string) => void;
@@ -89,9 +89,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             />
           </View>
           <Button
-            title="Cancel"
+            mode="contained"
             onPress={() => setVisible(false)}
-          />
+          >
+            Cancel
+          </Button>
         </View>
       </View>
     </Modal>

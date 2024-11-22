@@ -1,5 +1,4 @@
 import React from "react";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { router, Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
@@ -10,15 +9,18 @@ import NotificationIcon from "@/components/notifications/notification-icon";
 import MenuIcon from "@/components/ui/menu-icon";
 import { View } from "@/components/theme/Themed";
 import DrawerToggleButton from "@/components/ui/drawer-toggle-button/DrawerToggleButton";
-import { Octicons } from "@expo/vector-icons";
 import BrandSwitcher from "@/components/ui/brand-switcher";
-
-const TabBarIcon = (props: {
-  name: React.ComponentProps<typeof FontAwesome>["name"];
-  color: string;
-}) => {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-};
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import {
+  faHandshake,
+  faComment,
+  faStar,
+} from "@fortawesome/free-regular-svg-icons";
+import {
+  faFileSignature,
+  faPlusCircle,
+  faRightLeft,
+} from "@fortawesome/free-solid-svg-icons";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -33,6 +35,7 @@ const TabLayout = () => {
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
           display: xl ? "none" : "flex", // Hide the tab bar on desktop screens
+          paddingHorizontal: 8,
         },
         headerTitleAlign: "left",
         headerTitleStyle: {
@@ -46,7 +49,11 @@ const TabLayout = () => {
         options={{
           title: "Explore Influencers",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="handshake-o" color={color} />
+            <FontAwesomeIcon
+              color={color}
+              icon={faHandshake}
+              size={28}
+            />
           ),
           headerLeft: () =>
             xl ? (
@@ -54,9 +61,10 @@ const TabLayout = () => {
             ) : (
               <DrawerToggleButton
                 icon={
-                  <Octicons
-                    name="arrow-switch"
-                    size={26}
+                  <FontAwesomeIcon
+                    color={Colors(theme).text}
+                    icon={faRightLeft}
+                    size={24}
                     style={{
                       marginLeft: 14,
                       color: Colors(theme).text,
@@ -84,7 +92,13 @@ const TabLayout = () => {
         name="collaborations"
         options={{
           title: "Collaborations",
-          tabBarIcon: ({ color }) => <TabBarIcon name="group" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <FontAwesomeIcon
+              color={color}
+              icon={faStar}
+              size={24}
+            />
+          ),
           headerRight: () => <NotificationIcon />,
         }}
       />
@@ -100,7 +114,11 @@ const TabLayout = () => {
           headerShown: false,
           title: "Create Collaborations",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="plus-circle" color={color} />
+            <FontAwesomeIcon
+              color={color}
+              icon={faPlusCircle}
+              size={24}
+            />
           ),
         }}
       />
@@ -108,7 +126,11 @@ const TabLayout = () => {
         name="messages"
         options={{
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="comments" color={color} />
+            <FontAwesomeIcon
+              color={color}
+              icon={faComment}
+              size={24}
+            />
           ),
           title: "Messages",
           headerTitleAlign: "left",
@@ -120,7 +142,11 @@ const TabLayout = () => {
         options={{
           title: "Contracts",
           tabBarIcon: ({ color }) => (
-            <TabBarIcon name="file-text-o" color={color} />
+            <FontAwesomeIcon
+              color={color}
+              icon={faFileSignature}
+              size={24}
+            />
           ),
           headerRight: () => <NotificationIcon />,
         }}

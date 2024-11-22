@@ -1,43 +1,61 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
 import stylesFn from "@/styles/empty-state/EmptyState.styles";
+import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
-import { useNavigation, useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
 import { Image } from "react-native";
 import { Button } from "react-native-paper";
 
 type EmptyStateProps = {
-  hideAction?: boolean;
-  actionHref?: string;
+  action?: () => void;
   actionLabel?: string;
-  image?: string;
+  hideAction?: boolean;
+  hideImage?: boolean;
+  image?: string | NodeRequire;
+  style?: any;
   subtitle?: string;
-  title: string;
+  title?: string;
 };
 
 const EmptyState: React.FC<EmptyStateProps> = ({
-  hideAction = false,
-  actionHref,
+  action,
   actionLabel = "Go back",
+  hideAction = false,
+  hideImage = false,
   image,
+  style,
   subtitle,
   title,
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
-  const router = useRouter();
   const navigation = useNavigation();
+
+  const handleAction = () => {
+    if (action) {
+      action();
+    } else {
+      navigation.goBack();
+    }
+  };
 
   return (
     <View
-      style={styles.container}
+      style={[
+        styles.container,
+        style,
+      ]}
     >
-      <Image
-        source={image ?? require("@/assets/images/placeholder-image.jpg")}
-        width={50}
-        height={50}
-        style={styles.image}
-      />
+      {
+        !hideImage && (
+          <Image
+            source={imageUrl(image)}
+            width={256}
+            height={256}
+            style={styles.image}
+          />
+        )
+      }
       <View
         style={styles.contentContainer}
       >
@@ -51,9 +69,8 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       {
         !hideAction && (
           <Button
-            onPress={() => actionHref ? router.push(actionHref) : navigation.goBack()}
-            style={styles.action}
-            textColor={Colors(theme).text}
+            mode="contained"
+            onPress={handleAction}
           >
             {actionLabel}
           </Button>

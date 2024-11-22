@@ -1,26 +1,23 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import JobCard from "@/components/collaboration/CollaborationCard";
-import { Text, View } from "@/components/theme/Themed";
+import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
-import { Link, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   getDocs,
   query,
   where,
-  doc as firebaseDoc,
-  getDoc,
 } from "firebase/firestore";
-import { ActivityIndicator, FlatList, Image } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
-import { Button } from "react-native-paper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import EmptyState from "../ui/empty-state";
 
 const Invitations = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -130,101 +127,80 @@ const Invitations = () => {
     <View
       style={{
         width: "100%",
+        flex: 1,
       }}
     >
-      {proposals.length === 0 ? (
-        <View
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 50,
-          }}
-        >
-          <Image
-            source={{ uri: "https://via.placeholder.com/150" }}
-            width={150}
-            height={150}
-            style={{
-              borderRadius: 10,
-            }}
+      {
+        proposals.length === 0 ? (
+          <EmptyState
+            hideAction
+            image={require("@/assets/images/illustration5.png")}
+            subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
+            title="No Invitations yet"
           />
-          <View
+        ) : (
+          <FlatList
+            data={filteredProposals}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <JobCard
+                name={item.name}
+                id={item.id}
+                brandName={item.brandName}
+                description={item.description}
+                brandId={item.brandId}
+                budget={{
+                  min: Number(item.budget.min),
+                  max: Number(item.budget.max),
+                }}
+                onOpenBottomSheet={openBottomSheet}
+                cardType="proposal"
+                collaborationType={item.collaborationType}
+                location={item.location}
+                managerId="managerId"
+                numberOfInfluencersNeeded={1}
+                platform={item.platform}
+                promotionType={item.promotionType}
+                timeStamp={item.timeStamp}
+                applications={item.applications}
+                invitations={item.invitations}
+                acceptedApplications={item.acceptedApplications}
+                status={item.status}
+              />
+            )}
+            keyExtractor={(item, index) => index.toString()}
             style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 10,
+              flexGrow: 1,
+              paddingTop: 8,
+              paddingHorizontal: 16,
+              paddingBottom: 16,
             }}
-          >
-            <Text style={styles.title}>No Collaborations found</Text>
-            <Text style={styles.subtitle}>
-              Go to the New Collaborations page to start creating new
-              Collaborations
-            </Text>
-          </View>
-          <Button
-            onPress={() => router.push("/modal")}
-            style={{
-              backgroundColor: Colors(theme).platinum,
-              padding: 5,
-              borderRadius: 5,
+            contentContainerStyle={{
+              gap: 16,
+              paddingBottom: 24,
             }}
-            textColor={Colors(theme).text}
-          >
-            New Collaborations
-          </Button>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredProposals}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <JobCard
-              name={item.name}
-              id={item.id}
-              brandName={item.brandName}
-              description={item.description}
-              brandId={item.brandId}
-              budget={{
-                min: Number(item.budget.min),
-                max: Number(item.budget.max),
-              }}
-              onOpenBottomSheet={openBottomSheet}
-              cardType="proposal"
-              collaborationType={item.collaborationType}
-              location={item.location}
-              managerId="managerId"
-              numberOfInfluencersNeeded={1}
-              platform={item.platform}
-              promotionType={item.promotionType}
-              timeStamp={item.timeStamp}
-              applications={item.applications}
-              invitations={item.invitations}
-              acceptedApplications={item.acceptedApplications}
-              status={item.status}
-            />
-          )}
-          keyExtractor={(item, index) => index.toString()}
-          style={{ height: "100%", width: "100%" }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[Colors(theme).primary]} // Customize color based on theme
-            />
-          }
-        />
-      )}
-      {isVisible && (
-        <BottomSheetActions
-          cardId={selectedCollabId || ""}
-          cardType="influencerCard"
-          isVisible={isVisible}
-          onClose={closeBottomSheet}
-          snapPointsRange={["20%", "50%"]}
-          key={selectedCollabId}
-        />
-      )}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[Colors(theme).primary]} // Customize color based on theme
+              />
+            }
+          />
+        )
+      }
+      {
+        isVisible && (
+          <BottomSheetActions
+            cardId={selectedCollabId || ""}
+            cardType="influencerCard"
+            isVisible={isVisible}
+            onClose={closeBottomSheet}
+            snapPointsRange={["20%", "50%"]}
+            key={selectedCollabId}
+          />
+        )
+      }
     </View>
   );
 };

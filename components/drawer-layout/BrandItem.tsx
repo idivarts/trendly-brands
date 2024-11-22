@@ -3,7 +3,9 @@ import { Pressable } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
 import stylesFn from "@/styles/brand-item/BrandItem.styles";
-import { Avatar, IconButton } from "react-native-paper";
+import { Avatar } from "react-native-paper";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
 
 interface BrandItemProps {
   active?: boolean;
@@ -71,11 +73,13 @@ const BrandItem: React.FC<BrandItemProps> = ({
         </View>
         {
           menu && (
-            <IconButton
-              icon="dots-vertical"
-              size={20}
-              iconColor={active ? Colors(theme).white : Colors(theme).text}
-            />
+            <Pressable>
+              <FontAwesomeIcon
+                icon={faEllipsisV}
+                size={20}
+                color={active ? Colors(theme).white : Colors(theme).text}
+              />
+            </Pressable>
           )
         }
       </View>
