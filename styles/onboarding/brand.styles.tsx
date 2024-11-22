@@ -30,7 +30,7 @@ const fnStyles = (theme: Theme) =>
     },
     autocompleteInputContainer: {
       borderWidth: 1,
-      borderColor: Colors(theme).border,
+      borderColor: Colors(theme).primary,
       borderRadius: 5,
       paddingHorizontal: 10,
       paddingVertical: 5,

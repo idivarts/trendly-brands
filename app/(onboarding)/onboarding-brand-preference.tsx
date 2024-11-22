@@ -90,11 +90,10 @@ const BrandPreferenceScreen = () => {
         <View style={styles.headerContainer}>
           <Text style={styles.headline}>Brand Preferences</Text>
           <Button
-            mode="text"
+            mode="contained"
             onPress={() => {
               handleSignUp();
             }}
-            labelStyle={styles.skipButtonLabel}
           >
             Skip
           </Button>
@@ -181,9 +180,6 @@ const BrandPreferenceScreen = () => {
           <Button
             mode="contained"
             onPress={handleSubmit}
-            buttonColor={Colors(theme).primary}
-            labelStyle={styles.submitButtonLabel}
-            contentStyle={styles.submitButtonContent}
           >
             Submit
           </Button>

@@ -1,7 +1,8 @@
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
-import { Octicons } from "@expo/vector-icons";
+import { faRightLeft } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useState } from "react";
 import { Pressable } from "react-native";
@@ -36,9 +37,10 @@ const BrandSwitcher = () => {
       }}
       anchor={
         <Pressable onPress={openMenu}>
-          <Octicons
-            name="arrow-switch"
-            size={26}
+          <FontAwesomeIcon
+            color={Colors(theme).text}
+            icon={faRightLeft}
+            size={24}
             style={{
               marginLeft: 14,
               color: Colors(theme).text,

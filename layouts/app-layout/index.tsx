@@ -4,6 +4,7 @@ import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import Toast from "react-native-toast-message";
 
 interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> { }
 
@@ -23,6 +24,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     >
       {children}
       <ExpoStatusBar style={!theme.dark ? "dark" : "light"} />
+      <Toast />
     </SafeAreaView>
   );
 };

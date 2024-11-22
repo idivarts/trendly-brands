@@ -11,6 +11,7 @@ import {
 
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
+import { imageUrl } from "@/utils/url";
 
 interface RenderMediaItemProps {
   handleImagePress: (uri: string) => void;
@@ -43,7 +44,7 @@ const RenderMediaItem: React.FC<RenderMediaItemProps> = ({
       >
         <Animated.View>
           <Image
-            source={{ uri: item.url || item.uri }}
+            source={imageUrl(item.url || item.uri)}
             style={[
               styles.media,
               {
@@ -83,7 +84,7 @@ const RenderMediaItem: React.FC<RenderMediaItemProps> = ({
       isLooping={false}
       shouldPlay={false}
       useNativeControls
-      onError={(error) => console.log("Video Error:", error)}
+      onError={(error) => console.error("Video Error:", error)}
     />
   );
 };

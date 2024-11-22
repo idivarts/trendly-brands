@@ -13,18 +13,10 @@ const styles = (theme: Theme) =>
       alignItems: "center",
       backgroundColor: Colors(theme).background,
     },
-    skipButton: {
+    skipButtonContainer: {
       position: "absolute",
       top: 10,
       right: 20,
-      backgroundColor: Colors(theme).black,
-      paddingHorizontal: 20,
-      paddingVertical: 5,
-      borderRadius: 10,
-    },
-    skipButtonText: {
-      color: Colors(theme).white,
-      fontSize: 16,
     },
     imageContainer: {
       borderRadius: 100,

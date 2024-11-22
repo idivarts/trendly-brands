@@ -7,6 +7,8 @@ import { useState } from "react";
 import BottomSheetActions from "../BottomSheetActions";
 import { influencers } from "@/constants/Influencers";
 import CollaborationFilter from "../FilterModal";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,6 +25,7 @@ const ExploreInfluencers = () => {
     0, 10000000,
   ]);
   const ToggleModal = () => setIsModalVisible(!isModalVisible);
+  const theme = useTheme();
 
   const filteredInfluencers = influencers.filter((influencer) => {
     const isCollaborationTypeMatch =
@@ -67,14 +70,30 @@ const ExploreInfluencers = () => {
         )}
         keyExtractor={(item, index) => index.toString()}
         contentContainerStyle={{
-          padding: 16,
-          paddingBottom: 100,
+          paddingTop: 16,
+          paddingBottom: 16,
         }}
+        ItemSeparatorComponent={
+          () => (
+            <View
+              style={{
+                height: 16,
+                backgroundColor: theme.dark ? Colors(theme).background : Colors(theme).aliceBlue,
+              }}
+            />
+          )
+        }
         ListHeaderComponent={
-          <SearchComponent
-            setSearchQuery={setSearchQuery}
-            ToggleModal={() => setIsFilterModalVisible(true)}
-          />
+          <View
+            style={{
+              paddingHorizontal: 16,
+            }}
+          >
+            <SearchComponent
+              setSearchQuery={setSearchQuery}
+              ToggleModal={() => setIsFilterModalVisible(true)}
+            />
+          </View>
         }
       />
       {isModalVisible && (

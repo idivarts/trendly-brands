@@ -100,7 +100,7 @@ const BottomSheetActions = ({
         Toaster.success("Application accepted successfully");
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       handleClose();
       Toaster.error("Failed to accept application");
     }
@@ -122,7 +122,7 @@ const BottomSheetActions = ({
         Toaster.success("Application rejected successfully");
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       handleClose();
       Toaster.error("Failed to reject application");
     }
@@ -138,7 +138,7 @@ const BottomSheetActions = ({
         Toaster.success("Collaboration delisted successfully");
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       handleClose();
       Toaster.error("Failed to delist collaboration");
     }
@@ -171,7 +171,7 @@ const BottomSheetActions = ({
 
       case "influencerCard":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 28 }}>
             <List.Item
               title="View Profile"
               onPress={() => {
@@ -195,7 +195,7 @@ const BottomSheetActions = ({
 
       case "applicationCard":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 28 }}>
             <List.Item
               title="Send Message"
               onPress={() => {
@@ -219,7 +219,7 @@ const BottomSheetActions = ({
 
       case "invitationCard":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 28 }}>
             <List.Item
               title="View Profile"
               onPress={() => {
@@ -242,7 +242,7 @@ const BottomSheetActions = ({
         );
       case "activeCollab":
         return (
-          <List.Section>
+          <List.Section style={{ paddingBottom: 28 }}>
             <List.Item
               title="View Collaboration"
               onPress={() => {

@@ -7,7 +7,6 @@ import { TextInput, Button } from "react-native-paper";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Toast from "react-native-toast-message";
 import Colors from "@/constants/Colors";
 
 const ForgotPasswordScreen = () => {
@@ -37,7 +36,6 @@ const ForgotPasswordScreen = () => {
   return (
     <View style={styles.container}>
       {/* Logo Section */}
-      <Toast />
       <Image
         source={require("@/assets/images/logo.png")} // Replace with your actual logo path
         style={styles.logo}
@@ -63,8 +61,6 @@ const ForgotPasswordScreen = () => {
         onPress={() => {
           handleResetPassword();
         }}
-        style={styles.button}
-        labelStyle={styles.buttonText}
       >
         Reset Password
       </Button>

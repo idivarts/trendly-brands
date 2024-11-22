@@ -5,20 +5,25 @@ import { StyleSheet } from "react-native";
 export const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 16,
     backgroundColor: Colors(theme).background,
   },
+  contentContainer: {
+    gap: 16,
+    paddingBottom: 24,
+  },
   card: {
-    marginVertical: 8,
-    padding: 10,
+    padding: 16,
+    borderRadius: 10,
     backgroundColor: Colors(theme).card,
+    shadowColor: Colors(theme).transparent,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
   },
   content: {
-    marginLeft: 10,
+    marginLeft: 16,
     flex: 1,
     color: Colors(theme).text,
   },

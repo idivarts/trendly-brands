@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
-import { View, Text, Image, TouchableOpacity, Platform } from "react-native";
+import React, { useState, useRef } from "react";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 import Swiper from "react-native-swiper";
-import { Title, Paragraph } from "react-native-paper";
+import { Title, Paragraph, Button } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import stylesFn from "@/styles/tab1.styles";
 import { useTheme } from "@react-navigation/native";
@@ -59,12 +59,18 @@ const PreSignIn = () => {
         {slides.map((slide, index) => (
           <View style={styles.slide} key={slide.key}>
             {slide.key !== "connect" && (
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={skipToConnect} // Navigate to "connect" slide
+              <View
+                style={styles.skipButtonContainer}
               >
-                <Text style={styles.skipButtonText}>Skip</Text>
-              </TouchableOpacity>
+                <Button
+                  mode="contained"
+                  onPress={() => {
+                    skipToConnect();
+                  }}
+                >
+                  Skip
+                </Button>
+              </View>
             )}
             <View style={styles.imageContainer}>
               <Image source={{ uri: slide.image }} style={styles.image} />

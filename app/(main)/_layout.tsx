@@ -1,5 +1,4 @@
 import { ChatContextProvider } from "@/contexts";
-import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import { Stack } from "expo-router";
 
 const MainLayout = () => {

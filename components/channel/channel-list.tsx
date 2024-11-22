@@ -51,17 +51,19 @@ const ChannelListNative = () => {
     >
       <View
         style={{
-          padding: 15,
-          paddingTop: 20,
+          padding: 16,
+          paddingTop: 16,
         }}
       >
         <Searchbar
           onChangeText={handleSearchChange}
           placeholder="Search"
+          placeholderTextColor={Colors(theme).gray100}
           value={searchInput}
           style={[
             {
-              backgroundColor: Colors(theme).platinum
+              borderRadius: 15,
+              backgroundColor: Colors(theme).aliceBlue
             },
           ]}
         />

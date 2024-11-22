@@ -1,5 +1,6 @@
 export const influencers = [
   {
+    id: "1",
     name: "John Doe",
     handle: "@johndoe",
     followers: 10000,
@@ -27,6 +28,7 @@ export const influencers = [
     ],
   },
   {
+    id: "2",
     name: "Jane Smith",
     handle: "@janesmith",
     followers: 15000,

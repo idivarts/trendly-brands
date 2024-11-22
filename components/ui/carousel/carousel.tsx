@@ -52,7 +52,7 @@ const CarouselNative: React.FC<CarouselProps> = ({
     <View style={styles.carouselContainer}>
       <Carousel
         loop
-        width={Dimensions.get("window").width - 45}
+        width={Dimensions.get("window").width}
         height={250}
         data={data}
         renderItem={({ item, index }) => (
