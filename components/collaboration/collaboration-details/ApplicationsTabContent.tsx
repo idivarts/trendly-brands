@@ -10,6 +10,7 @@ import { FirestoreDB } from "@/utils/firestore";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
 import EmptyState from "@/components/ui/empty-state";
+import Colors from "@/constants/Colors";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -114,13 +115,19 @@ const ApplicationsTabContent = (props: any) => {
           />
         )}
         keyExtractor={(item, index) => item.id + index}
-        contentContainerStyle={{
-          gap: 8,
-        }}
         style={{
-          paddingHorizontal: 16,
           paddingBottom: 16,
         }}
+        ItemSeparatorComponent={
+          () => (
+            <View
+              style={{
+                height: 16,
+                backgroundColor: theme.dark ? Colors(theme).background : Colors(theme).aliceBlue,
+              }}
+            />
+          )
+        }
       />
       {
         isVisible && (

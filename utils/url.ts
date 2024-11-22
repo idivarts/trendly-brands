@@ -1,5 +1,9 @@
 export const imageUrl = (image: string | NodeRequire | undefined) => {
-  if (image && typeof image === "string" && image.includes("http")) {
+  if (
+    image &&
+    typeof image === "string" &&
+    (image.startsWith("http") || image.startsWith("ph://"))
+  ) {
     return {
       uri: image,
     };
