@@ -11,10 +11,11 @@ import OverviewTabContent from "./OverviewTabContent";
 import SettingsTabContent from "./SettingsTabContent";
 import CollaborationHeader from "../CollaborationHeader";
 
-interface Collaboration extends ICollaboration {
-  brandName: string;
-  paymentVerified: boolean;
+export interface CollaborationDetail extends ICollaboration {
   brandDescription: string;
+  brandName: string;
+  logo: string;
+  paymentVerified: boolean;
 }
 
 interface CollaborationDetailsProps {
@@ -24,7 +25,7 @@ interface CollaborationDetailsProps {
 const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   pageID
 }) => {
-  const [collaboration, setCollaboration] = useState<Collaboration | undefined>(
+  const [collaboration, setCollaboration] = useState<CollaborationDetail | undefined>(
     undefined
   );
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
       setCollaboration({
         ...data,
+        logo: brandData?.image || "",
         brandName: brandData?.name || "Unknown Brand",
         paymentVerified: brandData?.paymentMethodVerified || false,
         brandDescription: brandData?.description || "",
@@ -60,9 +62,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       title: "Overview",
       component: (
         <OverviewTabContent
-          collaboration={collaboration as Collaboration}
-          // logo={collaboration?.logo}
-          logo={""}
+          collaboration={collaboration as CollaborationDetail}
         />
       ),
     },

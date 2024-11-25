@@ -5,9 +5,10 @@ import Tag from '../ui/tag';
 import { Text, View } from '../theme/Themed';
 import { useTheme } from '@react-navigation/native';
 import { stylesFn } from '@/styles/collaboration-details/CollaborationHeader.styles';
+import { CollaborationDetail } from './collaboration-details';
 
 interface ColloborationHeaderProps {
-  collaboration: any;
+  collaboration: CollaborationDetail;
 }
 
 const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
@@ -41,12 +42,12 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
         <Tag
           icon="checkbox-marked-circle"
         >
-          {collaboration.appliedCount} Applied
+          {collaboration.promotionType}
         </Tag>
         <Tag
           icon="eye"
         >
-          {collaboration.brandViewed} Reviewed
+          {collaboration.collaborationType}
         </Tag>
         <Tag
           icon="map-marker"
