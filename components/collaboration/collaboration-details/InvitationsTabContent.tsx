@@ -119,7 +119,7 @@ const InvitationsTabContent = (props: any) => {
               media: [
                 {
                   type: "image",
-                  uri: item.profileImage,
+                  url: item.profileImage,
                 },
               ],
               followers: item.backend ? item.backend.followers : 1000,

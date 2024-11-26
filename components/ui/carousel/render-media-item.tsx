@@ -13,11 +13,16 @@ import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
 import { imageUrl } from "@/utils/url";
 
+export interface MediaItem {
+  type: string;
+  url: string;
+}
+
 interface RenderMediaItemProps {
-  handleImagePress: (uri: string) => void;
+  handleImagePress: (item: MediaItem) => void;
   height?: number;
   index: number;
-  item: any;
+  item: MediaItem;
   videoRefs?: React.MutableRefObject<{ [key: number]: any }>;
   width?: number;
 }
@@ -33,18 +38,18 @@ const RenderMediaItem: React.FC<RenderMediaItemProps> = ({
   const theme = useTheme();
   const styles = stylesFn(theme);
 
-  if (item?.type === "image") {
+  if (item?.type.includes("image")) {
     return (
       <TapGestureHandler
         onHandlerStateChange={({ nativeEvent }) => {
           if (nativeEvent.state === State.ACTIVE) {
-            handleImagePress(item.uri);
+            handleImagePress(item);
           }
         }}
       >
         <Animated.View>
           <Image
-            source={imageUrl(item.url || item.uri)}
+            source={imageUrl(item.url)}
             style={[
               styles.media,
               {
@@ -67,9 +72,9 @@ const RenderMediaItem: React.FC<RenderMediaItemProps> = ({
         }
       }}
       source={
-        item.appleUrl
+        item.url
           ? {
-            uri: Platform.OS === "ios" ? item.appleUrl : item.playUrl,
+            uri: item.url,
           }
           : require("@/assets/videos/ForBiggerJoyrides.mp4")
       }

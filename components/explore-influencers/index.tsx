@@ -1,6 +1,6 @@
 import { FlatList } from "react-native";
 import InfluencerCard from "../InfluencerCard";
-import { Text, View } from "../theme/Themed";
+import { View } from "../theme/Themed";
 import AppLayout from "@/layouts/app-layout";
 import SearchComponent from "../SearchComponent";
 import { useState } from "react";
@@ -31,9 +31,7 @@ const ExploreInfluencers = () => {
     const isCollaborationTypeMatch =
       currentCollaborationType === "All" ||
       influencer.collaborationType === currentCollaborationType;
-    // const isInfluencerTypeMatch =
-    //   currentInfluencerType === "All" ||
-    //   influencer.influencerType === currentInfluencerType;
+
     const isFollowersRangeMatch =
       Number(influencer.followers) >= currentFollowersRange[0] &&
       Number(influencer.followers) <= currentFollowersRange[1];
@@ -43,12 +41,13 @@ const ExploreInfluencers = () => {
     const isEngagementRangeMatch =
       Number(influencer.engagement) >= currentEngagementRange[0] &&
       Number(influencer.engagement) <= currentEngagementRange[1];
+
     const isSearchQueryMatch = influencer.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
+
     return (
       isCollaborationTypeMatch &&
-      // isInfluencerTypeMatch &&
       isFollowersRangeMatch &&
       isReachRangeMatch &&
       isEngagementRangeMatch &&

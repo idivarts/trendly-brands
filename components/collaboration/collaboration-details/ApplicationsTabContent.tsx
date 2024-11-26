@@ -11,6 +11,7 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
+import { processRawAttachment } from "@/utils/attachments";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -96,7 +97,7 @@ const ApplicationsTabContent = (props: any) => {
               profilePic: item.profileImage,
               name: item.name,
               handle: item.handle || "@handle",
-              media: item.attachments,
+              media: item.attachments.map((media: any) => processRawAttachment(media)),
               followers: item.backend ? item.backend.followers : 1000,
               reach: item.backend ? item.backend.reach : 10000,
               rating: item.backend ? item.backend.rating : 4.5,
