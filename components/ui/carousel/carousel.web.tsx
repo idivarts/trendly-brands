@@ -3,11 +3,11 @@ import Swiper from "react-native-swiper";
 import stylesFn from "@/styles/tab1.styles";
 import { useTheme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
-import RenderMediaItem from "./render-media-item";
+import RenderMediaItem, { MediaItem } from "./render-media-item";
 
 interface CarouselWebProps {
-  data: any
-  onImagePress: (data: any) => void;
+  data: MediaItem[];
+  onImagePress: (data: MediaItem) => void;
 };
 
 const CarouselWeb: React.FC<CarouselWebProps> = ({
@@ -19,9 +19,9 @@ const CarouselWeb: React.FC<CarouselWebProps> = ({
   const swiperRef = useRef<Swiper>(null);
   const videoRefs = useRef<{ [key: number]: any }>({});
 
-  const handleImagePress = (uri: string) => {
+  const handleImagePress = (item: MediaItem) => {
     if (onImagePress) {
-      onImagePress(uri);
+      onImagePress(item);
     }
   };
 
@@ -40,7 +40,7 @@ const CarouselWeb: React.FC<CarouselWebProps> = ({
       paginationStyle={styles.pagination}
     >
       {data.map((
-        item: any,
+        item: MediaItem,
         index: number,
       ) => (
         <RenderMediaItem
@@ -48,7 +48,7 @@ const CarouselWeb: React.FC<CarouselWebProps> = ({
           height={560}
           index={index}
           item={item}
-          key={item.id || index}
+          key={item.url || index}
           videoRefs={videoRefs}
         />
       ))}

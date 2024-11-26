@@ -14,16 +14,16 @@ export const influencers = [
     collaborationType: "Paid",
     engagement: 5000,
     media: [
+      { type: "image", url: "https://picsum.photos/200/300" },
+      { type: "image", url: "https://picsum.photos/200/300?random=1" },
       {
         type: "video",
-        uri: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
       },
-      { type: "image", uri: "https://picsum.photos/200/300" },
-      { type: "image", uri: "https://picsum.photos/200/300?random=1" },
-      { type: "image", uri: "https://picsum.photos/200/300?random=2" },
+      { type: "image", url: "https://picsum.photos/200/300?random=2" },
       {
         type: "video",
-        uri: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
       },
     ],
   },
@@ -42,13 +42,13 @@ export const influencers = [
     collaborationType: "Sponsored",
     engagement: 6000,
     media: [
-      { type: "image", uri: "https://picsum.photos/200/300?random=3" },
-      { type: "image", uri: "https://picsum.photos/200/300?random=4" },
+      { type: "image", url: "https://picsum.photos/200/300?random=3" },
+      { type: "image", url: "https://picsum.photos/200/300?random=4" },
       {
         type: "video",
-        uri: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+        url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
       },
-      { type: "image", uri: "https://picsum.photos/200/300?random=5" },
+      { type: "image", url: "https://picsum.photos/200/300?random=5" },
     ],
   },
 ];
