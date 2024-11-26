@@ -39,16 +39,24 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
       </View>
 
       <View style={styles.tagsContainer}>
-        <Tag
-          icon="checkbox-marked-circle"
-        >
-          {collaboration.promotionType}
-        </Tag>
-        <Tag
-          icon="eye"
-        >
-          {collaboration.collaborationType}
-        </Tag>
+        {
+          collaboration.promotionType && (
+            <Tag
+              icon="checkbox-marked-circle"
+            >
+              {collaboration.promotionType}
+            </Tag>
+          )
+        }
+        {
+          collaboration.collaborationType && (
+            <Tag
+              icon="eye"
+            >
+              {collaboration.collaborationType}
+            </Tag>
+          )
+        }
         <Tag
           icon="map-marker"
         >

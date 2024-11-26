@@ -19,6 +19,7 @@ import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/constants/Colors";
+import { useFirebaseStorageContext } from "@/contexts";
 
 const OnboardingScreen = () => {
   const [brandName, setBrandName] = useState("");
@@ -29,11 +30,15 @@ const OnboardingScreen = () => {
   const [filteredRoles, setFilteredRoles] = useState<any[]>([]);
   const [filteredIndustries, setFilteredIndustries] = useState<string[]>([]);
   const [activeDropdown, setActiveDropdown] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
   const styles = fnStyles(theme);
   const {
     firstBrand,
   } = useLocalSearchParams();
+  const {
+    uploadImageBytes,
+  } = useFirebaseStorageContext();
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -42,6 +47,7 @@ const OnboardingScreen = () => {
       aspect: [4, 3],
       quality: 1,
     });
+
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
@@ -67,17 +73,26 @@ const OnboardingScreen = () => {
 
   const handleSubmit = async () => {
     try {
+      setIsSubmitting(true);
       const user = AuthApp.currentUser;
       if (!brandName || !role || !industry || !website) {
         Toaster.error("Please fill in all fields.");
+        setIsSubmitting(false);
         return;
       }
+
+      let imageUrl = "";
+      if (image) {
+        const blob = await fetch(image).then((res) => res.blob());
+        imageUrl = await uploadImageBytes(blob, `brands/${brandName}-${Date.now()}`);
+      }
+
       if (user) {
         const colRef = collection(FirestoreDB, "brands");
 
         let brandData = {
           name: brandName,
-          image: "",
+          image: imageUrl,
           profile: {
             industry,
             website,
@@ -99,6 +114,7 @@ const OnboardingScreen = () => {
           role,
         });
 
+        setIsSubmitting(false);
         router.navigate({
           pathname: "/(onboarding)/onboarding-brand-preference",
           params: { brandId: docRef.id },
@@ -238,6 +254,7 @@ const OnboardingScreen = () => {
         />
 
         <Button
+          loading={isSubmitting}
           mode="contained"
           onPress={handleSubmit}
         >
