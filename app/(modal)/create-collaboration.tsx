@@ -43,6 +43,7 @@ const CreateCollaborationScreen = () => {
     },
   ]);
   const [location, setLocation] = useState("Remote");
+  const [formattedAddress, setFormattedAddress] = useState("");
   const [links, setLinks] = useState<any[]>([]);
   const [screen, setScreen] = useState(1);
   const theme = useTheme();
@@ -89,6 +90,10 @@ const CreateCollaborationScreen = () => {
     setIsModalVisible(false);
   };
 
+  const onFormattedAddressChange = (address: string) => {
+    setFormattedAddress(address);
+  }
+
   const submitCollaboration = async () => {
     try {
       if (!AuthApp.currentUser) {
@@ -111,6 +116,18 @@ const CreateCollaborationScreen = () => {
       }
 
       const collabRef = collection(FirestoreDB, "collaborations");
+
+      let locationAddress = {};
+      if (location === "Physical" && mapRegion.latitude && mapRegion.longitude) {
+        locationAddress = {
+          name: formattedAddress,
+          latlong: {
+            lat: mapRegion.latitude,
+            long: mapRegion.longitude,
+          },
+        };
+      }
+
       await addDoc(collabRef, {
         name: collaborationName,
         brandId: selectedBrand ? selectedBrand.id : "",
@@ -127,13 +144,7 @@ const CreateCollaborationScreen = () => {
         platform: platform[0].value,
         location: {
           type: location,
-          ...(location === "Physical" && {
-            name: "locationName", // TODO: Add location name using geocoding API
-            latlong: {
-              lat: mapRegion.latitude,
-              long: mapRegion.longitude,
-            },
-          }),
+          ...locationAddress,
         },
         externalLinks: links,
         status: "active",
@@ -371,6 +382,7 @@ const CreateCollaborationScreen = () => {
               <CreateCollaborationMap
                 mapRegion={mapRegion}
                 onMapRegionChange={(region) => setMapRegion(region)}
+                onFormattedAddressChange={onFormattedAddressChange}
               />
             )
           }

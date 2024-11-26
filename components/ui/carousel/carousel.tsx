@@ -7,11 +7,11 @@ import Carousel from "react-native-reanimated-carousel";
 import { View } from "@/components/theme/Themed";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
-import RenderMediaItem from "./render-media-item";
+import RenderMediaItem, { MediaItem } from "./render-media-item";
 
 interface CarouselProps {
-  data: any[]; // TODO: Add specific type
-  onImagePress?: (data: any) => void;
+  data: MediaItem[];
+  onImagePress?: (data: MediaItem) => void;
 }
 
 const CarouselNative: React.FC<CarouselProps> = ({
@@ -40,10 +40,10 @@ const CarouselNative: React.FC<CarouselProps> = ({
     });
   };
 
-  const handleImagePress = (uri: string) => {
+  const handleImagePress = (item: MediaItem) => {
     if (!isSwiping) {
       if (onImagePress) {
-        onImagePress(uri);
+        onImagePress(item);
       }
     }
   };

@@ -7,15 +7,14 @@ import {
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
+import { CollaborationDetail } from ".";
 
 interface OverviewTabContentProps {
-  collaboration: any;
-  logo: string;
+  collaboration: CollaborationDetail;
 };
 
 const OverviewTabContent: React.FC<OverviewTabContentProps> = ({
   collaboration,
-  logo,
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
@@ -39,7 +38,7 @@ const OverviewTabContent: React.FC<OverviewTabContentProps> = ({
         <Image
           source={{
             uri:
-              logo ||
+              collaboration?.logo ||
               "https://cdn.pixabay.com/photo/2022/09/21/17/02/blue-background-7470781_640.jpg",
           }}
           style={styles.profileImage}

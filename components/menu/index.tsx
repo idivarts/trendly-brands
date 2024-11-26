@@ -1,10 +1,6 @@
 import { Avatar, Button } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
 import { useAuthContext } from "@/contexts";
-import {
-  PLACEHOLDER_IMAGE,
-  PLACEHOLDER_PERSON_IMAGE,
-} from "@/constants/Placeholder";
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -13,6 +9,7 @@ import { ImageBackground, Pressable } from "react-native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useState } from "react";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
+import { imageUrl } from "@/utils/url";
 
 const Menu = () => {
   const theme = useTheme();
@@ -34,20 +31,12 @@ const Menu = () => {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={
-          selectedBrand?.image ? {
-            uri: selectedBrand.image,
-          } : require("@/assets/images/cover-placeholder-image.png")
-        }
+        source={imageUrl(selectedBrand?.image)}
         resizeMode="cover"
         style={styles.backgroundImage}
       />
       <Avatar.Image
-        source={
-          selectedBrand?.image ? {
-            uri: selectedBrand.image,
-          } : require("@/assets/images/placeholder-image.jpg")
-        }
+        source={imageUrl(selectedBrand?.image)}
         size={72}
         style={styles.brandAvatar}
       />
