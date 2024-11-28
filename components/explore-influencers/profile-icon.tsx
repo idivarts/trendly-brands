@@ -28,7 +28,7 @@ const ProfileIcon = () => {
             }}
           >
             <FontAwesomeIcon
-              color={Colors(theme).text}
+              color={Colors(theme).primary}
               icon={faCircleNotch}
               size={32}
               style={{

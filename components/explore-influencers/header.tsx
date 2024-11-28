@@ -44,10 +44,9 @@ const Header: React.FC = (props) => {
                 <FontAwesomeIcon
                   color={Colors(theme).text}
                   icon={faChevronDown}
-                  size={24}
+                  size={16}
                   style={{
-                    marginLeft: 10,
-                    color: Colors(theme).text,
+                    marginLeft: 6,
                     marginBottom: -2,
                   }}
                 />

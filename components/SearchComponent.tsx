@@ -56,7 +56,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         }}
       >
         <FontAwesomeIcon
-          color={Colors(theme).text}
+          color={Colors(theme).primary}
           icon={faFilter}
           size={28}
         />

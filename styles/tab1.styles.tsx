@@ -12,6 +12,7 @@ const styles = (theme: Theme) =>
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: Colors(theme).background,
+      paddingHorizontal: 16,
     },
     skipButtonContainer: {
       position: "absolute",
@@ -35,7 +36,7 @@ const styles = (theme: Theme) =>
       fontSize: 16,
       textAlign: "center",
       paddingHorizontal: 20,
-      color: Colors(theme).gray100,
+      color: Colors(theme).text,
     },
     socialContainer: {
       flexDirection: "column",
