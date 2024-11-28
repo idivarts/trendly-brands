@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
 import { Searchbar } from "react-native-paper";
 import Colors from "@/constants/Colors";
-import { Theme, useTheme } from "@react-navigation/native";
+import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faSliders } from "@fortawesome/free-solid-svg-icons";
+import { faFilter, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import stylesFn from "@/styles/searchbar/Searchbar.styles";
+import searchComponentStylesFn from "@/styles/searchbar/SearchComponent.styles";
 
 interface SearchComponentProps {
   ToggleModal?: (show: boolean) => void;
@@ -18,6 +20,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   const [localQuery, setLocalQuery] = useState("");
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const searchComponentStyles = searchComponentStylesFn(theme);
 
   const handleChangeText = (query: string) => {
     setLocalQuery(query);
@@ -30,53 +33,36 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
   };
 
   return (
-    <View style={[styles.searchContainer]}>
+    <View style={[searchComponentStyles.searchContainer]}>
       <Searchbar
+        icon={() => (
+          <FontAwesomeIcon
+            color={Colors(theme).gray100}
+            icon={faMagnifyingGlass}
+            size={18}
+          />
+        )}
+        iconColor={Colors(theme).gray100}
+        inputStyle={styles.searchbarInput}
+        onChangeText={handleChangeText}
         placeholder="Search"
         placeholderTextColor={Colors(theme).gray100}
+        style={styles.searchbar}
         value={localQuery}
-        onChangeText={handleChangeText}
-        style={styles.searchInput}
-        iconColor={Colors(theme).gray100}
       />
       <Pressable
         onPress={() => {
           if (ToggleModal) ToggleModal(true);
         }}
-        style={styles.filterButton}
       >
         <FontAwesomeIcon
-          color={Colors(theme).white}
-          icon={faSliders}
-          size={24}
+          color={Colors(theme).text}
+          icon={faFilter}
+          size={28}
         />
       </Pressable>
     </View>
   );
 };
-
-const stylesFn = (theme: Theme) => StyleSheet.create({
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 25,
-    gap: 12,
-    width: "100%",
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    borderRadius: 15,
-    backgroundColor: Colors(theme).aliceBlue,
-  },
-  filterButton: {
-    borderRadius: 15,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors(theme).primary,
-  }
-});
 
 export default SearchComponent;

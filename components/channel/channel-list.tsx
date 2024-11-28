@@ -4,17 +4,21 @@ import { Channel as ChannelType } from "stream-chat";
 import { router } from "expo-router";
 import { useAuthContext } from "@/contexts";
 import { View } from "@/components/theme/Themed";
-import { IconButton } from "react-native-paper";
 import AddGroup from "@/components/channel/add-group";
 import { useState } from "react";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { Searchbar } from "react-native-paper";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faMagnifyingGlass, faPlus } from "@fortawesome/free-solid-svg-icons";
+import stylesFn from "@/styles/searchbar/Searchbar.styles";
+import { Pressable } from "react-native";
 
 const ChannelListNative = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const theme = useTheme();
+  const styles = stylesFn(theme);
 
   const {
     manager: user,
@@ -53,19 +57,24 @@ const ChannelListNative = () => {
         style={{
           padding: 16,
           paddingTop: 16,
+          flexDirection: "row",
         }}
       >
         <Searchbar
+          icon={() => (
+            <FontAwesomeIcon
+              color={Colors(theme).gray100}
+              icon={faMagnifyingGlass}
+              size={18}
+            />
+          )}
+          iconColor={Colors(theme).gray100}
+          inputStyle={styles.searchbarInput}
           onChangeText={handleSearchChange}
           placeholder="Search"
           placeholderTextColor={Colors(theme).gray100}
+          style={styles.searchbar}
           value={searchInput}
-          style={[
-            {
-              borderRadius: 15,
-              backgroundColor: Colors(theme).aliceBlue
-            },
-          ]}
         />
       </View>
       <ChannelList
@@ -77,17 +86,21 @@ const ChannelListNative = () => {
           router.push(`/channel/${channel.cid}`);
         }}
       />
-      <IconButton
-        icon="plus"
+      <Pressable
         onPress={() => setModalVisible(true)}
-        size={32}
         style={{
           position: "absolute",
           right: 10,
           bottom: 10,
           backgroundColor: Colors(theme).aliceBlue,
         }}
-      />
+      >
+        <FontAwesomeIcon
+          color={Colors(theme).text}
+          icon={faPlus}
+          size={20}
+        />
+      </Pressable>
       <AddGroup
         visible={modalVisible}
         setVisible={setModalVisible}

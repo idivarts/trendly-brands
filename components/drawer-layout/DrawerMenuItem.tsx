@@ -6,9 +6,13 @@ import Colors from "@/constants/Colors";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 
+export interface IconPropFn {
+  focused: boolean;
+}
+
 type Tab = {
   href: string;
-  icon: IconProp;
+  icon: IconProp | ((props: IconPropFn) => IconProp);
   label: string;
 };
 
@@ -40,16 +44,17 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
         }}
       >
         <FontAwesomeIcon
-          icon={tab.icon}
+          icon={
+            typeof tab.icon === "function"
+              ? tab.icon({ focused: tab.href.includes(pathname) })
+              : tab.icon
+          }
           color={
             tab.href.includes(pathname)
               ? Colors(theme).white
-              : Colors(theme).gray100
+              : Colors(theme).text
           }
           size={28}
-          style={{
-            width: 32,
-          }}
         />
         <Text
           style={{

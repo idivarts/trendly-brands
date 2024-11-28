@@ -19,8 +19,6 @@ const styles = (theme: Theme) =>
       right: 20,
     },
     imageContainer: {
-      borderRadius: 100,
-      overflow: "hidden",
       marginBottom: 20,
     },
     image: {

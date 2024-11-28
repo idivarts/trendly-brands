@@ -10,6 +10,9 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useState } from "react";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
 import { imageUrl } from "@/utils/url";
+import Colors from "@/constants/Colors";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 const Menu = () => {
   const theme = useTheme();
@@ -108,9 +111,10 @@ const Menu = () => {
                   {manager?.email}
                 </Text>
               </View>
-              <Avatar.Icon
-                icon="chevron-right"
-                size={28}
+              <FontAwesomeIcon
+                color={Colors(theme).text}
+                icon={faChevronRight}
+                size={20}
                 style={styles.chevron}
               />
             </View>

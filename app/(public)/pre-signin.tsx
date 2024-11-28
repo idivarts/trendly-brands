@@ -9,6 +9,7 @@ import AppLayout from "@/layouts/app-layout";
 import { slides } from "@/constants/Slides";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
+import { imageUrl } from "@/utils/url";
 
 const PreSignIn = () => {
   const theme = useTheme();
@@ -73,7 +74,7 @@ const PreSignIn = () => {
               </View>
             )}
             <View style={styles.imageContainer}>
-              <Image source={{ uri: slide.image }} style={styles.image} />
+              <Image source={imageUrl(slide.image)} style={styles.image} />
             </View>
             <Title style={[styles.title, { color: Colors(theme).primary }]}>
               {slide.title}

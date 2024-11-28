@@ -1,6 +1,6 @@
 import { Text, View } from "@/components/theme/Themed";
 import { APP_NAME } from "@/constants/App";
-import DrawerMenuItem from "./DrawerMenuItem";
+import DrawerMenuItem, { IconPropFn } from "./DrawerMenuItem";
 import { useBreakpoints } from "@/hooks";
 import BrandItem from "./BrandItem";
 import { DrawerActions, useTheme } from "@react-navigation/native";
@@ -14,26 +14,37 @@ import Colors from "@/constants/Colors";
 import { useEffect, useState } from "react";
 import { Searchbar } from "react-native-paper";
 import {
-  faHandshake,
   faComment,
+  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
-  faFileSignature,
+  faComment as faCommentSolid,
+  faFileLines as faFileLinesSolid,
+  faHouseUser as faHouseUserSolid,
+  faMagnifyingGlass,
+  faPlus,
   faPlusCircle,
+  faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
+import stylesFn from "@/styles/searchbar/Searchbar.styles";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 interface DrawerMenuContentProps { }
 
 const DRAWER_MENU_CONTENT_ITEMS = [
   {
     href: "/explore-influencers",
-    icon: faHandshake,
-    label: "Explore Influencers",
+    icon: ({
+      focused,
+    }: IconPropFn) => focused ? faHouseUserSolid : faHouseUserSolid,
+    label: "Home",
   },
   {
     href: "/collaborations",
-    icon: faStar,
+    icon: ({
+      focused,
+    }: IconPropFn) => focused ? faStarSolid : faStar,
     label: "Collaborations",
   },
   {
@@ -43,12 +54,16 @@ const DRAWER_MENU_CONTENT_ITEMS = [
   },
   {
     href: "/messages",
-    icon: faComment,
+    icon: ({
+      focused,
+    }: IconPropFn) => focused ? faCommentSolid : faComment,
     label: "Messages",
   },
   {
     href: "/contracts",
-    icon: faFileSignature,
+    icon: ({
+      focused,
+    }: IconPropFn) => focused ? faFileLinesSolid : faFileLines,
     label: "Contracts",
   },
 ];
@@ -59,6 +74,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const theme = useTheme();
+  const styles = stylesFn(theme);
   const {
     brands,
     selectedBrand,
@@ -106,20 +122,34 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
         </Text>
         {
           !xl && (
-            <Searchbar
-              onChangeText={handleSearchChange}
-              placeholder="Search"
-              placeholderTextColor={Colors(theme).gray100}
-              value={search}
-              style={[
-                {
-                  borderRadius: 15,
-                  marginHorizontal: 14,
-                  marginBottom: 8,
-                  backgroundColor: Colors(theme).aliceBlue
-                },
-              ]}
-            />
+            <View
+              style={{
+                flexDirection: 'row',
+              }}
+            >
+              <Searchbar
+                icon={() => (
+                  <FontAwesomeIcon
+                    color={Colors(theme).gray100}
+                    icon={faMagnifyingGlass}
+                    size={18}
+                  />
+                )}
+                iconColor={Colors(theme).gray100}
+                inputStyle={styles.searchbarInput}
+                onChangeText={handleSearchChange}
+                placeholder="Search"
+                placeholderTextColor={Colors(theme).gray100}
+                style={[
+                  styles.searchbar,
+                  {
+                    marginHorizontal: 14,
+                    marginBottom: 8,
+                  },
+                ]}
+                value={search}
+              />
+            </View>
           )
         }
       </View>
@@ -159,7 +189,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
       >
         <BrandActionItem
           key="create-brand"
-          icon="plus"
+          icon={faPlus}
           showChevron={false}
           onPress={() => {
             router.push("/(onboarding)/onboarding-your-brand");

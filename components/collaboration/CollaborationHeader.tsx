@@ -6,6 +6,9 @@ import { Text, View } from '../theme/Themed';
 import { useTheme } from '@react-navigation/native';
 import { stylesFn } from '@/styles/collaboration-details/CollaborationHeader.styles';
 import { CollaborationDetail } from './collaboration-details';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faBolt, faEye, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import Colors from '@/constants/Colors';
 
 interface ColloborationHeaderProps {
   collaboration: CollaborationDetail;
@@ -42,7 +45,13 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
         {
           collaboration.promotionType && (
             <Tag
-              icon="checkbox-marked-circle"
+              icon={() => (
+                <FontAwesomeIcon
+                  color={Colors(theme).primary}
+                  icon={faBolt}
+                  size={14}
+                />
+              )}
             >
               {collaboration.promotionType}
             </Tag>
@@ -51,14 +60,26 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
         {
           collaboration.collaborationType && (
             <Tag
-              icon="eye"
+              icon={() => (
+                <FontAwesomeIcon
+                  color={Colors(theme).primary}
+                  icon={faEye}
+                  size={14}
+                />
+              )}
             >
               {collaboration.collaborationType}
             </Tag>
           )
         }
         <Tag
-          icon="map-marker"
+          icon={() => (
+            <FontAwesomeIcon
+              color={Colors(theme).primary}
+              icon={faLocationDot}
+              size={14}
+            />
+          )}
         >
           {
             collaboration.location.type === "Remote"

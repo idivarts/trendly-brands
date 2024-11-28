@@ -398,7 +398,7 @@ const CreateCollaborationScreen = () => {
           </Button>
           {
             links.map((link, index) => (
-              <Paragraph key={index}>
+              <Paragraph key={index + link.url}>
                 {link.name}: {link.url}
               </Paragraph>
             ))

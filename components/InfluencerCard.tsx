@@ -26,7 +26,7 @@ import Colors from "@/constants/Colors";
 import CarouselNative from "./ui/carousel/carousel";
 import { convertToKUnits } from "@/utils/conversion";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faBullseye, faStar, faUsers, faMessage, faEllipsis } from "@fortawesome/free-solid-svg-icons";
+import { faEllipsis, faPeopleRoof, faChartLine, faFaceSmile, faComment, faCheck, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { imageUrl } from "@/utils/url";
 import Tag from "./ui/tag";
 import { MediaItem } from "./ui/carousel/render-media-item";
@@ -131,13 +131,25 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           {props.type === "invitation" &&
             (isInvited ? (
               <Tag
-                icon="check"
+                icon={() => (
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    size={12}
+                    color={Colors(theme).text}
+                  />
+                )}
               >
                 Invited
               </Tag>
             ) : (
               <Tag
-                icon="plus"
+                icon={() => (
+                  <FontAwesomeIcon
+                    icon={faPlus}
+                    size={12}
+                    color={Colors(theme).text}
+                  />
+                )}
                 onPress={() => {
                   if (props.ToggleMessageModal) {
                     props.ToggleMessageModal();
@@ -172,7 +184,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <FontAwesomeIcon
-                  icon={faUsers}
+                  icon={faPeopleRoof}
                   color={Colors(theme).primary}
                   size={20}
                 />
@@ -182,7 +194,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               </View>
               <View style={styles.statItem}>
                 <FontAwesomeIcon
-                  icon={faBullseye}
+                  icon={faChartLine}
                   color={Colors(theme).primary}
                   size={20}
                 />
@@ -192,7 +204,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               </View>
               <View style={styles.statItem}>
                 <FontAwesomeIcon
-                  icon={faStar}
+                  icon={faFaceSmile}
                   color={Colors(theme).primary}
                   size={20}
                 />
@@ -203,7 +215,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             </View>
             <View style={styles.statItem}>
               <FontAwesomeIcon
-                icon={faMessage}
+                icon={faComment}
                 color={Colors(theme).primary}
                 size={18}
               />

@@ -8,19 +8,20 @@ import { useTheme } from "@react-navigation/native";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import MenuIcon from "@/components/ui/menu-icon";
 import { View } from "@/components/theme/Themed";
-import DrawerToggleButton from "@/components/ui/drawer-toggle-button/DrawerToggleButton";
-import BrandSwitcher from "@/components/ui/brand-switcher";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
-  faHandshake,
   faComment,
+  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
-  faFileSignature,
+  faComment as faCommentSolid,
+  faFileLines as faFileLinesSolid,
+  faHouseUser,
   faPlusCircle,
-  faRightLeft,
+  faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
+import Header from "@/components/explore-influencers/header";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -47,33 +48,19 @@ const TabLayout = () => {
       <Tabs.Screen
         name="explore-influencers"
         options={{
-          title: "Explore Influencers",
+          title: "Home",
           tabBarIcon: ({ color }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faHandshake}
+              icon={faHouseUser}
               size={28}
             />
           ),
-          headerLeft: () =>
-            xl ? (
-              <BrandSwitcher />
-            ) : (
-              <DrawerToggleButton
-                icon={
-                  <FontAwesomeIcon
-                    color={Colors(theme).text}
-                    icon={faRightLeft}
-                    size={24}
-                    style={{
-                      marginLeft: 14,
-                      color: Colors(theme).text,
-                      marginBottom: -2,
-                    }}
-                  />
-                }
-              />
-            ),
+          headerTitle() {
+            return (
+              <Header />
+            )
+          },
           headerRight: () => (
             <View
               style={{
@@ -92,10 +79,10 @@ const TabLayout = () => {
         name="collaborations"
         options={{
           title: "Collaborations",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faStar}
+              icon={focused ? faStarSolid : faStar}
               size={24}
             />
           ),
@@ -125,10 +112,10 @@ const TabLayout = () => {
       <Tabs.Screen
         name="messages"
         options={{
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faComment}
+              icon={focused ? faCommentSolid : faComment}
               size={24}
             />
           ),
@@ -141,10 +128,10 @@ const TabLayout = () => {
         name="contracts"
         options={{
           title: "Contracts",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faFileSignature}
+              icon={focused ? faFileLinesSolid : faFileLines}
               size={24}
             />
           ),
