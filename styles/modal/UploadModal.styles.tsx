@@ -62,7 +62,7 @@ const stylesFn = (theme: Theme) =>
       borderRadius: 10,
       marginHorizontal: 0,
       color: Colors(theme).white,
-      padding: 8,
+      padding: 12,
     },
     iconButtonContent: {
       paddingHorizontal: 16,
