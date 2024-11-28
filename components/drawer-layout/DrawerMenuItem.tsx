@@ -3,8 +3,6 @@ import { usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 export interface IconPropFn {
   focused: boolean;
@@ -12,7 +10,7 @@ export interface IconPropFn {
 
 type Tab = {
   href: string;
-  icon: IconProp | ((props: IconPropFn) => IconProp);
+  icon: (props: IconPropFn) => JSX.Element;
   label: string;
 };
 
@@ -43,19 +41,11 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
           justifyContent: "flex-start"
         }}
       >
-        <FontAwesomeIcon
-          icon={
-            typeof tab.icon === "function"
-              ? tab.icon({ focused: tab.href.includes(pathname) })
-              : tab.icon
-          }
-          color={
-            tab.href.includes(pathname)
-              ? Colors(theme).white
-              : Colors(theme).text
-          }
-          size={28}
-        />
+        {
+          tab.icon({
+            focused: tab.href.includes(pathname),
+          })
+        }
         <Text
           style={{
             color: tab.href.includes(pathname)

@@ -3,7 +3,7 @@ import { APP_NAME } from "@/constants/App";
 import DrawerMenuItem, { IconPropFn } from "./DrawerMenuItem";
 import { useBreakpoints } from "@/hooks";
 import BrandItem from "./BrandItem";
-import { DrawerActions, useTheme } from "@react-navigation/native";
+import { DrawerActions, Theme, useTheme } from "@react-navigation/native";
 import { useNavigation, useRouter } from "expo-router";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
@@ -29,44 +29,94 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import DrawerIcon from "./DrawerIcon";
+import HomeIcon from "@/assets/icons/home.svg";
 
 interface DrawerMenuContentProps { }
 
-const DRAWER_MENU_CONTENT_ITEMS = [
-  {
-    href: "/explore-influencers",
-    icon: ({
-      focused,
-    }: IconPropFn) => focused ? faHouseUserSolid : faHouseUserSolid,
-    label: "Home",
-  },
-  {
-    href: "/collaborations",
-    icon: ({
-      focused,
-    }: IconPropFn) => focused ? faStarSolid : faStar,
-    label: "Collaborations",
-  },
-  {
-    href: "/create-collaboration",
-    icon: faPlusCircle,
-    label: "Create Collaboration",
-  },
-  {
-    href: "/messages",
-    icon: ({
-      focused,
-    }: IconPropFn) => focused ? faCommentSolid : faComment,
-    label: "Messages",
-  },
-  {
-    href: "/contracts",
-    icon: ({
-      focused,
-    }: IconPropFn) => focused ? faFileLinesSolid : faFileLines,
-    label: "Contracts",
-  },
-];
+const DRAWER_MENU_CONTENT_ITEMS = (
+  theme: Theme,
+) => [
+    {
+      href: "/explore-influencers",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/explore-influencers"
+          icon={faHouseUserSolid}
+        />
+      ) : (
+          <HomeIcon
+            width={28}
+            height={28}
+            fill={Colors(theme).text}
+          />
+        ),
+      label: "Home",
+    },
+    {
+      href: "/collaborations",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/collaborations"
+          icon={faStarSolid}
+        />
+      ) : (
+          <DrawerIcon
+            href="/collaborations"
+            icon={faStar}
+          />
+        ),
+      label: "Collaborations",
+    },
+    {
+      href: "/create-collaboration",
+      icon: () => (
+        <DrawerIcon
+          href="/create-collaboration"
+          icon={faPlusCircle}
+        />
+      ),
+      label: "Create Collaboration",
+    },
+    {
+      href: "/messages",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/messages"
+          icon={faCommentSolid}
+        />
+      ) : (
+          <DrawerIcon
+            href="/messages"
+            icon={faComment}
+          />
+        ),
+      label: "Messages",
+    },
+    {
+      href: "/contracts",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/contracts"
+          icon={faFileLinesSolid}
+        />
+      ) : (
+          <DrawerIcon
+            href="/contracts"
+            icon={faFileLines}
+          />
+        ),
+      label: "Contracts",
+    },
+  ];
 
 const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const { xl } = useBreakpoints();
@@ -164,7 +214,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             paddingTop: 8,
           }}
         >
-          {xl ? DRAWER_MENU_CONTENT_ITEMS.map((tab, index) => (
+          {xl ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
             <DrawerMenuItem
               key={index}
               tab={tab}

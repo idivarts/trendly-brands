@@ -6,7 +6,6 @@ import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useBreakpoints } from "@/hooks";
 import { useTheme } from "@react-navigation/native";
 import NotificationIcon from "@/components/notifications/notification-icon";
-import MenuIcon from "@/components/ui/menu-icon";
 import { View } from "@/components/theme/Themed";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
@@ -17,11 +16,13 @@ import {
 import {
   faComment as faCommentSolid,
   faFileLines as faFileLinesSolid,
-  faHouseUser,
+  faHouseUser as faHouseUserSolid,
   faPlusCircle,
   faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import Header from "@/components/explore-influencers/header";
+import ProfileIcon from "@/components/explore-influencers/profile-icon";
+import HomeIcon from "@/assets/icons/home.svg";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -31,6 +32,7 @@ const TabLayout = () => {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors(theme).primary,
+        tabBarInactiveTintColor: Colors(theme).text,
         headerShown: useClientOnlyValue(false, true),
         tabBarShowLabel: true,
         tabBarHideOnKeyboard: true,
@@ -49,12 +51,20 @@ const TabLayout = () => {
         name="explore-influencers"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <FontAwesomeIcon
-              color={color}
-              icon={faHouseUser}
-              size={28}
-            />
+          tabBarIcon: ({ color, focused }) => (
+            focused ? (
+              <FontAwesomeIcon
+                color={color}
+                icon={faHouseUserSolid}
+                size={24}
+              />
+            ) : (
+              <HomeIcon
+                width={24}
+                height={24}
+                fill={Colors(theme).text}
+              />
+            )
           ),
           headerTitle() {
             return (
@@ -70,7 +80,7 @@ const TabLayout = () => {
               }}
             >
               <NotificationIcon />
-              <MenuIcon />
+              <ProfileIcon />
             </View>
           ),
         }}

@@ -1,10 +1,12 @@
-import { Alert, Linking, Modal, Platform } from "react-native";
+import { Alert, Linking, Modal, Platform, Pressable } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { Button, IconButton } from "react-native-paper";
+import { Button } from "react-native-paper";
 
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faCamera, faImage } from "@fortawesome/free-solid-svg-icons";
 
 interface ImageUploadModalProps {
   onImageUpload: (image: string) => void;
@@ -88,16 +90,24 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
           <View
             style={styles.uploadInnerContainer}
           >
-            <IconButton
-              icon="camera"
+            <Pressable
               onPress={openCamera}
               style={styles.modalButton}
-            />
-            <IconButton
-              icon="image"
+            >
+              <FontAwesomeIcon
+                icon={faCamera}
+                size={20}
+              />
+            </Pressable>
+            <Pressable
               onPress={openGallery}
               style={styles.modalButton}
-            />
+            >
+              <FontAwesomeIcon
+                icon={faImage}
+                size={20}
+              />
+            </Pressable>
           </View>
           <Button
             mode="contained"

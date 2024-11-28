@@ -93,10 +93,12 @@ const ChannelListNative = () => {
           right: 10,
           bottom: 10,
           backgroundColor: Colors(theme).aliceBlue,
+          padding: 10,
+          borderRadius: 10,
         }}
       >
         <FontAwesomeIcon
-          color={Colors(theme).text}
+          color={Colors(theme).gray100}
           icon={faPlus}
           size={20}
         />

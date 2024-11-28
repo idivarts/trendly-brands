@@ -1,5 +1,4 @@
 import Colors from "@/constants/Colors";
-import { FontAwesome } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { Link } from "expo-router";
 import { Pressable } from "react-native";
