@@ -37,6 +37,8 @@ const stylesFn = (theme: Theme) =>
     modalButton: {
       backgroundColor: Colors(theme).lightgray,
       borderRadius: 100,
+      justifyContent: "center",
+      alignItems: "center",
       width: 50,
       height: 50,
     },
@@ -60,7 +62,7 @@ const stylesFn = (theme: Theme) =>
       borderRadius: 10,
       marginHorizontal: 0,
       color: Colors(theme).white,
-      padding: 8,
+      padding: 12,
     },
     iconButtonContent: {
       paddingHorizontal: 16,

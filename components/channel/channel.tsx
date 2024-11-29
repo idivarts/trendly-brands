@@ -1,9 +1,13 @@
 import AddMember from "@/components/channel/add-member";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
+import Colors from "@/constants/Colors";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Pressable } from "react-native";
 import { Channel as ChannelType } from "stream-chat";
 import { Channel, MessageInput, MessageList, useChatContext } from "stream-chat-expo";
 
@@ -11,6 +15,7 @@ const ChannelNative = () => {
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const { cid } = useLocalSearchParams<{ cid: string }>();
   const [modalVisible, setModalVisible] = useState(false);
+  const theme = useTheme();
 
   const { client } = useChatContext();
 
@@ -41,7 +46,18 @@ const ChannelNative = () => {
     <Channel channel={channel} audioRecordingEnabled>
       <ScreenHeader
         title={channel?.data?.name || 'Chat'}
-        rightAction={() => setModalVisible(true)}
+        rightAction
+        rightActionButton={
+          <Pressable
+            onPress={() => setModalVisible(true)}
+          >
+            <FontAwesomeIcon
+              icon={faPlus}
+              size={20}
+              color={Colors(theme).text}
+            />
+          </Pressable>
+        }
       />
       <MessageList />
       <MessageInput />

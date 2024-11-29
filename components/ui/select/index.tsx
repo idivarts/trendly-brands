@@ -1,7 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { Pressable } from "react-native";
+import { Pressable, StyleProp, ViewStyle } from "react-native";
 
 export type SelectItem = {
   label: string;
@@ -9,16 +11,24 @@ export type SelectItem = {
 };
 
 interface SelectProps {
+  direction?: "row" | "column";
   items: SelectItem[];
   multiselect?: boolean;
   onSelect: (selectedItems: SelectItem[]) => void;
+  selectItemIcon?: boolean;
+  selectItemStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
   value: SelectItem[] | [];
 }
 
 const Select: React.FC<SelectProps> = ({
+  direction = "row",
   items,
   multiselect = false,
   onSelect,
+  selectItemIcon = false,
+  selectItemStyle,
+  style,
   value,
 }) => {
   const theme = useTheme();
@@ -43,32 +53,46 @@ const Select: React.FC<SelectProps> = ({
 
   return (
     <View
-      style={{
-        flex: 1,
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-      }}
+      style={[
+        {
+          flex: 1,
+          gap: 8,
+        },
+        direction === "row" ? {
+          flexDirection: "row",
+          flexWrap: "wrap",
+        } : {
+          flexDirection: "column",
+          justifyContent: "center",
+        },
+        style,
+      ]
+      }
     >
       {
         items.map((item) => (
           <Pressable
+            key={item.value}
             onPress={() => handleSelect(item)}
           >
             <View
               key={item.value}
-              style={{
-                backgroundColor: value.find(
-                  (selectedItem) => selectedItem.value === item.value,
-                )
-                  ? Colors(theme).primary
-                  : Colors(theme).tag,
-                borderRadius: 10,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-              }}
+              style={[
+                {
+                  backgroundColor: value.find(
+                    (selectedItem) => selectedItem.value === item.value,
+                  )
+                    ? Colors(theme).primary
+                    : Colors(theme).tag,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  gap: 12,
+                },
+                selectItemStyle,
+              ]}
             >
               <Text
                 style={{
@@ -81,6 +105,16 @@ const Select: React.FC<SelectProps> = ({
               >
                 {item.label}
               </Text>
+              {
+                selectItemIcon && value.find(
+                  (selectedItem) => selectedItem.value === item.value,
+                ) && (
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    color={Colors(theme).white}
+                  />
+                )
+              }
             </View>
           </Pressable>
         ))

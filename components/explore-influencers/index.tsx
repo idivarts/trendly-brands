@@ -86,6 +86,7 @@ const ExploreInfluencers = () => {
           <View
             style={{
               paddingHorizontal: 16,
+              paddingBottom: theme.dark ? 16 : 0,
             }}
           >
             <SearchComponent

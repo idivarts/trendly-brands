@@ -1,4 +1,7 @@
+import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useNavigation } from "expo-router";
 import { Appbar } from "react-native-paper";
@@ -6,13 +9,15 @@ import { Appbar } from "react-native-paper";
 interface ScreenHeaderProps {
   action?: () => void;
   title: string;
-  rightAction?: () => void;
+  rightActionButton?: React.ReactNode;
+  rightAction?: boolean;
 }
 
 const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   action,
   title,
-  rightAction,
+  rightActionButton,
+  rightAction = false,
 }) => {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -25,12 +30,6 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     }
   }
 
-  const handleRightAction = () => {
-    if (rightAction) {
-      rightAction();
-    }
-  }
-
   return (
     <Appbar.Header
       style={{
@@ -40,7 +39,21 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       statusBarHeight={0}
     >
       <Appbar.Action
-        icon="arrow-left"
+        icon={() => (
+          <View
+            style={{
+              marginTop: 2,
+            }}
+            lightColor={Colors(theme).transparent}
+            darkColor={Colors(theme).transparent}
+          >
+            <FontAwesomeIcon
+              icon={faArrowLeft}
+              size={20}
+              color={Colors(theme).text}
+            />
+          </View>
+        )}
         color={Colors(theme).text}
         onPress={handleAction}
       />
@@ -51,13 +64,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       />
 
       {
-        rightAction && (
-          <Appbar.Action
-            icon="plus"
-            color={Colors(theme).text}
-            onPress={handleRightAction}
-          />
-        )
+        rightAction && rightActionButton
       }
     </Appbar.Header>
   );

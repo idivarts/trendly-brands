@@ -6,21 +6,23 @@ import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useBreakpoints } from "@/hooks";
 import { useTheme } from "@react-navigation/native";
 import NotificationIcon from "@/components/notifications/notification-icon";
-import MenuIcon from "@/components/ui/menu-icon";
 import { View } from "@/components/theme/Themed";
-import DrawerToggleButton from "@/components/ui/drawer-toggle-button/DrawerToggleButton";
-import BrandSwitcher from "@/components/ui/brand-switcher";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
-  faHandshake,
   faComment,
+  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
-  faFileSignature,
+  faComment as faCommentSolid,
+  faFileLines as faFileLinesSolid,
+  faHouseUser as faHouseUserSolid,
   faPlusCircle,
-  faRightLeft,
+  faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
+import Header from "@/components/explore-influencers/header";
+import ProfileIcon from "@/components/explore-influencers/profile-icon";
+import HomeIcon from "@/assets/icons/home.svg";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -30,6 +32,7 @@ const TabLayout = () => {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors(theme).primary,
+        tabBarInactiveTintColor: Colors(theme).text,
         headerShown: useClientOnlyValue(false, true),
         tabBarShowLabel: true,
         tabBarHideOnKeyboard: true,
@@ -47,33 +50,27 @@ const TabLayout = () => {
       <Tabs.Screen
         name="explore-influencers"
         options={{
-          title: "Explore Influencers",
-          tabBarIcon: ({ color }) => (
-            <FontAwesomeIcon
-              color={color}
-              icon={faHandshake}
-              size={28}
-            />
-          ),
-          headerLeft: () =>
-            xl ? (
-              <BrandSwitcher />
-            ) : (
-              <DrawerToggleButton
-                icon={
-                  <FontAwesomeIcon
-                    color={Colors(theme).text}
-                    icon={faRightLeft}
-                    size={24}
-                    style={{
-                      marginLeft: 14,
-                      color: Colors(theme).text,
-                      marginBottom: -2,
-                    }}
-                  />
-                }
+          title: "Home",
+          tabBarIcon: ({ color, focused }) => (
+            focused ? (
+              <FontAwesomeIcon
+                color={color}
+                icon={faHouseUserSolid}
+                size={24}
               />
-            ),
+            ) : (
+              <HomeIcon
+                width={24}
+                height={24}
+                fill={Colors(theme).text}
+              />
+            )
+          ),
+          headerTitle() {
+            return (
+              <Header />
+            )
+          },
           headerRight: () => (
             <View
               style={{
@@ -83,7 +80,7 @@ const TabLayout = () => {
               }}
             >
               <NotificationIcon />
-              <MenuIcon />
+              <ProfileIcon />
             </View>
           ),
         }}
@@ -92,10 +89,10 @@ const TabLayout = () => {
         name="collaborations"
         options={{
           title: "Collaborations",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faStar}
+              icon={focused ? faStarSolid : faStar}
               size={24}
             />
           ),
@@ -125,10 +122,10 @@ const TabLayout = () => {
       <Tabs.Screen
         name="messages"
         options={{
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faComment}
+              icon={focused ? faCommentSolid : faComment}
               size={24}
             />
           ),
@@ -141,10 +138,10 @@ const TabLayout = () => {
         name="contracts"
         options={{
           title: "Contracts",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={faFileSignature}
+              icon={focused ? faFileLinesSolid : faFileLines}
               size={24}
             />
           ),

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
   ScrollView,
   Platform,
+  Pressable,
 } from "react-native";
 import {
   TextInput,
@@ -27,6 +28,9 @@ import Select, { SelectItem } from "@/components/ui/select";
 import { Text, View } from "@/components/theme/Themed";
 import CreateCollaborationMap from "@/components/collaboration/create-collaboration/CreateCollaborationMap";
 import { COLLAB_TYPES, PLATFORM_TYPES, PROMOTION_TYPES } from "@/constants/CreateCollaborationForm";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faArrowLeft, faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle } from "@fortawesome/free-regular-svg-icons";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -241,12 +245,16 @@ const CreateCollaborationScreen = () => {
               Number of Influencers Involved:
             </Paragraph>
             <View style={styles.counter}>
-              <IconButton
-                icon="minus"
-                iconColor={Colors(theme).white}
+              <Pressable
                 onPress={() => setNumInfluencers(Math.max(1, numInfluencers - 1))}
                 style={styles.iconButton}
-              />
+
+              >
+                <FontAwesomeIcon
+                  icon={faMinus}
+                  color={Colors(theme).white}
+                />
+              </Pressable>
               <View
                 style={styles.iconButtonContent}
               >
@@ -258,12 +266,15 @@ const CreateCollaborationScreen = () => {
                   {numInfluencers}
                 </Text>
               </View>
-              <IconButton
-                icon="plus"
-                iconColor={Colors(theme).white}
+              <Pressable
                 onPress={() => setNumInfluencers(numInfluencers + 1)}
                 style={styles.iconButton}
-              />
+              >
+                <FontAwesomeIcon
+                  icon={faPlus}
+                  color={Colors(theme).white}
+                />
+              </Pressable>
             </View>
           </View>
           <View
@@ -336,9 +347,16 @@ const CreateCollaborationScreen = () => {
             }}
           >
             <IconButton
-              icon="arrow-left"
               onPress={() => setScreen(1)}
-              iconColor={Colors(theme).text}
+              style={{
+                padding: 12,
+              }}
+              icon={() => (
+                <FontAwesomeIcon
+                  icon={faArrowLeft}
+                  color={Colors(theme).text}
+                />
+              )}
             />
             <Title style={styles.title}>Create a Collaboration</Title>
           </View>
@@ -398,7 +416,7 @@ const CreateCollaborationScreen = () => {
           </Button>
           {
             links.map((link, index) => (
-              <Paragraph key={index}>
+              <Paragraph key={index + link.url}>
                 {link.name}: {link.url}
               </Paragraph>
             ))
@@ -443,13 +461,13 @@ const CreateCollaborationScreen = () => {
     return (
       <AppLayout>
         <View style={styles.container3}>
-          <IconButton
-            icon="check-circle"
+          <FontAwesomeIcon
+            icon={faCheckCircle}
             size={100}
-            iconColor="green"
+            color={Colors(theme).primary}
             style={styles.checkIcon}
           />
-          <Text style={styles.title}>Collaboration Posted</Text>
+          <Title style={styles.title}>Collaboration Posted</Title>
           <Text style={styles.description}>
             Your collaboration has been successfully posted.
           </Text>

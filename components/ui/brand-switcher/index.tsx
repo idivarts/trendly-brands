@@ -1,7 +1,7 @@
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
-import { faRightLeft } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useState } from "react";
@@ -39,7 +39,7 @@ const BrandSwitcher = () => {
         <Pressable onPress={openMenu}>
           <FontAwesomeIcon
             color={Colors(theme).text}
-            icon={faRightLeft}
+            icon={faChevronDown}
             size={24}
             style={{
               marginLeft: 14,

@@ -163,7 +163,7 @@ const InvitationsTabContent = (props: any) => {
             <View
               style={{
                 height: 16,
-                backgroundColor: Colors(theme).aliceBlue,
+                backgroundColor: theme.dark ? Colors(theme).background : Colors(theme).aliceBlue,
               }}
             />
           )
