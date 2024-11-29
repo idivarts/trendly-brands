@@ -10,6 +10,7 @@ const CustomPaperTheme = (theme: Theme) => ({
     onPrimary: Colors(theme).onPrimary,
     onSecondaryContainer: Colors(theme).onSecondaryContainer,
     onSurface: Colors(theme).onSurface,
+    outline: Colors(theme).outline,
     primary: Colors(theme).primary,
     secondaryContainer: Colors(theme).secondaryContainer,
     surface: Colors(theme).surface,

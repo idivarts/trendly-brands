@@ -1,8 +1,7 @@
 import React, { useState, useRef } from "react";
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, Image } from "react-native";
 import Swiper from "react-native-swiper";
-import { Title, Paragraph, Button } from "react-native-paper";
-import { Ionicons } from "@expo/vector-icons";
+import { Title, Paragraph } from "react-native-paper";
 import stylesFn from "@/styles/tab1.styles";
 import { useTheme } from "@react-navigation/native";
 import AppLayout from "@/layouts/app-layout";
@@ -10,6 +9,9 @@ import { slides } from "@/constants/Slides";
 import Colors from "@/constants/Colors";
 import { useRouter } from "expo-router";
 import { imageUrl } from "@/utils/url";
+import Button from "@/components/ui/button";
+import SocialButton from "@/components/ui/button/social-button";
+import { faEnvelopeOpen, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 
 const PreSignIn = () => {
   const theme = useTheme();
@@ -18,22 +20,6 @@ const PreSignIn = () => {
   const swiperRef = useRef<Swiper>(null); // Use ref for Swiper
   const [visible, setVisible] = useState(false);
   const router = useRouter();
-
-  const renderSocialButton = (
-    iconName: string,
-    label: string,
-    onPress: () => void
-  ) => (
-    <TouchableOpacity style={styles.socialButton} onPress={onPress}>
-      <Ionicons
-        name={iconName as any}
-        size={24}
-        color={Colors(theme).text}
-        style={styles.icon}
-      />
-      <Text style={styles.socialButtonText}>{label}</Text>
-    </TouchableOpacity>
-  );
 
   const skipToConnect = () => {
     // Calculate how many slides away the "connect" slide is
@@ -57,46 +43,55 @@ const PreSignIn = () => {
         ]}
         paginationStyle={styles.pagination}
       >
-        {slides.map((slide, index) => (
-          <View style={styles.slide} key={slide.key}>
-            {slide.key !== "connect" && (
-              <View
-                style={styles.skipButtonContainer}
-              >
-                <Button
-                  mode="contained"
-                  onPress={() => {
-                    skipToConnect();
-                  }}
-                >
-                  Skip
-                </Button>
+        {
+          slides.map((slide) => (
+            <View style={styles.slide} key={slide.key}>
+              {
+                slide.key !== "connect" && (
+                  <View
+                    style={styles.skipButtonContainer}
+                  >
+                    <Button
+                      mode="outlined"
+                      onPress={() => {
+                        skipToConnect();
+                      }}
+                    >
+                      Skip
+                    </Button>
+                  </View>
+                )
+              }
+              <View style={styles.imageContainer}>
+                <Image source={imageUrl(slide.image)} style={styles.image} />
               </View>
-            )}
-            <View style={styles.imageContainer}>
-              <Image source={imageUrl(slide.image)} style={styles.image} />
+              <Title style={[styles.title, { color: Colors(theme).primary }]}>
+                {slide.title}
+              </Title>
+              <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
+              {
+                slide.key === "connect" && (
+                  <View style={styles.socialContainer}>
+                    <SocialButton
+                      icon={faUserPlus}
+                      label="Create New Account"
+                      onPress={() => {
+                        router.push("/create-new-account");
+                      }}
+                    />
+                    <SocialButton
+                      icon={faEnvelopeOpen}
+                      label="Login"
+                      onPress={() => {
+                        router.push("/login");
+                      }}
+                    />
+                  </View>
+                )
+              }
             </View>
-            <Title style={[styles.title, { color: Colors(theme).primary }]}>
-              {slide.title}
-            </Title>
-            <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
-            {slide.key === "connect" && (
-              <View style={styles.socialContainer}>
-                {/* {renderSocialButton(
-                  "logo-facebook",
-                  "Login with Facebook",
-                  () => {}
-                )} */}
-                {renderSocialButton("person-add", "Create New Account", () => {
-                  router.push("/create-new-account");
-                })}
-                {renderSocialButton("mail-open", "Login", () => {
-                  router.push("/login");
-                })}
-              </View>
-            )}
-          </View>
-        ))}
+          ))
+        }
       </Swiper>
 
       {error && <Text style={{ color: "red" }}>Error: {error}</Text>}

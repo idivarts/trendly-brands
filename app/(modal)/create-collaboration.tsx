@@ -30,6 +30,7 @@ import CreateCollaborationMap from "@/components/collaboration/create-collaborat
 import { COLLAB_TYPES, PLATFORM_TYPES, PROMOTION_TYPES } from "@/constants/CreateCollaborationForm";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faArrowLeft, faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle } from "@fortawesome/free-regular-svg-icons";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -460,13 +461,13 @@ const CreateCollaborationScreen = () => {
     return (
       <AppLayout>
         <View style={styles.container3}>
-          <IconButton
-            icon="check-circle"
+          <FontAwesomeIcon
+            icon={faCheckCircle}
             size={100}
-            iconColor="green"
+            color={Colors(theme).primary}
             style={styles.checkIcon}
           />
-          <Text style={styles.title}>Collaboration Posted</Text>
+          <Title style={styles.title}>Collaboration Posted</Title>
           <Text style={styles.description}>
             Your collaboration has been successfully posted.
           </Text>

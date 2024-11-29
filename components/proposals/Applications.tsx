@@ -20,6 +20,7 @@ import { RefreshControl } from "react-native";
 import { stylesFn } from "@/styles/Proposal.styles";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import EmptyState from "../ui/empty-state";
+import { useBreakpoints } from "@/hooks";
 
 const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -40,6 +41,10 @@ const Applications = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const {
+    xl,
+  } = useBreakpoints();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -180,21 +185,29 @@ const Applications = () => {
               keyExtractor={(item, index) => index.toString()}
               style={{
                 flexGrow: 1,
-                paddingTop: 8,
-                paddingHorizontal: 16,
                 paddingBottom: 16,
+                paddingHorizontal: 16,
+                paddingTop: 8,
               }}
               contentContainerStyle={{
                 gap: 16,
                 paddingBottom: 24,
+                alignItems: xl ? "center" : "stretch",
               }}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={handleRefresh}
-                  colors={[Colors(theme).primary]} // Customize color based on theme
+                  colors={[Colors(theme).primary]}
                 />
               }
+              horizontal={false}
+              numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
+              {...xl && {
+                columnWrapperStyle: {
+                  gap: 16,
+                },
+              }}
             />
           </View>
         )

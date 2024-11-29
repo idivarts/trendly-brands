@@ -44,30 +44,6 @@ const styles = (theme: Theme) =>
       justifyContent: "space-between",
       marginTop: 20,
     },
-    socialButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors(theme).background,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 25,
-      marginHorizontal: 10,
-      shadowColor: Colors(theme).black,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    icon: {
-      marginRight: 10,
-    },
-    socialButtonText: {
-      color: Colors(theme).text,
-      fontWeight: "bold",
-    },
     pagination: {
       bottom: 30,
     },
