@@ -31,6 +31,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     textAlign: "center",
     fontSize: 20,
     fontWeight: "bold",
+    color: Colors(theme).gray100,
   },
   closeButton: {
     position: "absolute",

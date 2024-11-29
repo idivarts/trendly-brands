@@ -1,8 +1,11 @@
-import { Modal } from "react-native";
+import { Modal, Pressable } from "react-native";
 import { Text, View } from "../theme/Themed";
-import { Button, IconButton } from "react-native-paper";
+import { Button } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import stylesFn from "@/styles/modal/AddModal.styles";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faClose } from "@fortawesome/free-solid-svg-icons";
+import Colors from "@/constants/Colors";
 
 interface AddModalProps {
   action: () => void;
@@ -46,11 +49,16 @@ const AddModal: React.FC<AddModalProps> = ({
             >
               {title}
             </Text>
-            <IconButton
-              icon="close"
+            <Pressable
               onPress={() => setVisible(false)}
               style={styles.closeButton}
-            />
+            >
+              <FontAwesomeIcon
+                icon={faClose}
+                size={20}
+                color={Colors(theme).gray100}
+              />
+            </Pressable>
           </View>
           <View
             style={styles.modalInputContainer}

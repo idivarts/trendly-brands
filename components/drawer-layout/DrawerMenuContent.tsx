@@ -1,9 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
 import { APP_NAME } from "@/constants/App";
-import DrawerMenuItem from "./DrawerMenuItem";
+import DrawerMenuItem, { IconPropFn } from "./DrawerMenuItem";
 import { useBreakpoints } from "@/hooks";
 import BrandItem from "./BrandItem";
-import { DrawerActions, useTheme } from "@react-navigation/native";
+import { DrawerActions, Theme, useTheme } from "@react-navigation/native";
 import { useNavigation, useRouter } from "expo-router";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
@@ -14,44 +14,109 @@ import Colors from "@/constants/Colors";
 import { useEffect, useState } from "react";
 import { Searchbar } from "react-native-paper";
 import {
-  faHandshake,
   faComment,
+  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
-  faFileSignature,
+  faComment as faCommentSolid,
+  faFileLines as faFileLinesSolid,
+  faHouseUser as faHouseUserSolid,
+  faMagnifyingGlass,
+  faPlus,
   faPlusCircle,
+  faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
+import stylesFn from "@/styles/searchbar/Searchbar.styles";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import DrawerIcon from "./DrawerIcon";
+import HomeIcon from "@/assets/icons/home.svg";
 
 interface DrawerMenuContentProps { }
 
-const DRAWER_MENU_CONTENT_ITEMS = [
-  {
-    href: "/explore-influencers",
-    icon: faHandshake,
-    label: "Explore Influencers",
-  },
-  {
-    href: "/collaborations",
-    icon: faStar,
-    label: "Collaborations",
-  },
-  {
-    href: "/create-collaboration",
-    icon: faPlusCircle,
-    label: "Create Collaboration",
-  },
-  {
-    href: "/messages",
-    icon: faComment,
-    label: "Messages",
-  },
-  {
-    href: "/contracts",
-    icon: faFileSignature,
-    label: "Contracts",
-  },
-];
+const DRAWER_MENU_CONTENT_ITEMS = (
+  theme: Theme,
+) => [
+    {
+      href: "/explore-influencers",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/explore-influencers"
+          icon={faHouseUserSolid}
+        />
+      ) : (
+          <HomeIcon
+            width={28}
+            height={28}
+            fill={Colors(theme).text}
+          />
+        ),
+      label: "Home",
+    },
+    {
+      href: "/collaborations",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/collaborations"
+          icon={faStarSolid}
+        />
+      ) : (
+          <DrawerIcon
+            href="/collaborations"
+            icon={faStar}
+          />
+        ),
+      label: "Collaborations",
+    },
+    {
+      href: "/create-collaboration",
+      icon: () => (
+        <DrawerIcon
+          href="/create-collaboration"
+          icon={faPlusCircle}
+        />
+      ),
+      label: "Create Collaboration",
+    },
+    {
+      href: "/messages",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/messages"
+          icon={faCommentSolid}
+        />
+      ) : (
+          <DrawerIcon
+            href="/messages"
+            icon={faComment}
+          />
+        ),
+      label: "Messages",
+    },
+    {
+      href: "/contracts",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/contracts"
+          icon={faFileLinesSolid}
+        />
+      ) : (
+          <DrawerIcon
+            href="/contracts"
+            icon={faFileLines}
+          />
+        ),
+      label: "Contracts",
+    },
+  ];
 
 const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const { xl } = useBreakpoints();
@@ -59,6 +124,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const theme = useTheme();
+  const styles = stylesFn(theme);
   const {
     brands,
     selectedBrand,
@@ -106,20 +172,34 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
         </Text>
         {
           !xl && (
-            <Searchbar
-              onChangeText={handleSearchChange}
-              placeholder="Search"
-              placeholderTextColor={Colors(theme).gray100}
-              value={search}
-              style={[
-                {
-                  borderRadius: 15,
-                  marginHorizontal: 14,
-                  marginBottom: 8,
-                  backgroundColor: Colors(theme).aliceBlue
-                },
-              ]}
-            />
+            <View
+              style={{
+                flexDirection: 'row',
+              }}
+            >
+              <Searchbar
+                icon={() => (
+                  <FontAwesomeIcon
+                    color={Colors(theme).gray100}
+                    icon={faMagnifyingGlass}
+                    size={18}
+                  />
+                )}
+                iconColor={Colors(theme).gray100}
+                inputStyle={styles.searchbarInput}
+                onChangeText={handleSearchChange}
+                placeholder="Search"
+                placeholderTextColor={Colors(theme).gray100}
+                style={[
+                  styles.searchbar,
+                  {
+                    marginHorizontal: 14,
+                    marginBottom: 8,
+                  },
+                ]}
+                value={search}
+              />
+            </View>
           )
         }
       </View>
@@ -134,7 +214,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             paddingTop: 8,
           }}
         >
-          {xl ? DRAWER_MENU_CONTENT_ITEMS.map((tab, index) => (
+          {xl ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
             <DrawerMenuItem
               key={index}
               tab={tab}
@@ -159,7 +239,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
       >
         <BrandActionItem
           key="create-brand"
-          icon="plus"
+          icon={faPlus}
           showChevron={false}
           onPress={() => {
             router.push("/(onboarding)/onboarding-your-brand");

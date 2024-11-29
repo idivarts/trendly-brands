@@ -3,11 +3,13 @@ import { Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
 import stylesFn from "@/styles/brand-item/BrandItem.styles";
-import { Avatar, IconButton } from "react-native-paper";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 interface BrandActionItemProps {
   active?: boolean;
-  icon?: string;
+  icon?: IconProp;
   onPress: () => void;
   showChevron?: boolean;
   title: string;
@@ -45,11 +47,12 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
         >
           {
             icon && (
-              <Avatar.Icon
-                icon={icon}
-                size={32}
+              <FontAwesomeIcon
                 color={Colors(theme).text}
+                icon={icon}
+                size={18}
                 style={{
+                  marginRight: 6,
                   backgroundColor: Colors(theme).transparent,
                 }}
               />
@@ -68,10 +71,10 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
         </View>
         {
           showChevron && (
-            <IconButton
-              icon="chevron-right"
-              size={20}
-              iconColor={active ? Colors(theme).white : Colors(theme).text}
+            <FontAwesomeIcon
+              color={active ? Colors(theme).white : Colors(theme).text}
+              icon={faChevronRight}
+              size={16}
             />
           )
         }

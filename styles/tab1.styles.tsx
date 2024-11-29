@@ -12,6 +12,7 @@ const styles = (theme: Theme) =>
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: Colors(theme).background,
+      paddingHorizontal: 16,
     },
     skipButtonContainer: {
       position: "absolute",
@@ -19,8 +20,6 @@ const styles = (theme: Theme) =>
       right: 20,
     },
     imageContainer: {
-      borderRadius: 100,
-      overflow: "hidden",
       marginBottom: 20,
     },
     image: {
@@ -37,37 +36,13 @@ const styles = (theme: Theme) =>
       fontSize: 16,
       textAlign: "center",
       paddingHorizontal: 20,
-      color: Colors(theme).gray100,
+      color: Colors(theme).text,
     },
     socialContainer: {
       flexDirection: "column",
       gap: 10,
       justifyContent: "space-between",
       marginTop: 20,
-    },
-    socialButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors(theme).background,
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 25,
-      marginHorizontal: 10,
-      shadowColor: Colors(theme).black,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    icon: {
-      marginRight: 10,
-    },
-    socialButtonText: {
-      color: Colors(theme).text,
-      fontWeight: "bold",
     },
     pagination: {
       bottom: 30,

@@ -7,6 +7,7 @@ export default (theme: Theme) => ({
   ...theme.colors,
   ...(theme.dark
     ? {
+        card: "#1E1E1E",
         text: "#fff",
         background: "#000",
         tint: tintColorDark,
@@ -17,8 +18,10 @@ export default (theme: Theme) => ({
         onSurface: "#538BA6",
         tag: "#5f6368",
         tagForeground: "#f1f3f4",
+        outline: "#538BA6",
       }
     : {
+        card: "#fff",
         text: "#000",
         background: "#fff",
         tint: tintColorLight,
@@ -29,6 +32,7 @@ export default (theme: Theme) => ({
         onSurface: "#054463",
         tag: "#f1f3f4",
         tagForeground: "#5f6368",
+        outline: "#054463",
       }),
   aliceBlue: "#E9F1F7",
   amber: "#FFBF00",

@@ -60,11 +60,11 @@ export const stylesFn = (theme: Theme) =>
       height: 8,
       width: 8,
       borderRadius: 4,
-      backgroundColor: "#cccccc",
+      backgroundColor: Colors(theme).platinum,
       marginHorizontal: 4,
     },
     activeDot: {
-      backgroundColor: "#333333",
+      backgroundColor: Colors(theme).primary,
     },
     media: {
       alignSelf: "center",
