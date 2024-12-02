@@ -1,36 +1,18 @@
-import AppLayout from "@/layouts/app-layout";
 import React, { useEffect, useState } from "react";
-import {
-  ScrollView,
-  Platform,
-  Pressable,
-} from "react-native";
-import {
-  TextInput,
-  Button,
-  Title,
-  Paragraph,
-  IconButton,
-  RadioButton,
-  Modal,
-} from "react-native-paper";
-import stylesFn from "@/styles/modal/UploadModal.styles";
-import { useTheme } from "@react-navigation/native";
-import { addDoc, collection } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import Colors from "@/constants/Colors";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
-import Select, { SelectItem } from "@/components/ui/select";
-import { Text, View } from "@/components/theme/Themed";
-import CreateCollaborationMap from "@/components/collaboration/create-collaboration/CreateCollaborationMap";
-import { COLLAB_TYPES, PLATFORM_TYPES, PROMOTION_TYPES } from "@/constants/CreateCollaborationForm";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faArrowLeft, faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { faCheckCircle } from "@fortawesome/free-regular-svg-icons";
+import { SelectItem } from "@/components/ui/select";
+import ScreenOne from "@/components/create-collaboration/screen-one";
+import ScreenTwo from "@/components/create-collaboration/screen-two";
+import ScreenThree from "@/components/create-collaboration/screen-three";
+import { useCollaborationContext } from "@/contexts";
+import { SocialPlatform } from "@/shared-libs/firestore/trendly-pro/constants/social-platform";
+import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { CollaborationType } from "@/shared-libs/firestore/trendly-pro/constants/collaboration-type";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 const CreateCollaborationScreen = () => {
   const [collaborationName, setCollaborationName] = useState("");
@@ -46,12 +28,11 @@ const CreateCollaborationScreen = () => {
       value: "Instagram",
     },
   ]);
+  const params = useLocalSearchParams();
   const [location, setLocation] = useState("Remote");
   const [formattedAddress, setFormattedAddress] = useState("");
   const [links, setLinks] = useState<any[]>([]);
   const [screen, setScreen] = useState(1);
-  const theme = useTheme();
-  const styles = stylesFn(theme);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [newLinkName, setNewLinkName] = useState("");
   const { selectedBrand } = useBrandContext();
@@ -62,6 +43,14 @@ const CreateCollaborationScreen = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+
+  const type = params.id ? "Edit" : "Add";
+
+  const {
+    getCollaborationById,
+    createCollaboration,
+    updateCollaboration,
+  } = useCollaborationContext();
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -82,6 +71,53 @@ const CreateCollaborationScreen = () => {
     getCurrentLocation();
   }, []);
 
+  const fetchCollaboration = async (
+    id: string,
+  ) => {
+    const collaboration = await getCollaborationById(id);
+    setCollaborationName(collaboration.name);
+    setAboutCollab(collaboration.description || "");
+    setBudgetMin(collaboration.budget.min?.toString() || "");
+    setBudgetMax(collaboration.budget.max?.toString() || "");
+    setNumInfluencers(collaboration.numberOfInfluencersNeeded);
+    setPromotionType([
+      {
+        label: collaboration.promotionType,
+        value: collaboration.promotionType,
+      },
+    ]);
+    setCollabType([
+      {
+        label: collaboration.collaborationType,
+        value: collaboration.collaborationType,
+      },
+    ]);
+    setPlatform([
+      {
+        label: collaboration.platform,
+        value: collaboration.platform,
+      },
+    ]);
+    setLocation(collaboration.location.type);
+    setLinks(collaboration.externalLinks || []);
+    setLocation(collaboration.location.type);
+    if (collaboration.location.name && collaboration.location.latlong) {
+      setFormattedAddress(collaboration.location.name);
+      setMapRegion({
+        latitude: collaboration.location.latlong.lat,
+        longitude: collaboration.location.latlong.long,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (params.id && typeof params.id === "string") {
+      fetchCollaboration(params.id);
+    }
+  }, []);
+
   const addLink = () => {
     if (!newLinkName || !newLinkUrl) {
       Toaster.error("Please fill all fields");
@@ -96,6 +132,16 @@ const CreateCollaborationScreen = () => {
 
   const onFormattedAddressChange = (address: string) => {
     setFormattedAddress(address);
+  }
+
+  const handleCollaboration = async (
+    data: ICollaboration,
+  ): Promise<void> => {
+    if (params.id && typeof params.id === "string") {
+      await updateCollaboration(params.id, data);
+    } else {
+      await createCollaboration(data)
+    }
   }
 
   const submitCollaboration = async () => {
@@ -119,8 +165,6 @@ const CreateCollaborationScreen = () => {
         return;
       }
 
-      const collabRef = collection(FirestoreDB, "collaborations");
-
       let locationAddress = {};
       if (location === "Physical" && mapRegion.latitude && mapRegion.longitude) {
         locationAddress = {
@@ -132,25 +176,27 @@ const CreateCollaborationScreen = () => {
         };
       }
 
-      await addDoc(collabRef, {
+      await handleCollaboration({
         name: collaborationName,
         brandId: selectedBrand ? selectedBrand.id : "",
-        managerId: AuthApp.currentUser?.uid,
+        managerId: AuthApp.currentUser?.uid as string,
         description: aboutCollab,
         timeStamp: Date.now(),
         budget: {
-          min: budgetMin,
-          max: budgetMax,
+          min: Number(budgetMin),
+          max: Number(budgetMax),
         },
-        promotionType: promotionType[0].value,
-        collaborationType: collabType[0].value,
+        promotionType: promotionType[0].value as PromotionType,
+        collaborationType: collabType[0].value as CollaborationType,
         numberOfInfluencersNeeded: numInfluencers,
-        platform: platform[0].value,
+        platform: platform[0].value as SocialPlatform,
         location: {
           type: location,
           ...locationAddress,
         },
         externalLinks: links,
+        applications: undefined,
+        invitations: undefined,
         status: "active",
       }).then(() => {
         setScreen(3);
@@ -166,313 +212,66 @@ const CreateCollaborationScreen = () => {
 
   if (screen === 1) {
     return (
-      <AppLayout>
-        <ScrollView
-          contentContainerStyle={{
-            paddingVertical: 16,
-            gap: 16,
-          }}
-          style={styles.container}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
-            {
-              Platform.OS === "web" && (
-                <IconButton
-                  icon="arrow-left"
-                  iconColor={Colors(theme).text}
-                  onPress={() => router.push("/collaborations")}
-                />
-              )
-            }
-            <Title style={styles.title}>Create a Collaboration</Title>
-          </View>
-          <TextInput
-            label="Collaboration Name"
-            mode="outlined"
-            onChangeText={(text) => setCollaborationName(text)}
-            style={styles.input}
-            textColor={Colors(theme).text}
-            theme={{
-              colors: {
-                primary: Colors(theme).primary,
-                placeholder: Colors(theme).text,
-                text: Colors(theme).text,
-              },
-            }}
-            value={collaborationName}
-          />
-          <TextInput
-            label="About this Collaboration"
-            mode="outlined"
-            // multiline
-            onChangeText={(text) => setAboutCollab(text)}
-            style={styles.input}
-            textColor={Colors(theme).text}
-            value={aboutCollab}
-          />
-          <View style={styles.budgetContainer}>
-            <TextInput
-              label="Budget Min"
-              mode="outlined"
-              onChangeText={(text) => setBudgetMin(text)}
-              style={styles.budgetInput}
-              textColor={Colors(theme).text}
-              value={budgetMin}
-            />
-            <TextInput
-              label="Budget Max"
-              mode="outlined"
-              onChangeText={(text) => setBudgetMax(text)}
-              style={styles.budgetInput}
-              textColor={Colors(theme).text}
-              value={budgetMax}
-            />
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 16,
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Paragraph style={styles.paragraph}>
-              Number of Influencers Involved:
-            </Paragraph>
-            <View style={styles.counter}>
-              <Pressable
-                onPress={() => setNumInfluencers(Math.max(1, numInfluencers - 1))}
-                style={styles.iconButton}
-
-              >
-                <FontAwesomeIcon
-                  icon={faMinus}
-                  color={Colors(theme).white}
-                />
-              </Pressable>
-              <View
-                style={styles.iconButtonContent}
-              >
-                <Text
-                  style={{
-                    color: Colors(theme).primary,
-                  }}
-                >
-                  {numInfluencers}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => setNumInfluencers(numInfluencers + 1)}
-                style={styles.iconButton}
-              >
-                <FontAwesomeIcon
-                  icon={faPlus}
-                  color={Colors(theme).white}
-                />
-              </Pressable>
-            </View>
-          </View>
-          <View
-            style={styles.selectContainer}
-          >
-            <Paragraph style={styles.paragraph}>Promotion Type:</Paragraph>
-            <Select
-              items={PROMOTION_TYPES}
-              onSelect={(selectedItems) => setPromotionType(selectedItems)}
-              value={promotionType}
-            />
-          </View>
-          <View
-            style={styles.selectContainer}
-          >
-            <Paragraph style={styles.paragraph}>Collaboration Type:</Paragraph>
-            <Select
-              items={COLLAB_TYPES}
-              onSelect={(selectedItems) => setCollabType(selectedItems)}
-              value={collabType}
-            />
-          </View>
-          <View
-            style={styles.selectContainer}
-          >
-            <Paragraph style={styles.paragraph}>Platform:</Paragraph>
-            <Select
-              items={PLATFORM_TYPES}
-              onSelect={(selectedItems) => setPlatform(selectedItems)}
-              value={platform}
-            />
-          </View>
-          <Button
-            mode="contained"
-            onPress={() => {
-              if (
-                !collaborationName ||
-                !aboutCollab ||
-                !budgetMin ||
-                !budgetMax ||
-                !numInfluencers ||
-                !promotionType ||
-                !collabType ||
-                !platform
-              ) {
-                Toaster.error("Please fill all fields");
-                return;
-              }
-              setScreen(2);
-            }}
-          >
-            Next
-          </Button>
-        </ScrollView>
-      </AppLayout>
+      <ScreenOne
+        type={type}
+        data={{
+          collaborationName,
+          aboutCollab,
+          budgetMin,
+          budgetMax,
+          numInfluencers,
+          promotionType,
+          collabType,
+          platform,
+        }}
+        setScreen={setScreen}
+        setState={{
+          collaborationName: setCollaborationName,
+          aboutCollab: setAboutCollab,
+          budgetMin: setBudgetMin,
+          budgetMax: setBudgetMax,
+          numInfluencers: setNumInfluencers,
+          promotionType: setPromotionType,
+          collabType: setCollabType,
+          platform: setPlatform,
+        }}
+      />
     );
   }
 
   if (screen == 2) {
     return (
-      <AppLayout>
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.contentContainer}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
-            <IconButton
-              onPress={() => setScreen(1)}
-              style={{
-                padding: 12,
-              }}
-              icon={() => (
-                <FontAwesomeIcon
-                  icon={faArrowLeft}
-                  color={Colors(theme).text}
-                />
-              )}
-            />
-            <Title style={styles.title}>Create a Collaboration</Title>
-          </View>
-
-          <View>
-            <Paragraph
-              style={[
-                styles.paragraph,
-                {
-                  paddingLeft: 16,
-                }
-              ]}
-            >
-              Location:
-            </Paragraph>
-            <RadioButton.Group
-              onValueChange={(newValue) => setLocation(newValue)}
-              value={location}
-            >
-              <RadioButton.Item
-                mode="android"
-                label="Remote"
-                value="Remote"
-                labelStyle={{
-                  color: Colors(theme).text,
-                }}
-              />
-              <RadioButton.Item
-                mode="android"
-                label="Physical"
-                value="Physical"
-                labelStyle={{
-                  color: Colors(theme).text,
-                }}
-              />
-            </RadioButton.Group>
-          </View>
-
-          {
-            location === "Physical" && (
-              <CreateCollaborationMap
-                mapRegion={mapRegion}
-                onMapRegionChange={(region) => setMapRegion(region)}
-                onFormattedAddressChange={onFormattedAddressChange}
-              />
-            )
-          }
-
-          <Button
-            mode="contained"
-            onPress={() => setIsModalVisible(true)}
-            style={{
-              marginBottom: 16,
-            }}
-          >
-            Add Link
-          </Button>
-          {
-            links.map((link, index) => (
-              <Paragraph key={index + link.url}>
-                {link.name}: {link.url}
-              </Paragraph>
-            ))
-          }
-
-          <Button mode="contained" onPress={() => submitCollaboration()}>
-            Post
-          </Button>
-        </ScrollView>
-
-        <Modal
-          contentContainerStyle={styles.modalContainer}
-          onDismiss={() => setIsModalVisible(false)}
-          visible={isModalVisible}
-        >
-          <TextInput
-            label="Link Name"
-            mode="outlined"
-            onChangeText={setNewLinkName}
-            style={styles.input}
-            value={newLinkName}
-          />
-          <TextInput
-            label="Link URL"
-            mode="outlined"
-            onChangeText={setNewLinkUrl}
-            style={styles.input}
-            value={newLinkUrl}
-          />
-          <Button
-            mode="contained"
-            onPress={addLink}
-          >
-            Add Link
-          </Button>
-        </Modal>
-      </AppLayout>
+      <ScreenTwo
+        type={type}
+        setScreen={setScreen}
+        data={{
+          location,
+          links,
+          mapRegion,
+          newLinkName,
+          newLinkUrl,
+        }}
+        setState={{
+          location: setLocation,
+          links: setLinks,
+          mapRegion: setMapRegion,
+          newLinkName: setNewLinkName,
+          newLinkUrl: setNewLinkUrl,
+        }}
+        isModalVisible={isModalVisible}
+        setIsModalVisible={setIsModalVisible}
+        onFormattedAddressChange={onFormattedAddressChange}
+        submitCollaboration={submitCollaboration}
+        addLink={addLink}
+      />
     );
   }
 
   if (screen === 3) {
     return (
-      <AppLayout>
-        <View style={styles.container3}>
-          <FontAwesomeIcon
-            icon={faCheckCircle}
-            size={100}
-            color={Colors(theme).primary}
-            style={styles.checkIcon}
-          />
-          <Title style={styles.title}>Collaboration Posted</Title>
-          <Text style={styles.description}>
-            Your collaboration has been successfully posted.
-          </Text>
-        </View>
-      </AppLayout>
+      <ScreenThree
+        type={type}
+      />
     );
   }
 };
