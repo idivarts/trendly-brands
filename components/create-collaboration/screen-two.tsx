@@ -1,15 +1,13 @@
-import AppLayout from "@/layouts/app-layout";
 import { ScrollView } from "react-native";
 import { View } from "../theme/Themed";
-import { IconButton, Modal, Paragraph, RadioButton, TextInput, Title } from "react-native-paper";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { Modal, Paragraph, RadioButton, TextInput } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import Button from "../ui/button";
 
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { useTheme } from "@react-navigation/native";
+import ScreenHeader from "../ui/screen-header";
 
 interface ScreenTwoProps {
   type: "Add" | "Edit";
@@ -60,33 +58,15 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
   const styles = stylesFn(theme);
 
   return (
-    <AppLayout>
+    <>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <IconButton
-            onPress={() => setScreen(1)}
-            style={{
-              padding: 12,
-            }}
-            icon={() => (
-              <FontAwesomeIcon
-                icon={faArrowLeft}
-                color={Colors(theme).text}
-              />
-            )}
-          />
-          <Title style={styles.title}>
-            {type === "Add" ? "Create a" : "Edit"} Collaboration
-          </Title>
-        </View>
+        <ScreenHeader
+          title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
+          action={() => setScreen(1)}
+        />
 
         <View>
           <Paragraph
@@ -150,7 +130,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         }
 
         <Button mode="contained" onPress={() => submitCollaboration()}>
-          Post
+          {type === "Add" ? "Post" : "Update"}
         </Button>
       </ScrollView>
 
@@ -180,7 +160,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           Add Link
         </Button>
       </Modal>
-    </AppLayout>
+    </>
   );
 };
 

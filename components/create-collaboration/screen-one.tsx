@@ -1,9 +1,8 @@
-import AppLayout from "@/layouts/app-layout";
 import { Platform, Pressable, ScrollView } from "react-native";
 
 import { COLLAB_TYPES, PLATFORM_TYPES, PROMOTION_TYPES } from "@/constants/CreateCollaborationForm";
 import { Text, View } from "../theme/Themed";
-import { IconButton, Paragraph, TextInput, Title } from "react-native-paper";
+import { Paragraph, TextInput } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 
@@ -14,7 +13,7 @@ import Select, { SelectItem } from "../ui/select";
 import Button from "../ui/button";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import React from "react";
-import { useRouter } from "expo-router";
+import ScreenHeader from "../ui/screen-header";
 
 interface ScreenOneProps {
   type: "Add" | "Edit";
@@ -49,10 +48,9 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
-  const router = useRouter();
 
   return (
-    <AppLayout>
+    <>
       <ScrollView
         contentContainerStyle={{
           paddingVertical: 16,
@@ -60,25 +58,11 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
         }}
         style={styles.container}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          {
-            Platform.OS === "web" && (
-              <IconButton
-                icon="arrow-left"
-                iconColor={Colors(theme).text}
-                onPress={() => router.push("/collaborations")}
-              />
-            )
-          }
-          <Title style={styles.title}>
-            {type === "Add" ? "Create a" : "Edit"} Collaboration
-          </Title>
-        </View>
+        <ScreenHeader
+          title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
+          hideAction={(type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
+        />
+
         <TextInput
           label="Collaboration Name"
           mode="outlined"
@@ -217,7 +201,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           Next
         </Button>
       </ScrollView>
-    </AppLayout>
+    </>
   );
 };
 

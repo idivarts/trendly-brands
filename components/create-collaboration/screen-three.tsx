@@ -1,4 +1,3 @@
-import AppLayout from "@/layouts/app-layout";
 import { Text, View } from "../theme/Themed";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
@@ -19,7 +18,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
   const styles = stylesFn(theme);
 
   return (
-    <AppLayout>
+    <>
       <View style={styles.container3}>
         <FontAwesomeIcon
           icon={faCheckCircle}
@@ -34,7 +33,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
           Your collaboration has been successfully {type === "Add" ? "posted" : "updated"}.
         </Text>
       </View>
-    </AppLayout>
+    </>
   );
 };
 

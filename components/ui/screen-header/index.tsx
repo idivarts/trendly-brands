@@ -8,6 +8,7 @@ import { Appbar } from "react-native-paper";
 
 interface ScreenHeaderProps {
   action?: () => void;
+  hideAction?: boolean;
   title: string;
   rightActionButton?: React.ReactNode;
   rightAction?: boolean;
@@ -15,6 +16,7 @@ interface ScreenHeaderProps {
 
 const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   action,
+  hideAction = false,
   title,
   rightActionButton,
   rightAction = false,
@@ -38,25 +40,29 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       }}
       statusBarHeight={0}
     >
-      <Appbar.Action
-        icon={() => (
-          <View
-            style={{
-              marginTop: 2,
-            }}
-            lightColor={Colors(theme).transparent}
-            darkColor={Colors(theme).transparent}
-          >
-            <FontAwesomeIcon
-              icon={faArrowLeft}
-              size={20}
-              color={Colors(theme).text}
-            />
-          </View>
-        )}
-        color={Colors(theme).text}
-        onPress={handleAction}
-      />
+      {
+        !hideAction && (
+          <Appbar.Action
+            icon={() => (
+              <View
+                style={{
+                  marginTop: 2,
+                }}
+                lightColor={Colors(theme).transparent}
+                darkColor={Colors(theme).transparent}
+              >
+                <FontAwesomeIcon
+                  icon={faArrowLeft}
+                  size={20}
+                  color={Colors(theme).text}
+                />
+              </View>
+            )}
+            color={Colors(theme).text}
+            onPress={handleAction}
+          />
+        )
+      }
 
       <Appbar.Content
         title={title}
