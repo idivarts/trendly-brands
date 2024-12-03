@@ -8,6 +8,7 @@ import {
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { CollaborationDetail } from ".";
+import { useBreakpoints } from "@/hooks";
 
 interface OverviewTabContentProps {
   collaboration: CollaborationDetail;
@@ -19,6 +20,10 @@ const OverviewTabContent: React.FC<OverviewTabContentProps> = ({
   const theme = useTheme();
   const styles = stylesFn(theme);
 
+  const {
+    xl,
+  } = useBreakpoints();
+
   return (
     <ScrollView
       style={{
@@ -26,6 +31,8 @@ const OverviewTabContent: React.FC<OverviewTabContentProps> = ({
         paddingTop: 8,
         paddingHorizontal: 16,
         paddingBottom: 16,
+        width: xl ? 768 : '100%',
+        marginHorizontal: "auto",
       }}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{

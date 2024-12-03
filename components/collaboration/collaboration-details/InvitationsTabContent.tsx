@@ -21,6 +21,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useInfluencers } from "@/hooks/request";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -41,6 +42,10 @@ const InvitationsTabContent = (props: any) => {
   } = useInfluencers({
     pageID: props.pageID,
   });
+
+  const {
+    xl,
+  } = useBreakpoints();
 
   const handleCollaborationInvite = async () => {
     try {
@@ -157,6 +162,8 @@ const InvitationsTabContent = (props: any) => {
         keyExtractor={(item) => item.id}
         style={{
           paddingBottom: 16,
+          width: xl ? 768 : '100%',
+          marginHorizontal: "auto",
         }}
         ItemSeparatorComponent={
           () => (

@@ -12,6 +12,7 @@ import { useChatContext, useNotificationContext } from "@/contexts";
 import { FirestoreDB } from "@/utils/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { useRouter } from "expo-router";
 
 interface BottomSheetActionsProps {
   cardType:
@@ -39,6 +40,7 @@ const BottomSheetActions = ({
   const sheetRef = React.useRef<BottomSheet>(null);
   const [isMessageModalVisible, setIsMessageModalVisible] =
     React.useState(false);
+  const router = useRouter();
 
   const {
     createGroupWithMembers,
@@ -247,6 +249,18 @@ const BottomSheetActions = ({
               title="View Collaboration"
               onPress={() => {
                 handleClose();
+              }}
+            />
+            <List.Item
+              title="Edit Collaboration"
+              onPress={() => {
+                handleClose();
+                router.push({
+                  pathname: "/edit-collaboration",
+                  params: {
+                    id: cardId,
+                  },
+                });
               }}
             />
             <List.Item

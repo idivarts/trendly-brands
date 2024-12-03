@@ -12,6 +12,7 @@ import BottomSheetActions from "@/components/BottomSheetActions";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { processRawAttachment } from "@/utils/attachments";
+import { useBreakpoints } from "@/hooks";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -19,6 +20,10 @@ const ApplicationsTabContent = (props: any) => {
   const [influencers, setInfluencers] = useState<any>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
+
+  const {
+    xl,
+  } = useBreakpoints();
 
   const fetchApplications = async () => {
     try {
@@ -118,6 +123,8 @@ const ApplicationsTabContent = (props: any) => {
         keyExtractor={(item, index) => item.id + index}
         style={{
           paddingBottom: 16,
+          width: xl ? 768 : '100%',
+          marginHorizontal: "auto",
         }}
         ItemSeparatorComponent={
           () => (

@@ -139,9 +139,12 @@ const RootLayoutStack = () => {
           <Stack.Screen
             name="(modal)/create-collaboration"
             options={{
-              presentation: "modal",
+              presentation: "formSheet",
               gestureEnabled: true,
             }}
+          />
+          <Stack.Screen
+            name="(modal)/edit-collaboration"
           />
         </Stack>
       </Provider>
