@@ -99,7 +99,6 @@ const CreateCollaboration = () => {
     ]);
     setLocation(collaboration.location.type);
     setLinks(collaboration.externalLinks || []);
-    setLocation(collaboration.location.type);
     if (collaboration.location.name && collaboration.location.latlong) {
       setFormattedAddress(collaboration.location.name);
       setMapRegion({
