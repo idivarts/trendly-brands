@@ -2,7 +2,7 @@ import React from "react";
 import CreateCollaboration from "@/components/create-collaboration";
 import AppLayout from "@/layouts/app-layout";
 
-const CreateCollaborationScreen = () => {
+const EditCollaborationScreen = () => {
   return (
     <AppLayout>
       <CreateCollaboration />
@@ -10,4 +10,4 @@ const CreateCollaborationScreen = () => {
   );
 };
 
-export default CreateCollaborationScreen;
+export default EditCollaborationScreen;

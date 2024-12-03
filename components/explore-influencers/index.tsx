@@ -9,6 +9,7 @@ import { influencers } from "@/constants/Influencers";
 import CollaborationFilter from "../FilterModal";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import { useBreakpoints } from "@/hooks";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -26,6 +27,10 @@ const ExploreInfluencers = () => {
   ]);
   const ToggleModal = () => setIsModalVisible(!isModalVisible);
   const theme = useTheme();
+
+  const {
+    xl,
+  } = useBreakpoints();
 
   const filteredInfluencers = influencers.filter((influencer) => {
     const isCollaborationTypeMatch =
@@ -85,7 +90,7 @@ const ExploreInfluencers = () => {
         ListHeaderComponent={
           <View
             style={{
-              paddingHorizontal: 16,
+              paddingHorizontal: xl ? 0 : 16,
               paddingBottom: theme.dark ? 16 : 0,
             }}
           >
@@ -95,6 +100,10 @@ const ExploreInfluencers = () => {
             />
           </View>
         }
+        style={{
+          width: xl ? 768 : '100%',
+          marginHorizontal: "auto",
+        }}
       />
       {isModalVisible && (
         <BottomSheetActions
