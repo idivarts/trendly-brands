@@ -58,7 +58,7 @@ const ExploreInfluencers = () => {
   useEffect(() => {
     setIsLoading(true);
     const influencersRef = collection(FirestoreDB, "users");
-    const q = query(influencersRef, where("profile.completionPercentage", ">=", 0));
+    const q = query(influencersRef, where("profile.completionPercentage", ">=", 60));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedInfluencers: User[] = [];
