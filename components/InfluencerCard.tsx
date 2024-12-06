@@ -32,6 +32,8 @@ import Tag from "./ui/tag";
 import { MediaItem } from "./ui/carousel/render-media-item";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
+import RenderHTML from "react-native-render-html";
+import { truncateText } from "@/utils/text";
 
 const { width } = Dimensions.get("window");
 
@@ -58,6 +60,8 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const influencer = props.influencer;
   const theme = useTheme();
   const styles = stylesFn(theme);
+
+  const screenWidth = Dimensions.get("window").width;
 
   const pinchHandler =
     useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
@@ -218,7 +222,17 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
 
           <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
             <Text numberOfLines={bioExpanded ? undefined : 2} style={styles.bio}>
-              {influencer.profile?.content?.about}
+              <RenderHTML
+                contentWidth={screenWidth}
+                source={{
+                  html:
+                    truncateText(influencer?.profile?.content?.about as string, 110) ||
+                    "<p>No content available.</p>",
+                }}
+                tagsStyles={{
+                  p: { color: Colors(theme).text, fontSize: 16 },
+                }}
+              />
             </Text>
           </TouchableOpacity>
 
