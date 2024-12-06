@@ -30,27 +30,18 @@ import { faEllipsis, faPeopleRoof, faChartLine, faFaceSmile, faComment, faCheck,
 import { imageUrl } from "@/utils/url";
 import Tag from "./ui/tag";
 import { MediaItem } from "./ui/carousel/render-media-item";
+import { User } from "@/types/User";
+import { processRawAttachment } from "@/utils/attachments";
 
 const { width } = Dimensions.get("window");
 
 interface InfluencerCardPropsType {
-  influencer: {
-    id: string;
-    name: string;
-    handle: string;
-    profilePic: string;
-    media: MediaItem[];
-    followers: number | string;
-    reach: number | string;
-    rating: number | string;
-    bio: string;
-    jobsCompleted: number | string;
-    successRate: number | string;
-  };
+  influencer: User;
   type: string;
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
   ToggleModal: () => void;
   ToggleMessageModal?: () => void;
+  setSelectedInfluencer?: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const InfluencerCard = (props: InfluencerCardPropsType) => {
@@ -122,11 +113,11 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         >
           <Avatar.Image
             size={50}
-            source={imageUrl(influencer.profilePic)}
+            source={imageUrl(influencer.profileImage)}
           />
           <View style={styles.nameContainer}>
             <Text style={styles.name}>{influencer.name}</Text>
-            <Text style={styles.handle}>{influencer.handle}</Text>
+            <Text style={styles.handle}>{influencer.socials?.[0] || 'influencer-handle'}</Text>
           </View>
           {props.type === "invitation" &&
             (isInvited ? (
@@ -162,6 +153,9 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           <Pressable
             onPress={() => {
               props.ToggleModal();
+              if (props?.setSelectedInfluencer) {
+                props.setSelectedInfluencer(props.influencer);
+              }
             }}
           >
             <FontAwesomeIcon
@@ -173,7 +167,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         </View>
 
         <CarouselNative
-          data={influencer.media}
+          data={influencer.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
           onImagePress={onImagePress}
         />
 
@@ -189,7 +183,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.followers))}
+                  {convertToKUnits(Number(influencer.backend?.followers))}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -199,7 +193,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.reach))}
+                  {convertToKUnits(Number(influencer.backend?.reach))}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -209,7 +203,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {influencer.rating}
+                  {influencer.backend?.rating}
                 </Text>
               </View>
             </View>
@@ -224,7 +218,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
 
           <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
             <Text numberOfLines={bioExpanded ? undefined : 2} style={styles.bio}>
-              {influencer.bio}
+              {influencer.profile?.content?.about}
             </Text>
           </TouchableOpacity>
 
@@ -234,8 +228,9 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             }}
           >
             <Text style={styles.jobHistory}>
-              {influencer.jobsCompleted} Jobs completed ({influencer.successRate}{" "}
-              success rate)
+              {/* {influencer.jobsCompleted} Jobs completed ({influencer.successRate}{" "}
+              success rate) */}
+              10 Jobs completed 100% success rate
             </Text>
           </TouchableOpacity>
         </View>

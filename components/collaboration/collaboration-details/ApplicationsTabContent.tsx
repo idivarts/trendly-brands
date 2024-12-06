@@ -97,19 +97,7 @@ const ApplicationsTabContent = (props: any) => {
         renderItem={({ item }) => (
           <InfluencerCard
             type="application"
-            influencer={{
-              id: item.id,
-              profilePic: item.profileImage,
-              name: item.name,
-              handle: item.handle || "@handle",
-              media: item.attachments.map((media: any) => processRawAttachment(media)),
-              followers: item.backend ? item.backend.followers : 1000,
-              reach: item.backend ? item.backend.reach : 10000,
-              rating: item.backend ? item.backend.rating : 4.5,
-              bio: "I am a content creator",
-              jobsCompleted: 12,
-              successRate: 100,
-            }}
+            influencer={item}
             ToggleModal={() => {
               setIsVisible(true);
               setSelectedApplication({
