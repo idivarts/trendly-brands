@@ -158,6 +158,10 @@ const ExploreInfluencers = () => {
             type="explore"
             ToggleModal={ToggleModal}
             influencer={item}
+            openProfile={(influencer) => {
+              setSelectedInfluencer(influencer);
+              bottomSheetModalRef.current?.present();
+            }}
             setSelectedInfluencer={setSelectedInfluencer}
           />
         )}

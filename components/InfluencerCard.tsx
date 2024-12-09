@@ -43,6 +43,7 @@ interface InfluencerCardPropsType {
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
   ToggleModal: () => void;
   ToggleMessageModal?: () => void;
+  openProfile?: (influencer: User) => void;
   setSelectedInfluencer?: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
@@ -115,14 +116,30 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             styles.header,
           ]}
         >
-          <Avatar.Image
-            size={50}
-            source={imageUrl(influencer.profileImage)}
-          />
-          <View style={styles.nameContainer}>
+          <Pressable
+            onPress={() => {
+              if (props.openProfile) {
+                props.openProfile(influencer);
+              }
+            }}
+          >
+            <Avatar.Image
+              size={50}
+              source={imageUrl(influencer.profileImage)}
+
+            />
+          </Pressable>
+          <Pressable
+            style={styles.nameContainer}
+            onPress={() => {
+              if (props.openProfile) {
+                props.openProfile(influencer);
+              }
+            }}
+          >
             <Text style={styles.name}>{influencer.name}</Text>
             <Text style={styles.handle}>{influencer.socials?.[0] || 'influencer-handle'}</Text>
-          </View>
+          </Pressable>
           {props.type === "invitation" &&
             (isInvited ? (
               <Tag
@@ -220,21 +237,31 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             </View>
           </View>
 
-          <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
-            <Text numberOfLines={bioExpanded ? undefined : 2} style={styles.bio}>
+          <Pressable
+            onPress={() => {
+              if (props.openProfile) {
+                props.openProfile(influencer);
+              }
+            }}
+          >
+            <Text>
               <RenderHTML
                 contentWidth={screenWidth}
                 source={{
                   html:
-                    truncateText(influencer?.profile?.content?.about as string, 110) ||
+                    truncateText(influencer?.profile?.content?.about as string, 160) ||
                     "<p>No content available.</p>",
                 }}
-                tagsStyles={{
-                  p: { color: Colors(theme).text, fontSize: 16 },
+                defaultTextProps={{
+                  style: {
+                    color: Colors(theme).text,
+                    fontSize: 16,
+                    lineHeight: 22,
+                  },
                 }}
               />
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <TouchableOpacity
             onPress={() => {
