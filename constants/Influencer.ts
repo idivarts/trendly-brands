@@ -21,7 +21,6 @@ export const DUMMY_INFLUENCER: IUsers = {
     category: ["Fashion", "Lifestyle"],
     attachments: [
       {
-        id: 1,
         type: "image",
         imageUrl:
           "https://www.pngkey.com/png/full/114-1149878_setting-user-avatar-in-specific-size-without-breaking.png",

@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList } from "react-native";
-import {
-  ActivityIndicator,
-} from "react-native-paper";
+import { View, FlatList, ActivityIndicator } from "react-native";
 
 import { useTheme } from "@react-navigation/native";
 import InfluencerCard from "@/components/InfluencerCard";
@@ -11,7 +8,6 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import BottomSheetActions from "@/components/BottomSheetActions";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
-import { processRawAttachment } from "@/utils/attachments";
 import { useBreakpoints } from "@/hooks";
 
 const ApplicationsTabContent = (props: any) => {
@@ -75,7 +71,7 @@ const ApplicationsTabContent = (props: any) => {
           gap: 40,
         }}
       >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={Colors(theme).primary} />
       </View>
     );
   }
@@ -97,19 +93,7 @@ const ApplicationsTabContent = (props: any) => {
         renderItem={({ item }) => (
           <InfluencerCard
             type="application"
-            influencer={{
-              id: item.id,
-              profilePic: item.profileImage,
-              name: item.name,
-              handle: item.handle || "@handle",
-              media: item.attachments.map((media: any) => processRawAttachment(media)),
-              followers: item.backend ? item.backend.followers : 1000,
-              reach: item.backend ? item.backend.reach : 10000,
-              rating: item.backend ? item.backend.rating : 4.5,
-              bio: "I am a content creator",
-              jobsCompleted: 12,
-              successRate: 100,
-            }}
+            influencer={item}
             ToggleModal={() => {
               setIsVisible(true);
               setSelectedApplication({
