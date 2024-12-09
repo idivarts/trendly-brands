@@ -22,6 +22,8 @@ import {
 } from "firebase/firestore";
 import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
 import { List } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSharedValue } from "react-native-reanimated";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,6 +48,14 @@ const ExploreInfluencers = () => {
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+
+  const insets = useSafeAreaInsets();
+  const containerOffset = useSharedValue({
+    top: insets.top,
+    bottom: insets.bottom,
+    left: insets.left,
+    right: insets.right,
+  });
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -254,6 +264,9 @@ const ExploreInfluencers = () => {
         snapPoints={snapPoints}
         backdropComponent={renderBackdrop}
         enablePanDownToClose={true}
+        containerOffset={containerOffset}
+        topInset={insets.top}
+        bottomInset={insets.bottom}
       >
         <BottomSheetScrollView>
           <ProfileBottomSheet
