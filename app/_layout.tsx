@@ -6,7 +6,13 @@ import {
   useTheme,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack, useLocalSearchParams, usePathname, useRouter, useSegments } from "expo-router";
+import {
+  Stack,
+  useLocalSearchParams,
+  usePathname,
+  useRouter,
+  useSegments,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
@@ -27,6 +33,7 @@ import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-d
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import { queryParams } from "@/utils/url";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -64,21 +71,23 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-      <AuthContextProvider>
-        <FirebaseStorageContextProvider>
-          <NotificationContextProvider>
-            <CloudMessagingContextProvider>
-              <BrandContextProvider>
-                <CollaborationContextProvider>
-                  <AutocompleteDropdownContextProvider>
-                    <RootLayoutStack />
-                  </AutocompleteDropdownContextProvider>
-                </CollaborationContextProvider>
-              </BrandContextProvider>
-            </CloudMessagingContextProvider>
-          </NotificationContextProvider>
-        </FirebaseStorageContextProvider>
-      </AuthContextProvider>
+      <BottomSheetModalProvider>
+        <AuthContextProvider>
+          <FirebaseStorageContextProvider>
+            <NotificationContextProvider>
+              <CloudMessagingContextProvider>
+                <BrandContextProvider>
+                  <CollaborationContextProvider>
+                    <AutocompleteDropdownContextProvider>
+                      <RootLayoutStack />
+                    </AutocompleteDropdownContextProvider>
+                  </CollaborationContextProvider>
+                </BrandContextProvider>
+              </CloudMessagingContextProvider>
+            </NotificationContextProvider>
+          </FirebaseStorageContextProvider>
+        </AuthContextProvider>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }
@@ -119,9 +128,7 @@ const RootLayoutStack = () => {
 
   return (
     <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Provider
-        theme={CustomPaperTheme(theme)}
-      >
+      <Provider theme={CustomPaperTheme(theme)}>
         <Stack
           screenOptions={{
             animation: "ios",
@@ -143,9 +150,7 @@ const RootLayoutStack = () => {
               gestureEnabled: true,
             }}
           />
-          <Stack.Screen
-            name="(modal)/edit-collaboration"
-          />
+          <Stack.Screen name="(modal)/edit-collaboration" />
         </Stack>
       </Provider>
     </ThemeProvider>

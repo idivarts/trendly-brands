@@ -88,10 +88,6 @@ export const stylesFn = (theme: Theme) =>
       flexDirection: "row",
       justifyContent: "space-between",
     },
-    bio: {
-      fontSize: 14,
-      color: Colors(theme).text,
-    },
     jobHistory: {
       color: Colors(theme).primary,
       textDecorationLine: "underline",

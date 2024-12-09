@@ -30,27 +30,21 @@ import { faEllipsis, faPeopleRoof, faChartLine, faFaceSmile, faComment, faCheck,
 import { imageUrl } from "@/utils/url";
 import Tag from "./ui/tag";
 import { MediaItem } from "./ui/carousel/render-media-item";
+import { User } from "@/types/User";
+import { processRawAttachment } from "@/utils/attachments";
+import RenderHTML from "react-native-render-html";
+import { truncateText } from "@/utils/text";
 
 const { width } = Dimensions.get("window");
 
 interface InfluencerCardPropsType {
-  influencer: {
-    id: string;
-    name: string;
-    handle: string;
-    profilePic: string;
-    media: MediaItem[];
-    followers: number | string;
-    reach: number | string;
-    rating: number | string;
-    bio: string;
-    jobsCompleted: number | string;
-    successRate: number | string;
-  };
+  influencer: User;
   type: string;
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
   ToggleModal: () => void;
   ToggleMessageModal?: () => void;
+  openProfile?: (influencer: User) => void;
+  setSelectedInfluencer?: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const InfluencerCard = (props: InfluencerCardPropsType) => {
@@ -67,6 +61,8 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const influencer = props.influencer;
   const theme = useTheme();
   const styles = stylesFn(theme);
+
+  const screenWidth = Dimensions.get("window").width;
 
   const pinchHandler =
     useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
@@ -120,14 +116,30 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             styles.header,
           ]}
         >
-          <Avatar.Image
-            size={50}
-            source={imageUrl(influencer.profilePic)}
-          />
-          <View style={styles.nameContainer}>
+          <Pressable
+            onPress={() => {
+              if (props.openProfile) {
+                props.openProfile(influencer);
+              }
+            }}
+          >
+            <Avatar.Image
+              size={50}
+              source={imageUrl(influencer.profileImage)}
+
+            />
+          </Pressable>
+          <Pressable
+            style={styles.nameContainer}
+            onPress={() => {
+              if (props.openProfile) {
+                props.openProfile(influencer);
+              }
+            }}
+          >
             <Text style={styles.name}>{influencer.name}</Text>
-            <Text style={styles.handle}>{influencer.handle}</Text>
-          </View>
+            <Text style={styles.handle}>{influencer.socials?.[0] || 'influencer-handle'}</Text>
+          </Pressable>
           {props.type === "invitation" &&
             (isInvited ? (
               <Tag
@@ -162,6 +174,9 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           <Pressable
             onPress={() => {
               props.ToggleModal();
+              if (props?.setSelectedInfluencer) {
+                props.setSelectedInfluencer(props.influencer);
+              }
             }}
           >
             <FontAwesomeIcon
@@ -173,7 +188,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         </View>
 
         <CarouselNative
-          data={influencer.media}
+          data={influencer.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
           onImagePress={onImagePress}
         />
 
@@ -189,7 +204,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.followers))}
+                  {convertToKUnits(Number(influencer.backend?.followers))}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -199,7 +214,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.reach))}
+                  {convertToKUnits(Number(influencer.backend?.reach))}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -209,7 +224,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {influencer.rating}
+                  {influencer.backend?.rating}
                 </Text>
               </View>
             </View>
@@ -222,11 +237,31 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             </View>
           </View>
 
-          <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
-            <Text numberOfLines={bioExpanded ? undefined : 2} style={styles.bio}>
-              {influencer.bio}
+          <Pressable
+            onPress={() => {
+              if (props.openProfile) {
+                props.openProfile(influencer);
+              }
+            }}
+          >
+            <Text>
+              <RenderHTML
+                contentWidth={screenWidth}
+                source={{
+                  html:
+                    truncateText(influencer?.profile?.content?.about as string, 160) ||
+                    "<p>No content available.</p>",
+                }}
+                defaultTextProps={{
+                  style: {
+                    color: Colors(theme).text,
+                    fontSize: 16,
+                    lineHeight: 22,
+                  },
+                }}
+              />
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <TouchableOpacity
             onPress={() => {
@@ -234,8 +269,9 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             }}
           >
             <Text style={styles.jobHistory}>
-              {influencer.jobsCompleted} Jobs completed ({influencer.successRate}{" "}
-              success rate)
+              {/* {influencer.jobsCompleted} Jobs completed ({influencer.successRate}{" "}
+              success rate) */}
+              10 Jobs completed 100% success rate
             </Text>
           </TouchableOpacity>
         </View>
