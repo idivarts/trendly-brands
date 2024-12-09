@@ -7,7 +7,7 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
-import { faClose } from "@fortawesome/free-solid-svg-icons";
+import { faCheckDouble, faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 import { stylesFn } from "@/styles/FilterModal.styles";
@@ -131,6 +131,13 @@ const CollaborationFilter = ({
             <View style={styles.chipContainer}>
               {influencerType.map((category, index) => (
                 <Chip
+                  icon={() => localInfluencerType === category ? (
+                    <FontAwesomeIcon
+                      color={Colors(theme).text}
+                      icon={faCheckDouble}
+                      size={14}
+                    />
+                  ) : null}
                   key={index}
                   selected={localInfluencerType === category}
                   onPress={() => setLocalInfluencerType(category)}
