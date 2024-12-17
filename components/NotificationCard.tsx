@@ -14,10 +14,6 @@ interface NotificationCardProps {
   };
   description: string;
   isRead: boolean;
-  onCreateGroup: (
-    collaborationId: string,
-    userId: string,
-  ) => void;
   onMarkAsRead: () => void;
   time: number;
   title: string;
@@ -28,7 +24,6 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   data,
   description,
   isRead,
-  onCreateGroup,
   onMarkAsRead,
   time,
   title,
@@ -81,22 +76,6 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
         </View>
       </View>
       <View style={styles.actions}>
-        {
-          data.userId && !isRead && (
-            <Button
-              mode="contained"
-              onPress={() => {
-                onCreateGroup(
-                  data.collaborationId as string,
-                  data.userId as string
-                );
-                onMarkAsRead();
-              }}
-            >
-              Create Group
-            </Button>
-          )
-        }
         {action && (
           <Button
             mode="contained"

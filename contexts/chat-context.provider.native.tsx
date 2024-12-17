@@ -5,25 +5,23 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { DefaultGenerics, StreamChat } from "stream-chat";
+import { Channel, DefaultGenerics, StreamChat } from "stream-chat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
 import { useTheme } from "@react-navigation/native";
 import { useStreamTheme } from "@/hooks";
 
 const streamClient = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
+
 interface ChatContextProps {
   createGroupWithMembers: (
-    client: StreamChat<DefaultGenerics>,
     groupName: string,
     members: string[],
-  ) => Promise<void>;
-  client: StreamChat<DefaultGenerics> | null;
+  ) => Promise<Channel>;
 }
 
 const ChatContext = createContext<ChatContextProps>({
-  createGroupWithMembers: async () => { },
-  client: null,
+  createGroupWithMembers: async () => Promise.resolve({} as Channel),
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -47,22 +45,42 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     manager: user,
   } = useAuthContext();
 
-  useEffect(() => {
-    const connect = async () => {
-      await streamClient.connectUser(
-        {
-          id: user?.id as string,
-          name: user?.name as string,
-          image: user?.profileImage as string || '',
-        },
-        streamClient.devToken(user?.id as string),
-      ).then(() => {
-        setClient(streamClient);
-        setIsReady(true);
-      });
-    }
+  const connect = async (
+    streamToken: string,
+  ) => {
+    await streamClient.connectUser(
+      {
+        id: user?.id as string,
+        name: user?.name as string,
+        image: user?.profileImage as string || '',
+      },
+      streamToken,
+    ).then(() => {
+      setClient(streamClient);
+      setIsReady(true);
+    });
+  }
 
-    connect();
+  const connectUser = async () => {
+    const response = await fetch('https://be.trendly.pro/api/v1/chat/connect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user?.id}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.token !== '') {
+      await connect(data.token);
+    }
+  }
+
+  useEffect(() => {
+    if (user?.id) {
+      connectUser();
+    }
 
     return () => {
       if (isReady && client) {
@@ -73,21 +91,24 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   }, [user?.id]);
 
   const createGroupWithMembers = async (
-    client: StreamChat<DefaultGenerics>,
     groupName: string,
     members: string[],
-  ) => {
-    const channel = client.channel(
-      'messaging',
-      groupName.toLowerCase().replace(/\s+/g, '-'),
-      {
-        name: groupName,
-        members,
+  ): Promise<Channel> => {
+    const response = await fetch('https://be.trendly.pro/api/v1/chat/channel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user?.id}`,
       },
-    );
+      body: JSON.stringify({
+        name: groupName,
+        userIds: members,
+      }),
+    });
 
-    await channel.create();
-    await channel.watch();
+    const data = await response.json();
+
+    return data.channel;
   };
 
   return (
@@ -96,7 +117,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         <ChatContext.Provider
           value={{
             createGroupWithMembers,
-            client,
           }}
         >
           {children}

@@ -44,7 +44,6 @@ const BottomSheetActions = ({
 
   const {
     createGroupWithMembers,
-    client,
   } = useChatContext();
   const {
     createNotification,
@@ -75,12 +74,10 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        // @ts-ignore
-        createGroupWithMembers(client, data.collaboration.name, [
-          // @ts-ignore
-          client.user?.id as string,
-          cardId.influencerID,
-        ]).then(() => {
+        createGroupWithMembers(
+          data.collaboration.name,
+          [cardId.influencerID]
+        ).then((channel) => {
           createNotification(
             cardId.influencerID,
             {
@@ -95,6 +92,8 @@ const BottomSheetActions = ({
             },
             "users"
           );
+
+          // Redirect to the chat screen - channel
         });
 
         handleClose();
