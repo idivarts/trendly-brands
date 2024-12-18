@@ -18,10 +18,12 @@ interface ChatContextProps {
     groupName: string,
     members: string[],
   ) => Promise<Channel>;
+  connectUser: () => void;
 }
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => Promise.resolve({} as Channel),
+  connectUser: async () => { },
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -117,6 +119,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         <ChatContext.Provider
           value={{
             createGroupWithMembers,
+            connectUser,
           }}
         >
           {children}

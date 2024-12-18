@@ -44,6 +44,7 @@ const BottomSheetActions = ({
 
   const {
     createGroupWithMembers,
+    connectUser,
   } = useChatContext();
   const {
     createNotification,
@@ -78,6 +79,8 @@ const BottomSheetActions = ({
           data.collaboration.name,
           [cardId.influencerID]
         ).then((channel) => {
+          connectUser();
+
           createNotification(
             cardId.influencerID,
             {
@@ -93,7 +96,7 @@ const BottomSheetActions = ({
             "users"
           );
 
-          // Redirect to the chat screen - channel
+          router.navigate(`/channel/${channel.cid}`);
         });
 
         handleClose();
