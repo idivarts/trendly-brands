@@ -4,6 +4,9 @@ import stylesFn from "@/styles/tab1.styles";
 import { useTheme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
 import RenderMediaItem, { MediaItem } from "./render-media-item";
+import { View } from "@/components/theme/Themed";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 
 interface CarouselWebProps {
   data: MediaItem[];
@@ -38,21 +41,47 @@ const CarouselWeb: React.FC<CarouselWebProps> = ({
         },
       ]}
       paginationStyle={styles.pagination}
+      pagingEnabled
+      showsButtons={data.length > 1}
+      nextButton={
+        <View
+          style={styles.buttonWrapper}
+        >
+          <FontAwesomeIcon
+            icon={faChevronRight}
+            size={20}
+            color={Colors(theme).black}
+          />
+        </View>
+      }
+      prevButton={
+        <View
+          style={styles.buttonWrapper}
+        >
+          <FontAwesomeIcon
+            icon={faChevronLeft}
+            size={20}
+            color={Colors(theme).black}
+          />
+        </View>
+      }
     >
-      {data.map((
-        item: MediaItem,
-        index: number,
-      ) => (
-        <RenderMediaItem
-          handleImagePress={handleImagePress}
-          height={560}
-          index={index}
-          item={item}
-          key={item.url || index}
-          videoRefs={videoRefs}
-        />
-      ))}
-    </Swiper>
+      {
+        data.map((
+          item: MediaItem,
+          index: number,
+        ) => (
+          <RenderMediaItem
+            handleImagePress={handleImagePress}
+            height={560}
+            index={index}
+            item={item}
+            key={item.url || index}
+            videoRefs={videoRefs}
+          />
+        ))
+      }
+    </Swiper >
   );
 };
 

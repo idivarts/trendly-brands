@@ -47,6 +47,12 @@ const styles = (theme: Theme) =>
     pagination: {
       bottom: 30,
     },
+    buttonWrapper: {
+      backgroundColor: Colors(theme).white,
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+    },
     dotStyle: {
       width: 10,
       height: 10,
