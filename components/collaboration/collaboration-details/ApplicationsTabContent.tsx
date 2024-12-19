@@ -107,7 +107,7 @@ const ApplicationsTabContent = (props: any) => {
         keyExtractor={(item, index) => item.id + index}
         style={{
           paddingBottom: 16,
-          width: xl ? 768 : '100%',
+          width: xl ? 640 : '100%',
           marginHorizontal: "auto",
         }}
         ItemSeparatorComponent={
