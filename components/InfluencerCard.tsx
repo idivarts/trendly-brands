@@ -3,60 +3,41 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Modal,
   Pressable,
 } from "react-native";
 import { Card, Avatar } from "react-native-paper";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { useTheme } from "@react-navigation/native";
-import {
-  PinchGestureHandler,
-  PinchGestureHandlerGestureEvent,
-} from "react-native-gesture-handler";
-import Animated, {
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
 import Colors from "@/constants/Colors";
-import CarouselNative from "./ui/carousel/carousel";
 import { convertToKUnits } from "@/utils/conversion";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faEllipsis, faPeopleRoof, faChartLine, faFaceSmile, faComment, faCheck, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { imageUrl } from "@/utils/url";
 import Tag from "./ui/tag";
-import { MediaItem } from "./ui/carousel/render-media-item";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import RenderHTML from "react-native-render-html";
 import { truncateText } from "@/utils/text";
-
-const { width } = Dimensions.get("window");
+import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 
 interface InfluencerCardPropsType {
-  influencer: User;
-  type: string;
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
-  ToggleModal: () => void;
-  ToggleMessageModal?: () => void;
+  influencer: User;
   openProfile?: (influencer: User) => void;
   setSelectedInfluencer?: React.Dispatch<React.SetStateAction<User | null>>;
+  ToggleMessageModal?: () => void;
+  ToggleModal: () => void;
+  type: string;
 }
 
 const InfluencerCard = (props: InfluencerCardPropsType) => {
-  const [bioExpanded, setBioExpanded] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState(false);
   const [isInvited, setIsInvited] = useState(false);
-
-  // Animation values for zoom
-  const scale = useSharedValue(1);
-  const focalX = useSharedValue(0);
-  const focalY = useSharedValue(0);
 
   const influencer = props.influencer;
   const theme = useTheme();
@@ -64,37 +45,9 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
 
   const screenWidth = Dimensions.get("window").width;
 
-  const pinchHandler =
-    useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
-      onStart: (event) => {
-        focalX.value = event.focalX;
-        focalY.value = event.focalY;
-      },
-      onActive: (event) => {
-        scale.value = event.scale;
-      },
-      onEnd: () => {
-        if (scale.value < 1) {
-          scale.value = withSpring(1);
-        }
-      },
-    });
-
-  const animatedImageStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: focalX.value },
-        { translateY: focalY.value },
-        { scale: scale.value },
-        { translateX: -focalX.value },
-        { translateY: -focalY.value },
-      ],
-    };
-  });
-
   const onImagePress = (data: MediaItem) => {
-    setSelectedImage(data.url);
-    setIsZoomed(true);
+    setPreviewImageUrl(data.url);
+    setPreviewImage(true);
   }
 
   useEffect(() => {
@@ -187,9 +140,10 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           </Pressable>
         </View>
 
-        <CarouselNative
+        <Carousel
           data={influencer.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
           onImagePress={onImagePress}
+          theme={theme}
         />
 
         <View
@@ -277,52 +231,14 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         </View>
       </Card>
 
-      <Modal visible={isZoomed} transparent={true} animationType="fade">
-        <View style={additionalStyles.modalContainer}>
-          <TouchableOpacity
-            style={additionalStyles.closeButton}
-            onPress={() => {
-              setIsZoomed(false);
-              scale.value = 1;
-            }}
-          >
-            <Text style={additionalStyles.closeButtonText}>×</Text>
-          </TouchableOpacity>
-          <PinchGestureHandler onGestureEvent={pinchHandler}>
-            <Animated.Image
-              source={imageUrl(selectedImage || "")}
-              style={[additionalStyles.zoomedImage, animatedImageStyle]}
-              resizeMode="contain"
-            />
-          </PinchGestureHandler>
-        </View>
-      </Modal>
+      <AssetPreviewModal
+        previewImage={previewImage}
+        setPreviewImage={setPreviewImage}
+        previewImageUrl={previewImageUrl}
+        theme={theme}
+      />
     </>
   );
 };
-
-const additionalStyles = StyleSheet.create({
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  zoomedImage: {
-    width: width,
-    height: width,
-  },
-  closeButton: {
-    position: "absolute",
-    top: 40,
-    right: 20,
-    zIndex: 1,
-    padding: 10,
-  },
-  closeButtonText: {
-    color: "white",
-    fontSize: 36,
-  },
-});
 
 export default InfluencerCard;
