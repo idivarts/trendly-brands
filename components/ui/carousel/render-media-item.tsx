@@ -106,8 +106,10 @@ const RenderMediaItem: React.FC<RenderMediaItemProps> = ({
       ]}
       resizeMode={ResizeMode.COVER}
       isLooping={false}
-      shouldPlay={false}
+      shouldPlay
       useNativeControls
+      usePoster
+      posterSource={imageUrl(require("@/assets/images/placeholder-image.jpg"))}
       onError={(error) => console.error("Video Error:", error)}
       onLoadStart={() => setIsLoading(true)}
       onLoad={() => setIsLoading(false)}

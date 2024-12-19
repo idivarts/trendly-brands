@@ -22,6 +22,7 @@ const useInfluencers = ({
     const influencerRef = collection(FirestoreDB, "users");
     const influencersQuery = query(
       influencerRef,
+      where("profile.completionPercentage", ">=", 60),
       orderBy("name"),
       limit(PAGE_SIZE)
     );
@@ -54,6 +55,7 @@ const useInfluencers = ({
     const influencerRef = collection(FirestoreDB, "users");
     const influencersQuery = query(
       influencerRef,
+      where("profile.completionPercentage", ">=", 60),
       orderBy("name"),
       startAfter(lastVisible),
       limit(PAGE_SIZE)
