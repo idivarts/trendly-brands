@@ -8,16 +8,11 @@ import { View } from "../theme/Themed";
 
 interface NotificationsProps {
   notifications: Notification[];
-  onCreateGroup: (
-    collaborationId: string,
-    userId: string,
-  ) => void;
   onMarkAsRead: (notificationId: string) => void;
 }
 
 const Notifications: React.FC<NotificationsProps> = ({
   notifications,
-  onCreateGroup,
   onMarkAsRead,
 }) => {
   const theme = useTheme();
@@ -52,7 +47,6 @@ const Notifications: React.FC<NotificationsProps> = ({
                   description={item.description}
                   isRead={item.isRead}
                   key={item.id}
-                  onCreateGroup={onCreateGroup}
                   onMarkAsRead={() => onMarkAsRead(item.id)}
                   time={item.timeStamp}
                   title={item.title}

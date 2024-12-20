@@ -204,7 +204,7 @@ const ExploreInfluencers = () => {
           </View>
         }
         style={{
-          width: xl ? 768 : '100%',
+          width: xl ? 640 : '100%',
           marginHorizontal: "auto",
         }}
       />

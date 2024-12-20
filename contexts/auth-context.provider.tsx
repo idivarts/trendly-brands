@@ -113,6 +113,14 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
       setSession(managerCredential.user.uid);
 
+      await fetch('https://be.trendly.pro/api/v1/chat/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${managerCredential.user.uid}`,
+        },
+      });
+
       await analyticsLogEvent("signed_in", {
         id: managerCredential.user.uid,
         name: managerCredential.user.displayName,
@@ -164,6 +172,13 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           if (userCredential.user.emailVerified) {
             router.replace("/(onboarding)/onboarding-your-brand?firstBrand=true");
             setSession(userCredential.user.uid);
+            await fetch('https://be.trendly.pro/api/v1/chat/auth', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userCredential.user.uid}`,
+              },
+            });
           } else {
             setTimeout(checkVerification, 2000);
           }
