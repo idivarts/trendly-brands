@@ -1,21 +1,36 @@
-import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { useTheme } from "@react-navigation/native";
-import { BRAND_INDUSTRIES, INFLUENCER_CATEGORIES, INITIAL_BRAND_INDUSTRIES, INITIAL_INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
+import {
+  BRAND_INDUSTRIES,
+  INFLUENCER_CATEGORIES,
+  INITIAL_BRAND_INDUSTRIES,
+  INITIAL_INFLUENCER_CATEGORIES,
+} from "@/constants/ItemsList";
 import { useState } from "react";
 import { ScrollView } from "react-native";
 import TextInput from "../ui/text-input";
+import { View } from "../theme/Themed";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 
 const BrandProfile = () => {
   const theme = useTheme();
+  const [brandImage, setBrandImage] = useState("");
   const [brandProfile, setBrandProfile] = useState({
-    name: "",
     about: "",
-    website: "",
     brandIndustries: [] as string[],
+    image: "",
     influencerCategories: [] as string[],
+    name: "",
+    website: "",
   });
+
+  const handleImageUpload = (image: string) => {
+    setBrandProfile({
+      ...brandProfile,
+      image,
+    });
+  }
 
   return (
     <ScrollView
@@ -29,37 +44,48 @@ const BrandProfile = () => {
         gap: 32,
       }}
     >
-      <TextInput
-        label={"Brand Name"}
-        value={brandProfile.name}
-        onChangeText={(value) =>
-          setBrandProfile({
-            ...brandProfile,
-            name: value,
-          })
-        }
-      />
-      <TextInput
-        label={"About the Brand"}
-        value={brandProfile.about}
-        multiline
-        onChangeText={(value) =>
-          setBrandProfile({
-            ...brandProfile,
-            about: value,
-          })
-        }
-      />
-      <TextInput
-        label={"Website"}
-        value={brandProfile.website}
-        onChangeText={(value) =>
-          setBrandProfile({
-            ...brandProfile,
-            website: value,
-          })
-        }
-      />
+      {/* <ImageUpload
+        initialImage={brandProfile.image}
+        onUploadImage={handleImageUpload}
+        theme={theme}
+      /> */}
+      <View
+        style={{
+          gap: 16,
+        }}
+      >
+        <TextInput
+          label={"Brand Name"}
+          value={brandProfile.name}
+          onChangeText={(value) =>
+            setBrandProfile({
+              ...brandProfile,
+              name: value,
+            })
+          }
+        />
+        <TextInput
+          label={"About the Brand"}
+          value={brandProfile.about}
+          multiline
+          onChangeText={(value) =>
+            setBrandProfile({
+              ...brandProfile,
+              about: value,
+            })
+          }
+        />
+        <TextInput
+          label={"Website"}
+          value={brandProfile.website}
+          onChangeText={(value) =>
+            setBrandProfile({
+              ...brandProfile,
+              website: value,
+            })
+          }
+        />
+      </View>
       <ContentWrapper
         title="Brand Industry"
         description="Specifying the industry will help us match better with relevant brands."

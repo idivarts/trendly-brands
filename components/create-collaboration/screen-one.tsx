@@ -1,206 +1,223 @@
-import { Platform, Pressable, ScrollView } from "react-native";
-
-import { COLLAB_TYPES, PLATFORM_TYPES, PROMOTION_TYPES } from "@/constants/CreateCollaborationForm";
-import { Text, View } from "../theme/Themed";
-import { Paragraph, TextInput } from "react-native-paper";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-
-import stylesFn from "@/styles/modal/UploadModal.styles";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
-import Select, { SelectItem } from "../ui/select";
-import Button from "../ui/button";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import React from "react";
+import { Platform, ScrollView } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import { faDollarSign, faVideo } from "@fortawesome/free-solid-svg-icons";
+
+import { Collaboration } from "@/types/Collaboration";
+import { generateEmptyAssets } from "@/shared-uis/utils/profile";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { LANGUAGES } from "@/constants/ItemsList";
+import { MultiRangeSlider } from "@/shared-uis/components/multislider";
+import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
+import { processRawAttachment } from "@/utils/attachments";
+import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { SearchAdd } from "@/shared-uis/components/search-add";
+import { Selector } from "@/shared-uis/components/select/selector";
+import Button from "../ui/button";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
+import DragAndDropNative from "@/shared-uis/components/grid/native/DragAndDropNative";
+import DragAndDropWeb from "@/shared-uis/components/grid/web/DragAndDropWeb";
 import ScreenHeader from "../ui/screen-header";
+import stylesFn from "@/styles/create-collaboration/Screen.styles";
+import TextInput from "../ui/text-input";
+import ScreenLayout from "./screen-layout";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 
 interface ScreenOneProps {
-  type: "Add" | "Edit";
-  data: {
-    collaborationName: string;
-    aboutCollab: string;
-    budgetMin: string;
-    budgetMax: string;
-    numInfluencers: number;
-    promotionType: SelectItem[];
-    collabType: SelectItem[];
-    platform: SelectItem[];
-  };
+  attachments: any[];
+  collaboration: Partial<Collaboration>;
+  handleAssetsUpdateNative: (assets: NativeAssetItem[]) => void;
+  handleAssetsUpdateWeb: (assets: WebAssetItem[]) => void;
+  setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
-  setState: {
-    collaborationName: React.Dispatch<React.SetStateAction<string>>;
-    aboutCollab: React.Dispatch<React.SetStateAction<string>>;
-    budgetMin: React.Dispatch<React.SetStateAction<string>>;
-    budgetMax: React.Dispatch<React.SetStateAction<string>>;
-    numInfluencers: React.Dispatch<React.SetStateAction<number>>;
-    promotionType: React.Dispatch<React.SetStateAction<SelectItem[]>>;
-    collabType: React.Dispatch<React.SetStateAction<SelectItem[]>>;
-    platform: React.Dispatch<React.SetStateAction<SelectItem[]>>;
-  };
+  type: "Add" | "Edit";
 }
 
 const ScreenOne: React.FC<ScreenOneProps> = ({
-  type,
-  data,
+  attachments,
+  collaboration,
+  handleAssetsUpdateNative,
+  handleAssetsUpdateWeb,
   setScreen,
-  setState,
+  setCollaboration,
+  type,
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
 
+  const items = [
+    { url: '', type: '' },
+    { url: '', type: '' },
+    { url: '', type: '' },
+    { url: '', type: '' },
+    { url: '', type: '' },
+    { url: '', type: '' },
+  ];
+
   return (
     <>
-      <ScrollView
-        contentContainerStyle={{
-          paddingVertical: 16,
-          gap: 16,
-        }}
-        style={styles.container}
+      <ScreenLayout
+        screen={1}
+        setScreen={setScreen}
+        type={type}
       >
-        <ScreenHeader
-          title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
-          hideAction={(type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
-        />
+        {
+          Platform.OS === 'web' ? (
+            <DragAndDropWeb
+              items={attachments?.map((attachment, index) => {
+                return {
+                  ...processRawAttachment(attachment),
+                  id: index.toString(),
+                }
+              }) || items.map((item, index) => {
+                return {
+                  ...item,
+                  id: index.toString(),
+                }
+              })}
+              onUploadAsset={handleAssetsUpdateWeb}
+            />
+          ) : (
+            <DragAndDropNative
+              items={
+                generateEmptyAssets(attachments as any, items).map((item, index) => {
+                  return {
+                    ...item,
+                    id: index,
+                  }
+                })
+              }
+              onItemsUpdate={handleAssetsUpdateNative}
+            />
+          )
+        }
 
         <TextInput
           label="Collaboration Name"
           mode="outlined"
-          onChangeText={(text) => setState.collaborationName(text)}
-          style={styles.input}
-          textColor={Colors(theme).text}
-          theme={{
-            colors: {
-              primary: Colors(theme).primary,
-              placeholder: Colors(theme).text,
-              text: Colors(theme).text,
-            },
+          onChangeText={(text) => {
+            setCollaboration({
+              ...collaboration,
+              name: text,
+            });
           }}
-          value={data.collaborationName}
+          value={collaboration.name}
         />
         <TextInput
           label="About this Collaboration"
           mode="outlined"
           // multiline
-          onChangeText={(text) => setState.aboutCollab(text)}
-          style={styles.input}
-          textColor={Colors(theme).text}
-          value={data.aboutCollab}
+          onChangeText={(text) => {
+            setCollaboration({
+              ...collaboration,
+              description: text,
+            });
+          }}
+          value={collaboration.description}
         />
-        <View style={styles.budgetContainer}>
-          <TextInput
-            label="Budget Min"
-            mode="outlined"
-            onChangeText={(text) => setState.budgetMin(text)}
-            style={styles.budgetInput}
-            textColor={Colors(theme).text}
-            value={data.budgetMin}
-          />
-          <TextInput
-            label="Budget Max"
-            mode="outlined"
-            onChangeText={(text) => setState.budgetMax(text)}
-            style={styles.budgetInput}
-            textColor={Colors(theme).text}
-            value={data.budgetMax}
-          />
-        </View>
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 16,
-            alignItems: "center",
-            justifyContent: "space-between",
+        <ContentWrapper
+          theme={theme}
+          title="Promotion Type"
+          titleStyle={{
+            fontSize: 16,
           }}
         >
-          <Paragraph style={styles.paragraph}>
-            Number of Influencers Involved:
-          </Paragraph>
-          <View style={styles.counter}>
-            <Pressable
-              onPress={() => setState.numInfluencers(Math.max(1, data.numInfluencers - 1))}
-              style={styles.iconButton}
-
+          <Selector
+            options={[
+              {
+                icon: faVideo,
+                label: 'Barter Collab',
+                value: 'Barter Collab',
+              },
+              {
+                icon: faDollarSign,
+                label: 'Paid Collab',
+                value: 'Paid Collab',
+              },
+            ]}
+            onSelect={(value) => {
+              setCollaboration({
+                ...collaboration,
+                promotionType: value as PromotionType,
+              });
+            }}
+            selectedValue={collaboration.promotionType}
+            theme={theme}
+          />
+        </ContentWrapper>
+        {
+          collaboration.promotionType === 'Paid Collab' && (
+            <ContentWrapper
+              rightText={`Rs. ${collaboration.budget?.min || 0}-${collaboration.budget?.max || 10000}`}
+              theme={theme}
+              title="Collaboration Budget"
+              titleStyle={{
+                fontSize: 16,
+              }}
             >
-              <FontAwesomeIcon
-                icon={faMinus}
-                color={Colors(theme).white}
-              />
-            </Pressable>
-            <View
-              style={styles.iconButtonContent}
-            >
-              <Text
-                style={{
-                  color: Colors(theme).primary,
+              <MultiRangeSlider
+                containerStyle={{
+                  paddingHorizontal: 8,
                 }}
-              >
-                {data.numInfluencers}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => setState.numInfluencers(data.numInfluencers + 1)}
-              style={styles.iconButton}
-            >
-              <FontAwesomeIcon
-                icon={faPlus}
-                color={Colors(theme).white}
+                maxValue={10000}
+                minValue={0}
+                step={100}
+                sliderLength={352}
+                theme={theme}
+                onValuesChange={(values) => {
+                  setCollaboration({
+                    ...collaboration,
+                    budget: {
+                      min: values[0],
+                      max: values[1],
+                    },
+                  });
+                }}
+                values={[collaboration.budget?.min || 0, collaboration.budget?.max || 10000]}
               />
-            </Pressable>
-          </View>
-        </View>
-        <View
-          style={styles.selectContainer}
+            </ContentWrapper>
+          )
+        }
+        <ContentWrapper
+          theme={theme}
+          title="Language"
+          titleStyle={{
+            fontSize: 16,
+          }}
         >
-          <Paragraph style={styles.paragraph}>Promotion Type:</Paragraph>
-          <Select
-            items={PROMOTION_TYPES}
-            onSelect={(selectedItems) => setState.promotionType(selectedItems)}
-            value={data.promotionType}
+          <MultiSelectExtendable
+            initialMultiselectItemsList={LANGUAGES}
+            buttonLabel="Add Language"
+            initialItemsList={includeSelectedItems(LANGUAGES, collaboration.preferredContentLanguage || [])}
+            onSelectedItemsChange={(value) => {
+              setCollaboration({
+                ...collaboration,
+                preferredContentLanguage: value,
+              });
+            }}
+            selectedItems={collaboration.preferredContentLanguage || []}
+            theme={theme}
           />
-        </View>
-        <View
-          style={styles.selectContainer}
-        >
-          <Paragraph style={styles.paragraph}>Collaboration Type:</Paragraph>
-          <Select
-            items={COLLAB_TYPES}
-            onSelect={(selectedItems) => setState.collabType(selectedItems)}
-            value={data.collabType}
-          />
-        </View>
-        <View
-          style={styles.selectContainer}
-        >
-          <Paragraph style={styles.paragraph}>Platform:</Paragraph>
-          <Select
-            items={PLATFORM_TYPES}
-            onSelect={(selectedItems) => setState.platform(selectedItems)}
-            value={data.platform}
-          />
-        </View>
+        </ContentWrapper>
         <Button
           mode="contained"
           onPress={() => {
-            if (
-              !data.collaborationName ||
-              !data.aboutCollab ||
-              !data.budgetMin ||
-              !data.budgetMax ||
-              !data.numInfluencers ||
-              !data.promotionType ||
-              !data.collabType ||
-              !data.platform
-            ) {
-              Toaster.error("Please fill all fields");
-              return;
-            }
+            // if (
+            //   !collaboration.name ||
+            //   !collaboration.description ||
+            //   !collaboration.promotionType ||
+            //   (collaboration.promotionType === 'Paid Collab' && (!collaboration.budget?.min || !collaboration.budget?.max)) ||
+            //   !collaboration.preferredContentLanguage
+            // ) {
+            //   Toaster.error("Please fill all fields");
+            //   return;
+            // }
             setScreen(2);
           }}
         >
           Next
         </Button>
-      </ScrollView>
+      </ScreenLayout>
     </>
   );
 };

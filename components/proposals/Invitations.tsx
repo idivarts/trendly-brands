@@ -160,7 +160,8 @@ const Invitations = () => {
                 }}
                 onOpenBottomSheet={openBottomSheet}
                 cardType="proposal"
-                collaborationType={item.collaborationType}
+                preferredContentLanguage={item.preferredContentLanguage}
+                contentFormat={item.contentFormat}
                 location={item.location}
                 managerId="managerId"
                 numberOfInfluencersNeeded={1}

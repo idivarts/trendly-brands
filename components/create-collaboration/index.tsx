@@ -4,38 +4,53 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
-import { SelectItem } from "@/components/ui/select";
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
-import ScreenThree from "@/components/create-collaboration/screen-three";
+import ScreenFour from "@/components/create-collaboration/screen-four";
 import { useCollaborationContext } from "@/contexts";
-import { SocialPlatform } from "@/shared-libs/firestore/trendly-pro/constants/social-platform";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { CollaborationType } from "@/shared-libs/firestore/trendly-pro/constants/collaboration-type";
+import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
+import ScreenThree from "./screen-three";
+import { Collaboration } from "@/types/Collaboration";
 
 const CreateCollaboration = () => {
-  const [collaborationName, setCollaborationName] = useState("");
-  const [aboutCollab, setAboutCollab] = useState("");
-  const [budgetMin, setBudgetMin] = useState("");
-  const [budgetMax, setBudgetMax] = useState("");
-  const [numInfluencers, setNumInfluencers] = useState(1);
-  const [promotionType, setPromotionType] = useState<SelectItem[]>([]);
-  const [collabType, setCollabType] = useState<SelectItem[]>([]);
-  const [platform, setPlatform] = useState([
-    {
-      label: "Instagram",
-      value: "Instagram",
+  const [collaboration, setCollaboration] = useState<Partial<Collaboration>>({
+    name: "",
+    brandId: "",
+    managerId: "",
+    attachments: [],
+    description: "",
+    promotionType: PromotionType.BARTER_COLLAB,
+    budget: {
+      min: 0,
+      max: 0,
     },
-  ]);
-  const params = useLocalSearchParams();
+    preferredContentLanguage: [],
+    contentFormat: [],
+    platform: [],
+    numberOfInfluencersNeeded: 0,
+    location: {
+      type: "",
+      name: "",
+      latlong: {
+        lat: 0,
+        long: 0,
+      },
+    },
+    externalLinks: [],
+    questionsToInfluencers: [],
+    status: "",
+    timeStamp: 0,
+    viewsLastHour: 0,
+    lastReviewedTimeStamp: 0,
+  });
+
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [nativeAssets, setNativeAssets] = useState<NativeAssetItem[]>([]);
+  const [webAssets, setWebAssets] = useState<WebAssetItem[]>([]);
+
   const [location, setLocation] = useState("Remote");
   const [formattedAddress, setFormattedAddress] = useState("");
-  const [links, setLinks] = useState<any[]>([]);
-  const [screen, setScreen] = useState(1);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [newLinkName, setNewLinkName] = useState("");
-  const { selectedBrand } = useBrandContext();
-  const [newLinkUrl, setNewLinkUrl] = useState("");
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -43,6 +58,9 @@ const CreateCollaboration = () => {
     longitudeDelta: 0.0421,
   });
 
+  const params = useLocalSearchParams();
+  const [screen, setScreen] = useState(1);
+  const { selectedBrand } = useBrandContext();
   const type = params.id ? "Edit" : "Add";
 
   const {
@@ -74,31 +92,9 @@ const CreateCollaboration = () => {
     id: string,
   ) => {
     const collaboration = await getCollaborationById(id);
-    setCollaborationName(collaboration.name);
-    setAboutCollab(collaboration.description || "");
-    setBudgetMin(collaboration.budget.min?.toString() || "");
-    setBudgetMax(collaboration.budget.max?.toString() || "");
-    setNumInfluencers(collaboration.numberOfInfluencersNeeded);
-    setPromotionType([
-      {
-        label: collaboration.promotionType,
-        value: collaboration.promotionType,
-      },
-    ]);
-    setCollabType([
-      {
-        label: collaboration.collaborationType,
-        value: collaboration.collaborationType,
-      },
-    ]);
-    setPlatform([
-      {
-        label: collaboration.platform,
-        value: collaboration.platform,
-      },
-    ]);
+    setCollaboration(collaboration);
+
     setLocation(collaboration.location.type);
-    setLinks(collaboration.externalLinks || []);
     if (collaboration.location.name && collaboration.location.latlong) {
       setFormattedAddress(collaboration.location.name);
       setMapRegion({
@@ -115,18 +111,6 @@ const CreateCollaboration = () => {
       fetchCollaboration(params.id);
     }
   }, []);
-
-  const addLink = () => {
-    if (!newLinkName || !newLinkUrl) {
-      Toaster.error("Please fill all fields");
-      return;
-    }
-
-    setLinks([...links, { name: newLinkName, url: newLinkUrl }]);
-    setNewLinkName("");
-    setNewLinkUrl("");
-    setIsModalVisible(false);
-  };
 
   const onFormattedAddressChange = (address: string) => {
     setFormattedAddress(address);
@@ -149,14 +133,13 @@ const CreateCollaboration = () => {
       }
 
       if (
-        !collaborationName ||
-        !aboutCollab ||
-        !budgetMin ||
-        !budgetMax ||
-        !promotionType ||
-        !collabType ||
-        !numInfluencers ||
-        !platform ||
+        !collaboration.name ||
+        !collaboration.description ||
+        !collaboration.promotionType ||
+        (collaboration.promotionType === PromotionType.PAID_COLLAB &&
+          (!collaboration.budget?.min || !collaboration.budget?.max)) ||
+        !collaboration.platform ||
+        !collaboration.contentFormat ||
         !location
       ) {
         Toaster.error("Please fill all fields");
@@ -164,7 +147,7 @@ const CreateCollaboration = () => {
       }
 
       let locationAddress = {};
-      if (location === "Physical" && mapRegion.latitude && mapRegion.longitude) {
+      if (location === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
         locationAddress = {
           name: formattedAddress,
           latlong: {
@@ -175,25 +158,15 @@ const CreateCollaboration = () => {
       }
 
       await handleCollaboration({
-        name: collaborationName,
+        ...collaboration,
         brandId: selectedBrand ? selectedBrand.id : "",
         managerId: AuthApp.currentUser?.uid as string,
-        description: aboutCollab,
-        timeStamp: Date.now(),
-        budget: {
-          min: Number(budgetMin),
-          max: Number(budgetMax),
-        },
-        promotionType: promotionType[0].value as PromotionType,
-        collaborationType: collabType[0].value as CollaborationType,
-        numberOfInfluencersNeeded: numInfluencers,
-        platform: platform[0].value as SocialPlatform,
         location: {
           type: location,
           ...locationAddress,
         },
-        externalLinks: links,
         status: "active",
+        timeStamp: Date.now(),
       }).then(() => {
         setScreen(3);
         setTimeout(() => {
@@ -206,31 +179,24 @@ const CreateCollaboration = () => {
     }
   };
 
+  const handleAssetsUpdateNative = (items: NativeAssetItem[]) => {
+    setNativeAssets(items);
+  }
+
+  const handleAssetsUpdateWeb = (items: WebAssetItem[]) => {
+    setWebAssets(items);
+  }
+
   if (screen === 1) {
     return (
       <ScreenOne
-        type={type}
-        data={{
-          collaborationName,
-          aboutCollab,
-          budgetMin,
-          budgetMax,
-          numInfluencers,
-          promotionType,
-          collabType,
-          platform,
-        }}
+        attachments={attachments}
+        collaboration={collaboration}
+        handleAssetsUpdateNative={handleAssetsUpdateNative}
+        handleAssetsUpdateWeb={handleAssetsUpdateWeb}
+        setCollaboration={setCollaboration}
         setScreen={setScreen}
-        setState={{
-          collaborationName: setCollaborationName,
-          aboutCollab: setAboutCollab,
-          budgetMin: setBudgetMin,
-          budgetMax: setBudgetMax,
-          numInfluencers: setNumInfluencers,
-          promotionType: setPromotionType,
-          collabType: setCollabType,
-          platform: setPlatform,
-        }}
+        type={type}
       />
     );
   }
@@ -238,27 +204,15 @@ const CreateCollaboration = () => {
   if (screen == 2) {
     return (
       <ScreenTwo
-        type={type}
-        setScreen={setScreen}
-        data={{
-          location,
-          links,
-          mapRegion,
-          newLinkName,
-          newLinkUrl,
+        collaboration={collaboration}
+        mapRegion={{
+          state: mapRegion,
+          setState: setMapRegion,
         }}
-        setState={{
-          location: setLocation,
-          links: setLinks,
-          mapRegion: setMapRegion,
-          newLinkName: setNewLinkName,
-          newLinkUrl: setNewLinkUrl,
-        }}
-        isModalVisible={isModalVisible}
-        setIsModalVisible={setIsModalVisible}
         onFormattedAddressChange={onFormattedAddressChange}
-        submitCollaboration={submitCollaboration}
-        addLink={addLink}
+        setCollaboration={setCollaboration}
+        setScreen={setScreen}
+        type={type}
       />
     );
   }
@@ -266,6 +220,18 @@ const CreateCollaboration = () => {
   if (screen === 3) {
     return (
       <ScreenThree
+        collaboration={collaboration}
+        setCollaboration={setCollaboration}
+        setScreen={setScreen}
+        submitCollaboration={submitCollaboration}
+        type={type}
+      />
+    );
+  }
+
+  if (screen === 3) {
+    return (
+      <ScreenFour
         type={type}
       />
     );
