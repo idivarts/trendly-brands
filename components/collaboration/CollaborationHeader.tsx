@@ -58,7 +58,7 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
           )
         }
         {
-          collaboration.collaborationType && (
+          collaboration.promotionType && (
             <Tag
               icon={() => (
                 <FontAwesomeIcon
@@ -68,7 +68,7 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
                 />
               )}
             >
-              {collaboration.collaborationType}
+              {collaboration.promotionType}
             </Tag>
           )
         }

@@ -22,7 +22,6 @@ const ProfileIcon = () => {
           <View
             style={{
               position: "relative",
-              marginRight: 15,
               justifyContent: "center",
               alignItems: "center",
             }}

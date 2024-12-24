@@ -272,6 +272,7 @@ const ExploreInfluencers = () => {
           <ProfileBottomSheet
             influencer={selectedInfluencer as User}
             theme={theme}
+            FireStoreDB={FirestoreDB}
             isBrandsApp={true}
           />
         </BottomSheetScrollView>
