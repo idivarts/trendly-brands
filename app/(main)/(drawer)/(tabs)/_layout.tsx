@@ -10,12 +10,10 @@ import { View } from "@/components/theme/Themed";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
   faComment,
-  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
-  faFileLines as faFileLinesSolid,
   faHouseUser as faHouseUserSolid,
   faPlusCircle,
   faStar as faStarSolid,
@@ -80,7 +78,6 @@ const TabLayout = () => {
               }}
             >
               <NotificationIcon />
-              <ProfileIcon />
             </View>
           ),
         }}
@@ -137,17 +134,10 @@ const TabLayout = () => {
         }}
       />
       <Tabs.Screen
-        name="contracts"
+        name="menu"
         options={{
-          title: "Contracts",
-          tabBarIcon: ({ color, focused }) => (
-            <FontAwesomeIcon
-              color={color}
-              icon={focused ? faFileLinesSolid : faFileLines}
-              size={24}
-            />
-          ),
-          headerRight: () => <NotificationIcon />,
+          title: "Profile",
+          tabBarIcon: () => <ProfileIcon />,
         }}
       />
     </Tabs>

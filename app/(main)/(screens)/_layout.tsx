@@ -11,7 +11,7 @@ const ScreensLayout = () => {
         }}
       >
         <Stack.Screen name="notifications" />
-        <Stack.Screen name="menu" />
+        <Stack.Screen name="contracts" />
         <Stack.Screen name="CollaborationHistory" />
       </Stack>
     </AppLayout>
