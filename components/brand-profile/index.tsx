@@ -1,17 +1,22 @@
-import ContentWrapper from "@/shared-uis/components/content-wrapper";
-import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { useState } from "react";
+import { ScrollView } from "react-native";
 import { useTheme } from "@react-navigation/native";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+
 import {
   BRAND_INDUSTRIES,
   INFLUENCER_CATEGORIES,
   INITIAL_BRAND_INDUSTRIES,
   INITIAL_INFLUENCER_CATEGORIES,
 } from "@/constants/ItemsList";
-import { useState } from "react";
-import { ScrollView } from "react-native";
-import TextInput from "../ui/text-input";
-import { View } from "../theme/Themed";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { View } from "../theme/Themed";
+import Colors from "@/constants/Colors";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
+import ImageUpload from "@/shared-uis/components/image-upload";
+import TextInput from "../ui/text-input";
 
 const BrandProfile = () => {
   const theme = useTheme();
@@ -44,11 +49,11 @@ const BrandProfile = () => {
         gap: 32,
       }}
     >
-      {/* <ImageUpload
+      <ImageUpload
         initialImage={brandProfile.image}
         onUploadImage={handleImageUpload}
         theme={theme}
-      /> */}
+      />
       <View
         style={{
           gap: 16,
@@ -92,6 +97,13 @@ const BrandProfile = () => {
         theme={theme}
       >
         <MultiSelectExtendable
+          buttonIcon={
+            <FontAwesomeIcon
+              icon={faArrowRight}
+              color={Colors(theme).primary}
+              size={14}
+            />
+          }
           buttonLabel="See Other Options"
           initialItemsList={includeSelectedItems(BRAND_INDUSTRIES, brandProfile.brandIndustries || [])}
           initialMultiselectItemsList={includeSelectedItems(INITIAL_BRAND_INDUSTRIES, brandProfile.brandIndustries || [])}
@@ -111,6 +123,13 @@ const BrandProfile = () => {
         theme={theme}
       >
         <MultiSelectExtendable
+          buttonIcon={
+            <FontAwesomeIcon
+              icon={faArrowRight}
+              color={Colors(theme).primary}
+              size={14}
+            />
+          }
           buttonLabel="See Other Options"
           initialItemsList={includeSelectedItems(INFLUENCER_CATEGORIES, brandProfile.influencerCategories || [])}
           initialMultiselectItemsList={includeSelectedItems(INITIAL_INFLUENCER_CATEGORIES, brandProfile.influencerCategories || [])}
@@ -124,7 +143,7 @@ const BrandProfile = () => {
           theme={theme}
         />
       </ContentWrapper>
-    </ScrollView >
+    </ScrollView>
   );
 };
 

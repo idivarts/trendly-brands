@@ -161,6 +161,7 @@ const Invitations = () => {
                 onOpenBottomSheet={openBottomSheet}
                 cardType="proposal"
                 preferredContentLanguage={item.preferredContentLanguage}
+                preferences={item.preferences}
                 contentFormat={item.contentFormat}
                 location={item.location}
                 managerId="managerId"

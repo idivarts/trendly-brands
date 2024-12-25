@@ -1,4 +1,12 @@
-export const INFLUENCER_CATEGORIES = [];
+export const INFLUENCER_CATEGORIES = [
+  "Fashion",
+  "Beauty",
+  "Food Vlogs",
+  "Technology",
+  "Fitness & Health",
+  "Travel",
+  "Entertainment",
+];
 
 export const INITIAL_INFLUENCER_CATEGORIES = [
   "Fashion",
@@ -11,14 +19,17 @@ export const INITIAL_INFLUENCER_CATEGORIES = [
 ];
 
 export const BRAND_INDUSTRIES = [
-  "Fashion",
+  "Beauty & Skincare",
+  "Fashion & Apparel",
+  "Food & Beverages",
+  "Health & Wellness",
+  "Holidays & Stays",
+  "Restaurant & Cafes",
+  "Technology",
+  "Travel & Tourism",
   "Lifestyle",
-  "Restaurant / Cafes",
-  "Holidays / Stays",
   "Travel",
-  "Health",
   "Fitness",
-  "Beauty / Spa",
   "Tech",
   "Automobile",
   "Home Decor",
@@ -31,26 +42,34 @@ export const BRAND_INDUSTRIES = [
 ];
 
 export const INITIAL_BRAND_INDUSTRIES = [
+  "Beauty & Skincare",
   "Fashion & Apparel",
-  "Technology",
   "Food & Beverages",
   "Health & Wellness",
+  "Technology",
   "Travel & Tourism",
-  "Beauty & Skincare",
 ];
 
 export const LANGUAGES = [
+  "Bengali",
+  "English",
+  "Gujarati",
+  "Hindi",
+  "Kannada",
+  "Malayalam",
+  "Marathi",
+  "Odia",
+  "Punjabi",
+  "Sindhi",
+  "Tamil",
+  "Telugu",
+  "Urdu",
+];
+
+export const INITIAL_LANGUAGES = [
   "English",
   "Hindi",
   "Bengali",
-  "Tamil",
-  "Telugu",
   "Marathi",
-  "Urdu",
-  "Gujarati",
-  "Kannada",
-  "Odia",
   "Punjabi",
-  "Malayalam",
-  "Sindhi",
 ];

@@ -39,6 +39,12 @@ const CreateCollaboration = () => {
     },
     externalLinks: [],
     questionsToInfluencers: [],
+    preferences: {
+      timeCommitment: "Full Time",
+      influencerNiche: [],
+      influencerRelation: "Long Term",
+      preferredVideoType: "Integrated Video",
+    },
     status: "",
     timeStamp: 0,
     viewsLastHour: 0,

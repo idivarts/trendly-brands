@@ -171,6 +171,7 @@ const Applications = () => {
                   cardType="proposal"
                   preferredContentLanguage={item.preferredContentLanguage}
                   contentFormat={item.contentFormat}
+                  preferences={item.preferences}
                   location={item.location}
                   managerId="managerId"
                   numberOfInfluencersNeeded={1}
