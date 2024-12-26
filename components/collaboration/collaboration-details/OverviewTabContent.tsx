@@ -98,7 +98,7 @@ const OverviewTabContent: React.FC<OverviewTabContentProps> = ({
         </View>
         <Card.Content>
           <Paragraph style={styles.brandName}>
-            Cost: {collaboration.budget.min}
+            Cost: {collaboration.budget?.min}
           </Paragraph>
           <Paragraph style={styles.brandName}>
             Payment Verified: True

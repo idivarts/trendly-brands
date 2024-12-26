@@ -1,6 +1,6 @@
 import { Brand } from "@/types/Brand";
 import { FirestoreDB } from "@/utils/firestore";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { addDoc, collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import React, {
   useContext,
   createContext,
@@ -9,17 +9,22 @@ import React, {
   useState,
 } from "react";
 import { useAuthContext } from "./auth-context.provider";
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 
 interface BrandContextProps {
   brands: Brand[];
+  createBrand: (brand: Partial<IBrands>) => Promise<void>;
   selectedBrand: Brand | undefined;
   setSelectedBrand: React.Dispatch<React.SetStateAction<Brand | undefined>>;
+  updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
 }
 
 const BrandContext = createContext<BrandContextProps>({
   brands: [],
+  createBrand: () => Promise.resolve(),
   selectedBrand: undefined,
   setSelectedBrand: () => { },
+  updateBrand: () => Promise.resolve(),
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -70,12 +75,30 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     };
   }, [manager?.id]);
 
+  const createBrand = async (
+    brand: Partial<IBrands>,
+  ): Promise<void> => {
+    const brandRef = collection(FirestoreDB, "brands");
+    await addDoc(brandRef, brand);
+  }
+
+  const updateBrand = async (
+    id: string,
+    brand: Partial<IBrands>,
+  ): Promise<void> => {
+    const brandRef = doc(FirestoreDB, "brands", id);
+
+    await updateDoc(brandRef, brand);
+  }
+
   return (
     <BrandContext.Provider
       value={{
         brands,
+        createBrand,
         selectedBrand,
         setSelectedBrand,
+        updateBrand,
       }}
     >
       {children}

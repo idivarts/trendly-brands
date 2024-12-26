@@ -15,12 +15,11 @@ import { useEffect, useState } from "react";
 import { Searchbar } from "react-native-paper";
 import {
   faComment,
-  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
-  faFileLines as faFileLinesSolid,
+  faGears,
   faHouseUser as faHouseUserSolid,
   faMagnifyingGlass,
   faPlus,
@@ -100,21 +99,21 @@ const DRAWER_MENU_CONTENT_ITEMS = (
       label: "Messages",
     },
     {
-      href: "/contracts",
+      href: "/menu",
       icon: ({
         focused,
       }: IconPropFn) => focused ? (
         <DrawerIcon
-          href="/contracts"
-          icon={faFileLinesSolid}
+          href="/menu"
+          icon={faGears}
         />
       ) : (
           <DrawerIcon
-            href="/contracts"
-            icon={faFileLines}
+            href="/menu"
+            icon={faGears}
           />
         ),
-      label: "Contracts",
+      label: "Settings",
     },
   ];
 
