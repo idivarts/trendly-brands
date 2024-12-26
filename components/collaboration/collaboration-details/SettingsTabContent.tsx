@@ -16,16 +16,25 @@ interface SettingsTabContentProps {
 
 const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
   const theme = useTheme();
-  const [timeCommitment, setTimeCommitment] = useState<any>({
+  const [timeCommitment, setTimeCommitment] = useState<{
+    label: string;
+    value: string;
+  }>({
     label: "None",
     value: "None",
   });
   const [niches, setNiches] = useState<SelectItem[]>([]);
-  const [influencerLookingFor, setInfluencerLookingFor] = useState<any>({
+  const [influencerLookingFor, setInfluencerLookingFor] = useState<{
+    label: string;
+    value: string;
+  }>({
     label: "None",
     value: "None",
   });
-  const [preferredVideoType, setPreferredVideoType] = useState<any>({
+  const [preferredVideoType, setPreferredVideoType] = useState<{
+    label: string;
+    value: string;
+  }>({
     label: "None",
     value: "None",
   });
@@ -39,13 +48,15 @@ const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
     setNiches(selectedOptions);
   };
 
-  const updateCollaboration = async (field: string, value: any) => {
+  const updateCollaboration = async (
+    field: string,
+    value: string | string[]
+  ) => {
     try {
       const collabRef = doc(FirestoreDB, "collaborations", pageID);
       await updateDoc(collabRef, {
         [`preferences.${field}`]: value,
       });
-      console.log(`${field} updated to`, value);
     } catch (error) {
       console.error("Error updating Firestore:", error);
     }

@@ -13,12 +13,15 @@ import CollaborationHeader from "../CollaborationHeader";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 
 export interface CollaborationDetail extends ICollaboration {
   brandDescription: string;
   brandName: string;
   logo: string;
   paymentVerified: boolean;
+  brandWebsite: string;
+  brandCategory: string[];
 }
 
 interface CollaborationDetailsProps {
@@ -57,14 +60,22 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
       const brandRef = doc(FirestoreDB, "brands", data.brandId);
       const brandSnapshot = await getDoc(brandRef);
-      const brandData = brandSnapshot.data();
+      const brandData = brandSnapshot.data() as IBrands;
 
       setCollaboration({
         ...data,
         logo: brandData?.image || "",
         brandName: brandData?.name || "Unknown Brand",
         paymentVerified: brandData?.paymentMethodVerified || false,
-        brandDescription: brandData?.description || "",
+        brandDescription: brandData?.profile
+          ? brandData?.profile?.about || ""
+          : "",
+        brandWebsite: brandData?.profile
+          ? brandData?.profile?.website || ""
+          : "",
+        brandCategory: brandData?.preferences
+          ? brandData?.preferences?.influencerCategory
+          : [],
       });
     } catch (e) {
       console.error(e);

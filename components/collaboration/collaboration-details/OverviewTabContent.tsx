@@ -477,12 +477,14 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
       </Card>
       <Portal>
         <BrandModal
-          brandDescription={props.collaboration.brandDescription}
-          brandImage={props.collaboration.logo}
-          brandName={props.collaboration.brandName}
-          brandVerified={props.collaboration.paymentVerified}
-          brandWebsite="google.com"
-          category={["Tech", "Fashion"]}
+          brand={{
+            category: props.collaboration.brandCategory,
+            description: props.collaboration.brandDescription,
+            image: props.collaboration.logo,
+            name: props.collaboration.brandName,
+            verified: props.collaboration.paymentVerified,
+            website: props.collaboration.brandWebsite,
+          }}
           visible={brandModalVisible}
           setVisibility={setBrandModalVisible}
         />

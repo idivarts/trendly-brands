@@ -37,55 +37,6 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
           </View>
         </View>
       </View>
-
-
-      <View style={styles.tagsContainer}>
-        {
-          collaboration.promotionType && (
-            <Tag
-              icon={() => (
-                <FontAwesomeIcon
-                  color={Colors(theme).primary}
-                  icon={faBolt}
-                  size={14}
-                />
-              )}
-            >
-              {collaboration.promotionType}
-            </Tag>
-          )
-        }
-        {
-          collaboration.promotionType && (
-            <Tag
-              icon={() => (
-                <FontAwesomeIcon
-                  color={Colors(theme).primary}
-                  icon={faEye}
-                  size={14}
-                />
-              )}
-            >
-              {collaboration.promotionType}
-            </Tag>
-          )
-        }
-        <Tag
-          icon={() => (
-            <FontAwesomeIcon
-              color={Colors(theme).primary}
-              icon={faLocationDot}
-              size={14}
-            />
-          )}
-        >
-          {
-            collaboration.location.type === "Remote"
-              ? "Remote"
-              : collaboration.location.name
-          }
-        </Tag>
-      </View>
     </View>
   );
 };

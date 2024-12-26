@@ -23,6 +23,7 @@ import { processRawAttachment } from "@/utils/attachments";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
 import { DUMMY_INFLUENCER } from "@/constants/Influencer";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import { Pressable } from "react-native-gesture-handler";
 
 const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -156,80 +157,79 @@ const Applications = () => {
             data={filteredProposals}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              console.log(item),
-              (
-                <Card
+              <Card>
+                {item.attachments && item.attachments?.length > 0 && (
+                  <Carousel
+                    theme={theme}
+                    data={
+                      item.attachments?.map(
+                        //@ts-ignore
+                        (attachment: MediaItem) =>
+                          processRawAttachment(attachment)
+                      ) || []
+                    }
+                    dot={
+                      <View
+                        style={{
+                          backgroundColor: Colors(theme).primary,
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          marginLeft: 3,
+                          marginRight: 3,
+                        }}
+                      />
+                    }
+                    activeDot={
+                      <View
+                        style={{
+                          backgroundColor: Colors(theme).gray100,
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          marginLeft: 3,
+                          marginRight: 3,
+                        }}
+                      />
+                    }
+                  />
+                )}
+                {item.status === "draft" && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      right: 10,
+                      backgroundColor: Colors(theme).backdrop,
+                      padding: 4,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                  </View>
+                )}
+                <CollaborationDetails
+                  collabDescription={item.description || ""}
+                  name={item.name || ""}
+                  contentType={item.contentType}
+                  location={item.location}
+                  platform={item.platform}
+                  promotionType={item.promotionType}
+                  onOpenBottomSheet={openBottomSheet}
+                  collabId={item.id}
+                />
+                <Pressable
                   onPress={() => {
                     router.push(`/collaboration-details/${item.id}`);
                   }}
                 >
-                  {item.attachments && item.attachments?.length > 0 && (
-                    <Carousel
-                      theme={theme}
-                      data={
-                        item.attachments?.map(
-                          //@ts-ignore
-                          (attachment: MediaItem) =>
-                            processRawAttachment(attachment)
-                        ) || []
-                      }
-                      dot={
-                        <View
-                          style={{
-                            backgroundColor: Colors(theme).primary,
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            marginLeft: 3,
-                            marginRight: 3,
-                          }}
-                        />
-                      }
-                      activeDot={
-                        <View
-                          style={{
-                            backgroundColor: Colors(theme).gray100,
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            marginLeft: 3,
-                            marginRight: 3,
-                          }}
-                        />
-                      }
-                    />
-                  )}
-                  {item.status === "draft" && (
-                    <View
-                      style={{
-                        position: "absolute",
-                        top: 10,
-                        right: 10,
-                        backgroundColor: Colors(theme).backdrop,
-                        padding: 4,
-                        borderRadius: 4,
-                      }}
-                    >
-                      <Text style={{ color: Colors(theme).white }}>Draft</Text>
-                    </View>
-                  )}
-                  <CollaborationDetails
-                    collabDescription={item.description || ""}
-                    name={item.name || ""}
-                    contentType={item.contentType}
-                    location={item.location}
-                    platform={item.platform}
-                    promotionType={item.promotionType}
-                    onOpenBottomSheet={openBottomSheet}
-                    collabId={item.id}
-                  />
                   <CollaborationStats
                     budget={item.budget}
                     collabID={item.id}
                     influencerCount={item.numberOfInfluencersNeeded}
                   />
-                </Card>
-              )
+                </Pressable>
+              </Card>
             )}
             keyExtractor={(item, index) => index.toString()}
             style={{
