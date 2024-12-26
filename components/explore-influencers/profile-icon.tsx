@@ -18,37 +18,33 @@ const ProfileIcon = () => {
   return (
     <Link href="/menu" asChild>
       <Pressable>
-        {({ pressed }) => (
-          <View
+        <View
+          style={{
+            position: "relative",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <FontAwesomeIcon
+            color={Colors(theme).primary}
+            icon={faCircleNotch}
+            size={32}
             style={{
-              position: "relative",
-              marginRight: 15,
-              justifyContent: "center",
-              alignItems: "center",
+              left: -2,
+              position: "absolute",
+              top: -2,
+              zIndex: 1,
             }}
-          >
-            <FontAwesomeIcon
-              color={Colors(theme).primary}
-              icon={faCircleNotch}
-              size={32}
-              style={{
-                left: -2,
-                opacity: pressed ? 0.5 : 1,
-                position: "absolute",
-                top: -2,
-                zIndex: 1,
-              }}
-            />
-            <Image
-              source={imageUrl(selectedBrand?.image)}
-              style={{
-                borderRadius: 100,
-                height: 28,
-                width: 28,
-              }}
-            />
-          </View>
-        )}
+          />
+          <Image
+            source={imageUrl(selectedBrand?.image)}
+            style={{
+              borderRadius: 100,
+              height: 28,
+              width: 28,
+            }}
+          />
+        </View>
       </Pressable>
     </Link>
   )

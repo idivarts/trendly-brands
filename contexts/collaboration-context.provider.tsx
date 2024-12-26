@@ -17,7 +17,7 @@ import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/colla
 
 interface CollaborationContextProps {
   getCollaborationById: (id: string) => Promise<Collaboration>;
-  createCollaboration: (collaboration: ICollaboration) => Promise<void>;
+  createCollaboration: (collaboration: Partial<ICollaboration>) => Promise<void>;
   updateCollaboration: (id: string, collaboration: Partial<ICollaboration>) => Promise<void>;
 }
 
@@ -40,7 +40,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
   }
 
   const createCollaboration = async (
-    collaboration: ICollaboration,
+    collaboration: Partial<ICollaboration>,
   ): Promise<void> => {
     const collaborationRef = collection(FirestoreDB, "collaborations");
     await addDoc(collaborationRef, collaboration);
