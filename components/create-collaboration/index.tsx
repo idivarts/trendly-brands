@@ -56,7 +56,6 @@ const CreateCollaboration = () => {
     lastReviewedTimeStamp: 0,
   });
 
-  const [formattedAddress, setFormattedAddress] = useState("");
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -127,8 +126,7 @@ const CreateCollaboration = () => {
 
     setAttachments(collaboration?.attachments || []);
 
-    if (collaboration.location.name && collaboration.location.latlong) {
-      setFormattedAddress(collaboration.location.name);
+    if (collaboration.location.latlong) {
       setMapRegion({
         latitude: collaboration.location.latlong.lat,
         longitude: collaboration.location.latlong.long,
@@ -149,7 +147,14 @@ const CreateCollaboration = () => {
   }, []);
 
   const onFormattedAddressChange = (address: string) => {
-    setFormattedAddress(address);
+    setCollaboration({
+      ...collaboration,
+      location: {
+        ...collaboration.location,
+        type: "On-Site",
+        name: address,
+      },
+    });
   }
 
   const handleCollaboration = async (
@@ -174,8 +179,8 @@ const CreateCollaboration = () => {
 
       if (collaboration?.location?.type === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
         locationAddress = {
+          ...collaboration.location,
           type: collaboration.location.type || "Remote",
-          name: formattedAddress,
           latlong: {
             lat: mapRegion.latitude,
             long: mapRegion.longitude,

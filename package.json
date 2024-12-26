@@ -51,6 +51,7 @@
     "expo-image-picker": "^15.0.7",
     "expo-linking": "~6.3.1",
     "expo-location": "~17.0.1",
+    "expo-media-library": "~16.0.5",
     "expo-router": "~3.5.18",
     "expo-secure-store": "^13.0.2",
     "expo-splash-screen": "~0.27.5",
@@ -76,8 +77,7 @@
     "react-native-toast-message": "^2.2.1",
     "react-native-video": "^6.7.0",
     "react-native-web": "~0.19.10",
-    "stream-chat-expo": "^5.41.2",
-    "expo-media-library": "~16.0.5"
+    "stream-chat-expo": "^5.41.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
