@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { faDollarSign, faVideo } from "@fortawesome/free-solid-svg-icons";
@@ -21,13 +21,18 @@ import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { View } from "../theme/Themed";
+import { convertToKUnits } from "@/utils/conversion";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface ScreenOneProps {
   attachments: any[];
   collaboration: Partial<Collaboration>;
   handleAssetsUpdateNative: (assets: NativeAssetItem[]) => void;
   handleAssetsUpdateWeb: (assets: WebAssetItem[]) => void;
+  isEdited: boolean;
+  isSubmitting: boolean;
   setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
+  setIsEdited: React.Dispatch<React.SetStateAction<boolean>>;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
   type: "Add" | "Edit";
 }
@@ -37,11 +42,36 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
   collaboration,
   handleAssetsUpdateNative,
   handleAssetsUpdateWeb,
-  setScreen,
+  isEdited,
+  isSubmitting,
   setCollaboration,
+  setIsEdited,
+  setScreen,
   type,
 }) => {
   const theme = useTheme();
+
+  const budgetText = useMemo(() => {
+    if (
+      collaboration.budget?.min
+      && collaboration.budget?.max
+      && collaboration.budget?.min === 10000
+      && collaboration.budget?.max === 10000
+    ) {
+      return 'More than Rs. 10k';
+    }
+
+    if (
+      collaboration.budget?.min
+      && collaboration.budget?.max
+      && collaboration.budget?.min === collaboration.budget?.max
+      || collaboration.budget?.max === 0
+    ) {
+      return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}`;
+    }
+
+    return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}-${convertToKUnits(collaboration.budget?.max || 10000)}`;
+  }, [collaboration.budget]);
 
   const items = [
     { url: '', type: '' },
@@ -55,6 +85,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
   return (
     <>
       <ScreenLayout
+        isEdited={isEdited}
         screen={1}
         setScreen={setScreen}
         type={type}
@@ -99,6 +130,10 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
             label="Collaboration Name"
             mode="outlined"
             onChangeText={(text) => {
+              if (!isEdited) {
+                setIsEdited(true);
+              }
+
               setCollaboration({
                 ...collaboration,
                 name: text,
@@ -152,7 +187,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
         {
           collaboration.promotionType === 'Paid Collab' && (
             <ContentWrapper
-              rightText={`Rs. ${collaboration.budget?.min || 0}-${collaboration.budget?.max || 10000}`}
+              rightText={budgetText}
               theme={theme}
               title="Collaboration Budget"
               titleStyle={{
@@ -177,6 +212,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                     },
                   });
                 }}
+                allowOverlap
                 values={[collaboration.budget?.min || 0, collaboration.budget?.max || 10000]}
               />
             </ContentWrapper>
@@ -204,22 +240,19 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           />
         </ContentWrapper>
         <Button
+          loading={isSubmitting}
           mode="contained"
           onPress={() => {
-            // if (
-            //   !collaboration.name ||
-            //   !collaboration.description ||
-            //   !collaboration.promotionType ||
-            //   (collaboration.promotionType === 'Paid Collab' && (!collaboration.budget?.min || !collaboration.budget?.max)) ||
-            //   !collaboration.preferredContentLanguage
-            // ) {
-            //   Toaster.error("Please fill all fields");
-            //   return;
-            // }
+            if (
+              !collaboration.name
+            ) {
+              Toaster.error("Collaboration name is required");
+              return;
+            }
             setScreen(2);
           }}
         >
-          Next
+          {isSubmitting ? "Saving" : "Next"}
         </Button>
       </ScreenLayout>
     </>

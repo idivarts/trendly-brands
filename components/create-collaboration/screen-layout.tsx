@@ -8,10 +8,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Colors from "@/constants/Colors";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
 import ScreenHeader from "../ui/screen-header";
-import stylesFn from "@/styles/create-collaboration/Screen.styles";
+import { useRouter } from "expo-router";
 
 interface ScreenLayoutProps {
   children: React.ReactNode;
+  isEdited: boolean;
+  isSubmitting?: boolean;
+  saveAsDraft?: () => Promise<void>;
   screen: number;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
   type: "Add" | "Edit";
@@ -19,13 +22,16 @@ interface ScreenLayoutProps {
 
 const ScreenLayout: React.FC<ScreenLayoutProps> = ({
   children,
+  isEdited,
+  isSubmitting,
   screen,
+  saveAsDraft,
   setScreen,
   type,
 }) => {
   const theme = useTheme();
-  const styles = stylesFn(theme);
 
+  const router = useRouter();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   return (
@@ -36,13 +42,26 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
       }}
     >
       <ScreenHeader
-        action={() => setScreen(screen - 1)}
+        action={() => {
+          if (screen === 1) {
+            setIsModalVisible(true);
+            router.back();
+          } else {
+            setScreen(screen - 1);
+          }
+        }}
         hideAction={screen === 1 && (type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
         title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
-        rightAction={screen !== 1}
+        rightAction={screen !== 1 && type === "Add"}
         rightActionButton={
           <Pressable
-            onPress={() => setIsModalVisible(true)}
+            onPress={() => {
+              if (isEdited) {
+                setIsModalVisible(true);
+              } else {
+                router.back();
+              }
+            }}
             style={{
               marginLeft: 20,
               marginRight: 8,
@@ -105,12 +124,29 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
       <ConfirmationModal
         visible={isModalVisible}
         setVisible={setIsModalVisible}
-        cancelAction={() => setIsModalVisible(false)}
-        confirmAction={() => {
-          setIsModalVisible(false);
-          // setScreen(1);
+        cancelAction={() => {
+          if (isSubmitting) {
+            return;
+          }
+
+          router.back();
+          setIsModalVisible(false)
         }}
-        confirmText="Save as Draft"
+        confirmAction={() => {
+          if (isSubmitting) {
+            return;
+          }
+
+          if (isEdited && saveAsDraft) {
+            saveAsDraft().then(() => {
+              setIsModalVisible(false);
+            });
+          } else {
+            router.back();
+            setIsModalVisible(false);
+          }
+        }}
+        confirmText={isSubmitting ? "Saving..." : "Save as Draft"}
         cancelText="Discard"
         description="Are you sure you want to discard the changes? You can save as draft instead"
       />

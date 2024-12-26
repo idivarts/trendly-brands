@@ -1,9 +1,14 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 import { Collaboration } from "@/types/Collaboration";
-import { CONTENT_FORMATS, INITIAL_CONTENT_FORMATS, INITIAL_PLATFORMS, PLATFORMS } from "@/constants/ItemsList";
+import {
+  CONTENT_FORMATS,
+  INITIAL_CONTENT_FORMATS,
+  INITIAL_PLATFORMS,
+  PLATFORMS,
+} from "@/constants/ItemsList";
 import { faArrowRight, faPhotoFilm, faVideo } from "@fortawesome/free-solid-svg-icons";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { MultiRangeSlider } from "@/shared-uis/components/multislider";
@@ -16,10 +21,11 @@ import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import ScreenLayout from "./screen-layout";
 import TextInput from "../ui/text-input";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface ScreenTwoProps {
   collaboration: Partial<Collaboration>;
+  isEdited: boolean;
+  isSubmitting: boolean;
   mapRegion: {
     state: {
       latitude: number;
@@ -35,6 +41,7 @@ interface ScreenTwoProps {
     }>>;
   };
   onFormattedAddressChange: (address: string) => void;
+  saveAsDraft: () => Promise<void>;
   setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
   type: "Add" | "Edit";
@@ -42,17 +49,34 @@ interface ScreenTwoProps {
 
 const ScreenTwo: React.FC<ScreenTwoProps> = ({
   collaboration,
+  isEdited,
+  isSubmitting,
   mapRegion,
   onFormattedAddressChange,
+  saveAsDraft,
   setCollaboration,
   setScreen,
   type,
 }) => {
   const theme = useTheme();
 
+  const numberOfInfluencersNeededText = useMemo(() => {
+    if (
+      collaboration.numberOfInfluencersNeeded
+      && collaboration.numberOfInfluencersNeeded >= 101
+    ) {
+      return 'More than 100';
+    }
+
+    return `${collaboration.numberOfInfluencersNeeded || 0}`;
+  }, [collaboration.numberOfInfluencersNeeded]);
+
   return (
     <>
       <ScreenLayout
+        isEdited={isEdited}
+        isSubmitting={isSubmitting}
+        saveAsDraft={saveAsDraft}
         screen={2}
         setScreen={setScreen}
         type={type}
@@ -116,7 +140,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           />
         </ContentWrapper>
         <ContentWrapper
-          rightText={`${collaboration.numberOfInfluencersNeeded || 0}`}
+          rightText={numberOfInfluencersNeededText}
           theme={theme}
           title="Influencers Needed"
           titleStyle={{
@@ -125,7 +149,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         >
           <MultiRangeSlider
             minValue={0}
-            maxValue={100}
+            maxValue={101}
             onValuesChange={(values) => {
               setCollaboration({
                 ...collaboration,
@@ -155,7 +179,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 }}
               />
             }
-            values={[collaboration.numberOfInfluencersNeeded || 0, 100]}
+            values={[collaboration.numberOfInfluencersNeeded || 0, 101]}
             step={1}
             theme={theme}
           />
@@ -221,22 +245,13 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         }
 
         <Button
+          loading={isSubmitting}
           mode="contained"
           onPress={() => {
-            // if (
-            //   !collaboration.contentFormat ||
-            //   !collaboration.platform ||
-            //   !collaboration.numberOfInfluencersNeeded ||
-            //   !collaboration.location?.type ||
-            //   !collaboration.location
-            // ) {
-            //   Toaster.error("Please fill all fields");
-            //   return;
-            // }
             setScreen(3);
           }}
         >
-          Next
+          {isSubmitting ? "Saving" : "Next"}
         </Button>
       </ScreenLayout>
     </>

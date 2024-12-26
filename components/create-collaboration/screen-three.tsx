@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Pressable } from "react-native";
-import { Modal } from "react-native-paper";
+import { HelperText, Modal, ProgressBar } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faChain, faCircle, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -18,6 +18,11 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface ScreenThreeProps {
   collaboration: Partial<Collaboration>;
+  isEdited: boolean;
+  isSubmitting: boolean;
+  processMessage: string;
+  processPercentage: number;
+  saveAsDraft: () => Promise<void>;
   setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
   submitCollaboration: () => void;
@@ -26,6 +31,11 @@ interface ScreenThreeProps {
 
 const ScreenThree: React.FC<ScreenThreeProps> = ({
   collaboration,
+  isEdited,
+  isSubmitting,
+  processMessage,
+  processPercentage,
+  saveAsDraft,
   setCollaboration,
   setScreen,
   submitCollaboration,
@@ -96,6 +106,9 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
   return (
     <>
       <ScreenLayout
+        isEdited={isEdited}
+        isSubmitting={isSubmitting}
+        saveAsDraft={saveAsDraft}
         screen={3}
         setScreen={setScreen}
         type={type}
@@ -247,12 +260,40 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
             </View>
           </View>
         </View>
+        <View
+          style={{
+            gap: 16,
+          }}
+        >
+          {
+            processMessage && (
+              <HelperText
+                type="info"
+                style={{
+                  color: Colors(theme).primary,
+                  textAlign: "center",
+                }}
+              >
+                {processMessage} - {processPercentage}% done
+              </HelperText>
+            )
+          }
+
+          <ProgressBar
+            progress={processPercentage / 100}
+            color={Colors(theme).primary}
+            style={{
+              backgroundColor: Colors(theme).transparent
+            }}
+          />
+        </View>
 
         <Button
+          loading={isSubmitting}
           mode="contained"
-          onPress={() => submitCollaboration()}
+          onPress={submitCollaboration}
         >
-          {type === "Add" ? "Post" : "Update"}
+          {type === "Add" ? `${isSubmitting ? "Posting" : "Post"}` : `${isSubmitting ? "Updating" : "Update"}`}
         </Button>
       </ScreenLayout>
 

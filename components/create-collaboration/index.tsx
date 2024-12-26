@@ -13,6 +13,10 @@ import ScreenTwo from "@/components/create-collaboration/screen-two";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useAssets, useProcess } from "@/hooks";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { View } from "../theme/Themed";
+import { ActivityIndicator } from "react-native";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 
 const CreateCollaboration = () => {
   const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
@@ -24,9 +28,9 @@ const CreateCollaboration = () => {
     promotionType: PromotionType.BARTER_COLLAB,
     budget: {
       min: 0,
-      max: 0,
+      max: 10000,
     },
-    preferredContentLanguage: [],
+    preferredContentLanguage: ["English", "Hindi"],
     contentFormat: [],
     platform: [],
     numberOfInfluencersNeeded: 0,
@@ -52,7 +56,6 @@ const CreateCollaboration = () => {
     lastReviewedTimeStamp: 0,
   });
 
-  const [location, setLocation] = useState("Remote");
   const [formattedAddress, setFormattedAddress] = useState("");
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
@@ -62,6 +65,9 @@ const CreateCollaboration = () => {
   });
 
   const [screen, setScreen] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEdited, setIsEdited] = useState(false);
+  const theme = useTheme();
   const params = useLocalSearchParams();
   const type = params.id ? "Edit" : "Add";
 
@@ -119,7 +125,8 @@ const CreateCollaboration = () => {
     const collaboration = await getCollaborationById(id);
     setCollaboration(collaboration);
 
-    setLocation(collaboration.location.type);
+    setAttachments(collaboration?.attachments || []);
+
     if (collaboration.location.name && collaboration.location.latlong) {
       setFormattedAddress(collaboration.location.name);
       setMapRegion({
@@ -133,7 +140,11 @@ const CreateCollaboration = () => {
 
   useEffect(() => {
     if (params.id && typeof params.id === "string") {
-      fetchCollaboration(params.id);
+      setIsLoading(true);
+      fetchCollaboration(params.id)
+        .finally(() => {
+          setIsLoading(false);
+        })
     }
   }, []);
 
@@ -151,15 +162,19 @@ const CreateCollaboration = () => {
     }
   }
 
-  const submitCollaboration = async () => {
+  const saveCollaboration = async (
+    status: "draft" | "active",
+  ) => {
     try {
       if (!AuthApp.currentUser) {
         console.error("User not logged in");
       }
 
-      let locationAddress = {};
-      if (location === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
+      let locationAddress = collaboration?.location;
+
+      if (collaboration?.location?.type === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
         locationAddress = {
+          type: collaboration.location.type || "Remote",
           name: formattedAddress,
           latlong: {
             lat: mapRegion.latitude,
@@ -169,7 +184,7 @@ const CreateCollaboration = () => {
       }
 
       setIsProcessing(true);
-      setProcessMessage('Saving profile attachments...');
+      setProcessMessage('Saving collaboration attachments...');
       setProcessPercentage(40);
 
       // Upload assets to S3
@@ -179,24 +194,22 @@ const CreateCollaboration = () => {
         webAssets,
       );
 
-      setProcessMessage('Saved profile attachments...');
+      setProcessMessage('Saved collaboration attachments...');
       setProcessPercentage(70);
 
-      setProcessMessage('Saving profile...');
+      setProcessMessage('Saving collaboration...');
       setProcessPercentage(100);
 
       await handleCollaboration({
         ...collaboration,
+        attachments: uploadedAssets,
         brandId: selectedBrand ? selectedBrand?.id : "",
         managerId: AuthApp.currentUser?.uid as string,
-        location: {
-          type: location,
-          ...locationAddress,
-        },
-        status: "active",
-        timeStamp: Date.now(),
+        location: locationAddress,
+        status,
+        timeStamp: type === "Add" ? Date.now() : collaboration.timeStamp,
       }).then(() => {
-        setScreen(3);
+        setScreen(4);
         setTimeout(() => {
           router.dismiss(1);
           router.push("/collaborations");
@@ -214,67 +227,29 @@ const CreateCollaboration = () => {
     }
   };
 
+  const submitCollaboration = async () => {
+    await saveCollaboration("active");
+  };
+
   const saveAsDraft = async () => {
-    try {
-      if (!AuthApp.currentUser) {
-        console.error("User not logged in");
-      }
+    await saveCollaboration("draft");
+  }
 
-      let locationAddress = {};
-      if (location === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
-        locationAddress = {
-          name: formattedAddress,
-          latlong: {
-            lat: mapRegion.latitude,
-            long: mapRegion.longitude,
-          },
-        };
-      }
-
-      setIsProcessing(true);
-      setProcessMessage('Saving profile attachments...');
-      setProcessPercentage(40);
-
-      // Upload assets to S3
-      const uploadedAssets = await uploadNewAssets(
-        attachments,
-        nativeAssets,
-        webAssets,
-      );
-
-      setProcessMessage('Saved profile attachments...');
-      setProcessPercentage(70);
-
-      setProcessMessage('Saving profile...');
-      setProcessPercentage(100);
-
-      await handleCollaboration({
-        ...collaboration,
-        brandId: selectedBrand ? selectedBrand?.id : "",
-        managerId: AuthApp.currentUser?.uid as string,
-        location: {
-          type: location,
-          ...locationAddress,
-        },
-        status: "draft",
-        timeStamp: Date.now(),
-      }).then(() => {
-        setScreen(3);
-        setTimeout(() => {
-          router.dismiss(1);
-          router.push("/collaborations");
-        }, 3000);
-      }).catch((error) => {
-        console.error(error);
-        Toaster.error("Failed to save collaboration");
-      }).finally(() => {
-        setProcessPercentage(0);
-        setProcessMessage('');
-        setIsProcessing(false);
-      });
-    } catch (error) {
-      console.error(error);
-    }
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator
+          size="large"
+          color={Colors(theme).primary}
+        />
+      </View>
+    );
   }
 
   if (screen === 1) {
@@ -284,7 +259,10 @@ const CreateCollaboration = () => {
         collaboration={collaboration}
         handleAssetsUpdateNative={handleAssetsUpdateNative}
         handleAssetsUpdateWeb={handleAssetsUpdateWeb}
+        isEdited={isEdited}
+        isSubmitting={isProcessing}
         setCollaboration={setCollaboration}
+        setIsEdited={setIsEdited}
         setScreen={setScreen}
         type={type}
       />
@@ -295,11 +273,14 @@ const CreateCollaboration = () => {
     return (
       <ScreenTwo
         collaboration={collaboration}
+        isEdited={isEdited}
+        isSubmitting={isProcessing}
         mapRegion={{
           state: mapRegion,
           setState: setMapRegion,
         }}
         onFormattedAddressChange={onFormattedAddressChange}
+        saveAsDraft={saveAsDraft}
         setCollaboration={setCollaboration}
         setScreen={setScreen}
         type={type}
@@ -311,6 +292,11 @@ const CreateCollaboration = () => {
     return (
       <ScreenThree
         collaboration={collaboration}
+        isEdited={isEdited}
+        isSubmitting={isProcessing}
+        processMessage={processMessage}
+        processPercentage={processPercentage}
+        saveAsDraft={saveAsDraft}
         setCollaboration={setCollaboration}
         setScreen={setScreen}
         submitCollaboration={submitCollaboration}
@@ -319,7 +305,7 @@ const CreateCollaboration = () => {
     );
   }
 
-  if (screen === 3) {
+  if (screen === 4) {
     return (
       <ScreenFour
         type={type}

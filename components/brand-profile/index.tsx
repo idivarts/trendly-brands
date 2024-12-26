@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ScrollView } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";

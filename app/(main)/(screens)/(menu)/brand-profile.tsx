@@ -34,6 +34,10 @@ const BrandProfileScreen = () => {
   const brandImage = useRef(selectedBrand?.image || "");
 
   const handleSave = async () => {
+    if (!brandData.name) {
+      Toaster.error('Brand name is required');
+    }
+
     let imageUrl = "";
     if (brandData.image !== brandImage.current) {
       const blob = await fetch(

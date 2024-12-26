@@ -56,6 +56,11 @@ const OnboardingScreen = () => {
       return;
     }
 
+    if (!brandData.name) {
+      Toaster.error('Brand name is required');
+      return;
+    }
+
     let imageUrl = "";
     if (brandData.image) {
       const blob = await fetch(brandData.image).then((res) => res.blob());
