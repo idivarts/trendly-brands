@@ -17,22 +17,27 @@ import Colors from "@/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import ImageUpload from "@/shared-uis/components/image-upload";
 import TextInput from "../ui/text-input";
+import { Brand } from "@/types/Brand";
+import Select from "../ui/select";
 
-const BrandProfile = () => {
+interface BrandProfileProps {
+  action?: React.ReactNode;
+  brandData: Partial<Brand>;
+  setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
+  type?: "create" | "update";
+}
+
+const BrandProfile: React.FC<BrandProfileProps> = ({
+  action,
+  brandData,
+  setBrandData,
+  type = "update",
+}) => {
   const theme = useTheme();
-  const [brandImage, setBrandImage] = useState("");
-  const [brandProfile, setBrandProfile] = useState({
-    about: "",
-    brandIndustries: [] as string[],
-    image: "",
-    influencerCategories: [] as string[],
-    name: "",
-    website: "",
-  });
 
   const handleImageUpload = (image: string) => {
-    setBrandProfile({
-      ...brandProfile,
+    setBrandData({
+      ...brandData,
       image,
     });
   }
@@ -50,7 +55,7 @@ const BrandProfile = () => {
       }}
     >
       <ImageUpload
-        initialImage={brandProfile.image}
+        initialImage={brandData.image}
         onUploadImage={handleImageUpload}
         theme={theme}
       />
@@ -61,32 +66,38 @@ const BrandProfile = () => {
       >
         <TextInput
           label={"Brand Name"}
-          value={brandProfile.name}
+          value={brandData.name}
           onChangeText={(value) =>
-            setBrandProfile({
-              ...brandProfile,
+            setBrandData({
+              ...brandData,
               name: value,
             })
           }
         />
         <TextInput
           label={"About the Brand"}
-          value={brandProfile.about}
+          value={brandData.profile?.about}
           multiline
           onChangeText={(value) =>
-            setBrandProfile({
-              ...brandProfile,
-              about: value,
+            setBrandData({
+              ...brandData,
+              profile: {
+                ...brandData.profile,
+                about: value,
+              },
             })
           }
         />
         <TextInput
           label={"Website"}
-          value={brandProfile.website}
+          value={brandData.profile?.website}
           onChangeText={(value) =>
-            setBrandProfile({
-              ...brandProfile,
-              website: value,
+            setBrandData({
+              ...brandData,
+              profile: {
+                ...brandData.profile,
+                website: value,
+              },
             })
           }
         />
@@ -105,15 +116,18 @@ const BrandProfile = () => {
             />
           }
           buttonLabel="See Other Options"
-          initialItemsList={includeSelectedItems(BRAND_INDUSTRIES, brandProfile.brandIndustries || [])}
-          initialMultiselectItemsList={includeSelectedItems(INITIAL_BRAND_INDUSTRIES, brandProfile.brandIndustries || [])}
+          initialItemsList={includeSelectedItems(BRAND_INDUSTRIES, brandData.profile?.industries || [])}
+          initialMultiselectItemsList={includeSelectedItems(INITIAL_BRAND_INDUSTRIES, brandData.profile?.industries || [])}
           onSelectedItemsChange={(value) => {
-            setBrandProfile({
-              ...brandProfile,
-              brandIndustries: value.map((value) => value),
+            setBrandData({
+              ...brandData,
+              profile: {
+                ...brandData.profile,
+                industries: value.map((value) => value),
+              },
             });
           }}
-          selectedItems={brandProfile.brandIndustries || []}
+          selectedItems={brandData.profile?.industries || []}
           theme={theme}
         />
       </ContentWrapper>
@@ -131,18 +145,61 @@ const BrandProfile = () => {
             />
           }
           buttonLabel="See Other Options"
-          initialItemsList={includeSelectedItems(INFLUENCER_CATEGORIES, brandProfile.influencerCategories || [])}
-          initialMultiselectItemsList={includeSelectedItems(INITIAL_INFLUENCER_CATEGORIES, brandProfile.influencerCategories || [])}
+          initialItemsList={includeSelectedItems(
+            INFLUENCER_CATEGORIES, brandData.preferences?.influencerCategories || [],
+          )}
+          initialMultiselectItemsList={includeSelectedItems(
+            INITIAL_INFLUENCER_CATEGORIES, brandData.preferences?.influencerCategories || [],
+          )}
           onSelectedItemsChange={(value) => {
-            setBrandProfile({
-              ...brandProfile,
-              influencerCategories: value.map((value) => value),
+            setBrandData({
+              ...brandData,
+              preferences: {
+                ...brandData.preferences,
+                influencerCategories: value.map((value) => value),
+              },
             });
           }}
-          selectedItems={brandProfile.influencerCategories || []}
+          selectedItems={brandData.preferences?.influencerCategories || []}
           theme={theme}
         />
       </ContentWrapper>
+      <ContentWrapper
+        title="Promotion Type"
+        description="What type of promotion are you looking for?"
+        theme={theme}
+      >
+        <Select
+          items={[
+            { label: "Paid", value: "Paid" },
+            { label: "Unpaid", value: "Unpaid" },
+            { label: "Barter", value: "Barter" },
+          ]}
+          multiselect
+          onSelect={(item) => {
+            setBrandData({
+              ...brandData,
+              preferences: {
+                ...brandData.preferences,
+                promotionType: item.map((item) => item.value),
+              },
+            });
+          }}
+          selectItemIcon
+          value={
+            brandData.preferences?.promotionType?.map((value) => ({
+              label: value,
+              value,
+            })) || []
+          }
+        />
+      </ContentWrapper>
+
+      {
+        type === "create" && action && (
+          action
+        )
+      }
     </ScrollView>
   );
 };

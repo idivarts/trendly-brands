@@ -1,41 +1,59 @@
+import React, { useRef, useState } from "react";
+import { Pressable } from "react-native";
+import Toast from "react-native-toast-message";
+
+import { Brand } from "@/types/Brand";
+import { Text } from "@/components/theme/Themed";
+import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
-import React, { useState } from "react";
 import BrandProfile from "@/components/brand-profile";
 import ScreenHeader from "@/components/ui/screen-header";
-import { Pressable } from "react-native";
-import { Text } from "@/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Toast from "react-native-toast-message";
-import { useAuthContext } from "@/contexts";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { Manager } from "@/types/Manager";
 
 const BrandProfileScreen = () => {
   const {
-    // updateBrandProfile,
+    updateBrand,
+    selectedBrand,
+    setSelectedBrand,
   } = useBrandContext();
+  const {
+    uploadImageBytes,
+  } = useFirebaseStorageContext();
 
   const {
     manager: user,
   } = useAuthContext();
 
-  if (!user) {
+  if (!user || !selectedBrand) {
+    Toaster.error('Selected brand not found');
     return null;
   }
 
-  const [updatedBrandProfile, setUpdatedBrandProfile] = useState(user);
-
-  const handleOnSave = (user: Manager) => {
-    setUpdatedBrandProfile(user);
-  }
+  const [brandData, setBrandData] = useState<Partial<Brand>>(selectedBrand);
+  const brandImage = useRef(selectedBrand?.image || "");
 
   const handleSave = async () => {
-    console.log('updatedBrandProfile', updatedBrandProfile);
-    // await updateBrandProfile(updatedBrandProfile.id, updatedBrandProfile).then(() => {
-    //   Toaster.success('Saved changes successfully');
-    // }).catch((error) => {
-    //   Toaster.error('Error saving preferences');
-    // });
+    let imageUrl = "";
+    if (brandData.image !== brandImage.current) {
+      const blob = await fetch(
+        brandData.image as string,
+      ).then((res) => res.blob());
+      imageUrl = await uploadImageBytes(blob, `brands/${brandData.name}-${Date.now()}`);
+    }
+
+    await updateBrand(
+      selectedBrand.id,
+      Object.fromEntries(Object.entries({
+        ...brandData,
+        image: imageUrl ? imageUrl : brandImage.current,
+      }).filter(([key]) => key !== 'id'))
+    ).then(() => {
+      Toaster.success('Saved changes successfully');
+      setSelectedBrand(brandData as Brand);
+    }).catch((error) => {
+      Toaster.error('Error saving preferences');
+    });
   }
 
   return (
@@ -52,7 +70,10 @@ const BrandProfileScreen = () => {
           </Pressable>
         }
       />
-      <BrandProfile />
+      <BrandProfile
+        brandData={brandData}
+        setBrandData={setBrandData}
+      />
       <Toast />
     </AppLayout>
   );
