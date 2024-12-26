@@ -22,6 +22,7 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/components/theme/useColorScheme";
 import {
   AuthContextProvider,
+  AWSContextProvider,
   CloudMessagingContextProvider,
   CollaborationContextProvider,
   FirebaseStorageContextProvider,
@@ -73,19 +74,21 @@ export default function RootLayout() {
     <GestureHandlerRootView>
       <BottomSheetModalProvider>
         <AuthContextProvider>
-          <FirebaseStorageContextProvider>
-            <NotificationContextProvider>
-              <CloudMessagingContextProvider>
-                <BrandContextProvider>
-                  <CollaborationContextProvider>
-                    <AutocompleteDropdownContextProvider>
-                      <RootLayoutStack />
-                    </AutocompleteDropdownContextProvider>
-                  </CollaborationContextProvider>
-                </BrandContextProvider>
-              </CloudMessagingContextProvider>
-            </NotificationContextProvider>
-          </FirebaseStorageContextProvider>
+          <AWSContextProvider>
+            <FirebaseStorageContextProvider>
+              <NotificationContextProvider>
+                <CloudMessagingContextProvider>
+                  <BrandContextProvider>
+                    <CollaborationContextProvider>
+                      <AutocompleteDropdownContextProvider>
+                        <RootLayoutStack />
+                      </AutocompleteDropdownContextProvider>
+                    </CollaborationContextProvider>
+                  </BrandContextProvider>
+                </CloudMessagingContextProvider>
+              </NotificationContextProvider>
+            </FirebaseStorageContextProvider>
+          </AWSContextProvider>
         </AuthContextProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>

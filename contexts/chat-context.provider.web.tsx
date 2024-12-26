@@ -1,17 +1,17 @@
 import { createContext, PropsWithChildren, useContext } from "react";
+import { useAuthContext } from "./auth-context.provider";
 
 interface ChatContextProps {
   createGroupWithMembers: (
-    client: any,
     groupName: string,
     members: string[],
-  ) => Promise<void>;
-  client: any;
+  ) => Promise<any>;
+  connectUser: () => void;
 }
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => { },
-  client: null,
+  connectUser: async () => { },
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -19,21 +19,40 @@ export const useChatContext = () => useContext(ChatContext);
 export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const client: any = null;
+  const {
+    manager: user,
+  } = useAuthContext();
 
   const createGroupWithMembers = async (
-    client: any,
     groupName: string,
     members: string[],
-  ) => {
-    return;
+  ): Promise<any> => {
+    const response = await fetch('https://be.trendly.pro/api/v1/chat/channel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user?.id}`,
+      },
+      body: JSON.stringify({
+        name: groupName,
+        userIds: members,
+      }),
+    });
+
+    const data = await response.json();
+
+    return data.channel;
+  };
+
+  const connectUser = async () => {
+    return null;
   };
 
   return (
     <ChatContext.Provider
       value={{
         createGroupWithMembers,
-        client: null,
+        connectUser,
       }}
     >
       {children}

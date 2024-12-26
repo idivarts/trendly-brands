@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
-import { ActivityIndicator } from "react-native-paper";
+import { ActivityIndicator, Button } from "react-native-paper";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { View } from "@/components/theme/Themed";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
@@ -10,12 +10,18 @@ import InvitationsTabContent from "./InvitationsTabContent";
 import OverviewTabContent from "./OverviewTabContent";
 import SettingsTabContent from "./SettingsTabContent";
 import CollaborationHeader from "../CollaborationHeader";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 
 export interface CollaborationDetail extends ICollaboration {
   brandDescription: string;
   brandName: string;
   logo: string;
   paymentVerified: boolean;
+  brandWebsite: string;
+  brandCategory: string[];
 }
 
 interface CollaborationDetailsProps {
@@ -23,12 +29,26 @@ interface CollaborationDetailsProps {
 }
 
 const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
-  pageID
+  pageID,
 }) => {
-  const [collaboration, setCollaboration] = useState<CollaborationDetail | undefined>(
-    undefined
-  );
+  const [collaboration, setCollaboration] = useState<
+    CollaborationDetail | undefined
+  >(undefined);
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
+
+  const publishCollaboration = async () => {
+    if (!pageID) return;
+    try {
+      const collabRef = doc(FirestoreDB, "collaborations", pageID);
+      await updateDoc(collabRef, {
+        status: "active",
+      });
+      fetchCollaboration();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchCollaboration = async () => {
     if (!pageID) return;
@@ -40,14 +60,22 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
       const brandRef = doc(FirestoreDB, "brands", data.brandId);
       const brandSnapshot = await getDoc(brandRef);
-      const brandData = brandSnapshot.data();
+      const brandData = brandSnapshot.data() as IBrands;
 
       setCollaboration({
         ...data,
         logo: brandData?.image || "",
         brandName: brandData?.name || "Unknown Brand",
         paymentVerified: brandData?.paymentMethodVerified || false,
-        brandDescription: brandData?.description || "",
+        brandDescription: brandData?.profile
+          ? brandData?.profile?.about || ""
+          : "",
+        brandWebsite: brandData?.profile
+          ? brandData?.profile?.website || ""
+          : "",
+        brandCategory: brandData?.profile
+          ? brandData?.profile?.industries || []
+          : [],
       });
     } catch (e) {
       console.error(e);
@@ -82,19 +110,13 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     {
       id: "Invitations",
       title: "Invitations",
-      component: (
-        <InvitationsTabContent
-          pageID={pageID}
-        />
-      ),
+      component: <InvitationsTabContent pageID={pageID} />,
     },
     {
-      id: "Settings",
-      title: "Settings",
-      component: (
-        <SettingsTabContent />
-      ),
-    }
+      id: "Preferences",
+      title: "Preferences",
+      component: <SettingsTabContent pageID={pageID} />,
+    },
   ];
 
   useEffect(() => {
@@ -122,13 +144,56 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         flex: 1,
       }}
     >
-      <CollaborationHeader
-        collaboration={collaboration}
-      />
-      <TopTabNavigation
-        tabs={tabs}
-        size="compact"
-      />
+      <CollaborationHeader collaboration={collaboration} />
+
+      {collaboration.status === "draft" && (
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 16,
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <Button
+            mode="contained"
+            onPress={() => {
+              router.push({
+                pathname: "/edit-collaboration",
+                params: {
+                  id: pageID,
+                },
+              });
+            }}
+            style={{
+              flex: 1,
+              backgroundColor: Colors(theme).background,
+              borderWidth: 0.3,
+              borderColor: Colors(theme).outline,
+            }}
+            textColor={Colors(theme).text}
+          >
+            Edit Draft
+          </Button>
+          <Button
+            mode="contained"
+            onPress={() => publishCollaboration()}
+            style={{
+              flex: 1,
+            }}
+          >
+            Publish Now
+          </Button>
+        </View>
+      )}
+      {collaboration.status === "draft" && (
+        <OverviewTabContent collaboration={collaboration} />
+      )}
+      {collaboration.status === "active" && (
+        <TopTabNavigation tabs={tabs} size="compact" />
+      )}
     </View>
   );
 };

@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-  Text,
-} from "react-native";
+import { Modal, Pressable, StyleSheet, View, Text } from "react-native";
 import { List } from "react-native-paper";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useChatContext, useNotificationContext } from "@/contexts";
@@ -16,12 +10,12 @@ import { useRouter } from "expo-router";
 
 interface BottomSheetActionsProps {
   cardType:
-  | "influencerType"
-  | "promotionType"
-  | "influencerCard"
-  | "applicationCard"
-  | "invitationCard"
-  | "activeCollab";
+    | "influencerType"
+    | "promotionType"
+    | "influencerCard"
+    | "applicationCard"
+    | "invitationCard"
+    | "activeCollab";
   data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
@@ -42,13 +36,8 @@ const BottomSheetActions = ({
     React.useState(false);
   const router = useRouter();
 
-  const {
-    createGroupWithMembers,
-    client,
-  } = useChatContext();
-  const {
-    createNotification,
-  } = useNotificationContext();
+  const { createGroupWithMembers, connectUser } = useChatContext();
+  const { createNotification } = useNotificationContext();
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -75,12 +64,11 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        // @ts-ignore
-        createGroupWithMembers(client, data.collaboration.name, [
-          // @ts-ignore
-          client.user?.id as string,
+        createGroupWithMembers(data.collaboration.name, [
           cardId.influencerID,
-        ]).then(() => {
+        ]).then((channel) => {
+          connectUser();
+
           createNotification(
             cardId.influencerID,
             {
@@ -95,6 +83,8 @@ const BottomSheetActions = ({
             },
             "users"
           );
+
+          router.navigate(`/channel/${channel.cid}`);
         });
 
         handleClose();
@@ -249,6 +239,7 @@ const BottomSheetActions = ({
               title="View Collaboration"
               onPress={() => {
                 handleClose();
+                router.push(`/collaboration-details/${cardId}`);
               }}
             />
             <List.Item

@@ -1,41 +1,61 @@
 import React, { useEffect, useState } from "react";
-import { AuthApp } from "@/utils/auth";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useBrandContext } from "@/contexts/brand-context.provider";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
-import { SelectItem } from "@/components/ui/select";
-import ScreenOne from "@/components/create-collaboration/screen-one";
-import ScreenTwo from "@/components/create-collaboration/screen-two";
-import ScreenThree from "@/components/create-collaboration/screen-three";
-import { useCollaborationContext } from "@/contexts";
-import { SocialPlatform } from "@/shared-libs/firestore/trendly-pro/constants/social-platform";
+
+import { AuthApp } from "@/utils/auth";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { CollaborationType } from "@/shared-libs/firestore/trendly-pro/constants/collaboration-type";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useAWSContext, useCollaborationContext } from "@/contexts";
+import ScreenFour from "@/components/create-collaboration/screen-four";
+import ScreenOne from "@/components/create-collaboration/screen-one";
+import ScreenThree from "./screen-three";
+import ScreenTwo from "@/components/create-collaboration/screen-two";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { useAssets, useProcess } from "@/hooks";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { View } from "../theme/Themed";
+import { ActivityIndicator } from "react-native";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 
 const CreateCollaboration = () => {
-  const [collaborationName, setCollaborationName] = useState("");
-  const [aboutCollab, setAboutCollab] = useState("");
-  const [budgetMin, setBudgetMin] = useState("");
-  const [budgetMax, setBudgetMax] = useState("");
-  const [numInfluencers, setNumInfluencers] = useState(1);
-  const [promotionType, setPromotionType] = useState<SelectItem[]>([]);
-  const [collabType, setCollabType] = useState<SelectItem[]>([]);
-  const [platform, setPlatform] = useState([
-    {
-      label: "Instagram",
-      value: "Instagram",
+  const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
+    name: "",
+    brandId: "",
+    managerId: "",
+    attachments: [],
+    description: "",
+    promotionType: PromotionType.BARTER_COLLAB,
+    budget: {
+      min: 0,
+      max: 10000,
     },
-  ]);
-  const params = useLocalSearchParams();
-  const [location, setLocation] = useState("Remote");
-  const [formattedAddress, setFormattedAddress] = useState("");
-  const [links, setLinks] = useState<any[]>([]);
-  const [screen, setScreen] = useState(1);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [newLinkName, setNewLinkName] = useState("");
-  const { selectedBrand } = useBrandContext();
-  const [newLinkUrl, setNewLinkUrl] = useState("");
+    preferredContentLanguage: ["English", "Hindi"],
+    contentFormat: [],
+    platform: [],
+    numberOfInfluencersNeeded: 0,
+    location: {
+      type: "Remote",
+      name: "",
+      latlong: {
+        lat: 0,
+        long: 0,
+      },
+    },
+    externalLinks: [],
+    questionsToInfluencers: [],
+    preferences: {
+      timeCommitment: "Full Time",
+      influencerNiche: [],
+      influencerRelation: "Long Term",
+      preferredVideoType: "Integrated Video",
+    },
+    status: "",
+    timeStamp: 0,
+    viewsLastHour: 0,
+    lastReviewedTimeStamp: 0,
+  });
+
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -43,13 +63,41 @@ const CreateCollaboration = () => {
     longitudeDelta: 0.0421,
   });
 
+  const [screen, setScreen] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEdited, setIsEdited] = useState(false);
+  const theme = useTheme();
+  const params = useLocalSearchParams();
   const type = params.id ? "Edit" : "Add";
 
+  const {
+    isProcessing,
+    processMessage,
+    processPercentage,
+    setIsProcessing,
+    setProcessMessage,
+    setProcessPercentage,
+  } = useProcess();
+  const {
+    attachments,
+    handleAssetsUpdateNative,
+    handleAssetsUpdateWeb,
+    nativeAssets,
+    setAttachments,
+    webAssets,
+  } = useAssets();
+
+  const {
+    selectedBrand,
+  } = useBrandContext();
   const {
     getCollaborationById,
     createCollaboration,
     updateCollaboration,
   } = useCollaborationContext();
+  const {
+    uploadNewAssets,
+  } = useAWSContext();
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -74,33 +122,11 @@ const CreateCollaboration = () => {
     id: string,
   ) => {
     const collaboration = await getCollaborationById(id);
-    setCollaborationName(collaboration.name);
-    setAboutCollab(collaboration.description || "");
-    setBudgetMin(collaboration.budget.min?.toString() || "");
-    setBudgetMax(collaboration.budget.max?.toString() || "");
-    setNumInfluencers(collaboration.numberOfInfluencersNeeded);
-    setPromotionType([
-      {
-        label: collaboration.promotionType,
-        value: collaboration.promotionType,
-      },
-    ]);
-    setCollabType([
-      {
-        label: collaboration.collaborationType,
-        value: collaboration.collaborationType,
-      },
-    ]);
-    setPlatform([
-      {
-        label: collaboration.platform,
-        value: collaboration.platform,
-      },
-    ]);
-    setLocation(collaboration.location.type);
-    setLinks(collaboration.externalLinks || []);
-    if (collaboration.location.name && collaboration.location.latlong) {
-      setFormattedAddress(collaboration.location.name);
+    setCollaboration(collaboration);
+
+    setAttachments(collaboration?.attachments || []);
+
+    if (collaboration.location.latlong) {
       setMapRegion({
         latitude: collaboration.location.latlong.lat,
         longitude: collaboration.location.latlong.long,
@@ -112,28 +138,27 @@ const CreateCollaboration = () => {
 
   useEffect(() => {
     if (params.id && typeof params.id === "string") {
-      fetchCollaboration(params.id);
+      setIsLoading(true);
+      fetchCollaboration(params.id)
+        .finally(() => {
+          setIsLoading(false);
+        })
     }
   }, []);
 
-  const addLink = () => {
-    if (!newLinkName || !newLinkUrl) {
-      Toaster.error("Please fill all fields");
-      return;
-    }
-
-    setLinks([...links, { name: newLinkName, url: newLinkUrl }]);
-    setNewLinkName("");
-    setNewLinkUrl("");
-    setIsModalVisible(false);
-  };
-
   const onFormattedAddressChange = (address: string) => {
-    setFormattedAddress(address);
+    setCollaboration({
+      ...collaboration,
+      location: {
+        ...collaboration.location,
+        type: "On-Site",
+        name: address,
+      },
+    });
   }
 
   const handleCollaboration = async (
-    data: any,
+    data: Partial<ICollaboration>,
   ): Promise<void> => {
     if (params.id && typeof params.id === "string") {
       await updateCollaboration(params.id, data);
@@ -142,31 +167,20 @@ const CreateCollaboration = () => {
     }
   }
 
-  const submitCollaboration = async () => {
+  const saveCollaboration = async (
+    status: "draft" | "active",
+  ) => {
     try {
       if (!AuthApp.currentUser) {
         console.error("User not logged in");
       }
 
-      if (
-        !collaborationName ||
-        !aboutCollab ||
-        !budgetMin ||
-        !budgetMax ||
-        !promotionType ||
-        !collabType ||
-        !numInfluencers ||
-        !platform ||
-        !location
-      ) {
-        Toaster.error("Please fill all fields");
-        return;
-      }
+      let locationAddress = collaboration?.location;
 
-      let locationAddress = {};
-      if (location === "Physical" && mapRegion.latitude && mapRegion.longitude) {
+      if (collaboration?.location?.type === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
         locationAddress = {
-          name: formattedAddress,
+          ...collaboration.location,
+          type: collaboration.location.type || "Remote",
           latlong: {
             lat: mapRegion.latitude,
             long: mapRegion.longitude,
@@ -174,63 +188,88 @@ const CreateCollaboration = () => {
         };
       }
 
+      setIsProcessing(true);
+      setProcessMessage('Saving collaboration attachments...');
+      setProcessPercentage(40);
+
+      // Upload assets to S3
+      const uploadedAssets = await uploadNewAssets(
+        attachments,
+        nativeAssets,
+        webAssets,
+      );
+
+      setProcessMessage('Saved collaboration attachments...');
+      setProcessPercentage(70);
+
+      setProcessMessage('Saving collaboration...');
+      setProcessPercentage(100);
+
       await handleCollaboration({
-        name: collaborationName,
-        brandId: selectedBrand ? selectedBrand.id : "",
+        ...collaboration,
+        attachments: uploadedAssets,
+        brandId: selectedBrand ? selectedBrand?.id : "",
         managerId: AuthApp.currentUser?.uid as string,
-        description: aboutCollab,
-        timeStamp: Date.now(),
-        budget: {
-          min: Number(budgetMin),
-          max: Number(budgetMax),
-        },
-        promotionType: promotionType[0].value as PromotionType,
-        collaborationType: collabType[0].value as CollaborationType,
-        numberOfInfluencersNeeded: numInfluencers,
-        platform: platform[0].value as SocialPlatform,
-        location: {
-          type: location,
-          ...locationAddress,
-        },
-        externalLinks: links,
-        status: "active",
+        location: locationAddress,
+        status,
+        timeStamp: type === "Add" ? Date.now() : collaboration.timeStamp,
       }).then(() => {
-        setScreen(3);
+        setScreen(4);
         setTimeout(() => {
           router.dismiss(1);
           router.push("/collaborations");
         }, 3000);
+      }).catch((error) => {
+        console.error(error);
+        Toaster.error("Failed to save collaboration");
+      }).finally(() => {
+        setProcessPercentage(0);
+        setProcessMessage('');
+        setIsProcessing(false);
       });
     } catch (error) {
       console.error(error);
     }
   };
 
+  const submitCollaboration = async () => {
+    await saveCollaboration("active");
+  };
+
+  const saveAsDraft = async () => {
+    await saveCollaboration("draft");
+  }
+
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator
+          size="large"
+          color={Colors(theme).primary}
+        />
+      </View>
+    );
+  }
+
   if (screen === 1) {
     return (
       <ScreenOne
-        type={type}
-        data={{
-          collaborationName,
-          aboutCollab,
-          budgetMin,
-          budgetMax,
-          numInfluencers,
-          promotionType,
-          collabType,
-          platform,
-        }}
+        attachments={attachments}
+        collaboration={collaboration}
+        handleAssetsUpdateNative={handleAssetsUpdateNative}
+        handleAssetsUpdateWeb={handleAssetsUpdateWeb}
+        isEdited={isEdited}
+        isSubmitting={isProcessing}
+        setCollaboration={setCollaboration}
+        setIsEdited={setIsEdited}
         setScreen={setScreen}
-        setState={{
-          collaborationName: setCollaborationName,
-          aboutCollab: setAboutCollab,
-          budgetMin: setBudgetMin,
-          budgetMax: setBudgetMax,
-          numInfluencers: setNumInfluencers,
-          promotionType: setPromotionType,
-          collabType: setCollabType,
-          platform: setPlatform,
-        }}
+        type={type}
       />
     );
   }
@@ -238,27 +277,18 @@ const CreateCollaboration = () => {
   if (screen == 2) {
     return (
       <ScreenTwo
-        type={type}
-        setScreen={setScreen}
-        data={{
-          location,
-          links,
-          mapRegion,
-          newLinkName,
-          newLinkUrl,
+        collaboration={collaboration}
+        isEdited={isEdited}
+        isSubmitting={isProcessing}
+        mapRegion={{
+          state: mapRegion,
+          setState: setMapRegion,
         }}
-        setState={{
-          location: setLocation,
-          links: setLinks,
-          mapRegion: setMapRegion,
-          newLinkName: setNewLinkName,
-          newLinkUrl: setNewLinkUrl,
-        }}
-        isModalVisible={isModalVisible}
-        setIsModalVisible={setIsModalVisible}
         onFormattedAddressChange={onFormattedAddressChange}
-        submitCollaboration={submitCollaboration}
-        addLink={addLink}
+        saveAsDraft={saveAsDraft}
+        setCollaboration={setCollaboration}
+        setScreen={setScreen}
+        type={type}
       />
     );
   }
@@ -266,6 +296,23 @@ const CreateCollaboration = () => {
   if (screen === 3) {
     return (
       <ScreenThree
+        collaboration={collaboration}
+        isEdited={isEdited}
+        isSubmitting={isProcessing}
+        processMessage={processMessage}
+        processPercentage={processPercentage}
+        saveAsDraft={saveAsDraft}
+        setCollaboration={setCollaboration}
+        setScreen={setScreen}
+        submitCollaboration={submitCollaboration}
+        type={type}
+      />
+    );
+  }
+
+  if (screen === 4) {
+    return (
+      <ScreenFour
         type={type}
       />
     );

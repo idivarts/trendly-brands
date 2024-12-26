@@ -27,12 +27,7 @@ export const DUMMY_INFLUENCER: IUsers = {
       },
     ],
   },
-  preferences: {
-    question1: ["Option1"],
-    question2: ["Option2"],
-    question3: ["Option3"],
-    question4: ["Option4"],
-  },
+  preferences: {},
   settings: {
     theme: "light",
     emailNotification: true,

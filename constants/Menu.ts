@@ -1,17 +1,16 @@
+import { faGears, faUser } from "@fortawesome/free-solid-svg-icons";
+
 export const MENU_ITEMS = [
   {
     id: "1",
-    title: "Preferences",
+    icon: faUser,
+    title: "Members",
     href: "/preferences",
   },
   {
     id: "2",
     title: "Settings",
     href: "/settings",
-  },
-  {
-    id: "3",
-    title: "Billing",
-    href: "/billing",
+    icon: faGears,
   },
 ];

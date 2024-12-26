@@ -1,165 +1,259 @@
-import { ScrollView } from "react-native";
-import { View } from "../theme/Themed";
-import { Modal, Paragraph, RadioButton, TextInput } from "react-native-paper";
-import Colors from "@/constants/Colors";
-import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
-import Button from "../ui/button";
-
-import stylesFn from "@/styles/modal/UploadModal.styles";
+import React, { useMemo } from "react";
 import { useTheme } from "@react-navigation/native";
-import ScreenHeader from "../ui/screen-header";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+
+import { Collaboration } from "@/types/Collaboration";
+import {
+  CONTENT_FORMATS,
+  INITIAL_CONTENT_FORMATS,
+  INITIAL_PLATFORMS,
+  PLATFORMS,
+} from "@/constants/ItemsList";
+import { faArrowRight, faPhotoFilm, faVideo } from "@fortawesome/free-solid-svg-icons";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { MultiRangeSlider } from "@/shared-uis/components/multislider";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { Selector } from "@/shared-uis/components/select/selector";
+import { View } from "../theme/Themed";
+import Button from "../ui/button";
+import Colors from "@/constants/Colors";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
+import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
+import ScreenLayout from "./screen-layout";
+import TextInput from "../ui/text-input";
 
 interface ScreenTwoProps {
-  type: "Add" | "Edit";
-  setScreen: React.Dispatch<React.SetStateAction<number>>;
-  data: {
-    location: string;
-    links: any[];
-    mapRegion: {
+  collaboration: Partial<Collaboration>;
+  isEdited: boolean;
+  isSubmitting: boolean;
+  mapRegion: {
+    state: {
       latitude: number;
       longitude: number;
       latitudeDelta: number;
       longitudeDelta: number;
     };
-    newLinkName: string;
-    newLinkUrl: string;
-  };
-  setState: {
-    location: React.Dispatch<React.SetStateAction<string>>;
-    links: React.Dispatch<React.SetStateAction<any[]>>;
-    mapRegion: React.Dispatch<React.SetStateAction<{
+    setState: React.Dispatch<React.SetStateAction<{
       latitude: number;
       longitude: number;
       latitudeDelta: number;
       longitudeDelta: number;
     }>>;
-    newLinkName: React.Dispatch<React.SetStateAction<string>>;
-    newLinkUrl: React.Dispatch<React.SetStateAction<string>>;
   };
-  isModalVisible: boolean;
-  setIsModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   onFormattedAddressChange: (address: string) => void;
-  submitCollaboration: () => void;
-  addLink: () => void;
+  saveAsDraft: () => Promise<void>;
+  setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
+  setScreen: React.Dispatch<React.SetStateAction<number>>;
+  type: "Add" | "Edit";
 }
 
 const ScreenTwo: React.FC<ScreenTwoProps> = ({
-  type,
-  setScreen,
-  data,
-  setState,
-  isModalVisible,
-  setIsModalVisible,
+  collaboration,
+  isEdited,
+  isSubmitting,
+  mapRegion,
   onFormattedAddressChange,
-  submitCollaboration,
-  addLink,
+  saveAsDraft,
+  setCollaboration,
+  setScreen,
+  type,
 }) => {
   const theme = useTheme();
-  const styles = stylesFn(theme);
+
+  const numberOfInfluencersNeededText = useMemo(() => {
+    if (
+      collaboration.numberOfInfluencersNeeded
+      && collaboration.numberOfInfluencersNeeded >= 101
+    ) {
+      return 'More than 100';
+    }
+
+    return `${collaboration.numberOfInfluencersNeeded || 0}`;
+  }, [collaboration.numberOfInfluencersNeeded]);
 
   return (
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
+      <ScreenLayout
+        isEdited={isEdited}
+        isSubmitting={isSubmitting}
+        saveAsDraft={saveAsDraft}
+        screen={2}
+        setScreen={setScreen}
+        type={type}
       >
-        <ScreenHeader
-          title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
-          action={() => setScreen(1)}
-        />
-
-        <View>
-          <Paragraph
-            style={[
-              styles.paragraph,
+        <ContentWrapper
+          description="Which content format are you willing to post on your social media account for promotions."
+          theme={theme}
+          title="Content Format"
+          titleStyle={{
+            fontSize: 16,
+          }}
+        >
+          <MultiSelectExtendable
+            buttonIcon={
+              <FontAwesomeIcon
+                icon={faArrowRight}
+                color={Colors(theme).primary}
+                size={14}
+              />
+            }
+            buttonLabel="Others"
+            initialMultiselectItemsList={INITIAL_CONTENT_FORMATS}
+            initialItemsList={includeSelectedItems(CONTENT_FORMATS, collaboration.contentFormat || [])}
+            onSelectedItemsChange={(value) => {
+              setCollaboration({
+                ...collaboration,
+                contentFormat: value,
+              });
+            }}
+            selectedItems={collaboration.contentFormat || []}
+            theme={theme}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          description="Which platforms would you like to post content on?"
+          theme={theme}
+          title="Platform"
+          titleStyle={{
+            fontSize: 16,
+          }}
+        >
+          <MultiSelectExtendable
+            buttonIcon={
+              <FontAwesomeIcon
+                icon={faArrowRight}
+                color={Colors(theme).primary}
+                size={14}
+              />
+            }
+            buttonLabel="Others"
+            initialMultiselectItemsList={INITIAL_PLATFORMS}
+            initialItemsList={includeSelectedItems(PLATFORMS, collaboration.platform || [])}
+            onSelectedItemsChange={(value) => {
+              setCollaboration({
+                ...collaboration,
+                platform: value,
+              });
+            }}
+            selectedItems={collaboration.platform || []}
+            theme={theme}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          rightText={numberOfInfluencersNeededText}
+          theme={theme}
+          title="Influencers Needed"
+          titleStyle={{
+            fontSize: 16,
+          }}
+        >
+          <MultiRangeSlider
+            minValue={0}
+            maxValue={101}
+            onValuesChange={(values) => {
+              setCollaboration({
+                ...collaboration,
+                numberOfInfluencersNeeded: values[0],
+              });
+            }}
+            sliderLength={368}
+            isMarkersSeparated
+            allowOverlap
+            customMarkerLeft={
+              (e) => <View
+                style={{
+                  backgroundColor: Colors(theme).primary,
+                  borderRadius: 12,
+                  height: 20,
+                  width: 20,
+                }}
+              />
+            }
+            customMarkerRight={
+              (e) => <View
+                style={{
+                  backgroundColor: 'transparent',
+                  borderRadius: 0,
+                  height: 0,
+                  width: 0,
+                }}
+              />
+            }
+            values={[collaboration.numberOfInfluencersNeeded || 0, 101]}
+            step={1}
+            theme={theme}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          theme={theme}
+          title="Location"
+          titleStyle={{
+            fontSize: 16,
+          }}
+        >
+          <Selector
+            options={[
               {
-                paddingLeft: 16,
-              }
+                icon: faVideo,
+                label: 'Remote',
+                value: 'Remote',
+              },
+              {
+                icon: faPhotoFilm,
+                label: 'On-Site',
+                value: 'On-Site',
+              },
             ]}
-          >
-            Location:
-          </Paragraph>
-          <RadioButton.Group
-            onValueChange={(newValue) => setState.location(newValue)}
-            value={data.location}
-          >
-            <RadioButton.Item
-              mode="android"
-              label="Remote"
-              value="Remote"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-            <RadioButton.Item
-              mode="android"
-              label="Physical"
-              value="Physical"
-              labelStyle={{
-                color: Colors(theme).text,
-              }}
-            />
-          </RadioButton.Group>
-        </View>
-
+            onSelect={(value) => {
+              setCollaboration({
+                ...collaboration,
+                location: {
+                  ...collaboration.location,
+                  type: value,
+                },
+              })
+            }}
+            selectedValue={collaboration.location?.type || 'Remote'}
+            theme={theme}
+          />
+        </ContentWrapper>
         {
-          data.location === "Physical" && (
-            <CreateCollaborationMap
-              mapRegion={data.mapRegion}
-              onMapRegionChange={(region) => setState.mapRegion(region)}
-              onFormattedAddressChange={onFormattedAddressChange}
-            />
+          collaboration.location?.type === "On-Site" && (
+            <>
+              <TextInput
+                label="Location"
+                mode="outlined"
+                onChangeText={(text) => {
+                  setCollaboration({
+                    ...collaboration,
+                    location: {
+                      ...collaboration.location,
+                      type: collaboration.location?.type as string,
+                      name: text || "",
+                    },
+                  })
+                }}
+                value={collaboration.location?.name}
+              />
+              <CreateCollaborationMap
+                mapRegion={mapRegion.state}
+                onMapRegionChange={(region) => mapRegion.setState(region)}
+                onFormattedAddressChange={onFormattedAddressChange}
+              />
+            </>
           )
         }
 
         <Button
+          loading={isSubmitting}
           mode="contained"
-          onPress={() => setIsModalVisible(true)}
-          style={{
-            marginBottom: 16,
+          onPress={() => {
+            setScreen(3);
           }}
         >
-          Add Link
+          {isSubmitting ? "Saving" : "Next"}
         </Button>
-        {
-          data.links.map((link, index) => (
-            <Paragraph key={index + link.url}>
-              {link.name}: {link.url}
-            </Paragraph>
-          ))
-        }
-
-        <Button mode="contained" onPress={() => submitCollaboration()}>
-          {type === "Add" ? "Post" : "Update"}
-        </Button>
-      </ScrollView>
-
-      <Modal
-        contentContainerStyle={styles.modalContainer}
-        onDismiss={() => setIsModalVisible(false)}
-        visible={isModalVisible}
-      >
-        <TextInput
-          label="Link Name"
-          mode="outlined"
-          onChangeText={setState.newLinkName}
-          style={styles.input}
-          value={data.newLinkName}
-        />
-        <TextInput
-          label="Link URL"
-          mode="outlined"
-          onChangeText={setState.newLinkUrl}
-          style={styles.input}
-          value={data.newLinkUrl}
-        />
-        <Button
-          mode="contained"
-          onPress={addLink}
-        >
-          Add Link
-        </Button>
-      </Modal>
+      </ScreenLayout>
     </>
   );
 };

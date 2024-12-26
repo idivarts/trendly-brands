@@ -36,15 +36,12 @@ const Select: React.FC<SelectProps> = ({
   const handleSelect = (item: SelectItem) => {
     if (multiselect) {
       const index = value.findIndex(
-        (selectedItem) => selectedItem.value === item.value,
+        (selectedItem) => selectedItem.value === item.value
       );
       if (index === -1) {
         onSelect([...value, item]);
       } else {
-        onSelect([
-          ...value.slice(0, index),
-          ...value.slice(index + 1),
-        ]);
+        onSelect([...value.slice(0, index), ...value.slice(index + 1)]);
       }
     } else {
       onSelect([item]);
@@ -58,67 +55,59 @@ const Select: React.FC<SelectProps> = ({
           flex: 1,
           gap: 8,
         },
-        direction === "row" ? {
-          flexDirection: "row",
-          flexWrap: "wrap",
-        } : {
-          flexDirection: "column",
-          justifyContent: "center",
-        },
+        direction === "row"
+          ? {
+              flexDirection: "row",
+              flexWrap: "wrap",
+            }
+          : {
+              flexDirection: "column",
+              justifyContent: "center",
+            },
         style,
-      ]
-      }
+      ]}
     >
-      {
-        items.map((item) => (
-          <Pressable
+      {items.map((item) => (
+        <Pressable key={item.value} onPress={() => handleSelect(item)}>
+          <View
             key={item.value}
-            onPress={() => handleSelect(item)}
-          >
-            <View
-              key={item.value}
-              style={[
-                {
-                  backgroundColor: value.find(
-                    (selectedItem) => selectedItem.value === item.value,
-                  )
-                    ? Colors(theme).primary
-                    : Colors(theme).tag,
-                  borderRadius: 10,
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  gap: 12,
-                },
-                selectItemStyle,
-              ]}
-            >
-              <Text
-                style={{
-                  color: value.find(
-                    (selectedItem) => selectedItem.value === item.value,
-                  )
-                    ? Colors(theme).white
-                    : Colors(theme).text,
-                }}
-              >
-                {item.label}
-              </Text>
+            style={[
               {
-                selectItemIcon && value.find(
-                  (selectedItem) => selectedItem.value === item.value,
-                ) && (
-                  <FontAwesomeIcon
-                    icon={faCheck}
-                    color={Colors(theme).white}
-                  />
+                backgroundColor: value.find(
+                  (selectedItem) => selectedItem.value === item.value
                 )
-              }
-            </View>
-          </Pressable>
-        ))
-      }
+                  ? Colors(theme).primary
+                  : Colors(theme).tag,
+                borderRadius: 10,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                gap: 12,
+              },
+              selectItemStyle,
+            ]}
+          >
+            <Text
+              style={{
+                color: value.find(
+                  (selectedItem) => selectedItem.value === item.value
+                )
+                  ? Colors(theme).white
+                  : Colors(theme).text,
+              }}
+            >
+              {item.label}
+            </Text>
+            {selectItemIcon &&
+              value.find(
+                (selectedItem) => selectedItem.value === item.value
+              ) && (
+                <FontAwesomeIcon icon={faCheck} color={Colors(theme).white} />
+              )}
+          </View>
+        </Pressable>
+      ))}
     </View>
   );
 };
