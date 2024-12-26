@@ -5,7 +5,7 @@ import stylesFn from "@/styles/menu/MenuItem.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { MENU_ITEMS } from "@/constants/Menu";
-import { ImageBackground, Pressable } from "react-native";
+import { Image, ImageBackground, Pressable } from "react-native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useState } from "react";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
@@ -13,6 +13,7 @@ import { imageUrl } from "@/utils/url";
 import Colors from "@/constants/Colors";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import ProfileItemCard from "../ProfileItemCard";
 
 const Menu = () => {
   const theme = useTheme();
@@ -20,69 +21,57 @@ const Menu = () => {
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const router = useRouter();
 
-  const {
-    selectedBrand,
-  } = useBrandContext();
+  const { selectedBrand } = useBrandContext();
 
   const { signOutManager: signOut, manager } = useAuthContext();
 
   const handleSignOut = () => {
     setLogoutModalVisible(false);
     signOut();
-  }
+  };
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={imageUrl(selectedBrand?.image)}
-        resizeMode="cover"
-        style={styles.backgroundImage}
-      />
-      <Avatar.Image
-        source={imageUrl(selectedBrand?.image)}
-        size={72}
-        style={styles.brandAvatar}
-      />
       <View style={styles.menuItemsContainer}>
-        <View
-          style={{
-            gap: 10,
-            alignItems: "flex-end",
-          }}
-        >
-          <View style={styles.topRow}>
-            <Text style={styles.brandName}>{selectedBrand?.name}</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "flex-start",
+        <View style={styles.topRow}>
+          <Image
+            source={{
+              uri: selectedBrand?.image,
+            }}
+            style={styles.avatarBrandImage}
+          />
+          <Text style={styles.brandName}>{selectedBrand?.name}</Text>
+          {selectedBrand?.profile?.about && (
+            <Text style={styles.brandName}>
+              {selectedBrand?.profile?.about}
+            </Text>
+          )}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Button
+              mode="contained"
+              style={styles.menuButton}
+              onPress={() => {
+                router.push("/brand-profile");
               }}
             >
-              <Button
-                mode="contained"
-                style={styles.menuButton}
-                onPress={() => {
-                  router.push("/brand-profile");
-                }}
-              >
-                View Profile
-              </Button>
-            </View>
+              Edit Brand
+            </Button>
           </View>
         </View>
         <View style={styles.middleRow}>
           {MENU_ITEMS.map((item, index) => (
-            <View key={item.id} style={styles.menuRow}>
-              <Text
-                style={styles.menuRowText}
-                onPress={() => {
-                  //@ts-ignore
-                  router.push(item.href);
-                }}
-              >
-                {item.title}
-              </Text>
-            </View>
+            <ProfileItemCard
+              item={item}
+              onPress={() => {
+                router.push(item.href);
+              }}
+            />
           ))}
         </View>
         <View style={styles.bottomRow}>
@@ -94,9 +83,11 @@ const Menu = () => {
             <View style={styles.userProfileContainer}>
               <Avatar.Image
                 source={
-                  manager?.profileImage ? {
-                    uri: manager?.profileImage,
-                  } : require("@/assets/images/placeholder-person-image.png")
+                  manager?.profileImage
+                    ? {
+                        uri: manager?.profileImage,
+                      }
+                    : require("@/assets/images/placeholder-person-image.png")
                 }
                 size={56}
                 style={styles.avatar}

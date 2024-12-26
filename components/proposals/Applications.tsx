@@ -1,18 +1,12 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import JobCard from "@/components/collaboration/CollaborationCard";
-import { View } from "@/components/theme/Themed";
+import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { ActivityIndicator, FlatList } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
@@ -21,6 +15,15 @@ import { stylesFn } from "@/styles/Proposal.styles";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import EmptyState from "../ui/empty-state";
 import { useBreakpoints } from "@/hooks";
+import { Card } from "react-native-paper";
+import CollaborationHeader from "../collaboration-card/card-components/CollaborationHeader";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import { MediaItem } from "@/types/Media";
+import { processRawAttachment } from "@/utils/attachments";
+import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
+import { DUMMY_INFLUENCER } from "@/constants/Influencer";
+import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import { Pressable } from "react-native-gesture-handler";
 
 const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -42,9 +45,7 @@ const Applications = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const {
-    xl,
-  } = useBreakpoints();
+  const { xl } = useBreakpoints();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -142,90 +143,133 @@ const Applications = () => {
         flex: 1,
       }}
     >
-      {
-        filteredProposals.length === 0 ? (
-          <EmptyState
-            image={require("@/assets/images/illustration6.png")}
-            subtitle="Start Applying today and get exclusive collabs"
-            title="No Applications yet"
-            action={() => router.push("/collaborations")}
-            actionLabel="Explore Collaborations"
-          />
-        ) : (
-          <View style={{ flex: 1 }}>
-            <FlatList
-              data={filteredProposals}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <JobCard
-                  name={item.name}
-                  id={item.id}
-                  brandName={item.brandName}
-                  description={item.description}
-                  brandId={item.brandId}
-                  budget={{
-                    min: Number(item.budget.min),
-                    max: Number(item.budget.max),
-                  }}
-                  onOpenBottomSheet={openBottomSheet}
-                  cardType="proposal"
-                  preferredContentLanguage={item.preferredContentLanguage}
-                  contentFormat={item.contentFormat}
-                  preferences={item.preferences}
+      {filteredProposals.length === 0 ? (
+        <EmptyState
+          image={require("@/assets/images/illustration6.png")}
+          subtitle="Start Applying today and get exclusive collabs"
+          title="No Applications yet"
+          action={() => router.push("/collaborations")}
+          actionLabel="Explore Collaborations"
+        />
+      ) : (
+        <View style={{ flex: 1 }}>
+          <FlatList
+            data={filteredProposals}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <Card>
+                {item.attachments && item.attachments?.length > 0 && (
+                  <Carousel
+                    theme={theme}
+                    data={
+                      item.attachments?.map(
+                        //@ts-ignore
+                        (attachment: MediaItem) =>
+                          processRawAttachment(attachment)
+                      ) || []
+                    }
+                    dot={
+                      <View
+                        style={{
+                          backgroundColor: Colors(theme).primary,
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          marginLeft: 3,
+                          marginRight: 3,
+                        }}
+                      />
+                    }
+                    activeDot={
+                      <View
+                        style={{
+                          backgroundColor: Colors(theme).gray100,
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          marginLeft: 3,
+                          marginRight: 3,
+                        }}
+                      />
+                    }
+                  />
+                )}
+                {item.status === "draft" && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      right: 10,
+                      backgroundColor: Colors(theme).backdrop,
+                      padding: 4,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                  </View>
+                )}
+                <CollaborationDetails
+                  collabDescription={item.description || ""}
+                  name={item.name || ""}
+                  contentType={item.contentType}
                   location={item.location}
-                  managerId="managerId"
-                  numberOfInfluencersNeeded={1}
                   platform={item.platform}
                   promotionType={item.promotionType}
-                  timeStamp={item.timeStamp}
-                  applications={item.applications}
-                  invitations={item.invitations}
-                  acceptedApplications={item.acceptedApplications}
-                  status={item.status}
+                  onOpenBottomSheet={openBottomSheet}
+                  collabId={item.id}
                 />
-              )}
-              keyExtractor={(item, index) => index.toString()}
-              style={{
-                flexGrow: 1,
-                paddingBottom: 16,
-                paddingHorizontal: 16,
-                paddingTop: 8,
-              }}
-              contentContainerStyle={{
+                <Pressable
+                  onPress={() => {
+                    router.push(`/collaboration-details/${item.id}`);
+                  }}
+                >
+                  <CollaborationStats
+                    budget={item.budget}
+                    collabID={item.id}
+                    influencerCount={item.numberOfInfluencersNeeded}
+                  />
+                </Pressable>
+              </Card>
+            )}
+            keyExtractor={(item, index) => index.toString()}
+            style={{
+              flexGrow: 1,
+              paddingBottom: 16,
+              paddingHorizontal: 16,
+              paddingTop: 8,
+            }}
+            contentContainerStyle={{
+              gap: 16,
+              paddingBottom: 24,
+              alignItems: xl ? "center" : "stretch",
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[Colors(theme).primary]}
+              />
+            }
+            horizontal={false}
+            numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
+            {...(xl && {
+              columnWrapperStyle: {
                 gap: 16,
-                paddingBottom: 24,
-                alignItems: xl ? "center" : "stretch",
-              }}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                  colors={[Colors(theme).primary]}
-                />
-              }
-              horizontal={false}
-              numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
-              {...xl && {
-                columnWrapperStyle: {
-                  gap: 16,
-                },
-              }}
-            />
-          </View>
-        )
-      }
-      {
-        isVisible && (
-          <BottomSheetActions
-            cardId={selectedCollabId || ""}
-            cardType="activeCollab"
-            isVisible={isVisible}
-            onClose={closeBottomSheet}
-            snapPointsRange={["20%", "50%"]}
-            key={selectedCollabId}
+              },
+            })}
           />
-        )
-      }
+        </View>
+      )}
+      {isVisible && (
+        <BottomSheetActions
+          cardId={selectedCollabId || ""}
+          cardType="activeCollab"
+          isVisible={isVisible}
+          onClose={closeBottomSheet}
+          snapPointsRange={["20%", "50%"]}
+          key={selectedCollabId}
+        />
+      )}
     </View>
   );
 };

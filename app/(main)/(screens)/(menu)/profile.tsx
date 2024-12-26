@@ -6,9 +6,6 @@ import ScreenHeader from "@/components/ui/screen-header";
 const ProfileScreen = () => {
   return (
     <AppLayout>
-      <ScreenHeader
-        title="Profile"
-      />
       <Profile />
     </AppLayout>
   );

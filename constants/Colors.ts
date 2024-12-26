@@ -36,6 +36,7 @@ export default (theme: Theme) => ({
       }),
   aliceBlue: "#E9F1F7",
   amber: "#FFBF00",
+  yellow: "#E8B931",
   unicornSilver: "#e8e8e8",
   eerieBlack: "#1b1b1b",
   whiteSmoke: "#f5f5f5",
