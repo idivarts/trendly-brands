@@ -11,15 +11,14 @@ import { useBreakpoints } from "@/hooks";
 import { User } from "@/types/User";
 
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
 
 import { FirestoreDB } from "@/utils/firestore";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
 import { List } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -44,7 +43,9 @@ const ExploreInfluencers = () => {
   };
   const [influencers, setInfluencers] = useState<User[]>([]);
   const [filteredInfluencers, setFilteredInfluencers] = useState<User[]>([]);
-  const [selectedInfluencer, setSelectedInfluencer] = useState<User | null>(null);
+  const [selectedInfluencer, setSelectedInfluencer] = useState<User | null>(
+    null
+  );
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -61,14 +62,15 @@ const ExploreInfluencers = () => {
 
   const theme = useTheme();
 
-  const {
-    xl,
-  } = useBreakpoints();
+  const { xl } = useBreakpoints();
 
   useEffect(() => {
     setIsLoading(true);
     const influencersRef = collection(FirestoreDB, "users");
-    const q = query(influencersRef, where("profile.completionPercentage", ">=", 60));
+    const q = query(
+      influencersRef,
+      where("profile.completionPercentage", ">=", 60)
+    );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedInfluencers: User[] = [];
@@ -180,16 +182,16 @@ const ExploreInfluencers = () => {
           paddingTop: 16,
           paddingBottom: 16,
         }}
-        ItemSeparatorComponent={
-          () => (
-            <View
-              style={{
-                height: 16,
-                backgroundColor: theme.dark ? Colors(theme).background : Colors(theme).aliceBlue,
-              }}
-            />
-          )
-        }
+        ItemSeparatorComponent={() => (
+          <View
+            style={{
+              height: 16,
+              backgroundColor: theme.dark
+                ? Colors(theme).background
+                : Colors(theme).aliceBlue,
+            }}
+          />
+        )}
         ListHeaderComponent={
           <View
             style={{
@@ -204,59 +206,49 @@ const ExploreInfluencers = () => {
           </View>
         }
         style={{
-          width: xl ? 640 : '100%',
+          width: xl ? 640 : "100%",
           marginHorizontal: "auto",
         }}
       />
 
-      {
-        isModalVisible && (
-          <BottomSheetContainer
-            isVisible={isModalVisible}
-            snapPointsRange={["25%", "50%"]}
-            onClose={ToggleModal}
-          >
-            <List.Section style={{ paddingBottom: 28 }}>
-              <List.Item
-                title="View Profile"
-                onPress={() => {
-                  bottomSheetModalRef.current?.present();
-                  ToggleModal();
-                }}
-              />
-              <List.Item
-                title="Send Message"
-                onPress={() => null}
-              />
-              <List.Item
-                title="Block Influencer"
-                onPress={() => null}
-              />
-            </List.Section>
-          </BottomSheetContainer>
-        )
-      }
+      {isModalVisible && (
+        <BottomSheetContainer
+          isVisible={isModalVisible}
+          snapPointsRange={["25%", "50%"]}
+          onClose={ToggleModal}
+        >
+          <List.Section style={{ paddingBottom: 28 }}>
+            <List.Item
+              title="View Profile"
+              onPress={() => {
+                bottomSheetModalRef.current?.present();
+                ToggleModal();
+              }}
+            />
+            <List.Item title="Send Message" onPress={() => null} />
+            <List.Item title="Block Influencer" onPress={() => null} />
+          </List.Section>
+        </BottomSheetContainer>
+      )}
 
-      {
-        isFilterModalVisible && (
-          <CollaborationFilter
-            isVisible={isFilterModalVisible}
-            onClose={() => setIsFilterModalVisible(false)}
-            collaborationType={["All", "Paid", "Unpaid"]}
-            influencerType={["All", "Micro", "Macro"]}
-            setCollaborationType={setCurrentCollaborationType}
-            setInfluencerType={setCurrentInfluencerType}
-            setCurrentFollowersRange={setCurrentFollowersRange}
-            setCurrentReachRange={setCurrentReachRange}
-            setCurrentEngagementRange={setCurrentEngagementRange}
-            currentCollaborationType="All"
-            currentInfluencerType="All"
-            currentFollowersRange={[0, 1000000]}
-            currentReachRange={[0, 1000000]}
-            currentEngagementRange={[0, 100000]}
-          />
-        )
-      }
+      {isFilterModalVisible && (
+        <CollaborationFilter
+          isVisible={isFilterModalVisible}
+          onClose={() => setIsFilterModalVisible(false)}
+          collaborationType={["All", "Paid", "Unpaid"]}
+          influencerType={["All", "Micro", "Macro"]}
+          setCollaborationType={setCurrentCollaborationType}
+          setInfluencerType={setCurrentInfluencerType}
+          setCurrentFollowersRange={setCurrentFollowersRange}
+          setCurrentReachRange={setCurrentReachRange}
+          setCurrentEngagementRange={setCurrentEngagementRange}
+          currentCollaborationType="All"
+          currentInfluencerType="All"
+          currentFollowersRange={[0, 1000000]}
+          currentReachRange={[0, 1000000]}
+          currentEngagementRange={[0, 100000]}
+        />
+      )}
 
       <BottomSheetModal
         ref={bottomSheetModalRef}
@@ -272,6 +264,7 @@ const ExploreInfluencers = () => {
           <ProfileBottomSheet
             influencer={selectedInfluencer as User}
             theme={theme}
+            FireStoreDB={FirestoreDB}
             isBrandsApp={true}
           />
         </BottomSheetScrollView>
