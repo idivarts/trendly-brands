@@ -16,15 +16,18 @@ import {
   CollaborationContextProvider,
   useCollaborationContext,
 } from "./collaboration-context.provider";
+import { AWSContextProvider, useAWSContext } from "./aws-context.provider";
 
 export {
   AuthContextProvider,
+  AWSContextProvider,
   ChatContextProvider,
   CloudMessagingContextProvider,
   CollaborationContextProvider,
   FirebaseStorageContextProvider,
   NotificationContextProvider,
   useAuthContext,
+  useAWSContext,
   useChatContext,
   useCloudMessagingContext,
   useCollaborationContext,

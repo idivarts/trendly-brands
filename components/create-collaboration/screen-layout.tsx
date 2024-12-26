@@ -1,14 +1,14 @@
+import { useState } from "react";
 import { Platform, Pressable, ScrollView } from "react-native";
 import { View } from "../theme/Themed";
-import ScreenHeader from "../ui/screen-header";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { Modal } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
-import stylesFn from "@/styles/create-collaboration/Screen.styles";
-import { useState } from "react";
-import ConfirmationModal from "../ui/modal/ConfirmationModal";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+
 import Colors from "@/constants/Colors";
+import ConfirmationModal from "../ui/modal/ConfirmationModal";
+import ScreenHeader from "../ui/screen-header";
+import stylesFn from "@/styles/create-collaboration/Screen.styles";
 
 interface ScreenLayoutProps {
   children: React.ReactNode;

@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { AuthApp } from "@/utils/auth";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useBrandContext } from "@/contexts/brand-context.provider";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
-import ScreenOne from "@/components/create-collaboration/screen-one";
-import ScreenTwo from "@/components/create-collaboration/screen-two";
-import ScreenFour from "@/components/create-collaboration/screen-four";
-import { useCollaborationContext } from "@/contexts";
+
+import { AuthApp } from "@/utils/auth";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useAWSContext, useCollaborationContext } from "@/contexts";
+import ScreenFour from "@/components/create-collaboration/screen-four";
+import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenThree from "./screen-three";
-import { Collaboration } from "@/types/Collaboration";
+import ScreenTwo from "@/components/create-collaboration/screen-two";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { useAssets, useProcess } from "@/hooks";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 const CreateCollaboration = () => {
-  const [collaboration, setCollaboration] = useState<Partial<Collaboration>>({
+  const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
     name: "",
     brandId: "",
     managerId: "",
@@ -30,7 +31,7 @@ const CreateCollaboration = () => {
     platform: [],
     numberOfInfluencersNeeded: 0,
     location: {
-      type: "",
+      type: "Remote",
       name: "",
       latlong: {
         lat: 0,
@@ -51,10 +52,6 @@ const CreateCollaboration = () => {
     lastReviewedTimeStamp: 0,
   });
 
-  const [attachments, setAttachments] = useState<any[]>([]);
-  const [nativeAssets, setNativeAssets] = useState<NativeAssetItem[]>([]);
-  const [webAssets, setWebAssets] = useState<WebAssetItem[]>([]);
-
   const [location, setLocation] = useState("Remote");
   const [formattedAddress, setFormattedAddress] = useState("");
   const [mapRegion, setMapRegion] = useState({
@@ -64,16 +61,38 @@ const CreateCollaboration = () => {
     longitudeDelta: 0.0421,
   });
 
-  const params = useLocalSearchParams();
   const [screen, setScreen] = useState(1);
-  const { selectedBrand } = useBrandContext();
+  const params = useLocalSearchParams();
   const type = params.id ? "Edit" : "Add";
 
+  const {
+    isProcessing,
+    processMessage,
+    processPercentage,
+    setIsProcessing,
+    setProcessMessage,
+    setProcessPercentage,
+  } = useProcess();
+  const {
+    attachments,
+    handleAssetsUpdateNative,
+    handleAssetsUpdateWeb,
+    nativeAssets,
+    setAttachments,
+    webAssets,
+  } = useAssets();
+
+  const {
+    selectedBrand,
+  } = useBrandContext();
   const {
     getCollaborationById,
     createCollaboration,
     updateCollaboration,
   } = useCollaborationContext();
+  const {
+    uploadNewAssets,
+  } = useAWSContext();
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -123,7 +142,7 @@ const CreateCollaboration = () => {
   }
 
   const handleCollaboration = async (
-    data: any,
+    data: Partial<ICollaboration>,
   ): Promise<void> => {
     if (params.id && typeof params.id === "string") {
       await updateCollaboration(params.id, data);
@@ -138,20 +157,6 @@ const CreateCollaboration = () => {
         console.error("User not logged in");
       }
 
-      if (
-        !collaboration.name ||
-        !collaboration.description ||
-        !collaboration.promotionType ||
-        (collaboration.promotionType === PromotionType.PAID_COLLAB &&
-          (!collaboration.budget?.min || !collaboration.budget?.max)) ||
-        !collaboration.platform ||
-        !collaboration.contentFormat ||
-        !location
-      ) {
-        Toaster.error("Please fill all fields");
-        return;
-      }
-
       let locationAddress = {};
       if (location === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
         locationAddress = {
@@ -163,9 +168,26 @@ const CreateCollaboration = () => {
         };
       }
 
+      setIsProcessing(true);
+      setProcessMessage('Saving profile attachments...');
+      setProcessPercentage(40);
+
+      // Upload assets to S3
+      const uploadedAssets = await uploadNewAssets(
+        attachments,
+        nativeAssets,
+        webAssets,
+      );
+
+      setProcessMessage('Saved profile attachments...');
+      setProcessPercentage(70);
+
+      setProcessMessage('Saving profile...');
+      setProcessPercentage(100);
+
       await handleCollaboration({
         ...collaboration,
-        brandId: selectedBrand ? selectedBrand.id : "",
+        brandId: selectedBrand ? selectedBrand?.id : "",
         managerId: AuthApp.currentUser?.uid as string,
         location: {
           type: location,
@@ -179,18 +201,80 @@ const CreateCollaboration = () => {
           router.dismiss(1);
           router.push("/collaborations");
         }, 3000);
+      }).catch((error) => {
+        console.error(error);
+        Toaster.error("Failed to save collaboration");
+      }).finally(() => {
+        setProcessPercentage(0);
+        setProcessMessage('');
+        setIsProcessing(false);
       });
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleAssetsUpdateNative = (items: NativeAssetItem[]) => {
-    setNativeAssets(items);
-  }
+  const saveAsDraft = async () => {
+    try {
+      if (!AuthApp.currentUser) {
+        console.error("User not logged in");
+      }
 
-  const handleAssetsUpdateWeb = (items: WebAssetItem[]) => {
-    setWebAssets(items);
+      let locationAddress = {};
+      if (location === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
+        locationAddress = {
+          name: formattedAddress,
+          latlong: {
+            lat: mapRegion.latitude,
+            long: mapRegion.longitude,
+          },
+        };
+      }
+
+      setIsProcessing(true);
+      setProcessMessage('Saving profile attachments...');
+      setProcessPercentage(40);
+
+      // Upload assets to S3
+      const uploadedAssets = await uploadNewAssets(
+        attachments,
+        nativeAssets,
+        webAssets,
+      );
+
+      setProcessMessage('Saved profile attachments...');
+      setProcessPercentage(70);
+
+      setProcessMessage('Saving profile...');
+      setProcessPercentage(100);
+
+      await handleCollaboration({
+        ...collaboration,
+        brandId: selectedBrand ? selectedBrand?.id : "",
+        managerId: AuthApp.currentUser?.uid as string,
+        location: {
+          type: location,
+          ...locationAddress,
+        },
+        status: "draft",
+        timeStamp: Date.now(),
+      }).then(() => {
+        setScreen(3);
+        setTimeout(() => {
+          router.dismiss(1);
+          router.push("/collaborations");
+        }, 3000);
+      }).catch((error) => {
+        console.error(error);
+        Toaster.error("Failed to save collaboration");
+      }).finally(() => {
+        setProcessPercentage(0);
+        setProcessMessage('');
+        setIsProcessing(false);
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   if (screen === 1) {

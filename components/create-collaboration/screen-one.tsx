@@ -1,27 +1,26 @@
 import React from "react";
-import { Platform, ScrollView } from "react-native";
+import { Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { faDollarSign, faVideo } from "@fortawesome/free-solid-svg-icons";
 
 import { Collaboration } from "@/types/Collaboration";
 import { generateEmptyAssets } from "@/shared-uis/utils/profile";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
-import { LANGUAGES } from "@/constants/ItemsList";
+import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
 import { MultiRangeSlider } from "@/shared-uis/components/multislider";
 import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
 import { processRawAttachment } from "@/utils/attachments";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { SearchAdd } from "@/shared-uis/components/search-add";
 import { Selector } from "@/shared-uis/components/select/selector";
 import Button from "../ui/button";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import DragAndDropNative from "@/shared-uis/components/grid/native/DragAndDropNative";
 import DragAndDropWeb from "@/shared-uis/components/grid/web/DragAndDropWeb";
-import ScreenHeader from "../ui/screen-header";
 import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { View } from "../theme/Themed";
 
 interface ScreenOneProps {
   attachments: any[];
@@ -43,7 +42,6 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
   type,
 }) => {
   const theme = useTheme();
-  const styles = stylesFn(theme);
 
   const items = [
     { url: '', type: '' },
@@ -92,29 +90,35 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           )
         }
 
-        <TextInput
-          label="Collaboration Name"
-          mode="outlined"
-          onChangeText={(text) => {
-            setCollaboration({
-              ...collaboration,
-              name: text,
-            });
+        <View
+          style={{
+            gap: 8,
           }}
-          value={collaboration.name}
-        />
-        <TextInput
-          label="About this Collaboration"
-          mode="outlined"
-          // multiline
-          onChangeText={(text) => {
-            setCollaboration({
-              ...collaboration,
-              description: text,
-            });
-          }}
-          value={collaboration.description}
-        />
+        >
+          <TextInput
+            label="Collaboration Name"
+            mode="outlined"
+            onChangeText={(text) => {
+              setCollaboration({
+                ...collaboration,
+                name: text,
+              });
+            }}
+            value={collaboration.name}
+          />
+          <TextInput
+            label="About this Collaboration"
+            mode="outlined"
+            // multiline
+            onChangeText={(text) => {
+              setCollaboration({
+                ...collaboration,
+                description: text,
+              });
+            }}
+            value={collaboration.description}
+          />
+        </View>
         <ContentWrapper
           theme={theme}
           title="Promotion Type"
@@ -186,8 +190,8 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           }}
         >
           <MultiSelectExtendable
-            initialMultiselectItemsList={LANGUAGES}
             buttonLabel="Add Language"
+            initialMultiselectItemsList={INITIAL_LANGUAGES}
             initialItemsList={includeSelectedItems(LANGUAGES, collaboration.preferredContentLanguage || [])}
             onSelectedItemsChange={(value) => {
               setCollaboration({

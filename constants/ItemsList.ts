@@ -73,3 +73,28 @@ export const INITIAL_LANGUAGES = [
   "Marathi",
   "Punjabi",
 ];
+
+export const INITIAL_CONTENT_FORMATS = [
+  "Posts",
+  "Reels",
+  "Stories",
+  "Live",
+  "Product Reviews",
+];
+
+export const CONTENT_FORMATS = [
+  "Posts",
+  "Reels",
+  "Stories",
+  "Live",
+  "Product Reviews",
+];
+
+export const INITIAL_PLATFORMS = [
+  "Instagram",
+  "Facebook",
+  "YouTube",
+  "LinkedIn",
+];
+
+export const PLATFORMS = ["Instagram", "Facebook", "YouTube", "LinkedIn"];

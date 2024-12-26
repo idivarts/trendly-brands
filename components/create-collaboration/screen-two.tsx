@@ -1,23 +1,22 @@
-import { ScrollView } from "react-native";
 import React from "react";
-import { View } from "../theme/Themed";
-import { Modal } from "react-native-paper";
-import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
-import Button from "../ui/button";
-
-import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import { useTheme } from "@react-navigation/native";
-import ScreenHeader from "../ui/screen-header";
-import Select from "../ui/select";
-import ContentWrapper from "@/shared-uis/components/content-wrapper";
-import { Selector } from "@/shared-uis/components/select/selector";
-import { faPhotoFilm, faVideo } from "@fortawesome/free-solid-svg-icons";
-import { MultiRangeSlider } from "@/shared-uis/components/multislider";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+
 import { Collaboration } from "@/types/Collaboration";
-import { useState } from "react";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import TextInput from "../ui/text-input";
+import { CONTENT_FORMATS, INITIAL_CONTENT_FORMATS, INITIAL_PLATFORMS, PLATFORMS } from "@/constants/ItemsList";
+import { faArrowRight, faPhotoFilm, faVideo } from "@fortawesome/free-solid-svg-icons";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { MultiRangeSlider } from "@/shared-uis/components/multislider";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { Selector } from "@/shared-uis/components/select/selector";
+import { View } from "../theme/Themed";
+import Button from "../ui/button";
+import Colors from "@/constants/Colors";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
+import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import ScreenLayout from "./screen-layout";
+import TextInput from "../ui/text-input";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface ScreenTwoProps {
   collaboration: Partial<Collaboration>;
@@ -50,35 +49,6 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
   type,
 }) => {
   const theme = useTheme();
-  const styles = stylesFn(theme);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [externalLink, setExternalLink] = useState({
-    name: "",
-    link: "",
-  });
-
-  const handleAddExternalLink = () => {
-    if (!externalLink.name || !externalLink.link) {
-      Toaster.error("Please fill all fields");
-      return;
-    }
-
-    setCollaboration({
-      ...collaboration,
-      externalLinks: [
-        ...collaboration.externalLinks || [],
-        {
-          name: externalLink.name,
-          link: externalLink.link,
-        },
-      ],
-    });
-    setIsModalVisible(false);
-    setExternalLink({
-      name: "",
-      link: "",
-    });
-  }
 
   return (
     <>
@@ -95,26 +65,25 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
             fontSize: 16,
           }}
         >
-          <Select
-            items={[
-              { label: 'Posts', value: 'Posts' },
-              { label: 'Reels', value: 'Reels' },
-              { label: 'Stories', value: 'Stories' },
-              { label: 'Live', value: 'Live' },
-              { label: 'Product Reviews', value: 'Product Reviews' },
-            ]}
-            selectItemIcon={true}
-            value={collaboration.contentFormat?.map((item) => ({
-              label: item,
-              value: item,
-            })) || []}
-            multiselect
-            onSelect={(item) => {
+          <MultiSelectExtendable
+            buttonIcon={
+              <FontAwesomeIcon
+                icon={faArrowRight}
+                color={Colors(theme).primary}
+                size={14}
+              />
+            }
+            buttonLabel="Others"
+            initialMultiselectItemsList={INITIAL_CONTENT_FORMATS}
+            initialItemsList={includeSelectedItems(CONTENT_FORMATS, collaboration.contentFormat || [])}
+            onSelectedItemsChange={(value) => {
               setCollaboration({
                 ...collaboration,
-                contentFormat: item.map((item) => item.value),
+                contentFormat: value,
               });
             }}
+            selectedItems={collaboration.contentFormat || []}
+            theme={theme}
           />
         </ContentWrapper>
         <ContentWrapper
@@ -125,30 +94,29 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
             fontSize: 16,
           }}
         >
-          <Select
-            items={[
-              { label: 'Instagram', value: 'Instagram' },
-              { label: 'Facebook', value: 'Facebook' },
-              { label: 'YouTube', value: 'YouTube' },
-              { label: 'LinkedIn', value: 'LinkedIn' },
-              { label: 'Others', value: 'Others' },
-            ]}
-            selectItemIcon={true}
-            value={collaboration.platform?.map((item) => ({
-              label: item,
-              value: item,
-            })) || []}
-            multiselect
-            onSelect={(item) => {
+          <MultiSelectExtendable
+            buttonIcon={
+              <FontAwesomeIcon
+                icon={faArrowRight}
+                color={Colors(theme).primary}
+                size={14}
+              />
+            }
+            buttonLabel="Others"
+            initialMultiselectItemsList={INITIAL_PLATFORMS}
+            initialItemsList={includeSelectedItems(PLATFORMS, collaboration.platform || [])}
+            onSelectedItemsChange={(value) => {
               setCollaboration({
                 ...collaboration,
-                platform: item.map((item) => item.value),
+                platform: value,
               });
             }}
+            selectedItems={collaboration.platform || []}
+            theme={theme}
           />
         </ContentWrapper>
         <ContentWrapper
-          rightText={'1'}
+          rightText={`${collaboration.numberOfInfluencersNeeded || 0}`}
           theme={theme}
           title="Influencers Needed"
           titleStyle={{
@@ -165,18 +133,28 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
               });
             }}
             sliderLength={368}
-            customMarkerRight={(e) => {
-              return (
-                <View
-                  style={{
-                    backgroundColor: 'transparent',
-                    borderRadius: 100,
-                    height: 0,
-                    width: 0,
-                  }}
-                />
-              );
-            }}
+            isMarkersSeparated
+            allowOverlap
+            customMarkerLeft={
+              (e) => <View
+                style={{
+                  backgroundColor: Colors(theme).primary,
+                  borderRadius: 12,
+                  height: 20,
+                  width: 20,
+                }}
+              />
+            }
+            customMarkerRight={
+              (e) => <View
+                style={{
+                  backgroundColor: 'transparent',
+                  borderRadius: 0,
+                  height: 0,
+                  width: 0,
+                }}
+              />
+            }
             values={[collaboration.numberOfInfluencersNeeded || 0, 100]}
             step={1}
             theme={theme}
@@ -261,16 +239,6 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           Next
         </Button>
       </ScreenLayout>
-
-      <Modal
-        contentContainerStyle={styles.modalContainer}
-        onDismiss={() => {
-          setIsModalVisible(false);
-        }}
-        visible={isModalVisible}
-      >
-        <></>
-      </Modal>
     </>
   );
 };

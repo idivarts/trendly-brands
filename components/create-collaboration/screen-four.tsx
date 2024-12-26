@@ -1,11 +1,12 @@
-import { Text, View } from "../theme/Themed";
+import React from "react";
+import { Title } from "react-native-paper";
+import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
-import { Title } from "react-native-paper";
 
-import stylesFn from "@/styles/modal/UploadModal.styles";
+import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
+import stylesFn from "@/styles/modal/UploadModal.styles";
 
 interface ScreenFourProps {
   type: "Add" | "Edit";

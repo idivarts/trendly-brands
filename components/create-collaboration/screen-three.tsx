@@ -1,22 +1,20 @@
-import React from "react";
-import { Pressable, ScrollView } from "react-native";
-import { Text, View } from "../theme/Themed";
+import React, { useState } from "react";
+import { Pressable } from "react-native";
 import { Modal } from "react-native-paper";
-import Button from "../ui/button";
-
 import { useTheme } from "@react-navigation/native";
-import ScreenHeader from "../ui/screen-header";
-import ContentWrapper from "@/shared-uis/components/content-wrapper";
-import { Collaboration } from "@/types/Collaboration";
-import { useState } from "react";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import TextInput from "../ui/text-input";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faChain, faCircle, faPlus } from "@fortawesome/free-solid-svg-icons";
-import Colors from "@/constants/Colors";
+
+import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
-import stylesFn from "@/styles/create-collaboration/Screen.styles";
+import { Text, View } from "../theme/Themed";
+import Button from "../ui/button";
+import Colors from "@/constants/Colors";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import ScreenLayout from "./screen-layout";
+import stylesFn from "@/styles/create-collaboration/Screen.styles";
+import TextInput from "../ui/text-input";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface ScreenThreeProps {
   collaboration: Partial<Collaboration>;
@@ -105,6 +103,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         <View
           style={{
             flexGrow: 1,
+            gap: 16,
           }}
         >
           <View
