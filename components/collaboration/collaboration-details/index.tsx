@@ -73,8 +73,8 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         brandWebsite: brandData?.profile
           ? brandData?.profile?.website || ""
           : "",
-        brandCategory: brandData?.preferences
-          ? brandData?.preferences?.influencerCategory
+        brandCategory: brandData?.profile
+          ? brandData?.profile?.industries || []
           : [],
       });
     } catch (e) {
