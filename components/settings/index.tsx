@@ -1,59 +1,98 @@
 import { useEffect, useState } from "react";
-import { Text, View } from "../theme/Themed"
-import { Switch } from "react-native-paper";
+import { Text, View } from "../theme/Themed";
+import { Button, Switch } from "react-native-paper";
 import { useAuthContext } from "@/contexts";
 import stylesFn from "@/styles/settings/Settings.styles";
 import { useTheme } from "@react-navigation/native";
+import SelectGroup from "@/shared-uis/components/select/select-group";
+import Colors from "@/constants/Colors";
+import ScreenHeader from "../ui/screen-header";
+import { Pressable } from "react-native";
 
 const Settings = () => {
-  const [isSwitchOn, setIsSwitchOn] = useState(false);
-  const {
-    manager,
-    updateManager
-  } = useAuthContext();
+  const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("light");
+  const { manager, updateManager } = useAuthContext();
   const theme = useTheme();
   const styles = stylesFn(theme);
 
-  const onToggleSwitch = () => {
-    setIsSwitchOn(!isSwitchOn);
+  const themeChange = async () => {
     if (!manager) {
       return;
     }
 
-    updateManager(
-      manager?.id,
-      {
-        settings: {
-          theme: isSwitchOn ? "light" : "dark"
-        },
+    updateManager(manager?.id, {
+      settings: {
+        theme: selectedTheme,
       },
-    );
+    });
   };
 
   useEffect(() => {
     if (manager?.settings?.theme) {
-      setIsSwitchOn(manager.settings.theme === "dark");
+      setSelectedTheme(manager.settings.theme);
     }
   }, [manager]);
 
   return (
-    <View
-      style={styles.settingsContainer}
-    >
-      <View
-        style={styles.settingsRow}
-      >
-        <Text
-          style={styles.settingsLabel}
+    //@ts-ignore
+    <>
+      <ScreenHeader
+        title="Settings"
+        rightAction
+        rightActionButton={
+          <Pressable onPress={() => themeChange()}>
+            <Text
+              style={{
+                color: Colors(theme).text,
+                fontSize: 16,
+                marginRight: 16,
+              }}
+            >
+              Save
+            </Text>
+          </Pressable>
+        }
+      />
+      <View style={styles.settingsContainer}>
+        <View style={styles.settingsRow}>
+          <Text
+            style={{
+              ...styles.settingsLabel,
+              color: Colors(theme).text,
+              fontWeight: "bold",
+            }}
+          >
+            App Theme
+          </Text>
+          <SelectGroup
+            items={[
+              { label: "Light", value: "light" },
+              { label: "Dark", value: "dark" },
+            ]}
+            selectedItem={{
+              label: selectedTheme,
+              value: selectedTheme,
+            }}
+            onValueChange={(item) => {
+              setSelectedTheme(item.value as "light" | "dark");
+            }}
+            theme={theme}
+          />
+          <Text style={styles.settingsLabel}>
+            Decide the theme of the platform
+          </Text>
+        </View>
+        <Button
+          mode="contained"
+          style={{ margin: 20, width: "100%", paddingHorizontal: 20 }}
+          onPress={() => {
+            themeChange();
+          }}
         >
-          Theme ({isSwitchOn ? "Dark" : "Light"})
-        </Text>
-        <Switch
-          value={isSwitchOn}
-          onValueChange={onToggleSwitch}
-        />
+          Save
+        </Button>
       </View>
-    </View>
+    </>
   );
 };
 

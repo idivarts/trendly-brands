@@ -5,12 +5,7 @@ import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { ActivityIndicator, FlatList } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
@@ -19,6 +14,12 @@ import { stylesFn } from "@/styles/Proposal.styles";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import EmptyState from "../ui/empty-state";
 import { useBreakpoints } from "@/hooks";
+import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
+import { DUMMY_INFLUENCER } from "@/constants/Influencer";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import { processRawAttachment } from "@/utils/attachments";
+import { Card } from "react-native-paper";
 
 const Invitations = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -40,9 +41,7 @@ const Invitations = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const {
-    xl,
-  } = useBreakpoints();
+  const { xl } = useBreakpoints();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -135,85 +134,110 @@ const Invitations = () => {
         flex: 1,
       }}
     >
-      {
-        proposals.length === 0 ? (
-          <EmptyState
-            hideAction
-            image={require("@/assets/images/illustration5.png")}
-            subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
-            title="No Invitations yet"
-          />
-        ) : (
-          <FlatList
-            data={filteredProposals}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <JobCard
-                name={item.name}
-                id={item.id}
-                brandName={item.brandName}
-                description={item.description}
-                brandId={item.brandId}
-                budget={{
-                  min: Number(item.budget.min),
-                  max: Number(item.budget.max),
-                }}
-                onOpenBottomSheet={openBottomSheet}
-                cardType="proposal"
-                collaborationType={item.collaborationType}
+      {proposals.length === 0 ? (
+        <EmptyState
+          hideAction
+          image={require("@/assets/images/illustration5.png")}
+          subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
+          title="No Invitations yet"
+        />
+      ) : (
+        <FlatList
+          data={filteredProposals}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <Card>
+              {item.attachments && item.attachments.length > 0 && (
+                <Carousel
+                  theme={theme}
+                  data={
+                    item.attachments?.map(
+                      //@ts-ignore
+                      (attachment: MediaItem) =>
+                        processRawAttachment(attachment)
+                    ) || []
+                  }
+                  dot={
+                    <View
+                      style={{
+                        backgroundColor: Colors(theme).primary,
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        marginLeft: 3,
+                        marginRight: 3,
+                      }}
+                    />
+                  }
+                  activeDot={
+                    <View
+                      style={{
+                        backgroundColor: Colors(theme).gray100,
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        marginLeft: 3,
+                        marginRight: 3,
+                      }}
+                    />
+                  }
+                />
+              )}
+              <CollaborationDetails
+                collabDescription={item.description || ""}
+                name={item.name || ""}
+                contentType={item.contentType}
                 location={item.location}
-                managerId="managerId"
-                numberOfInfluencersNeeded={1}
                 platform={item.platform}
                 promotionType={item.promotionType}
-                timeStamp={item.timeStamp}
-                applications={item.applications}
-                invitations={item.invitations}
-                acceptedApplications={item.acceptedApplications}
-                status={item.status}
+                onOpenBottomSheet={openBottomSheet}
+                collabId={item.id}
               />
-            )}
-            keyExtractor={(item, index) => index.toString()}
-            style={{
-              flexGrow: 1,
-              paddingBottom: 16,
-              paddingHorizontal: 16,
-              paddingTop: 8,
-            }}
-            contentContainerStyle={{
+              <CollaborationStats
+                budget={item.budget}
+                collabID={item.id}
+                influencerCount={item.numberOfInfluencersNeeded}
+              />
+            </Card>
+          )}
+          keyExtractor={(item, index) => index.toString()}
+          style={{
+            flexGrow: 1,
+            paddingBottom: 16,
+            paddingHorizontal: 16,
+            paddingTop: 8,
+          }}
+          contentContainerStyle={{
+            gap: 16,
+            paddingBottom: 24,
+            alignItems: xl ? "center" : "stretch",
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[Colors(theme).primary]}
+            />
+          }
+          horizontal={false}
+          numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
+          {...(xl && {
+            columnWrapperStyle: {
               gap: 16,
-              paddingBottom: 24,
-              alignItems: xl ? "center" : "stretch",
-            }}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[Colors(theme).primary]}
-              />
-            }
-            horizontal={false}
-            numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
-            {...xl && {
-              columnWrapperStyle: {
-                gap: 16,
-              },
-            }}
-          />
-        )
-      }
-      {
-        isVisible && (
-          <BottomSheetActions
-            cardId={selectedCollabId || ""}
-            cardType="influencerCard"
-            isVisible={isVisible}
-            onClose={closeBottomSheet}
-            snapPointsRange={["20%", "50%"]}
-            key={selectedCollabId}
-          />
-        )
-      }
+            },
+          })}
+        />
+      )}
+      {isVisible && (
+        <BottomSheetActions
+          cardId={selectedCollabId || ""}
+          cardType="influencerCard"
+          isVisible={isVisible}
+          onClose={closeBottomSheet}
+          snapPointsRange={["20%", "50%"]}
+          key={selectedCollabId}
+        />
+      )}
     </View>
   );
 };
