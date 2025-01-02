@@ -1,61 +1,77 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, FlatList, ActivityIndicator } from "react-native";
 
 import { useTheme } from "@react-navigation/native";
-import InfluencerCard from "@/components/InfluencerCard";
 import { FirestoreDB } from "@/utils/firestore";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import BottomSheetActions from "@/components/BottomSheetActions";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";
+import {
+  ApplicationCard
+} from "@/components/card/collaboration-details/application-card";
+import {
+  ApplicationCard as ProfileApplicationCard
+} from "@/components/card/profile-modal/application-card";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSharedValue } from "react-native-reanimated";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import { User } from "@/types/User";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
+import { List } from "react-native-paper";
+import { useApplications } from "@/hooks/request";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
-  const [isVisible, setIsVisible] = useState(false);
-  const [influencers, setInfluencers] = useState<any>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [selectedInfluencer, setSelectedInfluencer] = useState<User | null>(null);
+  const [isActionModalVisible, setIsActionModalVisible] = useState(false);
 
   const {
     xl,
   } = useBreakpoints();
 
-  const fetchApplications = async () => {
-    try {
-      const applicationRef = collection(
-        FirestoreDB,
-        "collaborations",
-        props.pageID,
-        "applications"
-      );
-      const applicationFetch = await getDocs(applicationRef);
-      const applications = applicationFetch.docs.map((doc) => {
-        return {
-          ...doc.data(),
-          id: doc.id,
-        } as any;
-      });
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
 
-      const influencers = await Promise.all(
-        applications.map(async (application) => {
-          const userRef = doc(FirestoreDB, "users", application.userId);
-          const userFetch = await getDoc(userRef);
-          return {
-            ...application,
-            ...userFetch.data(),
-            id: userFetch.id,
-            applicationID: application.id,
-          } as any;
-        })
-      );
-      setInfluencers(influencers);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const insets = useSafeAreaInsets();
+  const containerOffset = useSharedValue({
+    top: insets.top,
+    bottom: insets.bottom,
+    left: insets.left,
+    right: insets.right,
+  });
+
+  const renderBackdrop = (props: any) => {
+    return (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+      />
+    );
   };
+
+  const toggleActionModal = () => {
+    setIsActionModalVisible(!isActionModalVisible);
+  }
+
+  const handleActionModalClose = () => {
+    setIsActionModalVisible(false);
+  }
+
+  const {
+    fetchApplications,
+    handleAcceptApplication,
+    handleRejectApplication,
+    influencers,
+    loading,
+  } = useApplications({
+    application: selectedApplication,
+    data: props.collaboration,
+    handleActionModalClose,
+    pageId: props.pageID,
+  });
 
   useEffect(() => {
     fetchApplications();
@@ -91,16 +107,27 @@ const ApplicationsTabContent = (props: any) => {
       <FlatList
         data={influencers}
         renderItem={({ item }) => (
-          <InfluencerCard
-            type="application"
-            influencer={item}
-            ToggleModal={() => {
-              setIsVisible(true);
+          <ApplicationCard
+            data={item}
+            headerLeftAction={() => {
+              setSelectedInfluencer(item);
               setSelectedApplication({
                 applicationID: item.applicationID,
                 collaborationID: props.pageID,
                 influencerID: item.id,
               });
+              setTimeout(() => {
+                bottomSheetModalRef.current?.present();
+              }, 500);
+            }}
+            headerRightAction={() => {
+              setSelectedInfluencer(item);
+              setSelectedApplication({
+                applicationID: item.applicationID,
+                collaborationID: props.pageID,
+                influencerID: item.id,
+              });
+              setIsActionModalVisible(true);
             }}
           />
         )}
@@ -121,21 +148,70 @@ const ApplicationsTabContent = (props: any) => {
           )
         }
       />
+
       {
-        isVisible && (
-          <BottomSheetActions
-            cardType="applicationCard"
-            data={{
-              collaboration: props.collaboration
-            }}
-            isVisible={isVisible}
-            onClose={() => setIsVisible(false)}
-            snapPointsRange={["30%", "50%"]}
-            cardId={selectedApplication}
-            key={selectedApplication?.applicationID}
-          />
+        isActionModalVisible && (
+          <BottomSheetContainer
+            isVisible={isActionModalVisible}
+            onClose={toggleActionModal}
+            snapPoints={["25%", "50%"]}
+          >
+            <List.Section
+              style={{
+                paddingBottom: 28
+              }}
+            >
+              <List.Item
+                title="Accept Application"
+                onPress={() => {
+                  console.log("Accept Application");
+                }}
+              />
+              <List.Item
+                title="Reject Application"
+                onPress={() => {
+                  console.log("Reject Application");
+                }}
+              />
+            </List.Section>
+          </BottomSheetContainer>
         )
       }
+
+      <BottomSheetModal
+        backdropComponent={renderBackdrop}
+        containerOffset={containerOffset}
+        enablePanDownToClose={true}
+        index={2}
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        topInset={insets.top}
+      >
+        <BottomSheetScrollView>
+          <ProfileBottomSheet
+            actionCard={
+              <View
+                style={{
+                  marginHorizontal: 16,
+                }}
+              >
+                <ProfileApplicationCard
+                  onReject={() => {
+                    console.log("Reject Application");
+                  }}
+                  onAccept={() => {
+                    console.log("Accept Application");
+                  }}
+                />
+              </View>
+            }
+            FireStoreDB={FirestoreDB}
+            influencer={selectedInfluencer as User}
+            isBrandsApp={true}
+            theme={theme}
+          />
+        </BottomSheetScrollView>
+      </BottomSheetModal>
     </>
   );
 };
