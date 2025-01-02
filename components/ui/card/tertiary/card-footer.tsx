@@ -1,5 +1,6 @@
 import React from 'react';
-import { View } from 'react-native';
+
+import { View } from '@/components/theme/Themed';
 
 type CardFooterProps = {
   footerActions?: React.ReactNode;
@@ -9,7 +10,11 @@ export const CardFooter = ({
   footerActions = null,
 }: CardFooterProps) => {
   return (
-    <View>
+    <View
+      style={{
+        backgroundColor: 'transparent',
+      }}
+    >
       {footerActions}
     </View>
   );

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { Theme, useTheme } from '@react-navigation/native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperclip } from '@fortawesome/free-solid-svg-icons';
 
 import Colors from '@/constants/Colors';
+import { Text, View } from '@/components/theme/Themed';
 
 type File = {
   url: string;
@@ -19,6 +20,7 @@ type CardFilesProps = {
 
 export const CardFiles = ({ files, onFilePress }: CardFilesProps) => {
   const theme = useTheme();
+  const styles = stylesFn(theme);
 
   return (
     <View style={styles.container}>
@@ -43,9 +45,10 @@ export const CardFiles = ({ files, onFilePress }: CardFilesProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
     gap: 16,
+    backgroundColor: Colors(theme).transparent,
   },
   fileRow: {
     flexDirection: 'row',

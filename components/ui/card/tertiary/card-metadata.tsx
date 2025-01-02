@@ -1,6 +1,10 @@
-import { CURRENCY_SYMBOL } from '@/constants/Unit';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Theme, useTheme } from '@react-navigation/native';
+
+import { Text, View } from '@/components/theme/Themed';
+import { CURRENCY_SYMBOL } from '@/constants/Unit';
+import Colors from '@/constants/Colors';
 
 type CardMetaDataProps = {
   quote?: string;
@@ -8,6 +12,9 @@ type CardMetaDataProps = {
 };
 
 export const CardMetaData = ({ quote, timeline }: CardMetaDataProps) => {
+  const theme = useTheme();
+  const styles = stylesFn(theme);
+
   return (
     <View style={styles.container}>
       <View style={styles.metaContainer}>
@@ -18,18 +25,19 @@ export const CardMetaData = ({ quote, timeline }: CardMetaDataProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
+    backgroundColor: Colors(theme).transparent,
     gap: 16,
   },
   metaContainer: {
+    backgroundColor: Colors(theme).transparent,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   meta: {
     fontSize: 16,
-    color: '#111827',
     fontWeight: '500',
   },
 });

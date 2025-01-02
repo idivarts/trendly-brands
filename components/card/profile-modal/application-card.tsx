@@ -64,9 +64,10 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         footerActions={
           <View
             style={{
+              backgroundColor: Colors(theme).transparent,
               flexDirection: 'row',
-              justifyContent: 'center',
               gap: 12,
+              justifyContent: 'center',
             }}
           >
             <Button

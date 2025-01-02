@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
+import { Image, StyleSheet, Pressable } from 'react-native';
 import { Theme, useTheme } from '@react-navigation/native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import Colors from '@/constants/Colors';
 import { Avatar } from 'react-native-paper';
 import { imageUrl } from '@/utils/url';
+import { Text, View } from '@/components/theme/Themed';
 
 type CardHeaderProps = {
   avatar: string;
@@ -116,7 +117,6 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
   },
   verifiedBadge: {
     marginLeft: 4,
@@ -125,10 +125,8 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   handle: {
     fontSize: 14,
-    color: '#6B7280',
   },
   timestamp: {
     fontSize: 14,
-    color: '#6B7280',
   },
 });

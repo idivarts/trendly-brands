@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, FlatList, ActivityIndicator } from "react-native";
+import { FlatList, ActivityIndicator } from "react-native";
 
 import { useTheme } from "@react-navigation/native";
 import { FirestoreDB } from "@/utils/firestore";
@@ -23,6 +23,7 @@ import { useApplications } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { processRawAttachment } from "@/utils/attachments";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
+import { View } from "@/components/theme/Themed";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -187,6 +188,7 @@ const ApplicationsTabContent = (props: any) => {
             actionCard={
               <View
                 style={{
+                  backgroundColor: Colors(theme).transparent,
                   marginHorizontal: 16,
                 }}
               >

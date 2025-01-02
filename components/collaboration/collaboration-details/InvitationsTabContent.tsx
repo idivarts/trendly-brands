@@ -1,6 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
 import {
-  View,
   FlatList,
   Modal,
   TextInput,
@@ -33,6 +32,7 @@ import { useSharedValue } from "react-native-reanimated";
 import { processRawAttachment } from "@/utils/attachments";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { User } from "@/types/User";
+import { View } from "@/components/theme/Themed";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -285,6 +285,7 @@ const InvitationsTabContent = (props: any) => {
             actionCard={
               <View
                 style={{
+                  backgroundColor: Colors(theme).transparent,
                   marginHorizontal: 16,
                 }}
               >

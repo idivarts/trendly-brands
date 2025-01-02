@@ -1,7 +1,9 @@
-import Colors from '@/constants/Colors';
-import { Theme, useTheme } from '@react-navigation/native';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Theme, useTheme } from '@react-navigation/native';
+
+import Colors from '@/constants/Colors';
+import { View } from '@/components/theme/Themed';
 
 type CardProps = {
   children: React.ReactNode;
@@ -20,7 +22,6 @@ export const Card = ({
 
 const stylesFn = (theme: Theme) => StyleSheet.create({
   card: {
-    backgroundColor: Colors(theme).background,
     gap: 24,
     paddingHorizontal: 16,
     paddingVertical: 24,

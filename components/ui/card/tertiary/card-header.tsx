@@ -1,5 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+
+import { Text, View } from '@/components/theme/Themed';
+import { Theme, useTheme } from '@react-navigation/native';
+import Colors from '@/constants/Colors';
 
 type CardHeaderProps = {
   title: string;
@@ -10,6 +14,9 @@ export const CardHeader = ({
   title,
   description
 }: CardHeaderProps) => {
+  const theme = useTheme();
+  const styles = stylesFn(theme);
+
   return (
     <View style={styles.header}>
       <Text style={styles.title}>{title}</Text>
@@ -18,18 +25,17 @@ export const CardHeader = ({
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   header: {
+    backgroundColor: Colors(theme).transparent,
     gap: 16,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
   },
   description: {
     fontSize: 16,
-    color: '#374151',
     lineHeight: 24,
   },
 });

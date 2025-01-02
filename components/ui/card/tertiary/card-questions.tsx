@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { View, Text } from '@/components/theme/Themed';
+import Colors from '@/constants/Colors';
+import { Theme, useTheme } from '@react-navigation/native';
 
 type Question = {
   question: string;
@@ -12,6 +14,9 @@ type CardQuestionsProps = {
 };
 
 export const CardQuestions = ({ questions }: CardQuestionsProps) => {
+  const theme = useTheme();
+  const styles = stylesFn(theme);
+
   return (
     <View style={styles.container}>
       {questions.map((item, index) => (
@@ -24,11 +29,13 @@ export const CardQuestions = ({ questions }: CardQuestionsProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
+    backgroundColor: Colors(theme).transparent,
     gap: 16,
   },
   questionContainer: {
+    backgroundColor: Colors(theme).transparent,
   },
   question: {
     fontSize: 16,
