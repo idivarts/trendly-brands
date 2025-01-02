@@ -166,7 +166,7 @@ const ApplicationsTabContent = (props: any) => {
               <List.Item
                 title="Reject Application"
                 onPress={() => {
-                  handleAcceptApplication();
+                  handleRejectApplication();
                 }}
               />
             </List.Section>
