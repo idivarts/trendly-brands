@@ -103,6 +103,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
           collaboration={{
             id: pageID,
             name: collaboration?.name,
+            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
           }}
         />
       ),
