@@ -9,6 +9,9 @@ import { CardQuestions } from '@/components/ui/card/tertiary/card-questions';
 import { View } from '@/components/theme/Themed';
 import Button from '@/components/ui/button';
 import { Application } from '@/types/Collaboration';
+import { convertToKUnits } from '@/utils/conversion';
+import Colors from '@/constants/Colors';
+import { useTheme } from '@react-navigation/native';
 
 interface ApplicationCardProps {
   data: Application;
@@ -21,6 +24,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   onAccept,
   onReject,
 }) => {
+  const theme = useTheme();
+
   return (
     <Card>
       <CardHeader
@@ -30,8 +35,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       {
         (data.quotation || data.timeline) && (
           <CardMetaData
-            quote={data.quotation}
-            timeline={data.timeline}
+            quote={convertToKUnits(Number(data.quotation)) as string}
+            timeline={new Date(data.timeline).toLocaleDateString('en-US')}
           />
         )
       }
@@ -60,15 +65,22 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             }}
           >
             <Button
+              customStyles={{
+                borderColor: Colors(theme).primary,
+              }}
+              textColor={Colors(theme).primary}
               mode="outlined"
-              size="small"
               onPress={onReject}
+              size="small"
             >
               Reject Application
             </Button>
             <Button
-              size="small"
+              customStyles={{
+                backgroundColor: Colors(theme).primary,
+              }}
               onPress={onAccept}
+              size="small"
             >
               Accept Application
             </Button>

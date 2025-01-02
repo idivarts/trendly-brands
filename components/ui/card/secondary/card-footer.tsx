@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Text, View } from '@/components/theme/Themed';
+import { CURRENCY_SYMBOL } from '@/constants/Unit';
 
 type CardFooterProps = {
   quote: string;
@@ -14,7 +15,7 @@ export const CardFooter = ({
   return (
     <View style={styles.container}>
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Quote: {quote}</Text>
+        <Text style={styles.footerText}>Quote: {CURRENCY_SYMBOL}{quote}</Text>
         <Text style={styles.footerText}>Timeline: {timeline}</Text>
       </View>
     </View>

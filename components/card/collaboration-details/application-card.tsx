@@ -13,6 +13,8 @@ import { CardFooter } from '@/components/ui/card/secondary/card-footer';
 import { processRawAttachment } from '@/utils/attachments';
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
 import { InfluencerApplication } from '@/types/Collaboration';
+import { formatDistanceToNow } from "date-fns";
+import { convertToKUnits } from '@/utils/conversion';
 
 interface ApplicationCardProps {
   acceptApplication: () => void;
@@ -34,11 +36,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       <CardHeader
         avatar={data.influencer.profileImage || ''}
         handle={data.influencer.socials?.[0]}
-        isVerified
+        isVerified={data.influencer.isVerified}
         leftAction={headerLeftAction}
         name={data.influencer.name}
         rightAction={headerRightAction}
-        timestamp="5s ago"
+        timestamp={formatDistanceToNow(data.application.timeStamp, { addSuffix: true })}
       />
       <Carousel
         data={data.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
@@ -73,8 +75,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         text="Lorem ipsum dolor sit amet, consectetur piscing elit, sed do eiusmod tempor do eiusmod temp..."
       />
       <CardFooter
-        quote="Rs 10k"
-        timeline="25th Dec"
+        quote={convertToKUnits(Number(data.application.quotation)) as string}
+        timeline={new Date(data.application.timeline).toLocaleDateString('en-US')}
       />
     </Card>
   );

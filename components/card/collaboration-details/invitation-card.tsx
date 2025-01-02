@@ -11,33 +11,40 @@ import { processRawAttachment } from '@/utils/attachments';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
 import Colors from '@/constants/Colors';
+import useInvitation from '@/hooks/use-invitation';
 
 interface InvitationCardProps {
+  checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
   data: User;
   headerLeftAction?: () => void;
   headerRightAction?: () => void;
   inviteInfluencer: () => void;
-  isAlreadyInvited: boolean;
 }
 
 const InvitationCard: React.FC<InvitationCardProps> = ({
+  checkIfAlreadyInvited,
   data,
   headerLeftAction,
   headerRightAction,
   inviteInfluencer,
-  isAlreadyInvited,
 }) => {
   const theme = useTheme();
+  const {
+    isAlreadyInvited,
+  } = useInvitation({
+    checkIfAlreadyInvited,
+    influencerId: data.id,
+  });
 
   return (
     <Card>
       <CardHeader
         avatar={data?.profileImage || ''}
         handle={data.socials?.[0]}
+        isVerified={data.isVerified}
         leftAction={headerLeftAction}
         name={data.name}
         rightAction={headerRightAction}
-        isVerified={data.isVerified}
       />
       <Carousel
         data={data.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
@@ -52,7 +59,11 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         action={
           <Button
             mode="outlined"
-            onPress={inviteInfluencer}
+            onPress={() => {
+              if (!isAlreadyInvited) {
+                inviteInfluencer();
+              }
+            }}
           >
             <FontAwesomeIcon
               color={Colors(theme).primary}

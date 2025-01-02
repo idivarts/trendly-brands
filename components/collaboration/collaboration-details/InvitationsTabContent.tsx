@@ -159,6 +159,7 @@ const InvitationsTabContent = (props: any) => {
         data={influencers}
         renderItem={({ item }) => (
           <InvitationCard
+            checkIfAlreadyInvited={checkIfAlreadyInvited}
             data={item}
             headerLeftAction={() => {
               setSelectedInfluencer(item);
@@ -170,9 +171,9 @@ const InvitationsTabContent = (props: any) => {
               setSelectedInfluencer(item);
               setIsActionModalVisible(true);
             }}
-            inviteInfluencer={handleCollaborationInvite}
-            isAlreadyInvited
-          // isAlreadyInvited={checkIfAlreadyInvited(item.id).then((result) => result)}
+            inviteInfluencer={() => {
+              setIsInvitationModalVisible(true);
+            }}
           />
         )}
         ListFooterComponent={
@@ -256,7 +257,7 @@ const InvitationsTabContent = (props: any) => {
                   setIsActionModalVisible(false);
                   setTimeout(() => {
                     setIsInvitationModalVisible(true);
-                  }, 500);
+                  }, 200);
                 }}
               />
               <List.Item
@@ -288,9 +289,12 @@ const InvitationsTabContent = (props: any) => {
                 }}
               >
                 <ProfileInvitationCard
-                  isAlreadyInvited
+                  checkIfAlreadyInvited={checkIfAlreadyInvited}
+                  influencerId={selectedInfluencer?.id}
                   onInvite={() => {
-                    console.log("Invite User");
+                    if (!selectedInfluencer) return;
+
+                    setIsInvitationModalVisible(true);
                   }}
                 />
               </View>

@@ -157,13 +157,13 @@ const ApplicationsTabContent = (props: any) => {
               <List.Item
                 title="Accept Application"
                 onPress={() => {
-                  console.log("Accept Application");
+                  handleAcceptApplication();
                 }}
               />
               <List.Item
                 title="Reject Application"
                 onPress={() => {
-                  console.log("Reject Application");
+                  handleAcceptApplication();
                 }}
               />
             </List.Section>
@@ -191,10 +191,10 @@ const ApplicationsTabContent = (props: any) => {
                 <ProfileApplicationCard
                   data={selectedInfluencerApplication?.application as Application}
                   onReject={() => {
-                    console.log("Reject Application");
+                    handleRejectApplication();
                   }}
                   onAccept={() => {
-                    console.log("Accept Application");
+                    handleAcceptApplication();
                   }}
                 />
               </View>

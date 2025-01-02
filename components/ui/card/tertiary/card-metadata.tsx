@@ -1,16 +1,17 @@
+import { CURRENCY_SYMBOL } from '@/constants/Unit';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 type CardMetaDataProps = {
   quote?: string;
-  timeline?: number;
+  timeline?: string;
 };
 
 export const CardMetaData = ({ quote, timeline }: CardMetaDataProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.metaContainer}>
-        {quote && <Text style={styles.meta}>Quote: {quote}</Text>}
+        {quote && <Text style={styles.meta}>Quote: {CURRENCY_SYMBOL}{quote}</Text>}
         {timeline && <Text style={styles.meta}>Timeline: {timeline}</Text>}
       </View>
     </View>
