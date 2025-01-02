@@ -79,7 +79,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         }
       />
       <CardDescription
-        text="Lorem ipsum dolor sit amet, consectetur piscing elit, sed do eiusmod tempor do eiusmod temp..."
+        text={data.profile?.content?.about || ''}
       />
     </Card>
   );

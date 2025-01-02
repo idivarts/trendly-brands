@@ -72,7 +72,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         }
       />
       <CardDescription
-        text="Lorem ipsum dolor sit amet, consectetur piscing elit, sed do eiusmod tempor do eiusmod temp..."
+        text={data.application.message}
       />
       <CardFooter
         quote={convertToKUnits(Number(data.application.quotation)) as string}
