@@ -211,7 +211,7 @@ const Applications = () => {
                 <CollaborationDetails
                   collabDescription={item.description || ""}
                   name={item.name || ""}
-                  contentType={item.contentType}
+                  contentType={item.contentFormat}
                   location={item.location}
                   platform={item.platform}
                   promotionType={item.promotionType}

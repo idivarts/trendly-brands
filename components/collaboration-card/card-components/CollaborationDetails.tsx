@@ -43,7 +43,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
   return (
     <View
       style={{
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingTop: 8,
       }}
     >
       <View

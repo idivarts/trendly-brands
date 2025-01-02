@@ -40,7 +40,6 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
     );
     const fetchInvite = await getDocs(invitedRef);
     const docsDataInvited = fetchInvite.docs.map((doc) => doc.data());
-    console.log(docsDataInvited.length);
 
     setInvitedCount(docsDataInvited.length);
   };

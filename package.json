@@ -39,6 +39,7 @@
     "@react-navigation/native": "^6.0.2",
     "@stream-io/flat-list-mvcp": "^0.10.3",
     "@vis.gl/react-google-maps": "^1.4.0",
+    "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "expo": "~51.0.21",
     "expo-av": "^14.0.7",

@@ -1,8 +1,109 @@
-import { View } from "../theme/Themed"
+import { FlatList, ScrollView } from "react-native";
+import MembersCard from "../brand-profile/members-card";
+import { View } from "../theme/Themed";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { FirestoreDB } from "@/utils/firestore";
+import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { useEffect, useState } from "react";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import AppLayout from "@/layouts/app-layout";
+import { Button, Portal } from "react-native-paper";
+import MembersModal from "../ui/modal/MembersModal";
+
+export interface ManagerCard extends IManagers {
+  managerId: string;
+  status: number;
+}
 
 const Preferences = () => {
+  const theme = useTheme();
+  const { selectedBrand } = useBrandContext();
+  const [members, setMembers] = useState<ManagerCard[]>([]);
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const fetchMembers = async () => {
+    if (!selectedBrand) return;
+    try {
+      const memberRef = collection(
+        FirestoreDB,
+        "brands",
+        selectedBrand.id,
+        "members"
+      );
+      const memberDoc = await getDocs(memberRef);
+      const membersData = memberDoc.docs.map((doc) => {
+        return {
+          ...doc.data(),
+          managerId: doc.id,
+        } as ManagerCard;
+      });
+
+      const members = await Promise.all(
+        membersData.map(async (member) => {
+          const memberDoc = doc(FirestoreDB, "managers", member.managerId);
+          const memberData = getDoc(memberDoc).then((doc) => {
+            return {
+              ...doc.data(),
+              managerId: doc.id,
+              status: member.status,
+            } as ManagerCard;
+          });
+          return memberData;
+        })
+      );
+
+      setMembers(members);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers();
+  }, [selectedBrand]);
+
   return (
-    <View></View>
+    <View
+      style={{
+        flex: 1,
+        padding: 10,
+        backgroundColor: Colors(theme).background,
+      }}
+    >
+      {/* <MembersCard /> */}
+      <FlatList
+        data={members}
+        renderItem={({ item }) => <MembersCard manager={item} />}
+        keyExtractor={(item) => item.managerId}
+        contentContainerStyle={{
+          gap: 10,
+        }}
+      />
+      <Button
+        buttonColor={Colors(theme).primary}
+        textColor={Colors(theme).white}
+        style={{
+          padding: 5,
+        }}
+        onPress={() => {
+          setShowMemberModal(true);
+        }}
+      >
+        Add Member
+      </Button>
+      <Portal>
+        <MembersModal
+          visible={showMemberModal}
+          handleModalClose={() => {
+            setShowMemberModal(false);
+          }}
+          refresh={fetchMembers}
+          theme={theme}
+        />
+      </Portal>
+    </View>
   );
 };
 

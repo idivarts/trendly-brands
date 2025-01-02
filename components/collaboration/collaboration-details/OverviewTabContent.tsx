@@ -26,12 +26,12 @@ import {
   faInstagram,
   faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
-import CreateCollaborationMap from "../create-collaboration/CreateCollaborationMap";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { PLACEHOLDER_IMAGE } from "@/constants/Placeholder";
 import BrandModal from "./modal/BrandModal";
 import ManagerModal from "./modal/ManagerModal";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -106,7 +106,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       {/* Collaboration Details */}
-      <Card style={styles.profileCard}>
+      <View style={styles.profileCard}>
         {props?.collaboration?.attachments &&
           props?.collaboration?.attachments.length > 0 && (
             <Carousel
@@ -122,40 +122,56 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
           <View
             style={{
               display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-between",
+              flexDirection: "column",
               width: "100%",
-              alignItems: "center",
             }}
           >
-            <Text variant="headlineMedium" style={styles.name}>
-              {props.collaboration.name}
-            </Text>
-            {props.collaboration.timeStamp ? (
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: Colors(theme).text,
-                  paddingRight: 8,
-                }}
-              >
-                {formatDistanceToNow(props.collaboration.timeStamp, {
-                  addSuffix: true,
-                })}
+            <View
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "space-between",
+                width: "100%",
+                alignItems: "center",
+              }}
+            >
+              <Text variant="headlineMedium" style={styles.name}>
+                {props.collaboration.name}
               </Text>
-            ) : null}
+              {props.collaboration.timeStamp ? (
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: Colors(theme).text,
+                    paddingRight: 8,
+                  }}
+                >
+                  {formatDistanceToNow(props.collaboration.timeStamp, {
+                    addSuffix: true,
+                  })}
+                </Text>
+              ) : null}
+            </View>
+            <View
+              style={{
+                width: "100%",
+              }}
+            >
+              <Text variant="bodySmall" style={styles.shortDescription}>
+                {props.collaboration.description}
+              </Text>
+            </View>
           </View>
+
           <View
             style={{
               width: "100%",
+              borderWidth: 0.3,
+              paddingVertical: 16,
+              borderRadius: 10,
+              borderColor: Colors(theme).gray300,
             }}
           >
-            <Text variant="bodySmall" style={styles.shortDescription}>
-              {props.collaboration.description}
-            </Text>
-          </View>
-
-          <Card style={{ width: "100%", borderWidth: 0.3 }}>
             <Card.Content>
               <Pressable
                 style={{ flex: 1, flexDirection: "column", gap: 16 }}
@@ -196,6 +212,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         flexWrap: "wrap",
                         overflow: "hidden",
                         color: Colors(theme).text,
+                        lineHeight: 22,
                       }}
                     >
                       {truncateText(props.collaboration.brandDescription, 120)}
@@ -204,7 +221,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 </View>
               </Pressable>
             </Card.Content>
-          </Card>
+          </View>
 
           {props.collaboration?.externalLinks &&
             props.collaboration?.externalLinks.length > 0 && (
@@ -213,7 +230,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   flexDirection: "row",
                   flexWrap: "wrap",
                   gap: 16,
-                  marginTop: 16,
                   justifyContent: "space-between",
                 }}
               >
@@ -222,7 +238,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     key={index}
                     mode="contained"
                     style={{
-                      marginBottom: 16,
                       flexBasis: 1,
                       flexGrow: 1,
                     }}
@@ -245,7 +260,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
               borderWidth: 0.3,
               borderRadius: 10,
               padding: 16,
-              marginTop: 16,
             }}
           >
             <Text
@@ -291,7 +305,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
           <View
             style={{
               flexDirection: "row",
-              marginTop: 16,
               flexWrap: "wrap",
               width: "100%",
             }}
@@ -332,10 +345,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
               <View
                 style={{
                   flexDirection: "row",
-                  marginTop: 10,
                   flexWrap: "wrap",
                   width: "100%",
-                  marginBottom: 16,
                 }}
               >
                 {props.collaboration.contentFormat.map((content, index) => (
@@ -347,8 +358,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             <View
               style={{
                 width: "100%",
-                gap: 16,
-                marginVertical: 16,
               }}
             >
               <Text
@@ -356,11 +365,12 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   fontSize: 16,
                   color: Colors(theme).text,
                   fontWeight: "bold",
+                  marginBottom: 16,
                 }}
               >
                 Location
               </Text>
-              <CreateCollaborationMap
+              <ViewCollaborationMap
                 mapRegion={{
                   latitude: props.collaboration?.location?.latlong?.lat,
                   longitude: props.collaboration?.location?.latlong?.long,
@@ -413,7 +423,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 )}
               </View>
             )}
-          <View style={{ width: "100%", marginTop: 16, gap: 16 }}>
+          <View style={{ width: "100%", gap: 16 }}>
             <Text
               style={{
                 fontSize: 16,
@@ -474,7 +484,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             </Pressable>
           </View>
         </Card.Content>
-      </Card>
+      </View>
       <Portal>
         <BrandModal
           brand={{

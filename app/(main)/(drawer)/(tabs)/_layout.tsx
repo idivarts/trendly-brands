@@ -1,5 +1,5 @@
 import React from "react";
-import { router, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
@@ -10,12 +10,13 @@ import { View } from "@/components/theme/Themed";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
   faComment,
+  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
   faHouseUser as faHouseUserSolid,
-  faPlusCircle,
+  faFileLines as faFileLinesSolid,
   faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import Header from "@/components/explore-influencers/header";
@@ -48,8 +49,8 @@ const TabLayout = () => {
       <Tabs.Screen
         name="explore-influencers"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, focused }) => (
+          title: "Explore",
+          tabBarIcon: ({ color, focused }) =>
             focused ? (
               <FontAwesomeIcon
                 color={color}
@@ -57,17 +58,10 @@ const TabLayout = () => {
                 size={24}
               />
             ) : (
-              <HomeIcon
-                width={24}
-                height={24}
-                fill={Colors(theme).text}
-              />
-            )
-          ),
+              <HomeIcon width={24} height={24} fill={Colors(theme).text} />
+            ),
           headerTitle() {
-            return (
-              <Header />
-            )
+            return <Header />;
           },
           headerRight: () => (
             <View
@@ -79,42 +73,6 @@ const TabLayout = () => {
             >
               <NotificationIcon />
             </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="collaborations"
-        options={{
-          title: "Collaborations",
-          tabBarIcon: ({ color, focused }) => (
-            <FontAwesomeIcon
-              color={color}
-              icon={focused ? faStarSolid : faStar}
-              size={24}
-            />
-          ),
-          headerRight: () => <NotificationIcon />,
-        }}
-      />
-      <Tabs.Screen
-        name="create-collaboration"
-        listeners={() => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push({
-              pathname: "/(modal)/create-collaboration",
-            });
-          },
-        })}
-        options={{
-          headerShown: false,
-          title: "Create Collaborations",
-          tabBarIcon: ({ color }) => (
-            <FontAwesomeIcon
-              color={color}
-              icon={faPlusCircle}
-              size={24}
-            />
           ),
         }}
       />
@@ -134,9 +92,37 @@ const TabLayout = () => {
         }}
       />
       <Tabs.Screen
+        name="collaborations"
+        options={{
+          title: "Collaborations",
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesomeIcon
+              color={color}
+              icon={focused ? faStarSolid : faStar}
+              size={24}
+            />
+          ),
+          headerRight: () => <NotificationIcon />,
+        }}
+      />
+      <Tabs.Screen
+        name="contracts"
+        options={{
+          title: "Contracts",
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesomeIcon
+              color={color}
+              icon={focused ? faFileLinesSolid : faFileLines}
+              size={24}
+            />
+          ),
+          headerRight: () => <NotificationIcon />,
+        }}
+      />
+      <Tabs.Screen
         name="menu"
         options={{
-          title: "Profile",
+          title: "My Brand",
           tabBarIcon: () => <ProfileIcon />,
         }}
       />

@@ -8,7 +8,6 @@ const styles = (theme: Theme) =>
       flexDirection: "row",
       alignItems: "center",
       paddingVertical: 30,
-      paddingHorizontal: 20,
       borderBottomWidth: 0.2,
       gap: 12,
     },
