@@ -73,7 +73,9 @@ const ApplicationsTabContent = (props: any) => {
     loading,
   } = useApplications({
     collaborationId: props.pageID,
-    data: props.collaboration,
+    data: {
+      collaboration: props.collaboration,
+    },
     handleActionModalClose,
     influencerApplication: selectedInfluencerApplication as InfluencerApplication,
   });

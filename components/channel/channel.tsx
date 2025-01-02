@@ -111,6 +111,10 @@ const ChannelNative = () => {
           </Pressable>
         }
       />
+
+      <MessageList />
+      <MessageInput />
+
       <FeedbackModal
         onSubmit={(
           rating: number,
@@ -123,8 +127,6 @@ const ChannelNative = () => {
         setIsVisible={setFeedbackModalVisible}
         theme={theme}
       />
-      <MessageList />
-      <MessageInput />
     </Channel>
   );
 }
