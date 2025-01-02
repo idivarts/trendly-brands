@@ -6,55 +6,64 @@ import { CardDescription } from '../../ui/card/secondary/card-description';
 import { CardActions } from '../../ui/card/secondary/card-actions';
 import Carousel from '@/shared-uis/components/carousel/carousel';
 import { useTheme } from '@react-navigation/native';
+import { User } from '@/types/User';
+import { processRawAttachment } from '@/utils/attachments';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
+import Colors from '@/constants/Colors';
 
 interface InvitationCardProps {
-  data: any;
+  data: User;
+  headerLeftAction?: () => void;
+  headerRightAction?: () => void;
+  inviteInfluencer: () => void;
+  isAlreadyInvited: boolean;
 }
 
 const InvitationCard: React.FC<InvitationCardProps> = ({
   data,
+  headerLeftAction,
+  headerRightAction,
+  inviteInfluencer,
+  isAlreadyInvited,
 }) => {
   const theme = useTheme();
-  console.log('Data', data);
 
   return (
     <Card>
       <CardHeader
-        avatar=""
-        name="Rahul Sinha"
-        handle="@trendly.pro"
-        isVerified
-        timestamp="5s ago"
+        avatar={data?.profileImage || ''}
+        handle={data.socials?.[0]}
+        leftAction={headerLeftAction}
+        name={data.name}
+        rightAction={headerRightAction}
+        isVerified={data.isVerified}
       />
       <Carousel
-        data={[
-          {
-            type: 'image',
-            url: 'https://picsum.photos/200/300',
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/200/320',
-          },
-          {
-            type: 'image',
-            url: 'https://picsum.photos/200/330',
-          },
-        ]}
+        data={data.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
         theme={theme}
       />
       <CardActions
         metrics={{
-          views: 10000,
-          likes: 20000,
-          comments: 5,
+          followers: data.backend?.followers || 0,
+          reach: data.backend?.reach || 0,
+          rating: data.backend?.rating || 0,
         }}
         action={
           <Button
             mode="outlined"
-            onPress={() => console.log('Invite pressed')}
+            onPress={inviteInfluencer}
           >
-            Invite
+            <FontAwesomeIcon
+              color={Colors(theme).primary}
+              icon={isAlreadyInvited ? faCheck : faPlus}
+              size={12}
+              style={{
+                marginRight: 6,
+                marginTop: -1,
+              }}
+            />
+            {isAlreadyInvited ? 'Already Invited' : 'Invite'}
           </Button>
         }
       />

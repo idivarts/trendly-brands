@@ -10,14 +10,19 @@ import { CardHeader } from '@/components/ui/card/secondary/card-header';
 import { CardActions } from '@/components/ui/card/secondary/card-actions';
 import { CardDescription } from '@/components/ui/card/secondary/card-description';
 import { CardFooter } from '@/components/ui/card/secondary/card-footer';
+import { processRawAttachment } from '@/utils/attachments';
+import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
+import { InfluencerApplication } from '@/types/Collaboration';
 
 interface ApplicationCardProps {
-  data: any;
+  acceptApplication: () => void;
+  data: InfluencerApplication;
   headerLeftAction?: () => void;
   headerRightAction?: () => void;
 }
 
 export const ApplicationCard: React.FC<ApplicationCardProps> = ({
+  acceptApplication,
   data,
   headerLeftAction,
   headerRightAction,
@@ -27,29 +32,29 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   return (
     <Card>
       <CardHeader
-        avatar=""
-        handle="@trendly.pro"
+        avatar={data.influencer.profileImage || ''}
+        handle={data.influencer.socials?.[0]}
         isVerified
         leftAction={headerLeftAction}
-        name={data?.name}
+        name={data.influencer.name}
         rightAction={headerRightAction}
         timestamp="5s ago"
       />
       <Carousel
-        data={data.attachments}
+        data={data.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
         theme={theme}
       />
       <CardActions
         metrics={{
-          views: 10000,
-          likes: 20000,
-          comments: 5,
+          followers: data.influencer.backend?.followers || 0,
+          reach: data.influencer.backend?.reach || 0,
+          rating: data.influencer.backend?.rating || 0,
         }}
         action={
           <Button
             mode="outlined"
             size="small"
-            onPress={() => console.log('Accept pressed')}
+            onPress={acceptApplication}
           >
             <FontAwesomeIcon
               color={Colors(theme).primary}

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 type Question = {
-  question: string;
+  question: number;
   answer: string;
 };
 

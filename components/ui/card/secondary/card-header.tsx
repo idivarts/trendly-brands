@@ -4,10 +4,12 @@ import { Theme, useTheme } from '@react-navigation/native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import Colors from '@/constants/Colors';
+import { Avatar } from 'react-native-paper';
+import { imageUrl } from '@/utils/url';
 
 type CardHeaderProps = {
   avatar: string;
-  handle: string;
+  handle?: string;
   isVerified?: boolean;
   leftAction?: () => void;
   name: string;
@@ -34,10 +36,10 @@ export const CardHeader = ({
         onPress={leftAction}
       >
         {avatar ? (
-          <Image source={{ uri: avatar }} style={styles.avatar} />
+          <Avatar.Image size={48} source={imageUrl(avatar)} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>{name?.[0]}</Text>
+            <Text style={styles.avatarText}>{name?.[0] || 'U'}</Text>
           </View>
         )}
         <View style={styles.userInfo}>
@@ -50,7 +52,7 @@ export const CardHeader = ({
               />
             )}
           </View>
-          <Text style={styles.handle}>{handle}</Text>
+          <Text style={styles.handle}>{handle || '@socialmedia'}</Text>
         </View>
       </Pressable>
       <View
@@ -87,21 +89,21 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 100,
   },
   avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E1E4F9',
+    width: 48,
+    height: 48,
+    borderRadius: 100,
+    backgroundColor: Colors(theme).aliceBlue,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: Colors(theme).primary,
   },
   userInfo: {
     marginLeft: 12,

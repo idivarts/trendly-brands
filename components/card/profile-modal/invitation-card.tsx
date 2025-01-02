@@ -6,12 +6,12 @@ import { CardFooter } from '@/components/ui/card/tertiary/card-footer';
 import Button from '@/components/ui/button';
 
 interface InvitationCardProps {
-  isInvited: boolean;
+  isAlreadyInvited: boolean;
   onInvite: () => void;
 }
 
 export const InvitationCard: React.FC<InvitationCardProps> = ({
-  isInvited,
+  isAlreadyInvited,
   onInvite,
 }) => {
   return (
@@ -29,7 +29,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
               width: '100%',
             }}
           >
-            {isInvited ? 'Already Invited' : 'Invite Now'}
+            {isAlreadyInvited ? 'Already Invited' : 'Invite Now'}
           </Button>
         }
       />

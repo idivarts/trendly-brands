@@ -1,8 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Colors from '@/constants/Colors';
+import { useTheme } from '@react-navigation/native';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faFile } from '@fortawesome/free-regular-svg-icons';
 
 type File = {
+  url: string;
   name: string;
   type: string;
 };
@@ -13,6 +17,8 @@ type CardFilesProps = {
 };
 
 export const CardFiles = ({ files, onFilePress }: CardFilesProps) => {
+  const theme = useTheme();
+
   const getFileIcon = (type: string) => {
     switch (type) {
       case 'pdf':
@@ -32,10 +38,10 @@ export const CardFiles = ({ files, onFilePress }: CardFilesProps) => {
           style={styles.fileRow}
           onPress={() => onFilePress?.(file)}
         >
-          <Feather
-            name={getFileIcon(file.type)}
+          <FontAwesomeIcon
+            icon={faFile}
             size={20}
-            color="#6B7280"
+            color={Colors(theme).text}
           />
           <Text style={styles.fileName}>{file.name}</Text>
         </TouchableOpacity>

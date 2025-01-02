@@ -20,11 +20,13 @@ import { User } from "@/types/User";
 import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import { List } from "react-native-paper";
 import { useApplications } from "@/hooks/request";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { processRawAttachment } from "@/utils/attachments";
+import { Application, InfluencerApplication } from "@/types/Collaboration";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
-  const [selectedApplication, setSelectedApplication] = useState<any>(null);
-  const [selectedInfluencer, setSelectedInfluencer] = useState<User | null>(null);
+  const [selectedInfluencerApplication, setSelectedInfluencerApplication] = useState<InfluencerApplication | null>(null);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
 
   const {
@@ -67,10 +69,10 @@ const ApplicationsTabContent = (props: any) => {
     influencers,
     loading,
   } = useApplications({
-    application: selectedApplication,
+    collaborationId: props.pageID,
     data: props.collaboration,
     handleActionModalClose,
-    pageId: props.pageID,
+    influencerApplication: selectedInfluencerApplication as InfluencerApplication,
   });
 
   useEffect(() => {
@@ -108,30 +110,21 @@ const ApplicationsTabContent = (props: any) => {
         data={influencers}
         renderItem={({ item }) => (
           <ApplicationCard
+            acceptApplication={handleAcceptApplication}
             data={item}
             headerLeftAction={() => {
-              setSelectedInfluencer(item);
-              setSelectedApplication({
-                applicationID: item.applicationID,
-                collaborationID: props.pageID,
-                influencerID: item.id,
-              });
+              setSelectedInfluencerApplication(item);
               setTimeout(() => {
                 bottomSheetModalRef.current?.present();
               }, 500);
             }}
             headerRightAction={() => {
-              setSelectedInfluencer(item);
-              setSelectedApplication({
-                applicationID: item.applicationID,
-                collaborationID: props.pageID,
-                influencerID: item.id,
-              });
+              setSelectedInfluencerApplication(item);
               setIsActionModalVisible(true);
             }}
           />
         )}
-        keyExtractor={(item, index) => item.id + index}
+        keyExtractor={(item, index) => item.application.id + index}
         style={{
           paddingBottom: 16,
           width: xl ? 640 : '100%',
@@ -196,6 +189,7 @@ const ApplicationsTabContent = (props: any) => {
                 }}
               >
                 <ProfileApplicationCard
+                  data={selectedInfluencerApplication?.application as Application}
                   onReject={() => {
                     console.log("Reject Application");
                   }}
@@ -205,8 +199,9 @@ const ApplicationsTabContent = (props: any) => {
                 />
               </View>
             }
+            carouselMedia={selectedInfluencerApplication?.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
             FireStoreDB={FirestoreDB}
-            influencer={selectedInfluencer as User}
+            influencer={selectedInfluencerApplication?.influencer as User}
             isBrandsApp={true}
             theme={theme}
           />

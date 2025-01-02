@@ -8,47 +8,48 @@ import { CardFooter } from '@/components/ui/card/tertiary/card-footer';
 import { CardQuestions } from '@/components/ui/card/tertiary/card-questions';
 import { View } from '@/components/theme/Themed';
 import Button from '@/components/ui/button';
+import { Application } from '@/types/Collaboration';
 
 interface ApplicationCardProps {
+  data: Application;
   onAccept: () => void;
   onReject: () => void;
 }
 
 export const ApplicationCard: React.FC<ApplicationCardProps> = ({
+  data,
   onAccept,
   onReject,
 }) => {
-  const files = [
-    { name: 'My File One.txt', type: 'txt' },
-    { name: 'My File two.pdf', type: 'pdf' },
-  ];
-
-  const questions = [
-    {
-      question: 'How much reach can you guarantee?',
-      answer: 'I can guarantee a reach of 20k in one week, if we are doing an integrated video for this',
-    },
-    {
-      question: 'Have you done any similar collaboration in past? If so please share link?',
-      answer: 'Yes I have done a similar collab for one more brand in the same field. You can check that out on my insta profile. Also attanching screenshot',
-    },
-  ];
-
   return (
     <Card>
       <CardHeader
         title="Application"
-        description="Lorem ipsum dolor sit amet, consectetur piscing elit, sed do eiusmod tempor do eiusmod temp Lorem dolor sit amet, consectetur piscing elit, sed do eiusmod"
+        description={data.message}
       />
-      <CardMetaData
-        quote="Rs 10k"
-        timeline="25th Dec"
-      />
-      <CardFiles
-        files={files}
-        onFilePress={(file) => console.log('File pressed:', file.name)}
-      />
-      <CardQuestions questions={questions} />
+      {
+        (data.quotation || data.timeline) && (
+          <CardMetaData
+            quote={data.quotation}
+            timeline={data.timeline}
+          />
+        )
+      }
+      {
+        data.fileAttachments && data.fileAttachments.length > 0 && (
+          <CardFiles
+            files={data.fileAttachments}
+            onFilePress={(file) => console.log('File pressed:', file.name)}
+          />
+        )
+      }
+      {
+        data.answersFromInfluencer && data.answersFromInfluencer.length > 0 && (
+          <CardQuestions
+            questions={data.answersFromInfluencer}
+          />
+        )
+      }
       <CardFooter
         footerActions={
           <View

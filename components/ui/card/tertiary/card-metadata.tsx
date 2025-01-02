@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 
 type CardMetaDataProps = {
   quote?: string;
-  timeline?: string;
+  timeline?: number;
 };
 
 export const CardMetaData = ({ quote, timeline }: CardMetaDataProps) => {

@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, where, query, orderBy, limit, onSnapshot, QuerySnapshot, DocumentData, startAfter } from "firebase/firestore";
 
 interface UseInfluencersProps {
-  pageID: string;
+  collaborationId: string;
 }
 
 const useInfluencers = ({
-  pageID,
+  collaborationId,
 }: UseInfluencersProps) => {
   const [influencers, setInfluencers] = useState<any[]>([]);
   const [lastVisible, setLastVisible] = useState<DocumentData | null>(null);
@@ -86,7 +86,7 @@ const useInfluencers = ({
     const invitationsRef = collection(
       FirestoreDB,
       "collaborations",
-      pageID,
+      collaborationId,
       "invitations"
     );
 

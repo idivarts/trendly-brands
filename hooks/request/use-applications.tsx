@@ -1,31 +1,33 @@
+import { useState } from "react";
+import { useRouter } from "expo-router";
+import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
+
 import { useChatContext, useNotificationContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { FirestoreDB } from "@/utils/firestore";
-import { useRouter } from "expo-router";
-import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
-import { useState } from "react";
+import { Application, InfluencerApplication } from "@/types/Collaboration";
+import { User } from "@/types/User";
 
 interface UseApplicationsProps {
-  application: {
-    collaborationId: string;
-    applicationId: string;
-    influencerId: string;
-  };
+  collaborationId: string;
   data: any;
   handleActionModalClose: () => void;
-  pageId: string;
+  influencerApplication: InfluencerApplication;
 }
 
 const useApplications = ({
-  application,
+  collaborationId,
   data,
   handleActionModalClose,
-  pageId,
+  influencerApplication,
 }: UseApplicationsProps) => {
   const { createGroupWithMembers, connectUser } = useChatContext();
   const { createNotification } = useNotificationContext();
   const router = useRouter();
-  const [influencers, setInfluencers] = useState<any[]>([]);
+  const [influencers, setInfluencers] = useState<{
+    influencer: User;
+    application: Application;
+  }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchApplications = async () => {
@@ -33,7 +35,7 @@ const useApplications = ({
       const applicationRef = collection(
         FirestoreDB,
         "collaborations",
-        pageId,
+        collaborationId,
         "applications"
       );
       const applicationFetch = await getDocs(applicationRef);
@@ -41,7 +43,7 @@ const useApplications = ({
         return {
           ...doc.data(),
           id: doc.id,
-        } as any;
+        } as Application;
       });
 
       const influencers = await Promise.all(
@@ -49,13 +51,18 @@ const useApplications = ({
           const userRef = doc(FirestoreDB, "users", application.userId);
           const userFetch = await getDoc(userRef);
           return {
-            ...application,
-            ...userFetch.data(),
-            id: userFetch.id,
-            applicationID: application.id,
-          } as any;
+            application: {
+              ...application,
+              id: application.id,
+            },
+            influencer: {
+              ...userFetch.data(),
+              id: userFetch.id,
+            }
+          } as InfluencerApplication;
         })
       );
+
       setInfluencers(influencers);
     } catch (error) {
       console.error(error);
@@ -66,26 +73,28 @@ const useApplications = ({
 
   const handleAcceptApplication = async () => {
     try {
+      if (!influencerApplication.application) return;
+
       const applicationRef = doc(
         FirestoreDB,
         "collaborations",
-        application.collaborationId,
+        influencerApplication.application.collaborationId,
         "applications",
-        application.applicationId
+        influencerApplication.application.id,
       );
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
         createGroupWithMembers(data.collaboration.name, [
-          application.influencerId,
+          influencerApplication.application.userId,
         ]).then((channel) => {
           connectUser();
 
           createNotification(
-            application.influencerId,
+            influencerApplication.application.userId,
             {
               data: {
-                collaborationId: data.collaboration.id,
+                collaborationId: influencerApplication.application.collaborationId,
               },
               title: "Application Accepted",
               description: `Your application for ${data.collaboration.name} has been accepted`,
@@ -112,12 +121,14 @@ const useApplications = ({
 
   const handleRejectApplication = async () => {
     try {
+      if (!influencerApplication.application) return;
+
       const applicationRef = doc(
         FirestoreDB,
         "collaborations",
-        application.collaborationId,
+        influencerApplication.application.collaborationId,
         "applications",
-        application.applicationId
+        influencerApplication.application.id
       );
       await updateDoc(applicationRef, {
         status: "rejected",

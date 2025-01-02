@@ -5,12 +5,13 @@ import Colors from '@/constants/Colors';
 import { faChartLine, faFaceSmile, faPeopleRoof } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { useTheme } from '@react-navigation/native';
+import { convertToKUnits } from '@/utils/conversion';
 
 type CardActionsProps = {
   metrics: {
-    views: number;
-    likes: number;
-    comments: number;
+    followers: number;
+    reach: number;
+    rating: number;
   };
   action?: React.ReactNode;
 };
@@ -21,10 +22,6 @@ export const CardActions = ({
 }: CardActionsProps) => {
   const theme = useTheme();
 
-  const formatNumber = (num: number) => {
-    return num >= 1000 ? `${(num / 1000).toFixed(0)}k` : num;
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.metrics}>
@@ -34,7 +31,7 @@ export const CardActions = ({
             color={Colors(theme).primary}
             size={16}
           />
-          <Text style={styles.metricText}>{formatNumber(metrics.views)}</Text>
+          <Text style={styles.metricText}>{convertToKUnits(metrics.followers)}</Text>
         </View>
         <View style={styles.metric}>
           <FontAwesomeIcon
@@ -42,7 +39,7 @@ export const CardActions = ({
             color={Colors(theme).primary}
             size={16}
           />
-          <Text style={styles.metricText}>{formatNumber(metrics.likes)}</Text>
+          <Text style={styles.metricText}>{convertToKUnits(metrics.reach)}</Text>
         </View>
         <View style={styles.metric}>
           <FontAwesomeIcon
@@ -50,7 +47,7 @@ export const CardActions = ({
             color={Colors(theme).primary}
             size={16}
           />
-          <Text style={styles.metricText}>{formatNumber(metrics.comments)}</Text>
+          <Text style={styles.metricText}>{convertToKUnits(metrics.rating)}</Text>
         </View>
       </View>
       {action}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   View,
   FlatList,
@@ -9,28 +9,42 @@ import {
 import {
   Text,
   Button,
+  List,
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
-import InfluencerCard from "@/components/InfluencerCard";
 import { FirestoreDB } from "@/utils/firestore";
 import { addDoc, collection } from "firebase/firestore";
-import BottomSheetActions from "@/components/BottomSheetActions";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useInfluencers } from "@/hooks/request";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
+import InvitationCard from "@/components/card/collaboration-details/invitation-card";
+import {
+  InvitationCard as ProfileInvitationCard
+} from "@/components/card/profile-modal/invitation-card";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSharedValue } from "react-native-reanimated";
+import { processRawAttachment } from "@/utils/attachments";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { User } from "@/types/User";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
-  const [isVisible, setIsVisible] = useState(false);
-  const [selectedInfluencer, setSelectedInfluencer] = useState<any>(null);
-  const [isMessageModalVisible, setIsMessageModalVisible] = useState(false);
+  const [isActionModalVisible, setIsActionModalVisible] = useState(false);
+  const [selectedInfluencer, setSelectedInfluencer] = useState<User | null>(null);
+  const [isInvitationModalVisible, setIsInvitationModalVisible] = useState(false);
   const [message, setMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
+
+  const collaborationId = props.pageID;
+
   const {
     isInitialLoading,
     checkIfAlreadyInvited,
@@ -40,33 +54,64 @@ const InvitationsTabContent = (props: any) => {
     influencers,
     isLoading,
   } = useInfluencers({
-    pageID: props.pageID,
+    collaborationId,
   });
 
   const {
     xl,
   } = useBreakpoints();
 
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+
+  const insets = useSafeAreaInsets();
+  const containerOffset = useSharedValue({
+    top: insets.top,
+    bottom: insets.bottom,
+    left: insets.left,
+    right: insets.right,
+  });
+
+  const renderBackdrop = (props: any) => {
+    return (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+      />
+    );
+  };
+
+  const toggleActionModal = () => {
+    setIsActionModalVisible(!isActionModalVisible);
+  }
+
+  const handleActionModalClose = () => {
+    setIsActionModalVisible(false);
+  }
+
   const handleCollaborationInvite = async () => {
     try {
+      if (!selectedInfluencer) return;
+
       setIsInviting(true);
       const invitationRef = collection(
         FirestoreDB,
         "collaborations",
-        props.pageID,
+        collaborationId,
         "invitations"
       );
 
       const invitationPayload = {
-        userId: selectedInfluencer.influencerID,
+        userId: selectedInfluencer.id,
         managerId: AuthApp.currentUser?.uid,
-        collaborationId: selectedInfluencer.collaborationID,
+        collaborationId,
         status: "pending",
         message: message,
       };
 
       await addDoc(invitationRef, invitationPayload).then(() => {
-        setIsMessageModalVisible(false);
+        setIsInvitationModalVisible(false);
         Toaster.success("Invitation sent successfully");
       });
     } catch (error) {
@@ -113,34 +158,21 @@ const InvitationsTabContent = (props: any) => {
         }}
         data={influencers}
         renderItem={({ item }) => (
-          <InfluencerCard
-            type="invitation"
-            alreadyInvited={checkIfAlreadyInvited}
-            influencer={{
-              ...item,
-              profile: {
-                attachments: [
-                  {
-                    type: "image",
-                    imageUrl: item.profileImage,
-                  },
-                ]
-              }
+          <InvitationCard
+            data={item}
+            headerLeftAction={() => {
+              setSelectedInfluencer(item);
+              setTimeout(() => {
+                bottomSheetModalRef.current?.present();
+              }, 500);
             }}
-            ToggleModal={() => {
-              setIsVisible(true);
-              setSelectedInfluencer({
-                collaborationID: props.pageID,
-                influencerID: item.id,
-              });
+            headerRightAction={() => {
+              setSelectedInfluencer(item);
+              setIsActionModalVisible(true);
             }}
-            ToggleMessageModal={() => {
-              setIsMessageModalVisible(true);
-              setSelectedInfluencer({
-                collaborationID: props.pageID,
-                influencerID: item.id,
-              });
-            }}
+            inviteInfluencer={handleCollaborationInvite}
+            isAlreadyInvited
+          // isAlreadyInvited={checkIfAlreadyInvited(item.id).then((result) => result)}
           />
         )}
         ListFooterComponent={
@@ -169,12 +201,13 @@ const InvitationsTabContent = (props: any) => {
           )
         }
       />
+
       <Modal
-        visible={isMessageModalVisible}
+        visible={isInvitationModalVisible}
         transparent
         animationType="slide"
-        onDismiss={() => setIsMessageModalVisible(false)}
-        onRequestClose={() => setIsMessageModalVisible(false)}
+        onDismiss={() => setIsInvitationModalVisible(false)}
+        onRequestClose={() => setIsInvitationModalVisible(false)}
       >
         <View style={styles.messageModalContainer}>
           <View style={styles.messageModalContent}>
@@ -196,7 +229,7 @@ const InvitationsTabContent = (props: any) => {
               </Button>
               <Button
                 mode="outlined"
-                onPress={() => setIsMessageModalVisible(false)}
+                onPress={() => setIsInvitationModalVisible(false)}
               >
                 Cancel
               </Button>
@@ -204,18 +237,72 @@ const InvitationsTabContent = (props: any) => {
           </View>
         </View>
       </Modal>
+
       {
-        isVisible && (
-          <BottomSheetActions
-            cardType="invitationCard"
-            isVisible={isVisible}
-            onClose={() => setIsVisible(false)}
-            snapPointsRange={["30%", "80%"]}
-            cardId={selectedInfluencer}
-            key={selectedInfluencer.collaborationID}
-          />
+        isActionModalVisible && (
+          <BottomSheetContainer
+            isVisible={isActionModalVisible}
+            onClose={toggleActionModal}
+            snapPoints={["25%", "50%"]}
+          >
+            <List.Section
+              style={{
+                paddingBottom: 28
+              }}
+            >
+              <List.Item
+                title="Invite User"
+                onPress={() => {
+                  setIsActionModalVisible(false);
+                  setTimeout(() => {
+                    setIsInvitationModalVisible(true);
+                  }, 500);
+                }}
+              />
+              <List.Item
+                title="Message User"
+                onPress={() => {
+                  console.log("Message User");
+                }}
+              />
+            </List.Section>
+          </BottomSheetContainer>
         )
       }
+
+      <BottomSheetModal
+        backdropComponent={renderBackdrop}
+        containerOffset={containerOffset}
+        enablePanDownToClose={true}
+        index={2}
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        topInset={insets.top}
+      >
+        <BottomSheetScrollView>
+          <ProfileBottomSheet
+            actionCard={
+              <View
+                style={{
+                  marginHorizontal: 16,
+                }}
+              >
+                <ProfileInvitationCard
+                  isAlreadyInvited
+                  onInvite={() => {
+                    console.log("Invite User");
+                  }}
+                />
+              </View>
+            }
+            carouselMedia={selectedInfluencer?.profile?.attachments?.map((attachment: Attachment) => processRawAttachment(attachment))}
+            FireStoreDB={FirestoreDB}
+            influencer={selectedInfluencer as User}
+            isBrandsApp={true}
+            theme={theme}
+          />
+        </BottomSheetScrollView>
+      </BottomSheetModal>
     </>
   );
 };
