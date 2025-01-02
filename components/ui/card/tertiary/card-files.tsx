@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Colors from '@/constants/Colors';
 import { useTheme } from '@react-navigation/native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faFile } from '@fortawesome/free-regular-svg-icons';
+import { faPaperclip } from '@fortawesome/free-solid-svg-icons';
+
+import Colors from '@/constants/Colors';
 
 type File = {
   url: string;
@@ -19,17 +20,6 @@ type CardFilesProps = {
 export const CardFiles = ({ files, onFilePress }: CardFilesProps) => {
   const theme = useTheme();
 
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'pdf':
-        return 'file-text';
-      case 'txt':
-        return 'file';
-      default:
-        return 'file';
-    }
-  };
-
   return (
     <View style={styles.container}>
       {files.map((file, index) => (
@@ -39,8 +29,11 @@ export const CardFiles = ({ files, onFilePress }: CardFilesProps) => {
           onPress={() => onFilePress?.(file)}
         >
           <FontAwesomeIcon
-            icon={faFile}
+            icon={faPaperclip}
             size={20}
+            style={{
+              transform: [{ rotate: '-45deg' }],
+            }}
             color={Colors(theme).text}
           />
           <Text style={styles.fileName}>{file.name}</Text>
@@ -61,7 +54,6 @@ const styles = StyleSheet.create({
   fileName: {
     marginLeft: 12,
     fontSize: 16,
-    color: '#111827',
     textDecorationLine: 'underline',
   },
 });

@@ -62,6 +62,8 @@ const ApplicationsTabContent = (props: any) => {
     setIsActionModalVisible(false);
   }
 
+  const collaborationQuestions = props.collaboration?.questionsToInfluencers || [];
+
   const {
     fetchApplications,
     handleAcceptApplication,
@@ -196,6 +198,10 @@ const ApplicationsTabContent = (props: any) => {
                   onAccept={() => {
                     handleAcceptApplication();
                   }}
+                  questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer) => ({
+                    question: collaborationQuestions[answer.question],
+                    answer: answer.answer
+                  })) || []}
                 />
               </View>
             }

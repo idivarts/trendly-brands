@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { View, Text } from '@/components/theme/Themed';
 
 type Question = {
-  question: number;
+  question: string;
   answer: string;
 };
 
@@ -32,12 +33,10 @@ const styles = StyleSheet.create({
   question: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 8,
   },
   answer: {
     fontSize: 16,
-    color: '#374151',
     lineHeight: 24,
   },
 });

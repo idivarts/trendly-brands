@@ -17,12 +17,17 @@ interface ApplicationCardProps {
   data: Application;
   onAccept: () => void;
   onReject: () => void;
+  questions: {
+    question: string;
+    answer: string;
+  }[];
 }
 
 export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   data,
   onAccept,
   onReject,
+  questions,
 }) => {
   const theme = useTheme();
 
@@ -51,7 +56,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       {
         data.answersFromInfluencer && data.answersFromInfluencer.length > 0 && (
           <CardQuestions
-            questions={data.answersFromInfluencer}
+            questions={questions}
           />
         )
       }
