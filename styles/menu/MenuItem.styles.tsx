@@ -28,6 +28,7 @@ const stylesFn = (theme: Theme) =>
       flex: 1,
       paddingHorizontal: 20,
       paddingVertical: 10,
+      justifyContent: "space-between",
     },
     topRow: {
       gap: 20,

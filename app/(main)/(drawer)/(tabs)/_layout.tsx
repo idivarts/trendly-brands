@@ -50,7 +50,7 @@ const TabLayout = () => {
         name="explore-influencers"
         options={{
           title: "Explore",
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }) =>
             focused ? (
               <FontAwesomeIcon
                 color={color}
@@ -58,17 +58,10 @@ const TabLayout = () => {
                 size={24}
               />
             ) : (
-              <HomeIcon
-                width={24}
-                height={24}
-                fill={Colors(theme).text}
-              />
-            )
-          ),
+              <HomeIcon width={24} height={24} fill={Colors(theme).text} />
+            ),
           headerTitle() {
-            return (
-              <Header />
-            )
+            return <Header />;
           },
           headerRight: () => (
             <View

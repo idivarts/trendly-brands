@@ -21,6 +21,13 @@ import { FirestoreDB } from "@/utils/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import ScreenHeader from "../ui/screen-header";
 import { Text } from "../theme/Themed";
+import {
+  ref,
+  uploadString,
+  getDownloadURL,
+  uploadBytes,
+} from "firebase/storage";
+import { StorageApp } from "@/utils/firebase-storage";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -28,24 +35,17 @@ const Profile = () => {
   const [email, setEmail] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false); // Loader state
-  const { uploadImageBytes } = useFirebaseStorageContext();
   const { manager } = useAuthContext();
   const [capturedImage, setCapturedImage] = useState<string>(
     manager?.profileImage || ""
   );
+  const [imageToUpload, setImageToUpload] = useState<string>("");
 
   const theme = useTheme();
 
-  console.log(capturedImage);
-
-  const updateProfile = async (image: string) => {
+  const updateProfile = async () => {
     if (!manager || !manager.id) {
       console.error("Manager ID is missing");
-      return;
-    }
-
-    if (!capturedImage) {
-      console.error("Captured image is invalid or empty");
       return;
     }
 
@@ -53,21 +53,28 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      const path = `managers/${manager.id}/profile-image`;
-      if (capturedImage !== manager.profileImage) {
-        const blob = await fetch(capturedImage).then((r) => r.blob());
-        const url = await uploadImageBytes(blob, path);
-        await updateDoc(managerRef, {
-          profileImage: url,
-        });
+      let updatedImageURL = manager.profileImage; // Default to existing profile image
+
+      if (imageToUpload) {
+        const path = `managers/${manager.id}/profile-image`;
+
+        // Validate Base64 format
+
+        const storageRef = ref(StorageApp, path);
+        const blobImage = await fetch(imageToUpload).then((res) => res.blob());
+        await uploadBytes(storageRef, blobImage);
+
+        // // Get the downloadable URL for the uploaded image
+        updatedImageURL = await getDownloadURL(storageRef);
       }
 
-      if (name !== manager.name) {
-        await updateDoc(managerRef, {
-          name,
-        });
-      }
+      // Update Firestore document
+      await updateDoc(managerRef, {
+        profileImage: updatedImageURL,
+        name: name || manager.name,
+      });
 
+      setImageToUpload(""); // Clear image-to-upload buffer
       Toaster.success("Profile updated successfully");
     } catch (error) {
       console.error("Error during profile update:", error);
@@ -97,7 +104,7 @@ const Profile = () => {
           title="Profile"
           rightAction
           rightActionButton={
-            <Pressable onPress={() => updateProfile(capturedImage)}>
+            <Pressable onPress={updateProfile}>
               <Text
                 style={{
                   color: Colors(theme).text,
@@ -180,7 +187,7 @@ const Profile = () => {
           <Button
             mode="contained"
             style={styles.saveButton}
-            onPress={() => updateProfile(capturedImage)}
+            onPress={updateProfile}
             disabled={loading} // Disable button while loading
           >
             Save Profile
@@ -191,7 +198,9 @@ const Profile = () => {
         setVisible={setIsModalVisible}
         visible={isModalVisible}
         onImageUpload={(image) => {
+          if (!image) return;
           setCapturedImage(image);
+          setImageToUpload(image);
         }}
       />
     </KeyboardAvoidingView>
