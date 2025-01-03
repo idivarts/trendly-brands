@@ -10,7 +10,13 @@ import { User } from "@/types/User";
 
 interface UseApplicationsProps {
   collaborationId: string;
-  data: any;
+  data: {
+    collaboration: {
+      id: string;
+      name: string;
+      questionsToInfluencers: string[];
+    },
+  };
   handleActionModalClose: () => void;
   influencerApplication: InfluencerApplication;
 }
