@@ -26,6 +26,7 @@ export const stylesFn = (theme: Theme) =>
     },
     name: {
       fontWeight: "bold",
+      width: "50%",
       fontSize: 20,
       color: Colors(theme).text,
       lineHeight: 20,

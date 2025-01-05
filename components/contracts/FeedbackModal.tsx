@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { Image, Pressable, Linking, StyleSheet, TextInput } from "react-native";
+import {
+  Image,
+  Pressable,
+  Linking,
+  StyleSheet,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+} from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { Text, View } from "@/components/theme/Themed";
 import { Chip, Modal, Portal } from "react-native-paper";
@@ -42,6 +51,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
       );
       if (textFeedback === "" || selectedStar === 0) {
         alert("Please provide feedback and rating before submitting");
+        return;
       }
       const date = new Date();
       await updateDoc(contractRef, {
@@ -76,96 +86,101 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         marginHorizontal: 20,
       }}
     >
-      <View style={styles.modal}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Feedback</Text>
-          <Pressable onPress={() => setVisibility(false)}>
-            <FontAwesomeIcon
-              icon={faClose}
-              color={Colors(theme).primary}
-              size={30}
-            />
-          </Pressable>
-        </View>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalText}>
-            {feedbackGiven
-              ? "Thank you for your feedback!"
-              : "Please provide your feedback"}
-          </Text>
-          {star === 0 && (
-            <View style={styles.modalRating}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Pressable key={i} onPress={() => setSelectedStar(i)}>
-                  <FontAwesomeIcon
-                    icon={faStar}
-                    color={
-                      i <= selectedStar
-                        ? Colors(theme).yellow
-                        : Colors(theme).text
-                    }
-                    size={30}
-                  />
-                </Pressable>
-              ))}
-            </View>
-          )}
-          {!feedbackGiven && (
-            <TextInput
-              style={styles.textInput}
-              placeholder="Write your feedback here"
-              value={textFeedback}
-              onChangeText={(text) => setTextFeedback(text)}
-              numberOfLines={5}
-              multiline
-            />
-          )}
-          {!feedbackGiven && (
-            <Pressable
-              style={{
-                backgroundColor: Colors(theme).primary,
-                paddingVertical: 10,
-                paddingHorizontal: 20,
-                borderRadius: 5,
-                marginVertical: 10,
-              }}
-              onPress={() => {
-                provideFeedback();
-              }}
-            >
-              <Text
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+      >
+        <Pressable style={styles.modal} onPress={() => Keyboard.dismiss()}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Feedback</Text>
+            <Pressable onPress={() => setVisibility(false)}>
+              <FontAwesomeIcon
+                icon={faClose}
+                color={Colors(theme).primary}
+                size={30}
+              />
+            </Pressable>
+          </View>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>
+              {feedbackGiven
+                ? "Thank you for your feedback!"
+                : "Please provide your feedback"}
+            </Text>
+            {star === 0 && (
+              <View style={styles.modalRating}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Pressable key={i} onPress={() => setSelectedStar(i)}>
+                    <FontAwesomeIcon
+                      icon={faStar}
+                      color={
+                        i <= selectedStar
+                          ? Colors(theme).yellow
+                          : Colors(theme).text
+                      }
+                      size={30}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {!feedbackGiven && (
+              <TextInput
+                style={styles.textInput}
+                placeholder="Write your feedback here"
+                value={textFeedback}
+                onChangeText={(text) => setTextFeedback(text)}
+                numberOfLines={5}
+                multiline
+              />
+            )}
+            {!feedbackGiven && (
+              <Pressable
                 style={{
-                  fontSize: 16,
-                  color: Colors(theme).white,
+                  backgroundColor: Colors(theme).primary,
+                  paddingVertical: 10,
+                  paddingHorizontal: 20,
+                  borderRadius: 5,
+                  marginVertical: 10,
+                }}
+                onPress={() => {
+                  provideFeedback();
                 }}
               >
-                Submit Feedback
-              </Text>
-            </Pressable>
-          )}
-          {feedbackGiven && (
-            <Pressable
-              style={{
-                backgroundColor: Colors(theme).primary,
-                paddingVertical: 10,
-                paddingHorizontal: 20,
-                borderRadius: 5,
-                marginVertical: 10,
-              }}
-              onPress={() => setVisibility(false)}
-            >
-              <Text
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: Colors(theme).white,
+                  }}
+                >
+                  Submit Feedback
+                </Text>
+              </Pressable>
+            )}
+            {feedbackGiven && (
+              <Pressable
                 style={{
-                  fontSize: 16,
-                  color: Colors(theme).white,
+                  backgroundColor: Colors(theme).primary,
+                  paddingVertical: 10,
+                  paddingHorizontal: 20,
+                  borderRadius: 5,
+                  marginVertical: 10,
                 }}
+                onPress={() => setVisibility(false)}
               >
-                Close
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: Colors(theme).white,
+                  }}
+                >
+                  Close
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -198,6 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginVertical: 10,
   },
+  keyboardAvoidingView: {},
   textInput: {
     width: "100%",
     height: 100,
