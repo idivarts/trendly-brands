@@ -121,6 +121,7 @@ const UserResponse: FC<UserResponseProps> = ({
                   key={index}
                   style={{
                     fontSize: 16,
+                    textDecorationLine: "underline",
                   }}
                 >
                   {attachment.name}
