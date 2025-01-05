@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { TextInput, Button, Avatar } from "react-native-paper";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Colors from "@/constants/Colors";
 import { PLACEHOLDER_PERSON_IMAGE } from "@/constants/Placeholder";
 import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
@@ -28,6 +28,7 @@ import {
   uploadBytes,
 } from "firebase/storage";
 import { StorageApp } from "@/utils/firebase-storage";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -36,6 +37,7 @@ const Profile = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false); // Loader state
   const { manager } = useAuthContext();
+  const { selectedBrand } = useBrandContext();
   const [capturedImage, setCapturedImage] = useState<string>(
     manager?.profileImage || ""
   );
@@ -73,6 +75,18 @@ const Profile = () => {
         profileImage: updatedImageURL,
         name: name || manager.name,
       });
+      if (selectedBrand) {
+        const brandMemberRef = doc(
+          FirestoreDB,
+          "brands",
+          selectedBrand.id,
+          "members",
+          manager.id
+        );
+        await updateDoc(brandMemberRef, {
+          role,
+        });
+      }
 
       setImageToUpload(""); // Clear image-to-upload buffer
       Toaster.success("Profile updated successfully");
@@ -84,13 +98,29 @@ const Profile = () => {
     }
   };
 
+  const fetchRole = async () => {
+    if (selectedBrand && selectedBrand.id && manager && manager.id) {
+      const managerRef = doc(
+        FirestoreDB,
+        "brands",
+        selectedBrand.id,
+        "members",
+        manager.id
+      );
+      const managerData = await getDoc(managerRef);
+      if (managerData.exists()) {
+        setRole(managerData.data().role);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!manager) {
       console.error("Manager object is null");
       return;
     }
     setName(manager.name || ""); // Fallback to empty string
-    setRole("Manager");
+    fetchRole();
     setEmail(manager.email || ""); // Fallback to empty string
   }, [manager]);
 
@@ -177,7 +207,7 @@ const Profile = () => {
           value={role}
           mode="outlined"
           style={styles.input}
-          editable={false}
+          onChangeText={(text) => setRole(text)}
         />
 
         {/* Save Profile Button */}
