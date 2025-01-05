@@ -13,7 +13,7 @@ import {
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { FirestoreDB } from "@/utils/firestore";
-import { addDoc, collection } from "firebase/firestore";
+import { collection, doc, setDoc } from "firebase/firestore";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useInfluencers } from "@/hooks/request";
@@ -95,7 +95,7 @@ const InvitationsTabContent = (props: any) => {
       if (!selectedInfluencer) return;
 
       setIsInviting(true);
-      const invitationRef = collection(
+      const invitationColRef = collection(
         FirestoreDB,
         "collaborations",
         collaborationId,
@@ -110,7 +110,9 @@ const InvitationsTabContent = (props: any) => {
         message: message,
       };
 
-      await addDoc(invitationRef, invitationPayload).then(() => {
+      // Invitation Id as influencer id
+      const invitationDocRef = doc(invitationColRef, selectedInfluencer.id);
+      await setDoc(invitationDocRef, invitationPayload).then(() => {
         setIsInvitationModalVisible(false);
         Toaster.success("Invitation sent successfully");
       });
@@ -223,7 +225,9 @@ const InvitationsTabContent = (props: any) => {
             <View style={styles.buttonContainer}>
               <Button
                 mode="contained"
-                onPress={handleCollaborationInvite}
+                onPress={() => {
+                  handleCollaborationInvite();
+                }}
                 loading={isInviting}
               >
                 Send Invitation
