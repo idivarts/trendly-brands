@@ -92,27 +92,22 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 </Text>
               ) : null}
             </View>
-            <View
-              style={{
-                width: "100%",
+
+            <RenderHTML
+              source={{
+                html:
+                  props.userData.profile?.content?.about ||
+                  "<p>No content available.</p>",
               }}
-            >
-              <RenderHTML
-                source={{
-                  html:
-                    props.userData.profile?.content?.about ||
-                    "<p>No content available.</p>",
-                }}
-                contentWidth={Dimensions.get("window").width}
-                defaultTextProps={{
-                  style: {
-                    color: Colors(theme).text,
-                    fontSize: 16,
-                    lineHeight: 22,
-                  },
-                }}
-              />
-            </View>
+              contentWidth={Dimensions.get("window").width}
+              defaultTextProps={{
+                style: {
+                  color: Colors(theme).text,
+                  fontSize: 16,
+                  lineHeight: 22,
+                },
+              }}
+            />
           </View>
 
           <ActionContainer

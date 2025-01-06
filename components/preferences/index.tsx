@@ -75,7 +75,13 @@ const Preferences = () => {
       {/* <MembersCard /> */}
       <FlatList
         data={members}
-        renderItem={({ item }) => <MembersCard manager={item} />}
+        renderItem={({ item }) => (
+          <MembersCard
+            manager={item}
+            cardType="preferences"
+            action={() => {}}
+          />
+        )}
         keyExtractor={(item) => item.managerId}
         contentContainerStyle={{
           gap: 10,

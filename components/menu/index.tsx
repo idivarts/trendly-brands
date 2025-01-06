@@ -41,9 +41,7 @@ const Menu = () => {
       <View style={styles.menuItemsContainer}>
         <View style={styles.topRow}>
           <Image
-            source={{
-              uri: selectedBrand?.image,
-            }}
+            source={imageUrl(selectedBrand?.image)}
             style={styles.avatarBrandImage}
           />
           <Text style={styles.brandName}>{selectedBrand?.name}</Text>

@@ -71,7 +71,7 @@ const UserResponse: FC<UserResponseProps> = ({
       <View
         style={{
           width: "100%",
-          gap: 10,
+          gap: 16,
         }}
       >
         <ScrollView horizontal style={{}}>
@@ -86,13 +86,11 @@ const UserResponse: FC<UserResponseProps> = ({
             />
           ))}
         </ScrollView>
-        <Text style={{ fontSize: 16, marginTop: 10 }}>
-          {application?.message}
-        </Text>
+        <Text style={{ fontSize: 16 }}>{application?.message}</Text>
         <View
           style={{
             flexDirection: "row",
-            gap: 10,
+            gap: 16,
             justifyContent: "space-between",
           }}
         >
@@ -114,7 +112,7 @@ const UserResponse: FC<UserResponseProps> = ({
                 onPress={() =>
                   downloadAndSaveFile(attachment.url, attachment.name)
                 }
-                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
               >
                 <FontAwesomeIcon icon={faPaperclip} />
                 <Text
@@ -133,7 +131,7 @@ const UserResponse: FC<UserResponseProps> = ({
         <View
           style={{
             flexDirection: "column",
-            gap: 10,
+            gap: 16,
           }}
         >
           {application?.answersFromInfluencer &&
@@ -152,6 +150,7 @@ const UserResponse: FC<UserResponseProps> = ({
                       fontWeight: "bold",
                     }}
                   >
+                    Q{") "}
                     {influencerQuestions[answer.question]}
                   </Text>
                   <Text
@@ -159,6 +158,7 @@ const UserResponse: FC<UserResponseProps> = ({
                       fontSize: 16,
                     }}
                   >
+                    A{") "}
                     {answer.answer}
                   </Text>
                 </View>
