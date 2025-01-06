@@ -33,11 +33,11 @@ export const stylesFn = (theme: Theme) =>
       justifyContent: "flex-end",
     },
     modalContent: {
-      padding: 20,
+      padding: 16,
+      gap: 16,
       borderRadius: 10,
       backgroundColor: Colors(theme).background,
       width: 300,
-      gap: 12,
     },
     modalInputContainer: {
       marginBottom: 10,
@@ -57,7 +57,7 @@ export const stylesFn = (theme: Theme) =>
       margin: 4,
     },
     addButton: {
-      marginTop: 10,
+      alignItems: "center",
     },
     noDataContainer: {
       flex: 1,

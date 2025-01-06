@@ -1,10 +1,16 @@
-import { FlatList, ScrollView } from "react-native";
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
 import MembersCard from "../brand-profile/members-card";
 import { View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { RefreshControl } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { useEffect, useState } from "react";
@@ -22,6 +28,7 @@ const Preferences = () => {
   const theme = useTheme();
   const { selectedBrand } = useBrandContext();
   const [members, setMembers] = useState<ManagerCard[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const fetchMembers = async () => {
     if (!selectedBrand) return;
@@ -60,6 +67,12 @@ const Preferences = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchMembers();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
     fetchMembers();
   }, [selectedBrand]);
@@ -86,6 +99,13 @@ const Preferences = () => {
         contentContainerStyle={{
           gap: 10,
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors(theme).primary]}
+          />
+        }
       />
       <Button
         buttonColor={Colors(theme).primary}
@@ -99,16 +119,15 @@ const Preferences = () => {
       >
         Add Member
       </Button>
-      <Portal>
-        <MembersModal
-          visible={showMemberModal}
-          handleModalClose={() => {
-            setShowMemberModal(false);
-          }}
-          refresh={fetchMembers}
-          theme={theme}
-        />
-      </Portal>
+
+      <MembersModal
+        visible={showMemberModal}
+        handleModalClose={() => {
+          setShowMemberModal(false);
+        }}
+        refresh={fetchMembers}
+        theme={theme}
+      />
     </View>
   );
 };
