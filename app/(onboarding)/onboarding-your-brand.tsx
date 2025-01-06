@@ -7,11 +7,10 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@react-navigation/native";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 
-import { AuthApp } from "@/utils/auth";
 import { Brand } from "@/types/Brand";
 import { FirestoreDB } from "@/utils/firestore";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useFirebaseStorageContext } from "@/contexts";
+import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import BrandProfile from "@/components/brand-profile";
 import fnStyles from "@/styles/onboarding/brand.styles";
@@ -48,9 +47,11 @@ const OnboardingScreen = () => {
   const {
     setSelectedBrand,
   } = useBrandContext();
+  const {
+    manager: user,
+  } = useAuthContext();
 
   const handleCreateBrand = async () => {
-    const user = AuthApp.currentUser;
     if (!user) {
       Toaster.error("User not found");
       return;
@@ -82,11 +83,11 @@ const OnboardingScreen = () => {
         "brands",
         docRef.id,
         "members",
-        user.uid
+        user.id
       );
 
       await setDoc(managerRef, {
-        managerId: user.uid,
+        managerId: user.id,
         role,
       }).then(() => {
         router.replace({
