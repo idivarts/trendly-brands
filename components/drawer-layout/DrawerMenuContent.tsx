@@ -241,7 +241,9 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           icon={faPlus}
           showChevron={false}
           onPress={() => {
-            router.push("/(onboarding)/onboarding-your-brand");
+            router.push({
+              pathname: "/(onboarding)/onboarding-your-brand",
+            });
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
           title="Create New Brand"

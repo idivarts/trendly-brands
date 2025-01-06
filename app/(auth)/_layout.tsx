@@ -23,13 +23,13 @@ const AuthLayout = () => {
             }}
           />
           <Stack.Screen
-            name="signup"
+            name="create-new-account"
             options={{
               headerShown: false,
             }}
           />
           <Stack.Screen
-            name="forget-password"
+            name="forgot-password"
             options={{
               headerShown: false,
             }}

@@ -89,9 +89,12 @@ const OnboardingScreen = () => {
         managerId: user.uid,
         role,
       }).then(() => {
-        router.navigate({
+        router.replace({
           pathname: "/(onboarding)/onboarding-get-started",
-          params: { brandId: docRef.id },
+          params: {
+            brandId: docRef.id,
+            firstBrand: firstBrand === "true" ? "true" : "false",
+          },
         });
         setSelectedBrand(brandData as Brand);
       }).catch((error) => {

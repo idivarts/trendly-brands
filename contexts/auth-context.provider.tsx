@@ -27,13 +27,13 @@ import {
 } from "firebase/auth";
 import { analyticsLogEvent } from "@/utils/analytics";
 import { checkTestUsers } from "@/utils/test-users";
+import { resetAndNavigate } from "@/utils/router";
 
 interface AuthContextProps {
-  firebaseSignIn: (token: string) => void;
-  firebaseSignUp: (token: string) => void;
   getManager: (managerId: string) => Promise<Manager | null>;
   isLoading: boolean;
   session?: string | null;
+  setSession: (value: string | null) => void;
   signIn: (email: string, password: string) => void;
   signOutManager: () => void;
   signUp: (name: string, email: string, password: string) => void;
@@ -45,10 +45,9 @@ interface AuthContextProps {
 }
 
 const AuthContext = createContext<AuthContextProps>({
-  firebaseSignIn: (token: string) => null,
-  firebaseSignUp: (token: string) => null,
   getManager: () => Promise.resolve(null),
   isLoading: false,
+  setSession: () => null,
   session: null,
   signIn: (email: string, password: string) => null,
   signOutManager: () => null,
@@ -141,6 +140,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       Toaster.error("Please fill in all fields.");
       return;
     }
+
     await createUserWithEmailAndPassword(AuthApp, email, password)
       .then(async (userCredential) => {
         const colRef = collection(FirestoreDB, "managers");
@@ -170,8 +170,13 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const checkVerification = async () => {
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
-            router.replace("/(onboarding)/onboarding-your-brand?firstBrand=true");
             setSession(userCredential.user.uid);
+            resetAndNavigate({
+              pathname: "/(onboarding)/onboarding-your-brand",
+              params: {
+                firstBrand: "true",
+              },
+            });
             await fetch('https://be.trendly.pro/api/v1/chat/auth', {
               method: 'POST',
               headers: {
@@ -202,18 +207,6 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         }
         Toaster.error(errorMessage);
       });
-  };
-
-  const firebaseSignIn = async (token: string) => {
-    setSession(token);
-    const user = await getManager(token);
-    router.replace("/explore-influencers");
-    Toaster.success("Signed In Successfully!");
-  };
-
-  const firebaseSignUp = async (token: string) => {
-    setSession(token);
-    Toaster.success("Signed Up Successfully!");
   };
 
   const signOutManager = () => {
@@ -265,11 +258,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <AuthContext.Provider
       value={{
-        firebaseSignIn,
-        firebaseSignUp,
         getManager,
         isLoading,
         session,
+        setSession,
         signIn,
         signOutManager,
         signUp,
