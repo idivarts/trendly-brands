@@ -179,35 +179,35 @@ const Applications = () => {
                     }
                   />
                 )}
-                {item.status === "draft" && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      backgroundColor: Colors(theme).backdrop,
-                      padding: 4,
-                      borderRadius: 4,
-                    }}
-                  >
-                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
-                  </View>
-                )}
-                <CollaborationDetails
-                  collabDescription={item.description || ""}
-                  name={item.name || ""}
-                  contentType={item.contentFormat}
-                  location={item.location}
-                  platform={item.platform}
-                  promotionType={item.promotionType}
-                  onOpenBottomSheet={openBottomSheet}
-                  collabId={item.id}
-                />
                 <Pressable
-                  onPress={() => {
-                    router.push(`/collaboration-details/${item.id}`);
-                  }}
+                  onPress={() =>
+                    router.push(`/collaboration-details/${item.id}`)
+                  }
                 >
+                  {item.status === "draft" && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 10,
+                        right: 10,
+                        backgroundColor: Colors(theme).backdrop,
+                        padding: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                    </View>
+                  )}
+                  <CollaborationDetails
+                    collabDescription={item.description || ""}
+                    name={item.name || ""}
+                    contentType={item.contentFormat}
+                    location={item.location}
+                    platform={item.platform}
+                    promotionType={item.promotionType}
+                    onOpenBottomSheet={openBottomSheet}
+                    collabId={item.id}
+                  />
                   <CollaborationStats
                     budget={item.budget}
                     collabID={item.id}
