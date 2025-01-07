@@ -14,7 +14,7 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { ActivityIndicator, FlatList } from "react-native";
+import { ActivityIndicator, FlatList, Pressable } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
@@ -76,7 +76,11 @@ const PastContracts = () => {
       }
 
       const contractsCol = collection(FirestoreDB, "contracts");
-      const contractsSnapshot = await getDocs(contractsCol);
+      const contractsQuery = query(
+        contractsCol,
+        where("brandId", "==", selectedBrand?.id)
+      );
+      const contractsSnapshot = await getDocs(contractsQuery);
 
       const contracts = await Promise.all(
         contractsSnapshot.docs.map(async (document) => {
@@ -129,10 +133,7 @@ const PastContracts = () => {
 
   const filteredProposals = useMemo(() => {
     return proposals.filter((proposal) => {
-      return (
-        proposal.status === 3 &&
-        proposal.collaborationData.brandId === selectedBrand?.id
-      );
+      return proposal.status === 3;
     });
   }, [proposals]);
 
@@ -167,9 +168,15 @@ const PastContracts = () => {
             data={filteredProposals}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <Card
+              <Pressable
                 onPress={() => {
                   router.push(`/contract-details/${item.streamChannelId}`);
+                }}
+                style={{
+                  borderWidth: 0.3,
+                  borderColor: Colors(theme).gray300,
+                  borderRadius: 5,
+                  overflow: "hidden",
                 }}
               >
                 <ContractHeader
@@ -188,7 +195,7 @@ const PastContracts = () => {
                     }
                   }
                 />
-              </Card>
+              </Pressable>
             )}
             keyExtractor={(item, index) => index.toString()}
             style={{

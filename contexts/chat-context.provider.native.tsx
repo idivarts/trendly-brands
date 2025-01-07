@@ -25,6 +25,10 @@ interface ChatContextProps {
   addMemberToChannel: (channel: string, member: string) => void;
   sendSystemMessage: (channel: string, message: string) => void;
   fetchChannelCid: (channelId: string) => Promise<string>;
+  removeMemberFromChannel: (
+    channel: string,
+    member: string
+  ) => Promise<boolean>;
 }
 
 const ChatContext = createContext<ChatContextProps>({
@@ -34,6 +38,7 @@ const ChatContext = createContext<ChatContextProps>({
   addMemberToChannel: async () => {},
   sendSystemMessage: async () => {},
   fetchChannelCid: async () => "",
+  removeMemberFromChannel: async () => false,
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -156,6 +161,26 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     channelToWatch.sendMessage(messageToSend);
   };
 
+  const removeMemberFromChannel = async (channel: string, member: string) => {
+    try {
+      const channelToWatch = streamClient.channel("messaging", channel);
+      await channelToWatch
+        .removeMembers([member])
+        .then(() => {
+          return true;
+        })
+        .catch((error) => {
+          console.error(error);
+          return false;
+        });
+
+      return false;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  };
+
   const fetchChannelCid = async (channelId: string) => {
     const channel = streamClient.channel("messaging", channelId);
     await channel.watch();
@@ -173,6 +198,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
             addMemberToChannel,
             sendSystemMessage,
             fetchChannelCid,
+            removeMemberFromChannel,
           }}
         >
           {children}

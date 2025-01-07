@@ -27,7 +27,7 @@ const MemberContainer: FC<MemberContainerProps> = ({
   setShowModal,
 }) => {
   const theme = useTheme();
-  const { fetchMembers } = useChatContext();
+  const { fetchMembers, removeMemberFromChannel } = useChatContext();
   const [updateMember, setUpdateMember] = React.useState(false);
   const [members, setMembers] = React.useState<any[]>([]);
 
@@ -95,7 +95,19 @@ const MemberContainer: FC<MemberContainerProps> = ({
       </View>
       <FlatList
         data={members}
-        renderItem={({ item }) => <MembersCard manager={item} />}
+        renderItem={({ item }) => (
+          <MembersCard
+            manager={item}
+            cardType="contract"
+            action={async () => {
+              await removeMemberFromChannel(channelId, item.managerId).then(
+                () => {
+                  fetchMembersFromClient();
+                }
+              );
+            }}
+          />
+        )}
         contentContainerStyle={{
           gap: 10,
         }}

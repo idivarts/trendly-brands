@@ -1,15 +1,13 @@
 import { IApplications } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { FC } from "react";
 import { Text, View } from "../theme/Themed";
-import { Button } from "react-native-paper";
-import { Pressable, ScrollView } from "react-native";
+import { Platform, Pressable, ScrollView } from "react-native";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import { processRawAttachment } from "@/utils/attachments";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
-import { formatDistanceToNow } from "date-fns";
-import { router } from "expo-router";
-import Colors from "@/constants/Colors";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useTheme } from "@react-navigation/native";
 
 interface UserResponseProps {
@@ -27,6 +25,24 @@ const UserResponse: FC<UserResponseProps> = ({
     return processRawAttachment(attachment);
   });
   const theme = useTheme();
+
+  const downloadAndSaveFile = async (url: string, filename: string) => {
+    try {
+      const { uri } = await FileSystem.downloadAsync(
+        url,
+        FileSystem.documentDirectory + filename
+      );
+      if (Platform.OS === "web") {
+        Sharing.shareAsync(uri);
+      } else {
+        await Sharing.shareAsync(uri);
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      setConfirmationModalVisible(false);
+      alert("Failed to download file. Please try again.");
+    }
+  };
 
   return (
     <View
@@ -55,7 +71,7 @@ const UserResponse: FC<UserResponseProps> = ({
       <View
         style={{
           width: "100%",
-          gap: 10,
+          gap: 16,
         }}
       >
         <ScrollView horizontal style={{}}>
@@ -70,13 +86,11 @@ const UserResponse: FC<UserResponseProps> = ({
             />
           ))}
         </ScrollView>
-        <Text style={{ fontSize: 16, marginTop: 10 }}>
-          {application?.message}
-        </Text>
+        <Text style={{ fontSize: 16 }}>{application?.message}</Text>
         <View
           style={{
             flexDirection: "row",
-            gap: 10,
+            gap: 16,
             justifyContent: "space-between",
           }}
         >
@@ -93,29 +107,31 @@ const UserResponse: FC<UserResponseProps> = ({
         {application?.fileAttachments &&
           application.fileAttachments.map((attachment, index) => {
             return (
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: 10,
-                }}
+              <Pressable
+                key={index}
+                onPress={() =>
+                  downloadAndSaveFile(attachment.url, attachment.name)
+                }
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
               >
                 <FontAwesomeIcon icon={faPaperclip} />
                 <Text
                   key={index}
                   style={{
                     fontSize: 16,
+                    textDecorationLine: "underline",
                   }}
                 >
                   {attachment.name}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
 
         <View
           style={{
             flexDirection: "column",
-            gap: 10,
+            gap: 16,
           }}
         >
           {application?.answersFromInfluencer &&
@@ -134,6 +150,7 @@ const UserResponse: FC<UserResponseProps> = ({
                       fontWeight: "bold",
                     }}
                   >
+                    Q{") "}
                     {influencerQuestions[answer.question]}
                   </Text>
                   <Text
@@ -141,6 +158,7 @@ const UserResponse: FC<UserResponseProps> = ({
                       fontSize: 16,
                     }}
                   >
+                    A{") "}
                     {answer.answer}
                   </Text>
                 </View>

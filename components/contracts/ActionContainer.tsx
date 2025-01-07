@@ -86,6 +86,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     }).then(() => {
       Toaster.success("Contract ended");
       refreshData();
+      feedbackModalVisible();
     });
   };
 
@@ -108,87 +109,88 @@ const ActionContainer: FC<ActionContainerProps> = ({
     <View
       style={{
         width: "100%",
-        flex: 1,
         flexDirection: "column",
         gap: 16,
       }}
     >
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
-        {contract.status === 0 && (
-          <>
-            <Button
-              mode="contained"
-              style={{
-                flex: 1,
-              }}
-              onPress={() => {
-                sendSystemMessage(
-                  contract.streamChannelId,
-                  "Please revise the quote"
-                );
-                Toaster.success("Message sent to influencer");
-              }}
-            >
-              Ask To Revise Quote
-            </Button>
-            <Button
-              mode="contained"
-              style={{
-                flex: 1,
-              }}
-              onPress={startContract}
-            >
-              Start Contract
-            </Button>
-          </>
-        )}
-        {contract.status === 1 && (
-          <>
-            <Button
-              mode="contained"
-              style={{
-                flex: 1,
-              }}
-              onPress={endContract}
-            >
-              End Contract
-            </Button>
-            <Button
-              mode="contained"
-              style={{
-                flex: 1,
-              }}
-              onPress={async () => {
-                const channelCid = await fetchChannelCid(
-                  contract.streamChannelId
-                );
-                router.navigate(`/channel/${channelCid}`);
-              }}
-            >
-              Go to Messages
-            </Button>
-          </>
-        )}
-        {contract.status === 2 && !contract.feedbackFromBrand && (
-          <>
-            <Button
-              mode="contained"
-              style={{
-                flex: 1,
-              }}
-              onPress={feedbackModalVisible}
-            >
-              Give Feedback
-            </Button>
-          </>
-        )}
-      </View>
+      {contract.status !== 3 && (
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
+        >
+          {contract.status === 0 && (
+            <>
+              <Button
+                mode="contained"
+                style={{
+                  flex: 1,
+                }}
+                onPress={() => {
+                  sendSystemMessage(
+                    contract.streamChannelId,
+                    "Please revise the quote"
+                  );
+                  Toaster.success("Message sent to influencer");
+                }}
+              >
+                Ask To Revise Quote
+              </Button>
+              <Button
+                mode="contained"
+                style={{
+                  flex: 1,
+                }}
+                onPress={startContract}
+              >
+                Start Contract
+              </Button>
+            </>
+          )}
+          {contract.status === 1 && (
+            <>
+              <Button
+                mode="contained"
+                style={{
+                  flex: 1,
+                }}
+                onPress={endContract}
+              >
+                End Contract
+              </Button>
+              <Button
+                mode="contained"
+                style={{
+                  flex: 1,
+                }}
+                onPress={async () => {
+                  const channelCid = await fetchChannelCid(
+                    contract.streamChannelId
+                  );
+                  router.navigate(`/channel/${channelCid}`);
+                }}
+              >
+                Go to Messages
+              </Button>
+            </>
+          )}
+          {contract.status === 2 && !contract.feedbackFromBrand && (
+            <>
+              <Button
+                mode="contained"
+                style={{
+                  flex: 1,
+                }}
+                onPress={feedbackModalVisible}
+              >
+                Give Feedback
+              </Button>
+            </>
+          )}
+        </View>
+      )}
       {contract.feedbackFromBrand && (
         <View
           style={{

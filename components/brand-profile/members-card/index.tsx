@@ -6,15 +6,22 @@ import { imageUrl } from "@/utils/url";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { FC } from "react";
-import { Avatar } from "react-native-paper";
+import { FC, useState } from "react";
+import { Pressable } from "react-native";
+import { Avatar, Menu } from "react-native-paper";
 
 interface MembersCardProps {
   manager: ManagerCard;
+  cardType: string;
+  action: () => void;
 }
 
-const MembersCard: FC<MembersCardProps> = ({ manager }) => {
+const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
   const theme = useTheme();
+  const [menuVisible, setMenuVisible] = useState(false); // State to handle menu visibility
+
+  const openMenu = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
 
   if (!manager) {
     return null;
@@ -41,41 +48,37 @@ const MembersCard: FC<MembersCardProps> = ({ manager }) => {
       >
         <Avatar.Image size={40} source={imageUrl(manager.profileImage)} />
         <View>
-          <View>
-            <Text
-              style={{
-                fontSize: 16,
-              }}
-            >
-              {manager.name}
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-              }}
-            >
-              {manager.email}
-            </Text>
-          </View>
+          <Text style={{ fontSize: 16 }}>{manager.name}</Text>
+          <Text style={{ fontSize: 16 }}>{manager.email}</Text>
         </View>
       </View>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        {manager.status === 0 ? (
-          <Text
-            style={{
-              color: Colors(theme).orange,
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        {manager.status === 0 && (
+          <Text style={{ color: Colors(theme).orange }}>Invite Sent</Text>
+        )}
+        <Menu
+          visible={menuVisible}
+          onDismiss={closeMenu}
+          anchor={
+            <Pressable onPress={openMenu}>
+              <FontAwesomeIcon icon={faEllipsisH} />
+            </Pressable>
+          }
+          style={{
+            backgroundColor: Colors(theme).background,
+            borderWidth: 0.3,
+            borderColor: Colors(theme).gray300,
+          }}
+        >
+          <Menu.Item
+            onPress={() => {
+              action();
+              closeMenu();
             }}
-          >
-            Invite Sent
-          </Text>
-        ) : null}
-        <FontAwesomeIcon icon={faEllipsisH} />
+            title="Delete"
+            titleStyle={{ color: Colors(theme).text }}
+          />
+        </Menu>
       </View>
     </View>
   );

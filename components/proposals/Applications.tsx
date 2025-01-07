@@ -157,7 +157,16 @@ const Applications = () => {
             data={filteredProposals}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <Card>
+              <View
+                style={{
+                  width: "100%",
+                  borderWidth: 0.3,
+                  borderColor: Colors(theme).gray300,
+                  gap: 8,
+                  borderRadius: 5,
+                  overflow: "hidden",
+                }}
+              >
                 {item.attachments && item.attachments?.length > 0 && (
                   <Carousel
                     theme={theme}
@@ -167,30 +176,6 @@ const Applications = () => {
                         (attachment: MediaItem) =>
                           processRawAttachment(attachment)
                       ) || []
-                    }
-                    dot={
-                      <View
-                        style={{
-                          backgroundColor: Colors(theme).primary,
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          marginLeft: 3,
-                          marginRight: 3,
-                        }}
-                      />
-                    }
-                    activeDot={
-                      <View
-                        style={{
-                          backgroundColor: Colors(theme).gray100,
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          marginLeft: 3,
-                          marginRight: 3,
-                        }}
-                      />
                     }
                   />
                 )}
@@ -229,7 +214,7 @@ const Applications = () => {
                     influencerCount={item.numberOfInfluencersNeeded}
                   />
                 </Pressable>
-              </Card>
+              </View>
             )}
             keyExtractor={(item, index) => index.toString()}
             style={{

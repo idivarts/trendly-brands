@@ -18,7 +18,8 @@ const ChipCard: FC<ChipCardProps> = ({ chipText, chipIcon }) => {
     <View
       style={{
         backgroundColor: Colors(theme).primary,
-        padding: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
         borderRadius: 8,
         alignItems: "center",
         flexDirection: "row",
