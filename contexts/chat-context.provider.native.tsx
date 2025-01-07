@@ -18,7 +18,8 @@ const streamClient = StreamChat.getInstance(
 interface ChatContextProps {
   createGroupWithMembers: (
     groupName: string,
-    members: string[]
+    userId: string,
+    collaborationId: string,
   ) => Promise<Channel>;
   connectUser: () => void;
   fetchMembers: (channel: string) => Promise<any>;
@@ -107,7 +108,8 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 
   const createGroupWithMembers = async (
     groupName: string,
-    members: string[]
+    userId: string,
+    collaborationId: string,
   ): Promise<Channel> => {
     const response = await fetch("https://be.trendly.pro/api/v1/chat/channel", {
       method: "POST",
@@ -117,7 +119,8 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       },
       body: JSON.stringify({
         name: groupName,
-        userIds: members,
+        userId,
+        collaborationId,
       }),
     });
 

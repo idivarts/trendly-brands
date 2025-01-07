@@ -7,7 +7,7 @@ import { CHAT_MESSAGE_TOPBAR_DESCRIPTION } from "@/constants/ChatMessageTopbar";
 import MessageTopbar from "@/shared-uis/components/chat-message-bar";
 import FeedbackModal from "@/shared-uis/components/feedback-modal";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { useContractContext } from "@/contexts";
+import { useAuthContext, useContractContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 interface ThirdPhaseProps {
@@ -27,6 +27,9 @@ const ThirdPhase: React.FC<ThirdPhaseProps> = ({
   const {
     updateContract,
   } = useContractContext();
+  const {
+    manager,
+  } = useAuthContext();
 
   const handleFeedbackSubmit = async (
     rating: number,
@@ -38,6 +41,7 @@ const ThirdPhase: React.FC<ThirdPhaseProps> = ({
         ratings: rating,
         feedbackReview: feedback,
         timeSubmitted: new Date().getTime(),
+        managerId: manager?.id,
       },
     }).then(() => {
       Toaster.success("Feedback submitted successfully");

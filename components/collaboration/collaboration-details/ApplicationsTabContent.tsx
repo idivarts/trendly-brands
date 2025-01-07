@@ -77,7 +77,6 @@ const ApplicationsTabContent = (props: any) => {
       collaboration: props.collaboration,
     },
     handleActionModalClose,
-    influencerApplication: selectedInfluencerApplication as InfluencerApplication,
   });
 
   useEffect(() => {
@@ -115,7 +114,10 @@ const ApplicationsTabContent = (props: any) => {
         data={influencers}
         renderItem={({ item }) => (
           <ApplicationCard
-            acceptApplication={handleAcceptApplication}
+            acceptApplication={() => {
+              setSelectedInfluencerApplication(item);
+              handleAcceptApplication(item);
+            }}
             data={item}
             headerLeftAction={() => {
               setSelectedInfluencerApplication(item);
@@ -162,13 +164,13 @@ const ApplicationsTabContent = (props: any) => {
               <List.Item
                 title="Accept Application"
                 onPress={() => {
-                  handleAcceptApplication();
+                  handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication);
                 }}
               />
               <List.Item
                 title="Reject Application"
                 onPress={() => {
-                  handleRejectApplication();
+                  handleRejectApplication(selectedInfluencerApplication as InfluencerApplication);
                 }}
               />
             </List.Section>
@@ -197,10 +199,10 @@ const ApplicationsTabContent = (props: any) => {
                 <ProfileApplicationCard
                   data={selectedInfluencerApplication?.application as Application}
                   onReject={() => {
-                    handleRejectApplication();
+                    handleRejectApplication(selectedInfluencerApplication as InfluencerApplication);
                   }}
                   onAccept={() => {
-                    handleAcceptApplication();
+                    handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication);
                   }}
                   questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer) => ({
                     question: collaborationQuestions[answer.question],
