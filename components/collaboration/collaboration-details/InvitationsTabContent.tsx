@@ -174,6 +174,7 @@ const InvitationsTabContent = (props: any) => {
               setIsActionModalVisible(true);
             }}
             inviteInfluencer={() => {
+              setSelectedInfluencer(item);
               setIsInvitationModalVisible(true);
             }}
           />

@@ -18,14 +18,12 @@ interface UseApplicationsProps {
     },
   };
   handleActionModalClose: () => void;
-  influencerApplication: InfluencerApplication;
 }
 
 const useApplications = ({
   collaborationId,
   data,
   handleActionModalClose,
-  influencerApplication,
 }: UseApplicationsProps) => {
   const { createGroupWithMembers, connectUser } = useChatContext();
   const { createNotification } = useNotificationContext();
@@ -77,7 +75,9 @@ const useApplications = ({
     }
   };
 
-  const handleAcceptApplication = async () => {
+  const handleAcceptApplication = async (
+    influencerApplication: InfluencerApplication,
+  ) => {
     try {
       if (!influencerApplication.application) return;
 
@@ -91,9 +91,11 @@ const useApplications = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        createGroupWithMembers(data.collaboration.name, [
+        createGroupWithMembers(
+          data.collaboration.name,
           influencerApplication.application.userId,
-        ]).then((channel) => {
+          data.collaboration.id,
+        ).then((channel) => {
           connectUser();
 
           createNotification(
@@ -125,7 +127,9 @@ const useApplications = ({
     }
   };
 
-  const handleRejectApplication = async () => {
+  const handleRejectApplication = async (
+    influencerApplication: InfluencerApplication,
+  ) => {
     try {
       if (!influencerApplication.application) return;
 

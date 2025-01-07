@@ -4,7 +4,8 @@ import { useAuthContext } from "./auth-context.provider";
 interface ChatContextProps {
   createGroupWithMembers: (
     groupName: string,
-    members: string[]
+    userId: string,
+    collaborationId: string,
   ) => Promise<any>;
   connectUser: () => void;
   fetchMembers: (channel: any) => Promise<any>;
@@ -33,7 +34,8 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 
   const createGroupWithMembers = async (
     groupName: string,
-    members: string[]
+    userId: string,
+    collaborationId: string,
   ): Promise<any> => {
     const response = await fetch("https://be.trendly.pro/api/v1/chat/channel", {
       method: "POST",
@@ -43,7 +45,8 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       },
       body: JSON.stringify({
         name: groupName,
-        userIds: members,
+        userId,
+        collaborationId,
       }),
     });
 

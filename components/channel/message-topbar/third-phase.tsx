@@ -38,6 +38,7 @@ const ThirdPhase: React.FC<ThirdPhaseProps> = ({
         ratings: rating,
         feedbackReview: feedback,
         timeSubmitted: new Date().getTime(),
+        managerId: contract.managerId,
       },
     }).then(() => {
       Toaster.success("Feedback submitted successfully");
