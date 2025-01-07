@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { TextInput, Button, Avatar } from "react-native-paper";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Colors from "@/constants/Colors";
 import { PLACEHOLDER_PERSON_IMAGE } from "@/constants/Placeholder";
 import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
@@ -21,6 +21,14 @@ import { FirestoreDB } from "@/utils/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import ScreenHeader from "../ui/screen-header";
 import { Text } from "../theme/Themed";
+import {
+  ref,
+  uploadString,
+  getDownloadURL,
+  uploadBytes,
+} from "firebase/storage";
+import { StorageApp } from "@/utils/firebase-storage";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -28,24 +36,18 @@ const Profile = () => {
   const [email, setEmail] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false); // Loader state
-  const { uploadImageBytes } = useFirebaseStorageContext();
   const { manager } = useAuthContext();
+  const { selectedBrand } = useBrandContext();
   const [capturedImage, setCapturedImage] = useState<string>(
     manager?.profileImage || ""
   );
+  const [imageToUpload, setImageToUpload] = useState<string>("");
 
   const theme = useTheme();
 
-  console.log(capturedImage);
-
-  const updateProfile = async (image: string) => {
+  const updateProfile = async () => {
     if (!manager || !manager.id) {
       console.error("Manager ID is missing");
-      return;
-    }
-
-    if (!capturedImage) {
-      console.error("Captured image is invalid or empty");
       return;
     }
 
@@ -53,21 +55,40 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      const path = `managers/${manager.id}/profile-image`;
-      if (capturedImage !== manager.profileImage) {
-        const blob = await fetch(capturedImage).then((r) => r.blob());
-        const url = await uploadImageBytes(blob, path);
-        await updateDoc(managerRef, {
-          profileImage: url,
+      let updatedImageURL = manager.profileImage; // Default to existing profile image
+
+      if (imageToUpload) {
+        const path = `managers/${manager.id}/profile-image`;
+
+        // Validate Base64 format
+
+        const storageRef = ref(StorageApp, path);
+        const blobImage = await fetch(imageToUpload).then((res) => res.blob());
+        await uploadBytes(storageRef, blobImage);
+
+        // // Get the downloadable URL for the uploaded image
+        updatedImageURL = await getDownloadURL(storageRef);
+      }
+
+      // Update Firestore document
+      await updateDoc(managerRef, {
+        profileImage: updatedImageURL,
+        name: name || manager.name,
+      });
+      if (selectedBrand) {
+        const brandMemberRef = doc(
+          FirestoreDB,
+          "brands",
+          selectedBrand.id,
+          "members",
+          manager.id
+        );
+        await updateDoc(brandMemberRef, {
+          role,
         });
       }
 
-      if (name !== manager.name) {
-        await updateDoc(managerRef, {
-          name,
-        });
-      }
-
+      setImageToUpload(""); // Clear image-to-upload buffer
       Toaster.success("Profile updated successfully");
     } catch (error) {
       console.error("Error during profile update:", error);
@@ -77,13 +98,29 @@ const Profile = () => {
     }
   };
 
+  const fetchRole = async () => {
+    if (selectedBrand && selectedBrand.id && manager && manager.id) {
+      const managerRef = doc(
+        FirestoreDB,
+        "brands",
+        selectedBrand.id,
+        "members",
+        manager.id
+      );
+      const managerData = await getDoc(managerRef);
+      if (managerData.exists()) {
+        setRole(managerData.data().role);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!manager) {
       console.error("Manager object is null");
       return;
     }
     setName(manager.name || ""); // Fallback to empty string
-    setRole("Manager");
+    fetchRole();
     setEmail(manager.email || ""); // Fallback to empty string
   }, [manager]);
 
@@ -97,7 +134,7 @@ const Profile = () => {
           title="Profile"
           rightAction
           rightActionButton={
-            <Pressable onPress={() => updateProfile(capturedImage)}>
+            <Pressable onPress={updateProfile}>
               <Text
                 style={{
                   color: Colors(theme).text,
@@ -170,7 +207,7 @@ const Profile = () => {
           value={role}
           mode="outlined"
           style={styles.input}
-          editable={false}
+          onChangeText={(text) => setRole(text)}
         />
 
         {/* Save Profile Button */}
@@ -180,7 +217,7 @@ const Profile = () => {
           <Button
             mode="contained"
             style={styles.saveButton}
-            onPress={() => updateProfile(capturedImage)}
+            onPress={updateProfile}
             disabled={loading} // Disable button while loading
           >
             Save Profile
@@ -191,7 +228,9 @@ const Profile = () => {
         setVisible={setIsModalVisible}
         visible={isModalVisible}
         onImageUpload={(image) => {
+          if (!image) return;
           setCapturedImage(image);
+          setImageToUpload(image);
         }}
       />
     </KeyboardAvoidingView>

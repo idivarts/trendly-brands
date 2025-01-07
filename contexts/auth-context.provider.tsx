@@ -112,11 +112,11 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
       setSession(managerCredential.user.uid);
 
-      await fetch('https://be.trendly.pro/api/v1/chat/auth', {
-        method: 'POST',
+      await fetch("https://be.trendly.pro/api/v1/chat/auth", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${managerCredential.user.uid}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${managerCredential.user.uid}`,
         },
       });
 
@@ -159,6 +159,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             emailNotification: true,
             pushNotification: true,
           },
+          role: "manager",
         };
 
         await setDoc(docRef, userData);
@@ -180,8 +181,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             await fetch('https://be.trendly.pro/api/v1/chat/auth', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${userCredential.user.uid}`,
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${userCredential.user.uid}`,
               },
             });
           } else {

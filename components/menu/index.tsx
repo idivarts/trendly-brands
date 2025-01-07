@@ -5,7 +5,7 @@ import stylesFn from "@/styles/menu/MenuItem.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { MENU_ITEMS } from "@/constants/Menu";
-import { Image, ImageBackground, Pressable } from "react-native";
+import { Image, ImageBackground, Pressable, ScrollView } from "react-native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useState } from "react";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
@@ -31,18 +31,27 @@ const Menu = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: "space-between",
+      }}
+    >
       <View style={styles.menuItemsContainer}>
         <View style={styles.topRow}>
           <Image
-            source={{
-              uri: selectedBrand?.image,
-            }}
+            source={imageUrl(selectedBrand?.image)}
             style={styles.avatarBrandImage}
           />
           <Text style={styles.brandName}>{selectedBrand?.name}</Text>
           {selectedBrand?.profile?.about && (
-            <Text style={styles.brandName}>
+            <Text
+              style={{
+                fontSize: 16,
+                color: Colors(theme).gray100,
+              }}
+            >
               {selectedBrand?.profile?.about}
             </Text>
           )}
@@ -129,7 +138,7 @@ const Menu = () => {
         setVisible={setLogoutModalVisible}
         visible={logoutModalVisible}
       />
-    </View>
+    </ScrollView>
   );
 };
 

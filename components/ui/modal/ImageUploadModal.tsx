@@ -24,13 +24,13 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
 
   const openGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
+    if (status !== "granted") {
       Alert.alert(
-        'Permission Required',
-        'Please grant permissions from settings',
+        "Permission Required",
+        "Please grant permissions from settings",
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          { text: "Cancel", style: "cancel" },
+          { text: "Open Settings", onPress: () => Linking.openSettings() },
         ]
       );
       return;
@@ -40,19 +40,19 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      quality: 0.2,
     });
 
     if (!result.canceled) {
       onImageUpload(result.assets[0].uri);
       setVisible(false);
     }
-  }
+  };
 
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      alert('We need camera permissions');
+    if (status !== "granted") {
+      alert("We need camera permissions");
       return;
     }
 
@@ -70,7 +70,7 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
   };
 
   const removeImage = () => {
-    onImageUpload('');
+    onImageUpload("");
     setVisible(false);
   };
 
@@ -81,38 +81,17 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       animationType={Platform.OS === "web" ? "fade" : "slide"}
       transparent={true}
     >
-      <View
-        style={styles.modalOverlay}
-      >
-        <View
-          style={styles.uploadContainer}
-        >
-          <View
-            style={styles.uploadInnerContainer}
-          >
-            <Pressable
-              onPress={openCamera}
-              style={styles.modalButton}
-            >
-              <FontAwesomeIcon
-                icon={faCamera}
-                size={20}
-              />
+      <View style={styles.modalOverlay}>
+        <View style={styles.uploadContainer}>
+          <View style={styles.uploadInnerContainer}>
+            <Pressable onPress={openCamera} style={styles.modalButton}>
+              <FontAwesomeIcon icon={faCamera} size={20} />
             </Pressable>
-            <Pressable
-              onPress={openGallery}
-              style={styles.modalButton}
-            >
-              <FontAwesomeIcon
-                icon={faImage}
-                size={20}
-              />
+            <Pressable onPress={openGallery} style={styles.modalButton}>
+              <FontAwesomeIcon icon={faImage} size={20} />
             </Pressable>
           </View>
-          <Button
-            mode="contained"
-            onPress={removeImage}
-          >
+          <Button mode="contained" onPress={removeImage}>
             Cancel
           </Button>
         </View>

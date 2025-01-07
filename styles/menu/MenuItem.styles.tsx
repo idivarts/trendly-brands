@@ -23,16 +23,19 @@ const stylesFn = (theme: Theme) =>
     brandName: {
       fontSize: 24,
       textAlign: "center",
+      color: Colors(theme).text,
     },
     menuItemsContainer: {
       flex: 1,
       paddingHorizontal: 20,
       paddingVertical: 10,
+      gap: 16,
+      justifyContent: "space-between",
     },
     topRow: {
       gap: 20,
       alignItems: "center",
-      paddingVertical: 20,
+      paddingTop: 20,
     },
     middleRow: {
       flex: 1,
