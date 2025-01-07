@@ -49,6 +49,7 @@ const Menu = () => {
             <Text
               style={{
                 fontSize: 16,
+                color: Colors(theme).gray100,
               }}
             >
               {selectedBrand?.profile?.about}

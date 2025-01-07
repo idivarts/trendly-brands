@@ -23,6 +23,7 @@ const stylesFn = (theme: Theme) =>
     brandName: {
       fontSize: 24,
       textAlign: "center",
+      color: Colors(theme).text,
     },
     menuItemsContainer: {
       flex: 1,

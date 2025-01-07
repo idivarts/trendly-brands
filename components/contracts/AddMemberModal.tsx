@@ -75,6 +75,7 @@ const AddMembersModal: FC<AddMemberModalProps> = ({
       );
 
       members = members.filter((member) => {
+        if (member.status === 0) return false;
         return !membersAlreadyInContract.some((memberInContract) => {
           if (!memberInContract) return false;
           return memberInContract.email === member.email;
@@ -172,7 +173,20 @@ const AddMembersModal: FC<AddMemberModalProps> = ({
         >
           Add your team members here
         </Text>
-        <FlatList data={members} renderItem={renderItem} />
+        {members.length !== 0 ? (
+          <FlatList data={members} renderItem={renderItem} />
+        ) : (
+          <Text
+            style={{
+              color: Colors(theme).gray300,
+              textAlign: "center",
+              fontSize: 16,
+              paddingBottom: 16,
+            }}
+          >
+            No members to add
+          </Text>
+        )}
       </View>
     </Modal>
   );

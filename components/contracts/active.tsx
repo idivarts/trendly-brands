@@ -76,7 +76,11 @@ const ActiveContracts = () => {
       }
 
       const contractsCol = collection(FirestoreDB, "contracts");
-      const contractsSnapshot = await getDocs(contractsCol);
+      const contractQuery = query(
+        contractsCol,
+        where("brandId", "==", selectedBrand?.id)
+      );
+      const contractsSnapshot = await getDocs(contractQuery);
 
       const contracts = await Promise.all(
         contractsSnapshot.docs.map(async (document) => {
@@ -129,10 +133,7 @@ const ActiveContracts = () => {
 
   const filteredProposals = useMemo(() => {
     return proposals.filter((proposal) => {
-      return (
-        proposal.status !== 3 &&
-        proposal.collaborationData.brandId === selectedBrand?.id
-      );
+      return proposal.status !== 3 && proposal.status !== 0;
     });
   }, [proposals]);
 

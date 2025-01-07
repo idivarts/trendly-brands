@@ -86,6 +86,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     }).then(() => {
       Toaster.success("Contract ended");
       refreshData();
+      feedbackModalVisible();
     });
   };
 
