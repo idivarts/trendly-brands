@@ -43,6 +43,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
     collaboration: Partial<ICollaboration>,
   ): Promise<void> => {
     const collaborationRef = collection(FirestoreDB, "collaborations");
+
     await addDoc(collaborationRef, collaboration);
   }
 

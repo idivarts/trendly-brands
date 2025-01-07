@@ -157,7 +157,16 @@ const Applications = () => {
             data={filteredProposals}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <Card>
+              <View
+                style={{
+                  width: "100%",
+                  borderWidth: 0.3,
+                  borderColor: Colors(theme).gray300,
+                  gap: 8,
+                  borderRadius: 5,
+                  overflow: "hidden",
+                }}
+              >
                 {item.attachments && item.attachments?.length > 0 && (
                   <Carousel
                     theme={theme}
@@ -168,68 +177,44 @@ const Applications = () => {
                           processRawAttachment(attachment)
                       ) || []
                     }
-                    dot={
-                      <View
-                        style={{
-                          backgroundColor: Colors(theme).primary,
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          marginLeft: 3,
-                          marginRight: 3,
-                        }}
-                      />
-                    }
-                    activeDot={
-                      <View
-                        style={{
-                          backgroundColor: Colors(theme).gray100,
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          marginLeft: 3,
-                          marginRight: 3,
-                        }}
-                      />
-                    }
                   />
                 )}
-                {item.status === "draft" && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      backgroundColor: Colors(theme).backdrop,
-                      padding: 4,
-                      borderRadius: 4,
-                    }}
-                  >
-                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
-                  </View>
-                )}
-                <CollaborationDetails
-                  collabDescription={item.description || ""}
-                  name={item.name || ""}
-                  contentType={item.contentType}
-                  location={item.location}
-                  platform={item.platform}
-                  promotionType={item.promotionType}
-                  onOpenBottomSheet={openBottomSheet}
-                  collabId={item.id}
-                />
                 <Pressable
-                  onPress={() => {
-                    router.push(`/collaboration-details/${item.id}`);
-                  }}
+                  onPress={() =>
+                    router.push(`/collaboration-details/${item.id}`)
+                  }
                 >
+                  {item.status === "draft" && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 10,
+                        right: 10,
+                        backgroundColor: Colors(theme).backdrop,
+                        padding: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                    </View>
+                  )}
+                  <CollaborationDetails
+                    collabDescription={item.description || ""}
+                    name={item.name || ""}
+                    contentType={item.contentFormat}
+                    location={item.location}
+                    platform={item.platform}
+                    promotionType={item.promotionType}
+                    onOpenBottomSheet={openBottomSheet}
+                    collabId={item.id}
+                  />
                   <CollaborationStats
                     budget={item.budget}
                     collabID={item.id}
                     influencerCount={item.numberOfInfluencersNeeded}
                   />
                 </Pressable>
-              </Card>
+              </View>
             )}
             keyExtractor={(item, index) => index.toString()}
             style={{

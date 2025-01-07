@@ -15,15 +15,15 @@ import { useEffect, useState } from "react";
 import { Searchbar } from "react-native-paper";
 import {
   faComment,
+  faFileLines,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
-  faGears,
+  faBuilding,
   faHouseUser as faHouseUserSolid,
   faMagnifyingGlass,
   faPlus,
-  faPlusCircle,
   faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
@@ -36,24 +36,6 @@ interface DrawerMenuContentProps { }
 const DRAWER_MENU_CONTENT_ITEMS = (
   theme: Theme,
 ) => [
-    {
-      href: "/explore-influencers",
-      icon: ({
-        focused,
-      }: IconPropFn) => focused ? (
-        <DrawerIcon
-          href="/explore-influencers"
-          icon={faHouseUserSolid}
-        />
-      ) : (
-          <HomeIcon
-            width={28}
-            height={28}
-            fill={Colors(theme).text}
-          />
-        ),
-      label: "Home",
-    },
     {
       href: "/collaborations",
       icon: ({
@@ -70,16 +52,6 @@ const DRAWER_MENU_CONTENT_ITEMS = (
           />
         ),
       label: "Collaborations",
-    },
-    {
-      href: "/create-collaboration",
-      icon: () => (
-        <DrawerIcon
-          href="/create-collaboration"
-          icon={faPlusCircle}
-        />
-      ),
-      label: "Create Collaboration",
     },
     {
       href: "/messages",
@@ -99,21 +71,49 @@ const DRAWER_MENU_CONTENT_ITEMS = (
       label: "Messages",
     },
     {
+      href: "/contracts",
+      icon: () => (
+        <DrawerIcon
+          href="/contracts"
+          icon={faFileLines}
+        />
+      ),
+      label: "Contracts",
+    },
+    {
+      href: "/explore-influencers",
+      icon: ({
+        focused,
+      }: IconPropFn) => focused ? (
+        <DrawerIcon
+          href="/explore-influencers"
+          icon={faHouseUserSolid}
+        />
+      ) : (
+          <HomeIcon
+            width={28}
+            height={28}
+            fill={Colors(theme).text}
+          />
+        ),
+      label: "Explore",
+    },
+    {
       href: "/menu",
       icon: ({
         focused,
       }: IconPropFn) => focused ? (
         <DrawerIcon
           href="/menu"
-          icon={faGears}
+          icon={faBuilding}
         />
       ) : (
           <DrawerIcon
             href="/menu"
-            icon={faGears}
+            icon={faBuilding}
           />
         ),
-      label: "Settings",
+      label: "My Brand",
     },
   ];
 
@@ -241,7 +241,9 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           icon={faPlus}
           showChevron={false}
           onPress={() => {
-            router.push("/(onboarding)/onboarding-your-brand");
+            router.push({
+              pathname: "/(onboarding)/onboarding-your-brand",
+            });
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
           title="Create New Brand"

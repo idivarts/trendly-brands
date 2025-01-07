@@ -22,13 +22,15 @@ export const stylesFn = (theme: Theme) =>
     profileContent: {
       alignItems: "center",
       width: "100%",
+      gap: 16,
     },
     name: {
       fontWeight: "bold",
+      width: "50%",
       fontSize: 20,
       color: Colors(theme).text,
       lineHeight: 20,
-      marginTop: 8,
+      marginTop: 16,
     },
     brandName: {
       fontSize: 16,
@@ -38,7 +40,7 @@ export const stylesFn = (theme: Theme) =>
       fontSize: 14,
       color: Colors(theme).text,
       textAlign: "left",
-      marginVertical: 8,
+      marginTop: 8,
     },
     statsContainer: {
       flexDirection: "row",

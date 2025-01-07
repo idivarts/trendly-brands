@@ -64,9 +64,11 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        createGroupWithMembers(data.collaboration.name, [
+        createGroupWithMembers(
+          data.collaboration.name,
           cardId.influencerID,
-        ]).then((channel) => {
+          cardId.collaborationID
+        ).then((channel) => {
           connectUser();
 
           createNotification(

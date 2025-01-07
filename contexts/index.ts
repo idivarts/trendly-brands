@@ -17,6 +17,10 @@ import {
   useCollaborationContext,
 } from "./collaboration-context.provider";
 import { AWSContextProvider, useAWSContext } from "./aws-context.provider";
+import {
+  ContractContextProvider,
+  useContractContext,
+} from "./contract-context.provider";
 
 export {
   AuthContextProvider,
@@ -24,6 +28,7 @@ export {
   ChatContextProvider,
   CloudMessagingContextProvider,
   CollaborationContextProvider,
+  ContractContextProvider,
   FirebaseStorageContextProvider,
   NotificationContextProvider,
   useAuthContext,
@@ -31,6 +36,7 @@ export {
   useChatContext,
   useCloudMessagingContext,
   useCollaborationContext,
+  useContractContext,
   useFirebaseStorageContext,
   useNotificationContext,
 };
