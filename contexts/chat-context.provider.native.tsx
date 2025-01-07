@@ -19,11 +19,13 @@ interface ChatContextProps {
     members: string[],
   ) => Promise<Channel>;
   connectUser: () => void;
+  sendSystemMessage: (channel: string, message: string) => void;
 }
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => Promise.resolve({} as Channel),
   connectUser: async () => { },
+  sendSystemMessage: async () => { },
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -113,6 +115,19 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     return data.channel;
   };
 
+  const sendSystemMessage = async (channel: string, message: string) => {
+    const channelToWatch = streamClient.channel("messaging", channel);
+    const messageToSend = {
+      text: message,
+      user: {
+        id: "system",
+        name: "system",
+      },
+      type: "system",
+    };
+    channelToWatch.sendMessage(messageToSend);
+  };
+
   return (
     <OverlayProvider value={{ style: streamChatTheme }}>
       <Chat client={streamClient}>
@@ -120,6 +135,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
           value={{
             createGroupWithMembers,
             connectUser,
+            sendSystemMessage,
           }}
         >
           {children}

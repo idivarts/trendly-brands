@@ -8,23 +8,38 @@ import ScreenHeader from "@/components/ui/screen-header";
 import { Channel, MessageInput, MessageList, useChatContext } from "stream-chat-expo";
 import ProfileIcon from "../explore-influencers/profile-icon";
 import ChatMessageTopbar from "./chat-message-topbar";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { useContractContext } from "@/contexts";
 
 const ChannelNative = () => {
   const [channel, setChannel] = useState<ChannelType | null>(null);
+  const [contract, setContract] = useState<IContracts | null>(null);
   const { cid } = useLocalSearchParams<{ cid: string }>();
 
   const { client } = useChatContext();
+  const { getContractById } = useContractContext();
+
+  const fetchContract = async (
+    contractId: string,
+  ) => {
+    const contractData = await getContractById(contractId);
+    setContract(contractData);
+  }
 
   useEffect(() => {
     const fetchChannel = async () => {
       const channels = await client.queryChannels({ cid });
       setChannel(channels[0]);
+
+      if (channels[0]?.data?.contractId) {
+        await fetchContract(channels[0]?.data?.contractId as string);
+      }
     };
 
     fetchChannel();
   }, [cid]);
 
-  if (!channel) {
+  if (!channel || !contract) {
     return (
       <View
         style={{
@@ -56,7 +71,10 @@ const ChannelNative = () => {
         }
       />
       <ChatMessageTopbar
-        status={0}
+        contract={{
+          ...contract,
+          id: channel?.data?.contractId as string,
+        }}
       />
       <MessageList />
       <MessageInput />

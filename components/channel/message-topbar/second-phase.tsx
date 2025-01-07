@@ -7,14 +7,22 @@ import { CHAT_MESSAGE_TOPBAR_DESCRIPTION } from "@/constants/ChatMessageTopbar";
 import Colors from "@/constants/Colors";
 import MessageTopbar from "@/shared-uis/components/chat-message-bar";
 
-const SecondPhase = () => {
+interface SecondPhaseProps {
+  setStatus: React.Dispatch<React.SetStateAction<number>>;
+}
+
+const SecondPhase: React.FC<SecondPhaseProps> = ({
+  setStatus,
+}) => {
   const theme = useTheme();
 
   return (
     <MessageTopbar
       description={CHAT_MESSAGE_TOPBAR_DESCRIPTION.second}
       rightAction={
-        <Pressable>
+        <Pressable
+          onPress={() => setStatus(-1)}
+        >
           <FontAwesomeIcon
             icon={faClose}
             color={Colors(theme).primary}

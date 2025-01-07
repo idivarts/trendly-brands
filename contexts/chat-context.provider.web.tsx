@@ -7,11 +7,13 @@ interface ChatContextProps {
     members: string[],
   ) => Promise<any>;
   connectUser: () => void;
+  sendSystemMessage: (channel: any, message: string) => void;
 }
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => { },
   connectUser: async () => { },
+  sendSystemMessage: async () => { },
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -48,11 +50,14 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     return null;
   };
 
+  const sendSystemMessage = async (channel: any, message: string) => { };
+
   return (
     <ChatContext.Provider
       value={{
         createGroupWithMembers,
         connectUser,
+        sendSystemMessage,
       }}
     >
       {children}
