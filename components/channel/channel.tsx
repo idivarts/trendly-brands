@@ -79,10 +79,14 @@ const ChannelNative = () => {
     );
   }
 
+  const channelName = channel?.data?.name || '';
+  const influencerName = influencer?.name ? ` w ${influencer.name}` : '';
+  const title = channelName + influencerName || 'Chat';
+
   return (
     <Channel channel={channel} audioRecordingEnabled>
       <ScreenHeader
-        title={channel?.data?.name || 'Chat'}
+        title={title}
         rightAction
         rightActionButton={
           <Pressable
