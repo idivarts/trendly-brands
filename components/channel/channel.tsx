@@ -1,23 +1,43 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Pressable } from "react-native";
 import { Channel as ChannelType } from "stream-chat";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import { Channel, MessageInput, MessageList, useChatContext } from "stream-chat-expo";
-import ProfileIcon from "../explore-influencers/profile-icon";
 import ChatMessageTopbar from "./chat-message-topbar";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { useContractContext } from "@/contexts";
+import { useAuthContext, useContractContext } from "@/contexts";
+import { Avatar } from "react-native-paper";
+import Colors from "@/constants/Colors";
+import { imageUrl } from "@/utils/url";
+import { User } from "@/types/User";
+import { useTheme } from "@react-navigation/native";
 
 const ChannelNative = () => {
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [contract, setContract] = useState<IContracts | null>(null);
+  const [influencer, setInfluencer] = useState<User | null>(null);
   const { cid } = useLocalSearchParams<{ cid: string }>();
+
+  const theme = useTheme();
 
   const { client } = useChatContext();
   const { getContractById } = useContractContext();
+
+  const router = useRouter();
+
+  const {
+    getInfluencerById,
+  } = useAuthContext();
+
+  const fetchInfluencer = async (
+    influencerId: string,
+  ) => {
+    const influencerData = await getInfluencerById(influencerId);
+    setInfluencer(influencerData);
+  }
 
   const fetchContract = async (
     contractId: string,
@@ -39,6 +59,12 @@ const ChannelNative = () => {
     fetchChannel();
   }, [cid]);
 
+  useEffect(() => {
+    if (contract?.userId) {
+      fetchInfluencer(contract.userId);
+    }
+  }, [contract]);
+
   if (!channel || !contract) {
     return (
       <View
@@ -59,15 +85,23 @@ const ChannelNative = () => {
         title={channel?.data?.name || 'Chat'}
         rightAction
         rightActionButton={
-          <View
+          <Pressable
             style={{
-              marginRight: 18,
+              marginRight: 8,
               marginLeft: 12,
             }}
+            onPress={() => {
+              router.push(`/contract-details/${contract.streamChannelId}`);
+            }}
           >
-            {/* TODO: This user icon should open the contract linked with the message. */}
-            <ProfileIcon />
-          </View>
+            <Avatar.Image
+              style={{
+                backgroundColor: Colors(theme).transparent,
+              }}
+              size={40}
+              source={imageUrl(influencer?.profileImage)}
+            />
+          </Pressable>
         }
       />
       <ChatMessageTopbar

@@ -28,9 +28,11 @@ import {
 import { analyticsLogEvent } from "@/utils/analytics";
 import { checkTestUsers } from "@/utils/test-users";
 import { resetAndNavigate } from "@/utils/router";
+import { User } from "@/types/User";
 
 interface AuthContextProps {
   getManager: (managerId: string) => Promise<Manager | null>;
+  getInfluencerById: (influencerId: string) => Promise<User | null>;
   isLoading: boolean;
   session?: string | null;
   setSession: (value: string | null) => void;
@@ -46,6 +48,7 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps>({
   getManager: () => Promise.resolve(null),
+  getInfluencerById: () => Promise.resolve(null),
   isLoading: false,
   setSession: () => null,
   session: null,
@@ -245,6 +248,21 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     return null;
   };
 
+  const getInfluencerById = async (influencerId: string): Promise<User | null> => {
+    const userRef = doc(FirestoreDB, "users", influencerId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const userData = {
+        ...(userSnap.data() as User),
+        id: userSnap.id as string,
+      };
+      return userData;
+    }
+
+    return null;
+  };
+
   const updateManager = async (
     managerId: string,
     manager: Partial<Manager>
@@ -260,6 +278,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     <AuthContext.Provider
       value={{
         getManager,
+        getInfluencerById,
         isLoading,
         session,
         setSession,
