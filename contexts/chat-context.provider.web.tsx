@@ -15,11 +15,11 @@ interface ChatContextProps {
 }
 
 const ChatContext = createContext<ChatContextProps>({
-  createGroupWithMembers: async () => {},
-  connectUser: async () => {},
-  fetchMembers: async () => {},
-  addMemberToChannel: async () => {},
-  sendSystemMessage: async () => {},
+  createGroupWithMembers: async () => { },
+  connectUser: async () => { },
+  fetchMembers: async () => { },
+  addMemberToChannel: async () => { },
+  sendSystemMessage: async () => { },
   fetchChannelCid: async () => "",
   removeMemberFromChannel: async () => false,
 });
@@ -52,11 +52,11 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     return data.channel;
   };
 
-  const fetchMembers = async (channel: any): Promise<any> => {};
+  const fetchMembers = async (channel: any): Promise<any> => { };
 
-  const addMemberToChannel = async (channel: any, member: string) => {};
+  const addMemberToChannel = async (channel: any, member: string) => { };
 
-  const sendSystemMessage = async (channel: string, message: string) => {};
+  const sendSystemMessage = async (channel: string, message: string) => { };
 
   const fetchChannelCid = async (channelId: string): Promise<string> => {
     return "";

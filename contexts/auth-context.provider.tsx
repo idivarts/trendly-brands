@@ -27,13 +27,15 @@ import {
 } from "firebase/auth";
 import { analyticsLogEvent } from "@/utils/analytics";
 import { checkTestUsers } from "@/utils/test-users";
+import { resetAndNavigate } from "@/utils/router";
+import { User } from "@/types/User";
 
 interface AuthContextProps {
-  firebaseSignIn: (token: string) => void;
-  firebaseSignUp: (token: string) => void;
   getManager: (managerId: string) => Promise<Manager | null>;
+  getInfluencerById: (influencerId: string) => Promise<User | null>;
   isLoading: boolean;
   session?: string | null;
+  setSession: (value: string | null) => void;
   signIn: (email: string, password: string) => void;
   signOutManager: () => void;
   signUp: (name: string, email: string, password: string) => void;
@@ -45,10 +47,10 @@ interface AuthContextProps {
 }
 
 const AuthContext = createContext<AuthContextProps>({
-  firebaseSignIn: (token: string) => null,
-  firebaseSignUp: (token: string) => null,
   getManager: () => Promise.resolve(null),
+  getInfluencerById: () => Promise.resolve(null),
   isLoading: false,
+  setSession: () => null,
   session: null,
   signIn: (email: string, password: string) => null,
   signOutManager: () => null,
@@ -141,6 +143,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       Toaster.error("Please fill in all fields.");
       return;
     }
+
     await createUserWithEmailAndPassword(AuthApp, email, password)
       .then(async (userCredential) => {
         const colRef = collection(FirestoreDB, "managers");
@@ -171,12 +174,15 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const checkVerification = async () => {
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
-            router.replace(
-              "/(onboarding)/onboarding-your-brand?firstBrand=true"
-            );
             setSession(userCredential.user.uid);
-            await fetch("https://be.trendly.pro/api/v1/chat/auth", {
-              method: "POST",
+            resetAndNavigate({
+              pathname: "/(onboarding)/onboarding-your-brand",
+              params: {
+                firstBrand: "true",
+              },
+            });
+            await fetch('https://be.trendly.pro/api/v1/chat/auth', {
+              method: 'POST',
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${userCredential.user.uid}`,
@@ -205,18 +211,6 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         }
         Toaster.error(errorMessage);
       });
-  };
-
-  const firebaseSignIn = async (token: string) => {
-    setSession(token);
-    const user = await getManager(token);
-    router.replace("/explore-influencers");
-    Toaster.success("Signed In Successfully!");
-  };
-
-  const firebaseSignUp = async (token: string) => {
-    setSession(token);
-    Toaster.success("Signed Up Successfully!");
   };
 
   const signOutManager = () => {
@@ -254,6 +248,21 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     return null;
   };
 
+  const getInfluencerById = async (influencerId: string): Promise<User | null> => {
+    const userRef = doc(FirestoreDB, "users", influencerId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const userData = {
+        ...(userSnap.data() as User),
+        id: userSnap.id as string,
+      };
+      return userData;
+    }
+
+    return null;
+  };
+
   const updateManager = async (
     managerId: string,
     manager: Partial<Manager>
@@ -268,11 +277,11 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <AuthContext.Provider
       value={{
-        firebaseSignIn,
-        firebaseSignUp,
         getManager,
+        getInfluencerById,
         isLoading,
         session,
+        setSession,
         signIn,
         signOutManager,
         signUp,

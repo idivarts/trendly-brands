@@ -33,10 +33,10 @@ interface ChatContextProps {
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => Promise.resolve({} as Channel),
-  connectUser: async () => {},
-  fetchMembers: async () => {},
-  addMemberToChannel: async () => {},
-  sendSystemMessage: async () => {},
+  connectUser: async () => { },
+  fetchMembers: async () => { },
+  addMemberToChannel: async () => { },
+  sendSystemMessage: async () => { },
   fetchChannelCid: async () => "",
   removeMemberFromChannel: async () => false,
 });
@@ -139,7 +139,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       const channelToWatch = streamClient.channel("messaging", channel);
       await channelToWatch
         .addMembers([member])
-        .then(() => {})
+        .then(() => { })
         .catch((error) => {
           console.error(error);
         });

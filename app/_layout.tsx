@@ -25,6 +25,7 @@ import {
   AWSContextProvider,
   CloudMessagingContextProvider,
   CollaborationContextProvider,
+  ContractContextProvider,
   FirebaseStorageContextProvider,
   NotificationContextProvider,
   useAuthContext,
@@ -80,9 +81,11 @@ export default function RootLayout() {
                 <CloudMessagingContextProvider>
                   <BrandContextProvider>
                     <CollaborationContextProvider>
-                      <AutocompleteDropdownContextProvider>
-                        <RootLayoutStack />
-                      </AutocompleteDropdownContextProvider>
+                      <ContractContextProvider>
+                        <AutocompleteDropdownContextProvider>
+                          <RootLayoutStack />
+                        </AutocompleteDropdownContextProvider>
+                      </ContractContextProvider>
                     </CollaborationContextProvider>
                   </BrandContextProvider>
                 </CloudMessagingContextProvider>

@@ -12,12 +12,13 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 const GetStartedScreen = () => {
   const [hearAboutUs, setHearAboutUs] = useState("");
   const [useFor, setUseFor] = useState("");
   const [volumeOfCollaboration, setVolumeOfCollaboration] = useState("");
-  const { firebaseSignIn } = useAuthContext();
+  const { setSession } = useAuthContext();
   const theme = useTheme();
   const styles = fnStyles(theme);
 
@@ -34,22 +35,27 @@ const GetStartedScreen = () => {
   const openMenu3 = () => setVisible3(true);
   const closeMenu3 = () => setVisible3(false);
 
-  const handleSignUp = () => {
-    firebaseSignIn(AuthApp.currentUser?.uid || "");
-  };
-
-  const params = useLocalSearchParams();
+  const {
+    brandId,
+    firstBrand,
+  } = useLocalSearchParams();
 
   const {
     setSelectedBrand,
   } = useBrandContext();
 
+  const handleSkip = () => {
+    setSession(AuthApp.currentUser?.uid || "");
+    router.replace("/explore-influencers");
+    Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
+  };
+
   const handleSubmit = async () => {
     try {
-      const { brandId } = params;
       if (brandId) {
         //@ts-ignore
         const brandRef = doc(FirestoreDB, "brands", brandId);
+
         await setDoc(
           brandRef,
           {
@@ -60,7 +66,7 @@ const GetStartedScreen = () => {
             },
           },
           { merge: true }
-        );
+        )
 
         const brandData = await getDoc(brandRef);
 
@@ -69,7 +75,8 @@ const GetStartedScreen = () => {
           id: brandRef.id,
         });
 
-        router.push("/(main)/explore-influencers");
+        router.replace("/explore-influencers");
+        Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
       }
     } catch (error) {
       console.error(error);
@@ -85,7 +92,7 @@ const GetStartedScreen = () => {
           <Button
             mode="contained"
             onPress={() => {
-              handleSignUp();
+              handleSkip();
             }}
           >
             Skip
@@ -212,13 +219,13 @@ const GetStartedScreen = () => {
           <Button
             mode="contained"
             onPress={() => {
-              handleSignUp();
+              handleSubmit();
             }}
             style={{
               width: "100%",
             }}
           >
-            Take me in
+            {firstBrand === "true" ? "Take me in" : "Submit"}
           </Button>
         </View>
       </View>
