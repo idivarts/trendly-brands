@@ -224,7 +224,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           email: manager?.email,
         });
 
-        router.replace("/pre-signin");
+        resetAndNavigate("/pre-signin");
         Toaster.success("Signed Out Successfully!");
       })
       .catch((error) => {
