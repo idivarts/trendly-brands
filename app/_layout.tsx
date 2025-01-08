@@ -36,6 +36,7 @@ import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import { queryParams } from "@/utils/url";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { Platform } from "react-native";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -116,19 +117,24 @@ const RootLayoutStack = () => {
 
     if (isLoading) return;
 
-    if (session && (inMainGroup || inOnboardingGroup)) {
-      // Redirect to main group path if signed in
-      //@ts-ignore
-      router.replace(`${pathname}${queryParams(params)}`);
-    } else if (session) {
-      // Redirect to main group if signed in
-      router.replace("/explore-influencers");
-    } else if (!session && !inAuthGroup) {
-      // App should start at pre-signin
-      router.replace("/pre-signin");
-    } else if (!session && inMainGroup) {
-      // User can't access main group if not signed in
-      router.replace("/login");
+    if (Platform.OS !== "web") {
+      if (session && (inMainGroup || inOnboardingGroup)) {
+        router.replace(`${pathname}${queryParams(params)}`);
+      } else if (session) {
+        router.replace("/explore-influencers");
+      } else {
+        router.replace("/pre-signin");
+      }
+    } else {
+      if (!session) {
+        router.replace("/pre-signin");
+      } else if (
+        session && pathname === "/"
+        || pathname === "/pre-signin"
+        || inAuthGroup
+      ) {
+        router.replace("/explore-influencers");
+      }
     }
   }, [session, isLoading]);
 
