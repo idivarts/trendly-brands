@@ -129,9 +129,11 @@ const RootLayoutStack = () => {
       if (!session) {
         router.replace("/pre-signin");
       } else if (
-        session && pathname === "/"
-        || pathname === "/pre-signin"
-        || inAuthGroup
+        session && (
+          pathname === "/"
+          || pathname === "/pre-signin"
+          || inAuthGroup
+        )
       ) {
         router.replace("/explore-influencers");
       }
