@@ -29,6 +29,7 @@ import {
 } from "firebase/storage";
 import { StorageApp } from "@/utils/firebase-storage";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -55,7 +56,7 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      let updatedImageURL = manager.profileImage; // Default to existing profile image
+      let updatedImageURL = manager.profileImage || ""; // Default to existing profile image
 
       if (imageToUpload) {
         const path = `managers/${manager.id}/profile-image`;
@@ -90,6 +91,7 @@ const Profile = () => {
 
       setImageToUpload(""); // Clear image-to-upload buffer
       Toaster.success("Profile updated successfully");
+      fetchRole();
     } catch (error) {
       console.error("Error during profile update:", error);
       Toaster.error("Error during profile update");
@@ -158,15 +160,13 @@ const Profile = () => {
       >
         {/* Profile Picture */}
         <View style={styles.avatarContainer}>
-          <Avatar.Image
-            source={
-              capturedImage
-                ? {
-                    uri: capturedImage,
-                  }
-                : require("@/assets/images/placeholder-person-image.png")
-            }
-            size={200}
+          <ImageComponent
+            url={capturedImage}
+            size="medium"
+            altText="Profile Image"
+            shape="circle"
+            initialsSize={40}
+            initials={manager?.name}
             style={{
               backgroundColor: Colors(theme).primary,
             }}

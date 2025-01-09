@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Colors from "@/constants/Colors";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface CollaborationHeaderProps {
   collabName: string;
@@ -47,8 +48,11 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
           gap: 8,
         }}
       >
-        <Image
-          source={{ uri: brandImage }}
+        <ImageComponent
+          url={brandImage}
+          altText="Image"
+          shape="circle"
+          size="small"
           style={{
             width: 40,
             height: 40,

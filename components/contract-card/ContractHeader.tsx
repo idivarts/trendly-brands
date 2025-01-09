@@ -8,6 +8,7 @@ import Colors from "@/constants/Colors";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
 import { imageUrl } from "@/utils/url";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface ContractHeaderProps {
   username: string;
@@ -46,8 +47,12 @@ const ContractHeader: FC<ContractHeaderProps> = ({
           gap: 8,
         }}
       >
-        <Image
-          source={imageUrl(userImage)}
+        <ImageComponent
+          url={userImage}
+          altText="Image"
+          shape="circle"
+          initials={username}
+          size="small"
           style={{
             width: 40,
             height: 40,
