@@ -17,6 +17,12 @@ const AuthLayout = () => {
           }}
         >
           <Stack.Screen
+            name="pre-signin"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
             name="login"
             options={{
               headerShown: false,

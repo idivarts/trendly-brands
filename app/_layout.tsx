@@ -37,6 +37,7 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import { queryParams } from "@/utils/url";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Platform } from "react-native";
+import { resetAndNavigate } from "@/utils/router";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -113,31 +114,23 @@ const RootLayoutStack = () => {
   useEffect(() => {
     const inAuthGroup = segments[0] === "(auth)";
     const inMainGroup = segments[0] === "(main)";
-    const inOnboardingGroup = segments[0] === "(onboarding)";
 
     if (isLoading) return;
 
-    if (Platform.OS !== "web") {
-      if (session && (inMainGroup || inOnboardingGroup)) {
-        router.replace(`${pathname}${queryParams(params)}`);
-      } else if (session) {
-        router.replace("/explore-influencers");
-      } else {
-        router.replace("/pre-signin");
-      }
-    } else {
-      if (!session) {
-        router.replace("/pre-signin");
-      } else if (
-        session && (
-          pathname === "/"
-          || pathname === "/pre-signin"
-          || inAuthGroup
-        )
-      ) {
-        router.replace("/explore-influencers");
-      }
+    if (
+      session
+      && (inAuthGroup || pathname === "/")
+    ) {
+      // On boot up, session exist and user is in auth group or /, redirect to collaborations
+      resetAndNavigate("/explore-influencers");
+    } else if (
+      !session
+      && (inMainGroup || pathname === "/")
+    ) {
+      // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
+      resetAndNavigate("/pre-signin");
     }
+    // Redirect to respective screen
   }, [session, isLoading]);
 
   return (
@@ -149,12 +142,8 @@ const RootLayoutStack = () => {
             headerShown: false,
           }}
         >
-          <Stack.Screen name="(public)" options={{ headerShown: false }} />
-          {session ? (
-            <Stack.Screen name="(main)" options={{ headerShown: false }} />
-          ) : (
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          )}
+          <Stack.Screen name="(main)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="index" />
           <Stack.Screen name="+not-found" />
           <Stack.Screen
