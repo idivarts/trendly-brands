@@ -117,26 +117,20 @@ const RootLayoutStack = () => {
 
     if (isLoading) return;
 
-    if (Platform.OS !== "web") {
-      if (session
-        && (inAuthGroup || pathname === "/pre-signin" || pathname === "/")
-      ) {
-        resetAndNavigate("/explore-influencers");
-      } else if (session) {
-        router.replace(`${pathname}${queryParams(params)}`);
-      } else if (!session) {
-        router.replace("/pre-signin");
-      }
-    } else {
-      if (
-        session
-        && (inAuthGroup || pathname === "/pre-signin" || pathname === "/")
-      ) {
-        router.replace("/explore-influencers");
-      } else if (!session && (inMainGroup || pathname === "/")) {
-        resetAndNavigate("/pre-signin");
-      }
+    if (
+      session
+      && (inAuthGroup || pathname === "/")
+    ) {
+      // On boot up, session exist and user is in auth group or /, redirect to collaborations
+      resetAndNavigate("/explore-influencers");
+    } else if (
+      !session
+      && (inMainGroup || pathname === "/")
+    ) {
+      // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
+      resetAndNavigate("/pre-signin");
     }
+    // Redirect to respective screen
   }, [session, isLoading]);
 
   return (
