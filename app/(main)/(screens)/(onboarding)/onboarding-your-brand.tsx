@@ -91,7 +91,7 @@ const OnboardingScreen = () => {
         role,
       }).then(() => {
         router.replace({
-          pathname: "/(onboarding)/onboarding-get-started",
+          pathname: "/onboarding-get-started",
           params: {
             brandId: docRef.id,
             firstBrand: firstBrand === "true" ? "true" : "false",

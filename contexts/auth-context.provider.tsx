@@ -176,7 +176,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           if (userCredential.user.emailVerified) {
             setSession(userCredential.user.uid);
             resetAndNavigate({
-              pathname: "/(onboarding)/onboarding-your-brand",
+              pathname: "/onboarding-your-brand",
               params: {
                 firstBrand: "true",
               },
