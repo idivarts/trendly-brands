@@ -14,6 +14,7 @@ import Colors from "@/constants/Colors";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import ProfileItemCard from "../ProfileItemCard";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 const Menu = () => {
   const theme = useTheme();
@@ -90,15 +91,12 @@ const Menu = () => {
             }}
           >
             <View style={styles.userProfileContainer}>
-              <Avatar.Image
-                source={
-                  manager?.profileImage
-                    ? {
-                        uri: manager?.profileImage,
-                      }
-                    : require("@/assets/images/placeholder-person-image.png")
-                }
-                size={56}
+              <ImageComponent
+                url={manager?.profileImage || ""}
+                initials={manager?.name}
+                shape="circle"
+                size="small"
+                altText="Image"
                 style={styles.avatar}
               />
               <View style={styles.textContainer}>

@@ -32,6 +32,7 @@ import BrandModal from "./modal/BrandModal";
 import ManagerModal from "./modal/ManagerModal";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -186,8 +187,11 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     flexGrow: 1,
                   }}
                 >
-                  <Image
-                    source={{ uri: props.collaboration.logo }}
+                  <ImageComponent
+                    url={props.collaboration.logo}
+                    altText="Brand Logo"
+                    shape="square"
+                    size="small"
                     style={{ width: 40, height: 40, borderRadius: 5 }}
                   />
                   <View style={{ flex: 1 }}>
@@ -442,12 +446,12 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   gap: 10,
                 }}
               >
-                <Image
-                  source={
-                    !managerDetails?.profileImage
-                      ? { uri: PLACEHOLDER_IMAGE }
-                      : { uri: managerDetails?.profileImage }
-                  }
+                <ImageComponent
+                  url={managerDetails?.profileImage}
+                  size="small"
+                  altText="Manager Profile Image"
+                  initials={managerDetails?.name}
+                  initialsSize={16}
                   style={{
                     width: 40,
                     height: 40,

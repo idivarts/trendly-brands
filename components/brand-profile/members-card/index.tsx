@@ -2,6 +2,7 @@ import { ManagerCard } from "@/components/preferences";
 import { View, Text } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import ImageComponent from "@/shared-uis/components/image-component";
 import { imageUrl } from "@/utils/url";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -46,7 +47,13 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
           gap: 10,
         }}
       >
-        <Avatar.Image size={40} source={imageUrl(manager.profileImage)} />
+        <ImageComponent
+          size="small"
+          shape="circle"
+          initials={manager.name}
+          url={manager.profileImage || ""}
+          altText="Image"
+        />
         <View>
           <Text style={{ fontSize: 16 }}>{manager.name}</Text>
           <Text style={{ fontSize: 16 }}>{manager.email}</Text>

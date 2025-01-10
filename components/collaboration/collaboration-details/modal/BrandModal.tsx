@@ -7,6 +7,7 @@ import { Chip, Modal } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface BrandModalProps {
   brand: {
@@ -42,8 +43,11 @@ const BrandModal: React.FC<BrandModalProps> = ({
     >
       <View style={{ alignItems: "center", gap: 20 }}>
         {/* Brand Image */}
-        <Image
-          source={{ uri: brand.image }}
+        <ImageComponent
+          url={brand.image}
+          altText="Brand Image"
+          shape="square"
+          size="medium"
           style={{
             width: 120,
             height: 120,

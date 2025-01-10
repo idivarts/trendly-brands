@@ -162,7 +162,6 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             emailNotification: true,
             pushNotification: true,
           },
-          role: "manager",
         };
 
         await setDoc(docRef, userData);
@@ -181,8 +180,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
                 firstBrand: "true",
               },
             });
-            await fetch('https://be.trendly.pro/api/v1/chat/auth', {
-              method: 'POST',
+            await fetch("https://be.trendly.pro/api/v1/chat/auth", {
+              method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${userCredential.user.uid}`,
@@ -248,7 +247,9 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     return null;
   };
 
-  const getInfluencerById = async (influencerId: string): Promise<User | null> => {
+  const getInfluencerById = async (
+    influencerId: string
+  ): Promise<User | null> => {
     const userRef = doc(FirestoreDB, "users", influencerId);
     const userSnap = await getDoc(userRef);
 
