@@ -13,7 +13,15 @@ import { useTheme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
 import { convertToKUnits } from "@/utils/conversion";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faEllipsis, faPeopleRoof, faChartLine, faFaceSmile, faComment, faCheck, faPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEllipsis,
+  faPeopleRoof,
+  faChartLine,
+  faFaceSmile,
+  faComment,
+  faCheck,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 import { imageUrl } from "@/utils/url";
 import Tag from "./ui/tag";
 import { User } from "@/types/User";
@@ -23,6 +31,7 @@ import { truncateText } from "@/utils/text";
 import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface InfluencerCardPropsType {
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
@@ -48,7 +57,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const onImagePress = (data: MediaItem) => {
     setPreviewImageUrl(data.url);
     setPreviewImage(true);
-  }
+  };
 
   useEffect(() => {
     if (props?.alreadyInvited) {
@@ -60,15 +69,8 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
 
   return (
     <>
-      <Card
-        style={styles.card}
-        mode="contained"
-      >
-        <View
-          style={[
-            styles.header,
-          ]}
-        >
+      <Card style={styles.card} mode="contained">
+        <View style={[styles.header]}>
           <Pressable
             onPress={() => {
               if (props.openProfile) {
@@ -76,10 +78,12 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               }
             }}
           >
-            <Avatar.Image
-              size={50}
-              source={imageUrl(influencer.profileImage)}
-
+            <ImageComponent
+              size="small"
+              url={influencer.profileImage || ""}
+              initials={influencer.name}
+              altText="Image"
+              shape="circle"
             />
           </Pressable>
           <Pressable
@@ -91,7 +95,9 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             }}
           >
             <Text style={styles.name}>{influencer.name}</Text>
-            <Text style={styles.handle}>{influencer.socials?.[0] || 'influencer-handle'}</Text>
+            <Text style={styles.handle}>
+              {influencer.socials?.[0] || "influencer-handle"}
+            </Text>
           </Pressable>
           {props.type === "invitation" &&
             (isInvited ? (
@@ -141,14 +147,16 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         </View>
 
         <Carousel
-          data={influencer.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
+          data={
+            influencer.profile?.attachments?.map((attachment) =>
+              processRawAttachment(attachment)
+            ) || []
+          }
           onImagePress={onImagePress}
           theme={theme}
         />
 
-        <View
-          style={styles.content}
-        >
+        <View style={styles.content}>
           <View style={styles.stats}>
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
@@ -203,8 +211,10 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                 contentWidth={screenWidth}
                 source={{
                   html:
-                    truncateText(influencer?.profile?.content?.about as string, 160) ||
-                    "<p>No content available.</p>",
+                    truncateText(
+                      influencer?.profile?.content?.about as string,
+                      160
+                    ) || "<p>No content available.</p>",
                 }}
                 defaultTextProps={{
                   style: {

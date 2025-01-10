@@ -20,6 +20,7 @@ import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface AddMemberModalProps {
   visible: boolean;
@@ -111,7 +112,12 @@ const AddMembersModal: FC<AddMemberModalProps> = ({
   const renderItem = (item: any) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <Avatar.Image size={40} source={{ uri: item.item.profileImage }} />
+        <ImageComponent
+          size="small"
+          url={item.item.profileImage}
+          initials={item.item.name}
+          altText="Profile Image"
+        />
         <View style={styles.textContainer}>
           <Text
             style={{

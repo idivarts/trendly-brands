@@ -5,6 +5,7 @@ import { Text, View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { Chip, Modal } from "react-native-paper";
 import Colors from "@/constants/Colors";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface ManagerModalProps {
   managerName: string;
@@ -39,13 +40,18 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
     >
       <View style={{ alignItems: "center", gap: 20 }}>
         {/* Brand Image */}
-        <Image
-          source={{ uri: managerImage }}
+        <ImageComponent
+          url={managerImage}
+          altText={managerName}
+          shape="circle"
+          size="medium"
           style={{
             width: 120,
             height: 120,
             borderRadius: 240,
           }}
+          initials={managerName}
+          initialsSize={40}
         />
 
         {/* Brand Name */}

@@ -17,6 +17,7 @@ import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { useChatContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { router } from "expo-router";
+import ImageComponent from "@/shared-uis/components/image-component";
 
 interface ActionContainerProps {
   contract: IContracts;
@@ -213,8 +214,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
               flexGrow: 1,
             }}
           >
-            <Image
-              source={imageUrl(manager?.profileImage)}
+            <ImageComponent
+              url={manager?.profileImage || ""}
+              altText={manager?.name || ""}
+              initials={manager?.name || ""}
+              shape="circle"
+              size="small"
               style={{ width: 40, height: 40, borderRadius: 20 }}
             />
             <View style={{ flex: 1 }}>
@@ -263,8 +268,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
               flexGrow: 1,
             }}
           >
-            <Image
-              source={imageUrl(userData.profileImage)}
+            <ImageComponent
+              url={userData.profileImage || ""}
+              altText={userData.name}
+              initials={userData.name}
+              shape="circle"
+              size="small"
               style={{ width: 40, height: 40, borderRadius: 20 }}
             />
             <View style={{ flex: 1 }}>

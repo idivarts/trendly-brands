@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import {
-  View,
-} from "react-native";
+import { View } from "react-native";
 import { Button } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@react-navigation/native";
@@ -38,34 +36,34 @@ const OnboardingScreen = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
   const styles = fnStyles(theme);
-  const {
-    firstBrand,
-  } = useLocalSearchParams();
-  const {
-    uploadImageBytes,
-  } = useFirebaseStorageContext();
-  const {
-    setSelectedBrand,
-  } = useBrandContext();
-  const {
-    manager: user,
-  } = useAuthContext();
+  const { firstBrand } = useLocalSearchParams();
+  const { uploadImageBytes } = useFirebaseStorageContext();
+  const { setSelectedBrand } = useBrandContext();
+  const { manager: user } = useAuthContext();
 
   const handleCreateBrand = async () => {
+    setIsSubmitting(true);
     if (!user) {
       Toaster.error("User not found");
+      setIsSubmitting(false);
       return;
     }
 
     if (!brandData.name) {
+
       Toaster.error('Brand name is required');
+      setIsSubmitting(false);
+
       return;
     }
 
     let imageUrl = "";
     if (brandData.image) {
       const blob = await fetch(brandData.image).then((res) => res.blob());
-      imageUrl = await uploadImageBytes(blob, `brands/${brandData.name}-${Date.now()}`);
+      imageUrl = await uploadImageBytes(
+        blob,
+        `brands/${brandData.name}-${Date.now()}`
+      );
     }
 
     if (user) {
@@ -88,23 +86,26 @@ const OnboardingScreen = () => {
 
       await setDoc(managerRef, {
         managerId: user.id,
-        role,
-      }).then(() => {
-        router.replace({
-          pathname: "/onboarding-get-started",
-          params: {
-            brandId: docRef.id,
-            firstBrand: firstBrand === "true" ? "true" : "false",
-          },
+        role: "Manager",
+      })
+        .then(() => {
+          router.replace({
+            pathname: "/onboarding-get-started",
+            params: {
+              brandId: docRef.id,
+              firstBrand: firstBrand === "true" ? "true" : "false",
+            },
+          });
+          setSelectedBrand(brandData as Brand);
+        })
+        .catch((error) => {
+          Toaster.error("Error creating brand");
+        })
+        .finally(() => {
+          setIsSubmitting(false);
         });
-        setSelectedBrand(brandData as Brand);
-      }).catch((error) => {
-        Toaster.error("Error creating brand");
-      }).finally(() => {
-        setIsSubmitting(false);
-      });
     }
-  }
+  };
 
   return (
     <AppLayout>
@@ -129,7 +130,7 @@ const OnboardingScreen = () => {
           type="create"
         />
       </View>
-    </AppLayout >
+    </AppLayout>
   );
 };
 
