@@ -42,13 +42,18 @@ const OnboardingScreen = () => {
   const { manager: user } = useAuthContext();
 
   const handleCreateBrand = async () => {
+    setIsSubmitting(true);
     if (!user) {
       Toaster.error("User not found");
+      setIsSubmitting(false);
       return;
     }
 
     if (!brandData.name) {
-      Toaster.error("Brand name is required");
+
+      Toaster.error('Brand name is required');
+      setIsSubmitting(false);
+
       return;
     }
 

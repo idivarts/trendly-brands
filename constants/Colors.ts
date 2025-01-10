@@ -19,6 +19,8 @@ export default (theme: Theme) => ({
         tag: "#5f6368",
         tagForeground: "#f1f3f4",
         outline: "#538BA6",
+        shimmerBackground: "#1E1E1E",
+        shimmerOverlay: "#1b1b1b",
       }
     : {
         card: "#fff",
@@ -33,6 +35,8 @@ export default (theme: Theme) => ({
         tag: "#f1f3f4",
         tagForeground: "#5f6368",
         outline: "#054463",
+        shimmerBackground: "#f1f3f4",
+        shimmerOverlay: "#eee",
       }),
   aliceBlue: "#E9F1F7",
   amber: "#FFBF00",
