@@ -76,7 +76,10 @@ const LoadingScreen: React.FC = () => {
           alignItems: "center",
         }}
       >
-        <ActivityIndicator size="large" color={Colors(theme).text} />
+        <ActivityIndicator
+          size="large"
+          color={Colors(theme).primary}
+        />
       </View>
     );
   }
