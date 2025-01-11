@@ -15,7 +15,7 @@ interface BrandProtectedScreenProps extends PropsWithChildren { }
 const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
   children,
 }) => {
-  const [hasBrandWithManagerId, setHasBrandWithManagerId] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const {
@@ -37,7 +37,7 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
       const membersSnapshot = await getDocs(membersQuery);
 
       if (!membersSnapshot.empty) {
-        setHasBrandWithManagerId(true);
+        setLoading(false);
         return;
       }
     }
@@ -49,15 +49,17 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
         firstBrand: "true",
       },
     });
+    setLoading(false);
   };
 
   useEffect(() => {
-    if (!manager?.id) return;
-
-    fetchBrands(manager.id);
+    if (manager && manager.id) {
+      setLoading(true);
+      fetchBrands(manager.id);
+    }
   }, [manager]);
 
-  if (!hasBrandWithManagerId) {
+  if (loading) {
     return <LoadingScreen />;
   }
 
