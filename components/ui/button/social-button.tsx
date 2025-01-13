@@ -22,17 +22,11 @@ const SocialButton: React.FC<SocialButtonProps> = ({
   const styles = stylesFn(theme);
 
   return (
-    <Pressable
-      style={[
-        styles.socialButton,
-        customStyles,
-      ]}
-      {...props}
-    >
+    <Pressable style={[styles.socialButton, customStyles]} {...props}>
       <FontAwesomeIcon
         icon={icon}
         size={24}
-        color={Colors(theme).text}
+        color={Colors(theme).white}
         style={styles.socialButtonIcon}
       />
       <Text style={styles.socialButtonText}>{label}</Text>
