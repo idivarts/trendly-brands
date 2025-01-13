@@ -63,12 +63,12 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
   const numberOfInfluencersNeededText = useMemo(() => {
     if (
       collaboration.numberOfInfluencersNeeded
-      && collaboration.numberOfInfluencersNeeded >= 101
+      && collaboration.numberOfInfluencersNeeded >= 11
     ) {
-      return 'More than 100';
+      return '>10';
     }
 
-    return `${collaboration.numberOfInfluencersNeeded || 0}`;
+    return `${collaboration.numberOfInfluencersNeeded || 1}`;
   }, [collaboration.numberOfInfluencersNeeded]);
 
   return (
@@ -148,8 +148,8 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           }}
         >
           <MultiRangeSlider
-            minValue={0}
-            maxValue={101}
+            minValue={1}
+            maxValue={11}
             onValuesChange={(values) => {
               setCollaboration({
                 ...collaboration,
@@ -179,7 +179,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 }}
               />
             }
-            values={[collaboration.numberOfInfluencersNeeded || 0, 101]}
+            values={[collaboration.numberOfInfluencersNeeded || 1, 11]}
             step={1}
             theme={theme}
           />
