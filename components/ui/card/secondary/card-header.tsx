@@ -61,6 +61,7 @@ export const CardHeader = ({
           gap: 12,
           flexDirection: 'row',
           alignItems: 'center',
+          backgroundColor: Colors(theme).transparent,
         }}
       >
         {timestamp && <Text style={styles.timestamp}>{timestamp}</Text>}
@@ -84,6 +85,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    backgroundColor: Colors(theme).transparent,
   },
   leftContent: {
     flexDirection: 'row',
@@ -108,11 +110,13 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   userInfo: {
     marginLeft: 12,
+    backgroundColor: Colors(theme).transparent,
   },
   nameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    backgroundColor: Colors(theme).transparent,
   },
   name: {
     fontSize: 16,

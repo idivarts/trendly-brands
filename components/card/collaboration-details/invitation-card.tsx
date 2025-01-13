@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
 import Colors from '@/constants/Colors';
 import useInvitation from '@/hooks/use-invitation';
+import { Platform } from 'react-native';
 
 interface InvitationCardProps {
   checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
@@ -47,6 +48,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         rightAction={headerRightAction}
       />
       <Carousel
+        containerHeight={data.profile?.attachments?.length === 1 ? (Platform.OS === 'web' ? 560 : 288) : undefined}
         data={data.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
         theme={theme}
       />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 import Button from '../../ui/button';
 import Carousel from '@/shared-uis/components/carousel/carousel';
 import { useTheme } from '@react-navigation/native';
@@ -44,6 +44,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         timestamp={formatTimeToNow(data.application.timeStamp)}
       />
       <Carousel
+        containerHeight={data.application?.attachments?.length === 1 ? (Platform.OS === 'web' ? 560 : 288) : undefined}
         data={data.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
         theme={theme}
       />
