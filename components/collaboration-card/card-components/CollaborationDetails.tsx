@@ -17,6 +17,7 @@ import {
   faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { useRouter } from "expo-router";
 
 interface CollaborationDetailsProps {
   collabDescription: string;
@@ -40,6 +41,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
   onOpenBottomSheet,
 }) => {
   const theme = useTheme();
+  const router = useRouter();
+
   return (
     <View
       style={{
@@ -55,15 +58,24 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           marginBottom: 8,
         }}
       >
-        <Text
+        <Pressable
+          onPress={() =>
+            router.push(`/collaboration-details/${collabId}`)
+          }
           style={{
-            fontSize: 16,
-            fontWeight: "bold",
-            color: Colors(theme).text,
+            flex: 1,
           }}
         >
-          {name}
-        </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "bold",
+              color: Colors(theme).text,
+            }}
+          >
+            {name}
+          </Text>
+        </Pressable>
         <Pressable
           onPress={() => {
             onOpenBottomSheet(collabId);
@@ -76,49 +88,55 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           />
         </Pressable>
       </View>
-      <Text
-        style={{
-          color: Colors(theme).gray100,
-        }}
+      <Pressable
+        onPress={() =>
+          router.push(`/collaboration-details/${collabId}`)
+        }
       >
-        {collabDescription}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          marginTop: 10,
-          flexWrap: "wrap",
-          rowGap: 10,
-        }}
-      >
-        <ChipCard
-          chipText={
-            promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
-          }
-          chipIcon={faDollar}
-        />
-        <ChipCard chipText={location.type} chipIcon={faMap} />
-        {platform &&
-          platform.map((content, index) => (
-            <ChipCard
-              key={index}
-              chipText={content}
-              chipIcon={
-                content === "Instagram"
-                  ? faInstagram
-                  : content === "Facebook"
-                  ? faFacebook
-                  : content === "Youtube"
-                  ? faYoutube
-                  : faInstagram
-              }
-            />
-          ))}
-        {contentType &&
-          contentType.map((content, index) => (
-            <ChipCard key={index} chipText={content} chipIcon={faCoins} />
-          ))}
-      </View>
+        <Text
+          style={{
+            color: Colors(theme).gray100,
+          }}
+        >
+          {collabDescription}
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            marginTop: 10,
+            flexWrap: "wrap",
+            rowGap: 10,
+          }}
+        >
+          <ChipCard
+            chipText={
+              promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
+            }
+            chipIcon={faDollar}
+          />
+          <ChipCard chipText={location.type} chipIcon={faMap} />
+          {platform &&
+            platform.map((content, index) => (
+              <ChipCard
+                key={index}
+                chipText={content}
+                chipIcon={
+                  content === "Instagram"
+                    ? faInstagram
+                    : content === "Facebook"
+                      ? faFacebook
+                      : content === "Youtube"
+                        ? faYoutube
+                        : faInstagram
+                }
+              />
+            ))}
+          {contentType &&
+            contentType.map((content, index) => (
+              <ChipCard key={index} chipText={content} chipIcon={faCoins} />
+            ))}
+        </View>
+      </Pressable>
     </View>
   );
 };
