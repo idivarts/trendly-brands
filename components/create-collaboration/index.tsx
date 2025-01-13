@@ -28,7 +28,7 @@ const CreateCollaboration = () => {
     promotionType: PromotionType.BARTER_COLLAB,
     budget: {
       min: 0,
-      max: 10000,
+      max: 500,
     },
     preferredContentLanguage: ["English", "Hindi"],
     contentFormat: [],
@@ -209,6 +209,10 @@ const CreateCollaboration = () => {
         ...collaboration,
         attachments: uploadedAssets,
         brandId: selectedBrand ? selectedBrand?.id : "",
+        budget: {
+          min: collaboration.budget?.min || 0,
+          max: collaboration.budget?.max || 0,
+        },
         managerId: AuthApp.currentUser?.uid as string,
         location: locationAddress,
         status,
