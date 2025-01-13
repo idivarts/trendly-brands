@@ -57,6 +57,8 @@ const SignUpScreen = () => {
             value={name}
             onChangeText={setName}
             mode="outlined"
+            textColor={Colors(theme).text}
+            placeholderTextColor={Colors(theme).text}
             style={styles.input}
             theme={{ colors: { primary: Colors(theme).text } }}
           />
@@ -64,7 +66,9 @@ const SignUpScreen = () => {
           <TextInput
             label="Email"
             value={email}
+            placeholderTextColor={Colors(theme).text}
             onChangeText={setEmail}
+            textColor={Colors(theme).text}
             mode="outlined"
             style={styles.input}
             theme={{ colors: { primary: Colors(theme).text } }}
@@ -76,6 +80,8 @@ const SignUpScreen = () => {
             onChangeText={setPassword}
             secureTextEntry
             mode="outlined"
+            placeholderTextColor={Colors(theme).text}
+            textColor={Colors(theme).text}
             style={styles.input}
             theme={{ colors: { primary: Colors(theme).text } }}
           />
@@ -83,6 +89,8 @@ const SignUpScreen = () => {
             label="Confirm Password"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
+            placeholderTextColor={Colors(theme).text}
+            textColor={Colors(theme).text}
             secureTextEntry
             mode="outlined"
             style={styles.input}
