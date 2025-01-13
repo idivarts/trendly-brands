@@ -92,7 +92,6 @@ const ChannelNative = () => {
           <Pressable
             style={{
               marginRight: 8,
-              marginLeft: 12,
             }}
             onPress={() => {
               router.push(`/contract-details/${contract.streamChannelId}`);

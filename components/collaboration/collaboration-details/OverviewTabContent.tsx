@@ -18,7 +18,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Colors from "@/constants/Colors";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import { processRawAttachment } from "@/utils/attachments";
-import { formatDistanceToNow } from "date-fns";
 import { truncateText } from "@/utils/text";
 import ChipCard from "@/components/collaboration-card/card-components/ChipComponent";
 import {
@@ -33,6 +32,7 @@ import ManagerModal from "./modal/ManagerModal";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
 import ImageComponent from "@/shared-uis/components/image-component";
+import { formatTimeToNow } from "@/utils/date";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -147,9 +147,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     paddingRight: 8,
                   }}
                 >
-                  {formatDistanceToNow(props.collaboration.timeStamp, {
-                    addSuffix: true,
-                  })}
+                  {formatTimeToNow(props.collaboration.timeStamp)}
                 </Text>
               ) : null}
             </View>

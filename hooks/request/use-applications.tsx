@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc, query, where } from "firebase/firestore";
 
 import { useChatContext, useNotificationContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -42,7 +42,12 @@ const useApplications = ({
         collaborationId,
         "applications"
       );
-      const applicationFetch = await getDocs(applicationRef);
+      const applicationQuery = query(
+        applicationRef,
+        where("status", "in", ["pending", "accepted"])
+      );
+      const applicationFetch = await getDocs(applicationQuery);
+
       const applications = applicationFetch.docs.map((doc) => {
         return {
           ...doc.data(),
@@ -116,8 +121,8 @@ const useApplications = ({
           router.navigate(`/channel/${channel.cid}`);
         });
 
+        fetchApplications();
         handleActionModalClose();
-
         Toaster.success("Application accepted successfully");
       });
     } catch (error) {
@@ -143,6 +148,7 @@ const useApplications = ({
       await updateDoc(applicationRef, {
         status: "rejected",
       }).then(() => {
+        fetchApplications();
         handleActionModalClose();
         Toaster.success("Application rejected successfully");
       });

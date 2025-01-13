@@ -1,14 +1,12 @@
 import { Text, View } from "@/components/theme/Themed";
 import { FC } from "react";
-import { formatDistanceToNow } from "date-fns";
-import { Avatar } from "react-native-paper";
-import { Image, Pressable } from "react-native";
+import { Pressable } from "react-native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Colors from "@/constants/Colors";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
-import { imageUrl } from "@/utils/url";
 import ImageComponent from "@/shared-uis/components/image-component";
+import { formatTimeToNow } from "@/utils/date";
 
 interface ContractHeaderProps {
   username: string;
@@ -96,9 +94,7 @@ const ContractHeader: FC<ContractHeaderProps> = ({
       >
         {timePosted ? (
           <Text>
-            {formatDistanceToNow(timePosted, {
-              addSuffix: true,
-            })}
+            {formatTimeToNow(timePosted)}
           </Text>
         ) : null}
         <Pressable

@@ -118,16 +118,16 @@ const ApplicationsTabContent = (props: any) => {
               setSelectedInfluencerApplication(item);
               handleAcceptApplication(item);
             }}
+            bottomSheetAction={() => {
+              setSelectedInfluencerApplication(item);
+              setIsActionModalVisible(true);
+            }}
             data={item}
-            headerLeftAction={() => {
+            profileModalAction={() => {
               setSelectedInfluencerApplication(item);
               setTimeout(() => {
                 bottomSheetModalRef.current?.present();
               }, 500);
-            }}
-            headerRightAction={() => {
-              setSelectedInfluencerApplication(item);
-              setIsActionModalVisible(true);
             }}
           />
         )}
@@ -198,11 +198,15 @@ const ApplicationsTabContent = (props: any) => {
               >
                 <ProfileApplicationCard
                   data={selectedInfluencerApplication?.application as Application}
-                  onReject={() => {
-                    handleRejectApplication(selectedInfluencerApplication as InfluencerApplication);
+                  onReject={async () => {
+                    await handleRejectApplication(selectedInfluencerApplication as InfluencerApplication).then(() => {
+                      bottomSheetModalRef.current?.close();
+                    });
                   }}
-                  onAccept={() => {
-                    handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication);
+                  onAccept={async () => {
+                    await handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication).then(() => {
+                      bottomSheetModalRef.current?.close();
+                    });
                   }}
                   questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer) => ({
                     question: collaborationQuestions[answer.question],

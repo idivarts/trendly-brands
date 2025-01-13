@@ -217,7 +217,12 @@ const CreateCollaboration = () => {
         setScreen(4);
         setTimeout(() => {
           router.dismiss(1);
-          router.push("/collaborations");
+          router.push({
+            pathname: "/collaborations",
+            params: {
+              fetchNewCollaborations: "true",
+            },
+          });
         }, 3000);
       }).catch((error) => {
         console.error(error);

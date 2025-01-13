@@ -4,7 +4,7 @@ import { Text, View } from '@/components/theme/Themed';
 import Colors from '@/constants/Colors';
 import { faChartLine, faFaceSmile, faPeopleRoof } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { useTheme } from '@react-navigation/native';
+import { Theme, useTheme } from '@react-navigation/native';
 import { convertToKUnits } from '@/utils/conversion';
 
 type CardActionsProps = {
@@ -21,6 +21,7 @@ export const CardActions = ({
   action = null,
 }: CardActionsProps) => {
   const theme = useTheme();
+  const styles = stylesFn(theme);
 
   return (
     <View style={styles.container}>
@@ -55,21 +56,24 @@ export const CardActions = ({
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
+    backgroundColor: Colors(theme).transparent,
   },
   metrics: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors(theme).transparent,
   },
   metric: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 16,
+    backgroundColor: Colors(theme).transparent,
   },
   metricText: {
     marginLeft: 4,

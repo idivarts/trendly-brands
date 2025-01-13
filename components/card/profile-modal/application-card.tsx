@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { Card } from '@/components/ui/card/tertiary';
 import { CardHeader } from '@/components/ui/card/tertiary/card-header';
@@ -15,8 +15,8 @@ import { useTheme } from '@react-navigation/native';
 
 interface ApplicationCardProps {
   data: Application;
-  onAccept: () => void;
-  onReject: () => void;
+  onAccept: () => Promise<void>;
+  onReject: () => Promise<void>;
   questions: {
     question: string;
     answer: string;
@@ -30,6 +30,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   questions,
 }) => {
   const theme = useTheme();
+  const [acceptingApplication, setAcceptingApplication] = useState(false);
+  const [rejectingApplication, setRejectingApplication] = useState(false);
 
   return (
     <Card>
@@ -60,39 +62,55 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
           />
         )
       }
-      <CardFooter
-        footerActions={
-          <View
-            style={{
-              backgroundColor: Colors(theme).transparent,
-              flexDirection: 'row',
-              gap: 12,
-              justifyContent: 'center',
-            }}
-          >
-            <Button
-              customStyles={{
-                borderColor: Colors(theme).primary,
-              }}
-              textColor={Colors(theme).primary}
-              mode="outlined"
-              onPress={onReject}
-              size="small"
-            >
-              Reject Application
-            </Button>
-            <Button
-              customStyles={{
-                backgroundColor: Colors(theme).primary,
-              }}
-              onPress={onAccept}
-              size="small"
-            >
-              Accept Application
-            </Button>
-          </View>
-        }
-      />
+      {
+        data?.status === 'pending' && (
+          <CardFooter
+            footerActions={
+              <View
+                style={{
+                  backgroundColor: Colors(theme).transparent,
+                  flexDirection: 'row',
+                  gap: 12,
+                  justifyContent: 'center',
+                }}
+              >
+                <Button
+                  customStyles={{
+                    borderColor: Colors(theme).primary,
+                  }}
+                  textColor={Colors(theme).primary}
+                  loading={rejectingApplication}
+                  mode="outlined"
+                  onPress={() => {
+                    setRejectingApplication(true);
+                    onReject().then(() => {
+                      setRejectingApplication(false);
+                    })
+                  }}
+                  size="small"
+                >
+                  Reject Application
+                </Button>
+                <Button
+                  customStyles={{
+                    backgroundColor: Colors(theme).primary,
+                  }}
+                  onPress={() => {
+                    setAcceptingApplication(true);
+                    onAccept().then(() => {
+                      setAcceptingApplication(false);
+                    });
+                  }}
+                  loading={acceptingApplication}
+                  size="small"
+                >
+                  Accept Application
+                </Button>
+              </View>
+            }
+          />
+        )
+      }
     </Card>
   );
 }
