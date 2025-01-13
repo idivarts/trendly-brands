@@ -30,13 +30,10 @@ const Collaborations = () => {
         style={{
           flex: 1,
           paddingTop: 16,
-          position: "relative",
           paddingBottom: 64,
         }}
       >
-        <TopTabNavigation
-          tabs={tabs}
-        />
+        <TopTabNavigation tabs={tabs} />
         <Button
           customStyles={{
             position: "absolute",

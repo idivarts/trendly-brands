@@ -14,6 +14,8 @@ import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Toast from "react-native-toast-message";
 
 export interface CollaborationDetail extends ICollaboration {
   brandDescription: string;
@@ -44,6 +46,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       await updateDoc(collabRef, {
         status: "active",
       });
+      Toaster.success("Collaboration is published successfully");
       fetchCollaboration();
     } catch (e) {
       console.error(e);
@@ -145,6 +148,13 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         flex: 1,
       }}
     >
+      <View
+        style={{
+          zIndex: 1000,
+        }}
+      >
+        <Toast />
+      </View>
       <CollaborationHeader collaboration={collaboration} />
 
       {collaboration.status === "draft" && (
