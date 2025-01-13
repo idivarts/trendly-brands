@@ -8,7 +8,7 @@ import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import { Brand } from "@/types/Brand";
 import { FirestoreDB } from "@/utils/firestore";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
+import { useAuthContext, useAWSContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import BrandProfile from "@/components/brand-profile";
 import fnStyles from "@/styles/onboarding/brand.styles";
@@ -37,9 +37,10 @@ const OnboardingScreen = () => {
   const theme = useTheme();
   const styles = fnStyles(theme);
   const { firstBrand } = useLocalSearchParams();
-  const { uploadImageBytes } = useFirebaseStorageContext();
+  const { uploadFileUri } = useAWSContext();
   const { setSelectedBrand } = useBrandContext();
   const { manager: user } = useAuthContext();
+
 
   const handleCreateBrand = async () => {
     setIsSubmitting(true);
@@ -59,11 +60,13 @@ const OnboardingScreen = () => {
 
     let imageUrl = "";
     if (brandData.image) {
-      const blob = await fetch(brandData.image).then((res) => res.blob());
-      imageUrl = await uploadImageBytes(
-        blob,
-        `brands/${brandData.name}-${Date.now()}`
-      );
+      const uploadedImage = await uploadFileUri({
+        id: brandData.image,
+        localUri: brandData.image,
+        uri: brandData.image,
+        type: "image",
+      });
+      imageUrl = uploadedImage.imageUrl;
     }
 
     if (user) {

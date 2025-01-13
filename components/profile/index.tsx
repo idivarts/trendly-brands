@@ -8,11 +8,10 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { TextInput, Button, Avatar } from "react-native-paper";
+import { TextInput, Button } from "react-native-paper";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Colors from "@/constants/Colors";
-import { PLACEHOLDER_PERSON_IMAGE } from "@/constants/Placeholder";
-import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
+import { useAuthContext } from "@/contexts";
 import { useTheme } from "@react-navigation/native";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
