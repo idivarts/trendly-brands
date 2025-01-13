@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, Pressable } from "react-native";
 import Swiper from "react-native-swiper";
 import { Title, Paragraph } from "react-native-paper";
 import stylesFn from "@/styles/tab1.styles";
@@ -11,7 +11,12 @@ import { useRouter } from "expo-router";
 import { imageUrl } from "@/utils/url";
 import Button from "@/components/ui/button";
 import SocialButton from "@/components/ui/button/social-button";
-import { faEnvelopeOpen, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowRight,
+  faEnvelopeOpen,
+  faUserPlus,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 const PreSignIn = () => {
   const theme = useTheme();
@@ -42,56 +47,83 @@ const PreSignIn = () => {
           { backgroundColor: Colors(theme).primary },
         ]}
         paginationStyle={styles.pagination}
+        loop={false}
       >
-        {
-          slides.map((slide) => (
-            <View style={styles.slide} key={slide.key}>
-              {
-                slide.key !== "connect" && (
-                  <View
-                    style={styles.skipButtonContainer}
-                  >
-                    <Button
-                      mode="outlined"
-                      onPress={() => {
-                        skipToConnect();
-                      }}
-                    >
-                      Skip
-                    </Button>
-                  </View>
-                )
-              }
-              <View style={styles.imageContainer}>
-                <Image source={imageUrl(slide.image)} style={styles.image} />
+        {slides.map((slide) => (
+          <View style={styles.slide} key={slide.key}>
+            {slide.key !== "connect" && (
+              <View style={styles.skipButtonContainer}>
+                <Button
+                  mode="outlined"
+                  onPress={() => {
+                    skipToConnect();
+                  }}
+                  buttonColor={Colors(theme).primary}
+                  textColor={Colors(theme).white}
+                >
+                  Skip
+                </Button>
               </View>
-              <Title style={[styles.title, { color: Colors(theme).primary }]}>
-                {slide.title}
-              </Title>
-              <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
-              {
-                slide.key === "connect" && (
-                  <View style={styles.socialContainer}>
-                    <SocialButton
-                      icon={faUserPlus}
-                      label="Create New Account"
-                      onPress={() => {
-                        router.push("/create-new-account");
-                      }}
-                    />
-                    <SocialButton
-                      icon={faEnvelopeOpen}
-                      label="Login"
-                      onPress={() => {
-                        router.push("/login");
-                      }}
-                    />
-                  </View>
-                )
-              }
+            )}
+            <View style={styles.imageContainer}>
+              <Image source={imageUrl(slide.image)} style={styles.image} />
             </View>
-          ))
-        }
+            <Title style={[styles.title, { color: Colors(theme).primary }]}>
+              {slide.title}
+            </Title>
+            <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
+            {slide.key !== "connect" && (
+              <Pressable
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 15,
+                  backgroundColor: Colors(theme).primary,
+                  paddingHorizontal: 20,
+                  paddingVertical: 10,
+                  borderRadius: 5,
+                  gap: 10,
+                }}
+                onPress={() => {
+                  swiperRef.current?.scrollBy(1);
+                }}
+              >
+                <Text
+                  style={{
+                    color: Colors(theme).white,
+                    fontSize: 16,
+                  }}
+                >
+                  Next
+                </Text>
+                <FontAwesomeIcon
+                  icon={faArrowRight}
+                  size={16}
+                  color={Colors(theme).white}
+                />
+              </Pressable>
+            )}
+            {slide.key === "connect" && (
+              <View style={styles.socialContainer}>
+                <SocialButton
+                  icon={faUserPlus}
+                  label="Create New Account"
+                  onPress={() => {
+                    router.push("/create-new-account");
+                  }}
+                />
+                <SocialButton
+                  icon={faEnvelopeOpen}
+                  label="Login"
+                  onPress={() => {
+                    router.push("/login");
+                  }}
+                />
+              </View>
+            )}
+          </View>
+        ))}
       </Swiper>
 
       {error && <Text style={{ color: "red" }}>Error: {error}</Text>}

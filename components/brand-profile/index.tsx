@@ -39,7 +39,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
       ...brandData,
       image,
     });
-  }
+  };
 
   return (
     <ScrollView
@@ -99,6 +99,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
               },
             })
           }
+          autoCapitalize="none"
         />
       </View>
       <ContentWrapper
@@ -115,8 +116,14 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
             />
           }
           buttonLabel="See Other Options"
-          initialItemsList={includeSelectedItems(BRAND_INDUSTRIES, brandData.profile?.industries || [])}
-          initialMultiselectItemsList={includeSelectedItems(INITIAL_BRAND_INDUSTRIES, brandData.profile?.industries || [])}
+          initialItemsList={includeSelectedItems(
+            BRAND_INDUSTRIES,
+            brandData.profile?.industries || []
+          )}
+          initialMultiselectItemsList={includeSelectedItems(
+            INITIAL_BRAND_INDUSTRIES,
+            brandData.profile?.industries || []
+          )}
           onSelectedItemsChange={(value) => {
             setBrandData({
               ...brandData,
@@ -145,10 +152,12 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
           }
           buttonLabel="See Other Options"
           initialItemsList={includeSelectedItems(
-            INFLUENCER_CATEGORIES, brandData.preferences?.influencerCategories || [],
+            INFLUENCER_CATEGORIES,
+            brandData.preferences?.influencerCategories || []
           )}
           initialMultiselectItemsList={includeSelectedItems(
-            INITIAL_INFLUENCER_CATEGORIES, brandData.preferences?.influencerCategories || [],
+            INITIAL_INFLUENCER_CATEGORIES,
+            brandData.preferences?.influencerCategories || []
           )}
           onSelectedItemsChange={(value) => {
             setBrandData({
@@ -194,11 +203,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         />
       </ContentWrapper>
 
-      {
-        type === "create" && action && (
-          action
-        )
-      }
+      {type === "create" && action && action}
     </ScrollView>
   );
 };

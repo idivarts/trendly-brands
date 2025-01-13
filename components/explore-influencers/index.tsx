@@ -258,7 +258,6 @@ const ExploreInfluencers = () => {
         enablePanDownToClose={true}
         containerOffset={containerOffset}
         topInset={insets.top}
-        bottomInset={insets.bottom}
       >
         <BottomSheetScrollView>
           <ProfileBottomSheet
