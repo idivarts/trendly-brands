@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View } from "react-native";
-import { Button } from "react-native-paper";
+import { ActivityIndicator, View } from "react-native";
+import { Button, Portal } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@react-navigation/native";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
@@ -14,6 +14,7 @@ import BrandProfile from "@/components/brand-profile";
 import fnStyles from "@/styles/onboarding/brand.styles";
 import ScreenHeader from "@/components/ui/screen-header";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/constants/Colors";
 
 const OnboardingScreen = () => {
   const [brandData, setBrandData] = useState<Partial<Brand>>({
@@ -50,8 +51,7 @@ const OnboardingScreen = () => {
     }
 
     if (!brandData.name) {
-
-      Toaster.error('Brand name is required');
+      Toaster.error("Brand name is required");
       setIsSubmitting(false);
 
       return;
@@ -130,6 +130,24 @@ const OnboardingScreen = () => {
           type="create"
         />
       </View>
+      {isSubmitting && (
+        <Portal>
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: Colors(theme).backdrop,
+            }}
+          >
+            <ActivityIndicator color={Colors(theme).primary} />
+          </View>
+        </Portal>
+      )}
     </AppLayout>
   );
 };

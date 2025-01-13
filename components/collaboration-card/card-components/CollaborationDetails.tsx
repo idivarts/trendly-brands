@@ -88,6 +88,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           flexDirection: "row",
           marginTop: 10,
           flexWrap: "wrap",
+          rowGap: 10,
         }}
       >
         <ChipCard
@@ -97,36 +98,27 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           chipIcon={faDollar}
         />
         <ChipCard chipText={location.type} chipIcon={faMap} />
-        <ChipCard
-          chipText={
-            platform.length > 1
-              ? platform[0] + "+" + (platform.length - 1)
-              : platform[0]
-          }
-          chipIcon={
-            platform[0] === "Instagram"
-              ? faInstagram
-              : platform[0] === "Facebook"
-              ? faFacebook
-              : platform[0] === "Youtube"
-              ? faYoutube
-              : faInstagram
-          }
-        />
-      </View>
-      {contentType && contentType.length > 0 && (
-        <View
-          style={{
-            flexDirection: "row",
-            marginTop: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          {contentType.map((content, index) => (
+        {platform &&
+          platform.map((content, index) => (
+            <ChipCard
+              key={index}
+              chipText={content}
+              chipIcon={
+                content === "Instagram"
+                  ? faInstagram
+                  : content === "Facebook"
+                  ? faFacebook
+                  : content === "Youtube"
+                  ? faYoutube
+                  : faInstagram
+              }
+            />
+          ))}
+        {contentType &&
+          contentType.map((content, index) => (
             <ChipCard key={index} chipText={content} chipIcon={faCoins} />
           ))}
-        </View>
-      )}
+      </View>
     </View>
   );
 };

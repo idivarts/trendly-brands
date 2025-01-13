@@ -35,6 +35,7 @@ const fnStyles = (theme: Theme) =>
     input: {
       marginBottom: 15,
       backgroundColor: Colors(theme).background,
+      color: Colors(theme).text,
     },
     button: {
       marginTop: 20,
