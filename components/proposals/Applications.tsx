@@ -226,7 +226,6 @@ const Applications = () => {
             contentContainerStyle={{
               gap: 16,
               paddingBottom: 24,
-              alignItems: xl ? "center" : "stretch",
             }}
             refreshControl={
               <RefreshControl
