@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, ScrollView, Pressable, Dimensions } from "react-native";
-import { Text, Card, Paragraph, Button, Portal } from "react-native-paper";
+import { Text, Card, Portal } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import Colors from "@/constants/Colors";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import { processRawAttachment } from "@/utils/attachments";
-import { formatDistanceToNow } from "date-fns";
 import {
   IApplications,
   ICollaboration,
@@ -22,6 +21,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import FeedbackModal from "./FeedbackModal";
 import { router } from "expo-router";
+import { formatTimeToNow } from "@/utils/date";
 
 interface CollaborationDetailsContentProps {
   collaborationDetail: ICollaboration;
@@ -86,9 +86,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     paddingRight: 8,
                   }}
                 >
-                  {formatDistanceToNow(props.collaborationDetail.timeStamp, {
-                    addSuffix: true,
-                  })}
+                  {formatTimeToNow(props.collaborationDetail.timeStamp)}
                 </Text>
               ) : null}
             </View>

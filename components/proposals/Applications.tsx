@@ -4,7 +4,7 @@ import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { ActivityIndicator, FlatList } from "react-native";
@@ -24,6 +24,9 @@ import CollaborationDetails from "../collaboration-card/card-components/Collabor
 import { DUMMY_INFLUENCER } from "@/constants/Influencer";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
 import { Pressable } from "react-native-gesture-handler";
+import Button from "../ui/button";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -46,6 +49,7 @@ const Applications = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const { xl } = useBreakpoints();
+  const { fetchNewCollaborations } = useLocalSearchParams();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -58,6 +62,7 @@ const Applications = () => {
       if (!selectedBrand) {
         return;
       }
+
       const collaborationCol = collection(FirestoreDB, "collaborations");
       const q = query(
         collaborationCol,
@@ -119,6 +124,12 @@ const Applications = () => {
   };
 
   useEffect(() => {
+    if (fetchNewCollaborations === "true") {
+      fetchProposals();
+    }
+  }, []);
+
+  useEffect(() => {
     fetchProposals();
   }, [user, selectedBrand]);
 
@@ -141,6 +152,7 @@ const Applications = () => {
       style={{
         width: "100%",
         flex: 1,
+        position: "relative",
       }}
     >
       {filteredProposals.length === 0 ? (
@@ -148,8 +160,8 @@ const Applications = () => {
           image={require("@/assets/images/illustration6.png")}
           subtitle="Start Applying today and get exclusive collabs"
           title="No Applications yet"
-          action={() => router.push("/collaborations")}
-          actionLabel="Explore Collaborations"
+          action={() => router.push("/(modal)/create-collaboration")}
+          actionLabel="Create Collaboration"
         />
       ) : (
         <View style={{ flex: 1 }}>
@@ -254,6 +266,39 @@ const Applications = () => {
           key={selectedCollabId}
         />
       )}
+      {
+        filteredProposals.length !== 0 && (
+          <View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              left: 0,
+              paddingTop: 16,
+              paddingHorizontal: 16,
+            }}
+          >
+            <Button
+              onPress={() => {
+                router.push({
+                  pathname: "/(modal)/create-collaboration",
+                });
+              }}
+            >
+              <FontAwesomeIcon
+                icon={faPlus}
+                color="white"
+                size={14}
+                style={{
+                  marginRight: 8,
+                  marginTop: -2,
+                }}
+              />
+              Create Collaboration
+            </Button>
+          </View>
+        )
+      }
     </View>
   );
 };

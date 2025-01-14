@@ -5,11 +5,11 @@ import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/CollaborationCard.styles";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { router } from "expo-router";
-import { formatDistanceToNow } from "date-fns";
 import Colors from "@/constants/Colors";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faEllipsis } from "@fortawesome/free-solid-svg-icons";
 import Tag from "../ui/tag";
+import { formatTimeToNow } from "@/utils/date";
 
 export interface CollaborationAdCardProps extends ICollaboration {
   name: string;
@@ -67,7 +67,7 @@ const JobCard = (props: CollaborationAdCardProps) => {
         {/* Posted Date and Cost */}
         <View style={styles.infoRow}>
           <Text style={styles.infoText}>
-            Posted: {formatDistanceToNow(datePosted, { addSuffix: true })}
+            Posted: {formatTimeToNow(datePosted)}
           </Text>
         </View>
 

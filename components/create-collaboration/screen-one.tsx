@@ -16,7 +16,6 @@ import Button from "../ui/button";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import DragAndDropNative from "@/shared-uis/components/grid/native/DragAndDropNative";
 import DragAndDropWeb from "@/shared-uis/components/grid/web/DragAndDropWeb";
-import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
@@ -129,6 +128,8 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           <TextInput
             label="Collaboration Name"
             mode="outlined"
+            multiline
+            numberOfLines={2}
             onChangeText={(text) => {
               if (!isEdited) {
                 setIsEdited(true);
@@ -144,7 +145,11 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           <TextInput
             label="About this Collaboration"
             mode="outlined"
-            // multiline
+            multiline
+            numberOfLines={4}
+            style={{
+              minHeight: 100,
+            }}
             onChangeText={(text) => {
               setCollaboration({
                 ...collaboration,

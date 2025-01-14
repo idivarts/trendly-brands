@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Platform, Pressable, ScrollView } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 import { View } from "../theme/Themed";
 import { useTheme } from "@react-navigation/native";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
@@ -35,7 +35,8 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   return (
-    <View
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{
         flex: 1,
         paddingTop: 8,
@@ -150,7 +151,7 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
         cancelText="Discard"
         description="Are you sure you want to discard the changes? You can save as draft instead"
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
