@@ -1,4 +1,5 @@
 import { NativeAssetItem, WebAssetItem } from "@/types/Asset";
+import { processAttachments } from "@/utils/attachments";
 import { useState } from "react";
 
 interface useAssetsType {
@@ -17,10 +18,12 @@ const useAssets = (): useAssetsType => {
 
   const handleAssetsUpdateNative = (items: NativeAssetItem[]) => {
     setNativeAssets(items);
+    setAttachments(processAttachments(items));
   }
 
   const handleAssetsUpdateWeb = (items: WebAssetItem[]) => {
     setWebAssets(items);
+    setAttachments(processAttachments(items));
   }
 
   return {

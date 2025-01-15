@@ -1,22 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { View, Image, ScrollView, Pressable, Linking } from "react-native";
-import { Text, Card, Paragraph, Button, Portal } from "react-native-paper";
+import { View, ScrollView, Pressable, Linking } from "react-native";
+import { Text, Card, Button, Portal } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { FirestoreDB } from "@/utils/firestore";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { CollaborationDetail } from ".";
 import {
   faCheckCircle,
   faCoins,
-  faDollar,
   faDollarSign,
   faFilm,
   faHouseLaptop,
-  faMap,
   faPanorama,
-  faStar,
-  faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Colors from "@/constants/Colors";
@@ -30,13 +26,15 @@ import {
   faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import { PLACEHOLDER_IMAGE } from "@/constants/Placeholder";
 import BrandModal from "./modal/BrandModal";
 import ManagerModal from "./modal/ManagerModal";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { formatTimeToNow } from "@/utils/date";
+import { Contract } from "@/types/Contract";
+import RatingSection from "@/shared-uis/components/rating-section";
+import { useContractContext } from "@/contexts";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -49,6 +47,11 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   const [managerDetails, setManagerDetails] = React.useState<any>();
   const [brandModalVisible, setBrandModalVisible] = useState(false);
   const [managerModalVisible, setManagerModalVisible] = useState(false);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+
+  const {
+    getContractsByCollaborationId,
+  } = useContractContext();
 
   const fetchManagerDetails = async () => {
     const managerRef = doc(
@@ -79,33 +82,45 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     });
   };
 
-  const renderStars = (rating: number) => {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    return (
-      <>
-        {Array.from({ length: fullStars }, (_, i) => (
-          <FontAwesomeIcon
-            key={i}
-            icon={faStar}
-            size={16}
-            color={Colors(theme).yellow}
-          />
-        ))}
-        {hasHalfStar && (
-          <FontAwesomeIcon
-            icon={faStarHalfStroke}
-            size={16}
-            color={Colors(theme).yellow}
-          />
-        )}
-      </>
+  const fetchContracts = async () => {
+    const fetchedContracts = await getContractsByCollaborationId(
+      props.collaboration.id
     );
+
+    setContracts(fetchedContracts);
   };
+
+  const getFeedbacks = (contract: Contract[]) => {
+    let feedbacks: {
+      ratings?: number;
+      review?: string;
+    }[] = [];
+
+    contract.forEach((contract) => {
+      if (contract.feedbackFromInfluencer) {
+        feedbacks.push({
+          ratings: contract.feedbackFromInfluencer.ratings,
+          review: contract.feedbackFromInfluencer.feedbackReview,
+        });
+      }
+
+      if (contract.feedbackFromBrand) {
+        feedbacks.push({
+          ratings: contract.feedbackFromBrand.ratings,
+          review: contract.feedbackFromBrand.feedbackReview,
+        });
+      }
+    });
+
+    return feedbacks;
+  }
 
   useEffect(() => {
     fetchManagerDetails();
+  }, []);
+
+  useEffect(() => {
+    fetchContracts();
   }, []);
 
   return (
@@ -176,11 +191,13 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             }}
           >
             <Card.Content>
+              <RatingSection
+                feedbacks={getFeedbacks(contracts)}
+              />
               <Pressable
                 style={{ flex: 1, flexDirection: "column", gap: 16 }}
                 onPress={() => setBrandModalVisible(true)}
               >
-                <View style={{ flexDirection: "row" }}>{renderStars(4.5)}</View>
                 <View
                   style={{
                     flexDirection: "row",
@@ -298,19 +315,19 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             </Text>
             {props.collaboration.promotionType ===
               PromotionType.PAID_COLLAB && (
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: Colors(theme).text,
-                }}
-              >
-                Budget:
-                {props.collaboration?.budget?.min ===
-                props.collaboration?.budget?.max
-                  ? `$${props.collaboration?.budget?.min}`
-                  : `$${props.collaboration?.budget?.min} - $${props.collaboration?.budget?.max}`}
-              </Text>
-            )}
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: Colors(theme).text,
+                  }}
+                >
+                  Budget:
+                  {props.collaboration?.budget?.min ===
+                    props.collaboration?.budget?.max
+                    ? `$${props.collaboration?.budget?.min}`
+                    : `$${props.collaboration?.budget?.min} - $${props.collaboration?.budget?.max}`}
+                </Text>
+              )}
           </View>
           <View
             style={{
@@ -341,10 +358,10 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Instagram"
                       ? faInstagram
                       : content === "Facebook"
-                      ? faFacebook
-                      : content === "Youtube"
-                      ? faYoutube
-                      : faInstagram
+                        ? faFacebook
+                        : content === "Youtube"
+                          ? faYoutube
+                          : faInstagram
                   }
                 />
               ))}
@@ -357,8 +374,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Posts"
                       ? faPanorama
                       : content === "Reels"
-                      ? faFilm
-                      : faCoins
+                        ? faFilm
+                        : faCoins
                   }
                 />
               ))}
@@ -387,8 +404,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   latitudeDelta: 0.0922,
                   longitudeDelta: 0.042,
                 }}
-                onMapRegionChange={(region) => {}}
-                onFormattedAddressChange={(address) => {}}
+                onMapRegionChange={(region) => { }}
+                onFormattedAddressChange={(address) => { }}
               />
               <Text style={{ fontSize: 16, color: Colors(theme).text }}>
                 {props.collaboration.location.name}

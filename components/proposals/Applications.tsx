@@ -205,21 +205,22 @@ const Applications = () => {
                     <Text style={{ color: Colors(theme).white }}>Draft</Text>
                   </View>
                 )}
+
+                <CollaborationDetails
+                  collabDescription={item.description || ""}
+                  name={item.name || ""}
+                  contentType={item.contentFormat}
+                  location={item.location}
+                  platform={item.platform}
+                  promotionType={item.promotionType}
+                  onOpenBottomSheet={openBottomSheet}
+                  collabId={item.id}
+                />
                 <Pressable
                   onPress={() =>
                     router.push(`/collaboration-details/${item.id}`)
                   }
                 >
-                  <CollaborationDetails
-                    collabDescription={item.description || ""}
-                    name={item.name || ""}
-                    contentType={item.contentFormat}
-                    location={item.location}
-                    platform={item.platform}
-                    promotionType={item.promotionType}
-                    onOpenBottomSheet={openBottomSheet}
-                    collabId={item.id}
-                  />
                   <CollaborationStats
                     budget={item.budget}
                     collabID={item.id}

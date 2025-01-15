@@ -18,6 +18,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
 
 export interface CollaborationDetail extends ICollaboration {
+  id: string;
   brandDescription: string;
   brandName: string;
   logo: string;
@@ -66,6 +67,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       const brandData = brandSnapshot.data() as IBrands;
 
       setCollaboration({
+        id: snapshot.id,
         ...data,
         logo: brandData?.image || "",
         brandName: brandData?.name || "Unknown Brand",
