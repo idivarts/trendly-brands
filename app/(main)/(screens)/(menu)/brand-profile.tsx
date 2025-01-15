@@ -1,25 +1,29 @@
 import React, { useRef, useState } from "react";
-import { Pressable } from "react-native";
+import { ActivityIndicator, Pressable } from "react-native";
 import Toast from "react-native-toast-message";
 
 import { Brand } from "@/types/Brand";
 import { Text } from "@/components/theme/Themed";
-import { useAuthContext, useFirebaseStorageContext } from "@/contexts";
+import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import BrandProfile from "@/components/brand-profile";
 import ScreenHeader from "@/components/ui/screen-header";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 
 const BrandProfileScreen = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
   const {
     updateBrand,
     selectedBrand,
     setSelectedBrand,
   } = useBrandContext();
-  const {
-    uploadImageBytes,
-  } = useFirebaseStorageContext();
+  const { uploadFileUri } = useAWSContext();
+
+  const theme = useTheme();
 
   const {
     manager: user,
@@ -38,12 +42,16 @@ const BrandProfileScreen = () => {
       Toaster.error('Brand name is required');
     }
 
+    setIsSaving(true);
     let imageUrl = "";
-    if (brandData.image !== brandImage.current) {
-      const blob = await fetch(
-        brandData.image as string,
-      ).then((res) => res.blob());
-      imageUrl = await uploadImageBytes(blob, `brands/${brandData.name}-${Date.now()}`);
+    if (brandData.image && brandData.image !== brandImage.current) {
+      const uploadedImage = await uploadFileUri({
+        id: brandData.image,
+        localUri: brandData.image,
+        uri: brandData.image,
+        type: "image",
+      });
+      imageUrl = uploadedImage.imageUrl;
     }
 
     await updateBrand(
@@ -57,6 +65,8 @@ const BrandProfileScreen = () => {
       setSelectedBrand(brandData as Brand);
     }).catch((error) => {
       Toaster.error('Error saving preferences');
+    }).finally(() => {
+      setIsSaving(false);
     });
   }
 
@@ -68,8 +78,22 @@ const BrandProfileScreen = () => {
         rightActionButton={
           <Pressable
             onPress={handleSave}
-            style={{ padding: 10 }}
+            style={{
+              padding: 10,
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 8,
+              flexDirection: "row",
+            }}
           >
+            {
+              isSaving && (
+                <ActivityIndicator
+                  size="small"
+                  color={Colors(theme).primary}
+                />
+              )
+            }
             <Text>Save</Text>
           </Pressable>
         }

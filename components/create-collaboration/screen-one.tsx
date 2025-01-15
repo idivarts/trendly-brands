@@ -7,7 +7,6 @@ import { Collaboration } from "@/types/Collaboration";
 import { generateEmptyAssets } from "@/shared-uis/utils/profile";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
-import { MultiRangeSlider } from "@/shared-uis/components/multislider";
 import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
 import { processRawAttachment } from "@/utils/attachments";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
@@ -16,7 +15,6 @@ import Button from "../ui/button";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import DragAndDropNative from "@/shared-uis/components/grid/native/DragAndDropNative";
 import DragAndDropWeb from "@/shared-uis/components/grid/web/DragAndDropWeb";
-import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
@@ -55,22 +53,20 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
     if (
       collaboration.budget?.min
       && collaboration.budget?.max
-      && collaboration.budget?.min === 10000
-      && collaboration.budget?.max === 10000
+      && collaboration.budget?.min > collaboration.budget?.max
     ) {
-      return 'More than Rs. 10k';
+      return `Rs. ${convertToKUnits(Math.max(collaboration.budget?.min, collaboration.budget?.max))}`;
     }
 
     if (
-      collaboration.budget?.min
-      && collaboration.budget?.max
-      && collaboration.budget?.min === collaboration.budget?.max
+      collaboration.budget?.min === collaboration.budget?.max
       || collaboration.budget?.max === 0
+      || !collaboration.budget?.max
     ) {
       return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}`;
     }
 
-    return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}-${convertToKUnits(collaboration.budget?.max || 10000)}`;
+    return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}-${convertToKUnits(collaboration.budget?.max || 500)}`;
   }, [collaboration.budget]);
 
   const items = [
@@ -129,6 +125,8 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           <TextInput
             label="Collaboration Name"
             mode="outlined"
+            multiline
+            numberOfLines={2}
             onChangeText={(text) => {
               if (!isEdited) {
                 setIsEdited(true);
@@ -144,7 +142,11 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           <TextInput
             label="About this Collaboration"
             mode="outlined"
-            // multiline
+            multiline
+            numberOfLines={4}
+            style={{
+              minHeight: 100,
+            }}
             onChangeText={(text) => {
               setCollaboration({
                 ...collaboration,
@@ -194,27 +196,57 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                 fontSize: 16,
               }}
             >
-              <MultiRangeSlider
-                containerStyle={{
-                  paddingHorizontal: 8,
+              <View
+                style={{
+                  flexDirection: 'row',
+                  gap: 8,
                 }}
-                maxValue={10000}
-                minValue={0}
-                step={100}
-                sliderLength={352}
-                theme={theme}
-                onValuesChange={(values) => {
-                  setCollaboration({
-                    ...collaboration,
-                    budget: {
-                      min: values[0],
-                      max: values[1],
-                    },
-                  });
-                }}
-                allowOverlap
-                values={[collaboration.budget?.min || 0, collaboration.budget?.max || 10000]}
-              />
+              >
+                <TextInput
+                  keyboardType="number-pad"
+                  label="Min (Rs)"
+                  mode="outlined"
+                  onChangeText={(text) => {
+                    if (collaboration.budget?.max && (parseInt(text) > collaboration.budget?.max)) {
+                      Toaster.error("Min budget can't be greater than max");
+                    }
+
+                    setCollaboration({
+                      ...collaboration,
+                      budget: {
+                        ...collaboration.budget,
+                        min: parseInt(text),
+                      },
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                  }}
+                  value={collaboration.budget?.min === 0 ? '0' : collaboration.budget?.min ? collaboration.budget?.min.toString() : ''}
+                />
+                <TextInput
+                  keyboardType="number-pad"
+                  label="Max (Rs)"
+                  mode="outlined"
+                  onChangeText={(text) => {
+                    if (collaboration.budget?.min && (parseInt(text) < collaboration.budget?.min)) {
+                      Toaster.error("Max budget can't be less than min");
+                    }
+
+                    setCollaboration({
+                      ...collaboration,
+                      budget: {
+                        ...collaboration.budget,
+                        max: parseInt(text),
+                      },
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                  }}
+                  value={collaboration.budget?.max === 0 ? '0' : collaboration.budget?.max ? collaboration.budget?.max.toString() : ''}
+                />
+              </View>
             </ContentWrapper>
           )
         }
@@ -249,6 +281,15 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
               Toaster.error("Collaboration name is required");
               return;
             }
+
+            if (
+              collaboration.budget?.min && collaboration.budget?.max
+              && collaboration.budget?.min > collaboration.budget?.max
+            ) {
+              Toaster.error("Min budget can't be greater than max");
+              return;
+            }
+
             setScreen(2);
           }}
         >

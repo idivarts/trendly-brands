@@ -49,7 +49,8 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     name: "",
     link: "",
   });
-  const [questions, setQuestions] = useState(collaboration.questionsToInfluencers || []);
+  const newQuestions = collaboration.questionsToInfluencers || [""];
+  const [questions, setQuestions] = useState(newQuestions.length === 0 ? [""] : newQuestions);
 
   const handleAddExternalLink = () => {
     if (!externalLink.name || !externalLink.link) {
@@ -100,7 +101,12 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     });
 
     setIsQuestionsModalVisible(false);
-    setQuestions(newQuestions);
+
+    if (newQuestions.length === 0) {
+      setQuestions([...newQuestions, ""]);
+    } else {
+      setQuestions(newQuestions);
+    }
   }
 
   return (
@@ -321,6 +327,9 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         />
         <TextInput
           label="Link URL"
+          keyboardType="url"
+          textContentType="URL"
+          autoCapitalize="none"
           mode="outlined"
           onChangeText={(text) => {
             setExternalLink({
@@ -361,7 +370,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         contentContainerStyle={styles.modalContainer}
         onDismiss={() => {
           setIsQuestionsModalVisible(false);
-          setQuestions(collaboration.questionsToInfluencers || []);
+          setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
         }}
         visible={isQuestionsModalVisible}
       >
@@ -423,7 +432,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
               marginRight: 8,
             }}
           />
-          Add Questions
+          Add Question
         </Button>
         <Button
           onPress={submitNewQuestions}

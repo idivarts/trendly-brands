@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { GooglePlacesAutocomplete, GooglePlacesAutocompleteRef } from 'react-native-google-places-autocomplete';
 
 import { Collaboration } from "@/types/Collaboration";
 import {
@@ -20,7 +21,8 @@ import Colors from "@/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import ScreenLayout from "./screen-layout";
-import TextInput from "../ui/text-input";
+import { calculateDelta, fetchLatLngFromPlaceId } from "@/utils/map";
+import { Platform } from "react-native";
 
 interface ScreenTwoProps {
   collaboration: Partial<Collaboration>;
@@ -40,7 +42,10 @@ interface ScreenTwoProps {
       longitudeDelta: number;
     }>>;
   };
-  onFormattedAddressChange: (address: string) => void;
+  onLocationChange: (
+    latlong: { lat: number; long: number },
+    address: string,
+  ) => void;
   saveAsDraft: () => Promise<void>;
   setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
@@ -52,7 +57,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
   isEdited,
   isSubmitting,
   mapRegion,
-  onFormattedAddressChange,
+  onLocationChange,
   saveAsDraft,
   setCollaboration,
   setScreen,
@@ -60,15 +65,23 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
 }) => {
   const theme = useTheme();
 
+  const mapInputRef = useRef<GooglePlacesAutocompleteRef>(null);
+
+  useEffect(() => {
+    if (collaboration.location?.name) {
+      mapInputRef.current?.setAddressText(collaboration.location.name);
+    }
+  }, [collaboration.location?.name]);
+
   const numberOfInfluencersNeededText = useMemo(() => {
     if (
       collaboration.numberOfInfluencersNeeded
-      && collaboration.numberOfInfluencersNeeded >= 101
+      && collaboration.numberOfInfluencersNeeded >= 11
     ) {
-      return 'More than 100';
+      return '>10';
     }
 
-    return `${collaboration.numberOfInfluencersNeeded || 0}`;
+    return `${collaboration.numberOfInfluencersNeeded || 1}`;
   }, [collaboration.numberOfInfluencersNeeded]);
 
   return (
@@ -148,8 +161,8 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           }}
         >
           <MultiRangeSlider
-            minValue={0}
-            maxValue={101}
+            minValue={1}
+            maxValue={11}
             onValuesChange={(values) => {
               setCollaboration({
                 ...collaboration,
@@ -179,7 +192,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 }}
               />
             }
-            values={[collaboration.numberOfInfluencersNeeded || 0, 101]}
+            values={[collaboration.numberOfInfluencersNeeded || 1, 11]}
             step={1}
             theme={theme}
           />
@@ -219,28 +232,70 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         </ContentWrapper>
         {
           collaboration.location?.type === "On-Site" && (
-            <>
-              <TextInput
-                label="Location"
-                mode="outlined"
-                onChangeText={(text) => {
-                  setCollaboration({
-                    ...collaboration,
-                    location: {
-                      ...collaboration.location,
-                      type: collaboration.location?.type as string,
-                      name: text || "",
-                    },
-                  })
+            <View
+              style={{
+                gap: Platform.OS === 'web' ? 56 : 16,
+              }}
+            >
+              <GooglePlacesAutocomplete
+                placeholder='Location'
+                key={collaboration.location?.type}
+                ref={mapInputRef}
+                onPress={async (_data, details = null) => {
+                  if (!details || !details.place_id) {
+                    return;
+                  }
+
+                  await fetchLatLngFromPlaceId(details.place_id).then((latlong) => {
+                    if (!latlong) {
+                      return;
+                    }
+
+                    const delta = calculateDelta(latlong?.lat, latlong?.long);
+
+                    setCollaboration({
+                      ...collaboration,
+                      location: {
+                        latlong,
+                        type: collaboration.location?.type as string,
+                        name: _data.description || "",
+                      },
+                    });
+
+                    mapRegion.setState({
+                      latitude: latlong?.lat,
+                      longitude: latlong?.long,
+                      latitudeDelta: delta.latitudeDelta,
+                      longitudeDelta: delta.longitudeDelta,
+                    });
+                  });
                 }}
-                value={collaboration.location?.name}
+                query={{
+                  key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY!,
+                  language: 'en',
+                }}
+                styles={{
+                  container: {
+                    flex: 0,
+                    zIndex: 100,
+                  },
+                  textInput: {
+                    backgroundColor: Colors(theme).background,
+                    color: Colors(theme).text,
+                    borderColor: Colors(theme).primary,
+                    borderWidth: 1,
+                    borderRadius: 4,
+                  },
+                  listView: {
+                    backgroundColor: Colors(theme).background,
+                  },
+                }}
               />
               <CreateCollaborationMap
                 mapRegion={mapRegion.state}
-                onMapRegionChange={(region) => mapRegion.setState(region)}
-                onFormattedAddressChange={onFormattedAddressChange}
+                onLocationChange={onLocationChange}
               />
-            </>
+            </View>
           )
         }
 

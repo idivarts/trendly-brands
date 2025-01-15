@@ -3,8 +3,12 @@ import Colors from "@/constants/Colors";
 import {
   faCoins,
   faDollar,
+  faDollarSign,
   faEllipsisH,
+  faFilm,
+  faHouseLaptop,
   faMap,
+  faPanorama,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -17,6 +21,7 @@ import {
   faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { useRouter } from "expo-router";
 
 interface CollaborationDetailsProps {
   collabDescription: string;
@@ -40,6 +45,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
   onOpenBottomSheet,
 }) => {
   const theme = useTheme();
+  const router = useRouter();
+
   return (
     <View
       style={{
@@ -55,15 +62,24 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           marginBottom: 8,
         }}
       >
-        <Text
+        <Pressable
+          onPress={() =>
+            router.push(`/collaboration-details/${collabId}`)
+          }
           style={{
-            fontSize: 16,
-            fontWeight: "bold",
-            color: Colors(theme).text,
+            flex: 1,
           }}
         >
-          {name}
-        </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "bold",
+              color: Colors(theme).text,
+            }}
+          >
+            {name}
+          </Text>
+        </Pressable>
         <Pressable
           onPress={() => {
             onOpenBottomSheet(collabId);
@@ -76,57 +92,61 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           />
         </Pressable>
       </View>
-      <Text
-        style={{
-          color: Colors(theme).gray100,
-        }}
+      <Pressable
+        onPress={() =>
+          router.push(`/collaboration-details/${collabId}`)
+        }
       >
-        {collabDescription}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          marginTop: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <ChipCard
-          chipText={
-            promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
-          }
-          chipIcon={faDollar}
-        />
-        <ChipCard chipText={location.type} chipIcon={faMap} />
-        <ChipCard
-          chipText={
-            platform.length > 1
-              ? platform[0] + "+" + (platform.length - 1)
-              : platform[0]
-          }
-          chipIcon={
-            platform[0] === "Instagram"
-              ? faInstagram
-              : platform[0] === "Facebook"
-              ? faFacebook
-              : platform[0] === "Youtube"
-              ? faYoutube
-              : faInstagram
-          }
-        />
-      </View>
-      {contentType && contentType.length > 0 && (
+        <Text>
+          {collabDescription}
+        </Text>
         <View
           style={{
             flexDirection: "row",
             marginTop: 10,
             flexWrap: "wrap",
+            rowGap: 10,
           }}
         >
-          {contentType.map((content, index) => (
-            <ChipCard key={index} chipText={content} chipIcon={faCoins} />
-          ))}
+          <ChipCard
+            chipText={
+              promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
+            }
+            chipIcon={faDollarSign}
+          />
+          <ChipCard chipText={location.type} chipIcon={faHouseLaptop} />
+          {platform &&
+            platform.map((content, index) => (
+              <ChipCard
+                key={index}
+                chipText={content}
+                chipIcon={
+                  content === "Instagram"
+                    ? faInstagram
+                    : content === "Facebook"
+                      ? faFacebook
+                      : content === "Youtube"
+                        ? faYoutube
+                        : faInstagram
+                }
+              />
+            ))}
+          {contentType &&
+            contentType.map((content, index) => (
+              <ChipCard
+                key={index}
+                chipText={content}
+                chipIcon={
+                  content === "Posts"
+                    ? faPanorama
+                    : content === "Reels"
+                      ? faFilm
+                      : faCoins
+                }
+              />
+            ))}
         </View>
-      )}
+      </Pressable>
     </View>
   );
 };
