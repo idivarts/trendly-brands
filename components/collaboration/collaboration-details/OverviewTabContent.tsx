@@ -10,7 +10,11 @@ import {
   faCheckCircle,
   faCoins,
   faDollar,
+  faDollarSign,
+  faFilm,
+  faHouseLaptop,
   faMap,
+  faPanorama,
   faStar,
   faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
@@ -322,11 +326,11 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   ? "Paid"
                   : "Unpaid"
               }
-              chipIcon={faDollar}
+              chipIcon={faDollarSign}
             />
             <ChipCard
               chipText={props.collaboration.location.type}
-              chipIcon={faMap}
+              chipIcon={faHouseLaptop}
             />
             {props.collaboration.platform &&
               props.collaboration.platform.map((content, index) => (
@@ -346,7 +350,17 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
               ))}
             {props.collaboration.contentFormat &&
               props.collaboration.contentFormat.map((content, index) => (
-                <ChipCard key={index} chipText={content} chipIcon={faCoins} />
+                <ChipCard
+                  key={index}
+                  chipText={content}
+                  chipIcon={
+                    content === "Posts"
+                      ? faPanorama
+                      : content === "Reels"
+                      ? faFilm
+                      : faCoins
+                  }
+                />
               ))}
           </View>
 

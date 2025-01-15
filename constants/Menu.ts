@@ -1,9 +1,13 @@
-import { faGears, faUser } from "@fortawesome/free-solid-svg-icons";
+import {
+  faGears,
+  faUser,
+  faUsersBetweenLines,
+} from "@fortawesome/free-solid-svg-icons";
 
 export const MENU_ITEMS = [
   {
     id: "1",
-    icon: faUser,
+    icon: faUsersBetweenLines,
     title: "Members",
     href: "/preferences",
   },

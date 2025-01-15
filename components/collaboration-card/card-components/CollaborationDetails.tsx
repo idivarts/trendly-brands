@@ -3,8 +3,12 @@ import Colors from "@/constants/Colors";
 import {
   faCoins,
   faDollar,
+  faDollarSign,
   faEllipsisH,
+  faFilm,
+  faHouseLaptop,
   faMap,
+  faPanorama,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -95,9 +99,9 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           chipText={
             promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
           }
-          chipIcon={faDollar}
+          chipIcon={faDollarSign}
         />
-        <ChipCard chipText={location.type} chipIcon={faMap} />
+        <ChipCard chipText={location.type} chipIcon={faHouseLaptop} />
         {platform &&
           platform.map((content, index) => (
             <ChipCard
@@ -116,7 +120,17 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           ))}
         {contentType &&
           contentType.map((content, index) => (
-            <ChipCard key={index} chipText={content} chipIcon={faCoins} />
+            <ChipCard
+              key={index}
+              chipText={content}
+              chipIcon={
+                content === "Posts"
+                  ? faPanorama
+                  : content === "Reels"
+                  ? faFilm
+                  : faCoins
+              }
+            />
           ))}
       </View>
     </View>
