@@ -7,7 +7,6 @@ import { Collaboration } from "@/types/Collaboration";
 import { generateEmptyAssets } from "@/shared-uis/utils/profile";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
-import { MultiRangeSlider } from "@/shared-uis/components/multislider";
 import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
 import { processRawAttachment } from "@/utils/attachments";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";

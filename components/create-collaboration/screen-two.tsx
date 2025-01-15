@@ -21,7 +21,8 @@ import Colors from "@/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import ScreenLayout from "./screen-layout";
-import { fetchLatLngFromPlaceId } from "@/utils/map";
+import { calculateDelta, fetchLatLngFromPlaceId } from "@/utils/map";
+import { Platform } from "react-native";
 
 interface ScreenTwoProps {
   collaboration: Partial<Collaboration>;
@@ -41,7 +42,10 @@ interface ScreenTwoProps {
       longitudeDelta: number;
     }>>;
   };
-  onFormattedAddressChange: (address: string) => void;
+  onLocationChange: (
+    latlong: { lat: number; long: number },
+    address: string,
+  ) => void;
   saveAsDraft: () => Promise<void>;
   setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
@@ -53,7 +57,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
   isEdited,
   isSubmitting,
   mapRegion,
-  onFormattedAddressChange,
+  onLocationChange,
   saveAsDraft,
   setCollaboration,
   setScreen,
@@ -230,38 +234,40 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           collaboration.location?.type === "On-Site" && (
             <View
               style={{
-                gap: 16,
+                gap: Platform.OS === 'web' ? 56 : 16,
               }}
             >
               <GooglePlacesAutocomplete
                 placeholder='Location'
-                GooglePlacesDetailsQuery={{ fields: "geometry" }}
-                fetchDetails
+                key={collaboration.location?.type}
                 ref={mapInputRef}
                 onPress={async (_data, details = null) => {
                   if (!details || !details.place_id) {
                     return;
                   }
 
-                  const latLng = await fetchLatLngFromPlaceId(details.place_id);
+                  await fetchLatLngFromPlaceId(details.place_id).then((latlong) => {
+                    if (!latlong) {
+                      return;
+                    }
 
-                  setCollaboration({
-                    ...collaboration,
-                    location: {
-                      latlong: {
-                        lat: latLng?.lat,
-                        long: latLng?.lng,
+                    const delta = calculateDelta(latlong?.lat, latlong?.long);
+
+                    setCollaboration({
+                      ...collaboration,
+                      location: {
+                        latlong,
+                        type: collaboration.location?.type as string,
+                        name: _data.description || "",
                       },
-                      type: collaboration.location?.type as string,
-                      name: _data.description || "",
-                    },
-                  });
+                    });
 
-                  mapRegion.setState({
-                    latitude: latLng?.lng,
-                    longitude: latLng?.lat,
-                    latitudeDelta: 0.092,
-                    longitudeDelta: 0.190,
+                    mapRegion.setState({
+                      latitude: latlong?.lat,
+                      longitude: latlong?.long,
+                      latitudeDelta: delta.latitudeDelta,
+                      longitudeDelta: delta.longitudeDelta,
+                    });
                   });
                 }}
                 query={{
@@ -271,6 +277,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 styles={{
                   container: {
                     flex: 0,
+                    zIndex: 100,
                   },
                   textInput: {
                     backgroundColor: Colors(theme).background,
@@ -286,18 +293,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
               />
               <CreateCollaborationMap
                 mapRegion={mapRegion.state}
-                onFormattedAddressChange={(address) => {
-                  onFormattedAddressChange(address);
-
-                  setCollaboration({
-                    ...collaboration,
-                    location: {
-                      ...collaboration.location,
-                      type: "On-Site",
-                      name: address,
-                    },
-                  });
-                }}
+                onLocationChange={onLocationChange}
               />
             </View>
           )

@@ -17,7 +17,9 @@ export const fetchMapRegionAddress = async (lat: number, lng: number) => {
   return address;
 };
 
-export const fetchLatLngFromPlaceId = async (placeId: string) => {
+export const fetchLatLngFromPlaceId = async (
+  placeId: string
+): Promise<{ lat: number; long: number } | undefined> => {
   if (!placeId) {
     return;
   }
@@ -31,5 +33,17 @@ export const fetchLatLngFromPlaceId = async (placeId: string) => {
   const lat = result?.results?.[0]?.geometry?.location?.lat;
   const lng = result?.results?.[0]?.geometry?.location?.lng;
 
-  return { lat, lng };
+  return {
+    lat,
+    long: lng,
+  };
+};
+
+export const calculateDelta = (lat: number, long: number, rangeInKm = 1) => {
+  const earthRadius = 6371;
+  const latDelta = (rangeInKm / earthRadius) * (180 / Math.PI);
+  const lngDelta =
+    (rangeInKm / (earthRadius * Math.cos((lat * Math.PI) / 180))) *
+    (180 / Math.PI);
+  return { latitudeDelta: latDelta, longitudeDelta: lngDelta };
 };

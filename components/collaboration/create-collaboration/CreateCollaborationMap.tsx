@@ -12,13 +12,16 @@ import { fetchMapRegionAddress } from "@/utils/map";
 interface CreateCollaborationMapProps {
   mapRegion: any;
   onMapRegionChange?: (region: any) => void;
-  onFormattedAddressChange?: (address: string) => void;
+  onLocationChange?: (
+    latlong: { lat: number; long: number },
+    address: string,
+  ) => void;
 }
 
 const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
   mapRegion,
   onMapRegionChange,
-  onFormattedAddressChange,
+  onLocationChange,
 }) => {
   const [nativeMapRegion, setNativeMapRegion] = useState(mapRegion);
 
@@ -37,8 +40,14 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
       location.longitude
     );
 
-    if (onFormattedAddressChange) {
-      onFormattedAddressChange(address as string);
+    if (onLocationChange) {
+      onLocationChange(
+        {
+          lat: location.latitude,
+          long: location.longitude
+        },
+        address as string
+      );
     }
   };
 
@@ -50,8 +59,14 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
       region.longitude
     );
 
-    if (onFormattedAddressChange) {
-      onFormattedAddressChange(address as string);
+    if (onLocationChange) {
+      onLocationChange(
+        {
+          lat: region.latitude,
+          long: region.longitude,
+        },
+        address as string,
+      );
     }
   }
 

@@ -146,13 +146,17 @@ const CreateCollaboration = () => {
     }
   }, []);
 
-  const onFormattedAddressChange = (address: string) => {
+  const onLocationChange = (
+    latlong: { lat: number; long: number },
+    address: string,
+  ) => {
     setCollaboration({
       ...collaboration,
       location: {
         ...collaboration.location,
         type: "On-Site",
         name: address,
+        latlong,
       },
     });
   }
@@ -293,7 +297,7 @@ const CreateCollaboration = () => {
           state: mapRegion,
           setState: setMapRegion,
         }}
-        onFormattedAddressChange={onFormattedAddressChange}
+        onLocationChange={onLocationChange}
         saveAsDraft={saveAsDraft}
         setCollaboration={setCollaboration}
         setScreen={setScreen}
