@@ -11,8 +11,6 @@ import {
   faCoins,
   faDollar,
   faMap,
-  faStar,
-  faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Colors from "@/constants/Colors";
