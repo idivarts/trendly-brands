@@ -237,7 +237,7 @@ const Applications = () => {
             }}
             contentContainerStyle={{
               gap: 16,
-              paddingBottom: 24,
+              paddingBottom: 64,
             }}
             refreshControl={
               <RefreshControl
@@ -266,39 +266,37 @@ const Applications = () => {
           key={selectedCollabId}
         />
       )}
-      {
-        filteredProposals.length !== 0 && (
-          <View
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
-              left: 0,
-              paddingTop: 16,
-              paddingHorizontal: 16,
+      {filteredProposals.length !== 0 && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            left: 0,
+            paddingTop: 16,
+            paddingHorizontal: 16,
+          }}
+        >
+          <Button
+            onPress={() => {
+              router.push({
+                pathname: "/(modal)/create-collaboration",
+              });
             }}
           >
-            <Button
-              onPress={() => {
-                router.push({
-                  pathname: "/(modal)/create-collaboration",
-                });
+            <FontAwesomeIcon
+              icon={faPlus}
+              color="white"
+              size={14}
+              style={{
+                marginRight: 8,
+                marginTop: -2,
               }}
-            >
-              <FontAwesomeIcon
-                icon={faPlus}
-                color="white"
-                size={14}
-                style={{
-                  marginRight: 8,
-                  marginTop: -2,
-                }}
-              />
-              Create Collaboration
-            </Button>
-          </View>
-        )
-      }
+            />
+            Create Collaboration
+          </Button>
+        </View>
+      )}
     </View>
   );
 };
