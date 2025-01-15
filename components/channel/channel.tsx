@@ -14,6 +14,14 @@ import Colors from "@/constants/Colors";
 import { imageUrl } from "@/utils/url";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
+import {
+  AttachButton,
+  AttachmentPickerSelectionBar,
+  AudioRecordingButton,
+  CommandsButton,
+  MoreOptionsButton,
+  SendButton,
+} from "./components";
 
 const ChannelNative = () => {
   const [channel, setChannel] = useState<ChannelType | null>(null);
@@ -84,7 +92,15 @@ const ChannelNative = () => {
   const title = channelName + influencerName || 'Chat';
 
   return (
-    <Channel channel={channel} audioRecordingEnabled>
+    <Channel
+      AttachButton={AttachButton}
+      audioRecordingEnabled
+      channel={channel}
+      CommandsButton={CommandsButton}
+      MoreOptionsButton={MoreOptionsButton}
+      SendButton={SendButton}
+      StartAudioRecordingButton={AudioRecordingButton}
+    >
       <ScreenHeader
         title={title}
         rightAction
@@ -114,7 +130,9 @@ const ChannelNative = () => {
         }}
       />
       <MessageList />
-      <MessageInput />
+      <MessageInput
+        AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
+      />
     </Channel>
   );
 }
