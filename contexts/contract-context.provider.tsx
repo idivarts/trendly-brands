@@ -3,13 +3,15 @@ import {
   createContext,
   type PropsWithChildren,
 } from "react";
-import { updateDoc, doc, getDoc } from "firebase/firestore";
+import { updateDoc, doc, getDoc, collection, where, query, getDocs } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { Contract } from "@/types/Contract";
 
 interface ContractContextProps {
   getContractById: (contractId: string) => Promise<IContracts>;
+  getContractsByCollaborationId: (collaborationId: string) => Promise<Contract[]>;
   updateContract: (
     contractId: string,
     contract: Partial<IContracts>
@@ -18,6 +20,7 @@ interface ContractContextProps {
 
 const ContractContext = createContext<ContractContextProps>({
   getContractById: async () => ({} as IContracts),
+  getContractsByCollaborationId: async () => ([] as Contract[]),
   updateContract: () => Promise.resolve(),
 });
 
@@ -31,6 +34,19 @@ export const ContractContextProvider: React.FC<PropsWithChildren> = ({
     const contractSnap = await getDoc(contractRef);
 
     return contractSnap.data() as IContracts
+  }
+
+  const getContractsByCollaborationId = async (collaborationId: string) => {
+    const contractsCollection = collection(FirestoreDB, 'contracts');
+    const q = query(contractsCollection, where('collaborationId', '==', collaborationId));
+    const querySnapshot = await getDocs(q);
+
+    const fetchedContracts: Contract[] = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Contract[];
+
+    return fetchedContracts;
   }
 
   const updateContract = async (
@@ -48,6 +64,7 @@ export const ContractContextProvider: React.FC<PropsWithChildren> = ({
     <ContractContext.Provider
       value={{
         getContractById,
+        getContractsByCollaborationId,
         updateContract,
       }}
     >
