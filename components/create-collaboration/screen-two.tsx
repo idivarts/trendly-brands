@@ -10,7 +10,7 @@ import {
   INITIAL_PLATFORMS,
   PLATFORMS,
 } from "@/constants/ItemsList";
-import { faArrowRight, faPhotoFilm, faVideo } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faHouseLaptop, faMapLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { MultiRangeSlider } from "@/shared-uis/components/multislider";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
@@ -207,12 +207,12 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           <Selector
             options={[
               {
-                icon: faVideo,
+                icon: faHouseLaptop,
                 label: 'Remote',
                 value: 'Remote',
               },
               {
-                icon: faPhotoFilm,
+                icon: faMapLocationDot,
                 label: 'On-Site',
                 value: 'On-Site',
               },
