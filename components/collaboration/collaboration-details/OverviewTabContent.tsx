@@ -8,13 +8,12 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { CollaborationDetail } from ".";
 import {
   faCheckCircle,
-  faCoins,
-  faDollar,
   faDollarSign,
   faFilm,
   faHouseLaptop,
-  faMap,
+  faLocationDot,
   faPanorama,
+  faRecordVinyl,
   faStar,
   faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
@@ -37,6 +36,7 @@ import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/pro
 import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { formatTimeToNow } from "@/utils/date";
+import { faHeart } from "@fortawesome/free-regular-svg-icons";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -330,7 +330,11 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             />
             <ChipCard
               chipText={props.collaboration.location.type}
-              chipIcon={faHouseLaptop}
+              chipIcon={
+                props.collaboration.location.type === "On-Site"
+                  ? faLocationDot
+                  : faHouseLaptop
+              }
             />
             {props.collaboration.platform &&
               props.collaboration.platform.map((content, index) => (
@@ -358,7 +362,13 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                       ? faPanorama
                       : content === "Reels"
                       ? faFilm
-                      : faCoins
+                      : content === "Stories"
+                      ? faHeart
+                      : content === "Live"
+                      ? faRecordVinyl
+                      : content === "Product Reviews"
+                      ? faStarHalfStroke
+                      : faPanorama
                   }
                 />
               ))}
