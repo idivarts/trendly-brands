@@ -24,6 +24,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { faHeart, faStarHalfStroke } from "@fortawesome/free-regular-svg-icons";
+import { useRouter } from "expo-router";
 
 interface CollaborationDetailsProps {
   collabDescription: string;
@@ -47,6 +48,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
   onOpenBottomSheet,
 }) => {
   const theme = useTheme();
+  const router = useRouter();
+
   return (
     <View
       style={{
@@ -62,15 +65,24 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           marginBottom: 8,
         }}
       >
-        <Text
+        <Pressable
+          onPress={() =>
+            router.push(`/collaboration-details/${collabId}`)
+          }
           style={{
-            fontSize: 16,
-            fontWeight: "bold",
-            color: Colors(theme).text,
+            flex: 1,
           }}
         >
-          {name}
-        </Text>
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: "bold",
+              color: Colors(theme).text,
+            }}
+          >
+            {name}
+          </Text>
+        </Pressable>
         <Pressable
           onPress={() => {
             onOpenBottomSheet(collabId);
@@ -83,10 +95,10 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           />
         </Pressable>
       </View>
-      <Text
-        style={{
-          color: Colors(theme).gray100,
-        }}
+      <Pressable
+        onPress={() =>
+          router.push(`/collaboration-details/${collabId}`)
+        }
       >
         {collabDescription}
       </Text>
@@ -145,6 +157,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
             />
           ))}
       </View>
+
     </View>
   );
 };

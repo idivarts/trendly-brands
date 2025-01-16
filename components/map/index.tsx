@@ -32,6 +32,7 @@ const Map: React.FC<MapProps> = ({
       style={{
         width: '100%',
         height: 300,
+        zIndex: 2,
       }}
       defaultZoom={18}
       mapId={'map-id'}

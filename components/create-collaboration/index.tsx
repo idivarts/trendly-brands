@@ -28,7 +28,7 @@ const CreateCollaboration = () => {
     promotionType: PromotionType.BARTER_COLLAB,
     budget: {
       min: 0,
-      max: 10000,
+      max: 500,
     },
     preferredContentLanguage: ["English", "Hindi"],
     contentFormat: [],
@@ -146,13 +146,17 @@ const CreateCollaboration = () => {
     }
   }, []);
 
-  const onFormattedAddressChange = (address: string) => {
+  const onLocationChange = (
+    latlong: { lat: number; long: number },
+    address: string,
+  ) => {
     setCollaboration({
       ...collaboration,
       location: {
         ...collaboration.location,
         type: "On-Site",
         name: address,
+        latlong,
       },
     });
   }
@@ -209,6 +213,10 @@ const CreateCollaboration = () => {
         ...collaboration,
         attachments: uploadedAssets,
         brandId: selectedBrand ? selectedBrand?.id : "",
+        budget: {
+          min: collaboration.budget?.min || 0,
+          max: collaboration.budget?.max || 0,
+        },
         managerId: AuthApp.currentUser?.uid as string,
         location: locationAddress,
         status,
@@ -289,7 +297,7 @@ const CreateCollaboration = () => {
           state: mapRegion,
           setState: setMapRegion,
         }}
-        onFormattedAddressChange={onFormattedAddressChange}
+        onLocationChange={onLocationChange}
         saveAsDraft={saveAsDraft}
         setCollaboration={setCollaboration}
         setScreen={setScreen}

@@ -1,23 +1,27 @@
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Region } from "react-native-maps";
 import { APIProvider } from "@vis.gl/react-google-maps";
 
 import Map from "@/components/map";
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { useTheme } from "@react-navigation/native";
+import { fetchMapRegionAddress } from "@/utils/map";
 
 interface CreateCollaborationMapProps {
   mapRegion: any;
-  onMapRegionChange: (region: any) => void;
-  onFormattedAddressChange?: (address: string) => void;
+  onMapRegionChange?: (region: any) => void;
+  onLocationChange?: (
+    latlong: { lat: number; long: number },
+    address: string,
+  ) => void;
 }
 
 const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
   mapRegion,
   onMapRegionChange,
-  onFormattedAddressChange,
+  onLocationChange,
 }) => {
   const [nativeMapRegion, setNativeMapRegion] = useState(mapRegion);
 
@@ -26,66 +30,53 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
   const theme = useTheme();
   const styles = stylesFn(theme);
 
-  const fetchMapRegionAddress = async (
-    lat: number,
-    lng: number
-  ) => {
-    if (!lat || !lng) {
-      return;
-    }
-
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`
-    );
-
-    const result = await response.json();
-
-    const address = result?.results?.[0]?.formatted_address || result?.plus_code?.compound_code || 'Address';
-
-    return address;
-  };
-
-  const onLocationChange = async (
+  const onWebLocationChange = async (
     location: { latitude: number; longitude: number },
   ) => {
-    setWebMapRegion({
-      latitude: location.latitude,
-      longitude: location.longitude,
-    });
+    setWebMapRegion(location);
 
     const address = await fetchMapRegionAddress(
       location.latitude,
       location.longitude
     );
 
-    if (onFormattedAddressChange) {
-      onFormattedAddressChange(address as string);
+    if (onLocationChange) {
+      onLocationChange(
+        {
+          lat: location.latitude,
+          long: location.longitude
+        },
+        address as string
+      );
     }
   };
 
-  const onMapLocationChange = async (region: any) => {
-    onMapRegionChange({
-      latitude: region.latitude,
-      longitude: region.longitude,
-    });
+  const onNativeLocationChange = async (region: Region) => {
+    setNativeMapRegion(region);
 
     const address = await fetchMapRegionAddress(
       region.latitude,
       region.longitude
     );
 
-    if (onFormattedAddressChange) {
-      onFormattedAddressChange(address as string);
+    if (onLocationChange) {
+      onLocationChange(
+        {
+          lat: region.latitude,
+          long: region.longitude,
+        },
+        address as string,
+      );
     }
   }
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      onMapLocationChange(webMapRegion);
+      setWebMapRegion(mapRegion);
     } else {
-      onMapLocationChange(nativeMapRegion);
+      setNativeMapRegion(mapRegion);
     }
-  }, [nativeMapRegion, webMapRegion]);
+  }, [mapRegion]);
 
   if (Platform.OS === 'web') {
     return (
@@ -94,7 +85,7 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
       >
         <Map
           location={webMapRegion}
-          onLocationChange={onLocationChange}
+          onLocationChange={onWebLocationChange}
         />
       </APIProvider>
     );
@@ -105,7 +96,7 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
       <MapView
         style={styles.map}
         region={nativeMapRegion}
-        onRegionChangeComplete={(region) => setNativeMapRegion(region)}
+        onRegionChangeComplete={onNativeLocationChange}
       >
         <Marker coordinate={nativeMapRegion} />
       </MapView>
