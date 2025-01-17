@@ -4,7 +4,7 @@ import Colors from "@/constants/Colors";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { imageUrl } from "@/utils/url";
-import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
+import { faEllipsis, faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { FC, useState } from "react";
@@ -68,7 +68,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
           onDismiss={closeMenu}
           anchor={
             <Pressable onPress={openMenu}>
-              <FontAwesomeIcon icon={faEllipsisH} />
+              <FontAwesomeIcon icon={faEllipsis} />
             </Pressable>
           }
           style={{

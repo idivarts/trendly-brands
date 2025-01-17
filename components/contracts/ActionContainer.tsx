@@ -5,7 +5,11 @@ import { Button } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faStar, faStarHalfStroke } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCircleInfo,
+  faStar,
+  faStarHalfStroke,
+} from "@fortawesome/free-solid-svg-icons";
 import { faNoteSticky } from "@fortawesome/free-regular-svg-icons";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
@@ -316,7 +320,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
           gap: 10,
         }}
       >
-        <FontAwesomeIcon icon={faNoteSticky} size={20} />
+        <FontAwesomeIcon icon={faCircleInfo} size={20} />
         <Text style={{ fontSize: 16, width: "95%" }}>
           {contract.status === 0
             ? "Please make sure to use this chat to first understand the the influencer. Post that, you can start your collaboration here"
