@@ -14,7 +14,6 @@ import {
   faLocationDot,
   faPanorama,
   faRecordVinyl,
-  faStar,
   faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -382,14 +381,14 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Posts"
                       ? faPanorama
                       : content === "Reels"
-                      ? faFilm
-                      : content === "Stories"
-                      ? faHeart
-                      : content === "Live"
-                      ? faRecordVinyl
-                      : content === "Product Reviews"
-                      ? faStarHalfStroke
-                      : faPanorama
+                        ? faFilm
+                        : content === "Stories"
+                          ? faHeart
+                          : content === "Live"
+                            ? faRecordVinyl
+                            : content === "Product Reviews"
+                              ? faStarHalfStroke
+                              : faPanorama
                   }
                 />
               ))}
