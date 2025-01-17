@@ -174,12 +174,14 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
             setSession(userCredential.user.uid);
+
             resetAndNavigate({
               pathname: "/onboarding-your-brand",
               params: {
                 firstBrand: "true",
               },
             });
+
             await fetch("https://be.trendly.pro/api/v1/chat/auth", {
               method: "POST",
               headers: {
@@ -191,6 +193,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             setTimeout(checkVerification, 2000);
           }
         };
+
         checkVerification();
       })
       .catch((error) => {

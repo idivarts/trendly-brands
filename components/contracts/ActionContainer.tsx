@@ -15,8 +15,6 @@ import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import { Image } from "react-native";
-import { imageUrl } from "@/utils/url";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { useChatContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -309,8 +307,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
         style={{
           backgroundColor:
             contract.status === 0 ||
-            contract.status === 1 ||
-            contract.status === 2
+              contract.status === 1 ||
+              contract.status === 2
               ? Colors(theme).gold
               : Colors(theme).green,
           padding: 16,
@@ -325,10 +323,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
           {contract.status === 0
             ? "Please make sure to use this chat to first understand the the influencer. Post that, you can start your collaboration here"
             : contract.status === 1
-            ? "Please note, if your collaboration is done, we would need you to close the collaboration here. Having open collaborations idle for a long time can end up reducing the rating"
-            : contract.status === 2
-            ? "Feedbacks are important for us. Our platform works on what people give feedback to each other. You see that other persons feedback only if you give your feedback"
-            : "You can create new collaboration and invite user to collaboration"}
+              ? "Please note, if your collaboration is done, we would need you to close the collaboration here. Having open collaborations idle for a long time can end up reducing the rating"
+              : contract.status === 2
+                ? "Feedbacks are important for us. Our platform works on what people give feedback to each other. You see that other persons feedback only if you give your feedback"
+                : "You can create new collaboration and invite user to collaboration"}
         </Text>
       </View>
     </View>

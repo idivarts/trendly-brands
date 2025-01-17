@@ -2,7 +2,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 import { View } from "../theme/Themed";
 import { useTheme } from "@react-navigation/native";
-import { faClose } from "@fortawesome/free-solid-svg-icons";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 import Colors from "@/constants/Colors";
@@ -69,7 +69,7 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
             }}
           >
             <FontAwesomeIcon
-              icon={faClose}
+              icon={faXmark}
               size={24}
               color={theme.colors.text}
             />
