@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
-import { faDollarSign, faVideo } from "@fortawesome/free-solid-svg-icons";
+import { faGift, faHandHoldingDollar } from "@fortawesome/free-solid-svg-icons";
 
 import { Collaboration } from "@/types/Collaboration";
 import { generateEmptyAssets } from "@/shared-uis/utils/profile";
@@ -166,12 +166,12 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           <Selector
             options={[
               {
-                icon: faVideo,
+                icon: faGift,
                 label: 'Barter Collab',
                 value: 'Barter Collab',
               },
               {
-                icon: faDollarSign,
+                icon: faHandHoldingDollar,
                 label: 'Paid Collab',
                 value: 'Paid Collab',
               },
