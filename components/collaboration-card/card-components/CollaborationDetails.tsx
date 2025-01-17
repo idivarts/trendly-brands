@@ -24,6 +24,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { faHeart, faStarHalfStroke } from "@fortawesome/free-regular-svg-icons";
+import { router } from "expo-router";
 
 interface CollaborationDetailsProps {
   collabDescription: string;
@@ -83,68 +84,74 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           />
         </Pressable>
       </View>
-      <Text
-        style={{
-          color: Colors(theme).gray100,
-        }}
+      <Pressable
+        onPress={() => router.push(`/collaboration-details/${collabId}`)}
       >
-        {collabDescription}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          marginTop: 10,
-          flexWrap: "wrap",
-          rowGap: 10,
-        }}
-      >
-        <ChipCard
-          chipText={
-            promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
-          }
-          chipIcon={faDollarSign}
-        />
-        <ChipCard
-          chipText={location.type}
-          chipIcon={location.type === "On-Site" ? faLocationDot : faHouseLaptop}
-        />
-        {platform &&
-          platform.map((content, index) => (
-            <ChipCard
-              key={index}
-              chipText={content}
-              chipIcon={
-                content === "Instagram"
-                  ? faInstagram
-                  : content === "Facebook"
-                  ? faFacebook
-                  : content === "Youtube"
-                  ? faYoutube
-                  : faInstagram
-              }
-            />
-          ))}
-        {contentType &&
-          contentType.map((content, index) => (
-            <ChipCard
-              key={index}
-              chipText={content}
-              chipIcon={
-                content === "Posts"
-                  ? faPanorama
-                  : content === "Reels"
-                  ? faFilm
-                  : content === "Stories"
-                  ? faHeart
-                  : content === "Live"
-                  ? faRecordVinyl
-                  : content === "Product Reviews"
-                  ? faStarHalfStroke
-                  : faPanorama
-              }
-            />
-          ))}
-      </View>
+        <Text
+          style={{
+            color: Colors(theme).gray100,
+          }}
+        >
+          {collabDescription}
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            marginTop: 10,
+            flexWrap: "wrap",
+            rowGap: 10,
+          }}
+        >
+          <ChipCard
+            chipText={
+              promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
+            }
+            chipIcon={faDollarSign}
+          />
+          <ChipCard
+            chipText={location.type}
+            chipIcon={
+              location.type === "On-Site" ? faLocationDot : faHouseLaptop
+            }
+          />
+          {platform &&
+            platform.map((content, index) => (
+              <ChipCard
+                key={index}
+                chipText={content}
+                chipIcon={
+                  content === "Instagram"
+                    ? faInstagram
+                    : content === "Facebook"
+                    ? faFacebook
+                    : content === "Youtube"
+                    ? faYoutube
+                    : faInstagram
+                }
+              />
+            ))}
+          {contentType &&
+            contentType.map((content, index) => (
+              <ChipCard
+                key={index}
+                chipText={content}
+                chipIcon={
+                  content === "Posts"
+                    ? faPanorama
+                    : content === "Reels"
+                    ? faFilm
+                    : content === "Stories"
+                    ? faHeart
+                    : content === "Live"
+                    ? faRecordVinyl
+                    : content === "Product Reviews"
+                    ? faStarHalfStroke
+                    : faPanorama
+                }
+              />
+            ))}
+        </View>
+      </Pressable>
     </View>
   );
 };
