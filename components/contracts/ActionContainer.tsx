@@ -5,7 +5,12 @@ import { Button } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faCircleInfo, faStar, faStarHalfStroke } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCircleInfo,
+  faStar,
+  faStarHalfStroke,
+} from "@fortawesome/free-solid-svg-icons";
+import { faNoteSticky } from "@fortawesome/free-regular-svg-icons";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
