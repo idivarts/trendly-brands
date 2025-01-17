@@ -1,6 +1,5 @@
 import Colors from "@/constants/Colors";
 import { useNotificationContext } from "@/contexts";
-import { FontAwesome } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { Link } from "expo-router";
 import { Pressable } from "react-native";

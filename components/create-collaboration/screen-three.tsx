@@ -3,7 +3,7 @@ import { Pressable } from "react-native";
 import { HelperText, Modal, ProgressBar } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faChain, faCircle, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCircle, faLink, faPlus } from "@fortawesome/free-solid-svg-icons";
 
 import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
@@ -179,7 +179,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                   >
                     <FontAwesomeIcon
                       color={Colors(theme).text}
-                      icon={faChain}
+                      icon={faLink}
                       size={16}
                     />
                     <Text
