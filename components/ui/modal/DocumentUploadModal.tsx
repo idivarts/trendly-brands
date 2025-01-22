@@ -5,9 +5,9 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
-import { Button } from "react-native-paper";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faFolder, faImage } from "@fortawesome/free-solid-svg-icons";
+import Button from "../button";
 
 interface DocumentUploadModalProps {
   onDocumentUpload: (url: string) => void;

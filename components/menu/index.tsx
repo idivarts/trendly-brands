@@ -1,11 +1,10 @@
-import { Avatar, Button } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
 import { useAuthContext } from "@/contexts";
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { MENU_ITEMS } from "@/constants/Menu";
-import { Image, ImageBackground, Pressable, ScrollView } from "react-native";
+import { Image, Pressable, ScrollView } from "react-native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useState } from "react";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
@@ -15,6 +14,7 @@ import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import ProfileItemCard from "../ProfileItemCard";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Button from "../ui/button";
 
 const Menu = () => {
   const theme = useTheme();
@@ -77,6 +77,7 @@ const Menu = () => {
         <View style={styles.middleRow}>
           {MENU_ITEMS.map((item, index) => (
             <ProfileItemCard
+              key={item.id}
               item={item}
               onPress={() => {
                 router.push(item.href);

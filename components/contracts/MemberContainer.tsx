@@ -1,10 +1,8 @@
 import { useTheme } from "@react-navigation/native";
 import { Text, View } from "../theme/Themed";
 import { FC, useEffect } from "react";
-import { Button } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import React from "react";
-import { faNoteSticky } from "@fortawesome/free-regular-svg-icons";
 import { useChatContext } from "@/contexts";
 import { doc, getDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";

@@ -1,7 +1,6 @@
 import { useTheme } from "@react-navigation/native";
 import { Text, View } from "../theme/Themed";
 import { FC, useEffect, useState } from "react";
-import { Button } from "react-native-paper";
 import Colors from "@/constants/Colors";
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -10,7 +9,6 @@ import {
   faStar,
   faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
-import { faNoteSticky } from "@fortawesome/free-regular-svg-icons";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
@@ -20,6 +18,7 @@ import { useChatContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { router } from "expo-router";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Button from "../ui/button";
 
 interface ActionContainerProps {
   contract: IContracts;
