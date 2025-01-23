@@ -43,7 +43,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
               }
             }}
             size="small"
-            customStyles={{
+            style={{
               width: '100%',
               backgroundColor: Colors(theme).primary,
             }}

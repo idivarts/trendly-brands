@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
-import { ActivityIndicator, Button } from "react-native-paper";
+import { ActivityIndicator } from "react-native-paper";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { View } from "@/components/theme/Themed";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
@@ -16,6 +16,7 @@ import { router } from "expo-router";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Toast from "react-native-toast-message";
+import Button from "@/components/ui/button";
 
 export interface CollaborationDetail extends ICollaboration {
   id: string;

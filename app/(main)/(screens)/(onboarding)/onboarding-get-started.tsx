@@ -5,7 +5,7 @@ import fnStyles from "@/styles/onboarding/get-started.styles";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { Button, Menu } from "react-native-paper";
+import { Menu } from "react-native-paper";
 import { AuthApp } from "@/utils/auth";
 import { router, useLocalSearchParams } from "expo-router";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -13,6 +13,7 @@ import { FirestoreDB } from "@/utils/firestore";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Button from "@/components/ui/button";
 
 const GetStartedScreen = () => {
   const [hearAboutUs, setHearAboutUs] = useState("");

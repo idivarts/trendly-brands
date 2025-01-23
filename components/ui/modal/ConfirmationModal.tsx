@@ -2,7 +2,7 @@ import { Text, View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/ConfirmationModal.styles";
 import { useTheme } from "@react-navigation/native";
 import { Modal } from "react-native";
-import { Button } from "react-native-paper";
+import Button from "../button";
 
 interface ConfirmationModalProps {
   animationType?: "none" | "slide" | "fade";

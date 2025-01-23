@@ -1,9 +1,10 @@
 import React from "react";
 import { View } from "react-native";
-import { Text, Button, Card, Avatar } from "react-native-paper";
+import { Text, Card, Avatar } from "react-native-paper";
 import { stylesFn } from "@/styles/NotificationCard.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import Button from "./ui/button";
 
 interface NotificationCardProps {
   avatar: string;

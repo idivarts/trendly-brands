@@ -1,7 +1,6 @@
 import React from "react";
-import { Button, Chip, Modal, Portal, TextInput } from "react-native-paper";
+import { Modal, Portal } from "react-native-paper";
 import { stylesFn } from "@/styles/Members";
-import { useTheme } from "@react-navigation/native";
 import { View, Text } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -16,6 +15,8 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import TextInput from "../text-input";
+import Button from "../button";
 
 interface MembersModalProps {
   visible: boolean;

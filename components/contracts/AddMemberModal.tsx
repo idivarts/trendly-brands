@@ -11,14 +11,12 @@ import {
   TouchableOpacity,
   Pressable,
 } from "react-native";
-import { Text, Button, Avatar, Card } from "react-native-paper";
+import { Text } from "react-native-paper";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/utils/firestore";
 import { useChatContext } from "@/contexts";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import ImageComponent from "@/shared-uis/components/image-component";
 

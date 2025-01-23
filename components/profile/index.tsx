@@ -8,11 +8,10 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { TextInput, Button } from "react-native-paper";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
-import { useTheme } from "@react-navigation/native";
+import { Theme, useTheme } from "@react-navigation/native";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import ImageUploadModal from "../ui/modal/ImageUploadModal";
@@ -22,13 +21,14 @@ import ScreenHeader from "../ui/screen-header";
 import { Text } from "../theme/Themed";
 import {
   ref,
-  uploadString,
   getDownloadURL,
   uploadBytes,
 } from "firebase/storage";
 import { StorageApp } from "@/utils/firebase-storage";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import ImageComponent from "@/shared-uis/components/image-component";
+import TextInput from "../ui/text-input";
+import Button from "../ui/button";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -44,6 +44,7 @@ const Profile = () => {
   const [imageToUpload, setImageToUpload] = useState<string>("");
 
   const theme = useTheme();
+  const styles = stylesFn(theme);
 
   const updateProfile = async () => {
     if (!manager || !manager.id) {
@@ -135,7 +136,9 @@ const Profile = () => {
           title="Profile"
           rightAction
           rightActionButton={
-            <Pressable onPress={updateProfile}>
+            <Pressable
+              onPress={updateProfile}
+            >
               <Text
                 style={{
                   color: Colors(theme).text,
@@ -176,7 +179,7 @@ const Profile = () => {
           >
             <FontAwesomeIcon
               icon={faPen}
-              color={Colors(theme).text}
+              color={theme.dark ? Colors(theme).white : Colors(theme).primary}
               size={22}
             />
           </Pressable>
@@ -236,7 +239,7 @@ const Profile = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
   avatarContainer: {
     alignItems: "center",
     marginBottom: 24,
@@ -246,6 +249,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     right: 10,
+    padding: 10,
+    backgroundColor: theme.dark ? Colors(theme).card : Colors(theme).tag,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: theme.dark ? Colors(theme).white : Colors(theme).primary,
   },
   input: {
     width: "100%",
@@ -253,7 +261,6 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     width: "100%",
-    paddingVertical: 4,
     marginTop: 16,
   },
 });
