@@ -75,7 +75,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
                 }}
               >
                 <Button
-                  customStyles={{
+                  style={{
                     borderColor: Colors(theme).primary,
                   }}
                   textColor={Colors(theme).primary}
@@ -92,7 +92,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
                   Reject Application
                 </Button>
                 <Button
-                  customStyles={{
+                  style={{
                     backgroundColor: Colors(theme).primary,
                   }}
                   onPress={() => {

@@ -1,17 +1,15 @@
-import { Animated, StyleProp, ViewStyle } from "react-native";
 import {
   Button as RNPButton,
   ButtonProps as RNPButtonProps,
 } from "react-native-paper";
 
 interface ButtonProps extends RNPButtonProps {
-  customStyles?: Animated.WithAnimatedValue<StyleProp<ViewStyle>>;
   size?: 'small' | 'medium' | 'large';
 }
 
 const Button: React.FC<ButtonProps> = ({
   contentStyle,
-  customStyles,
+  style,
   size,
   ...props
 }) => {
@@ -19,7 +17,7 @@ const Button: React.FC<ButtonProps> = ({
     <RNPButton
       mode="contained"
       style={[
-        customStyles,
+        style,
       ]}
       contentStyle={[
         size === 'small' && {

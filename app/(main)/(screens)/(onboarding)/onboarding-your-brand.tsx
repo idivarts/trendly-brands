@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { Button, Portal } from "react-native-paper";
+import { Portal } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@react-navigation/native";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
@@ -15,6 +15,7 @@ import fnStyles from "@/styles/onboarding/brand.styles";
 import ScreenHeader from "@/components/ui/screen-header";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/constants/Colors";
+import Button from "@/components/ui/button";
 
 const OnboardingScreen = () => {
   const [brandData, setBrandData] = useState<Partial<Brand>>({

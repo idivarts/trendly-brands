@@ -3,11 +3,12 @@ import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import * as React from "react";
 import { View, Image, Text } from "react-native";
-import { TextInput, Button } from "react-native-paper";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { AuthApp } from "@/utils/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/constants/Colors";
+import Button from "@/components/ui/button";
+import TextInput from "@/components/ui/text-input";
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState("");
@@ -47,6 +48,7 @@ const ForgotPasswordScreen = () => {
 
       {/* Email Input Field */}
       <TextInput
+        autoCapitalize="none"
         label="Enter your Email ID"
         value={email}
         onChangeText={setEmail}

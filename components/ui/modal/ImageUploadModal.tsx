@@ -1,12 +1,12 @@
 import { Alert, Linking, Modal, Platform, Pressable } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import { Button } from "react-native-paper";
 
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCamera, faImage } from "@fortawesome/free-solid-svg-icons";
+import Button from "../button";
 
 interface ImageUploadModalProps {
   onImageUpload: (image: string) => void;

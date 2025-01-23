@@ -1,6 +1,5 @@
 import {
   faGears,
-  faUser,
   faUsersBetweenLines,
 } from "@fortawesome/free-solid-svg-icons";
 

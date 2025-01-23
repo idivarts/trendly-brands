@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, ScrollView, Pressable, Linking } from "react-native";
-import { Text, Card, Button, Portal } from "react-native-paper";
+import { Text, Card, Portal } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { FirestoreDB } from "@/utils/firestore";
@@ -38,6 +38,7 @@ import { faHeart } from "@fortawesome/free-regular-svg-icons";
 import { Contract } from "@/types/Contract";
 import RatingSection from "@/shared-uis/components/rating-section";
 import { useContractContext } from "@/contexts";
+import Button from "@/components/ui/button";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;

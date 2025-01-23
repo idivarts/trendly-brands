@@ -2,12 +2,10 @@ import React, { useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
-  TextInput,
   ActivityIndicator,
 } from "react-native";
 import {
   Text,
-  Button,
   List,
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
@@ -33,6 +31,8 @@ import { processRawAttachment } from "@/utils/attachments";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { User } from "@/types/User";
 import { View } from "@/components/theme/Themed";
+import TextInput from "@/components/ui/text-input";
+import Button from "@/components/ui/button";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "../theme/Themed";
-import { Button, Switch } from "react-native-paper";
 import { useAuthContext } from "@/contexts";
 import stylesFn from "@/styles/settings/Settings.styles";
 import { useTheme } from "@react-navigation/native";
@@ -8,6 +7,7 @@ import SelectGroup from "@/shared-uis/components/select/select-group";
 import Colors from "@/constants/Colors";
 import ScreenHeader from "../ui/screen-header";
 import { Pressable } from "react-native";
+import Button from "../ui/button";
 
 const Settings = () => {
   const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("light");

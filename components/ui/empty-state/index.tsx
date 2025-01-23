@@ -4,7 +4,7 @@ import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
 import { useNavigation } from "expo-router";
 import { Image } from "react-native";
-import { Button } from "react-native-paper";
+import Button from "../button";
 
 type EmptyStateProps = {
   action?: () => void;

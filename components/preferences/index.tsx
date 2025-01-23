@@ -1,8 +1,5 @@
 import {
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
 import MembersCard from "../brand-profile/members-card";
 import { View } from "../theme/Themed";
@@ -12,12 +9,10 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { RefreshControl } from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
-import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { useEffect, useState } from "react";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import AppLayout from "@/layouts/app-layout";
-import { Button, Portal } from "react-native-paper";
 import MembersModal from "../ui/modal/MembersModal";
+import Button from "../ui/button";
 
 export interface ManagerCard extends IManagers {
   managerId: string;
@@ -92,7 +87,7 @@ const Preferences = () => {
           <MembersCard
             manager={item}
             cardType="preferences"
-            action={() => {}}
+            action={() => { }}
           />
         )}
         keyExtractor={(item) => item.managerId}
@@ -108,11 +103,6 @@ const Preferences = () => {
         }
       />
       <Button
-        buttonColor={Colors(theme).primary}
-        textColor={Colors(theme).white}
-        style={{
-          padding: 5,
-        }}
         onPress={() => {
           setShowMemberModal(true);
         }}
