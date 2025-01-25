@@ -16,12 +16,13 @@ import { Searchbar } from "react-native-paper";
 import {
   faComment,
   faFileLines,
+  faHeart,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
   faBuilding,
-  faHouseUser as faHouseUserSolid,
+  faHeart as faHeartSolid,
   faMagnifyingGlass,
   faPlus,
   faStar as faStarSolid,
@@ -87,13 +88,12 @@ const DRAWER_MENU_CONTENT_ITEMS = (
       }: IconPropFn) => focused ? (
         <DrawerIcon
           href="/explore-influencers"
-          icon={faHouseUserSolid}
+          icon={faHeartSolid}
         />
       ) : (
-          <HomeIcon
-            width={28}
-            height={28}
-            fill={Colors(theme).text}
+          <DrawerIcon
+            href="/explore-influencers"
+            icon={faHeart}
           />
         ),
       label: "Explore",
