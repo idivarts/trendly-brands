@@ -12,22 +12,22 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
 import Colors from '@/constants/Colors';
 import useInvitation from '@/hooks/use-invitation';
-import { Platform } from 'react-native';
+import { Platform, Pressable } from 'react-native';
 
 interface InvitationCardProps {
+  bottomSheetAction?: () => void;
   checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
   data: User;
-  headerLeftAction?: () => void;
-  headerRightAction?: () => void;
   inviteInfluencer: () => void;
+  profileModalAction?: () => void;
 }
 
 const InvitationCard: React.FC<InvitationCardProps> = ({
+  bottomSheetAction,
   checkIfAlreadyInvited,
   data,
-  headerLeftAction,
-  headerRightAction,
   inviteInfluencer,
+  profileModalAction,
 }) => {
   const theme = useTheme();
   const {
@@ -43,46 +43,50 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         avatar={data?.profileImage || ''}
         handle={data.socials?.[0]}
         isVerified={data.isVerified}
-        leftAction={headerLeftAction}
+        leftAction={profileModalAction}
         name={data.name}
-        rightAction={headerRightAction}
+        rightAction={bottomSheetAction}
       />
       <Carousel
         containerHeight={data.profile?.attachments?.length === 1 ? (Platform.OS === 'web' ? 560 : 288) : undefined}
         data={data.profile?.attachments?.map((attachment) => processRawAttachment(attachment)) || []}
         theme={theme}
       />
-      <CardActions
-        metrics={{
-          followers: data.backend?.followers || 0,
-          reach: data.backend?.reach || 0,
-          rating: data.backend?.rating || 0,
-        }}
-        action={
-          <Button
-            mode="outlined"
-            onPress={() => {
-              if (!isAlreadyInvited) {
-                inviteInfluencer();
-              }
-            }}
-          >
-            <FontAwesomeIcon
-              color={Colors(theme).primary}
-              icon={isAlreadyInvited ? faCheck : faPlus}
-              size={12}
-              style={{
-                marginRight: 6,
-                marginTop: -1,
+      <Pressable
+        onPress={profileModalAction}
+      >
+        <CardActions
+          metrics={{
+            followers: data.backend?.followers || 0,
+            reach: data.backend?.reach || 0,
+            rating: data.backend?.rating || 0,
+          }}
+          action={
+            <Button
+              mode="outlined"
+              onPress={() => {
+                if (!isAlreadyInvited) {
+                  inviteInfluencer();
+                }
               }}
-            />
-            {isAlreadyInvited ? 'Already Invited' : 'Invite'}
-          </Button>
-        }
-      />
-      <CardDescription
-        text={data.profile?.content?.about || ''}
-      />
+            >
+              <FontAwesomeIcon
+                color={Colors(theme).primary}
+                icon={isAlreadyInvited ? faCheck : faPlus}
+                size={12}
+                style={{
+                  marginRight: 6,
+                  marginTop: -1,
+                }}
+              />
+              {isAlreadyInvited ? 'Already Invited' : 'Invite'}
+            </Button>
+          }
+        />
+        <CardDescription
+          text={data.profile?.content?.about || ''}
+        />
+      </Pressable>
     </Card>
   );
 };

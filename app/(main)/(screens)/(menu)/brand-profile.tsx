@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { ActivityIndicator, Pressable } from "react-native";
+import { ActivityIndicator, Platform, Pressable } from "react-native";
 import Toast from "react-native-toast-message";
 
 import { Brand } from "@/types/Brand";
@@ -21,7 +21,10 @@ const BrandProfileScreen = () => {
     selectedBrand,
     setSelectedBrand,
   } = useBrandContext();
-  const { uploadFileUri } = useAWSContext();
+  const {
+    uploadFileUri,
+    uploadFile,
+  } = useAWSContext();
 
   const theme = useTheme();
 
@@ -36,6 +39,7 @@ const BrandProfileScreen = () => {
 
   const [brandData, setBrandData] = useState<Partial<Brand>>(selectedBrand);
   const brandImage = useRef(selectedBrand?.image || "");
+  const [brandWebImage, setBrandWebImage] = useState<File | null>(null);
 
   const handleSave = async () => {
     if (!brandData.name) {
@@ -44,7 +48,10 @@ const BrandProfileScreen = () => {
 
     setIsSaving(true);
     let imageUrl = "";
-    if (brandData.image && brandData.image !== brandImage.current) {
+    if (Platform.OS === "web" && brandWebImage) {
+      const uploadedImage = await uploadFile(brandWebImage as File);
+      imageUrl = uploadedImage.imageUrl;
+    } else if (brandData.image && brandData.image !== brandImage.current) {
       const uploadedImage = await uploadFileUri({
         id: brandData.image,
         localUri: brandData.image,
@@ -101,6 +108,7 @@ const BrandProfileScreen = () => {
       <BrandProfile
         brandData={brandData}
         setBrandData={setBrandData}
+        setBrandWebImage={setBrandWebImage}
       />
       <Toast />
     </AppLayout>

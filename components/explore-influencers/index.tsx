@@ -23,6 +23,7 @@ import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
 import { List } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSharedValue } from "react-native-reanimated";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -206,7 +207,7 @@ const ExploreInfluencers = () => {
           </View>
         }
         style={{
-          width: xl ? 640 : "100%",
+          width: xl ? MAX_WIDTH_WEB : "100%",
           marginHorizontal: "auto",
         }}
       />

@@ -23,6 +23,7 @@ interface BrandProfileProps {
   action?: React.ReactNode;
   brandData: Partial<Brand>;
   setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
+  setBrandWebImage: React.Dispatch<React.SetStateAction<File | null>>;
   type?: "create" | "update";
 }
 
@@ -30,15 +31,20 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
   action,
   brandData,
   setBrandData,
+  setBrandWebImage,
   type = "update",
 }) => {
   const theme = useTheme();
 
-  const handleImageUpload = (image: string) => {
-    setBrandData({
-      ...brandData,
-      image,
-    });
+  const handleImageUpload = (image: string | File) => {
+    if (typeof image !== "string") {
+      setBrandWebImage(image);
+    } else {
+      setBrandData({
+        ...brandData,
+        image,
+      });
+    }
   };
 
   return (
