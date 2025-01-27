@@ -43,6 +43,7 @@ const ContractHeader: FC<ContractHeaderProps> = ({
           flexDirection: "row",
           alignItems: "center",
           gap: 8,
+          flex: 1,
         }}
       >
         <ImageComponent
@@ -63,6 +64,7 @@ const ContractHeader: FC<ContractHeaderProps> = ({
             flexDirection: "column",
             justifyContent: "center",
             gap: 2,
+            flex: 1,
           }}
         >
           <Text
@@ -92,11 +94,7 @@ const ContractHeader: FC<ContractHeaderProps> = ({
           justifyContent: "space-between",
         }}
       >
-        {timePosted ? (
-          <Text>
-            {formatTimeToNow(timePosted)}
-          </Text>
-        ) : null}
+        {timePosted ? <Text>{formatTimeToNow(timePosted)}</Text> : null}
         <Pressable
           onPress={() => {
             onOpenBottomSheet();

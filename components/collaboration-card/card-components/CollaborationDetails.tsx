@@ -22,6 +22,7 @@ import {
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { faHeart, faStarHalfStroke } from "@fortawesome/free-regular-svg-icons";
 import { useRouter } from "expo-router";
+import { truncateText } from "@/utils/text";
 
 interface CollaborationDetailsProps {
   collabDescription: string;
@@ -63,9 +64,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
         }}
       >
         <Pressable
-          onPress={() =>
-            router.push(`/collaboration-details/${collabId}`)
-          }
+          onPress={() => router.push(`/collaboration-details/${collabId}`)}
           style={{
             flex: 1,
           }}
@@ -100,7 +99,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
             color: Colors(theme).gray100,
           }}
         >
-          {collabDescription}
+          {truncateText(collabDescription, 120)}
         </Text>
         <View
           style={{
@@ -122,8 +121,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
               location.type === "On-Site" ? faLocationDot : faHouseLaptop
             }
           />
-          {
-            platform &&
+          {platform &&
             platform.map((content, index) => (
               <ChipCard
                 key={index}
@@ -132,16 +130,14 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                   content === "Instagram"
                     ? faInstagram
                     : content === "Facebook"
-                      ? faFacebook
-                      : content === "Youtube"
-                        ? faYoutube
-                        : faInstagram
+                    ? faFacebook
+                    : content === "Youtube"
+                    ? faYoutube
+                    : faInstagram
                 }
               />
-            ))
-          }
-          {
-            contentType &&
+            ))}
+          {contentType &&
             contentType.map((content, index) => (
               <ChipCard
                 key={index}
@@ -150,21 +146,20 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                   content === "Posts"
                     ? faPanorama
                     : content === "Reels"
-                      ? faFilm
-                      : content === "Stories"
-                        ? faHeart
-                        : content === "Live"
-                          ? faRecordVinyl
-                          : content === "Product Reviews"
-                            ? faStarHalfStroke
-                            : faPanorama
+                    ? faFilm
+                    : content === "Stories"
+                    ? faHeart
+                    : content === "Live"
+                    ? faRecordVinyl
+                    : content === "Product Reviews"
+                    ? faStarHalfStroke
+                    : faPanorama
                 }
               />
-            ))
-          }
-        </View >
-      </Pressable >
-    </View >
+            ))}
+        </View>
+      </Pressable>
+    </View>
   );
 };
 
