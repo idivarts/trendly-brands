@@ -162,13 +162,13 @@ const InvitationsTabContent = (props: any) => {
           <InvitationCard
             checkIfAlreadyInvited={checkIfAlreadyInvited}
             data={item}
-            headerLeftAction={() => {
+            profileModalAction={() => {
               setSelectedInfluencer(item);
               setTimeout(() => {
                 bottomSheetModalRef.current?.present();
               }, 500);
             }}
-            headerRightAction={() => {
+            bottomSheetAction={() => {
               setSelectedInfluencer(item);
               setIsActionModalVisible(true);
             }}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { Portal } from "react-native-paper";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@react-navigation/native";
@@ -34,15 +34,18 @@ const OnboardingScreen = () => {
     },
   });
   const [role, setRole] = useState("");
+  const [brandWebImage, setBrandWebImage] = useState<File | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
   const styles = fnStyles(theme);
   const { firstBrand } = useLocalSearchParams();
-  const { uploadFileUri } = useAWSContext();
+  const {
+    uploadFileUri,
+    uploadFile,
+  } = useAWSContext();
   const { setSelectedBrand } = useBrandContext();
   const { manager: user } = useAuthContext();
-
 
   const handleCreateBrand = async () => {
     setIsSubmitting(true);
@@ -60,7 +63,10 @@ const OnboardingScreen = () => {
     }
 
     let imageUrl = "";
-    if (brandData.image) {
+    if (Platform.OS === "web" && brandWebImage) {
+      const uploadedImage = await uploadFile(brandWebImage as File);
+      imageUrl = uploadedImage.imageUrl;
+    } else if (brandData.image) {
       const uploadedImage = await uploadFileUri({
         id: brandData.image,
         localUri: brandData.image,
@@ -131,6 +137,7 @@ const OnboardingScreen = () => {
           }
           brandData={brandData}
           setBrandData={setBrandData}
+          setBrandWebImage={setBrandWebImage}
           type="create"
         />
       </View>
