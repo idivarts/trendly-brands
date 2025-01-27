@@ -53,9 +53,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   const [managerModalVisible, setManagerModalVisible] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
 
-  const {
-    getContractsByCollaborationId,
-  } = useContractContext();
+  const { getContractsByCollaborationId } = useContractContext();
 
   const fetchManagerDetails = async () => {
     const managerRef = doc(
@@ -117,7 +115,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     });
 
     return feedbacks;
-  }
+  };
 
   useEffect(() => {
     fetchManagerDetails();
@@ -156,6 +154,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 flexDirection: "row",
                 justifyContent: "space-between",
                 width: "100%",
+                gap: 8,
                 alignItems: "center",
               }}
             >
@@ -195,9 +194,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             }}
           >
             <Card.Content>
-              <RatingSection
-                feedbacks={getFeedbacks(contracts)}
-              />
+              <RatingSection feedbacks={getFeedbacks(contracts)} />
               <Pressable
                 style={{ flex: 1, flexDirection: "column", gap: 16 }}
                 onPress={() => setBrandModalVisible(true)}
@@ -242,7 +239,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         lineHeight: 22,
                       }}
                     >
-                      {truncateText(props.collaboration.brandDescription, 120)}
+                      {truncateText(props.collaboration.brandDescription, 60)}
                     </Text>
                   </View>
                 </View>
@@ -319,19 +316,19 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             </Text>
             {props.collaboration.promotionType ===
               PromotionType.PAID_COLLAB && (
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: Colors(theme).text,
-                  }}
-                >
-                  Budget:
-                  {props.collaboration?.budget?.min ===
-                    props.collaboration?.budget?.max
-                    ? `$${props.collaboration?.budget?.min}`
-                    : `$${props.collaboration?.budget?.min} - $${props.collaboration?.budget?.max}`}
-                </Text>
-              )}
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: Colors(theme).text,
+                }}
+              >
+                Budget:
+                {props.collaboration?.budget?.min ===
+                props.collaboration?.budget?.max
+                  ? `$${props.collaboration?.budget?.min}`
+                  : `$${props.collaboration?.budget?.min} - $${props.collaboration?.budget?.max}`}
+              </Text>
+            )}
           </View>
           <View
             style={{
@@ -366,10 +363,10 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Instagram"
                       ? faInstagram
                       : content === "Facebook"
-                        ? faFacebook
-                        : content === "Youtube"
-                          ? faYoutube
-                          : faInstagram
+                      ? faFacebook
+                      : content === "Youtube"
+                      ? faYoutube
+                      : faInstagram
                   }
                 />
               ))}
@@ -382,14 +379,14 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Posts"
                       ? faPanorama
                       : content === "Reels"
-                        ? faFilm
-                        : content === "Stories"
-                          ? faHeart
-                          : content === "Live"
-                            ? faRecordVinyl
-                            : content === "Product Reviews"
-                              ? faStarHalfStroke
-                              : faPanorama
+                      ? faFilm
+                      : content === "Stories"
+                      ? faHeart
+                      : content === "Live"
+                      ? faRecordVinyl
+                      : content === "Product Reviews"
+                      ? faStarHalfStroke
+                      : faPanorama
                   }
                 />
               ))}
@@ -418,8 +415,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   latitudeDelta: 0.0922,
                   longitudeDelta: 0.042,
                 }}
-                onMapRegionChange={(region) => { }}
-                onFormattedAddressChange={(address) => { }}
+                onMapRegionChange={(region) => {}}
+                onFormattedAddressChange={(address) => {}}
               />
               <Text style={{ fontSize: 16, color: Colors(theme).text }}>
                 {props.collaboration.location.name}

@@ -215,8 +215,8 @@ const Invitations = () => {
             }}
             contentContainerStyle={{
               gap: 16,
-              paddingBottom: 24,
-              alignItems: xl ? "center" : "stretch",
+              paddingBottom: 64,
+              width: xl ? "50%" : "100%",
             }}
             refreshControl={
               <RefreshControl
@@ -226,9 +226,10 @@ const Invitations = () => {
               />
             }
             horizontal={false}
-            numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
+            numColumns={xl ? 2 : 1}
             {...(xl && {
               columnWrapperStyle: {
+                justifyContent: "space-between",
                 gap: 16,
               },
             })}

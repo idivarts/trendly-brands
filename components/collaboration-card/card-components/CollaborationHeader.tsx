@@ -63,7 +63,8 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            gap: 2,
+            gap: 8,
+            flex: 1,
           }}
         >
           <Text
@@ -93,11 +94,7 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
           justifyContent: "space-between",
         }}
       >
-        {timePosted ? (
-          <Text>
-            {formatTimeToNow(timePosted)}
-          </Text>
-        ) : null}
+        {timePosted ? <Text>{formatTimeToNow(timePosted)}</Text> : null}
         <Pressable
           onPress={() => {
             onOpenBottomSheet(collabId);

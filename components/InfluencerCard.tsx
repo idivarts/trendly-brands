@@ -32,6 +32,9 @@ import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import ImageComponent from "@/shared-uis/components/image-component";
+import { doc, getDoc } from "firebase/firestore";
+import { FirestoreDB } from "@/utils/firestore";
+import { ISocials } from "@/shared-libs/firestore/trendly-pro/models/socials";
 
 interface InfluencerCardPropsType {
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
@@ -47,6 +50,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState(false);
   const [isInvited, setIsInvited] = useState(false);
+  const [handle, setHandle] = useState("");
 
   const influencer = props.influencer;
   const theme = useTheme();
@@ -59,12 +63,36 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
     setPreviewImage(true);
   };
 
+  const fetchHandle = async () => {
+    if (!influencer.primarySocial) {
+      setHandle("influencer-handle");
+      return;
+    }
+    const userSocialRef = doc(
+      FirestoreDB,
+      "users",
+      influencer.id,
+      "socials",
+      influencer.primarySocial
+    );
+    const socialDoc = await getDoc(userSocialRef);
+    const socialData = socialDoc.data() as ISocials;
+    if (socialDoc.exists()) {
+      if (socialData.isInstagram) {
+        setHandle(socialData.instaProfile?.username || "influencer-handle");
+      } else {
+        setHandle(socialData.fbProfile?.name || "influencer-handle");
+      }
+    }
+  };
+
   useEffect(() => {
     if (props?.alreadyInvited) {
       props.alreadyInvited(props.influencer.id).then((invited) => {
         setIsInvited(invited);
       });
     }
+    fetchHandle();
   }, []);
 
   return (
@@ -95,9 +123,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             }}
           >
             <Text style={styles.name}>{influencer.name}</Text>
-            <Text style={styles.handle}>
-              {influencer.socials?.[0] || "influencer-handle"}
-            </Text>
+            <Text style={styles.handle}>@{handle}</Text>
           </Pressable>
           {props.type === "invitation" &&
             (isInvited ? (
