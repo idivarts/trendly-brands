@@ -70,7 +70,6 @@ export const stylesFn = (theme: Theme) =>
     messageModalContent: {
       width: "80%",
       padding: 20,
-      backgroundColor: "white",
       borderRadius: 10,
       alignItems: "center",
     },

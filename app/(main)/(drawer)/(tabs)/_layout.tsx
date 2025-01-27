@@ -11,17 +11,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
   faComment,
   faFileLines,
+  faHeart,
   faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
-  faHouseUser as faHouseUserSolid,
+  faHeart as faHeartSolid,
   faFileLines as faFileLinesSolid,
   faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import Header from "@/components/explore-influencers/header";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
-import HomeIcon from "@/assets/icons/home.svg";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -50,16 +50,13 @@ const TabLayout = () => {
         name="explore-influencers"
         options={{
           title: "Explore",
-          tabBarIcon: ({ color, focused }) =>
-            focused ? (
-              <FontAwesomeIcon
-                color={color}
-                icon={faHouseUserSolid}
-                size={24}
-              />
-            ) : (
-              <HomeIcon width={24} height={24} fill={Colors(theme).text} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <FontAwesomeIcon
+              color={color}
+              icon={focused ? faHeartSolid : faHeart}
+              size={24}
+            />
+          ),
           headerTitle() {
             return <Header />;
           },

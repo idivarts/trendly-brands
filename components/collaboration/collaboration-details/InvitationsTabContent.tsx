@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
 } from "react-native";
 import {
-  Text,
   List,
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
@@ -30,7 +29,7 @@ import { useSharedValue } from "react-native-reanimated";
 import { processRawAttachment } from "@/utils/attachments";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { User } from "@/types/User";
-import { View } from "@/components/theme/Themed";
+import { Text, View } from "@/components/theme/Themed";
 import TextInput from "@/components/ui/text-input";
 import Button from "@/components/ui/button";
 
