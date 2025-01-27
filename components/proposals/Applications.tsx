@@ -239,6 +239,7 @@ const Applications = () => {
             contentContainerStyle={{
               gap: 16,
               paddingBottom: 64,
+              width: xl ? "50%" : "100%",
             }}
             refreshControl={
               <RefreshControl
@@ -247,10 +248,10 @@ const Applications = () => {
                 colors={[Colors(theme).primary]}
               />
             }
-            horizontal={false}
-            numColumns={xl ? 2 : 1} // TODO: On fly can't be responsive
+            numColumns={xl ? 2 : 1}
             {...(xl && {
               columnWrapperStyle: {
+                justifyContent: "space-between",
                 gap: 16,
               },
             })}

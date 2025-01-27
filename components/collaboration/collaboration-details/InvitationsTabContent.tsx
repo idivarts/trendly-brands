@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
 } from "react-native";
 import {
-  Text,
   List,
 } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
@@ -30,9 +29,10 @@ import { useSharedValue } from "react-native-reanimated";
 import { processRawAttachment } from "@/utils/attachments";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { User } from "@/types/User";
-import { View } from "@/components/theme/Themed";
+import { Text, View } from "@/components/theme/Themed";
 import TextInput from "@/components/ui/text-input";
 import Button from "@/components/ui/button";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -163,13 +163,13 @@ const InvitationsTabContent = (props: any) => {
           <InvitationCard
             checkIfAlreadyInvited={checkIfAlreadyInvited}
             data={item}
-            headerLeftAction={() => {
+            profileModalAction={() => {
               setSelectedInfluencer(item);
               setTimeout(() => {
                 bottomSheetModalRef.current?.present();
               }, 500);
             }}
-            headerRightAction={() => {
+            bottomSheetAction={() => {
               setSelectedInfluencer(item);
               setIsActionModalVisible(true);
             }}
@@ -191,7 +191,7 @@ const InvitationsTabContent = (props: any) => {
         keyExtractor={(item) => item.id}
         style={{
           paddingBottom: 16,
-          width: xl ? 640 : '100%',
+          width: xl ? MAX_WIDTH_WEB : '100%',
           marginHorizontal: "auto",
         }}
         ItemSeparatorComponent={

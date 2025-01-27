@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, Image, Pressable } from "react-native";
+import { View, Text, Image, Pressable, Platform } from "react-native";
 import Swiper from "react-native-swiper";
 import { Title, Paragraph } from "react-native-paper";
 import stylesFn from "@/styles/tab1.styles";
@@ -13,6 +13,8 @@ import Button from "@/components/ui/button";
 import SocialButton from "@/components/ui/button/social-button";
 import {
   faArrowRight,
+  faChevronLeft,
+  faChevronRight,
   faEnvelopeOpen,
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
@@ -48,6 +50,29 @@ const PreSignIn = () => {
         ]}
         paginationStyle={styles.pagination}
         loop={false}
+        showsButtons={Platform.OS === "web"}
+        nextButton={
+          Platform.OS === "web" && (
+            <View style={styles.buttonWrapper}>
+              <FontAwesomeIcon
+                icon={faChevronRight}
+                size={20}
+                color={Colors(theme).black}
+              />
+            </View>
+          )
+        }
+        prevButton={
+          Platform.OS === "web" && (
+            <View style={styles.buttonWrapper}>
+              <FontAwesomeIcon
+                icon={faChevronLeft}
+                size={20}
+                color={Colors(theme).black}
+              />
+            </View>
+          )
+        }
       >
         {slides.map((slide) => (
           <View style={styles.slide} key={slide.key}>
@@ -58,8 +83,8 @@ const PreSignIn = () => {
                   onPress={() => {
                     skipToConnect();
                   }}
-                  buttonColor={Colors(theme).primary}
-                  textColor={Colors(theme).white}
+                  buttonColor={Colors(theme).background}
+                  textColor={Colors(theme).primary}
                 >
                   Skip
                 </Button>
@@ -72,7 +97,7 @@ const PreSignIn = () => {
               {slide.title}
             </Title>
             <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
-            {slide.key !== "connect" && (
+            {slide.key !== "connect" && Platform.OS !== "web" && (
               <Pressable
                 style={{
                   flexDirection: "row",

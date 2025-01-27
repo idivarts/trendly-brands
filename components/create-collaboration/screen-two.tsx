@@ -22,7 +22,7 @@ import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import ScreenLayout from "./screen-layout";
 import { calculateDelta, fetchLatLngFromPlaceId } from "@/utils/map";
-import { Platform } from "react-native";
+import { Platform, useWindowDimensions } from "react-native";
 
 interface ScreenTwoProps {
   collaboration: Partial<Collaboration>;
@@ -64,6 +64,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
   type,
 }) => {
   const theme = useTheme();
+  const dimensions = useWindowDimensions();
 
   const mapInputRef = useRef<GooglePlacesAutocompleteRef>(null);
 
@@ -169,7 +170,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 numberOfInfluencersNeeded: values[0],
               });
             }}
-            sliderLength={368}
+            sliderLength={Platform.OS === "web" ? dimensions.width - 40 : 368}
             isMarkersSeparated
             allowOverlap
             customMarkerLeft={

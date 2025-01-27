@@ -22,6 +22,7 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import FeedbackModal from "./FeedbackModal";
 import { router } from "expo-router";
 import { formatTimeToNow } from "@/utils/date";
+import { truncateText } from "@/utils/text";
 
 interface CollaborationDetailsContentProps {
   collaborationDetail: ICollaboration;
@@ -174,7 +175,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 color: Colors(theme).gray100,
               }}
             >
-              {props.collaborationDetail.description}
+              {truncateText(props.collaborationDetail.description || "", 120)}
             </Text>
           </Pressable>
         </Card.Content>

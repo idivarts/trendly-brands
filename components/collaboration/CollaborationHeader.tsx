@@ -1,18 +1,10 @@
 import { imageUrl } from "@/utils/url";
 import React from "react";
 import { Avatar } from "react-native-paper";
-import Tag from "../ui/tag";
 import { Text, View } from "../theme/Themed";
 import { useTheme } from "@react-navigation/native";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationHeader.styles";
 import { CollaborationDetail } from "./collaboration-details";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import {
-  faBolt,
-  faEye,
-  faLocationDot,
-} from "@fortawesome/free-solid-svg-icons";
-import Colors from "@/constants/Colors";
 
 interface ColloborationHeaderProps {
   collaboration: CollaborationDetail;
