@@ -24,6 +24,7 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import { processRawAttachment } from "@/utils/attachments";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { View } from "@/components/theme/Themed";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
 
 const ApplicationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -134,7 +135,7 @@ const ApplicationsTabContent = (props: any) => {
         keyExtractor={(item, index) => item.application.id + index}
         style={{
           paddingBottom: 16,
-          width: xl ? 640 : '100%',
+          width: xl ? MAX_WIDTH_WEB : '100%',
           marginHorizontal: "auto",
         }}
         ItemSeparatorComponent={
