@@ -5,8 +5,8 @@ const ChannelWeb = () => {
     <View
       style={{
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
       <Text>Stream chat is not available on web right now</Text>

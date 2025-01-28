@@ -1,7 +1,7 @@
 import { useTheme } from "@react-navigation/native";
 import { Text, View } from "../theme/Themed";
 import Colors from "@/constants/Colors";
-import { Pressable } from "react-native";
+import { Platform, Pressable } from "react-native";
 import { useBreakpoints } from "@/hooks";
 import BrandSwitcher from "../ui/brand-switcher";
 import DrawerToggleButton from "../ui/drawer-toggle-button/DrawerToggleButton";
@@ -13,9 +13,7 @@ const Header: React.FC = (props) => {
   const theme = useTheme();
   const { xl } = useBreakpoints();
 
-  const {
-    selectedBrand,
-  } = useBrandContext();
+  const { selectedBrand } = useBrandContext();
 
   return (
     <View
@@ -32,28 +30,24 @@ const Header: React.FC = (props) => {
           fontWeight: "bold",
         }}
       >
-        {selectedBrand?.name ?? "Brand"}
+        {Platform.OS === "web" ? "Explore" : selectedBrand?.name ?? "Brand"}
       </Text>
       <Pressable>
-        {
-          xl ? (
-            <BrandSwitcher />
-          ) : (
-            <DrawerToggleButton
-              icon={
-                <FontAwesomeIcon
-                  color={Colors(theme).text}
-                  icon={faChevronDown}
-                  size={16}
-                  style={{
-                    marginLeft: 6,
-                    marginBottom: -2,
-                  }}
-                />
-              }
-            />
-          )
-        }
+        {xl ? null : (
+          <DrawerToggleButton
+            icon={
+              <FontAwesomeIcon
+                color={Colors(theme).text}
+                icon={faChevronDown}
+                size={16}
+                style={{
+                  marginLeft: 6,
+                  marginBottom: -2,
+                }}
+              />
+            }
+          />
+        )}
       </Pressable>
     </View>
   );
