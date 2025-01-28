@@ -20,7 +20,7 @@ ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 git init
 
-git remote add origin git@github.com:idivarts/trendly-users.git
+git remote add origin git@github.com:idivarts/trendly-brands.git
 
 git clean -df
 git checkout -- .

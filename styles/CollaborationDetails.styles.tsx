@@ -6,6 +6,7 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     scrollContainer: {
       gap: 16,
+      paddingBottom: 24,
     },
     profileCard: {
       backgroundColor: Colors(theme).card,

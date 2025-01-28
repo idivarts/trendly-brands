@@ -1,5 +1,4 @@
 import { Text, View } from "@/components/theme/Themed";
-import { APP_NAME } from "@/constants/App";
 import DrawerMenuItem, { IconPropFn } from "./DrawerMenuItem";
 import { useBreakpoints } from "@/hooks";
 import BrandItem from "./BrandItem";
@@ -21,7 +20,6 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
-  faBuilding,
   faHeart as faHeartSolid,
   faMagnifyingGlass,
   faPlus,
@@ -30,8 +28,8 @@ import {
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import DrawerIcon from "./DrawerIcon";
-import HomeIcon from "@/assets/icons/home.svg";
 import BrandSwitcher from "../ui/brand-switcher";
+import ProfileIcon from "../explore-influencers/profile-icon";
 
 interface DrawerMenuContentProps { }
 
@@ -73,12 +71,7 @@ const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
   },
   {
     href: "/menu",
-    icon: ({ focused }: IconPropFn) =>
-      focused ? (
-        <DrawerIcon href="/menu" icon={faBuilding} />
-      ) : (
-        <DrawerIcon href="/menu" icon={faBuilding} />
-      ),
+    icon: ({ focused }: IconPropFn) => <ProfileIcon />,
     label: "My Brand",
   },
 ];

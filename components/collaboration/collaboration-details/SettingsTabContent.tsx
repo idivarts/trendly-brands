@@ -147,37 +147,31 @@ const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
         >
           Content Niche / Category
         </Text>
-        <View
-          style={{
-            marginBottom: 90,
+        <Select
+          items={[
+            { label: "Fashion", value: "Fashion" },
+            { label: "Lifestyle", value: "Lifestyle" },
+            { label: "Food", value: "Food" },
+            { label: "Travel", value: "Travel" },
+            { label: "Health", value: "Health" },
+          ]}
+          selectItemIcon={true}
+          value={niches}
+          multiselect
+          onSelect={(selectedOptions) => {
+            const selectedValues = selectedOptions.map(
+              (option) => option.value
+            );
+            setNiches(selectedOptions);
+            updateCollaboration("influencerNiche", selectedValues);
           }}
-        >
-          <Select
-            items={[
-              { label: "Fashion", value: "Fashion" },
-              { label: "Lifestyle", value: "Lifestyle" },
-              { label: "Food", value: "Food" },
-              { label: "Travel", value: "Travel" },
-              { label: "Health", value: "Health" },
-            ]}
-            selectItemIcon={true}
-            value={niches}
-            multiselect
-            onSelect={(selectedOptions) => {
-              const selectedValues = selectedOptions.map(
-                (option) => option.value
-              );
-              setNiches(selectedOptions);
-              updateCollaboration("influencerNiche", selectedValues);
-            }}
-            selectItemStyle={{
-              height: 40,
-            }}
-            style={{
-              marginBottom: 16,
-            }}
-          />
-        </View>
+          selectItemStyle={{
+            height: 40,
+          }}
+          style={{
+            marginBottom: 16,
+          }}
+        />
         <Text
           style={{
             fontSize: 14,
