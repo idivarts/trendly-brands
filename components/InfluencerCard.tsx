@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Pressable,
+  Platform,
 } from "react-native";
 import { Card, Avatar } from "react-native-paper";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
@@ -35,6 +36,7 @@ import ImageComponent from "@/shared-uis/components/image-component";
 import { doc, getDoc } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
 import { ISocials } from "@/shared-libs/firestore/trendly-pro/models/socials";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
 
 interface InfluencerCardPropsType {
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
@@ -178,6 +180,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               processRawAttachment(attachment)
             ) || []
           }
+          carouselWidth={Platform.OS === "web" ? MAX_WIDTH_WEB : screenWidth}
           onImagePress={onImagePress}
           theme={theme}
         />

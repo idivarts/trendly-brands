@@ -1,5 +1,12 @@
 import React, { useState, useRef } from "react";
-import { View, Text, Image, Pressable, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  Platform,
+  Dimensions,
+} from "react-native";
 import Swiper from "react-native-swiper";
 import { Title, Paragraph } from "react-native-paper";
 import stylesFn from "@/styles/tab1.styles";
@@ -19,64 +26,55 @@ import {
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useSharedValue } from "react-native-reanimated";
+import Carousel, {
+  ICarouselInstance,
+  Pagination,
+} from "react-native-reanimated-carousel";
 
 const PreSignIn = () => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const [error, setError] = useState<string | null>(null);
-  const swiperRef = useRef<Swiper>(null); // Use ref for Swiper
   const [visible, setVisible] = useState(false);
   const router = useRouter();
+  const swiperRef = useRef<ICarouselInstance>(null);
+  const progress = useSharedValue(0);
 
   const skipToConnect = () => {
-    // Calculate how many slides away the "connect" slide is
     const connectSlideIndex = slides.findIndex(
       (slide) => slide.key === "connect"
     );
     if (connectSlideIndex !== -1) {
-      swiperRef.current?.scrollBy(connectSlideIndex);
+      swiperRef.current?.scrollTo({ index: connectSlideIndex });
     }
+  };
+
+  const onPressPagination = (index: number) => {
+    swiperRef.current?.scrollTo({
+      count: index - progress.value,
+      animated: true,
+    });
   };
 
   return (
     <AppLayout>
-      <Swiper
+      <Carousel
         ref={swiperRef} // Attach the ref to Swiper
         style={styles.wrapper}
-        dotStyle={styles.dotStyle}
-        activeDotStyle={[
-          styles.dotStyle,
-          { backgroundColor: Colors(theme).primary },
-        ]}
-        paginationStyle={styles.pagination}
         loop={false}
-        showsButtons={Platform.OS === "web"}
-        nextButton={
-          Platform.OS === "web" && (
-            <View style={styles.buttonWrapper}>
-              <FontAwesomeIcon
-                icon={faChevronRight}
-                size={20}
-                color={Colors(theme).black}
-              />
-            </View>
-          )
-        }
-        prevButton={
-          Platform.OS === "web" && (
-            <View style={styles.buttonWrapper}>
-              <FontAwesomeIcon
-                icon={faChevronLeft}
-                size={20}
-                color={Colors(theme).black}
-              />
-            </View>
-          )
-        }
-      >
-        {slides.map((slide) => (
-          <View style={styles.slide} key={slide.key}>
-            {slide.key !== "connect" && (
+        width={Dimensions.get("window").width}
+        data={slides}
+        onProgressChange={(_, absoluteProgress) => {
+          progress.value = absoluteProgress;
+        }}
+        withAnimation={{
+          type: "timing",
+          config: {},
+        }}
+        renderItem={({ item }) => (
+          <View style={styles.slide}>
+            {item.key !== "connect" && (
               <View style={styles.skipButtonContainer}>
                 <Button
                   mode="outlined"
@@ -91,13 +89,13 @@ const PreSignIn = () => {
               </View>
             )}
             <View style={styles.imageContainer}>
-              <Image source={imageUrl(slide.image)} style={styles.image} />
+              <Image source={imageUrl(item.image)} style={styles.image} />
             </View>
             <Title style={[styles.title, { color: Colors(theme).primary }]}>
-              {slide.title}
+              {item.title}
             </Title>
-            <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
-            {slide.key !== "connect" && Platform.OS !== "web" && (
+            <Paragraph style={styles.paragraph}>{item.text}</Paragraph>
+            {item.key !== "connect" && (
               <Pressable
                 style={{
                   flexDirection: "row",
@@ -111,7 +109,7 @@ const PreSignIn = () => {
                   gap: 10,
                 }}
                 onPress={() => {
-                  swiperRef.current?.scrollBy(1);
+                  swiperRef.current?.next();
                 }}
               >
                 <Text
@@ -129,7 +127,7 @@ const PreSignIn = () => {
                 />
               </Pressable>
             )}
-            {slide.key === "connect" && (
+            {item.key === "connect" && (
               <View style={styles.socialContainer}>
                 <SocialButton
                   icon={faUserPlus}
@@ -148,8 +146,30 @@ const PreSignIn = () => {
               </View>
             )}
           </View>
-        ))}
-      </Swiper>
+        )}
+      />
+      <Pagination.Basic
+        progress={progress}
+        data={slides}
+        size={12}
+        dotStyle={{
+          borderRadius: 100,
+          backgroundColor: Colors(theme).backdrop,
+        }}
+        activeDotStyle={{
+          borderRadius: 100,
+          overflow: "hidden",
+          backgroundColor: Colors(theme).primary,
+        }}
+        containerStyle={[
+          {
+            gap: 5,
+            marginBottom: 10,
+          },
+        ]}
+        horizontal
+        onPress={onPressPagination}
+      />
 
       {error && <Text style={{ color: "red" }}>Error: {error}</Text>}
     </AppLayout>
