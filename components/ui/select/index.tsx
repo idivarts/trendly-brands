@@ -52,18 +52,17 @@ const Select: React.FC<SelectProps> = ({
     <View
       style={[
         {
-          flex: 1,
           gap: 8,
         },
         direction === "row"
           ? {
-              flexDirection: "row",
-              flexWrap: "wrap",
-            }
+            flexDirection: "row",
+            flexWrap: "wrap",
+          }
           : {
-              flexDirection: "column",
-              justifyContent: "center",
-            },
+            flexDirection: "column",
+            justifyContent: "center",
+          },
         style,
       ]}
     >
