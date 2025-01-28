@@ -162,8 +162,8 @@ const Applications = () => {
       {filteredProposals.length === 0 ? (
         <EmptyState
           image={require("@/assets/images/illustration6.png")}
-          subtitle="Start Applying today and get exclusive collabs"
-          title="No Applications yet"
+          subtitle="You have posted no collaborations yet! Your journey begins here"
+          title="No Collaborations posted"
           action={() => router.push("/(modal)/create-collaboration")}
           actionLabel="Create Collaboration"
         />

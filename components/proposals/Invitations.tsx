@@ -6,7 +6,12 @@ import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { ActivityIndicator, FlatList, Pressable } from "react-native";
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Pressable,
+} from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
@@ -140,8 +145,8 @@ const Invitations = () => {
         <EmptyState
           hideAction
           image={require("@/assets/images/illustration5.png")}
-          subtitle="Start building your profile today to have better reach. If any brand invites you to collaborate we woudl show it here"
-          title="No Invitations yet"
+          subtitle="There are no collaborations here. Once your collaboration expires, you will see that here"
+          title="No Past Collaborations"
         />
       ) : (
         <View style={{ flex: 1 }}>
@@ -155,6 +160,8 @@ const Invitations = () => {
                   borderWidth: 0.3,
                   borderColor: Colors(theme).gray300,
                   gap: 8,
+                  borderRadius: 5,
+                  overflow: "hidden",
                 }}
               >
                 {item.attachments && item.attachments?.length > 0 && (
@@ -167,6 +174,7 @@ const Invitations = () => {
                           processRawAttachment(attachment)
                       ) || []
                     }
+                    carouselWidth={xl ? 640 : Dimensions.get("window").width}
                   />
                 )}
                 {item.status === "draft" && (
@@ -183,6 +191,7 @@ const Invitations = () => {
                     <Text style={{ color: Colors(theme).white }}>Draft</Text>
                   </View>
                 )}
+
                 <CollaborationDetails
                   collabDescription={item.description || ""}
                   name={item.name || ""}
@@ -194,9 +203,9 @@ const Invitations = () => {
                   collabId={item.id}
                 />
                 <Pressable
-                  onPress={() => {
-                    router.push(`/collaboration-details/${item.id}`);
-                  }}
+                  onPress={() =>
+                    router.push(`/collaboration-details/${item.id}`)
+                  }
                 >
                   <CollaborationStats
                     budget={item.budget}
@@ -225,7 +234,6 @@ const Invitations = () => {
                 colors={[Colors(theme).primary]}
               />
             }
-            horizontal={false}
             numColumns={xl ? 2 : 1}
             {...(xl && {
               columnWrapperStyle: {

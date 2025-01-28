@@ -29,6 +29,7 @@ export const stylesFn = (theme: Theme) =>
       fontSize: 20,
       color: Colors(theme).text,
       lineHeight: 20,
+      flex: 1,
     },
     brandName: {
       fontSize: 16,
