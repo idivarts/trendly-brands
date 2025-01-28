@@ -31,91 +31,57 @@ import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import DrawerIcon from "./DrawerIcon";
 import HomeIcon from "@/assets/icons/home.svg";
+import BrandSwitcher from "../ui/brand-switcher";
 
 interface DrawerMenuContentProps { }
 
-const DRAWER_MENU_CONTENT_ITEMS = (
-  theme: Theme,
-) => [
-    {
-      href: "/collaborations",
-      icon: ({
-        focused,
-      }: IconPropFn) => focused ? (
-        <DrawerIcon
-          href="/collaborations"
-          icon={faStarSolid}
-        />
+const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
+  {
+    href: "/collaborations",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/collaborations" icon={faStarSolid} />
       ) : (
-          <DrawerIcon
-            href="/collaborations"
-            icon={faStar}
-          />
-        ),
-      label: "Collaborations",
-    },
-    {
-      href: "/messages",
-      icon: ({
-        focused,
-      }: IconPropFn) => focused ? (
-        <DrawerIcon
-          href="/messages"
-          icon={faCommentSolid}
-        />
-      ) : (
-          <DrawerIcon
-            href="/messages"
-            icon={faComment}
-          />
-        ),
-      label: "Messages",
-    },
-    {
-      href: "/contracts",
-      icon: () => (
-        <DrawerIcon
-          href="/contracts"
-          icon={faFileLines}
-        />
+        <DrawerIcon href="/collaborations" icon={faStar} />
       ),
-      label: "Contracts",
-    },
-    {
-      href: "/explore-influencers",
-      icon: ({
-        focused,
-      }: IconPropFn) => focused ? (
-        <DrawerIcon
-          href="/explore-influencers"
-          icon={faHeartSolid}
-        />
+    label: "Collaborations",
+  },
+  {
+    href: "/messages",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/messages" icon={faCommentSolid} />
       ) : (
-          <DrawerIcon
-            href="/explore-influencers"
-            icon={faHeart}
-          />
-        ),
-      label: "Explore",
-    },
-    {
-      href: "/menu",
-      icon: ({
-        focused,
-      }: IconPropFn) => focused ? (
-        <DrawerIcon
-          href="/menu"
-          icon={faBuilding}
-        />
+        <DrawerIcon href="/messages" icon={faComment} />
+      ),
+    label: "Messages",
+  },
+  {
+    href: "/contracts",
+    icon: () => <DrawerIcon href="/contracts" icon={faFileLines} />,
+    label: "Contracts",
+  },
+  {
+    href: "/explore-influencers",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
       ) : (
-          <DrawerIcon
-            href="/menu"
-            icon={faBuilding}
-          />
-        ),
-      label: "My Brand",
-    },
-  ];
+        <DrawerIcon href="/explore-influencers" icon={faHeart} />
+      ),
+    label: "Explore",
+  },
+  {
+    href: "/menu",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/menu" icon={faBuilding} />
+      ) : (
+        <DrawerIcon href="/menu" icon={faBuilding} />
+      ),
+    label: "My Brand",
+  },
+];
 
 const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const { xl } = useBreakpoints();
@@ -124,11 +90,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const { bottom } = useSafeAreaInsets();
   const theme = useTheme();
   const styles = stylesFn(theme);
-  const {
-    brands,
-    selectedBrand,
-    setSelectedBrand,
-  } = useBrandContext();
+  const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
 
   const [filteredBrands, setFilteredBrands] = useState<Brand[]>(brands);
   const [search, setSearch] = useState("");
@@ -143,64 +105,82 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
       return;
     }
 
-    setFilteredBrands(brands.filter(brand => brand.name.toLowerCase().includes(search.toLowerCase())));
+    setFilteredBrands(
+      brands.filter((brand) =>
+        brand.name.toLowerCase().includes(search.toLowerCase())
+      )
+    );
   }, [search, brands]);
 
   const handleSearchChange = (text: string) => {
     setSearch(text);
-  }
+  };
 
   return (
     <View
       style={{
         flex: 1,
-        paddingTop: Platform.OS === 'web' ? 12 : 64,
+        paddingTop: Platform.OS === "web" ? 12 : 64,
       }}
     >
       <View>
-        <Text
-          style={{
-            paddingHorizontal: 24,
-            paddingTop: 8,
-            paddingBottom: 16,
-            fontSize: 24,
-            fontWeight: "bold",
-          }}
-        >
-          {APP_NAME}
-        </Text>
-        {
-          !xl && (
-            <View
-              style={{
-                flexDirection: 'row',
-              }}
-            >
-              <Searchbar
-                icon={() => (
-                  <FontAwesomeIcon
-                    color={Colors(theme).gray100}
-                    icon={faMagnifyingGlass}
-                    size={18}
-                  />
-                )}
-                iconColor={Colors(theme).gray100}
-                inputStyle={styles.searchbarInput}
-                onChangeText={handleSearchChange}
-                placeholder="Search"
-                placeholderTextColor={Colors(theme).gray100}
-                style={[
-                  styles.searchbar,
-                  {
-                    marginHorizontal: 14,
-                    marginBottom: 8,
-                  },
-                ]}
-                value={search}
-              />
-            </View>
-          )
-        }
+        {xl ? (
+          <Text
+            style={{
+              paddingHorizontal: 24,
+              paddingTop: 8,
+              paddingBottom: 16,
+              fontSize: 24,
+              fontWeight: "bold",
+            }}
+          >
+            {selectedBrand?.name ?? "Brand"}
+
+            <BrandSwitcher />
+          </Text>
+        ) : (
+          <Text
+            style={{
+              paddingHorizontal: 24,
+              paddingTop: 8,
+              paddingBottom: 16,
+              fontSize: 24,
+              fontWeight: "bold",
+            }}
+          >
+            {selectedBrand?.name ?? "Brand"}
+          </Text>
+        )}
+        {!xl && (
+          <View
+            style={{
+              flexDirection: "row",
+            }}
+          >
+            <Searchbar
+              icon={() => (
+                <FontAwesomeIcon
+                  color={Colors(theme).gray100}
+                  icon={faMagnifyingGlass}
+                  size={18}
+                />
+              )}
+              iconColor={Colors(theme).gray100}
+              inputStyle={styles.searchbarInput}
+              onChangeText={handleSearchChange}
+              placeholder="Search"
+              placeholderTextColor={Colors(theme).gray100}
+              style={[
+                styles.searchbar,
+                {
+                  marginHorizontal: 14,
+                  marginBottom: 8,
+                },
+              ]}
+              value={search}
+            />
+          </View>
+        )}
       </View>
       <ScrollView
         style={{
@@ -213,27 +193,26 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             paddingTop: 8,
           }}
         >
-          {xl ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
-            <DrawerMenuItem
-              key={index}
-              tab={tab}
-            />
-          )) : filteredBrands.map((brand) => (
-            <BrandItem
-              active={selectedBrand?.id === brand.id}
-              image={brand.image}
-              key={brand.id.toString()}
-              menu={true}
-              onPress={() => handleBrandChange(brand)}
-              showImage={true}
-              title={brand.name}
-            />
-          ))}
+          {xl
+            ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
+              <DrawerMenuItem key={index} tab={tab} />
+            ))
+            : filteredBrands.map((brand) => (
+              <BrandItem
+                active={selectedBrand?.id === brand.id}
+                image={brand.image}
+                key={brand.id.toString()}
+                menu={true}
+                onPress={() => handleBrandChange(brand)}
+                showImage={true}
+                title={brand.name}
+              />
+            ))}
         </View>
       </ScrollView>
       <View
         style={{
-          marginBottom: bottom + Platform.OS === 'android' ? 24 : 44,
+          marginBottom: bottom + Platform.OS === "android" ? 24 : 44,
         }}
       >
         <BrandActionItem

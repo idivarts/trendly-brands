@@ -7,7 +7,12 @@ import { useTheme } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { ActivityIndicator, FlatList, Pressable } from "react-native";
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Pressable,
+} from "react-native";
 import { FirestoreDB } from "@/utils/firestore";
 import { AuthApp } from "@/utils/auth";
 import { RefreshControl } from "react-native";
@@ -157,8 +162,8 @@ const Applications = () => {
       {filteredProposals.length === 0 ? (
         <EmptyState
           image={require("@/assets/images/illustration6.png")}
-          subtitle="Start Applying today and get exclusive collabs"
-          title="No Applications yet"
+          subtitle="You have posted no collaborations yet! Your journey begins here"
+          title="No Collaborations posted"
           action={() => router.push("/(modal)/create-collaboration")}
           actionLabel="Create Collaboration"
         />
@@ -188,6 +193,7 @@ const Applications = () => {
                           processRawAttachment(attachment)
                       ) || []
                     }
+                    carouselWidth={xl ? 640 : Dimensions.get("window").width}
                   />
                 )}
                 {item.status === "draft" && (
