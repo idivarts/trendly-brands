@@ -4,10 +4,8 @@ import {
   Text,
   Image,
   Pressable,
-  Platform,
   Dimensions,
 } from "react-native";
-import Swiper from "react-native-swiper";
 import { Title, Paragraph } from "react-native-paper";
 import stylesFn from "@/styles/tab1.styles";
 import { useTheme } from "@react-navigation/native";
@@ -20,8 +18,6 @@ import Button from "@/components/ui/button";
 import SocialButton from "@/components/ui/button/social-button";
 import {
   faArrowRight,
-  faChevronLeft,
-  faChevronRight,
   faEnvelopeOpen,
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
@@ -95,60 +91,64 @@ const PreSignIn = () => {
               {item.title}
             </Title>
             <Paragraph style={styles.paragraph}>{item.text}</Paragraph>
-            {item.key !== "connect" && (
-              <Pressable
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginTop: 15,
-                  backgroundColor: Colors(theme).primary,
-                  paddingHorizontal: 20,
-                  paddingVertical: 10,
-                  borderRadius: 5,
-                  gap: 10,
-                }}
-                onPress={() => {
-                  swiperRef.current?.next();
-                }}
-              >
-                <Text
+            {
+              item.key !== "connect" && (
+                <Pressable
                   style={{
-                    color: Colors(theme).white,
-                    fontSize: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: 15,
+                    backgroundColor: Colors(theme).primary,
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 5,
+                    gap: 10,
+                  }}
+                  onPress={() => {
+                    swiperRef.current?.next();
                   }}
                 >
-                  Next
-                </Text>
-                <FontAwesomeIcon
-                  icon={faArrowRight}
-                  size={16}
-                  color={Colors(theme).white}
-                />
-              </Pressable>
-            )}
-            {item.key === "connect" && (
-              <View style={styles.socialContainer}>
-                <SocialButton
-                  icon={faUserPlus}
-                  label="Create New Account"
-                  onPress={() => {
-                    router.push("/create-new-account");
-                  }}
-                />
-                <SocialButton
-                  icon={faEnvelopeOpen}
-                  label="Login"
-                  onPress={() => {
-                    router.push("/login");
-                  }}
-                />
-              </View>
-            )}
-          </View>
+                  <Text
+                    style={{
+                      color: Colors(theme).white,
+                      fontSize: 16,
+                    }}
+                  >
+                    Next
+                  </Text>
+                  <FontAwesomeIcon
+                    icon={faArrowRight}
+                    size={16}
+                    color={Colors(theme).white}
+                  />
+                </Pressable>
+              )
+            }
+            {
+              item.key === "connect" && (
+                <View style={styles.socialContainer}>
+                  <SocialButton
+                    icon={faUserPlus}
+                    label="Create New Account"
+                    onPress={() => {
+                      router.push("/create-new-account");
+                    }}
+                  />
+                  <SocialButton
+                    icon={faEnvelopeOpen}
+                    label="Login"
+                    onPress={() => {
+                      router.push("/login");
+                    }}
+                  />
+                </View>
+              )
+            }
+          </View >
         )}
       />
-      <Pagination.Basic
+      < Pagination.Basic
         progress={progress}
         data={slides}
         size={12}
@@ -161,18 +161,19 @@ const PreSignIn = () => {
           overflow: "hidden",
           backgroundColor: Colors(theme).primary,
         }}
-        containerStyle={[
-          {
-            gap: 5,
-            marginBottom: 10,
-          },
-        ]}
+        containerStyle={
+          [
+            {
+              gap: 5,
+              marginBottom: 10,
+            },
+          ]}
         horizontal
         onPress={onPressPagination}
       />
 
       {error && <Text style={{ color: "red" }}>Error: {error}</Text>}
-    </AppLayout>
+    </AppLayout >
   );
 };
 

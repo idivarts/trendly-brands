@@ -33,7 +33,7 @@ import DrawerIcon from "./DrawerIcon";
 import HomeIcon from "@/assets/icons/home.svg";
 import BrandSwitcher from "../ui/brand-switcher";
 
-interface DrawerMenuContentProps {}
+interface DrawerMenuContentProps { }
 
 const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
   {
@@ -195,19 +195,19 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
         >
           {xl
             ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
-                <DrawerMenuItem key={index} tab={tab} />
-              ))
+              <DrawerMenuItem key={index} tab={tab} />
+            ))
             : filteredBrands.map((brand) => (
-                <BrandItem
-                  active={selectedBrand?.id === brand.id}
-                  image={brand.image}
-                  key={brand.id.toString()}
-                  menu={true}
-                  onPress={() => handleBrandChange(brand)}
-                  showImage={true}
-                  title={brand.name}
-                />
-              ))}
+              <BrandItem
+                active={selectedBrand?.id === brand.id}
+                image={brand.image}
+                key={brand.id.toString()}
+                menu={true}
+                onPress={() => handleBrandChange(brand)}
+                showImage={true}
+                title={brand.name}
+              />
+            ))}
         </View>
       </ScrollView>
       <View
