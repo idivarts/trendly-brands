@@ -230,7 +230,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     }
 
     signOut(AuthApp)
-      .then(async () => {
+      .then(() => {
         setSession("");
         setManager(null);
 
