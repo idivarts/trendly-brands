@@ -10,12 +10,12 @@ import { useRouter } from "expo-router";
 
 interface BottomSheetActionsProps {
   cardType:
-    | "influencerType"
-    | "promotionType"
-    | "influencerCard"
-    | "applicationCard"
-    | "invitationCard"
-    | "activeCollab";
+  | "influencerType"
+  | "promotionType"
+  | "influencerCard"
+  | "applicationCard"
+  | "invitationCard"
+  | "activeCollab";
   data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
@@ -37,7 +37,7 @@ const BottomSheetActions = ({
   const router = useRouter();
 
   const { createGroupWithMembers, connectUser } = useChatContext();
-  const { createNotification } = useNotificationContext();
+  const { sendNotification } = useNotificationContext();
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -71,8 +71,10 @@ const BottomSheetActions = ({
         ).then((channel) => {
           connectUser();
 
-          createNotification(
-            cardId.influencerID,
+          sendNotification(
+            {
+              users: [cardId.influencerID],
+            },
             {
               data: {
                 collaborationId: data.collaboration.id,
@@ -83,7 +85,6 @@ const BottomSheetActions = ({
               isRead: false,
               type: "application-accepted",
             },
-            "users"
           );
 
           router.navigate(`/channel/${channel.cid}`);

@@ -26,7 +26,7 @@ const useApplications = ({
   handleActionModalClose,
 }: UseApplicationsProps) => {
   const { createGroupWithMembers, connectUser } = useChatContext();
-  const { createNotification } = useNotificationContext();
+  const { sendNotification } = useNotificationContext();
   const router = useRouter();
   const [influencers, setInfluencers] = useState<{
     influencer: User;
@@ -103,8 +103,10 @@ const useApplications = ({
         ).then((channel) => {
           connectUser();
 
-          createNotification(
-            influencerApplication.application.userId,
+          sendNotification(
+            {
+              users: [influencerApplication.application.userId],
+            },
             {
               data: {
                 collaborationId: influencerApplication.application.collaborationId,
@@ -115,7 +117,6 @@ const useApplications = ({
               isRead: false,
               type: "application-accepted",
             },
-            "users"
           );
 
           router.navigate(`/channel/${channel.cid}`);

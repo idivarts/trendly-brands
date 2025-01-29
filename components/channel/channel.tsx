@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable } from "react-native";
+import { ActivityIndicator, Platform, Pressable } from "react-native";
 import { Channel as ChannelType } from "stream-chat";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Notifications from "expo-notifications";
 
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
@@ -72,6 +73,20 @@ const ChannelNative = () => {
       fetchInfluencer(contract.userId);
     }
   }, [contract]);
+
+  useEffect(() => {
+    const resetBadgeCount = async () => {
+      if (Platform.OS === "ios" || Platform.OS === "android") {
+        try {
+          await Notifications.setBadgeCountAsync(0);
+        } catch (error) {
+          console.error("Failed to reset badge count:", error);
+        }
+      }
+    };
+
+    resetBadgeCount();
+  }, []);
 
   if (!channel || !contract) {
     return (
