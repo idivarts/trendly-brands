@@ -29,6 +29,8 @@ import { analyticsLogEvent } from "@/utils/analytics";
 import { checkTestUsers } from "@/utils/test-users";
 import { resetAndNavigate } from "@/utils/router";
 import { User } from "@/types/User";
+import { Platform } from "react-native";
+import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
 
 interface AuthContextProps {
   getManager: (managerId: string) => Promise<Manager | null>;
@@ -215,7 +217,18 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       });
   };
 
-  const signOutManager = () => {
+  const signOutManager = async () => {
+    if (Platform.OS !== "web") {
+      // Remove push notification token from the database
+      const newUpdatedTokens = await updatedTokens(manager);
+
+      if (newUpdatedTokens) {
+        await updateManager(session as string, {
+          pushNotificationToken: newUpdatedTokens,
+        });
+      }
+    }
+
     signOut(AuthApp)
       .then(() => {
         setSession("");

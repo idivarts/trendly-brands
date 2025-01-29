@@ -8,6 +8,7 @@ import Colors from "@/constants/Colors";
 import ScreenHeader from "../ui/screen-header";
 import { Pressable } from "react-native";
 import Button from "../ui/button";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
 
 const Settings = () => {
   const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("light");
@@ -54,16 +55,11 @@ const Settings = () => {
         }
       />
       <View style={styles.settingsContainer}>
-        <View style={styles.settingsRow}>
-          <Text
-            style={{
-              ...styles.settingsLabel,
-              color: Colors(theme).text,
-              fontWeight: "bold",
-            }}
-          >
-            App Theme
-          </Text>
+        <ContentWrapper
+          theme={theme}
+          title="App Theme"
+          description="Decide the theme of the platform"
+        >
           <SelectGroup
             items={[
               { label: "Light", value: "light" },
@@ -78,13 +74,10 @@ const Settings = () => {
             }}
             theme={theme}
           />
-          <Text style={styles.settingsLabel}>
-            Decide the theme of the platform
-          </Text>
-        </View>
+        </ContentWrapper>
         <Button
           mode="contained"
-          style={{ margin: 20, width: "100%", paddingHorizontal: 20 }}
+          style={{ width: "100%", paddingHorizontal: 20 }}
           onPress={() => {
             themeChange();
           }}
