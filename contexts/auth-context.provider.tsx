@@ -29,6 +29,7 @@ import { analyticsLogEvent } from "@/utils/analytics";
 import { checkTestUsers } from "@/utils/test-users";
 import { resetAndNavigate } from "@/utils/router";
 import { User } from "@/types/User";
+import { usePushNotificationToken } from "@/hooks";
 
 interface AuthContextProps {
   getManager: (managerId: string) => Promise<Manager | null>;
@@ -67,6 +68,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   const [[isLoading, session], setSession] = useStorageState("manager");
   const [manager, setManager] = useState<Manager | null>(null);
   const router = useRouter();
+
+  const { updatedTokens } = usePushNotificationToken({
+    user: manager,
+  });
 
   const fetchManager = async () => {
     if (session) {
@@ -217,7 +222,16 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
   const signOutManager = () => {
     signOut(AuthApp)
-      .then(() => {
+      .then(async () => {
+        const newUpdatedTokens = await updatedTokens();
+
+        if (newUpdatedTokens) {
+          // Remove push notification token from the database
+          await updateManager(session as string, {
+            pushNotificationToken: newUpdatedTokens,
+          });
+        }
+
         setSession("");
         setManager(null);
 

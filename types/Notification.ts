@@ -3,3 +3,9 @@ import { INotifications } from "@/shared-libs/firestore/trendly-pro/models/notif
 export interface Notification extends INotifications {
   id: string;
 }
+
+export interface PushNotificationPayload {
+  title: string;
+  description: string;
+  image?: string;
+}

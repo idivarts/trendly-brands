@@ -1,6 +1,6 @@
-import { getMessaging, getToken } from "firebase/messaging";
+import { getMessaging, getToken, deleteToken } from "firebase/messaging";
 import { FirebaseApp } from "./firebase";
 
 const messaging = getMessaging(FirebaseApp);
 
-export { getToken, messaging };
+export { deleteToken, getToken, messaging };
