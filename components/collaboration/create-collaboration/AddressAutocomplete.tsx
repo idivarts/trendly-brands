@@ -54,6 +54,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       <GooglePlacesAutocomplete
         apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY!}
         ref={mapInputRefWeb}
+        defaultValue={collaboration.location?.name || "Location"}
         onPlaceSelected={async (data) => {
           if (!data.place_id) {
             return;
