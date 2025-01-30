@@ -4,19 +4,16 @@ import { Channel as ChannelType } from "stream-chat";
 import { router } from "expo-router";
 import { useAuthContext } from "@/contexts";
 import { View } from "@/components/theme/Themed";
-import AddGroup from "@/components/channel/add-group";
 import { useState } from "react";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { Searchbar } from "react-native-paper";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faMagnifyingGlass, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
-import { Pressable } from "react-native";
 import EmptyMessageState from "./empty-message-state";
 
 const ChannelListNative = () => {
-  const [modalVisible, setModalVisible] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const theme = useTheme();
   const styles = stylesFn(theme);
@@ -51,7 +48,6 @@ const ChannelListNative = () => {
     <View
       style={{
         flex: 1,
-        position: "relative",
       }}
     >
       <View
@@ -89,27 +85,6 @@ const ChannelListNative = () => {
         onSelect={(channel) => {
           router.push(`/channel/${channel.cid}`);
         }}
-      />
-      <Pressable
-        onPress={() => setModalVisible(true)}
-        style={{
-          position: "absolute",
-          right: 10,
-          bottom: 10,
-          backgroundColor: Colors(theme).aliceBlue,
-          padding: 10,
-          borderRadius: 10,
-        }}
-      >
-        <FontAwesomeIcon
-          color={Colors(theme).gray100}
-          icon={faPlus}
-          size={20}
-        />
-      </Pressable>
-      <AddGroup
-        visible={modalVisible}
-        setVisible={setModalVisible}
       />
     </View>
   );
