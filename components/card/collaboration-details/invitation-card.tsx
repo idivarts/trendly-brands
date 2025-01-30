@@ -14,6 +14,7 @@ import Colors from "@/constants/Colors";
 import useInvitation from "@/hooks/use-invitation";
 import { Dimensions, Platform, Pressable } from "react-native";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { truncateText } from "@/utils/text";
 
 interface InvitationCardProps {
   bottomSheetAction?: () => void;
@@ -93,7 +94,9 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
             </Button>
           }
         />
-        <CardDescription text={data.profile?.content?.about || ""} />
+        <CardDescription
+          text={truncateText(data.profile?.content?.about || "", 160)}
+        />
       </Pressable>
     </Card>
   );

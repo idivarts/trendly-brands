@@ -17,6 +17,7 @@ import { InfluencerApplication } from "@/types/Collaboration";
 import { convertToKUnits } from "@/utils/conversion";
 import { formatTimeToNow } from "@/utils/date";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { truncateText } from "@/utils/text";
 
 interface ApplicationCardProps {
   acceptApplication: () => void;
@@ -90,7 +91,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             </Button>
           }
         />
-        <CardDescription text={data.application.message} />
+        <CardDescription text={truncateText(data.application.message, 160)} />
         <CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}
           timeline={new Date(data.application.timeline).toLocaleDateString(
