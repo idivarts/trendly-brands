@@ -39,6 +39,7 @@ export const stylesFn = (theme: Theme) =>
     shortDescription: {
       fontSize: 14,
       color: Colors(theme).text,
+      lineHeight: 22,
       textAlign: "left",
       marginTop: 8,
     },

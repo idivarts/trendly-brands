@@ -7,15 +7,16 @@ import { FirestoreDB } from "@/utils/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 
 interface BottomSheetActionsProps {
   cardType:
-  | "influencerType"
-  | "promotionType"
-  | "influencerCard"
-  | "applicationCard"
-  | "invitationCard"
-  | "activeCollab";
+    | "influencerType"
+    | "promotionType"
+    | "influencerCard"
+    | "applicationCard"
+    | "invitationCard"
+    | "activeCollab";
   data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
@@ -85,6 +86,7 @@ const BottomSheetActions = ({
               timeStamp: Date.now(),
               title: "Application Accepted",
               type: "application-accepted",
+
             },
             "users"
           );
@@ -268,6 +270,16 @@ const BottomSheetActions = ({
                   params: {
                     id: cardId,
                   },
+                });
+              }}
+            />
+            <List.Item
+              title="Copy Link"
+              onPress={() => {
+                Clipboard.setStringAsync(
+                  `https://creators.trendly.pro/collaboration/${cardId}`
+                ).then(() => {
+                  Toaster.success("Link copied to clipboard");
                 });
               }}
             />
