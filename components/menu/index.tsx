@@ -15,6 +15,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import ProfileItemCard from "../ProfileItemCard";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Button from "../ui/button";
+import { truncateText } from "@/utils/text";
 
 const Menu = () => {
   const theme = useTheme();
@@ -53,7 +54,7 @@ const Menu = () => {
                 color: Colors(theme).gray100,
               }}
             >
-              {selectedBrand?.profile?.about}
+              {truncateText(selectedBrand?.profile?.about, 120)}
             </Text>
           )}
           <View
