@@ -39,6 +39,7 @@ import { Contract } from "@/types/Contract";
 import RatingSection from "@/shared-uis/components/rating-section";
 import { useContractContext } from "@/contexts";
 import Button from "@/components/ui/button";
+import { CURRENCY } from "@/constants/Unit";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -316,19 +317,18 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             </Text>
             {props.collaboration.promotionType ===
               PromotionType.PAID_COLLAB && (
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: Colors(theme).text,
-                }}
-              >
-                Budget:
-                {props.collaboration?.budget?.min ===
-                props.collaboration?.budget?.max
-                  ? `$${props.collaboration?.budget?.min}`
-                  : `$${props.collaboration?.budget?.min} - $${props.collaboration?.budget?.max}`}
-              </Text>
-            )}
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: Colors(theme).text,
+                  }}
+                >
+                  Budget: {props.collaboration?.budget?.min ===
+                    props.collaboration?.budget?.max
+                    ? `${CURRENCY}. ${props.collaboration?.budget?.min}`
+                    : `${CURRENCY}. ${props.collaboration?.budget?.min} - ${CURRENCY}. ${props.collaboration?.budget?.max}`}
+                </Text>
+              )}
           </View>
           <View
             style={{
@@ -363,10 +363,10 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Instagram"
                       ? faInstagram
                       : content === "Facebook"
-                      ? faFacebook
-                      : content === "Youtube"
-                      ? faYoutube
-                      : faInstagram
+                        ? faFacebook
+                        : content === "Youtube"
+                          ? faYoutube
+                          : faInstagram
                   }
                 />
               ))}
@@ -379,14 +379,14 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     content === "Posts"
                       ? faPanorama
                       : content === "Reels"
-                      ? faFilm
-                      : content === "Stories"
-                      ? faHeart
-                      : content === "Live"
-                      ? faRecordVinyl
-                      : content === "Product Reviews"
-                      ? faStarHalfStroke
-                      : faPanorama
+                        ? faFilm
+                        : content === "Stories"
+                          ? faHeart
+                          : content === "Live"
+                            ? faRecordVinyl
+                            : content === "Product Reviews"
+                              ? faStarHalfStroke
+                              : faPanorama
                   }
                 />
               ))}
@@ -415,8 +415,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                   latitudeDelta: 0.0922,
                   longitudeDelta: 0.042,
                 }}
-                onMapRegionChange={(region) => {}}
-                onFormattedAddressChange={(address) => {}}
+                onMapRegionChange={(region) => { }}
+                onFormattedAddressChange={(address) => { }}
               />
               <Text style={{ fontSize: 16, color: Colors(theme).text }}>
                 {props.collaboration.location.name}

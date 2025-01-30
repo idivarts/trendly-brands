@@ -7,15 +7,16 @@ import { FirestoreDB } from "@/utils/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 
 interface BottomSheetActionsProps {
   cardType:
-  | "influencerType"
-  | "promotionType"
-  | "influencerCard"
-  | "applicationCard"
-  | "invitationCard"
-  | "activeCollab";
+    | "influencerType"
+    | "promotionType"
+    | "influencerCard"
+    | "applicationCard"
+    | "invitationCard"
+    | "activeCollab";
   data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
@@ -37,7 +38,10 @@ const BottomSheetActions = ({
   const router = useRouter();
 
   const { createGroupWithMembers, connectUser } = useChatContext();
-  const { sendNotification } = useNotificationContext();
+  const {
+    createNotification,
+    sendNotification,
+  } = useNotificationContext();
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -71,19 +75,31 @@ const BottomSheetActions = ({
         ).then((channel) => {
           connectUser();
 
+          createNotification(
+            cardId.influencerID,
+            {
+              data: {
+                collaborationId: data.collaboration.id,
+              },
+              description: `Your application for ${data.collaboration.name} has been accepted`,
+              isRead: false,
+              timeStamp: Date.now(),
+              title: "Application Accepted",
+              type: "application-accepted",
+
+            },
+            "users"
+          );
+
           sendNotification(
             {
               users: [cardId.influencerID],
             },
             {
-              data: {
-                collaborationId: data.collaboration.id,
+              notification: {
+                title: "Application Accepted",
+                description: `Your application for ${data.collaboration.name} has been accepted`,
               },
-              title: "Application Accepted",
-              description: `Your application for ${data.collaboration.name} has been accepted`,
-              timeStamp: Date.now(),
-              isRead: false,
-              type: "application-accepted",
             },
           );
 
@@ -254,6 +270,16 @@ const BottomSheetActions = ({
                   params: {
                     id: cardId,
                   },
+                });
+              }}
+            />
+            <List.Item
+              title="Copy Link"
+              onPress={() => {
+                Clipboard.setStringAsync(
+                  `https://creators.trendly.pro/collaboration/${cardId}`
+                ).then(() => {
+                  Toaster.success("Link copied to clipboard");
                 });
               }}
             />

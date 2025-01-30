@@ -4,6 +4,7 @@ import { useTheme } from "@react-navigation/native";
 import { FC, useEffect, useState } from "react";
 import { doc, collection, getDocs } from "firebase/firestore";
 import { FirestoreDB } from "@/utils/firestore";
+import { CURRENCY } from "@/constants/Unit";
 
 interface CollaborationStatsProps {
   influencerCount: number;
@@ -61,8 +62,8 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
         <Text style={styles.infoText}>
           Budget:{" "}
           {props.budget.min === props.budget.max
-            ? `$${props.budget.min}`
-            : `$${props.budget.min} - $${props.budget.max}`}
+            ? `${CURRENCY}. ${props.budget.min}`
+            : `${CURRENCY}. ${props.budget.min} - ${CURRENCY}. ${props.budget.max}`}
         </Text>
       </View>
       <View style={styles.infoRow}>

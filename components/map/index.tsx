@@ -20,31 +20,36 @@ const Map: React.FC<MapProps> = ({
 }) => {
   const handleOnMapClick = useCallback((event: MapMouseEvent) => {
     event.map?.setCenter(event.detail.latLng as any);
+    event.map?.panTo(event.detail.latLng as any);
 
     onLocationChange({
       latitude: event.detail.latLng?.lat as number,
       longitude: event.detail.latLng?.lng as number,
     });
-  }, []);
+  }, [location]);
 
   return (
     <GoogleMap
+      center={{
+        lat: location.latitude,
+        lng: location.longitude
+      }}
+      defaultCenter={{
+        lat: location.latitude,
+        lng: location.longitude
+      }}
+      defaultZoom={18}
+      disableDefaultUI={true}
+      disableDoubleClickZoom={true}
+      mapId={'map-id'}
+      mapTypeControl={false}
+      mapTypeId={'satellite'}
+      onClick={handleOnMapClick}
       style={{
         width: '100%',
         height: 300,
         zIndex: 2,
       }}
-      defaultZoom={18}
-      mapId={'map-id'}
-      defaultCenter={{
-        lat: location.latitude,
-        lng: location.longitude
-      }}
-      disableDefaultUI={true}
-      mapTypeId={'satellite'}
-      mapTypeControl={false}
-      onClick={handleOnMapClick}
-      disableDoubleClickZoom={true}
     >
       {
         location.latitude && location.longitude && (

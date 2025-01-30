@@ -21,6 +21,7 @@ import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-exten
 import { View } from "../theme/Themed";
 import { convertToKUnits } from "@/utils/conversion";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { CURRENCY } from "@/constants/Unit";
 
 interface ScreenOneProps {
   attachments: any[];
@@ -55,7 +56,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
       && collaboration.budget?.max
       && collaboration.budget?.min > collaboration.budget?.max
     ) {
-      return `Rs. ${convertToKUnits(Math.max(collaboration.budget?.min, collaboration.budget?.max))}`;
+      return `${CURRENCY}. ${convertToKUnits(Math.max(collaboration.budget?.min, collaboration.budget?.max))}`;
     }
 
     if (
@@ -63,10 +64,10 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
       || collaboration.budget?.max === 0
       || !collaboration.budget?.max
     ) {
-      return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}`;
+      return `${CURRENCY}. ${convertToKUnits(collaboration.budget?.min || 0)}`;
     }
 
-    return `Rs. ${convertToKUnits(collaboration.budget?.min || 0)}-${convertToKUnits(collaboration.budget?.max || 500)}`;
+    return `${CURRENCY}.  ${convertToKUnits(collaboration.budget?.min || 0)}-${convertToKUnits(collaboration.budget?.max || 500)}`;
   }, [collaboration.budget]);
 
   const items = [
