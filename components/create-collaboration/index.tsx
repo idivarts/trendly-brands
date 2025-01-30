@@ -227,9 +227,6 @@ const CreateCollaboration = () => {
           router.dismiss(1);
           router.push({
             pathname: "/collaborations",
-            params: {
-              fetchNewCollaborations: "true",
-            },
           });
         }, 3000);
       }).catch((error) => {

@@ -37,6 +37,7 @@ export const CardDescription = ({ text }: CardDescriptionProps) => {
 
 const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
+    marginTop: 8,
     paddingHorizontal: 16,
     backgroundColor: Colors(theme).transparent,
   },

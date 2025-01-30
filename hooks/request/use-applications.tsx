@@ -26,7 +26,10 @@ const useApplications = ({
   handleActionModalClose,
 }: UseApplicationsProps) => {
   const { createGroupWithMembers, connectUser } = useChatContext();
-  const { sendNotification } = useNotificationContext();
+  const {
+    createNotification,
+    sendNotification,
+  } = useNotificationContext();
   const router = useRouter();
   const [influencers, setInfluencers] = useState<{
     influencer: User;
@@ -103,6 +106,21 @@ const useApplications = ({
         ).then((channel) => {
           connectUser();
 
+          createNotification(
+            influencerApplication.application.userId,
+            {
+              data: {
+                collaborationId: data.collaboration.id,
+              },
+              description: `Your application for ${data.collaboration.name} has been accepted`,
+              isRead: false,
+              timeStamp: Date.now(),
+              title: "Application Accepted",
+              type: "application-accepted",
+            },
+            "users"
+          );
+
           sendNotification(
             {
               users: [influencerApplication.application.userId],
@@ -111,11 +129,10 @@ const useApplications = ({
               data: {
                 collaborationId: influencerApplication.application.collaborationId,
               },
-              title: "Application Accepted",
-              description: `Your application for ${data.collaboration.name} has been accepted`,
-              timeStamp: Date.now(),
-              isRead: false,
-              type: "application-accepted",
+              notification: {
+                title: "Application Accepted",
+                description: `Your application for ${data.collaboration.name} has been accepted`,
+              },
             },
           );
 

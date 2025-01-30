@@ -72,7 +72,10 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      setWebMapRegion(mapRegion);
+      setWebMapRegion({
+        latitude: mapRegion.latitude,
+        longitude: mapRegion.longitude
+      });
     } else {
       setNativeMapRegion(mapRegion);
     }

@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { GooglePlacesAutocomplete, GooglePlacesAutocompleteRef } from 'react-native-google-places-autocomplete';
 
 import { Collaboration } from "@/types/Collaboration";
 import {
@@ -21,8 +20,8 @@ import Colors from "@/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import ScreenLayout from "./screen-layout";
-import { calculateDelta, fetchLatLngFromPlaceId } from "@/utils/map";
 import { Platform, useWindowDimensions } from "react-native";
+import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 
 interface ScreenTwoProps {
   collaboration: Partial<Collaboration>;
@@ -65,14 +64,6 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
 }) => {
   const theme = useTheme();
   const dimensions = useWindowDimensions();
-
-  const mapInputRef = useRef<GooglePlacesAutocompleteRef>(null);
-
-  useEffect(() => {
-    if (collaboration.location?.name) {
-      mapInputRef.current?.setAddressText(collaboration.location.name);
-    }
-  }, [collaboration.location?.name]);
 
   const numberOfInfluencersNeededText = useMemo(() => {
     if (
@@ -235,62 +226,13 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           collaboration.location?.type === "On-Site" && (
             <View
               style={{
-                gap: Platform.OS === 'web' ? 56 : 16,
+                gap: 16,
               }}
             >
-              <GooglePlacesAutocomplete
-                placeholder='Location'
-                key={collaboration.location?.type}
-                ref={mapInputRef}
-                onPress={async (_data, details = null) => {
-                  if (!details || !details.place_id) {
-                    return;
-                  }
-
-                  await fetchLatLngFromPlaceId(details.place_id).then((latlong) => {
-                    if (!latlong) {
-                      return;
-                    }
-
-                    const delta = calculateDelta(latlong?.lat, latlong?.long);
-
-                    setCollaboration({
-                      ...collaboration,
-                      location: {
-                        latlong,
-                        type: collaboration.location?.type as string,
-                        name: _data.description || "",
-                      },
-                    });
-
-                    mapRegion.setState({
-                      latitude: latlong?.lat,
-                      longitude: latlong?.long,
-                      latitudeDelta: delta.latitudeDelta,
-                      longitudeDelta: delta.longitudeDelta,
-                    });
-                  });
-                }}
-                query={{
-                  key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY!,
-                  language: 'en',
-                }}
-                styles={{
-                  container: {
-                    flex: 0,
-                    zIndex: 100,
-                  },
-                  textInput: {
-                    backgroundColor: Colors(theme).background,
-                    color: Colors(theme).text,
-                    borderColor: Colors(theme).primary,
-                    borderWidth: 1,
-                    borderRadius: 4,
-                  },
-                  listView: {
-                    backgroundColor: Colors(theme).background,
-                  },
-                }}
+              <AddressAutocomplete
+                collaboration={collaboration}
+                mapRegion={mapRegion}
+                setCollaboration={setCollaboration}
               />
               <CreateCollaborationMap
                 mapRegion={mapRegion.state}

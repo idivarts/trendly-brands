@@ -1,12 +1,11 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
-import JobCard from "@/components/collaboration/CollaborationCard";
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,13 +19,10 @@ import { stylesFn } from "@/styles/Proposal.styles";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import EmptyState from "../ui/empty-state";
 import { useBreakpoints } from "@/hooks";
-import { Card } from "react-native-paper";
-import CollaborationHeader from "../collaboration-card/card-components/CollaborationHeader";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import { MediaItem } from "@/types/Media";
 import { processRawAttachment } from "@/utils/attachments";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
-import { DUMMY_INFLUENCER } from "@/constants/Influencer";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
 import Button from "../ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -36,7 +32,6 @@ const Applications = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
   const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
-  const [notPendingProposals, setNotPendingProposals] = useState<number>();
   const { selectedBrand } = useBrandContext();
 
   const openBottomSheet = (id: string) => {
@@ -53,7 +48,6 @@ const Applications = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const { xl } = useBreakpoints();
-  const { fetchNewCollaborations } = useLocalSearchParams();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -74,64 +68,62 @@ const Applications = () => {
         orderBy("timeStamp", "desc")
       );
 
-      const querySnapshot = await getDocs(q);
+      const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        const proposals = await Promise.all(
+          querySnapshot.docs.map(async (doc) => {
+            const data = {
+              ...doc.data(),
+              id: doc.id,
+            };
 
-      const proposals = await Promise.all(
-        querySnapshot.docs.map(async (doc) => {
-          const data = {
-            ...doc.data(),
-            id: doc.id,
-          };
+            // Fetch applications
+            const applicationCol = collection(
+              FirestoreDB,
+              "collaborations",
+              data.id,
+              "applications"
+            );
+            const applicationSnapshot = await getDocs(applicationCol);
+            const applications = applicationSnapshot.docs.map((appDoc) =>
+              appDoc.data()
+            );
+            const acceptedApplications = applications.filter(
+              (application) => application.status === "accepted"
+            ).length;
 
-          // Fetch applications
-          const applicationCol = collection(
-            FirestoreDB,
-            "collaborations",
-            data.id,
-            "applications"
-          );
-          const applicationSnapshot = await getDocs(applicationCol);
-          const applications = applicationSnapshot.docs.map((appDoc) =>
-            appDoc.data()
-          );
-          const acceptedApplications = applications.filter(
-            (application) => application.status === "accepted"
-          ).length;
+            // Fetch invitations
+            const invitationCol = collection(
+              FirestoreDB,
+              "collaborations",
+              data.id,
+              "invitations"
+            );
+            const invitationSnapshot = await getDocs(invitationCol);
+            const invitations = invitationSnapshot.docs.map((invDoc) =>
+              invDoc.data()
+            );
 
-          // Fetch invitations
-          const invitationCol = collection(
-            FirestoreDB,
-            "collaborations",
-            data.id,
-            "invitations"
-          );
-          const invitationSnapshot = await getDocs(invitationCol);
-          const invitations = invitationSnapshot.docs.map((invDoc) =>
-            invDoc.data()
-          );
+            return {
+              ...data,
+              applications: applications.length,
+              invitations: invitations.length,
+              acceptedApplications,
+            };
+          })
+        );
 
-          return {
-            ...data,
-            applications: applications.length,
-            invitations: invitations.length,
-            acceptedApplications,
-          };
-        })
-      );
+        setProposals(proposals);
+      });
 
-      setProposals(proposals);
+      return () => {
+        unsubscribe();
+      };
     } catch (error) {
       console.error("Error fetching proposals: ", error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (fetchNewCollaborations === "true") {
-      fetchProposals();
-    }
-  }, []);
 
   useEffect(() => {
     fetchProposals();
