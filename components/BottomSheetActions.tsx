@@ -38,10 +38,13 @@ const BottomSheetActions = ({
   const router = useRouter();
 
   const { createGroupWithMembers, connectUser } = useChatContext();
-  const {
-    createNotification,
-    sendNotification,
-  } = useNotificationContext();
+  const { createNotification, sendNotification } = useNotificationContext();
+
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(
+      "https://creators.trendly.pro/collaboration/" + cardId
+    );
+  };
 
   // Adjust snap points for the bottom sheet height
   const snapPoints = React.useMemo(
@@ -86,7 +89,6 @@ const BottomSheetActions = ({
               timeStamp: Date.now(),
               title: "Application Accepted",
               type: "application-accepted",
-
             },
             "users"
           );
@@ -100,7 +102,7 @@ const BottomSheetActions = ({
                 title: "Application Accepted",
                 description: `Your application for ${data.collaboration.name} has been accepted`,
               },
-            },
+            }
           );
 
           router.navigate(`/channel/${channel.cid}`);
@@ -275,12 +277,9 @@ const BottomSheetActions = ({
             />
             <List.Item
               title="Copy Link"
-              onPress={() => {
-                Clipboard.setStringAsync(
-                  `https://creators.trendly.pro/collaboration/${cardId}`
-                ).then(() => {
-                  Toaster.success("Link copied to clipboard");
-                });
+              onPress={async () => {
+                await copyToClipboard();
+                Toaster.success("Link copied to clipboard");
               }}
             />
             <List.Item
