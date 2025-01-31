@@ -307,7 +307,7 @@ const BottomSheetActions = ({
       <View style={styles.bottomSheetContainer}>
         <BottomSheet
           ref={sheetRef}
-          index={0} // Snap to the first point when opened
+          index={1} // Snap to the first point when opened
           snapPoints={snapPoints}
           enablePanDownToClose
           backdropComponent={() => {

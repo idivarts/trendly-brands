@@ -215,17 +215,17 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                   size={20}
                 />
                 <Text style={styles.statsText}>
-                  {influencer.backend?.rating}
+                  {convertToKUnits(Number(influencer.backend?.rating))}
                 </Text>
               </View>
             </View>
-            <View style={styles.statItem}>
+            {/* <View style={styles.statItem}>
               <FontAwesomeIcon
                 icon={faComment}
                 color={Colors(theme).primary}
                 size={18}
               />
-            </View>
+            </View> */}
           </View>
 
           <Pressable

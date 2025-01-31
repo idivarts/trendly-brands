@@ -5,7 +5,14 @@ import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
 import {
   ActivityIndicator,
   Dimensions,
@@ -261,7 +268,7 @@ const Applications = () => {
           cardType="activeCollab"
           isVisible={isVisible}
           onClose={closeBottomSheet}
-          snapPointsRange={["20%", "50%"]}
+          snapPointsRange={["25%", "50%"]}
           key={selectedCollabId}
         />
       )}
