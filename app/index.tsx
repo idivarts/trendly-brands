@@ -1,7 +1,12 @@
-import { Image } from "react-native";
+import { ActivityIndicator } from "react-native";
+import { useTheme } from "@react-navigation/native";
+
 import { View } from "@/components/theme/Themed";
+import Colors from "@/constants/Colors";
 
 const Index = () => {
+  const theme = useTheme();
+
   return (
     <View
       style={{
@@ -10,12 +15,9 @@ const Index = () => {
         alignItems: 'center',
       }}
     >
-      <Image
-        source={require("@/assets/images/splash.png")}
-        style={{
-          width: '100%',
-          height: '100%',
-        }}
+      <ActivityIndicator
+        size="large"
+        color={Colors(theme).primary}
       />
     </View>
   );

@@ -77,7 +77,6 @@ const ChannelListNative = () => {
       <ChannelList
         EmptyStateIndicator={EmptyMessageState}
         LoadingErrorIndicator={EmptyMessageState}
-        LoadingIndicator={EmptyMessageState}
         channelRenderFilterFn={customChannelFilterFunction}
         filters={{
           members: { $in: [user?.id as string] },

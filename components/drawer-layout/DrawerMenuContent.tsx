@@ -31,7 +31,7 @@ import DrawerIcon from "./DrawerIcon";
 import BrandSwitcher from "../ui/brand-switcher";
 import ProfileIcon from "../explore-influencers/profile-icon";
 
-interface DrawerMenuContentProps { }
+interface DrawerMenuContentProps {}
 
 const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
   {
@@ -113,7 +113,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
     <View
       style={{
         flex: 1,
-        paddingTop: Platform.OS === "web" ? 12 : 64,
+        paddingTop: Platform.OS === "web" ? 8 : 64,
       }}
     >
       <View>
@@ -188,19 +188,19 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
         >
           {xl
             ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
-              <DrawerMenuItem key={index} tab={tab} />
-            ))
+                <DrawerMenuItem key={index} tab={tab} />
+              ))
             : filteredBrands.map((brand) => (
-              <BrandItem
-                active={selectedBrand?.id === brand.id}
-                image={brand.image}
-                key={brand.id.toString()}
-                menu={true}
-                onPress={() => handleBrandChange(brand)}
-                showImage={true}
-                title={brand.name}
-              />
-            ))}
+                <BrandItem
+                  active={selectedBrand?.id === brand.id}
+                  image={brand.image}
+                  key={brand.id.toString()}
+                  menu={true}
+                  onPress={() => handleBrandChange(brand)}
+                  showImage={true}
+                  title={brand.name}
+                />
+              ))}
         </View>
       </ScrollView>
       <View

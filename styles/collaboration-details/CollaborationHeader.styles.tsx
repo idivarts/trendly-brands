@@ -7,7 +7,6 @@ export const stylesFn = (theme: Theme) =>
     container: {
       paddingHorizontal: 16,
       paddingBottom: 16,
-      maxWidth: 600,
     },
     header: {
       flexDirection: "row",

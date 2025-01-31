@@ -163,54 +163,63 @@ const ExploreInfluencers = () => {
 
   return (
     <AppLayout>
-      <FlatList
-        data={filteredInfluencers}
-        renderItem={({ item, index }) => (
-          <InfluencerCard
-            key={index}
-            type="explore"
-            ToggleModal={ToggleModal}
-            influencer={item}
-            openProfile={(influencer) => {
-              setSelectedInfluencer(influencer);
-              bottomSheetModalRef.current?.present();
-            }}
-            setSelectedInfluencer={setSelectedInfluencer}
-          />
-        )}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={{
-          paddingTop: 16,
-          paddingBottom: 16,
-        }}
-        ItemSeparatorComponent={() => (
-          <View
-            style={{
-              height: 16,
-              backgroundColor: theme.dark
-                ? Colors(theme).background
-                : Colors(theme).aliceBlue,
-            }}
-          />
-        )}
-        ListHeaderComponent={
-          <View
-            style={{
-              paddingHorizontal: xl ? 0 : 16,
-              paddingBottom: theme.dark ? 16 : 0,
-            }}
-          >
-            <SearchComponent
-              setSearchQuery={setSearchQuery}
-              ToggleModal={() => setIsFilterModalVisible(true)}
-            />
-          </View>
-        }
+      <View
         style={{
-          width: xl ? MAX_WIDTH_WEB : "100%",
+          flex: 1,
           marginHorizontal: "auto",
+
+          width: xl ? MAX_WIDTH_WEB : "100%",
         }}
-      />
+      >
+        <FlatList
+          data={filteredInfluencers}
+          renderItem={({ item, index }) => (
+            <InfluencerCard
+              key={index}
+              type="explore"
+              ToggleModal={ToggleModal}
+              influencer={item}
+              openProfile={(influencer) => {
+                setSelectedInfluencer(influencer);
+                bottomSheetModalRef.current?.present();
+              }}
+              setSelectedInfluencer={setSelectedInfluencer}
+            />
+          )}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={{
+            paddingTop: 16,
+            paddingBottom: 16,
+          }}
+          ItemSeparatorComponent={() => (
+            <View
+              style={{
+                height: 16,
+                backgroundColor: theme.dark
+                  ? Colors(theme).background
+                  : Colors(theme).aliceBlue,
+              }}
+            />
+          )}
+          ListHeaderComponent={
+            <View
+              style={{
+                paddingHorizontal: xl ? 0 : 16,
+                paddingBottom: theme.dark ? 16 : 0,
+              }}
+            >
+              <SearchComponent
+                setSearchQuery={setSearchQuery}
+                ToggleModal={() => setIsFilterModalVisible(true)}
+              />
+            </View>
+          }
+          style={{
+            width: xl ? MAX_WIDTH_WEB : "100%",
+            marginHorizontal: "auto",
+          }}
+        />
+      </View>
 
       {isModalVisible && (
         <BottomSheetContainer
