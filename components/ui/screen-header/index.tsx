@@ -1,5 +1,6 @@
 import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { resetAndNavigate } from "@/utils/router";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -28,8 +29,10 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   const handleAction = () => {
     if (action) {
       action();
-    } else {
+    } else if (navigation.canGoBack()) {
       navigation.goBack();
+    } else {
+      resetAndNavigate("/explore-influencers");
     }
   };
 
