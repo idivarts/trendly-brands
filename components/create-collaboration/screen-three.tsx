@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Pressable } from "react-native";
+import { Keyboard, Pressable, ScrollView } from "react-native";
 import { HelperText, Modal, ProgressBar } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faCircle, faLink, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCircle, faClose, faLink, faPlus } from "@fortawesome/free-solid-svg-icons";
 
 import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
@@ -368,56 +368,110 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
 
       <Modal
         contentContainerStyle={styles.modalContainer}
+        dismissable={false}
         onDismiss={() => {
           setIsQuestionsModalVisible(false);
           setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
         }}
         visible={isQuestionsModalVisible}
       >
+        <Pressable
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            left: 0,
+            bottom: 0,
+          }}
+          onPress={() => {
+            Keyboard.dismiss();
+          }}
+        />
         <View
           style={{
             gap: 8,
           }}
         >
-          {
-            questions.map((question, index) => (
-              <View
-                key={index}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 16,
-                }}
-              >
-                <TextInput
-                  label="Question"
-                  mode="outlined"
+          <Pressable
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+            }}
+            onPress={() => {
+              Keyboard.dismiss();
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "bold",
+              }}
+            >
+              Questions
+            </Text>
+            <Pressable
+              onPress={() => {
+                setIsQuestionsModalVisible(false);
+                setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
+              }}
+            >
+              <FontAwesomeIcon
+                icon={faClose}
+                size={18}
+                color={Colors(theme).primary}
+              />
+            </Pressable>
+          </Pressable>
+          <ScrollView
+            style={{
+              maxHeight: 180,
+            }}
+            contentContainerStyle={{
+              gap: 8,
+            }}
+          >
+            {
+              questions.map((question, index) => (
+                <View
+                  key={index}
                   style={{
-                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 16,
                   }}
-                  value={questions[index]}
-                  onChangeText={(text) => {
-                    const newQuestions = [...questions];
-                    newQuestions[index] = text;
-
-                    setQuestions(newQuestions);
-                  }}
-                />
-                <Pressable
-                  onPress={() => handleRemoveQuestion(index)}
                 >
-                  <FontAwesomeIcon
-                    icon={faTrashCan}
-                    size={20}
-                    color={Colors(theme).primary}
+                  <TextInput
+                    label="Question"
+                    mode="outlined"
                     style={{
-                      marginTop: 4,
+                      flex: 1,
+                    }}
+                    value={questions[index]}
+                    onChangeText={(text) => {
+                      const newQuestions = [...questions];
+                      newQuestions[index] = text;
+
+                      setQuestions(newQuestions);
                     }}
                   />
-                </Pressable>
-              </View>
-            ))
-          }
+                  <Pressable
+                    onPress={() => handleRemoveQuestion(index)}
+                  >
+                    <FontAwesomeIcon
+                      icon={faTrashCan}
+                      size={20}
+                      color={Colors(theme).primary}
+                      style={{
+                        marginTop: 4,
+                      }}
+                    />
+                  </Pressable>
+                </View>
+              ))
+            }
+          </ScrollView>
         </View>
         <Button
           mode="outlined"

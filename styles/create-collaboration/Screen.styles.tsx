@@ -12,6 +12,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     flexGrow: 1,
   },
   modalContainer: {
+    position: 'relative',
     backgroundColor: Colors(theme).background,
     zIndex: 100,
     padding: 20,
