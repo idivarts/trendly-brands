@@ -18,7 +18,6 @@ import { useTheme } from "@react-navigation/native";
 import {
   AttachButton,
   AttachmentPickerSelectionBar,
-  AudioRecordingButton,
   CommandsButton,
   MoreOptionsButton,
   SendButton,
@@ -114,7 +113,6 @@ const ChannelNative = () => {
       CommandsButton={CommandsButton}
       MoreOptionsButton={MoreOptionsButton}
       SendButton={SendButton}
-      StartAudioRecordingButton={AudioRecordingButton}
     >
       <ScreenHeader
         title={title}
