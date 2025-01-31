@@ -50,7 +50,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         style={styles.searchbar}
         value={localQuery}
       />
-      <Pressable
+      {/* <Pressable
         onPress={() => {
           if (ToggleModal) ToggleModal(true);
         }}
@@ -60,7 +60,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
           icon={faFilter}
           size={28}
         />
-      </Pressable>
+      </Pressable> */}
     </View>
   );
 };

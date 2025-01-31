@@ -3,6 +3,7 @@ import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { FC } from "react";
 import { IApplications } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { truncateText } from "@/utils/text";
 
 interface ContractDetailsProps {
   application: IApplications;
@@ -33,7 +34,7 @@ const ContractDetails: FC<ContractDetailsProps> = ({ application }) => {
             color: Colors(theme).text,
           }}
         >
-          {application.message}
+          {truncateText(application.message, 120)}
         </Text>
       </View>
       <View

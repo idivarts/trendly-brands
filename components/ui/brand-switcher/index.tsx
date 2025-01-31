@@ -12,18 +12,14 @@ const BrandSwitcher = () => {
   const [visible, setVisible] = useState(false);
   const theme = useTheme();
 
-  const {
-    brands,
-    selectedBrand,
-    setSelectedBrand,
-  } = useBrandContext();
+  const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
 
   const openMenu = () => setVisible(true);
 
   const handleBrandChange = (brand: Brand) => {
     setSelectedBrand(brand);
     setVisible(false);
-  }
+  };
 
   return (
     <Menu
@@ -40,7 +36,7 @@ const BrandSwitcher = () => {
           <FontAwesomeIcon
             color={Colors(theme).text}
             icon={faChevronDown}
-            size={24}
+            size={16}
             style={{
               marginLeft: 14,
               color: Colors(theme).text,
@@ -50,22 +46,27 @@ const BrandSwitcher = () => {
         </Pressable>
       }
     >
-      {
-        brands.map((brand) => (
-          <Menu.Item
-            key={brand.id}
-            style={{
-              backgroundColor: brand.id === selectedBrand?.id ? Colors(theme).primary : Colors(theme).background,
-              margin: 0,
-            }}
-            titleStyle={{
-              color: brand.id === selectedBrand?.id ? Colors(theme).white : Colors(theme).text,
-            }}
-            onPress={() => handleBrandChange(brand)}
-            title={brand.name}
-          />
-        ))
-      }
+      {brands.map((brand) => (
+        <Menu.Item
+          key={brand.id}
+          style={{
+            backgroundColor:
+              brand.id === selectedBrand?.id
+                ? Colors(theme).primary
+                : Colors(theme).background,
+            margin: 0,
+          }}
+          titleStyle={{
+            color:
+              brand.id === selectedBrand?.id
+                ? Colors(theme).white
+                : Colors(theme).text,
+            fontSize: 16,
+          }}
+          onPress={() => handleBrandChange(brand)}
+          title={brand.name}
+        />
+      ))}
     </Menu>
   );
 };
