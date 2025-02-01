@@ -3,7 +3,7 @@ import CollaborationDetails from "@/components/collaboration/collaboration-detai
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
-import { faEllipsisH, faEllipsisV } from "@fortawesome/free-solid-svg-icons";
+import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
@@ -21,9 +21,9 @@ const CollaborationDetailsScreen = () => {
         title="Collaboration Details"
         rightAction
         rightActionButton={
-          <Pressable onPress={() => setIsVisible(true)}>
+          <Pressable onPress={() => setIsVisible(true)} style={{ paddingRight: 16 }}>
             <FontAwesomeIcon
-              icon={faEllipsisV}
+              icon={faEllipsisH}
               size={24}
               color={Colors(theme).text}
             />
