@@ -1,42 +1,38 @@
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Dimensions,
-  Pressable,
-  Platform,
-} from "react-native";
-import { Card, Avatar } from "react-native-paper";
-import { stylesFn } from "@/styles/InfluencerCard.styles";
-import { useTheme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
-import { convertToKUnits } from "@/utils/conversion";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import {
-  faEllipsis,
-  faPeopleRoof,
-  faChartLine,
-  faFaceSmile,
-  faComment,
-  faCheck,
-  faPlus,
-} from "@fortawesome/free-solid-svg-icons";
-import { imageUrl } from "@/utils/url";
-import Tag from "./ui/tag";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { ISocials } from "@/shared-libs/firestore/trendly-pro/models/socials";
+import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
+import ImageComponent from "@/shared-uis/components/image-component";
+import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
-import RenderHTML from "react-native-render-html";
-import { truncateText } from "@/utils/text";
-import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
-import ImageComponent from "@/shared-uis/components/image-component";
-import { doc, getDoc } from "firebase/firestore";
+import { convertToKUnits } from "@/utils/conversion";
 import { FirestoreDB } from "@/utils/firestore";
-import { ISocials } from "@/shared-libs/firestore/trendly-pro/models/socials";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { truncateText } from "@/utils/text";
+import {
+  faChartLine,
+  faCheck,
+  faEllipsis,
+  faFaceSmile,
+  faPeopleRoof,
+  faPlus
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  Dimensions,
+  Platform,
+  Pressable,
+  Text,
+  View
+} from "react-native";
+import { Card } from "react-native-paper";
+import RenderHTML from "react-native-render-html";
+import Tag from "./ui/tag";
 
 interface InfluencerCardPropsType {
   alreadyInvited?: (influencerId: string) => Promise<boolean>;
@@ -100,14 +96,12 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   return (
     <>
       <Card style={styles.card} mode="contained">
-        <View style={[styles.header]}>
-          <Pressable
-            onPress={() => {
-              if (props.openProfile) {
-                props.openProfile(influencer);
-              }
-            }}
-          >
+        <Pressable onPress={() => {
+          if (props.openProfile) {
+            props.openProfile(influencer);
+          }
+        }}>
+          <View style={[styles.header]}>
             <ImageComponent
               size="small"
               url={influencer.profileImage || ""}
@@ -115,126 +109,116 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               altText="Image"
               shape="circle"
             />
-          </Pressable>
-          <Pressable
-            style={styles.nameContainer}
-            onPress={() => {
-              if (props.openProfile) {
-                props.openProfile(influencer);
-              }
-            }}
-          >
-            <Text style={styles.name}>{influencer.name}</Text>
-            <Text style={styles.handle}>@{handle}</Text>
-          </Pressable>
-          {props.type === "invitation" &&
-            (isInvited ? (
-              <Tag
-                icon={() => (
-                  <FontAwesomeIcon
-                    icon={faCheck}
-                    size={12}
-                    color={Colors(theme).text}
-                  />
-                )}
-              >
-                Invited
-              </Tag>
-            ) : (
-              <Tag
-                icon={() => (
-                  <FontAwesomeIcon
-                    icon={faPlus}
-                    size={12}
-                    color={Colors(theme).text}
-                  />
-                )}
-                onPress={() => {
-                  if (props.ToggleMessageModal) {
-                    props.ToggleMessageModal();
-                  }
-                }}
-              >
-                Invite
-              </Tag>
-            ))}
-          <Pressable
-            onPress={() => {
-              props.ToggleModal();
-              if (props?.setSelectedInfluencer) {
-                props.setSelectedInfluencer(props.influencer);
-              }
-            }}
-          >
-            <FontAwesomeIcon
-              icon={faEllipsis}
-              size={24}
-              color={Colors(theme).text}
-            />
-          </Pressable>
-        </View>
-
-        <Carousel
-          data={
-            influencer.profile?.attachments?.map((attachment) =>
-              processRawAttachment(attachment)
-            ) || []
-          }
-          carouselWidth={Platform.OS === "web" ? MAX_WIDTH_WEB : screenWidth}
-          onImagePress={onImagePress}
-          theme={theme}
-        />
-
-        <View style={styles.content}>
-          <View style={styles.stats}>
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <FontAwesomeIcon
-                  icon={faPeopleRoof}
-                  color={Colors(theme).primary}
-                  size={20}
-                />
-                <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.backend?.followers))}
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <FontAwesomeIcon
-                  icon={faChartLine}
-                  color={Colors(theme).primary}
-                  size={20}
-                />
-                <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.backend?.reach))}
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <FontAwesomeIcon
-                  icon={faFaceSmile}
-                  color={Colors(theme).primary}
-                  size={20}
-                />
-                <Text style={styles.statsText}>
-                  {convertToKUnits(Number(influencer.backend?.rating))}
-                </Text>
-              </View>
+            <View
+              style={styles.nameContainer}
+            >
+              <Text style={styles.name}>{influencer.name}</Text>
+              <Text style={styles.handle}>@{handle}</Text>
             </View>
-            {/* <View style={styles.statItem}>
+            {props.type === "invitation" &&
+              (isInvited ? (
+                <Tag
+                  icon={() => (
+                    <FontAwesomeIcon
+                      icon={faCheck}
+                      size={12}
+                      color={Colors(theme).text}
+                    />
+                  )}
+                >
+                  Invited
+                </Tag>
+              ) : (
+                <Tag
+                  icon={() => (
+                    <FontAwesomeIcon
+                      icon={faPlus}
+                      size={12}
+                      color={Colors(theme).text}
+                    />
+                  )}
+                  onPress={(event) => {
+                    event.stopPropagation()
+                    if (props.ToggleMessageModal) {
+                      props.ToggleMessageModal();
+                    }
+                  }}
+                >
+                  Invite
+                </Tag>
+              ))}
+            <Pressable
+              onPress={(event) => {
+                event.stopPropagation();
+                props.ToggleModal();
+                if (props?.setSelectedInfluencer) {
+                  props.setSelectedInfluencer(props.influencer);
+                }
+              }}
+            >
+              <FontAwesomeIcon
+                icon={faEllipsis}
+                size={24}
+                color={Colors(theme).text}
+              />
+            </Pressable>
+          </View>
+
+          <Carousel
+            data={
+              influencer.profile?.attachments?.map((attachment) =>
+                processRawAttachment(attachment)
+              ) || []
+            }
+            carouselWidth={Platform.OS === "web" ? MAX_WIDTH_WEB : screenWidth}
+            // onImagePress={onImagePress}
+            theme={theme}
+          />
+
+          <View style={styles.content}>
+            <View style={styles.stats}>
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <FontAwesomeIcon
+                    icon={faPeopleRoof}
+                    color={Colors(theme).primary}
+                    size={20}
+                  />
+                  <Text style={styles.statsText}>
+                    {convertToKUnits(Number(influencer.backend?.followers))}
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <FontAwesomeIcon
+                    icon={faChartLine}
+                    color={Colors(theme).primary}
+                    size={20}
+                  />
+                  <Text style={styles.statsText}>
+                    {convertToKUnits(Number(influencer.backend?.reach))}
+                  </Text>
+                </View>
+                <View style={styles.statItem}>
+                  <FontAwesomeIcon
+                    icon={faFaceSmile}
+                    color={Colors(theme).primary}
+                    size={20}
+                  />
+                  <Text style={styles.statsText}>
+                    {convertToKUnits(Number(influencer.backend?.rating))}
+                  </Text>
+                </View>
+              </View>
+              {/* <View style={styles.statItem}>
               <FontAwesomeIcon
                 icon={faComment}
                 color={Colors(theme).primary}
                 size={18}
               />
             </View> */}
-          </View>
+            </View>
 
-          <Pressable
-            onPress={() => {
-              if (props.openProfile) {
-                props.openProfile(influencer);
-              }
-            }}
-          >
+
             <Text>
               <RenderHTML
                 contentWidth={screenWidth}
@@ -254,8 +238,8 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
                 }}
               />
             </Text>
-          </Pressable>
-        </View>
+          </View>
+        </Pressable>
       </Card>
 
       <AssetPreviewModal
