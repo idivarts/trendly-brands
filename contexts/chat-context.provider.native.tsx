@@ -81,6 +81,11 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   };
 
   const connectUser = async () => {
+    if (isReady) {
+      console.log("Already connected to Chat")
+      return
+    }
+    console.log("Connecting to Chat")
     try {
       const response = await fetch("https://be.trendly.pro/api/v1/chat/connect", {
         method: "POST",
