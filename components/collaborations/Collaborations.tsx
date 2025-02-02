@@ -72,6 +72,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
       const q = query(
         collaborationCol,
         where("brandId", "==", selectedBrand?.id),
+        (active ? where("status", "!=", "inactive") : where("status", "==", "inactive")),
         orderBy("timeStamp", "desc")
       );
 
@@ -137,7 +138,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
   }, [user, selectedBrand]);
 
   const filteredProposals = useMemo(() => {
-    return proposals.filter((proposal) => active ? (proposal.status !== "inactive") : (proposal.status === "inactive"));
+    return proposals;
   }, [proposals]);
 
   if (isLoading) {
