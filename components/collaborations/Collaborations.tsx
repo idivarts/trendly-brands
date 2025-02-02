@@ -119,8 +119,11 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             };
           })
         );
-
         setProposals(proposals);
+        setIsLoading(false);
+      }, (error) => {
+        setIsLoading(false);
+      }, () => {
         setIsLoading(false);
       });
 
