@@ -23,7 +23,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -121,6 +121,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
         );
 
         setProposals(proposals);
+        setIsLoading(false);
       });
 
       return () => {
@@ -128,7 +129,6 @@ const CollaborationList = ({ active }: { active: boolean }) => {
       };
     } catch (error) {
       console.error("Error fetching proposals: ", error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -137,9 +137,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     fetchProposals();
   }, [user, selectedBrand]);
 
-  const filteredProposals = useMemo(() => {
-    return proposals;
-  }, [proposals]);
+  const filteredProposals = proposals;
 
   if (isLoading) {
     return (
