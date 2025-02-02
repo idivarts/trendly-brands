@@ -27,6 +27,7 @@ const ChannelListNative = () => {
   useFocusEffect(
     useCallback(() => {
       if (hasError) {
+        console.log("Trying to connect to chat");
         connectUser();
       }
     }, [])
