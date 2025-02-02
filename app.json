@@ -20,7 +20,7 @@
       }
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "pro.trendly.brands",
       "googleServicesFile": "./GoogleService-Info.plist"
     },
