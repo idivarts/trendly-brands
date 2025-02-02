@@ -1,3 +1,5 @@
+import { useStreamTheme } from "@/hooks";
+import { useTheme } from "@react-navigation/native";
 import {
   createContext,
   useContext,
@@ -8,8 +10,6 @@ import {
 import { Channel, DefaultGenerics, StreamChat } from "stream-chat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
-import { useTheme } from "@react-navigation/native";
-import { useStreamTheme } from "@/hooks";
 
 const streamClient = StreamChat.getInstance(
   process.env.EXPO_PUBLIC_STREAM_API_KEY!
@@ -30,6 +30,7 @@ interface ChatContextProps {
     channel: string,
     member: string
   ) => Promise<boolean>;
+  hasError?: boolean;
 }
 
 const ChatContext = createContext<ChatContextProps>({
@@ -40,6 +41,7 @@ const ChatContext = createContext<ChatContextProps>({
   sendSystemMessage: async () => { },
   fetchChannelCid: async () => "",
   removeMemberFromChannel: async () => false,
+  hasError: false,
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -48,6 +50,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
   const [isReady, setIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false)
   const theme = useTheme();
   const { getTheme } = useStreamTheme(theme);
   const [streamChatTheme, setStreamChatTheme] = useState(getTheme());
@@ -74,23 +77,38 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       .then(() => {
         setClient(streamClient);
         setIsReady(true);
+        setHasError(false);
       });
   };
 
   const connectUser = async () => {
-    const response = await fetch("https://be.trendly.pro/api/v1/chat/connect", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${user?.id}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (data.token !== "") {
-      await connect(data.token);
+    if (isReady) {
+      console.log("Already connected to Chat")
+      return
     }
+    console.log("Connecting to Chat")
+    try {
+      const response = await fetch("https://be.trendly.pro/api/v1/chat/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.id}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!!data.token) {
+        await connect(data.token);
+      } else {
+        throw { message: "No token provided" }
+      }
+    } catch (error) {
+      console.log("Error connecting to chat", error);
+      setIsReady(false)
+      setHasError(true)
+    }
+
   };
 
   useEffect(() => {
@@ -202,6 +220,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
             sendSystemMessage,
             fetchChannelCid,
             removeMemberFromChannel,
+            hasError,
           }}
         >
           {children}

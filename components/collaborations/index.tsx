@@ -1,19 +1,18 @@
+import CollaborationList from "@/components/collaborations/Collaborations";
 import { View } from "@/components/theme/Themed";
 import AppLayout from "@/layouts/app-layout";
-import Applications from "@/components/proposals/Applications";
-import Invitations from "@/components/proposals/Invitations";
 import TopTabNavigation from "../ui/top-tab-navigation";
 
 const tabs = [
   {
     id: "Active",
     title: "Active",
-    component: <Applications />,
+    component: <CollaborationList key={"active"} active={true} />,
   },
   {
     id: "Past",
     title: "Past",
-    component: <Invitations />,
+    component: <CollaborationList key={"inactive"} active={false} />,
   },
 ];
 

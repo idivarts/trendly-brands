@@ -1,5 +1,13 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { truncateText } from "@/utils/text";
+import {
+  faFacebook,
+  faInstagram,
+  faYoutube,
+} from "@fortawesome/free-brands-svg-icons";
+import { faHeart, faStarHalfStroke } from "@fortawesome/free-regular-svg-icons";
 import {
   faDollarSign,
   faEllipsisH,
@@ -11,18 +19,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { FC } from "react";
 import { Pressable } from "react-native";
 import ChipCard from "./ChipComponent";
-import {
-  faFacebook,
-  faInstagram,
-  faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
-import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { faHeart, faStarHalfStroke } from "@fortawesome/free-regular-svg-icons";
-import { useRouter } from "expo-router";
-import { truncateText } from "@/utils/text";
 
 interface CollaborationDetailsProps {
   collabDescription: string;
@@ -32,7 +32,7 @@ interface CollaborationDetailsProps {
   platform: string[];
   contentType: string[];
   promotionType: PromotionType;
-  onOpenBottomSheet: (id: string) => void;
+  onOpenBottomSheet?: (id: string) => void;
 }
 
 const CollaborationDetails: FC<CollaborationDetailsProps> = ({
@@ -79,17 +79,18 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
             {name}
           </Text>
         </Pressable>
-        <Pressable
-          onPress={() => {
-            onOpenBottomSheet(collabId);
-          }}
-        >
-          <FontAwesomeIcon
-            icon={faEllipsisH}
-            color={Colors(theme).primary}
-            size={24}
-          />
-        </Pressable>
+        {onOpenBottomSheet && (
+          <Pressable
+            onPress={() => {
+              onOpenBottomSheet(collabId);
+            }}
+          >
+            <FontAwesomeIcon
+              icon={faEllipsisH}
+              color={Colors(theme).primary}
+              size={24}
+            />
+          </Pressable>)}
       </View>
       <Pressable
         onPress={() => router.push(`/collaboration-details/${collabId}`)}
@@ -130,10 +131,10 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                   content === "Instagram"
                     ? faInstagram
                     : content === "Facebook"
-                    ? faFacebook
-                    : content === "Youtube"
-                    ? faYoutube
-                    : faInstagram
+                      ? faFacebook
+                      : content === "Youtube"
+                        ? faYoutube
+                        : faInstagram
                 }
               />
             ))}
@@ -146,14 +147,14 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                   content === "Posts"
                     ? faPanorama
                     : content === "Reels"
-                    ? faFilm
-                    : content === "Stories"
-                    ? faHeart
-                    : content === "Live"
-                    ? faRecordVinyl
-                    : content === "Product Reviews"
-                    ? faStarHalfStroke
-                    : faPanorama
+                      ? faFilm
+                      : content === "Stories"
+                        ? faHeart
+                        : content === "Live"
+                          ? faRecordVinyl
+                          : content === "Product Reviews"
+                            ? faStarHalfStroke
+                            : faPanorama
                 }
               />
             ))}
