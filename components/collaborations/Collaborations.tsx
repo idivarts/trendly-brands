@@ -1,41 +1,41 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
+import { stylesFn } from "@/styles/Proposal.styles";
+import { MediaItem } from "@/types/Media";
+import { processRawAttachment } from "@/utils/attachments";
+import { AuthApp } from "@/utils/auth";
+import { FirestoreDB } from "@/utils/firestore";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   getDocs,
+  onSnapshot,
+  orderBy,
   query,
   where,
-  orderBy,
-  onSnapshot,
 } from "firebase/firestore";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Pressable,
+  RefreshControl
 } from "react-native";
-import { FirestoreDB } from "@/utils/firestore";
-import { AuthApp } from "@/utils/auth";
-import { RefreshControl } from "react-native";
-import { stylesFn } from "@/styles/Proposal.styles";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import EmptyState from "../ui/empty-state";
-import { useBreakpoints } from "@/hooks";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import { MediaItem } from "@/types/Media";
-import { processRawAttachment } from "@/utils/attachments";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
 import Button from "../ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import EmptyState from "../ui/empty-state";
 
-const Applications = () => {
+const CollaborationList = ({ active }: { active: boolean }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [proposals, setProposals] = useState<any[]>([]);
   const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
@@ -137,7 +137,7 @@ const Applications = () => {
   }, [user, selectedBrand]);
 
   const filteredProposals = useMemo(() => {
-    return proposals.filter((proposal) => proposal.status !== "inactive");
+    return proposals.filter((proposal) => active ? (proposal.status !== "inactive") : (proposal.status === "inactive"));
   }, [proposals]);
 
   if (isLoading) {
@@ -172,59 +172,56 @@ const Applications = () => {
             data={filteredProposals}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <View
-                style={{
-                  width: "100%",
-                  borderWidth: 0.3,
-                  borderColor: Colors(theme).gray300,
-                  gap: 8,
-                  borderRadius: 5,
-                  overflow: "hidden",
-                }}
-              >
-                {item.attachments && item.attachments?.length > 0 && (
-                  <Carousel
-                    theme={theme}
-                    data={
-                      item.attachments?.map(
+              <View style={{
+                width: "100%",
+                borderWidth: 0.3,
+                borderColor: Colors(theme).gray300,
+                gap: 8,
+                borderRadius: 5,
+                overflow: "hidden",
+              }}>
+                <Pressable onPress={() =>
+                  router.push(`/collaboration-details/${item.id}`)
+                }>
+                  {item.attachments && item.attachments?.length > 0 && (
+                    <ScrollMedia
+                      theme={theme}
+                      MAX_WIDTH_WEB={MAX_WIDTH_WEB}
+                      media={item.attachments?.map(
                         //@ts-ignore
                         (attachment: MediaItem) =>
                           processRawAttachment(attachment)
-                      ) || []
-                    }
-                    carouselWidth={xl ? 640 : Dimensions.get("window").width}
-                  />
-                )}
-                {item.status === "draft" && (
-                  <View
-                    style={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      backgroundColor: Colors(theme).backdrop,
-                      padding: 4,
-                      borderRadius: 4,
-                    }}
-                  >
-                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
-                  </View>
-                )}
+                      ) || []}
+                      xl={xl}
+                    />
+                  )}
 
-                <CollaborationDetails
-                  collabDescription={item.description || ""}
-                  name={item.name || ""}
-                  contentType={item.contentFormat}
-                  location={item.location}
-                  platform={item.platform}
-                  promotionType={item.promotionType}
-                  onOpenBottomSheet={openBottomSheet}
-                  collabId={item.id}
-                />
-                <Pressable
-                  onPress={() =>
-                    router.push(`/collaboration-details/${item.id}`)
-                  }
-                >
+                  {item.status === "draft" && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 10,
+                        right: 10,
+                        backgroundColor: Colors(theme).backdrop,
+                        padding: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                    </View>
+                  )}
+
+                  <CollaborationDetails
+                    collabDescription={item.description || ""}
+                    name={item.name || ""}
+                    contentType={item.contentFormat}
+                    location={item.location}
+                    platform={item.platform}
+                    promotionType={item.promotionType}
+                    onOpenBottomSheet={active ? openBottomSheet : undefined}
+                    collabId={item.id}
+                  />
+
                   <CollaborationStats
                     budget={item.budget}
                     collabID={item.id}
@@ -307,4 +304,4 @@ const Applications = () => {
   );
 };
 
-export default Applications;
+export default CollaborationList;
