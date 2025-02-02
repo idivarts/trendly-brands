@@ -24,13 +24,13 @@ const ChannelListNative = () => {
 
   const { hasError, connectUser } = useChatContext()
 
-  useFocusEffect(() => {
+  useFocusEffect(
     useCallback(() => {
-      if (!hasError) {
+      if (hasError) {
         connectUser();
       }
-    }, []);
-  });
+    }, [])
+  );
 
   if (!user?.id) {
     return null;
