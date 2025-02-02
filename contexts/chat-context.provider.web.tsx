@@ -13,6 +13,7 @@ interface ChatContextProps {
   sendSystemMessage: (channel: string, message: string) => void;
   fetchChannelCid: (channelId: string) => Promise<string>;
   removeMemberFromChannel: (channel: any, member: string) => Promise<boolean>;
+  hasError?: boolean;
 }
 
 const ChatContext = createContext<ChatContextProps>({

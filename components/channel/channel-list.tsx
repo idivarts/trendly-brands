@@ -1,16 +1,16 @@
-import { ChannelList } from "stream-chat-expo";
 import { Channel as ChannelType } from "stream-chat";
+import { ChannelList } from "stream-chat-expo";
 
-import { router } from "expo-router";
-import { useAuthContext } from "@/contexts";
 import { View } from "@/components/theme/Themed";
-import { useState } from "react";
 import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-import { Searchbar } from "react-native-paper";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { useAuthContext, useChatContext } from "@/contexts";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
+import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Searchbar } from "react-native-paper";
 import EmptyMessageState from "./empty-message-state";
 
 const ChannelListNative = () => {
@@ -21,6 +21,16 @@ const ChannelListNative = () => {
   const {
     manager: user,
   } = useAuthContext();
+
+  const { hasError, connectUser } = useChatContext()
+
+  useFocusEffect(() => {
+    useCallback(() => {
+      if (!hasError) {
+        connectUser();
+      }
+    }, []);
+  });
 
   if (!user?.id) {
     return null;
@@ -74,17 +84,18 @@ const ChannelListNative = () => {
           value={searchInput}
         />
       </View>
-      <ChannelList
-        EmptyStateIndicator={EmptyMessageState}
-        LoadingErrorIndicator={EmptyMessageState}
-        channelRenderFilterFn={customChannelFilterFunction}
-        filters={{
-          members: { $in: [user?.id as string] },
-        }}
-        onSelect={(channel) => {
-          router.push(`/channel/${channel.cid}`);
-        }}
-      />
+      {hasError ? <EmptyMessageState /> :
+        <ChannelList
+          EmptyStateIndicator={EmptyMessageState}
+          LoadingErrorIndicator={EmptyMessageState}
+          channelRenderFilterFn={customChannelFilterFunction}
+          filters={{
+            members: { $in: [user?.id as string] },
+          }}
+          onSelect={(channel) => {
+            router.push(`/channel/${channel.cid}`);
+          }}
+        />}
     </View>
   );
 };
