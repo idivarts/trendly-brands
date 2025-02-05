@@ -182,21 +182,22 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 borderRadius: 5,
                 overflow: "hidden",
               }}>
+
+                {item.attachments && item.attachments?.length > 0 && (
+                  <ScrollMedia
+                    theme={theme}
+                    MAX_WIDTH_WEB={MAX_WIDTH_WEB}
+                    media={item.attachments?.map(
+                      //@ts-ignore
+                      (attachment: MediaItem) =>
+                        processRawAttachment(attachment)
+                    ) || []}
+                    xl={xl}
+                  />
+                )}
                 <Pressable onPress={() =>
                   router.push(`/collaboration-details/${item.id}`)
                 }>
-                  {item.attachments && item.attachments?.length > 0 && (
-                    <ScrollMedia
-                      theme={theme}
-                      MAX_WIDTH_WEB={MAX_WIDTH_WEB}
-                      media={item.attachments?.map(
-                        //@ts-ignore
-                        (attachment: MediaItem) =>
-                          processRawAttachment(attachment)
-                      ) || []}
-                      xl={xl}
-                    />
-                  )}
 
                   {item.status === "draft" && (
                     <View
