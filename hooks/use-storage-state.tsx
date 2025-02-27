@@ -1,3 +1,4 @@
+import { AuthApp } from '@/utils/auth';
 import * as SecureStore from 'expo-secure-store';
 import * as React from 'react';
 import { Platform } from 'react-native';
@@ -39,19 +40,27 @@ export function useStorageState(key: string): UseStateHook<string> {
 
   // Get
   React.useEffect(() => {
-    if (Platform.OS === 'web') {
-      try {
-        if (typeof localStorage !== 'undefined') {
-          setState(localStorage.getItem(key));
+    (async () => {
+      // await AuthApp.signOut()
+      await AuthApp.authStateReady();
+      if (key != "manager" || AuthApp.currentUser) {
+        if (Platform.OS === 'web') {
+          try {
+            if (typeof localStorage !== 'undefined') {
+              setState(localStorage.getItem(key));
+            }
+          } catch (e) {
+            console.error('Local storage is unavailable:', e);
+          }
+        } else {
+          SecureStore.getItemAsync(key).then(value => {
+            setState(value);
+          });
         }
-      } catch (e) {
-        console.error('Local storage is unavailable:', e);
+      } else {
+        setState(null);
       }
-    } else {
-      SecureStore.getItemAsync(key).then(value => {
-        setState(value);
-      });
-    }
+    })();
   }, [key]);
 
   // Set
