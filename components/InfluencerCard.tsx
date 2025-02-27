@@ -163,17 +163,29 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
               />
             </Pressable>
           </View>
+        </Pressable>
 
-          <Carousel
-            data={
-              influencer.profile?.attachments?.map((attachment) =>
-                processRawAttachment(attachment)
-              ) || []
+
+        <Carousel
+          data={
+            influencer.profile?.attachments?.map((attachment) =>
+              processRawAttachment(attachment)
+            ) || []
+          }
+          carouselWidth={Platform.OS === "web" ? MAX_WIDTH_WEB : screenWidth}
+          // onImagePress={onImagePress}
+          onImagePress={() => {
+            if (props.openProfile) {
+              props.openProfile(influencer);
             }
-            carouselWidth={Platform.OS === "web" ? MAX_WIDTH_WEB : screenWidth}
-            // onImagePress={onImagePress}
-            theme={theme}
-          />
+          }}
+          theme={theme}
+        />
+        <Pressable onPress={() => {
+          if (props.openProfile) {
+            props.openProfile(influencer);
+          }
+        }}>
 
           <View style={styles.content}>
             <View style={styles.stats}>
