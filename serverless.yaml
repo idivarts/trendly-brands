@@ -16,8 +16,10 @@ constructs:
     type: single-page-app
     path: dist
     domain:
+      - brands.trendly.now
       - brands.trendly.pro
-    certificate: arn:aws:acm:us-east-1:730335628944:certificate/824dbf36-435d-4ca7-a7c7-1e2c0944cf40
+    redirectToMainDomain: true
+    certificate: arn:aws:acm:us-east-1:730335628944:certificate/63d77810-e7c5-4413-8a22-875b44a0f75d
 
 # Create certificate from AWS dashboard
 # custom:
