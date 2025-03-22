@@ -21,11 +21,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { DrawerActions, Theme, useTheme } from "@react-navigation/native";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Platform, ScrollView, StyleSheet } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Searchbar } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ProfileIcon from "../explore-influencers/profile-icon";
-import BrandSwitcher from "../ui/brand-switcher";
+import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
 import BrandActionItem from "./BrandActionItem";
 import BrandItem from "./BrandItem";
 import DrawerIcon from "./DrawerIcon";
@@ -126,21 +126,25 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           borderBottomWidth: StyleSheet.hairlineWidth,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12 }}>
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: "700",
-              paddingVertical: 8,
-              paddingHorizontal: 16,
-              flex: 1,
-              color: Colors(theme).text,
-            }}
-          >
-            {selectedBrand?.name ?? "Brand"}
-          </Text>
-          {xl && <BrandSwitcher />}
-        </View>
+        <Pressable onPress={() => {
+          OpenBrandSwitcher.next(undefined)
+        }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12 }}>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                flex: 1,
+                color: Colors(theme).text,
+              }}
+            >
+              {selectedBrand?.name ?? "Brand"}
+            </Text>
+            {xl && <BrandSwitcher />}
+          </View>
+        </Pressable>
 
 
         {!xl && (
