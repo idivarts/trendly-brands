@@ -4,9 +4,12 @@ import { Brand } from "@/types/Brand";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable } from "react-native";
 import { Menu } from "react-native-paper";
+import { Subject } from 'rxjs';
+
+export const OpenBrandSwitcher = new Subject()
 
 const BrandSwitcher = () => {
   const [visible, setVisible] = useState(false);
@@ -21,6 +24,11 @@ const BrandSwitcher = () => {
     setVisible(false);
   };
 
+  useEffect(() => {
+    OpenBrandSwitcher.subscribe(() => {
+      setVisible(true)
+    })
+  }, [])
   return (
     <Menu
       visible={visible}

@@ -1,17 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
-import DrawerMenuItem, { IconPropFn } from "./DrawerMenuItem";
-import { useBreakpoints } from "@/hooks";
-import BrandItem from "./BrandItem";
-import { DrawerActions, Theme, useTheme } from "@react-navigation/native";
-import { useNavigation, useRouter } from "expo-router";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { Brand } from "@/types/Brand";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Platform, ScrollView } from "react-native";
-import BrandActionItem from "./BrandActionItem";
 import Colors from "@/constants/Colors";
-import { useEffect, useState } from "react";
-import { Searchbar } from "react-native-paper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
+import stylesFn from "@/styles/searchbar/Searchbar.styles";
+import { Brand } from "@/types/Brand";
 import {
   faComment,
   faFileLines,
@@ -25,15 +17,33 @@ import {
   faPlus,
   faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
-import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import DrawerIcon from "./DrawerIcon";
-import BrandSwitcher from "../ui/brand-switcher";
+import { DrawerActions, Theme, useTheme } from "@react-navigation/native";
+import { useNavigation, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Searchbar } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ProfileIcon from "../explore-influencers/profile-icon";
+import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
+import BrandActionItem from "./BrandActionItem";
+import BrandItem from "./BrandItem";
+import DrawerIcon from "./DrawerIcon";
+import DrawerMenuItem, { IconPropFn } from "./DrawerMenuItem";
 
-interface DrawerMenuContentProps {}
+interface DrawerMenuContentProps { }
 
 const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
+  {
+    href: "/explore-influencers",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
+      ) : (
+        <DrawerIcon href="/explore-influencers" icon={faHeart} />
+      ),
+    label: "Explore",
+  },
   {
     href: "/collaborations",
     icon: ({ focused }: IconPropFn) =>
@@ -58,16 +68,6 @@ const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
     href: "/contracts",
     icon: () => <DrawerIcon href="/contracts" icon={faFileLines} />,
     label: "Contracts",
-  },
-  {
-    href: "/explore-influencers",
-    icon: ({ focused }: IconPropFn) =>
-      focused ? (
-        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
-      ) : (
-        <DrawerIcon href="/explore-influencers" icon={faHeart} />
-      ),
-    label: "Explore",
   },
   {
     href: "/menu",
@@ -114,42 +114,41 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
       style={{
         flex: 1,
         paddingTop: Platform.OS === "web" ? 8 : 64,
+        backgroundColor: Colors(theme).background,
       }}
     >
-      <View>
-        {xl ? (
-          <Text
-            style={{
-              paddingHorizontal: 24,
-              paddingTop: 8,
-              paddingBottom: 16,
-              fontSize: 24,
-              fontWeight: "bold",
-            }}
-          >
-            {selectedBrand?.name ?? "Brand"}
+      {/* Header Section */}
+      <View
+        style={{
+          paddingHorizontal: 8,
+          paddingBottom: 12,
+          borderBottomColor: Colors(theme).border,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+        }}
+      >
+        <Pressable onPress={() => {
+          OpenBrandSwitcher.next(undefined)
+        }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 12 }}>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+                flex: 1,
+                color: Colors(theme).text,
+              }}
+            >
+              {selectedBrand?.name ?? "Brand"}
+            </Text>
+            {xl && <BrandSwitcher />}
+          </View>
+        </Pressable>
 
-            <BrandSwitcher />
-          </Text>
-        ) : (
-          <Text
-            style={{
-              paddingHorizontal: 24,
-              paddingTop: 8,
-              paddingBottom: 16,
-              fontSize: 24,
-              fontWeight: "bold",
-            }}
-          >
-            {selectedBrand?.name ?? "Brand"}
-          </Text>
-        )}
+
         {!xl && (
-          <View
-            style={{
-              flexDirection: "row",
-            }}
-          >
+          <View style={{ marginTop: 8 }}>
             <Searchbar
               icon={() => (
                 <FontAwesomeIcon
@@ -161,13 +160,14 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
               iconColor={Colors(theme).gray100}
               inputStyle={styles.searchbarInput}
               onChangeText={handleSearchChange}
-              placeholder="Search"
+              placeholder="Search Brands"
               placeholderTextColor={Colors(theme).gray100}
               style={[
                 styles.searchbar,
                 {
-                  marginHorizontal: 14,
-                  marginBottom: 8,
+                  backgroundColor: Colors(theme).card,
+                  borderRadius: 12,
+                  marginBottom: 4,
                 },
               ]}
               value={search}
@@ -175,37 +175,39 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           </View>
         )}
       </View>
+
+      {/* Scrollable Menu Section */}
       <ScrollView
-        style={{
-          flex: 1,
-          gap: 6,
+        contentContainerStyle={{
+          paddingVertical: 12,
+          gap: 10,
         }}
+        showsVerticalScrollIndicator={false}
       >
-        <View
-          style={{
-            paddingTop: 8,
-          }}
-        >
-          {xl
-            ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
-                <DrawerMenuItem key={index} tab={tab} />
-              ))
-            : filteredBrands.map((brand) => (
-                <BrandItem
-                  active={selectedBrand?.id === brand.id}
-                  image={brand.image}
-                  key={brand.id.toString()}
-                  menu={true}
-                  onPress={() => handleBrandChange(brand)}
-                  showImage={true}
-                  title={brand.name}
-                />
-              ))}
-        </View>
+        {xl
+          ? DRAWER_MENU_CONTENT_ITEMS(theme).map((tab, index) => (
+            <DrawerMenuItem key={index} tab={tab} />
+          ))
+          : filteredBrands.map((brand) => (
+            <BrandItem
+              active={selectedBrand?.id === brand.id}
+              image={brand.image}
+              key={brand.id.toString()}
+              menu={true}
+              onPress={() => handleBrandChange(brand)}
+              showImage={true}
+              title={brand.name}
+            />
+          ))}
       </ScrollView>
+
+      {/* Bottom CTA Section */}
       <View
         style={{
-          marginBottom: bottom + Platform.OS === "android" ? 24 : 44,
+          paddingHorizontal: 16,
+          paddingBottom: bottom + (Platform.OS === "android" ? 24 : 36),
+          borderTopColor: Colors(theme).border,
+          borderTopWidth: StyleSheet.hairlineWidth,
         }}
       >
         <BrandActionItem
@@ -219,10 +221,10 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
           title="Create New Brand"
+          removeBottomBorder={true}
         />
       </View>
     </View>
   );
 };
-
 export default DrawerMenuContent;

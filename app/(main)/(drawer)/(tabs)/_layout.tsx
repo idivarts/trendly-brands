@@ -1,13 +1,13 @@
-import React from "react";
 import { Tabs } from "expo-router";
+import React from "react";
 
-import Colors from "@/constants/Colors";
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import { useBreakpoints } from "@/hooks";
-import { useTheme } from "@react-navigation/native";
+import Header from "@/components/explore-influencers/header";
+import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useClientOnlyValue } from "@/components/useClientOnlyValue";
+import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import {
   faComment,
   faFileLines,
@@ -16,12 +16,12 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
-  faHeart as faHeartSolid,
   faFileLines as faFileLinesSolid,
+  faHeart as faHeartSolid,
   faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
-import Header from "@/components/explore-influencers/header";
-import ProfileIcon from "@/components/explore-influencers/profile-icon";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -36,13 +36,31 @@ const TabLayout = () => {
         tabBarShowLabel: true,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          display: xl ? "none" : "flex", // Hide the tab bar on desktop screens
-          paddingHorizontal: 8,
+          display: xl ? "none" : "flex",
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          height: 70,
+          borderTopWidth: 1,
+          borderTopColor: Colors(theme).border,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          backgroundColor: Colors(theme).background,
         },
         headerTitleAlign: "left",
         headerTitleStyle: {
-          fontSize: 24,
-          fontWeight: "bold",
+          fontSize: 22,
+          fontWeight: "600",
+        },
+        headerStyle: {
+          backgroundColor: Colors(theme).background,
+          borderBottomWidth: 1,
+          borderBottomColor: Colors(theme).border,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
         },
       }}
     >
@@ -54,7 +72,7 @@ const TabLayout = () => {
             <FontAwesomeIcon
               color={color}
               icon={focused ? faHeartSolid : faHeart}
-              size={24}
+              size={22}
             />
           ),
           headerTitle() {
@@ -80,7 +98,7 @@ const TabLayout = () => {
             <FontAwesomeIcon
               color={color}
               icon={focused ? faCommentSolid : faComment}
-              size={24}
+              size={22}
             />
           ),
           title: "Messages",
@@ -96,7 +114,7 @@ const TabLayout = () => {
             <FontAwesomeIcon
               color={color}
               icon={focused ? faStarSolid : faStar}
-              size={24}
+              size={22}
             />
           ),
           headerRight: () => <NotificationIcon />,
@@ -110,7 +128,7 @@ const TabLayout = () => {
             <FontAwesomeIcon
               color={color}
               icon={focused ? faFileLinesSolid : faFileLines}
-              size={24}
+              size={22}
             />
           ),
           headerRight: () => <NotificationIcon />,

@@ -29,8 +29,8 @@ const Header: React.FC = (props) => {
         <Text
           style={{
             color: Colors(theme).text,
-            fontSize: 24,
-            fontWeight: "bold",
+            fontSize: 22,
+            fontWeight: 600,
           }}
         >
           {Platform.OS === "web" ? "Explore" : selectedBrand?.name ?? "Brand"}

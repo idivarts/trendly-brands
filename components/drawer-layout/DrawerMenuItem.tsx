@@ -1,8 +1,8 @@
+import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
-import Colors from "@/constants/Colors";
 
 export interface IconPropFn {
   focused: boolean;
@@ -23,37 +23,36 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
   const pathname = usePathname();
   const theme = useTheme();
 
+  const isActive = tab.href.includes(pathname);
+  const colorSet = Colors(theme);
+
   return (
-    //@ts-ignore
-    <Pressable onPress={() => router.push(tab.href)}>
-      <View
-        style={{
-          backgroundColor: tab.href.includes(pathname)
-            ? Colors(theme).primary
-            : Colors(theme).background,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: Colors(theme).aliceBlue,
-          paddingHorizontal: 24,
-          paddingVertical: 14,
-          flexDirection: "row",
-          gap: 12,
-          alignItems: "center",
-          justifyContent: "flex-start"
-        }}
-      >
+    <Pressable
+      onPress={() => router.push(tab.href)}
+      android_ripple={{ color: colorSet.primary + "30" }}
+      style={[
+        styles.wrapper,
         {
-          tab.icon({
-            focused: tab.href.includes(pathname),
-          })
-        }
+          backgroundColor: isActive
+            ? colorSet.primary
+            : colorSet.background,
+          borderColor: isActive
+            ? colorSet.primary
+            : colorSet.background,
+          // shadowColor: isActive ? "#000" : "transparent",
+        },
+      ]}
+    >
+      <View style={styles.innerContainer}>
+        {tab.icon({ focused: isActive })}
         <Text
-          style={{
-            color: tab.href.includes(pathname)
-              ? Colors(theme).white
-              : Colors(theme).text,
-            textAlign: "center",
-            fontSize: 16,
-          }}
+          style={[
+            styles.label,
+            {
+              color: isActive ? colorSet.white : colorSet.text,
+              fontWeight: isActive ? "600" : "400",
+            },
+          ]}
         >
           {tab.label}
         </Text>
@@ -61,5 +60,26 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  wrapper: {
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+  },
+  innerContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: "transparent"
+  },
+  label: {
+    fontSize: 16,
+  },
+});
 
 export default DrawerMenuItem;

@@ -48,7 +48,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         <View
           style={{
             marginTop: 2,
-            marginLeft: 10,
+            paddingHorizontal: 16,
           }}
           lightColor={Colors(theme).transparent}
           darkColor={Colors(theme).transparent}

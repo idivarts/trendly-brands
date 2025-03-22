@@ -1,11 +1,11 @@
+import Colors from "@/constants/Colors";
+import stylesFn from "@/styles/brand-item/BrandItem.styles";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
-import Colors from "@/constants/Colors";
-import stylesFn from "@/styles/brand-item/BrandItem.styles";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
 
 interface BrandActionItemProps {
   active?: boolean;
@@ -13,6 +13,7 @@ interface BrandActionItemProps {
   onPress: () => void;
   showChevron?: boolean;
   title: string;
+  removeBottomBorder?: boolean
 }
 
 const BrandActionItem: React.FC<BrandActionItemProps> = ({
@@ -21,6 +22,7 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
   onPress,
   showChevron = true,
   title,
+  removeBottomBorder
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
@@ -34,6 +36,7 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
             borderTopColor: Colors(theme).aliceBlue,
             borderTopWidth: StyleSheet.hairlineWidth,
             backgroundColor: active ? Colors(theme).primary : Colors(theme).background,
+            borderBottomWidth: removeBottomBorder ? 0 : undefined,
           },
         ]}
       >

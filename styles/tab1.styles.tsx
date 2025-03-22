@@ -6,6 +6,8 @@ const styles = (theme: Theme) =>
   StyleSheet.create({
     wrapper: {
       backgroundColor: Colors(theme).background,
+      flex: 1,
+      alignSelf: "center"
     },
     slide: {
       flex: 1,

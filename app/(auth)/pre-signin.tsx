@@ -1,29 +1,30 @@
-import React, { useState, useRef } from "react";
-import {
-  View,
-  Text,
-  Image,
-  Pressable,
-  Dimensions,
-  Platform,
-} from "react-native";
-import { Title, Paragraph } from "react-native-paper";
-import stylesFn from "@/styles/tab1.styles";
-import { useTheme } from "@react-navigation/native";
-import AppLayout from "@/layouts/app-layout";
-import { slides } from "@/constants/Slides";
-import Colors from "@/constants/Colors";
-import { useRouter } from "expo-router";
-import { imageUrl } from "@/utils/url";
 import Button from "@/components/ui/button";
 import SocialButton from "@/components/ui/button/social-button";
+import Colors from "@/constants/Colors";
+import { slides } from "@/constants/Slides";
+import { useBreakpoints } from "@/hooks";
+import AppLayout from "@/layouts/app-layout";
+import stylesFn from "@/styles/tab1.styles";
+import { imageUrl } from "@/utils/url";
 import {
   faArrowRight,
   faEnvelopeOpen,
   faUserPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { useSharedValue, runOnJS } from "react-native-reanimated";
+import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
+import {
+  Dimensions,
+  Image,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import { Paragraph, Title } from "react-native-paper";
+import { runOnJS, useSharedValue } from "react-native-reanimated";
 import Carousel, {
   ICarouselInstance,
   Pagination,
@@ -63,6 +64,7 @@ const PreSignIn = () => {
     });
   };
 
+  const { xl } = useBreakpoints();
   return (
     <AppLayout>
       {Platform.OS === "web" ? (
@@ -71,7 +73,7 @@ const PreSignIn = () => {
             ref={swiperRef} // Attach the ref to Swiper
             style={styles.wrapper}
             loop={false}
-            width={Dimensions.get("window").width}
+            width={xl ? 800 : Dimensions.get("window").width}
             data={slides}
             onProgressChange={(_, absoluteProgress) => {
               runOnJS((value: number) => {
