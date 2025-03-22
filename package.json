@@ -27,6 +27,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.0",
     "@fortawesome/react-native-fontawesome": "^0.3.2",
     "@gorhom/bottom-sheet": "^5.0.2",
+    "@likashefqet/react-native-image-zoom": "^4.3.0",
     "@ptomasroos/react-native-multi-slider": "^2.2.2",
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/masked-view": "^0.1.11",
