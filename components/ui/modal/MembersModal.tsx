@@ -1,22 +1,22 @@
-import React from "react";
-import { Modal, Portal } from "react-native-paper";
-import { stylesFn } from "@/styles/Members";
-import { View, Text } from "@/components/theme/Themed";
+import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import axios from "axios";
+import { stylesFn } from "@/styles/Members";
 import { AuthApp } from "@/utils/auth";
 import { FirestoreDB } from "@/utils/firestore";
+import axios from "axios";
 import { doc, setDoc } from "firebase/firestore";
+import React from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
-import TextInput from "../text-input";
+import { Modal, Portal } from "react-native-paper";
 import Button from "../button";
+import TextInput from "../text-input";
 
 interface MembersModalProps {
   visible: boolean;
@@ -49,7 +49,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
 
     await axios
       .post(
-        "https://be.trendly.pro/api/v1/brands/members",
+        "https://be.trendly.now/api/v1/brands/members",
         {
           brandId: selectedBrand.id,
           email,

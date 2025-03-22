@@ -1,22 +1,22 @@
-import React from "react";
-import { Modal, Pressable, StyleSheet, View, Text } from "react-native";
-import { List } from "react-native-paper";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useChatContext, useNotificationContext } from "@/contexts";
-import { FirestoreDB } from "@/utils/firestore";
-import { doc, updateDoc } from "firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useRouter } from "expo-router";
+import { FirestoreDB } from "@/utils/firestore";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Clipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
+import { doc, updateDoc } from "firebase/firestore";
+import React from "react";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { List } from "react-native-paper";
 
 interface BottomSheetActionsProps {
   cardType:
-    | "influencerType"
-    | "promotionType"
-    | "influencerCard"
-    | "applicationCard"
-    | "invitationCard"
-    | "activeCollab";
+  | "influencerType"
+  | "promotionType"
+  | "influencerCard"
+  | "applicationCard"
+  | "invitationCard"
+  | "activeCollab";
   data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
@@ -42,7 +42,7 @@ const BottomSheetActions = ({
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(
-      "https://creators.trendly.pro/collaboration/" + cardId
+      "https://creators.trendly.now/collaboration/" + cardId
     );
   };
 
