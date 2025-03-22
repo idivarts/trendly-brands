@@ -134,7 +134,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
               style={{
                 fontSize: 20,
                 fontWeight: "700",
-                paddingVertical: 8,
+                paddingVertical: 10,
                 paddingHorizontal: 16,
                 flex: 1,
                 color: Colors(theme).text,
