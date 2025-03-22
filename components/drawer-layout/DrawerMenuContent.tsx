@@ -35,6 +35,16 @@ interface DrawerMenuContentProps { }
 
 const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
   {
+    href: "/explore-influencers",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
+      ) : (
+        <DrawerIcon href="/explore-influencers" icon={faHeart} />
+      ),
+    label: "Explore",
+  },
+  {
     href: "/collaborations",
     icon: ({ focused }: IconPropFn) =>
       focused ? (
@@ -58,16 +68,6 @@ const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
     href: "/contracts",
     icon: () => <DrawerIcon href="/contracts" icon={faFileLines} />,
     label: "Contracts",
-  },
-  {
-    href: "/explore-influencers",
-    icon: ({ focused }: IconPropFn) =>
-      focused ? (
-        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
-      ) : (
-        <DrawerIcon href="/explore-influencers" icon={faHeart} />
-      ),
-    label: "Explore",
   },
   {
     href: "/menu",
