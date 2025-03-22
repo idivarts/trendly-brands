@@ -88,7 +88,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }
     console.log("Connecting to Chat")
     try {
-      const response = await fetch("https://be.trendly.pro/api/v1/chat/connect", {
+      const response = await fetch("https://be.trendly.now/api/v1/chat/connect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -129,7 +129,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     userId: string,
     collaborationId: string,
   ): Promise<Channel> => {
-    const response = await fetch("https://be.trendly.pro/api/v1/chat/channel", {
+    const response = await fetch("https://be.trendly.now/api/v1/chat/channel", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

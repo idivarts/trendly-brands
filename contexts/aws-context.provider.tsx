@@ -1,14 +1,14 @@
+import { AssetItem, NativeAssetItem, WebAssetItem } from "@/types/Asset";
 import { AuthApp } from "@/utils/auth";
+import * as FileSystem from "expo-file-system";
+import * as MediaLibrary from "expo-media-library";
 import {
-  useContext,
   createContext,
   type PropsWithChildren,
+  useContext,
   useState,
 } from "react";
 import { Platform } from "react-native";
-import * as FileSystem from "expo-file-system";
-import * as MediaLibrary from "expo-media-library";
-import { AssetItem, NativeAssetItem, WebAssetItem } from "@/types/Asset";
 
 interface AWSContextProps {
   getBlob: (fileUri: any) => Promise<Blob>;
@@ -50,7 +50,7 @@ export const AWSContextProvider: React.FC<PropsWithChildren> = ({
 
   const preUploadRequestUrl = (file: File | AssetItem): string => {
     const date = new Date().getTime();
-    const baseUrl = 'https://be.trendly.pro/s3/v1/';
+    const baseUrl = 'https://be.trendly.now/s3/v1/';
     const type = file.type.includes("video") ? "videos" : "images";
     let filename: string = '';
 

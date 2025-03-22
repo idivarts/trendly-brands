@@ -1,13 +1,20 @@
 import { useStorageState } from "@/hooks";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type PropsWithChildren,
-} from "react";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { Manager } from "@/types/Manager";
+import { User } from "@/types/User";
+import { analyticsLogEvent } from "@/utils/analytics";
+import { AuthApp } from "@/utils/auth";
+import { FirestoreDB } from "@/utils/firestore";
+import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
+import { resetAndNavigate } from "@/utils/router";
+import { checkTestUsers } from "@/utils/test-users";
 import { useRouter } from "expo-router";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import {
   collection,
   doc,
@@ -16,21 +23,14 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { Manager } from "@/types/Manager";
-import { AuthApp } from "@/utils/auth";
 import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  signInWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-import { analyticsLogEvent } from "@/utils/analytics";
-import { checkTestUsers } from "@/utils/test-users";
-import { resetAndNavigate } from "@/utils/router";
-import { User } from "@/types/User";
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+} from "react";
 import { Platform } from "react-native";
-import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
 
 interface AuthContextProps {
   getManager: (managerId: string) => Promise<Manager | null>;
@@ -117,7 +117,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
       setSession(managerCredential.user.uid);
 
-      await fetch("https://be.trendly.pro/api/v1/chat/auth", {
+      await fetch("https://be.trendly.now/api/v1/chat/auth", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -184,7 +184,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
               },
             });
 
-            await fetch("https://be.trendly.pro/api/v1/chat/auth", {
+            await fetch("https://be.trendly.now/api/v1/chat/auth", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
