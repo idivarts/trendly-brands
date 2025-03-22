@@ -45,6 +45,15 @@ constructs:
 
 resources:
   Resources:
+    Route53NowRecord:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneId: Z02250033690XMWB8LXL7 # Your HostedZoneId
+        Name: brands.trendly.now
+        Type: A
+        AliasTarget:
+          HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Route53 HostedZoneId. This does not change.
+          DNSName: ${construct:trendlyBrands.cname}
     Route53Record:
       Type: AWS::Route53::RecordSet
       Properties:
