@@ -41,6 +41,12 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       style={{
         backgroundColor: Colors(theme).background,
         elevation: 0,
+        borderBottomWidth: Platform.OS === "web" ? 1 : 0,
+        borderBottomColor: Colors(theme).border,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
       }}
       statusBarHeight={0}
     >
@@ -48,7 +54,8 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         <View
           style={{
             marginTop: 2,
-            marginLeft: 10,
+            paddingLeft: 16,
+            paddingRight: 16,
           }}
           lightColor={Colors(theme).transparent}
           darkColor={Colors(theme).transparent}
@@ -56,10 +63,11 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
           <Pressable onPress={handleAction}>
             <FontAwesomeIcon
               icon={faArrowLeft}
-              size={20}
+              size={22}
               color={Colors(theme).text}
               style={{
                 alignItems: "center",
+                justifyContent: "center",
               }}
             />
           </Pressable>
@@ -69,13 +77,15 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       <Appbar.Content
         style={{
           flex: 1,
-          marginLeft: Platform.OS === "web" ? 12 : 16,
+          marginLeft: 12,
         }}
         color={Colors(theme).text}
         title={title}
       />
 
-      {rightAction && rightActionButton}
+      {rightAction && (
+        <View style={{ paddingRight: 16 }}>{rightActionButton}</View>
+      )}
     </Appbar.Header>
   );
 };
