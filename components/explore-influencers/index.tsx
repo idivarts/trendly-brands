@@ -70,7 +70,7 @@ const ExploreInfluencers = () => {
     const influencersRef = collection(FirestoreDB, "users");
     const q = query(
       influencersRef,
-      // where("profile.completionPercentage", ">=", 60)
+      // where("profile.completionPercentage", ">=", 60),
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -83,6 +83,9 @@ const ExploreInfluencers = () => {
             id: doc.id,
           } as User);
       });
+      fetchedInfluencers.sort((a, b) => {
+        return (b?.creationTime || 0) - (a?.creationTime || 0);
+      })
 
       setInfluencers(fetchedInfluencers);
       setIsLoading(false);
