@@ -1,11 +1,10 @@
 import { useRouter } from "expo-router";
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { useState } from "react";
 
 import { useChatContext, useNotificationContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
-import { User } from "@/types/User";
 import { FirestoreDB } from "@/utils/firestore";
 
 interface UseApplicationsProps {
@@ -22,6 +21,7 @@ interface UseApplicationsProps {
 }
 
 const useApplications = ({
+  isApplicationConcised,
   collaborationId,
   data,
   handleActionModalClose,
@@ -32,37 +32,60 @@ const useApplications = ({
     sendNotification,
   } = useNotificationContext();
   const router = useRouter();
-  const [influencers, setInfluencers] = useState<{
-    influencer: User;
-    application: Application;
-  }[]>([]);
+  const [influencers, setInfluencers] = useState<InfluencerApplication[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchApplications = async () => {
     try {
-      const applicationRef = collection(
-        FirestoreDB,
-        "collaborations",
-        collaborationId,
-        "applications"
-      );
-      const applicationQuery = query(
-        applicationRef,
-        where("status", "in", ["pending", "accepted"])
-      );
-      const applicationFetch = await getDocs(applicationQuery);
+      let applications: Application[] = [];
+      if (!isApplicationConcised) {
+        const applicationRef = collection(
+          FirestoreDB,
+          "collaborations",
+          collaborationId,
+          "applications"
+        );
+        const applicationQuery = query(
+          applicationRef,
+          where("status", "in", ["pending", "accepted"])
+        );
+        const applicationFetch = await getDocs(applicationQuery);
 
-      const applications = applicationFetch.docs.map((doc) => {
-        return {
-          ...doc.data(),
-          id: doc.id,
-        } as Application;
-      });
+        applications = applicationFetch.docs.map((doc) => {
+          return {
+            ...doc.data(),
+            id: doc.id,
+          } as Application;
+        });
+      } else {
+        const applicationRef = collectionGroup(FirestoreDB, "applications");
+        const applicationQuery = query(
+          applicationRef,
+          where("status", "in", ["pending", "accepted"]),
+          orderBy("timeStamp", "desc"),
+        );
+        const applicationFetch = await getDocs(applicationQuery);
+
+        applications = applicationFetch.docs.map((doc) => {
+          return {
+            ...doc.data(),
+            id: doc.id,
+          } as Application;
+        });
+      }
 
       const influencers = await Promise.all(
         applications.map(async (application) => {
           const userRef = doc(FirestoreDB, "users", application.userId);
           const userFetch = await getDoc(userRef);
+
+          let collab = data.collaboration;
+          if (isApplicationConcised) {
+            const collabRef = doc(FirestoreDB, "collaborations", application.collaborationId);
+            const collabFetch = await getDoc(collabRef);
+            collab = collabFetch.data() as any;
+          }
+
           return {
             application: {
               ...application,
@@ -71,7 +94,8 @@ const useApplications = ({
             influencer: {
               ...userFetch.data(),
               id: userFetch.id,
-            }
+            },
+            collaboration: collab
           } as InfluencerApplication;
         })
       );

@@ -73,7 +73,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     setIsActionModalVisible(false);
   }
 
-  const collaborationQuestions = props.collaboration?.questionsToInfluencers || [];
+  // const collaborationQuestions = props.collaboration?.questionsToInfluencers || [];
 
   const {
     fetchApplications,
@@ -219,8 +219,8 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                       bottomSheetModalRef.current?.close();
                     });
                   }}
-                  questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer) => ({
-                    question: collaborationQuestions[answer.question],
+                  questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer, index) => ({
+                    question: selectedInfluencerApplication.collaboration?.questionsToInfluencers[index] || "",
                     answer: answer.answer
                   })) || []}
                 />
