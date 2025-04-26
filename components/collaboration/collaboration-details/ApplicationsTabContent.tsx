@@ -1,32 +1,40 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, ActivityIndicator } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 
-import { useTheme } from "@react-navigation/native";
-import { FirestoreDB } from "@/utils/firestore";
-import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/constants/Colors";
-import { useBreakpoints } from "@/hooks";
 import {
   ApplicationCard
 } from "@/components/card/collaboration-details/application-card";
 import {
   ApplicationCard as ProfileApplicationCard
 } from "@/components/card/profile-modal/application-card";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSharedValue } from "react-native-reanimated";
-import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
-import { User } from "@/types/User";
-import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
-import { List } from "react-native-paper";
+import { View } from "@/components/theme/Themed";
+import EmptyState from "@/components/ui/empty-state";
+import Colors from "@/constants/Colors";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { processRawAttachment } from "@/utils/attachments";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
-import { View } from "@/components/theme/Themed";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { User } from "@/types/User";
+import { processRawAttachment } from "@/utils/attachments";
+import { FirestoreDB } from "@/utils/firestore";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useTheme } from "@react-navigation/native";
+import { List } from "react-native-paper";
+import { useSharedValue } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const ApplicationsTabContent = (props: any) => {
+interface IProps {
+  pageID: string;
+  collaboration: {
+    id: string;
+    name: string;
+    questionsToInfluencers: string[];
+  };
+}
+const ApplicationsTabContent = (props: IProps) => {
   const theme = useTheme();
   const [selectedInfluencerApplication, setSelectedInfluencerApplication] = useState<InfluencerApplication | null>(null);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
