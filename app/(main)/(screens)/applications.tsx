@@ -43,6 +43,7 @@ const ApplicationsScreen = () => {
                 marginTop: 16,
             }}>
                 <ApplicationsTabContent
+                    isApplicationConcised={true}
                     pageID={"6M5M35RrgaDstPwz7I3G"}
                     collaboration={{
                         id: "6M5M35RrgaDstPwz7I3G",

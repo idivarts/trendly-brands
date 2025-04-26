@@ -27,6 +27,7 @@ import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface IProps {
+  isApplicationConcised?: boolean;
   pageID: string;
   collaboration: {
     id: string;
@@ -34,7 +35,7 @@ interface IProps {
     questionsToInfluencers: string[];
   };
 }
-const ApplicationsTabContent = (props: IProps) => {
+const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => {
   const theme = useTheme();
   const [selectedInfluencerApplication, setSelectedInfluencerApplication] = useState<InfluencerApplication | null>(null);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
@@ -81,6 +82,7 @@ const ApplicationsTabContent = (props: IProps) => {
     influencers,
     loading,
   } = useApplications({
+    isApplicationConcised,
     collaborationId: props.pageID,
     data: {
       collaboration: props.collaboration,

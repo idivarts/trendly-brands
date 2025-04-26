@@ -1,14 +1,15 @@
-import { useState } from "react";
 import { useRouter } from "expo-router";
-import { collection, getDocs, doc, updateDoc, getDoc, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { useState } from "react";
 
 import { useChatContext, useNotificationContext } from "@/contexts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { FirestoreDB } from "@/utils/firestore";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
+import { FirestoreDB } from "@/utils/firestore";
 
 interface UseApplicationsProps {
+  isApplicationConcised?: boolean;
   collaborationId: string;
   data: {
     collaboration: {
