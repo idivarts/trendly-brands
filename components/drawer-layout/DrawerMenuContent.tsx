@@ -217,7 +217,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           showChevron={false}
           onPress={() => {
             router.push({
-              pathname: "/onboarding-your-brand",
+              pathname: "/applications",
             });
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
