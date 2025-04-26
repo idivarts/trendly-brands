@@ -1,14 +1,14 @@
-import { ActivityIndicator, FlatList } from "react-native";
-import InfluencerCard from "../InfluencerCard";
-import { View } from "../theme/Themed";
-import AppLayout from "@/layouts/app-layout";
-import SearchComponent from "../SearchComponent";
-import { useEffect, useMemo, useRef, useState } from "react";
-import CollaborationFilter from "../FilterModal";
 import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 import { useBreakpoints } from "@/hooks";
+import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
+import { useTheme } from "@react-navigation/native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, FlatList } from "react-native";
+import CollaborationFilter from "../FilterModal";
+import InfluencerCard from "../InfluencerCard";
+import SearchComponent from "../SearchComponent";
+import { View } from "../theme/Themed";
 
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import {
@@ -17,13 +17,13 @@ import {
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 
-import { FirestoreDB } from "@/utils/firestore";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
-import { List } from "react-native-paper";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSharedValue } from "react-native-reanimated";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { FirestoreDB } from "@/utils/firestore";
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { List } from "react-native-paper";
+import { useSharedValue } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,16 +70,18 @@ const ExploreInfluencers = () => {
     const influencersRef = collection(FirestoreDB, "users");
     const q = query(
       influencersRef,
-      where("profile.completionPercentage", ">=", 60)
+      // where("profile.completionPercentage", ">=", 60)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const fetchedInfluencers: User[] = [];
       querySnapshot.forEach((doc) => {
-        fetchedInfluencers.push({
-          ...doc.data(),
-          id: doc.id,
-        } as User);
+        const inf = doc.data()
+        if (inf.primarySocial)
+          fetchedInfluencers.push({
+            ...inf,
+            id: doc.id,
+          } as User);
       });
 
       setInfluencers(fetchedInfluencers);

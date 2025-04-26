@@ -1,32 +1,43 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, ActivityIndicator } from "react-native";
+import { ActivityIndicator, FlatList } from "react-native";
 
-import { useTheme } from "@react-navigation/native";
-import { FirestoreDB } from "@/utils/firestore";
-import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/constants/Colors";
-import { useBreakpoints } from "@/hooks";
 import {
   ApplicationCard
 } from "@/components/card/collaboration-details/application-card";
 import {
   ApplicationCard as ProfileApplicationCard
 } from "@/components/card/profile-modal/application-card";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSharedValue } from "react-native-reanimated";
-import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
-import { User } from "@/types/User";
-import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
-import { List } from "react-native-paper";
+import { View } from "@/components/theme/Themed";
+import { CardHeader } from "@/components/ui/card/secondary/card-header";
+import EmptyState from "@/components/ui/empty-state";
+import Colors from "@/constants/Colors";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { processRawAttachment } from "@/utils/attachments";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
-import { View } from "@/components/theme/Themed";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { User } from "@/types/User";
+import { processRawAttachment } from "@/utils/attachments";
+import { FirestoreDB } from "@/utils/firestore";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useTheme } from "@react-navigation/native";
+import { List } from "react-native-paper";
+import { useSharedValue } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const ApplicationsTabContent = (props: any) => {
+interface IProps {
+  isApplicationConcised?: boolean;
+  pageID: string;
+  collaboration: {
+    id: string;
+    name: string;
+    questionsToInfluencers: string[];
+  };
+}
+const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => {
   const theme = useTheme();
   const [selectedInfluencerApplication, setSelectedInfluencerApplication] = useState<InfluencerApplication | null>(null);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
@@ -64,7 +75,7 @@ const ApplicationsTabContent = (props: any) => {
     setIsActionModalVisible(false);
   }
 
-  const collaborationQuestions = props.collaboration?.questionsToInfluencers || [];
+  // const collaborationQuestions = props.collaboration?.questionsToInfluencers || [];
 
   const {
     fetchApplications,
@@ -73,6 +84,7 @@ const ApplicationsTabContent = (props: any) => {
     influencers,
     loading,
   } = useApplications({
+    isApplicationConcised,
     collaborationId: props.pageID,
     data: {
       collaboration: props.collaboration,
@@ -80,9 +92,11 @@ const ApplicationsTabContent = (props: any) => {
     handleActionModalClose,
   });
 
+  const { brands } = useBrandContext();
+
   useEffect(() => {
     fetchApplications();
-  }, []);
+  }, [brands]);
 
   if (loading) {
     return (
@@ -114,23 +128,33 @@ const ApplicationsTabContent = (props: any) => {
       <FlatList
         data={influencers}
         renderItem={({ item }) => (
-          <ApplicationCard
-            acceptApplication={() => {
-              setSelectedInfluencerApplication(item);
-              handleAcceptApplication(item);
-            }}
-            bottomSheetAction={() => {
-              setSelectedInfluencerApplication(item);
-              setIsActionModalVisible(true);
-            }}
-            data={item}
-            profileModalAction={() => {
-              setSelectedInfluencerApplication(item);
-              setTimeout(() => {
-                bottomSheetModalRef.current?.present();
-              }, 500);
-            }}
-          />
+          <>
+            {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
+              <CardHeader
+                avatar={item.brand?.image || ""}
+                handle={item.brand?.name || ""}
+                // isVerified={true}
+                name={item.collaboration?.name || ""}
+              />
+            </View>}
+            <ApplicationCard
+              acceptApplication={() => {
+                setSelectedInfluencerApplication(item);
+                handleAcceptApplication(item);
+              }}
+              bottomSheetAction={() => {
+                setSelectedInfluencerApplication(item);
+                setIsActionModalVisible(true);
+              }}
+              data={item}
+              profileModalAction={() => {
+                setSelectedInfluencerApplication(item);
+                setTimeout(() => {
+                  bottomSheetModalRef.current?.present();
+                }, 500);
+              }}
+            />
+          </>
         )}
         keyExtractor={(item, index) => item.application.id + index}
         style={{
@@ -209,8 +233,8 @@ const ApplicationsTabContent = (props: any) => {
                       bottomSheetModalRef.current?.close();
                     });
                   }}
-                  questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer) => ({
-                    question: collaborationQuestions[answer.question],
+                  questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer, index) => ({
+                    question: selectedInfluencerApplication.collaboration?.questionsToInfluencers?.[index] || "",
                     answer: answer.answer
                   })) || []}
                 />

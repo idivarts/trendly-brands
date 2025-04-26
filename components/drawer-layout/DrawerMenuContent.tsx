@@ -6,6 +6,7 @@ import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { Brand } from "@/types/Brand";
 import {
   faComment,
+  faEye,
   faFileLines,
   faHeart,
   faStar,
@@ -208,8 +209,22 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           paddingBottom: bottom + (Platform.OS === "android" ? 24 : 36),
           borderTopColor: Colors(theme).border,
           borderTopWidth: StyleSheet.hairlineWidth,
+          gap: 12,
         }}
       >
+        <BrandActionItem
+          key="view-applications"
+          icon={faEye}
+          showChevron={false}
+          onPress={() => {
+            router.push({
+              pathname: "/applications",
+            });
+            navigation.dispatch(DrawerActions.closeDrawer());
+          }}
+          title="View All Applications"
+          removeBottomBorder={true}
+        />
         <BrandActionItem
           key="create-brand"
           icon={faPlus}
@@ -221,6 +236,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
           title="Create New Brand"
+          removeTopBorder={true}
           removeBottomBorder={true}
         />
       </View>
