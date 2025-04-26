@@ -209,6 +209,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           paddingBottom: bottom + (Platform.OS === "android" ? 24 : 36),
           borderTopColor: Colors(theme).border,
           borderTopWidth: StyleSheet.hairlineWidth,
+          gap: 12,
         }}
       >
         <BrandActionItem
