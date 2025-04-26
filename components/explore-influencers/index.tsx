@@ -19,7 +19,7 @@ import {
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { FirestoreDB } from "@/utils/firestore";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -70,7 +70,8 @@ const ExploreInfluencers = () => {
     const influencersRef = collection(FirestoreDB, "users");
     const q = query(
       influencersRef,
-      // where("profile.completionPercentage", ">=", 60)
+      // where("profile.completionPercentage", ">=", 60),
+      orderBy("creationTime", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -83,6 +84,9 @@ const ExploreInfluencers = () => {
             id: doc.id,
           } as User);
       });
+      // fetchedInfluencers.sort((a, b) => {
+      //   return (b?.creationTime || 0) - (a?.creationTime || 0);
+      // })
 
       setInfluencers(fetchedInfluencers);
       setIsLoading(false);
