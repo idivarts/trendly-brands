@@ -1,12 +1,12 @@
-import React from 'react';
-import { Image, StyleSheet, Pressable } from 'react-native';
-import { Theme, useTheme } from '@react-navigation/native';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
-import Colors from '@/constants/Colors';
-import { Avatar } from 'react-native-paper';
-import { imageUrl } from '@/utils/url';
 import { Text, View } from '@/components/theme/Themed';
+import Colors from '@/constants/Colors';
+import { imageUrl } from '@/utils/url';
+import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { Theme, useTheme } from '@react-navigation/native';
+import React from 'react';
+import { Image, Pressable, StyleSheet } from 'react-native';
+import { Avatar } from 'react-native-paper';
 
 type CardHeaderProps = {
   avatar: string;
@@ -56,25 +56,27 @@ export const CardHeader = ({
           <Text style={styles.handle}>{handle || '@socialmedia'}</Text>
         </View>
       </Pressable>
-      <View
-        style={{
-          gap: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: Colors(theme).transparent,
-        }}
-      >
-        {timestamp && <Text style={styles.timestamp}>{timestamp}</Text>}
-        <Pressable
-          onPress={rightAction}
+      {(rightAction || timestamp) &&
+        <View
+          style={{
+            gap: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: Colors(theme).transparent,
+          }}
         >
-          <FontAwesomeIcon
-            icon={faEllipsis}
-            color={Colors(theme).primary}
-            size={20}
-          />
-        </Pressable>
-      </View>
+          {timestamp && <Text style={styles.timestamp}>{timestamp}</Text>}
+          {rightAction &&
+            <Pressable
+              onPress={rightAction}
+            >
+              <FontAwesomeIcon
+                icon={faEllipsis}
+                color={Colors(theme).primary}
+                size={20}
+              />
+            </Pressable>}
+        </View>}
     </View>
   );
 };
@@ -111,9 +113,11 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   userInfo: {
     marginLeft: 12,
     backgroundColor: Colors(theme).transparent,
+    // maxWidth: '70%',
   },
   nameContainer: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     gap: 2,
     backgroundColor: Colors(theme).transparent,

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useChatContext, useNotificationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { Brand } from "@/types/Brand";
 import { Application, Collaboration, InfluencerApplication } from "@/types/Collaboration";
 import { FirestoreDB } from "@/utils/firestore";
 
@@ -97,10 +98,15 @@ const useApplications = ({
           const userFetch = await getDoc(userRef);
 
           let collab: Partial<Collaboration> = data.collaboration;
+          let brand: Partial<Brand> = {};
           if (isApplicationConcised) {
             const collabRef = doc(FirestoreDB, "collaborations", application.collaborationId);
             const collabFetch = await getDoc(collabRef);
             collab = { ...collabFetch.data(), id: collabFetch.id } as Collaboration;
+
+            const brandRef = doc(FirestoreDB, "brands", "" + collab.brandId);
+            const brandFetch = await getDoc(brandRef);
+            brand = { ...brandFetch.data(), id: brandFetch.id } as Brand;
           }
 
           return {
@@ -112,7 +118,8 @@ const useApplications = ({
               ...userFetch.data(),
               id: userFetch.id,
             },
-            collaboration: collab
+            collaboration: collab,
+            brand: brand
           } as InfluencerApplication;
         })
       );

@@ -8,6 +8,7 @@ import {
   ApplicationCard as ProfileApplicationCard
 } from "@/components/card/profile-modal/application-card";
 import { View } from "@/components/theme/Themed";
+import { CardHeader } from "@/components/ui/card/secondary/card-header";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
@@ -127,23 +128,33 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
       <FlatList
         data={influencers}
         renderItem={({ item }) => (
-          <ApplicationCard
-            acceptApplication={() => {
-              setSelectedInfluencerApplication(item);
-              handleAcceptApplication(item);
-            }}
-            bottomSheetAction={() => {
-              setSelectedInfluencerApplication(item);
-              setIsActionModalVisible(true);
-            }}
-            data={item}
-            profileModalAction={() => {
-              setSelectedInfluencerApplication(item);
-              setTimeout(() => {
-                bottomSheetModalRef.current?.present();
-              }, 500);
-            }}
-          />
+          <>
+            {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
+              <CardHeader
+                avatar={item.brand?.image || ""}
+                handle={item.brand?.name || ""}
+                // isVerified={true}
+                name={item.collaboration?.name || ""}
+              />
+            </View>}
+            <ApplicationCard
+              acceptApplication={() => {
+                setSelectedInfluencerApplication(item);
+                handleAcceptApplication(item);
+              }}
+              bottomSheetAction={() => {
+                setSelectedInfluencerApplication(item);
+                setIsActionModalVisible(true);
+              }}
+              data={item}
+              profileModalAction={() => {
+                setSelectedInfluencerApplication(item);
+                setTimeout(() => {
+                  bottomSheetModalRef.current?.present();
+                }, 500);
+              }}
+            />
+          </>
         )}
         keyExtractor={(item, index) => item.application.id + index}
         style={{

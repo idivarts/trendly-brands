@@ -3,6 +3,7 @@ import {
   ICollaboration,
   IInvitations,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { Brand } from "./Brand";
 import { User } from "./User";
 
 export interface Collaboration extends ICollaboration {
@@ -21,4 +22,5 @@ export type InfluencerApplication = {
   application: Application;
   influencer: User;
   collaboration?: Partial<Collaboration>;
+  brand?: Partial<Brand>;
 };
