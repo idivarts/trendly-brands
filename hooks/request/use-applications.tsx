@@ -3,8 +3,9 @@ import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, upda
 import { useState } from "react";
 
 import { useChatContext, useNotificationContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { Application, InfluencerApplication } from "@/types/Collaboration";
+import { Application, Collaboration, InfluencerApplication } from "@/types/Collaboration";
 import { FirestoreDB } from "@/utils/firestore";
 
 interface UseApplicationsProps {
@@ -34,6 +35,7 @@ const useApplications = ({
   const router = useRouter();
   const [influencers, setInfluencers] = useState<InfluencerApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const { brands } = useBrandContext();
 
   const fetchApplications = async () => {
     try {
@@ -58,10 +60,25 @@ const useApplications = ({
           } as Application;
         });
       } else {
+        const brandIds = brands.map((brand) => brand.id);
+        console.log("brandIds", brandIds);
+
+        const activeCollabs = collection(FirestoreDB, "collaborations");
+        const activeCollabsQuery = query(
+          activeCollabs,
+          where("status", "==", "active"),
+          where("brandId", "in", brandIds)
+        );
+
+        const activeCollabsFetch = await getDocs(activeCollabsQuery);
+        const activeCollabsIds = activeCollabsFetch.docs.map((doc) => doc.id);
+        console.log("activeCollabsIds", activeCollabsIds);
+
         const applicationRef = collectionGroup(FirestoreDB, "applications");
         const applicationQuery = query(
           applicationRef,
           where("status", "in", ["pending", "accepted"]),
+          where("collaborationId", "in", activeCollabsIds),
           orderBy("timeStamp", "desc"),
         );
         const applicationFetch = await getDocs(applicationQuery);
@@ -79,11 +96,11 @@ const useApplications = ({
           const userRef = doc(FirestoreDB, "users", application.userId);
           const userFetch = await getDoc(userRef);
 
-          let collab = data.collaboration;
+          let collab: Partial<Collaboration> = data.collaboration;
           if (isApplicationConcised) {
             const collabRef = doc(FirestoreDB, "collaborations", application.collaborationId);
             const collabFetch = await getDoc(collabRef);
-            collab = collabFetch.data() as any;
+            collab = { ...collabFetch.data(), id: collabFetch.id } as Collaboration;
           }
 
           return {

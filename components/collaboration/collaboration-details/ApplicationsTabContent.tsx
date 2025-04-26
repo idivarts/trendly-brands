@@ -11,6 +11,7 @@ import { View } from "@/components/theme/Themed";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
@@ -90,9 +91,11 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     handleActionModalClose,
   });
 
+  const { brands } = useBrandContext();
+
   useEffect(() => {
     fetchApplications();
-  }, []);
+  }, [brands]);
 
   if (loading) {
     return (
@@ -220,7 +223,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                     });
                   }}
                   questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer, index) => ({
-                    question: selectedInfluencerApplication.collaboration?.questionsToInfluencers[index] || "",
+                    question: selectedInfluencerApplication.collaboration?.questionsToInfluencers?.[index] || "",
                     answer: answer.answer
                   })) || []}
                 />
