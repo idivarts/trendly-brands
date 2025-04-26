@@ -6,6 +6,7 @@ import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { Brand } from "@/types/Brand";
 import {
   faComment,
+  faEye,
   faFileLines,
   faHeart,
   faStar,
@@ -211,6 +212,19 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
         }}
       >
         <BrandActionItem
+          key="view-applications"
+          icon={faEye}
+          showChevron={false}
+          onPress={() => {
+            router.push({
+              pathname: "/onboarding-your-brand",
+            });
+            navigation.dispatch(DrawerActions.closeDrawer());
+          }}
+          title="View All Applications"
+          removeBottomBorder={true}
+        />
+        <BrandActionItem
           key="create-brand"
           icon={faPlus}
           showChevron={false}
@@ -221,6 +235,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             navigation.dispatch(DrawerActions.closeDrawer());
           }}
           title="Create New Brand"
+          removeTopBorder={true}
           removeBottomBorder={true}
         />
       </View>

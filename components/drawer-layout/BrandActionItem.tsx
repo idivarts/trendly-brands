@@ -13,6 +13,7 @@ interface BrandActionItemProps {
   onPress: () => void;
   showChevron?: boolean;
   title: string;
+  removeTopBorder?: boolean
   removeBottomBorder?: boolean
 }
 
@@ -22,6 +23,7 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
   onPress,
   showChevron = true,
   title,
+  removeTopBorder,
   removeBottomBorder
 }) => {
   const theme = useTheme();
@@ -34,7 +36,7 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
           styles.container,
           {
             borderTopColor: Colors(theme).aliceBlue,
-            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopWidth: removeTopBorder ? 0 : StyleSheet.hairlineWidth,
             backgroundColor: active ? Colors(theme).primary : Colors(theme).background,
             borderBottomWidth: removeBottomBorder ? 0 : undefined,
           },
