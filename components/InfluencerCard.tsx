@@ -49,8 +49,11 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
   const [previewImage, setPreviewImage] = useState(false);
   const [isInvited, setIsInvited] = useState(false);
   const [handle, setHandle] = useState("");
-
   const influencer = props.influencer;
+  const [images, setImages] = useState(influencer.profile?.attachments?.map((attachment) =>
+    processRawAttachment(attachment)
+  ) || [])
+
   const theme = useTheme();
   const styles = stylesFn(theme);
 
@@ -80,6 +83,13 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         setHandle(socialData.instaProfile?.username || "influencer-handle");
       } else {
         setHandle(socialData.fbProfile?.name || "influencer-handle");
+      }
+      const atts = (socialData.socialScreenShots || []).map((attachment) => ({
+        type: "image",
+        url: attachment,
+      }));
+      if (atts.length > 0) {
+        setImages([...images, ...atts]);
       }
     }
   };
@@ -165,13 +175,8 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
           </View>
         </Pressable>
 
-
-        <Carousel
-          data={
-            influencer.profile?.attachments?.map((attachment) =>
-              processRawAttachment(attachment)
-            ) || []
-          }
+        {images.length > 0 && <Carousel
+          data={images}
           carouselWidth={Platform.OS === "web" ? MAX_WIDTH_WEB : screenWidth}
           // onImagePress={onImagePress}
           onImagePress={() => {
@@ -180,7 +185,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
             }
           }}
           theme={theme}
-        />
+        />}
         <Pressable onPress={() => {
           if (props.openProfile) {
             props.openProfile(influencer);
