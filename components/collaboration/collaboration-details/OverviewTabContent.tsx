@@ -1,11 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { View, ScrollView, Pressable, Linking } from "react-native";
-import { Text, Card, Portal } from "react-native-paper";
-import { useTheme } from "@react-navigation/native";
+import ChipCard from "@/components/collaboration-card/card-components/ChipComponent";
+import Button from "@/components/ui/button";
+import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
+import Colors from "@/constants/Colors";
+import { CURRENCY } from "@/constants/Unit";
+import { useContractContext } from "@/contexts";
+import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import ImageComponent from "@/shared-uis/components/image-component";
+import RatingSection from "@/shared-uis/components/rating-section";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
+import { Contract } from "@/types/Contract";
+import { processRawAttachment } from "@/utils/attachments";
+import { formatTimeToNow } from "@/utils/date";
 import { FirestoreDB } from "@/utils/firestore";
-import { doc, getDoc } from "firebase/firestore";
-import { CollaborationDetail } from ".";
+import { truncateText } from "@/utils/text";
+import {
+  faFacebook,
+  faInstagram,
+  faYoutube,
+} from "@fortawesome/free-brands-svg-icons";
+import { faHeart } from "@fortawesome/free-regular-svg-icons";
 import {
   faCheckCircle,
   faDollarSign,
@@ -17,29 +32,15 @@ import {
   faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import Colors from "@/constants/Colors";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import { processRawAttachment } from "@/utils/attachments";
-import { truncateText } from "@/utils/text";
-import ChipCard from "@/components/collaboration-card/card-components/ChipComponent";
-import {
-  faFacebook,
-  faInstagram,
-  faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { useTheme } from "@react-navigation/native";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { Linking, Pressable, View } from "react-native";
+import { IOScrollView } from "react-native-intersection-observer";
+import { Card, Portal, Text } from "react-native-paper";
+import { CollaborationDetail } from ".";
 import BrandModal from "./modal/BrandModal";
 import ManagerModal from "./modal/ManagerModal";
-import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
-import ImageComponent from "@/shared-uis/components/image-component";
-import { formatTimeToNow } from "@/utils/date";
-import { faHeart } from "@fortawesome/free-regular-svg-icons";
-import { Contract } from "@/types/Contract";
-import RatingSection from "@/shared-uis/components/rating-section";
-import { useContractContext } from "@/contexts";
-import Button from "@/components/ui/button";
-import { CURRENCY } from "@/constants/Unit";
 
 interface CollaborationDetailsContentProps {
   collaboration: CollaborationDetail;
@@ -127,9 +128,9 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   }, []);
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <IOScrollView contentContainerStyle={styles.scrollContainer}>
       {/* Collaboration Details */}
-      <View style={styles.profileCard}>
+      <View style={[styles.profileCard, { alignItems: "center" }]}>
         {props?.collaboration?.attachments &&
           props?.collaboration?.attachments.length > 0 && (
             <Carousel
@@ -545,7 +546,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
           setVisibility={setManagerModalVisible}
         />
       </Portal>
-    </ScrollView>
+    </IOScrollView>
   );
 };
 
