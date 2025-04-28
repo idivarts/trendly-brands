@@ -24,6 +24,7 @@ import { processRawAttachment } from "@/utils/attachments";
 import { FirestoreDB } from "@/utils/firestore";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
+import { IOScrollView } from "react-native-intersection-observer";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -124,7 +125,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
   };
 
   return (
-    <>
+    <IOScrollView>
       <FlatList
         data={influencers}
         renderItem={({ item }) => (
@@ -248,7 +249,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           />
         </BottomSheetScrollView>
       </BottomSheetModal>
-    </>
+    </IOScrollView>
   );
 };
 
