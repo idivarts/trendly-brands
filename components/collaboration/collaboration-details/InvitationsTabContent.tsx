@@ -1,38 +1,39 @@
-import React, { useMemo, useRef, useState } from "react";
-import {
-  FlatList,
-  Modal,
-  ActivityIndicator,
-} from "react-native";
-import {
-  List,
-} from "react-native-paper";
-import { useTheme } from "@react-navigation/native";
-import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
-import { FirestoreDB } from "@/utils/firestore";
-import { collection, doc, setDoc } from "firebase/firestore";
-import { AuthApp } from "@/utils/auth";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useInfluencers } from "@/hooks/request";
-import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/constants/Colors";
-import { useBreakpoints } from "@/hooks";
-import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import InvitationCard from "@/components/card/collaboration-details/invitation-card";
 import {
   InvitationCard as ProfileInvitationCard
 } from "@/components/card/profile-modal/invitation-card";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSharedValue } from "react-native-reanimated";
-import { processRawAttachment } from "@/utils/attachments";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { User } from "@/types/User";
 import { Text, View } from "@/components/theme/Themed";
-import TextInput from "@/components/ui/text-input";
 import Button from "@/components/ui/button";
+import EmptyState from "@/components/ui/empty-state";
+import TextInput from "@/components/ui/text-input";
+import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useBreakpoints } from "@/hooks";
+import { useInfluencers } from "@/hooks/request";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
+import { User } from "@/types/User";
+import { processRawAttachment } from "@/utils/attachments";
+import { AuthApp } from "@/utils/auth";
+import { FirestoreDB } from "@/utils/firestore";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useTheme } from "@react-navigation/native";
+import { collection, doc, setDoc } from "firebase/firestore";
+import React, { useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+} from "react-native";
+import { IOScrollView } from "react-native-intersection-observer";
+import {
+  List,
+} from "react-native-paper";
+import { useSharedValue } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -151,7 +152,7 @@ const InvitationsTabContent = (props: any) => {
   };
 
   return (
-    <>
+    <IOScrollView>
       <FlatList
         refreshing={isLoading}
         onRefresh={() => {
@@ -313,7 +314,7 @@ const InvitationsTabContent = (props: any) => {
           />
         </BottomSheetScrollView>
       </BottomSheetModal>
-    </>
+    </IOScrollView>
   );
 };
 

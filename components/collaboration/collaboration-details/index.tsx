@@ -1,22 +1,22 @@
-import { useEffect, useState } from "react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { ActivityIndicator } from "react-native-paper";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { View } from "@/components/theme/Themed";
+import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
+import Colors from "@/constants/Colors";
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { FirestoreDB } from "@/utils/firestore";
+import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { ActivityIndicator } from "react-native-paper";
+import Toast from "react-native-toast-message";
+import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import OverviewTabContent from "./OverviewTabContent";
 import SettingsTabContent from "./SettingsTabContent";
-import CollaborationHeader from "../CollaborationHeader";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
-import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Toast from "react-native-toast-message";
-import Button from "@/components/ui/button";
 
 export interface CollaborationDetail extends ICollaboration {
   id: string;
@@ -108,7 +108,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
           pageID={pageID}
           collaboration={{
             id: pageID,
-            name: collaboration?.name,
+            name: collaboration?.name || "",
             questionsToInfluencers: collaboration?.questionsToInfluencers || [],
           }}
         />

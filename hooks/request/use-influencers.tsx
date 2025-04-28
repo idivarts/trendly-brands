@@ -1,6 +1,6 @@
 import { FirestoreDB } from "@/utils/firestore";
+import { collection, DocumentData, getDocs, limit, onSnapshot, orderBy, query, QuerySnapshot, startAfter, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { collection, getDocs, where, query, orderBy, limit, onSnapshot, QuerySnapshot, DocumentData, startAfter } from "firebase/firestore";
 
 interface UseInfluencersProps {
   collaborationId: string;
@@ -23,7 +23,7 @@ const useInfluencers = ({
     const influencersQuery = query(
       influencerRef,
       where("profile.completionPercentage", ">=", 60),
-      orderBy("name"),
+      orderBy("lastUseTime", "desc"),
       limit(PAGE_SIZE)
     );
 
@@ -56,7 +56,7 @@ const useInfluencers = ({
     const influencersQuery = query(
       influencerRef,
       where("profile.completionPercentage", ">=", 60),
-      orderBy("name"),
+      orderBy("lastUseTime", "desc"),
       startAfter(lastVisible),
       limit(PAGE_SIZE)
     );

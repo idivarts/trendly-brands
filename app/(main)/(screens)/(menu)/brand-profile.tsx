@@ -2,15 +2,15 @@ import React, { useRef, useState } from "react";
 import { ActivityIndicator, Platform, Pressable } from "react-native";
 import Toast from "react-native-toast-message";
 
-import { Brand } from "@/types/Brand";
+import BrandProfile from "@/components/brand-profile";
 import { Text } from "@/components/theme/Themed";
+import ScreenHeader from "@/components/ui/screen-header";
+import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
-import BrandProfile from "@/components/brand-profile";
-import ScreenHeader from "@/components/ui/screen-header";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Colors from "@/constants/Colors";
+import { Brand } from "@/types/Brand";
 import { useTheme } from "@react-navigation/native";
 
 const BrandProfileScreen = () => {
@@ -50,7 +50,7 @@ const BrandProfileScreen = () => {
     let imageUrl = "";
     if (Platform.OS === "web" && brandWebImage) {
       const uploadedImage = await uploadFile(brandWebImage as File);
-      imageUrl = uploadedImage.imageUrl;
+      imageUrl = uploadedImage?.imageUrl || "";
     } else if (brandData.image && brandData.image !== brandImage.current) {
       const uploadedImage = await uploadFileUri({
         id: brandData.image,
@@ -58,7 +58,7 @@ const BrandProfileScreen = () => {
         uri: brandData.image,
         type: "image",
       });
-      imageUrl = uploadedImage.imageUrl;
+      imageUrl = uploadedImage?.imageUrl || "";
     }
 
     await updateBrand(
