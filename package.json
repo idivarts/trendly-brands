@@ -85,7 +85,7 @@
     "react-native-svg-transformer": "^1.5.0",
     "react-native-swiper": "^1.6.0",
     "react-native-toast-message": "^2.2.1",
-    "react-native-video": "^6.7.0",
+    "react-native-video": "^6.13.0",
     "react-native-web": "~0.19.10",
     "stream-chat-expo": "^5.41.2"
   },
