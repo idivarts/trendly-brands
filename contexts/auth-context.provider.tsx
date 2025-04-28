@@ -5,6 +5,7 @@ import { User } from "@/types/User";
 import { analyticsLogEvent } from "@/utils/analytics";
 import { AuthApp } from "@/utils/auth";
 import { FirestoreDB } from "@/utils/firestore";
+import { HttpWrapper } from "@/utils/http-wrapper";
 import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
 import { resetAndNavigate } from "@/utils/router";
 import { checkTestUsers } from "@/utils/test-users";
@@ -117,11 +118,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
       setSession(managerCredential.user.uid);
 
-      await fetch("https://be.trendly.now/api/v1/chat/auth", {
+      await HttpWrapper.fetch("/api/v1/chat/auth", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${managerCredential.user.uid}`,
         },
       });
 
@@ -184,11 +184,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
               },
             });
 
-            await fetch("https://be.trendly.now/api/v1/chat/auth", {
+            await HttpWrapper.fetch("/api/v1/chat/auth", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${userCredential.user.uid}`,
               },
             });
           } else {

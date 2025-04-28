@@ -1,3 +1,4 @@
+import { HttpWrapper } from "@/utils/http-wrapper";
 import { createContext, PropsWithChildren, useContext } from "react";
 import { useAuthContext } from "./auth-context.provider";
 
@@ -38,11 +39,10 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     userId: string,
     collaborationId: string,
   ): Promise<any> => {
-    const response = await fetch("https://be.trendly.now/api/v1/chat/channel", {
+    const response = await HttpWrapper.fetch("/api/v1/chat/channel", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${user?.id}`,
       },
       body: JSON.stringify({
         name: groupName,
