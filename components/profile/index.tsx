@@ -1,34 +1,28 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Colors from "@/constants/Colors";
-import { useAuthContext } from "@/contexts";
-import { Theme, useTheme } from "@react-navigation/native";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import ImageUploadModal from "../ui/modal/ImageUploadModal";
-import { FirestoreDB } from "@/utils/firestore";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import ScreenHeader from "../ui/screen-header";
-import { Text } from "../theme/Themed";
-import {
-  ref,
-  getDownloadURL,
-  uploadBytes,
-} from "firebase/storage";
-import { StorageApp } from "@/utils/firebase-storage";
+import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import ImageComponent from "@/shared-uis/components/image-component";
-import TextInput from "../ui/text-input";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { FirestoreDB } from "@/utils/firestore";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { Theme, useTheme } from "@react-navigation/native";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../theme/Themed";
 import Button from "../ui/button";
+import ImageUploadModal from "../ui/modal/ImageUploadModal";
+import ScreenHeader from "../ui/screen-header";
+import TextInput from "../ui/text-input";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -42,6 +36,7 @@ const Profile = () => {
     manager?.profileImage || ""
   );
   const [imageToUpload, setImageToUpload] = useState<string>("");
+  const { uploadFileUri } = useAWSContext();
 
   const theme = useTheme();
   const styles = stylesFn(theme);
@@ -59,16 +54,20 @@ const Profile = () => {
       let updatedImageURL = manager.profileImage || ""; // Default to existing profile image
 
       if (imageToUpload) {
-        const path = `managers/${manager.id}/profile-image`;
-
-        // Validate Base64 format
-
-        const storageRef = ref(StorageApp, path);
-        const blobImage = await fetch(imageToUpload).then((res) => res.blob());
-        await uploadBytes(storageRef, blobImage);
-
-        // // Get the downloadable URL for the uploaded image
-        updatedImageURL = await getDownloadURL(storageRef);
+        if (Platform.OS === "web") {
+          Toaster.error("Web upload not supported yet");
+          return;
+        } else {
+          const res = await uploadFileUri({
+            id: manager.id,
+            localUri: imageToUpload,
+            uri: imageToUpload,
+            type: "image",
+          })
+          if (res) {
+            updatedImageURL = res.imageUrl || "";
+          }
+        }
       }
 
       // Update Firestore document

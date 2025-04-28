@@ -1,21 +1,21 @@
+import { useTheme } from "@react-navigation/native";
+import { router, useLocalSearchParams } from "expo-router";
+import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { Portal } from "react-native-paper";
-import { router, useLocalSearchParams } from "expo-router";
-import { useTheme } from "@react-navigation/native";
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 
+import BrandProfile from "@/components/brand-profile";
+import Button from "@/components/ui/button";
+import ScreenHeader from "@/components/ui/screen-header";
+import Colors from "@/constants/Colors";
+import { useAuthContext, useAWSContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import AppLayout from "@/layouts/app-layout";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import fnStyles from "@/styles/onboarding/brand.styles";
 import { Brand } from "@/types/Brand";
 import { FirestoreDB } from "@/utils/firestore";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useAuthContext, useAWSContext } from "@/contexts";
-import AppLayout from "@/layouts/app-layout";
-import BrandProfile from "@/components/brand-profile";
-import fnStyles from "@/styles/onboarding/brand.styles";
-import ScreenHeader from "@/components/ui/screen-header";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Colors from "@/constants/Colors";
-import Button from "@/components/ui/button";
 
 const OnboardingScreen = () => {
   const [brandData, setBrandData] = useState<Partial<Brand>>({
@@ -65,7 +65,7 @@ const OnboardingScreen = () => {
     let imageUrl = "";
     if (Platform.OS === "web" && brandWebImage) {
       const uploadedImage = await uploadFile(brandWebImage as File);
-      imageUrl = uploadedImage.imageUrl;
+      imageUrl = uploadedImage?.imageUrl || "";
     } else if (brandData.image) {
       const uploadedImage = await uploadFileUri({
         id: brandData.image,
@@ -73,7 +73,7 @@ const OnboardingScreen = () => {
         uri: brandData.image,
         type: "image",
       });
-      imageUrl = uploadedImage.imageUrl;
+      imageUrl = uploadedImage?.imageUrl || "";
     }
 
     if (user) {
