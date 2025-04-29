@@ -1,27 +1,23 @@
-import React, { useMemo } from "react";
-import { Platform } from "react-native";
-import { useTheme } from "@react-navigation/native";
 import { faGift, faHandHoldingDollar } from "@fortawesome/free-solid-svg-icons";
+import { useTheme } from "@react-navigation/native";
+import React, { useMemo } from "react";
 
-import { Collaboration } from "@/types/Collaboration";
-import { generateEmptyAssets } from "@/shared-uis/utils/profile";
-import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
-import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
-import { processRawAttachment } from "@/utils/attachments";
+import { CURRENCY } from "@/constants/Unit";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { Selector } from "@/shared-uis/components/select/selector";
-import Button from "../ui/button";
+import DragAndDropGrid from "@/shared-libs/functional-uis/grid/DragAndDropGrid";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
-import DragAndDropNative from "@/shared-uis/components/grid/native/DragAndDropNative";
-import DragAndDropWeb from "@/shared-uis/components/grid/web/DragAndDropWeb";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { Selector } from "@/shared-uis/components/select/selector";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { Collaboration } from "@/types/Collaboration";
+import { convertToKUnits } from "@/utils/conversion";
+import { View } from "../theme/Themed";
+import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
-import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
-import { View } from "../theme/Themed";
-import { convertToKUnits } from "@/utils/conversion";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { CURRENCY } from "@/constants/Unit";
 
 interface ScreenOneProps {
   attachments: any[];
@@ -87,36 +83,10 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
         setScreen={setScreen}
         type={type}
       >
-        {
-          Platform.OS === 'web' ? (
-            <DragAndDropWeb
-              items={attachments?.map((attachment, index) => {
-                return {
-                  ...processRawAttachment(attachment),
-                  id: index.toString(),
-                }
-              }) || items.map((item, index) => {
-                return {
-                  ...item,
-                  id: index.toString(),
-                }
-              })}
-              onUploadAsset={handleAssetsUpdateWeb}
-            />
-          ) : (
-            <DragAndDropNative
-              items={
-                generateEmptyAssets(attachments as any, items).map((item, index) => {
-                  return {
-                    ...item,
-                    id: index,
-                  }
-                })
-              }
-              onItemsUpdate={handleAssetsUpdateNative}
-            />
-          )
-        }
+        <DragAndDropGrid attachments={attachments || []}
+          onAttachmentChange={(attachments) => {
+            console.log("Attachment changed", attachments);
+          }} />
 
         <View
           style={{
