@@ -1,24 +1,22 @@
+import { Text, View } from "@/components/theme/Themed";
+import Colors from "@/constants/Colors";
+import { useAuthContext } from "@/contexts";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { faClose, faStar } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { doc, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
-  Image,
-  Pressable,
-  Linking,
-  StyleSheet,
-  TextInput,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
+  Pressable,
+  StyleSheet,
+  TextInput
 } from "react-native";
-import { useTheme } from "@react-navigation/native";
-import { Text, View } from "@/components/theme/Themed";
-import { Chip, Modal, Portal } from "react-native-paper";
-import Colors from "@/constants/Colors";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faClose, faCross, faStar } from "@fortawesome/free-solid-svg-icons";
-import { doc, updateDoc } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { useAuthContext } from "@/contexts";
+import { Modal } from "react-native-paper";
 
 interface FeedbackModalProps {
   star: number;

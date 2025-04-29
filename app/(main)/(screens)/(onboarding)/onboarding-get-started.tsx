@@ -1,19 +1,19 @@
+import Button from "@/components/ui/button";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/onboarding/get-started.styles";
+import { Brand } from "@/types/Brand";
 import { useTheme } from "@react-navigation/native";
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { Menu } from "react-native-paper";
-import { AuthApp } from "@/utils/auth";
 import { router, useLocalSearchParams } from "expo-router";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { Brand } from "@/types/Brand";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Button from "@/components/ui/button";
+import React, { useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import { Menu } from "react-native-paper";
 
 const GetStartedScreen = () => {
   const [hearAboutUs, setHearAboutUs] = useState("");

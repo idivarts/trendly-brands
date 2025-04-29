@@ -1,36 +1,34 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
-import AppLayout from "@/layouts/app-layout";
-import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  collectionGroup,
-  doc,
-  getDoc,
-} from "firebase/firestore";
-import { ActivityIndicator, FlatList, Pressable } from "react-native";
-import { FirestoreDB } from "@/utils/firestore";
-import { AuthApp } from "@/utils/auth";
-import { RefreshControl } from "react-native";
-import { stylesFn } from "@/styles/Proposal.styles";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import EmptyState from "../ui/empty-state";
 import { useBreakpoints } from "@/hooks";
-import { Card } from "react-native-paper";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import AppLayout from "@/layouts/app-layout";
 import {
   IApplications,
   ICollaboration,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import ContractHeader from "../contract-card/ContractHeader";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { stylesFn } from "@/styles/Proposal.styles";
+import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
+import {
+  collection,
+  collectionGroup,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl } from "react-native";
 import ContractDetails from "../contract-card/ContractDetails";
+import ContractHeader from "../contract-card/ContractHeader";
+import EmptyState from "../ui/empty-state";
 
 interface ICollaborationCard extends IContracts {
   userData: IUsers;

@@ -1,18 +1,18 @@
+import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { useTheme } from "@react-navigation/native";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
   FlatList,
+  RefreshControl,
 } from "react-native";
 import MembersCard from "../brand-profile/members-card";
 import { View } from "../theme/Themed";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import { RefreshControl } from "react-native";
-import { FirestoreDB } from "@/utils/firestore";
-import { useEffect, useState } from "react";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import MembersModal from "../ui/modal/MembersModal";
 import Button from "../ui/button";
+import MembersModal from "../ui/modal/MembersModal";
 
 export interface ManagerCard extends IManagers {
   managerId: string;

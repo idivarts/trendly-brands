@@ -6,6 +6,7 @@ import { CURRENCY } from "@/constants/Unit";
 import { useContractContext } from "@/contexts";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import ImageComponent from "@/shared-uis/components/image-component";
 import RatingSection from "@/shared-uis/components/rating-section";
@@ -13,7 +14,6 @@ import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { Contract } from "@/types/Contract";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
-import { FirestoreDB } from "@/utils/firestore";
 import { truncateText } from "@/utils/text";
 import {
   faFacebook,

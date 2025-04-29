@@ -1,22 +1,23 @@
-import React, { useEffect, useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 
-import { AuthApp } from "@/utils/auth";
-import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useAWSContext, useCollaborationContext } from "@/contexts";
 import ScreenFour from "@/components/create-collaboration/screen-four";
 import ScreenOne from "@/components/create-collaboration/screen-one";
-import ScreenThree from "./screen-three";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useAssets, useProcess } from "@/hooks";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { View } from "../theme/Themed";
-import { ActivityIndicator } from "react-native";
 import Colors from "@/constants/Colors";
+import { useAWSContext, useCollaborationContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useProcess } from "@/hooks";
+import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
+import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
+import { ActivityIndicator } from "react-native";
+import { View } from "../theme/Themed";
+import ScreenThree from "./screen-three";
 
 const CreateCollaboration = () => {
   const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
@@ -78,14 +79,8 @@ const CreateCollaboration = () => {
     setProcessMessage,
     setProcessPercentage,
   } = useProcess();
-  const {
-    attachments,
-    handleAssetsUpdateNative,
-    handleAssetsUpdateWeb,
-    nativeAssets,
-    setAttachments,
-    webAssets,
-  } = useAssets();
+
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const {
     selectedBrand,
@@ -197,11 +192,11 @@ const CreateCollaboration = () => {
       setProcessPercentage(40);
 
       // Upload assets to S3
-      const uploadedAssets = await uploadNewAssets(
-        attachments,
-        nativeAssets,
-        webAssets,
-      );
+      // const uploadedAssets = await uploadNewAssets(
+      //   attachments,
+      //   nativeAssets,
+      //   webAssets,
+      // );
 
       setProcessMessage('Saved collaboration attachments...');
       setProcessPercentage(70);
@@ -211,7 +206,7 @@ const CreateCollaboration = () => {
 
       await handleCollaboration({
         ...collaboration,
-        attachments: uploadedAssets,
+        attachments: attachments,
         brandId: selectedBrand ? selectedBrand?.id : "",
         budget: {
           min: collaboration.budget?.min || 0,
@@ -272,8 +267,9 @@ const CreateCollaboration = () => {
       <ScreenOne
         attachments={attachments}
         collaboration={collaboration}
-        handleAssetsUpdateNative={handleAssetsUpdateNative}
-        handleAssetsUpdateWeb={handleAssetsUpdateWeb}
+        setAttachments={setAttachments}
+        // handleAssetsUpdateNative={handleAssetsUpdateNative}
+        // handleAssetsUpdateWeb={handleAssetsUpdateWeb}
         isEdited={isEdited}
         isSubmitting={isProcessing}
         setCollaboration={setCollaboration}

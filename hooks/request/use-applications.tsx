@@ -4,10 +4,10 @@ import { useState } from "react";
 
 import { useChatContext, useNotificationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
 import { Application, Collaboration, InfluencerApplication } from "@/types/Collaboration";
-import { FirestoreDB } from "@/utils/firestore";
 
 interface UseApplicationsProps {
   isApplicationConcised?: boolean;
