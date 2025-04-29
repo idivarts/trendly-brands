@@ -1,14 +1,15 @@
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 import { View } from "../theme/Themed";
-import { useTheme } from "@react-navigation/native";
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 import Colors from "@/constants/Colors";
+import { resetAndNavigate } from "@/utils/router";
+import { useRouter } from "expo-router";
 import ConfirmationModal from "../ui/modal/ConfirmationModal";
 import ScreenHeader from "../ui/screen-header";
-import { useRouter } from "expo-router";
 
 interface ScreenLayoutProps {
   children: React.ReactNode;
@@ -130,7 +131,11 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
             return;
           }
 
-          router.back();
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            resetAndNavigate("/collaborations");
+          }
           setIsModalVisible(false)
         }}
         confirmAction={() => {
