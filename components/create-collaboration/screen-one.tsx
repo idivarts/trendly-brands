@@ -4,13 +4,13 @@ import React, { useMemo } from "react";
 
 import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
 import { CURRENCY } from "@/constants/Unit";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import DragAndDropGrid from "@/shared-libs/functional-uis/grid/DragAndDropGrid";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { Selector } from "@/shared-uis/components/select/selector";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { NativeAssetItem, WebAssetItem } from "@/shared-uis/types/Asset";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Collaboration } from "@/types/Collaboration";
 import { convertToKUnits } from "@/utils/conversion";
@@ -22,8 +22,9 @@ import ScreenLayout from "./screen-layout";
 interface ScreenOneProps {
   attachments: any[];
   collaboration: Partial<Collaboration>;
-  handleAssetsUpdateNative: (assets: NativeAssetItem[]) => void;
-  handleAssetsUpdateWeb: (assets: WebAssetItem[]) => void;
+  setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>>;
+  // handleAssetsUpdateNative: (assets: NativeAssetItem[]) => void;
+  // handleAssetsUpdateWeb: (assets: WebAssetItem[]) => void;
   isEdited: boolean;
   isSubmitting: boolean;
   setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
@@ -35,8 +36,7 @@ interface ScreenOneProps {
 const ScreenOne: React.FC<ScreenOneProps> = ({
   attachments,
   collaboration,
-  handleAssetsUpdateNative,
-  handleAssetsUpdateWeb,
+  setAttachments,
   isEdited,
   isSubmitting,
   setCollaboration,
@@ -85,7 +85,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
       >
         <DragAndDropGrid attachments={attachments || []}
           onAttachmentChange={(attachments) => {
-            console.log("Attachment changed", attachments);
+            setAttachments(attachments);
           }} />
 
         <View

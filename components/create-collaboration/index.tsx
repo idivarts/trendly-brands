@@ -8,7 +8,8 @@ import ScreenTwo from "@/components/create-collaboration/screen-two";
 import Colors from "@/constants/Colors";
 import { useAWSContext, useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useAssets, useProcess } from "@/hooks";
+import { useProcess } from "@/hooks";
+import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -78,14 +79,8 @@ const CreateCollaboration = () => {
     setProcessMessage,
     setProcessPercentage,
   } = useProcess();
-  const {
-    attachments,
-    handleAssetsUpdateNative,
-    handleAssetsUpdateWeb,
-    nativeAssets,
-    setAttachments,
-    webAssets,
-  } = useAssets();
+
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const {
     selectedBrand,
@@ -197,11 +192,11 @@ const CreateCollaboration = () => {
       setProcessPercentage(40);
 
       // Upload assets to S3
-      const uploadedAssets = await uploadNewAssets(
-        attachments,
-        nativeAssets,
-        webAssets,
-      );
+      // const uploadedAssets = await uploadNewAssets(
+      //   attachments,
+      //   nativeAssets,
+      //   webAssets,
+      // );
 
       setProcessMessage('Saved collaboration attachments...');
       setProcessPercentage(70);
@@ -211,7 +206,7 @@ const CreateCollaboration = () => {
 
       await handleCollaboration({
         ...collaboration,
-        attachments: uploadedAssets,
+        attachments: attachments,
         brandId: selectedBrand ? selectedBrand?.id : "",
         budget: {
           min: collaboration.budget?.min || 0,
@@ -272,8 +267,9 @@ const CreateCollaboration = () => {
       <ScreenOne
         attachments={attachments}
         collaboration={collaboration}
-        handleAssetsUpdateNative={handleAssetsUpdateNative}
-        handleAssetsUpdateWeb={handleAssetsUpdateWeb}
+        setAttachments={setAttachments}
+        // handleAssetsUpdateNative={handleAssetsUpdateNative}
+        // handleAssetsUpdateWeb={handleAssetsUpdateWeb}
         isEdited={isEdited}
         isSubmitting={isProcessing}
         setCollaboration={setCollaboration}
