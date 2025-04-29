@@ -1,6 +1,6 @@
 import { faGift, faHandHoldingDollar } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
 import { CURRENCY } from "@/constants/Unit";
@@ -45,6 +45,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
   type,
 }) => {
   const theme = useTheme();
+  const [onAssetUpload, setOnAssetUpload] = useState(false);
 
   const budgetText = useMemo(() => {
     if (
@@ -86,7 +87,11 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
         <DragAndDropGrid attachments={attachments || []}
           onAttachmentChange={(attachments) => {
             setAttachments(attachments);
-          }} />
+          }}
+          onLoadStateChange={(loading) => {
+            setOnAssetUpload(loading);
+          }}
+        />
 
         <View
           style={{
@@ -246,9 +251,11 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
           loading={isSubmitting}
           mode="contained"
           onPress={() => {
-            if (
-              !collaboration.name
-            ) {
+            if (onAssetUpload) {
+              Toaster.info("Media is still uploading", "Please wait till all the media is uploaded");
+              return;
+            }
+            if (!collaboration.name) {
               Toaster.error("Collaboration name is required");
               return;
             }
