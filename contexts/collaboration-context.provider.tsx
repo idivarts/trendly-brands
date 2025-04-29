@@ -1,9 +1,12 @@
 import {
-  useContext,
   createContext,
+  useContext,
   type PropsWithChildren,
 } from "react";
 
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { Collaboration } from "@/types/Collaboration";
 import {
   addDoc,
   collection,
@@ -11,9 +14,6 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { Collaboration } from "@/types/Collaboration";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 interface CollaborationContextProps {
   getCollaborationById: (id: string) => Promise<Collaboration>;

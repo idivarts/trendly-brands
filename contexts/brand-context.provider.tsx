@@ -1,15 +1,15 @@
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { Brand } from "@/types/Brand";
-import { FirestoreDB } from "@/utils/firestore";
 import { addDoc, collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import React, {
-  useContext,
   createContext,
   type PropsWithChildren,
+  useContext,
   useEffect,
   useState,
 } from "react";
 import { useAuthContext } from "./auth-context.provider";
-import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 
 interface BrandContextProps {
   brands: Brand[];

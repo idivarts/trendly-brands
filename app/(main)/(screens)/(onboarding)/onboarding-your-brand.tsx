@@ -12,10 +12,10 @@ import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/onboarding/brand.styles";
 import { Brand } from "@/types/Brand";
-import { FirestoreDB } from "@/utils/firestore";
 
 const OnboardingScreen = () => {
   const [brandData, setBrandData] = useState<Partial<Brand>>({

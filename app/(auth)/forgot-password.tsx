@@ -1,14 +1,14 @@
+import Button from "@/components/ui/button";
+import TextInput from "@/components/ui/text-input";
+import Colors from "@/constants/Colors";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/forgot-password.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import * as React from "react";
-import { View, Image, Text } from "react-native";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { AuthApp } from "@/utils/auth";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import Colors from "@/constants/Colors";
-import Button from "@/components/ui/button";
-import TextInput from "@/components/ui/text-input";
+import * as React from "react";
+import { Image, Text, View } from "react-native";
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = React.useState("");

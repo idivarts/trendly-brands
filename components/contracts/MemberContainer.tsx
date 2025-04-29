@@ -1,15 +1,14 @@
-import { useTheme } from "@react-navigation/native";
-import { Text, View } from "../theme/Themed";
-import { FC, useEffect } from "react";
 import Colors from "@/constants/Colors";
-import React from "react";
 import { useChatContext } from "@/contexts";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
+import React, { FC, useEffect } from "react";
 import { FlatList, Pressable } from "react-native";
 import MembersCard from "../brand-profile/members-card";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { Text, View } from "../theme/Themed";
 
 interface MemberContainerProps {
   channelId: string;

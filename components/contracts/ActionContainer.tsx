@@ -1,23 +1,22 @@
-import { useTheme } from "@react-navigation/native";
-import { Text, View } from "../theme/Themed";
-import { FC, useEffect, useState } from "react";
 import Colors from "@/constants/Colors";
-import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useChatContext } from "@/contexts";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import ImageComponent from "@/shared-uis/components/image-component";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
   faCircleInfo,
   faStar,
   faStarHalfStroke,
 } from "@fortawesome/free-solid-svg-icons";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
-import { useChatContext } from "@/contexts";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import ImageComponent from "@/shared-uis/components/image-component";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import React, { FC, useEffect, useState } from "react";
+import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 
 interface ActionContainerProps {

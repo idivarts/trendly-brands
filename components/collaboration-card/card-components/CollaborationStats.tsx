@@ -1,10 +1,10 @@
 import { Text, View } from "@/components/theme/Themed";
+import { CURRENCY } from "@/constants/Unit";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { stylesFn } from "@/styles/CollaborationCardStats.styles";
 import { useTheme } from "@react-navigation/native";
+import { collection, getDocs } from "firebase/firestore";
 import { FC, useEffect, useState } from "react";
-import { doc, collection, getDocs } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { CURRENCY } from "@/constants/Unit";
 
 interface CollaborationStatsProps {
   influencerCount: number;

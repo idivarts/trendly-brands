@@ -1,24 +1,24 @@
 import Colors from "@/constants/Colors";
+import { useChatContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import ImageComponent from "@/shared-uis/components/image-component";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import React, { FC, useEffect, useState } from "react";
 import {
-  View,
-  StyleSheet,
   FlatList,
   Modal,
-  TouchableOpacity,
   Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Text } from "react-native-paper";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { FirestoreDB } from "@/utils/firestore";
-import { useChatContext } from "@/contexts";
-import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import ImageComponent from "@/shared-uis/components/image-component";
 
 interface AddMemberModalProps {
   visible: boolean;

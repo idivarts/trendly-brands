@@ -1,4 +1,4 @@
-import { AuthApp } from '@/utils/auth';
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import * as SecureStore from 'expo-secure-store';
 import * as React from 'react';
 import { Platform } from 'react-native';

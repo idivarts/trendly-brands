@@ -1,6 +1,6 @@
 import { useChatContext, useNotificationContext } from "@/contexts";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { FirestoreDB } from "@/utils/firestore";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";

@@ -1,15 +1,15 @@
 import {
-  useContext,
   createContext,
   type PropsWithChildren,
+  useContext,
   useEffect,
 } from "react";
 
+import { messaging } from "@/shared-libs/utils/firebase/messaging-web";
+import { newToken } from "@/utils/token";
 import { getToken } from "firebase/messaging";
-import { messaging } from "@/utils/messaging-web";
 import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
-import { newToken } from "@/utils/token";
 
 interface CloudMessagingContextProps { }
 

@@ -1,6 +1,7 @@
 import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { ISocials } from "@/shared-libs/firestore/trendly-pro/models/socials";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
@@ -9,7 +10,6 @@ import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { convertToKUnits } from "@/utils/conversion";
-import { FirestoreDB } from "@/utils/firestore";
 import { truncateText } from "@/utils/text";
 import {
   faChartLine,

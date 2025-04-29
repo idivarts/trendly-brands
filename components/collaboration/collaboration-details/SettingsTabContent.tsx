@@ -1,12 +1,12 @@
 import Select, { SelectItem } from "@/components/ui/select";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import SelectGroup from "@/shared-uis/components/select/select-group";
 import { useTheme } from "@react-navigation/native";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FC, useEffect, useState } from "react";
 import { ScrollView } from "react-native";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import ContentWrapper from "@/shared-uis/components/content-wrapper";
 
 interface SettingsTabContentProps {
   pageID: string;

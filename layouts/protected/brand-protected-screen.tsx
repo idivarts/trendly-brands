@@ -1,14 +1,14 @@
-import React, { PropsWithChildren, useEffect, useState } from "react";
-import { ActivityIndicator, Platform } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import React, { PropsWithChildren, useEffect, useState } from "react";
+import { ActivityIndicator, Platform } from "react-native";
 
-import { View } from "@/components/theme/Themed";
-import { useAuthContext } from "@/contexts";
-import Colors from "@/constants/Colors";
 import ExploreInfluencerShimmer from "@/components/shimmers/explore-influencer-shimmer";
-import { FirestoreDB } from "@/utils/firestore";
+import { View } from "@/components/theme/Themed";
+import Colors from "@/constants/Colors";
+import { useAuthContext } from "@/contexts";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 
 interface BrandProtectedScreenProps extends PropsWithChildren { }
 

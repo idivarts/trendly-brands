@@ -1,33 +1,31 @@
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { IconButton } from "react-native-paper";
-import { useLocalSearchParams } from "expo-router";
 
-import AppLayout from "@/layouts/app-layout";
-import BottomSheetActions from "@/components/BottomSheetActions";
-import CollaborationDetails from "@/components/collaboration/collaboration-details";
+import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
+import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
-import { AuthApp } from "@/utils/auth";
-import {
-  collectionGroup,
-  doc,
-  getDocs,
-  getDoc,
-  query,
-  where,
-} from "firebase/firestore";
-import { FirestoreDB } from "@/utils/firestore";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import AppLayout from "@/layouts/app-layout";
 import {
   IApplications,
   ICollaboration,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { View } from "@/components/theme/Themed";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import {
+  collectionGroup,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
 import { ActivityIndicator } from "react-native";
 
 interface ICollaborationCard extends IContracts {

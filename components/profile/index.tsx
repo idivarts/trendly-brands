@@ -1,9 +1,9 @@
 import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { FirestoreDB } from "@/utils/firestore";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";

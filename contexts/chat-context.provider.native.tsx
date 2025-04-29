@@ -1,5 +1,5 @@
 import { useStreamTheme } from "@/hooks";
-import { HttpWrapper } from "@/utils/http-wrapper";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useTheme } from "@react-navigation/native";
 import {
   createContext,

@@ -1,31 +1,28 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
-import JobCard from "@/components/collaboration/CollaborationCard";
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import { stylesFn } from "@/styles/Proposal.styles";
+import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
   Pressable,
+  RefreshControl,
 } from "react-native";
-import { FirestoreDB } from "@/utils/firestore";
-import { AuthApp } from "@/utils/auth";
-import { RefreshControl } from "react-native";
-import { stylesFn } from "@/styles/Proposal.styles";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import EmptyState from "../ui/empty-state";
-import { useBreakpoints } from "@/hooks";
-import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
-import { DUMMY_INFLUENCER } from "@/constants/Influencer";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import { processRawAttachment } from "@/utils/attachments";
-import { Card } from "react-native-paper";
-import { router } from "expo-router";
+import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import EmptyState from "../ui/empty-state";
 
 const Invitations = () => {
   const [isVisible, setIsVisible] = useState(false);

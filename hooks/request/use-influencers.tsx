@@ -1,4 +1,4 @@
-import { FirestoreDB } from "@/utils/firestore";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, DocumentData, getDocs, limit, onSnapshot, orderBy, query, QuerySnapshot, startAfter, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 

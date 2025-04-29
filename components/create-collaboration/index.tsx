@@ -1,22 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
 import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 
-import { AuthApp } from "@/utils/auth";
-import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useAWSContext, useCollaborationContext } from "@/contexts";
 import ScreenFour from "@/components/create-collaboration/screen-four";
 import ScreenOne from "@/components/create-collaboration/screen-one";
-import ScreenThree from "./screen-three";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { useAssets, useProcess } from "@/hooks";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { View } from "../theme/Themed";
-import { ActivityIndicator } from "react-native";
 import Colors from "@/constants/Colors";
+import { useAWSContext, useCollaborationContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useAssets, useProcess } from "@/hooks";
+import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
+import { ActivityIndicator } from "react-native";
+import { View } from "../theme/Themed";
+import ScreenThree from "./screen-three";
 
 const CreateCollaboration = () => {
   const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({

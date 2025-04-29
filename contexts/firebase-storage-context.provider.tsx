@@ -1,16 +1,16 @@
 import {
-  useContext,
   createContext,
+  useContext,
   type PropsWithChildren,
 } from "react";
 
+import { StorageApp } from "@/shared-libs/utils/firebase/firebase-storage";
 import {
-  ref,
-  uploadString,
   getDownloadURL,
+  ref,
   uploadBytes,
+  uploadString,
 } from "firebase/storage";
-import { StorageApp } from "@/utils/firebase-storage";
 
 interface FirebaseStorageContextProps {
   uploadImage: (image: string, path: string) => Promise<string>;

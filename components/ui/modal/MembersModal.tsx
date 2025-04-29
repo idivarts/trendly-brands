@@ -1,10 +1,10 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/Members";
-import { AuthApp } from "@/utils/auth";
-import { FirestoreDB } from "@/utils/firestore";
 import axios from "axios";
 import { doc, setDoc } from "firebase/firestore";
 import React from "react";

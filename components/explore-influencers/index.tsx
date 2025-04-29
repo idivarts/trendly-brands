@@ -18,7 +18,7 @@ import {
 } from "@gorhom/bottom-sheet";
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
-import { FirestoreDB } from "@/utils/firestore";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
