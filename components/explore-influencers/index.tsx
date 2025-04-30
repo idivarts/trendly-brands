@@ -20,6 +20,7 @@ import {
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { IOScrollView } from "react-native-intersection-observer";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -177,54 +178,56 @@ const ExploreInfluencers = () => {
           width: xl ? MAX_WIDTH_WEB : "100%",
         }}
       >
-        <FlatList
-          data={filteredInfluencers}
-          renderItem={({ item, index }) => (
-            <InfluencerCard
-              key={index}
-              type="explore"
-              ToggleModal={ToggleModal}
-              influencer={item}
-              openProfile={(influencer) => {
-                setSelectedInfluencer(influencer);
-                bottomSheetModalRef.current?.present();
-              }}
-              setSelectedInfluencer={setSelectedInfluencer}
-            />
-          )}
-          keyExtractor={(item, index) => index.toString()}
-          contentContainerStyle={{
-            paddingTop: 16,
-            paddingBottom: 16,
-          }}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 16,
-                backgroundColor: theme.dark
-                  ? Colors(theme).background
-                  : Colors(theme).aliceBlue,
-              }}
-            />
-          )}
-          ListHeaderComponent={
-            <View
-              style={{
-                paddingHorizontal: xl ? 0 : 16,
-                paddingBottom: theme.dark ? 16 : 0,
-              }}
-            >
-              <SearchComponent
-                setSearchQuery={setSearchQuery}
-                ToggleModal={() => setIsFilterModalVisible(true)}
+        <IOScrollView>
+          <FlatList
+            data={filteredInfluencers}
+            renderItem={({ item, index }) => (
+              <InfluencerCard
+                key={index}
+                type="explore"
+                ToggleModal={ToggleModal}
+                influencer={item}
+                openProfile={(influencer) => {
+                  setSelectedInfluencer(influencer);
+                  bottomSheetModalRef.current?.present();
+                }}
+                setSelectedInfluencer={setSelectedInfluencer}
               />
-            </View>
-          }
-          style={{
-            width: xl ? MAX_WIDTH_WEB : "100%",
-            marginHorizontal: "auto",
-          }}
-        />
+            )}
+            keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={{
+              paddingTop: 16,
+              paddingBottom: 16,
+            }}
+            ItemSeparatorComponent={() => (
+              <View
+                style={{
+                  height: 16,
+                  backgroundColor: theme.dark
+                    ? Colors(theme).background
+                    : Colors(theme).aliceBlue,
+                }}
+              />
+            )}
+            ListHeaderComponent={
+              <View
+                style={{
+                  paddingHorizontal: xl ? 0 : 16,
+                  paddingBottom: theme.dark ? 16 : 0,
+                }}
+              >
+                <SearchComponent
+                  setSearchQuery={setSearchQuery}
+                  ToggleModal={() => setIsFilterModalVisible(true)}
+                />
+              </View>
+            }
+            style={{
+              width: xl ? MAX_WIDTH_WEB : "100%",
+              marginHorizontal: "auto",
+            }}
+          />
+        </IOScrollView>
       </View>
 
       {isModalVisible && (
