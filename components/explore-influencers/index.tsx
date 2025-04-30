@@ -218,6 +218,9 @@ const ExploreInfluencers = () => {
               width: xl ? MAX_WIDTH_WEB : "100%",
               marginHorizontal: "auto",
             }}
+            initialNumToRender={5}
+            maxToRenderPerBatch={10}
+            windowSize={5}
           />
         </IOScrollView>
       </View>

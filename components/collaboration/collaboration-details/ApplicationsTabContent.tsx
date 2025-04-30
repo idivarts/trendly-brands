@@ -128,6 +128,9 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     <IOScrollView>
       <FlatList
         data={influencers}
+        initialNumToRender={5}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         renderItem={({ item }) => (
           <>
             {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
