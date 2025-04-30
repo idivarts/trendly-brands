@@ -19,7 +19,9 @@ import {
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
+import { collection, orderBy, query } from "firebase/firestore";
+import { IOScrollView } from "react-native-intersection-observer";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -59,49 +61,38 @@ const ExploreInfluencers = () => {
     right: insets.right,
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
 
   const theme = useTheme();
 
   const { xl } = useBreakpoints();
 
+  const influencersRef = collection(FirestoreDB, "users");
+  const q = query(
+    influencersRef,
+    // where("profile.completionPercentage", ">=", 60),
+    orderBy("creationTime", "desc")
+  );
+  const { loading: isLoading, data, onScrollEvent } = useInfiniteScroll<User>(q, 10)
+
   useEffect(() => {
-    setIsLoading(true);
-    const influencersRef = collection(FirestoreDB, "users");
-    const q = query(
-      influencersRef,
-      // where("profile.completionPercentage", ">=", 60),
-      orderBy("creationTime", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedInfluencers: User[] = [];
-      querySnapshot.forEach((doc) => {
-        const inf = doc.data()
-        if (inf.primarySocial)
-          fetchedInfluencers.push({
-            ...inf,
-            id: doc.id,
-          } as User);
-      });
-      // fetchedInfluencers.sort((a, b) => {
-      //   return (b?.creationTime || 0) - (a?.creationTime || 0);
-      // })
-
-      setInfluencers(fetchedInfluencers);
-      setIsLoading(false);
+    const fetchedInfluencers: User[] = [];
+    data.forEach((doc) => {
+      const inf = doc
+      if (inf.primarySocial)
+        fetchedInfluencers.push({
+          ...inf,
+          id: doc.documentId,
+        } as User);
     });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+    setInfluencers(fetchedInfluencers);
+  }, [data])
 
   const filterInfluencers = () => {
     const newFilteredInfluencers = influencers.filter((influencer) => {
-      const isCollaborationTypeMatch =
-        currentCollaborationType === "All" ||
-        influencer.profile?.category?.includes(currentCollaborationType);
+      // const isCollaborationTypeMatch =
+      //   currentCollaborationType === "All" ||
+      //   influencer.profile?.category?.includes(currentCollaborationType);
 
       // const isFollowersRangeMatch =
       //   Number(influencer.backend?.followers) >= currentFollowersRange[0] &&
@@ -118,7 +109,7 @@ const ExploreInfluencers = () => {
         .includes(searchQuery.toLowerCase());
 
       return (
-        isCollaborationTypeMatch &&
+        // isCollaborationTypeMatch &&
         // isFollowersRangeMatch &&
         // isReachRangeMatch &&
         // isEngagementRangeMatch &&
@@ -151,7 +142,7 @@ const ExploreInfluencers = () => {
     );
   };
 
-  if (isLoading) {
+  if (isLoading && influencers.length == 0) {
     return (
       <AppLayout>
         <View
@@ -177,54 +168,61 @@ const ExploreInfluencers = () => {
           width: xl ? MAX_WIDTH_WEB : "100%",
         }}
       >
-        <FlatList
-          data={filteredInfluencers}
-          renderItem={({ item, index }) => (
-            <InfluencerCard
-              key={index}
-              type="explore"
-              ToggleModal={ToggleModal}
-              influencer={item}
-              openProfile={(influencer) => {
-                setSelectedInfluencer(influencer);
-                bottomSheetModalRef.current?.present();
-              }}
-              setSelectedInfluencer={setSelectedInfluencer}
-            />
-          )}
-          keyExtractor={(item, index) => index.toString()}
-          contentContainerStyle={{
-            paddingTop: 16,
-            paddingBottom: 16,
-          }}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 16,
-                backgroundColor: theme.dark
-                  ? Colors(theme).background
-                  : Colors(theme).aliceBlue,
-              }}
-            />
-          )}
-          ListHeaderComponent={
-            <View
-              style={{
-                paddingHorizontal: xl ? 0 : 16,
-                paddingBottom: theme.dark ? 16 : 0,
-              }}
-            >
-              <SearchComponent
-                setSearchQuery={setSearchQuery}
-                ToggleModal={() => setIsFilterModalVisible(true)}
+        <IOScrollView onScroll={(ev) => {
+          onScrollEvent(ev)
+        }}>
+          <FlatList
+            data={filteredInfluencers}
+            renderItem={({ item, index }) => (
+              <InfluencerCard
+                key={index}
+                type="explore"
+                ToggleModal={ToggleModal}
+                influencer={item}
+                openProfile={(influencer) => {
+                  setSelectedInfluencer(influencer);
+                  bottomSheetModalRef.current?.present();
+                }}
+                setSelectedInfluencer={setSelectedInfluencer}
               />
-            </View>
-          }
-          style={{
-            width: xl ? MAX_WIDTH_WEB : "100%",
-            marginHorizontal: "auto",
-          }}
-        />
+            )}
+            keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={{
+              paddingTop: 16,
+              paddingBottom: 16,
+            }}
+            ItemSeparatorComponent={() => (
+              <View
+                style={{
+                  height: 16,
+                  backgroundColor: theme.dark
+                    ? Colors(theme).background
+                    : Colors(theme).aliceBlue,
+                }}
+              />
+            )}
+            ListHeaderComponent={
+              <View
+                style={{
+                  paddingHorizontal: xl ? 0 : 16,
+                  paddingBottom: theme.dark ? 16 : 0,
+                }}
+              >
+                <SearchComponent
+                  setSearchQuery={setSearchQuery}
+                  ToggleModal={() => setIsFilterModalVisible(true)}
+                />
+              </View>
+            }
+            style={{
+              width: xl ? MAX_WIDTH_WEB : "100%",
+              marginHorizontal: "auto",
+            }}
+            initialNumToRender={5}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+          />
+        </IOScrollView>
       </View>
 
       {isModalVisible && (

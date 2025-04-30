@@ -160,6 +160,9 @@ const InvitationsTabContent = (props: any) => {
           fetchInitialInfluencers();
         }}
         data={influencers}
+        initialNumToRender={5}
+        maxToRenderPerBatch={10}
+        windowSize={5}
         renderItem={({ item }) => (
           <InvitationCard
             checkIfAlreadyInvited={checkIfAlreadyInvited}
