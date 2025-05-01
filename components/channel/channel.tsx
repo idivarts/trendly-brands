@@ -1,20 +1,20 @@
+import * as Notifications from "expo-notifications";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, Pressable } from "react-native";
 import { Channel as ChannelType } from "stream-chat";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import * as Notifications from "expo-notifications";
 
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
+import Colors from "@/constants/Colors";
+import { useAuthContext, useContractContext } from "@/contexts";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { User } from "@/types/User";
+import { imageUrl } from "@/utils/url";
+import { useTheme } from "@react-navigation/native";
+import { Avatar } from "react-native-paper";
 import { Channel, MessageInput, MessageList, useChatContext } from "stream-chat-expo";
 import ChatMessageTopbar from "./chat-message-topbar";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { useAuthContext, useContractContext } from "@/contexts";
-import { Avatar } from "react-native-paper";
-import Colors from "@/constants/Colors";
-import { imageUrl } from "@/utils/url";
-import { User } from "@/types/User";
-import { useTheme } from "@react-navigation/native";
 import {
   AttachButton,
   AttachmentPickerSelectionBar,
