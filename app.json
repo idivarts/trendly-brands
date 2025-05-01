@@ -4,7 +4,7 @@
     "slug": "trendly-brands",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.jpg",
+    "icon": "./assets/images/icon2.png",
     "scheme": [
       "trendly-brands"
     ],
@@ -44,7 +44,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/icon.jpg"
+      "favicon": "./assets/images/icon2.png"
     },
     "plugins": [
       "expo-router",
