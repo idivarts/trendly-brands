@@ -2,7 +2,7 @@
 const ChannelListWeb = () => {
   return (
     <iframe
-      src="/assets/messenger/"
+      src="/assets/messenger?skip_name_image_set=false&no_channel_name_filter=false"
       style={{ width: '100%', height: '100%', border: 'none' }}
     />
   );
