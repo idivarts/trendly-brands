@@ -33,7 +33,7 @@ const ApplicationsScreen = () => {
     };
 
     return (
-        <AppLayout>
+        <AppLayout withWebPadding={false}>
             <ScreenHeader
                 title="All Applications"
             />
