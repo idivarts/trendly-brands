@@ -1,8 +1,7 @@
-import { Text, View } from "@/components/theme/Themed";
-import EmptyMessageState from "./empty-message-state";
-import EmptyState from "../ui/empty-state";
-import { Linking } from "react-native";
+import { View } from "@/components/theme/Themed";
 import { imageUrl } from "@/utils/url";
+import { Linking } from "react-native";
+import EmptyState from "../ui/empty-state";
 
 const ChannelListWeb = () => {
   return (
