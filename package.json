@@ -88,6 +88,8 @@
     "react-native-toast-message": "^2.2.1",
     "react-native-video": "^6.13.0",
     "react-native-web": "~0.19.10",
+    "serverless-certificate-creator": "^1.6.0",
+    "serverless-domain-manager": "^8.0.0",
     "stream-chat-expo": "^5.41.2"
   },
   "devDependencies": {
@@ -99,7 +101,7 @@
     "jest-expo": "~51.0.3",
     "react-test-renderer": "18.2.0",
     "serverless": "^3.39.0",
-    "serverless-lift": "^1.29.0",
+    "serverless-lift": "^1.31.0",
     "typescript": "~5.3.3"
   },
   "private": true
