@@ -1,11 +1,10 @@
+import Profile from "@/components/profile";
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
-import Profile from "@/components/profile";
-import ScreenHeader from "@/components/ui/screen-header";
 
 const ProfileScreen = () => {
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <Profile />
     </AppLayout>
   );

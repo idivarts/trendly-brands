@@ -23,6 +23,7 @@ import Button from "../ui/button";
 import ImageUploadModal from "../ui/modal/ImageUploadModal";
 import ScreenHeader from "../ui/screen-header";
 import TextInput from "../ui/text-input";
+import AppLayout from "@/layouts/app-layout";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -151,80 +152,82 @@ const Profile = () => {
           }
         />
       </View>
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          padding: 16,
-          alignItems: "center",
-          backgroundColor: Colors(theme).background,
-        }}
-      >
-        {/* Profile Picture */}
-        <View style={styles.avatarContainer}>
-          <ImageComponent
-            url={capturedImage}
-            size="medium"
-            altText="Profile Image"
-            shape="circle"
-            initialsSize={40}
-            initials={manager?.name}
-            style={{
-              backgroundColor: Colors(theme).primary,
-            }}
-          />
-          <Pressable
-            onPress={() => setIsModalVisible(true)}
-            style={styles.editIcon}
-          >
-            <FontAwesomeIcon
-              icon={faPen}
-              color={theme.dark ? Colors(theme).white : Colors(theme).primary}
-              size={22}
+      <AppLayout>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            padding: 16,
+            alignItems: "center",
+            backgroundColor: Colors(theme).background,
+          }}
+        >
+          {/* Profile Picture */}
+          <View style={styles.avatarContainer}>
+            <ImageComponent
+              url={capturedImage}
+              size="medium"
+              altText="Profile Image"
+              shape="circle"
+              initialsSize={40}
+              initials={manager?.name}
+              style={{
+                backgroundColor: Colors(theme).primary,
+              }}
             />
-          </Pressable>
-        </View>
+            <Pressable
+              onPress={() => setIsModalVisible(true)}
+              style={styles.editIcon}
+            >
+              <FontAwesomeIcon
+                icon={faPen}
+                color={theme.dark ? Colors(theme).white : Colors(theme).primary}
+                size={22}
+              />
+            </Pressable>
+          </View>
 
-        {/* Name Input */}
-        <TextInput
-          label="Name"
-          value={name}
-          onChangeText={(text) => setName(text)}
-          mode="outlined"
-          style={styles.input}
-        />
+          {/* Name Input */}
+          <TextInput
+            label="Name"
+            value={name}
+            onChangeText={(text) => setName(text)}
+            mode="outlined"
+            style={styles.input}
+          />
 
-        {/* Email (Static) */}
-        <TextInput
-          label="Email"
-          value={email}
-          mode="outlined"
-          style={styles.input}
-          editable={false}
-        />
+          {/* Email (Static) */}
+          <TextInput
+            label="Email"
+            value={email}
+            mode="outlined"
+            style={styles.input}
+            editable={false}
+          />
 
-        {/* Role Input */}
-        <TextInput
-          label="Role"
-          value={role}
-          mode="outlined"
-          style={styles.input}
-          onChangeText={(text) => setRole(text)}
-        />
+          {/* Role Input */}
+          <TextInput
+            label="Role"
+            value={role}
+            mode="outlined"
+            style={styles.input}
+            onChangeText={(text) => setRole(text)}
+          />
 
-        {/* Save Profile Button */}
-        {loading ? (
-          <ActivityIndicator size="large" color={Colors(theme).primary} />
-        ) : (
-          <Button
-            mode="contained"
-            style={styles.saveButton}
-            onPress={updateProfile}
-            disabled={loading} // Disable button while loading
-          >
-            Save Profile
-          </Button>
-        )}
-      </ScrollView>
+          {/* Save Profile Button */}
+          {loading ? (
+            <ActivityIndicator size="large" color={Colors(theme).primary} />
+          ) : (
+            <Button
+              mode="contained"
+              style={styles.saveButton}
+              onPress={updateProfile}
+              disabled={loading} // Disable button while loading
+            >
+              Save Profile
+            </Button>
+          )}
+        </ScrollView>
+      </AppLayout>
       <ImageUploadModal
         setVisible={setIsModalVisible}
         visible={isModalVisible}

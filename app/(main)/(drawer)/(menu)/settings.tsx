@@ -1,12 +1,10 @@
+import Settings from "@/components/settings";
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
-import Settings from "@/components/settings";
-import ScreenHeader from "@/components/ui/screen-header";
-import { View } from "@/components/theme/Themed";
 
 const SettingsScreen = () => {
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <Settings />
     </AppLayout>
   );

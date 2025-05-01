@@ -1,11 +1,11 @@
-import AppLayout from "@/layouts/app-layout";
-import React from "react";
 import Billing from "@/components/billing";
 import ScreenHeader from "@/components/ui/screen-header";
+import AppLayout from "@/layouts/app-layout";
+import React from "react";
 
 const BillingScreen = () => {
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <ScreenHeader
         title="Billing"
       />

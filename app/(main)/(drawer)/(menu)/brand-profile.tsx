@@ -78,7 +78,7 @@ const BrandProfileScreen = () => {
   }
 
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <ScreenHeader
         title="Brand Profile"
         rightAction
@@ -105,11 +105,13 @@ const BrandProfileScreen = () => {
           </Pressable>
         }
       />
-      <BrandProfile
-        brandData={brandData}
-        setBrandData={setBrandData}
-        setBrandWebImage={setBrandWebImage}
-      />
+      <AppLayout>
+        <BrandProfile
+          brandData={brandData}
+          setBrandData={setBrandData}
+          setBrandWebImage={setBrandWebImage}
+        />
+      </AppLayout>
       <Toast />
     </AppLayout>
   );
