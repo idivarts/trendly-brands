@@ -1,12 +1,13 @@
-import { StyleSheet } from "react-native";
-import { Theme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
+import { Theme } from "@react-navigation/native";
+import { StyleSheet } from "react-native";
 
 export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     container: {
       paddingHorizontal: 16,
       paddingBottom: 16,
+      marginTop: 16
     },
     header: {
       flexDirection: "row",

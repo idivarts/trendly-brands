@@ -108,7 +108,7 @@ const ContractScreen = () => {
   }
 
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <ScreenHeader
         title="Collaboration Status"
         rightAction

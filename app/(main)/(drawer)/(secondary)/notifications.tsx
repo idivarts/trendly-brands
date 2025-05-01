@@ -1,16 +1,16 @@
-import AppLayout from "@/layouts/app-layout";
-import React from "react";
-import { Appbar } from "react-native-paper";
-import { useTheme } from "@react-navigation/native";
-import Colors from "@/constants/Colors";
 import Notifications from "@/components/notifications";
+import ScreenHeader from "@/components/ui/screen-header";
+import Colors from "@/constants/Colors";
 import {
   useAuthContext,
   useNotificationContext
 } from "@/contexts";
-import ScreenHeader from "@/components/ui/screen-header";
+import AppLayout from "@/layouts/app-layout";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import React from "react";
+import { Appbar } from "react-native-paper";
 
 const NotificationsScreen = () => {
   const theme = useTheme();
@@ -35,7 +35,7 @@ const NotificationsScreen = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <ScreenHeader
         title="Notifications"
         rightAction

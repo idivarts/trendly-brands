@@ -16,7 +16,7 @@ const CollaborationDetailsScreen = () => {
   const theme = useTheme();
 
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={false}>
       <ScreenHeader
         title="Collaboration Details"
         rightAction
