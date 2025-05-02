@@ -3,6 +3,7 @@ import { useAuthContext } from "@/contexts";
 import { useChatContext } from "@/contexts/chat-context.provider.web";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 import { View } from "../theme/Themed";
@@ -12,6 +13,7 @@ const ChannelListWeb = () => {
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState("")
   const theme = useTheme()
+  const router = useRouter()
   const { manager } = useAuthContext()
   const { connectUser } = useChatContext()
 
@@ -26,6 +28,14 @@ const ChannelListWeb = () => {
 
   useEffect(() => {
     fetchToken()
+
+    window.addEventListener('message', function (event) {
+      console.log("Received event from ifram");
+      if (event.data.type == "contract") {
+        router.push(`/contract-details/${event.data.data}`);
+        // window.location.href = event.data.replace('redirect:', '');
+      }
+    });
   }, [])
 
   if (loading) {
