@@ -54,15 +54,18 @@ const ChannelListWeb = () => {
   if (!token) {
     return <EmptyMessageState />
   }
+  const url = `/messenger?user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`
+  console.log("Messenger path", url);
+
   return (
     <Fragment>
       {
         params.channelId ?
           <iframe
-            src={`/assets/messenger?channelId=${params.channelId}&user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
+            src={`/messenger/index.html?channelId=${params.channelId}&user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
             style={{ width: '100%', height: '100%', border: 'none' }}
           /> : <iframe
-            src={`/assets/messenger?user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
+            src={`/messenger/index.html?user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
             style={{ width: '100%', height: '100%', border: 'none' }}
           />
       }
