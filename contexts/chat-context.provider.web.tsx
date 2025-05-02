@@ -1,6 +1,5 @@
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { createContext, PropsWithChildren, useContext, useState } from "react";
-import { useAuthContext } from "./auth-context.provider";
 
 interface ChatContextProps {
   createGroupWithMembers: (
@@ -32,7 +31,6 @@ export const useChatContext = () => useContext(ChatContext);
 export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const { manager: user } = useAuthContext();
   const [token, setToken] = useState("")
 
   const createGroupWithMembers = async (

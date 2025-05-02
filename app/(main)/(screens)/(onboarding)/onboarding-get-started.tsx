@@ -85,7 +85,7 @@ const GetStartedScreen = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={true}>
       <View style={styles.container}>
         {/* Heading */}
         <View style={styles.headerContainer}>

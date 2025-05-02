@@ -12,7 +12,7 @@ interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> {
   setInvisible?: boolean
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, withWebPadding = true, setInvisible }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, withWebPadding = false, setInvisible }) => {
   const theme = useTheme();
   const isAndroid = useMemo(() => Platform.OS === "android", []);
   const { xl } = useBreakpoints()

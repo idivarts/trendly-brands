@@ -118,7 +118,7 @@ const OnboardingScreen = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout withWebPadding={true}>
       <View style={styles.container}>
         <ScreenHeader
           title={firstBrand === "true" ? "Onboarding" : "Create New Brand"}
