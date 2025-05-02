@@ -3,8 +3,8 @@ import { useAuthContext } from "@/contexts";
 import { useChatContext } from "@/contexts/chat-context.provider.web";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Fragment, useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 import { View } from "../theme/Themed";
 import EmptyMessageState from "./empty-message-state";
@@ -16,6 +16,7 @@ const ChannelListWeb = () => {
   const router = useRouter()
   const { manager } = useAuthContext()
   const { connectUser } = useChatContext()
+  const params = useLocalSearchParams()
 
   const fetchToken = async () => {
     setLoading(true)
@@ -49,10 +50,18 @@ const ChannelListWeb = () => {
     return <EmptyMessageState />
   }
   return (
-    <iframe
-      src={`/assets/messenger?user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
-      style={{ width: '100%', height: '100%', border: 'none' }}
-    />
+    <Fragment>
+      {
+        params.channelId ?
+          <iframe
+            src={`/assets/messenger?channelId=${params.channelId}&user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          /> : <iframe
+            src={`/assets/messenger?user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          />
+      }
+    </Fragment>
   );
 };
 
