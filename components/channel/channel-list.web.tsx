@@ -28,7 +28,6 @@ const ChannelListWeb = () => {
   }
 
   useEffect(() => {
-    fetchToken()
 
     window.addEventListener('message', function (event) {
       console.log("Received event from ifram");
@@ -39,6 +38,11 @@ const ChannelListWeb = () => {
       }
     });
   }, [])
+
+  useEffect(() => {
+    if (manager)
+      fetchToken()
+  }, [manager])
 
   if (loading) {
     return <AppLayout>
