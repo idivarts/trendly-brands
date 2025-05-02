@@ -25,6 +25,21 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   const [token, setToken] = useState("")
   const { manager } = useAuthContext()
   const { getToken, registerPushTokenWithStream } = useCloudMessagingContext()
+  const connectWithStream = async (token: string | void) => {
+    if (token) {
+      if (AuthApp.currentUser?.uid)
+        streamClient.connectUser({
+          id: AuthApp.currentUser?.uid
+        }, token)
+      registerPushTokenWithStream(await getToken())
+    }
+  }
+
+  useEffect(() => {
+    if (manager) {
+      connectUser().then(connectWithStream);
+    }
+  }, [manager])
 
   const connectUser = async (): Promise<string | undefined> => {
     if (token) {
@@ -49,21 +64,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }
     return undefined
   };
-  const connectWithStream = async (token: string | void) => {
-    if (token) {
-      if (AuthApp.currentUser?.uid)
-        streamClient.connectUser({
-          id: AuthApp.currentUser?.uid
-        }, token)
-      registerPushTokenWithStream(await getToken())
-    }
-  }
-
-  useEffect(() => {
-    if (manager) {
-      connectUser().then(connectWithStream);
-    }
-  }, [manager])
 
   return (
     <ChatContext.Provider
