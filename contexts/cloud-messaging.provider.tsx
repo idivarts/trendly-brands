@@ -13,10 +13,14 @@ const client = streamClient
 
 interface CloudMessagingContextProps {
   getToken: () => Promise<string>;
+  registerPushTokenWithStream: (token: string) => Promise<void>
+  registerPushTokenWithPlatform: (token: string) => Promise<void>
 }
 
 const CloudMessagingContext = createContext<CloudMessagingContextProps>({
   getToken: async () => "",
+  registerPushTokenWithPlatform: async (x: string) => { },
+  registerPushTokenWithStream: async (x: string) => { },
 });
 
 export const useCloudMessagingContext = () => useContext(CloudMessagingContext);
@@ -29,12 +33,14 @@ export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
     updateManager,
   } = useAuthContext();
 
-  const { getToken } = useCloudMessaging(streamClient, AuthApp.currentUser?.uid, manager, updateManager)
+  const { getToken, registerPushTokenWithStream, registerPushTokenWithPlatform } = useCloudMessaging(streamClient, AuthApp.currentUser?.uid, manager, updateManager)
 
   return (
     <CloudMessagingContext.Provider
       value={{
         getToken,
+        registerPushTokenWithPlatform,
+        registerPushTokenWithStream
       }}
     >
       {children}
