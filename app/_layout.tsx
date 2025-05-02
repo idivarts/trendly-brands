@@ -17,32 +17,22 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-reanimated";
 import 'react-native-get-random-values';
+import "react-native-reanimated";
 
 import { useColorScheme } from "@/components/theme/useColorScheme";
+import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
   AuthContextProvider,
-  AWSContextProvider,
-  CloudMessagingContextProvider,
-  CollaborationContextProvider,
-  ContractContextProvider,
-  FirebaseStorageContextProvider,
-  NotificationContextProvider,
-  useAuthContext,
+  useAuthContext
 } from "@/contexts";
-import { Provider } from "react-native-paper";
-import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
-import { BrandContextProvider } from "@/contexts/brand-context.provider";
-import CustomPaperTheme from "@/constants/Themes/Theme";
-import { queryParams } from "@/utils/url";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { Platform } from "react-native";
 import { resetAndNavigate } from "@/utils/router";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { Provider } from "react-native-paper";
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
@@ -76,27 +66,11 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-      <BottomSheetModalProvider>
-        <AuthContextProvider>
-          <AWSContextProvider>
-            <FirebaseStorageContextProvider>
-              <NotificationContextProvider>
-                <CloudMessagingContextProvider>
-                  <BrandContextProvider>
-                    <CollaborationContextProvider>
-                      <ContractContextProvider>
-                        <AutocompleteDropdownContextProvider>
-                          <RootLayoutStack />
-                        </AutocompleteDropdownContextProvider>
-                      </ContractContextProvider>
-                    </CollaborationContextProvider>
-                  </BrandContextProvider>
-                </CloudMessagingContextProvider>
-              </NotificationContextProvider>
-            </FirebaseStorageContextProvider>
-          </AWSContextProvider>
-        </AuthContextProvider>
-      </BottomSheetModalProvider>
+      <AuthContextProvider>
+        <BottomSheetModalProvider>
+          <RootLayoutStack />
+        </BottomSheetModalProvider>
+      </AuthContextProvider>
     </GestureHandlerRootView>
   );
 }

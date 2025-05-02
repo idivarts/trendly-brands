@@ -15,7 +15,7 @@ interface BrandProtectedScreenProps extends PropsWithChildren { }
 const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
   children,
 }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const {
@@ -59,11 +59,16 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
     }
   }, [manager]);
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
+  // if (loading) {
+  //   return <LoadingScreen />;
+  // }
 
-  return <>{children}</>;
+  return <>
+    {loading && <LoadingScreen />}
+    <View style={{ flex: 1, display: loading ? "none" : "flex" }}>
+      {children}
+    </View>
+  </>;
 };
 
 const LoadingScreen: React.FC = () => {
