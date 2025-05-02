@@ -28,7 +28,7 @@ const MainLayout = () => {
                           }}
                         />
                         <Stack.Screen
-                          name="(screens)"
+                          name="(onboarding)"
                           options={{
                             headerShown: false,
                           }}
