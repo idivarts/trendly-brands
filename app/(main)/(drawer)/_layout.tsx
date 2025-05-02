@@ -25,7 +25,7 @@ const DrawerLayout = () => {
           }}
         />
         <Drawer.Screen
-          name="(menu)"
+          name="(secondary)"
           options={{
             headerShown: false,
           }}
