@@ -1,18 +1,18 @@
+import messaging from "@react-native-firebase/messaging";
 import {
-  useContext,
   createContext,
   type PropsWithChildren,
+  useContext,
   useEffect,
 } from "react";
-import messaging from "@react-native-firebase/messaging";
 import { Platform } from "react-native";
 
+import { newToken } from "@/utils/token";
 import { PermissionsAndroid } from 'react-native';
 import { useAuthContext } from "./auth-context.provider";
-import { newToken } from "@/utils/token";
-import { StreamChat } from "stream-chat";
+import { streamClient } from "./chat-context.provider";
 
-const client = StreamChat.getInstance(process.env.EXPO_PUBLIC_STREAM_API_KEY!);
+const client = streamClient
 
 interface CloudMessagingContextProps {
   getToken: () => Promise<string>;
