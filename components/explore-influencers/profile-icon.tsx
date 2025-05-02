@@ -1,52 +1,50 @@
-import { useTheme } from "@react-navigation/native";
-import { Link } from "expo-router";
-import { Image, Pressable } from "react-native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { Image, Pressable } from "react-native";
 
-import { useBrandContext } from "@/contexts/brand-context.provider";
 import Colors from "@/constants/Colors";
-import { View } from "../theme/Themed";
-import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { imageUrl } from "@/utils/url";
+import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { View } from "../theme/Themed";
 
 const ProfileIcon = () => {
   const theme = useTheme();
   const {
     selectedBrand,
   } = useBrandContext();
-
+  const router = useRouter()
   return (
-    <Link href="/menu" asChild>
-      <Pressable>
-        <View
+    <Pressable onPress={() => router.push("/menu")}>
+      <View
+        style={{
+          position: "relative",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <FontAwesomeIcon
+          color={Colors(theme).primary}
+          icon={faCircleNotch}
+          size={32}
           style={{
-            position: "relative",
-            justifyContent: "center",
-            alignItems: "center",
+            left: -2,
+            position: "absolute",
+            top: -2,
+            zIndex: 1,
           }}
-        >
-          <FontAwesomeIcon
-            color={Colors(theme).primary}
-            icon={faCircleNotch}
-            size={32}
-            style={{
-              left: -2,
-              position: "absolute",
-              top: -2,
-              zIndex: 1,
-            }}
-          />
-          <Image
-            source={imageUrl(selectedBrand?.image)}
-            style={{
-              borderRadius: 100,
-              height: 28,
-              width: 28,
-            }}
-          />
-        </View>
-      </Pressable>
-    </Link>
+        />
+        <Image
+          source={imageUrl(selectedBrand?.image)}
+          style={{
+            borderRadius: 100,
+            height: 28,
+            width: 28,
+          }}
+        />
+      </View>
+    </Pressable>
   )
 };
 
