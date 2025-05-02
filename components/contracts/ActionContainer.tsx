@@ -16,6 +16,7 @@ import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { FC, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 
@@ -167,10 +168,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
                   flex: 1,
                 }}
                 onPress={async () => {
-                  const channelCid = await fetchChannelCid(
-                    contract.streamChannelId
-                  );
-                  router.navigate(`/channel/${channelCid}`);
+
+                  if (Platform.OS == "web")
+                    router.navigate(`/messages?channelId=${contract.streamChannelId}`);
+                  else {
+                    const channelCid = await fetchChannelCid(
+                      contract.streamChannelId
+                    );
+                    router.navigate(`/channel/${channelCid}`);
+                  }
                 }}
               >
                 Go to Messages
