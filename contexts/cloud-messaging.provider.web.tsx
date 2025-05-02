@@ -6,7 +6,7 @@ import {
 } from "react";
 
 import { messaging } from "@/shared-libs/utils/firebase/messaging-web";
-import { newToken } from "@/utils/token";
+import { newToken } from "@/shared-libs/utils/token";
 import { getToken } from "firebase/messaging";
 import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";

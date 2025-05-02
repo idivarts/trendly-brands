@@ -7,7 +7,7 @@ import {
 } from "react";
 import { Platform } from "react-native";
 
-import { newToken } from "@/utils/token";
+import { newToken } from "@/shared-libs/utils/token";
 import { PermissionsAndroid } from 'react-native';
 import { useAuthContext } from "./auth-context.provider";
 import { streamClient } from "./chat-context.provider";
