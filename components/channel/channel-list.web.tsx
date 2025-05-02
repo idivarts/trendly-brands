@@ -32,8 +32,9 @@ const ChannelListWeb = () => {
 
     window.addEventListener('message', function (event) {
       console.log("Received event from ifram");
-      if (event.data.type == "contract") {
-        router.push(`/contract-details/${event.data.data}`);
+      if (event.data.type == "open-contract") {
+        const contractId = event.data.data
+        router.push(`/contract-details/${contractId}`);
         // window.location.href = event.data.replace('redirect:', '');
       }
     });
