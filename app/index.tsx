@@ -1,5 +1,5 @@
-import { ActivityIndicator } from "react-native";
 import { useTheme } from "@react-navigation/native";
+import { ActivityIndicator } from "react-native";
 
 import { View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";

@@ -64,6 +64,12 @@ const AuthContext = createContext<AuthContextProps>({
 
 export const useAuthContext = () => useContext(AuthContext);
 
+const isWorkEmail = (email: string): boolean => {
+  const generalDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com"];
+  const emailDomain = email.split("@")[1]?.toLowerCase();
+  return emailDomain ? !generalDomains.includes(emailDomain) : false;
+};
+
 export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
@@ -143,6 +149,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   const signUp = async (name: string, email: string, password: string) => {
     if (!name || !email || !password) {
       Toaster.error("Please fill in all fields.");
+      return;
+    }
+    if (!isWorkEmail(email)) {
+      Toaster.error("Please enter a work email to proceed.");
       return;
     }
 

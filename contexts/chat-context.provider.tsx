@@ -1,4 +1,5 @@
 import { useStreamTheme } from "@/hooks";
+import { useCloudMessagingContext } from "@/shared-libs/contexts/cloud-messaging.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useTheme } from "@react-navigation/native";
 import {
@@ -12,7 +13,7 @@ import { Channel, DefaultGenerics, StreamChat } from "stream-chat";
 import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
 
-const streamClient = StreamChat.getInstance(
+export const streamClient = StreamChat.getInstance(
   process.env.EXPO_PUBLIC_STREAM_API_KEY!
 );
 
@@ -59,6 +60,10 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     null
   );
 
+  const { manager } = useAuthContext()
+  const { getToken, registerPushTokenWithStream } = useCloudMessagingContext()
+
+
   useEffect(() => {
     setStreamChatTheme(getTheme());
   }, [theme]);
@@ -66,20 +71,16 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   const { manager: user } = useAuthContext();
 
   const connect = async (streamToken: string) => {
-    await streamClient
-      .connectUser(
-        {
-          id: user?.id as string,
-          name: user?.name as string,
-          image: (user?.profileImage as string) || "",
-        },
-        streamToken
-      )
-      .then(() => {
-        setClient(streamClient);
-        setIsReady(true);
-        setHasError(false);
-      });
+    await streamClient.connectUser({
+      id: user?.id as string,
+      name: user?.name as string,
+      image: (user?.profileImage as string) || "",
+    }, streamToken).then(async () => {
+      setClient(streamClient);
+      setIsReady(true);
+      setHasError(false);
+      registerPushTokenWithStream(await getToken())
+    });
   };
 
   const connectUser = async () => {

@@ -1,20 +1,20 @@
+import Button from "@/components/ui/button";
+import TextInput from "@/components/ui/text-input";
+import Colors from "@/constants/Colors";
+import { useAuthContext } from "@/contexts";
+import fnStyles from "@/styles/signup.styles";
+import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  View,
+  Dimensions,
   Image,
-  Text,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
-import fnStyles from "@/styles/signup.styles";
-import { useTheme } from "@react-navigation/native";
-import { useAuthContext } from "@/contexts";
-import Colors from "@/constants/Colors";
-import TextInput from "@/components/ui/text-input";
-import Button from "@/components/ui/button";
 
 const SignUpScreen = () => {
   const [name, setName] = useState("");
@@ -38,84 +38,88 @@ const SignUpScreen = () => {
         contentContainerStyle={{
           minHeight: windowHeight,
           paddingBottom: 30,
+          paddingHorizontal: 20,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo Section */}
-        <Image
-          source={require("@/assets/images/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        {/* Title */}
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subTitle}>Welcome to Trendly Brands</Text>
-        {/* Name Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            label="Name"
-            value={name}
-            onChangeText={setName}
-            mode="outlined"
-            textColor={Colors(theme).text}
-            placeholderTextColor={Colors(theme).text}
-            style={styles.input}
-            theme={{ colors: { primary: Colors(theme).text } }}
+        <View style={{ width: "100%", maxWidth: 480, alignSelf: "center" }}>
+          {/* Logo Section */}
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
           />
-          {/* Email Field */}
-          <TextInput
-            autoCapitalize="none"
-            label="Email"
-            value={email}
-            placeholderTextColor={Colors(theme).text}
-            onChangeText={setEmail}
-            textColor={Colors(theme).text}
-            mode="outlined"
-            style={styles.input}
-            theme={{ colors: { primary: Colors(theme).text } }}
-          />
-          {/* Password Field */}
-          <TextInput
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            mode="outlined"
-            placeholderTextColor={Colors(theme).text}
-            textColor={Colors(theme).text}
-            style={styles.input}
-            theme={{ colors: { primary: Colors(theme).text } }}
-          />
-          <TextInput
-            label="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholderTextColor={Colors(theme).text}
-            textColor={Colors(theme).text}
-            secureTextEntry
-            mode="outlined"
-            style={styles.input}
-            theme={{ colors: { primary: Colors(theme).text } }}
-          />
-          {/* Sign Up Button */}
-          <Button
-            mode="contained"
-            onPress={() => signUp(name, email, password)}
-          >
-            Signup
-          </Button>
-        </View>
-        {/* Login Prompt */}
-        <Text style={styles.loginText}>
-          Already have an account?{" "}
-          <Text
-            style={styles.loginLink}
-            onPress={() => router.replace("/(auth)/login")}
-          >
-            Login
+          {/* Title */}
+          <Text style={styles.title}>Create Your Brand</Text>
+          <Text style={styles.subTitle}>Welcome to Trendly! Lets put your work email register to Trendly</Text>
+          {/* Name Field */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              label="Name"
+              value={name}
+              onChangeText={setName}
+              mode="outlined"
+              textColor={Colors(theme).text}
+              placeholderTextColor={Colors(theme).text}
+              style={styles.input}
+              theme={{ colors: { primary: Colors(theme).text } }}
+            />
+            {/* Email Field */}
+            <TextInput
+              autoCapitalize="none"
+              label="Work Email"
+              value={email}
+              placeholderTextColor={Colors(theme).text}
+              onChangeText={setEmail}
+              textColor={Colors(theme).text}
+              mode="outlined"
+              style={styles.input}
+              theme={{ colors: { primary: Colors(theme).text } }}
+            />
+            {/* Password Field */}
+            <TextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              mode="outlined"
+              placeholderTextColor={Colors(theme).text}
+              textColor={Colors(theme).text}
+              style={styles.input}
+              theme={{ colors: { primary: Colors(theme).text } }}
+            />
+            <TextInput
+              label="Confirm Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholderTextColor={Colors(theme).text}
+              textColor={Colors(theme).text}
+              secureTextEntry
+              mode="outlined"
+              style={styles.input}
+              theme={{ colors: { primary: Colors(theme).text } }}
+            />
+            {/* Sign Up Button */}
+            <Button
+              mode="contained"
+              style={{ marginTop: 16 }}
+              onPress={() => signUp(name, email, password)}
+            >
+              Signup
+            </Button>
+          </View>
+          {/* Login Prompt */}
+          <Text style={styles.loginText}>
+            Already have an account?{" "}
+            <Text
+              style={styles.loginLink}
+              onPress={() => router.replace("/(auth)/login")}
+            >
+              Login
+            </Text>
           </Text>
-        </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
