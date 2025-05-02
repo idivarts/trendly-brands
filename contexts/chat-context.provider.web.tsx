@@ -1,5 +1,5 @@
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { createContext, PropsWithChildren, useContext } from "react";
+import { createContext, PropsWithChildren, useContext, useState } from "react";
 import { useAuthContext } from "./auth-context.provider";
 
 interface ChatContextProps {
@@ -8,7 +8,7 @@ interface ChatContextProps {
     userId: string,
     collaborationId: string,
   ) => Promise<any>;
-  connectUser: () => void;
+  connectUser: () => Promise<string | undefined>;
   fetchMembers: (channel: any) => Promise<any>;
   addMemberToChannel: (channel: any, member: string) => void;
   sendSystemMessage: (channel: string, message: string) => void;
@@ -19,7 +19,7 @@ interface ChatContextProps {
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => { },
-  connectUser: async () => { },
+  connectUser: async () => { return undefined },
   fetchMembers: async () => { },
   addMemberToChannel: async () => { },
   sendSystemMessage: async () => { },
@@ -33,6 +33,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
   const { manager: user } = useAuthContext();
+  const [token, setToken] = useState("")
 
   const createGroupWithMembers = async (
     groupName: string,
@@ -70,8 +71,28 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     return false;
   };
 
-  const connectUser = async () => {
-    return null;
+  const connectUser = async (): Promise<string | undefined> => {
+    if (token) {
+      console.log("Already connected to Chat")
+      return token
+    }
+    console.log("Connecting to Chat")
+    try {
+      const response = await HttpWrapper.fetch("/api/v1/chat/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      setToken(data.token)
+      return data.token
+    } catch (error) {
+      console.log("Error connecting to chat", error);
+    }
+    return undefined
   };
 
   return (

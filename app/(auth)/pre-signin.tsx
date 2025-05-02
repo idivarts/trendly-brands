@@ -67,137 +67,25 @@ const PreSignIn = () => {
   const { xl } = useBreakpoints();
   return (
     <AppLayout>
-      {Platform.OS === "web" ? (
-        <>
-          <Carousel
-            ref={swiperRef} // Attach the ref to Swiper
-            style={styles.wrapper}
-            loop={false}
-            width={xl ? 800 : Dimensions.get("window").width}
-            data={slides}
-            onProgressChange={(_, absoluteProgress) => {
-              runOnJS((value: number) => {
-                progress.value = value;
-              })(absoluteProgress);
-            }}
-            withAnimation={{
-              type: "timing",
-              config: {},
-            }}
-            renderItem={({ item }) => (
-              <View style={styles.slide}>
-                {item.key !== "connect" && (
-                  <View style={styles.skipButtonContainer}>
-                    <Button
-                      mode="outlined"
-                      onPress={() => {
-                        skipToConnect();
-                      }}
-                      buttonColor={Colors(theme).background}
-                      textColor={Colors(theme).primary}
-                    >
-                      Skip
-                    </Button>
-                  </View>
-                )}
-                <View style={styles.imageContainer}>
-                  <Image source={imageUrl(item.image)} style={styles.image} />
-                </View>
-                <Title style={[styles.title, { color: Colors(theme).primary }]}>
-                  {item.title}
-                </Title>
-                <Paragraph style={styles.paragraph}>{item.text}</Paragraph>
-                {item.key !== "connect" && (
-                  <Pressable
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginTop: 15,
-                      backgroundColor: Colors(theme).primary,
-                      paddingHorizontal: 20,
-                      paddingVertical: 10,
-                      borderRadius: 5,
-                      gap: 10,
-                    }}
-                    onPress={() => {
-                      swiperRef.current?.next();
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: Colors(theme).white,
-                        fontSize: 16,
-                      }}
-                    >
-                      Next
-                    </Text>
-                    <FontAwesomeIcon
-                      icon={faArrowRight}
-                      size={16}
-                      color={Colors(theme).white}
-                    />
-                  </Pressable>
-                )}
-                {item.key === "connect" && (
-                  <View style={styles.socialContainer}>
-                    <SocialButton
-                      icon={faUserPlus}
-                      label="Create New Account"
-                      onPress={() => {
-                        router.push("/create-new-account");
-                      }}
-                    />
-                    <SocialButton
-                      icon={faEnvelopeOpen}
-                      label="Login"
-                      onPress={() => {
-                        router.push("/login");
-                      }}
-                    />
-                  </View>
-                )}
-              </View>
-            )}
-          />
-          <Pagination.Basic
-            progress={progress}
-            data={slides}
-            size={12}
-            dotStyle={{
-              borderRadius: 100,
-              backgroundColor: Colors(theme).backdrop,
-            }}
-            activeDotStyle={{
-              borderRadius: 100,
-              overflow: "hidden",
-              backgroundColor: Colors(theme).primary,
-            }}
-            containerStyle={[
-              {
-                gap: 5,
-                marginBottom: 10,
-              },
-            ]}
-            horizontal
-            onPress={onPressPagination}
-          />
-        </>
-      ) : (
-        <Swiper
-          ref={nativeRef} // Attach the ref to Swiper
+      <>
+        <Carousel
+          ref={swiperRef} // Attach the ref to Swiper
           style={styles.wrapper}
-          dotStyle={styles.dotStyle}
-          activeDotStyle={[
-            styles.dotStyle,
-            { backgroundColor: Colors(theme).primary },
-          ]}
-          paginationStyle={styles.pagination}
           loop={false}
-        >
-          {slides.map((slide) => (
-            <View style={styles.slide} key={slide.key}>
-              {slide.key !== "connect" && (
+          width={xl ? 800 : Dimensions.get("window").width}
+          data={slides}
+          onProgressChange={(_, absoluteProgress) => {
+            runOnJS((value: number) => {
+              progress.value = value;
+            })(absoluteProgress);
+          }}
+          withAnimation={{
+            type: "timing",
+            config: {},
+          }}
+          renderItem={({ item }) => (
+            <View style={styles.slide}>
+              {item.key !== "connect" && (
                 <View style={styles.skipButtonContainer}>
                   <Button
                     mode="outlined"
@@ -212,13 +100,13 @@ const PreSignIn = () => {
                 </View>
               )}
               <View style={styles.imageContainer}>
-                <Image source={imageUrl(slide.image)} style={styles.image} />
+                <Image source={imageUrl(item.image)} style={styles.image} />
               </View>
               <Title style={[styles.title, { color: Colors(theme).primary }]}>
-                {slide.title}
+                {item.title}
               </Title>
-              <Paragraph style={styles.paragraph}>{slide.text}</Paragraph>
-              {slide.key !== "connect" && Platform.OS !== "web" && (
+              <Paragraph style={styles.paragraph}>{item.text}</Paragraph>
+              {item.key !== "connect" && (
                 <Pressable
                   style={{
                     flexDirection: "row",
@@ -232,7 +120,7 @@ const PreSignIn = () => {
                     gap: 10,
                   }}
                   onPress={() => {
-                    nativeRef.current?.scrollBy(1);
+                    swiperRef.current?.next();
                   }}
                 >
                   <Text
@@ -250,7 +138,7 @@ const PreSignIn = () => {
                   />
                 </Pressable>
               )}
-              {slide.key === "connect" && (
+              {item.key === "connect" && (
                 <View style={styles.socialContainer}>
                   <SocialButton
                     icon={faUserPlus}
@@ -269,10 +157,31 @@ const PreSignIn = () => {
                 </View>
               )}
             </View>
-          ))}
-        </Swiper>
-      )}
-
+          )}
+        />
+        <Pagination.Basic
+          progress={progress}
+          data={slides}
+          size={12}
+          dotStyle={{
+            borderRadius: 100,
+            backgroundColor: Colors(theme).backdrop,
+          }}
+          activeDotStyle={{
+            borderRadius: 100,
+            overflow: "hidden",
+            backgroundColor: Colors(theme).primary,
+          }}
+          containerStyle={[
+            {
+              gap: 5,
+              marginBottom: 10,
+            },
+          ]}
+          horizontal
+          onPress={onPressPagination}
+        />
+      </>
       {error && <Text style={{ color: "red" }}>Error: {error}</Text>}
     </AppLayout>
   );

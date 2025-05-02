@@ -1,9 +1,10 @@
+import EmptyState from "@/components/ui/empty-state";
+import AppLayout from "@/layouts/app-layout";
 import { stylesFn } from "@/styles/NotificationCard.styles";
+import { Notification } from "@/types/Notification";
 import { useTheme } from "@react-navigation/native";
 import { ScrollView } from "react-native";
 import { NotificationCard } from "../NotificationCard";
-import { Notification } from "@/types/Notification";
-import EmptyState from "@/components/ui/empty-state";
 import { View } from "../theme/Themed";
 
 interface NotificationsProps {
@@ -19,7 +20,7 @@ const Notifications: React.FC<NotificationsProps> = ({
   const styles = stylesFn(theme);
 
   return (
-    <>
+    <AppLayout>
       {
         notifications.length === 0 ? (
           <View style={styles.container}>
@@ -56,7 +57,7 @@ const Notifications: React.FC<NotificationsProps> = ({
           </ScrollView>
         )
       }
-    </>
+    </AppLayout>
   );
 };
 
