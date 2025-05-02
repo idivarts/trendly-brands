@@ -1,10 +1,10 @@
 import { AWSContextProvider, useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
-import { AuthContextProvider, useAuthContext } from "./auth-context.provider";
-import { ChatContextProvider, useChatContext } from "./chat-context.provider";
 import {
   CloudMessagingContextProvider,
   useCloudMessagingContext,
-} from "./cloud-messaging.provider";
+} from "../shared-libs/contexts/cloud-messaging.provider";
+import { AuthContextProvider, useAuthContext } from "./auth-context.provider";
+import { ChatContextProvider, useChatContext } from "./chat-context.provider";
 import {
   CollaborationContextProvider,
   useCollaborationContext,

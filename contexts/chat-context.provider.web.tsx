@@ -2,8 +2,8 @@ import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { StreamChat } from "stream-chat";
+import { useCloudMessagingContext } from "../shared-libs/contexts/cloud-messaging.provider";
 import { useAuthContext } from "./auth-context.provider";
-import { useCloudMessagingContext } from "./cloud-messaging.provider";
 
 interface ChatContextProps {
   connectUser: () => Promise<string | undefined>;

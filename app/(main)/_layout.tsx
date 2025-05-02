@@ -1,15 +1,18 @@
-import { AWSContextProvider, ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider } from "@/contexts";
+import { AWSContextProvider, ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
+import { streamClient } from "@/contexts/chat-context.provider";
 import { Stack } from "expo-router";
 import React from "react";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
 
+
 const MainLayout = () => {
+  const { manager, updateManager } = useAuthContext()
   return (
     <AWSContextProvider>
       <FirebaseStorageContextProvider>
         <NotificationContextProvider>
-          <CloudMessagingContextProvider>
+          <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
             <BrandContextProvider>
               <CollaborationContextProvider>
                 <ContractContextProvider>
