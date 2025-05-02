@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import { useCloudMessaging } from "@/shared-libs/utils/cloud-messaging";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useAuthContext } from "./auth-context.provider";
 import { streamClient } from "./chat-context.provider";
 
@@ -24,12 +25,11 @@ export const CloudMessagingContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
   const {
-    session,
-    manager: user,
+    manager,
     updateManager,
   } = useAuthContext();
 
-  const { getToken } = useCloudMessaging(streamClient, session, user, updateManager)
+  const { getToken } = useCloudMessaging(streamClient, AuthApp.currentUser?.uid, manager, updateManager)
 
   return (
     <CloudMessagingContext.Provider
