@@ -1,6 +1,6 @@
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
-import { useChatContext } from "@/contexts/chat-context.provider.web";
+import { useChatContext } from "@/contexts/chat-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { IMessengerData } from "@/shared-libs/messenger/interfaces/message-interface";
 import { useIsFocused, useTheme } from "@react-navigation/native";
