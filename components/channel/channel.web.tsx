@@ -1,15 +1,25 @@
 import { Text, View } from "@/components/theme/Themed";
+import { useAuthContext } from "@/contexts";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect } from "react";
 
 const ChannelWeb = () => {
+  const { cid } = useLocalSearchParams<{ cid: string }>();
+  const router = useRouter()
+  const { manager } = useAuthContext()
+  useEffect(() => {
+    if (manager)
+      router.push(`/messages?channelId=${cid}`)
+  }, [manager])
   return (
     <View
       style={{
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center'
       }}
     >
-      <Text>Stream chat is not available on web right now</Text>
+      <Text>Stream is loading...</Text>
     </View>
   );
 };
