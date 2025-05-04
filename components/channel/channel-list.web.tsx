@@ -44,7 +44,7 @@ const ChannelListWeb = () => {
     return <EmptyMessageState />
   }
   return (
-    <WebMessageWrapper iFrameLoaded={iFrameLoaded} iFrameRef={iFramRef}>
+    <WebMessageWrapper iFrameLoaded={iFrameLoaded} iFrameRef={iFramRef} isUser={false}>
       <iframe
         ref={iFramRef}
         src={`/messenger/index.html?user=${manager?.id}&user_token=${token}&target_origin=${window.location.origin}&skip_name_image_set=false&no_channel_name_filter=false`}
