@@ -50,7 +50,8 @@ const useApplications = ({
         );
         const applicationQuery = query(
           applicationRef,
-          where("status", "in", ["pending", "accepted"])
+          where("status", "in", ["pending", "accepted"]),
+          orderBy("timeStamp", "desc"),
         );
         const applicationFetch = await getDocs(applicationQuery);
 
