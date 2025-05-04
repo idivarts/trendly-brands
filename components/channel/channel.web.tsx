@@ -9,7 +9,7 @@ const ChannelWeb = () => {
   const { manager } = useAuthContext()
   useEffect(() => {
     if (manager)
-      router.push(`/messages?channelId=${cid}`)
+      router.push(`/messages?channelId=${cid?.split(":")[1]}`)
   }, [manager])
   return (
     <View
