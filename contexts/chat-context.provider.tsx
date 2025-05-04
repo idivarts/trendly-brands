@@ -1,7 +1,5 @@
-import { useStreamTheme } from "@/hooks";
 import { useCloudMessagingContext } from "@/shared-libs/contexts/cloud-messaging.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { useTheme } from "@react-navigation/native";
 import {
   createContext,
   useContext,
@@ -10,8 +8,8 @@ import {
   type PropsWithChildren,
 } from "react";
 import { Channel, DefaultGenerics, StreamChat } from "stream-chat";
-import { Chat, OverlayProvider } from "stream-chat-expo";
 import { useAuthContext } from "./auth-context.provider";
+import StreamWrapper from "./stream-wrapper";
 
 export const streamClient = StreamChat.getInstance(
   process.env.EXPO_PUBLIC_STREAM_API_KEY!
@@ -23,7 +21,7 @@ interface ChatContextProps {
     userId: string,
     collaborationId: string,
   ) => Promise<Channel>;
-  connectUser: () => void;
+  connectUser: () => Promise<string>;
   fetchMembers: (channel: string) => Promise<any>;
   addMemberToChannel: (channel: string, member: string) => void;
   sendSystemMessage: (channel: string, message: string) => void;
@@ -37,7 +35,7 @@ interface ChatContextProps {
 
 const ChatContext = createContext<ChatContextProps>({
   createGroupWithMembers: async () => Promise.resolve({} as Channel),
-  connectUser: async () => { },
+  connectUser: async () => "",
   fetchMembers: async () => { },
   addMemberToChannel: async () => { },
   sendSystemMessage: async () => { },
@@ -51,42 +49,32 @@ export const useChatContext = () => useContext(ChatContext);
 export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
-  const [isReady, setIsReady] = useState(false);
+  const [token, setToken] = useState("");
   const [hasError, setHasError] = useState(false)
-  const theme = useTheme();
-  const { getTheme } = useStreamTheme(theme);
-  const [streamChatTheme, setStreamChatTheme] = useState(getTheme());
-  const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(
-    null
-  );
 
-  const { manager } = useAuthContext()
+  const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(null);
+
   const { getToken, registerPushTokenWithStream } = useCloudMessagingContext()
-
-
-  useEffect(() => {
-    setStreamChatTheme(getTheme());
-  }, [theme]);
 
   const { manager: user } = useAuthContext();
 
-  const connect = async (streamToken: string) => {
+  const connectStream = async (streamToken: string) => {
     await streamClient.connectUser({
       id: user?.id as string,
       name: user?.name as string,
       image: (user?.profileImage as string) || "",
     }, streamToken).then(async () => {
       setClient(streamClient);
-      setIsReady(true);
+      setToken(streamToken);
       setHasError(false);
       registerPushTokenWithStream(await getToken())
     });
   };
 
   const connectUser = async () => {
-    if (isReady) {
+    if (token) {
       console.log("Already connected to Chat")
-      return
+      return token
     }
     console.log("Connecting to Chat")
     try {
@@ -100,30 +88,31 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       const data = await response.json();
 
       if (!!data.token) {
-        await connect(data.token);
+        await connectStream(data.token);
+        return (data.token as string)
       } else {
         throw { message: "No token provided" }
       }
     } catch (error) {
       console.log("Error connecting to chat", error);
-      setIsReady(false)
+      setToken("")
       setHasError(true)
     }
-
+    return ""
   };
 
   useEffect(() => {
-    if (user?.id) {
+    if (user) {
       connectUser();
     }
 
     return () => {
-      if (isReady && client) {
+      if (token && client) {
         streamClient.disconnectUser();
-        setIsReady(false);
+        setToken("");
       }
     };
-  }, [user?.id]);
+  }, [user]);
 
   const createGroupWithMembers = async (
     groupName: string,
@@ -209,23 +198,21 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   };
 
   return (
-    <OverlayProvider value={{ style: streamChatTheme }}>
-      <Chat client={streamClient}>
-        <ChatContext.Provider
-          value={{
-            createGroupWithMembers,
-            connectUser,
-            fetchMembers,
-            addMemberToChannel,
-            sendSystemMessage,
-            fetchChannelCid,
-            removeMemberFromChannel,
-            hasError,
-          }}
-        >
-          {children}
-        </ChatContext.Provider>
-      </Chat>
-    </OverlayProvider>
+    <ChatContext.Provider
+      value={{
+        createGroupWithMembers,
+        connectUser,
+        fetchMembers,
+        addMemberToChannel,
+        sendSystemMessage,
+        fetchChannelCid,
+        removeMemberFromChannel,
+        hasError,
+      }}
+    >
+      <StreamWrapper>
+        {children}
+      </StreamWrapper>
+    </ChatContext.Provider>
   );
 };

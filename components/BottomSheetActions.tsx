@@ -75,11 +75,8 @@ const BottomSheetActions = ({
           data.collaboration.name,
           cardId.influencerID,
           cardId.collaborationID
-        ).then((channel) => {
-          connectUser();
-
-          createNotification(
-            cardId.influencerID,
+        ).then(async (channel) => {
+          createNotification(cardId.influencerID,
             {
               data: {
                 collaborationId: data.collaboration.id,
@@ -91,7 +88,7 @@ const BottomSheetActions = ({
               type: "application-accepted",
             },
             "users"
-          );
+          ).catch(e => { });
 
           sendNotification(
             {
@@ -103,8 +100,9 @@ const BottomSheetActions = ({
                 description: `Your application for ${data.collaboration.name} has been accepted`,
               },
             }
-          );
+          ).catch(e => { });
 
+          await connectUser();
           router.navigate(`/channel/${channel.cid}`);
         });
 

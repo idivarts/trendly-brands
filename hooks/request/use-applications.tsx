@@ -149,9 +149,9 @@ const useApplications = ({
         status: "accepted",
       }).then(() => {
         createGroupWithMembers(
-          data.collaboration.name,
+          influencerApplication.collaboration?.name || data.collaboration.name,
           influencerApplication.application.userId,
-          data.collaboration.id,
+          influencerApplication.application.collaborationId,
         ).then((channel) => {
           connectUser();
 
