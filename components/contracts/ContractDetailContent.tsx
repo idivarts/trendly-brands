@@ -1,28 +1,28 @@
-import React, { useState } from "react";
-import { View, ScrollView, Pressable, Dimensions } from "react-native";
-import { Text, Card, Portal } from "react-native-paper";
-import { useTheme } from "@react-navigation/native";
-import { stylesFn } from "@/styles/CollaborationDetails.styles";
+import UserResponse from "@/components/contract-card/UserResponse";
 import Colors from "@/constants/Colors";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import { processRawAttachment } from "@/utils/attachments";
 import {
   IApplications,
   ICollaboration,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import UserResponse from "@/components/contract-card/UserResponse";
-import RenderHTML from "react-native-render-html";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
-import ActionContainer from "./ActionContainer";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import MemberContainer from "./MemberContainer";
-import AddMembersModal from "./AddMemberModal";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import FeedbackModal from "./FeedbackModal";
-import { router } from "expo-router";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import { stylesFn } from "@/styles/CollaborationDetails.styles";
+import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
 import { truncateText } from "@/utils/text";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
+import React, { useState } from "react";
+import { Dimensions, Pressable, ScrollView, View } from "react-native";
+import { Card, Portal, Text } from "react-native-paper";
+import RenderHTML from "react-native-render-html";
+import ActionContainer from "./ActionContainer";
+import AddMembersModal from "./AddMemberModal";
+import FeedbackModal from "./FeedbackModal";
+import MemberContainer from "./MemberContainer";
 
 interface CollaborationDetailsContentProps {
   collaborationDetail: ICollaboration;
@@ -49,14 +49,16 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
       <View style={styles.profileCard}>
         {props?.applicationData?.attachments &&
           props?.applicationData?.attachments.length > 0 && (
-            <Carousel
-              theme={theme}
-              data={
-                props?.applicationData?.attachments?.map((attachment) =>
-                  processRawAttachment(attachment)
-                ) || []
-              }
-            />
+            <View style={{ alignSelf: "center" }}>
+              <Carousel
+                theme={theme}
+                data={
+                  props?.applicationData?.attachments?.map((attachment) =>
+                    processRawAttachment(attachment)
+                  ) || []
+                }
+              />
+            </View>
           )}
         <Card.Content style={styles.profileContent}>
           {/* About Collaboration */}
@@ -130,7 +132,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
             influencerQuestions={
               props?.collaborationDetail?.questionsToInfluencers
             }
-            setConfirmationModalVisible={() => {}}
+            setConfirmationModalVisible={() => { }}
           />
           <Pressable
             style={{
