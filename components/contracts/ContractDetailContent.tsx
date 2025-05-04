@@ -1,5 +1,6 @@
 import UserResponse from "@/components/contract-card/UserResponse";
 import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import {
   IApplications,
   ICollaboration,
@@ -7,6 +8,7 @@ import {
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import Carousel from "@/shared-uis/components/carousel/carousel";
+import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
@@ -39,6 +41,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
   const [addMemberModal, setAddMemberModal] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [updateMemberContainer, setUpdateMemberContainer] = useState(0);
+  const { xl } = useBreakpoints()
 
   return (
     <ScrollView
@@ -50,14 +53,28 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
         {props?.applicationData?.attachments &&
           props?.applicationData?.attachments.length > 0 && (
             <View style={{ alignSelf: "center" }}>
-              <Carousel
-                theme={theme}
-                data={
-                  props?.applicationData?.attachments?.map((attachment) =>
+              {
+                xl ? <ScrollMedia
+                  media={props?.applicationData?.attachments?.map((attachment) =>
                     processRawAttachment(attachment)
-                  ) || []
-                }
-              />
+                  ) || []}
+                  MAX_WIDTH_WEB={"100%"}
+                  xl={xl}
+                  theme={theme}
+                  mediaRes={{
+                    width: 300,
+                    height: 300
+                  }}
+                /> : <Carousel
+                  theme={theme}
+                  data={
+                    props?.applicationData?.attachments?.map((attachment) =>
+                      processRawAttachment(attachment)
+                    ) || []
+                  }
+                />
+              }
+
             </View>
           )}
         <Card.Content style={styles.profileContent}>
