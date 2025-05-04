@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { IconButton } from "react-native-paper";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
-import { View } from "@/components/theme/Themed";
+import { Text, View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
+import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import {
   IApplications,
@@ -39,11 +40,15 @@ const ContractScreen = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const { manager } = useAuthContext()
   const { pageID } = useLocalSearchParams();
   const [contract, setContract] = useState<ICollaborationCard>();
 
   const fetchProposals = async () => {
     try {
+      if (!manager)
+        return;
+
       const user = AuthApp.currentUser;
 
       if (!user?.uid) {
@@ -95,12 +100,13 @@ const ContractScreen = () => {
 
   useEffect(() => {
     fetchProposals();
-  }, []);
+  }, [manager]);
 
   if (isLoading || !contract) {
     return (
       <AppLayout>
         <View style={{ flex: 1, alignItems: "center", padding: 20 }}>
+          <Text>Status is here: {isLoading} & {JSON.stringify(contract)}</Text>
           <ActivityIndicator size="large" color={Colors(theme).primary} />
         </View>
       </AppLayout>
