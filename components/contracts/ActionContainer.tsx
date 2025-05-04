@@ -76,22 +76,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
     });
   };
 
-  const endContract = async () => {
-    const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-    const timeEnded = new Date().getTime();
-    await updateDoc(contractRef, {
-      status: 2,
-      contractTimestamp: {
-        ...contract.contractTimestamp,
-        endedOn: timeEnded,
-      },
-    }).then(() => {
-      Toaster.success("Contract ended");
-      refreshData();
-      feedbackModalVisible();
-    });
-  };
-
   const fetchManager = async () => {
     if (!contract.feedbackFromBrand?.managerId) return;
     const managerRef = doc(
@@ -115,7 +99,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         gap: 16,
       }}
     >
-      {contract.status !== 3 && (
+      {contract.status < 2 && (
         <View
           style={{
             flexDirection: "row",
@@ -126,7 +110,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
           {contract.status === 0 && (
             <>
               <Button
-                mode="contained"
+                mode="outlined"
                 style={{
                   flex: 1,
                 }}
@@ -154,11 +138,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
           {contract.status === 1 && (
             <>
               <Button
-                mode="contained"
+                mode="contained-tonal"
                 style={{
                   flex: 1,
                 }}
-                onPress={endContract}
+                onPress={feedbackModalVisible}
               >
                 End Contract
               </Button>
@@ -183,7 +167,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
               </Button>
             </>
           )}
-          {contract.status === 2 && !contract.feedbackFromBrand && (
+          {/* {contract.status === 2 && !contract.feedbackFromBrand && (
             <>
               <Button
                 mode="contained"
@@ -195,7 +179,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 Give Feedback
               </Button>
             </>
-          )}
+          )} */}
         </View>
       )}
       {contract.feedbackFromBrand && (
