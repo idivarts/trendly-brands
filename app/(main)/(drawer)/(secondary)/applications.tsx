@@ -44,10 +44,10 @@ const ApplicationsScreen = () => {
             }}>
                 <ApplicationsTabContent
                     isApplicationConcised={true}
-                    pageID={"6M5M35RrgaDstPwz7I3G"}
+                    pageID={""}
                     collaboration={{
-                        id: "6M5M35RrgaDstPwz7I3G",
-                        name: "Collaboration Name",
+                        id: "",
+                        name: "",
                         questionsToInfluencers: [],
                     }}
                 />
