@@ -40,6 +40,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [textFeedback, setTextFeedback] = useState("");
   const { manager } = useAuthContext();
 
+
   const provideFeedback = async () => {
     try {
       const contractRef = doc(
@@ -53,6 +54,11 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
       }
       const date = new Date();
       await updateDoc(contractRef, {
+        status: 2,
+        contractTimestamp: {
+          ...contract.contractTimestamp,
+          endedOn: Date.now(),
+        },
         feedbackFromBrand: {
           ratings: selectedStar,
           feedbackReview: textFeedback,
@@ -61,11 +67,11 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         },
       });
 
-      if (contract.feedbackFromInfluencer?.ratings) {
-        await updateDoc(contractRef, {
-          status: 3,
-        });
-      }
+      // if (contract.feedbackFromInfluencer?.ratings) {
+      //   await updateDoc(contractRef, {
+      //     status: 3,
+      //   });
+      // }
       setVisibility(false);
       refreshData();
     } catch (e) {
@@ -82,6 +88,9 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         borderRadius: 10,
         padding: 20,
         marginHorizontal: 20,
+        width: "100%",
+        maxWidth: 600,
+        alignSelf: "center"
       }}
     >
       <KeyboardAvoidingView
@@ -151,7 +160,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                     color: Colors(theme).white,
                   }}
                 >
-                  Submit Feedback
+                  End Contract with Feedback
                 </Text>
               </Pressable>
             )}
