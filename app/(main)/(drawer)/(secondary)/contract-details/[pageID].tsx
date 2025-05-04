@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { IconButton } from "react-native-paper";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
-import { Text, View } from "@/components/theme/Themed";
+import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
@@ -106,7 +106,7 @@ const ContractScreen = () => {
     return (
       <AppLayout>
         <View style={{ flex: 1, alignItems: "center", padding: 20 }}>
-          <Text>Status is here: {isLoading} & {JSON.stringify(contract)}</Text>
+          {/* <Text>Status is here: {isLoading} & {JSON.stringify(contract)}</Text> */}
           <ActivityIndicator size="large" color={Colors(theme).primary} />
         </View>
       </AppLayout>
