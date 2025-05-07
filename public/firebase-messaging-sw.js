@@ -6,11 +6,12 @@ importScripts(
 firebase.initializeApp({
   apiKey: "AIzaSyDHQpInl2OP37roYCByI4thwNpMJrYCFWE",
   authDomain: "trendly-9ab99.firebaseapp.com",
+  databaseURL: "https://trendly-9ab99-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "trendly-9ab99",
   storageBucket: "trendly-9ab99.appspot.com",
   messagingSenderId: "799278694891",
-  appId: "1:799278694891:web:33c9053ae2c1c6a95ad9ae",
-  measurementId: "G-7HR6HKN407",
+  appId: "1:799278694891:web:c84d0b43feef61aa5ad9ae",
+  measurementId: "G-TH0T6MMYHK"
 });
 
 const messaging = firebase.messaging();
