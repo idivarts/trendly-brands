@@ -24,7 +24,7 @@ jobs:
     - run: npm i
     - name: Load Config JS
       env:
-        FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_FIREBASE_CONFIG }}
+        FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
         ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
       run: |
         echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
