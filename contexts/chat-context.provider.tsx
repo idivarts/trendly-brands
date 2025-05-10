@@ -7,7 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { Channel, DefaultGenerics, StreamChat } from "stream-chat";
+import { DefaultGenerics, StreamChat } from "stream-chat";
 import { useAuthContext } from "./auth-context.provider";
 import StreamWrapper from "./stream-wrapper";
 
@@ -16,11 +16,11 @@ export const streamClient = StreamChat.getInstance(
 );
 
 interface ChatContextProps {
-  createGroupWithMembers: (
-    groupName: string,
-    userId: string,
-    collaborationId: string,
-  ) => Promise<Channel>;
+  // createGroupWithMembers: (
+  //   groupName: string,
+  //   userId: string,
+  //   collaborationId: string,
+  // ) => Promise<Channel>;
   connectUser: () => Promise<string>;
   fetchMembers: (channel: string) => Promise<any>;
   addMemberToChannel: (channel: string, member: string) => void;
@@ -34,7 +34,7 @@ interface ChatContextProps {
 }
 
 const ChatContext = createContext<ChatContextProps>({
-  createGroupWithMembers: async () => Promise.resolve({} as Channel),
+  // createGroupWithMembers: async () => Promise.resolve({} as Channel),
   connectUser: async () => "",
   fetchMembers: async () => { },
   addMemberToChannel: async () => { },
@@ -114,27 +114,27 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     };
   }, [user]);
 
-  const createGroupWithMembers = async (
-    groupName: string,
-    userId: string,
-    collaborationId: string,
-  ): Promise<Channel> => {
-    const response = await HttpWrapper.fetch("/api/v1/chat/channel", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: groupName,
-        userId,
-        collaborationId,
-      }),
-    });
+  // const createGroupWithMembers = async (
+  //   groupName: string,
+  //   userId: string,
+  //   collaborationId: string,
+  // ): Promise<Channel> => {
+  //   const response = await HttpWrapper.fetch("/api/v1/chat/channel", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       name: groupName,
+  //       userId,
+  //       collaborationId,
+  //     }),
+  //   });
 
-    const data = await response.json();
+  //   const data = await response.json();
 
-    return data.channel;
-  };
+  //   return data.channel;
+  // };
 
   const fetchMembers = async (channel: string) => {
     const channelToWatch = streamClient.channel("messaging", channel);
@@ -200,7 +200,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <ChatContext.Provider
       value={{
-        createGroupWithMembers,
+        // createGroupWithMembers,
         connectUser,
         fetchMembers,
         addMemberToChannel,

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useChatContext, useNotificationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
 import { Application, Collaboration, InfluencerApplication } from "@/types/Collaboration";
@@ -28,7 +29,7 @@ const useApplications = ({
   data,
   handleActionModalClose,
 }: UseApplicationsProps) => {
-  const { createGroupWithMembers, connectUser } = useChatContext();
+  const { connectUser } = useChatContext();
   const {
     createNotification,
     sendNotification,
@@ -149,49 +150,16 @@ const useApplications = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        createGroupWithMembers(
-          influencerApplication.collaboration?.name || data.collaboration.name,
-          influencerApplication.application.userId,
-          influencerApplication.application.collaborationId,
-        ).then((channel) => {
-          connectUser();
-
-          createNotification(
-            influencerApplication.application.userId,
-            {
-              data: {
-                collaborationId: data.collaboration.id,
-              },
-              description: `Your application for ${data.collaboration.name} has been accepted`,
-              isRead: false,
-              timeStamp: Date.now(),
-              title: "Application Accepted",
-              type: "application-accepted",
-            },
-            "users"
-          );
-
-          sendNotification(
-            {
-              users: [influencerApplication.application.userId],
-            },
-            {
-              data: {
-                collaborationId: influencerApplication.application.collaborationId,
-              },
-              notification: {
-                title: "Application Accepted",
-                description: `Your application for ${data.collaboration.name} has been accepted`,
-              },
-            },
-          );
-
-          router.navigate(`/channel/${channel.cid}`);
-        });
-
+        HttpWrapper.fetch(`/api/v1/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
+          method: "POST",
+        }).then(async (res) => {
+          Toaster.success("Application accepted successfully");
+          const body = await res.json()
+          await connectUser();
+          router.navigate(`/channel/${body.channel.cid}`);
+        })
         fetchApplications();
         handleActionModalClose();
-        Toaster.success("Application accepted successfully");
       });
     } catch (error) {
       console.error(error);
