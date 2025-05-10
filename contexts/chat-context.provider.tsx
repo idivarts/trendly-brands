@@ -24,7 +24,7 @@ interface ChatContextProps {
   connectUser: () => Promise<string>;
   fetchMembers: (channel: string) => Promise<any>;
   addMemberToChannel: (channel: string, member: string) => void;
-  sendSystemMessage: (channel: string, message: string) => void;
+  // sendSystemMessage: (channel: string, message: string) => void;
   fetchChannelCid: (channelId: string) => Promise<string>;
   removeMemberFromChannel: (
     channel: string,
@@ -38,7 +38,7 @@ const ChatContext = createContext<ChatContextProps>({
   connectUser: async () => "",
   fetchMembers: async () => { },
   addMemberToChannel: async () => { },
-  sendSystemMessage: async () => { },
+  // sendSystemMessage: async () => { },
   fetchChannelCid: async () => "",
   removeMemberFromChannel: async () => false,
   hasError: false,
@@ -158,18 +158,18 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }
   };
 
-  const sendSystemMessage = async (channel: string, message: string) => {
-    const channelToWatch = streamClient.channel("messaging", channel);
-    const messageToSend = {
-      text: message,
-      user: {
-        id: "system",
-        name: "system",
-      },
-      type: "system",
-    };
-    channelToWatch.sendMessage(messageToSend);
-  };
+  // const sendSystemMessage = async (channel: string, message: string) => {
+  //   const channelToWatch = streamClient.channel("messaging", channel);
+  //   const messageToSend = {
+  //     text: message,
+  //     user: {
+  //       id: "system",
+  //       name: "system",
+  //     },
+  //     type: "system",
+  //   };
+  //   channelToWatch.sendMessage(messageToSend);
+  // };
 
   const removeMemberFromChannel = async (channel: string, member: string) => {
     try {
@@ -204,7 +204,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         connectUser,
         fetchMembers,
         addMemberToChannel,
-        sendSystemMessage,
+        // sendSystemMessage,
         fetchChannelCid,
         removeMemberFromChannel,
         hasError,

@@ -3,6 +3,8 @@ import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faClose, faStar } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -66,6 +68,11 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           timeSubmitted: date.getTime(),
         },
       });
+      HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}/end`, {
+        method: "POST",
+      }).then(r => {
+        Toaster.success("Contract has now ended")
+      })
 
       // if (contract.feedbackFromInfluencer?.ratings) {
       //   await updateDoc(contractRef, {
