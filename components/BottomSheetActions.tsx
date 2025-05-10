@@ -102,6 +102,9 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "rejected",
       }).then(() => {
+        HttpWrapper.fetch(`/api/v1/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/reject`, {
+          method: "POST",
+        })
         handleClose();
         Toaster.success("Application rejected successfully");
       });

@@ -184,6 +184,9 @@ const useApplications = ({
       await updateDoc(applicationRef, {
         status: "rejected",
       }).then(() => {
+        HttpWrapper.fetch(`/api/v1/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/reject`, {
+          method: "POST",
+        })
         fetchApplications();
         handleActionModalClose();
         Toaster.success("Application rejected successfully");
