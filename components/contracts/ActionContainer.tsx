@@ -4,6 +4,7 @@ import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
@@ -35,7 +36,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
 }) => {
   const theme = useTheme();
   const [manager, setManager] = useState<IManagers>();
-  const { sendSystemMessage, fetchChannelCid } = useChatContext();
+  const { fetchChannelCid } = useChatContext();
 
   const renderStars = (rating: number) => {
     const fullStars = Math.floor(rating);
@@ -71,7 +72,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
         startedOn: timeStarted,
       },
     }).then(() => {
-      Toaster.success("Contract started");
+      HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}`, {
+        method: "POST",
+      }).then(r => {
+        Toaster.success("Contract has started")
+      })
       refreshData();
     });
   };
@@ -115,11 +120,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
                   flex: 1,
                 }}
                 onPress={() => {
-                  sendSystemMessage(
-                    contract.streamChannelId,
-                    "Please revise the quote"
-                  );
-                  Toaster.success("Message sent to influencer");
+                  HttpWrapper.fetch(`/api/v1/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
+                    method: "POST",
+                  }).then(r => {
+                    Toaster.success("Successfully notied influencer to revise quotation")
+                  })
                 }}
               >
                 Ask To Revise Quote

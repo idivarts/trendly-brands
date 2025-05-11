@@ -1,5 +1,6 @@
-import { useChatContext, useNotificationContext } from "@/contexts";
+import { useChatContext } from "@/contexts";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Clipboard from "expo-clipboard";
@@ -37,8 +38,7 @@ const BottomSheetActions = ({
     React.useState(false);
   const router = useRouter();
 
-  const { createGroupWithMembers, connectUser } = useChatContext();
-  const { createNotification, sendNotification } = useNotificationContext();
+  const { connectUser } = useChatContext();
 
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(
@@ -71,41 +71,14 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        createGroupWithMembers(
-          data.collaboration.name,
-          cardId.influencerID,
-          cardId.collaborationID
-        ).then(async (channel) => {
-          createNotification(cardId.influencerID,
-            {
-              data: {
-                collaborationId: data.collaboration.id,
-              },
-              description: `Your application for ${data.collaboration.name} has been accepted`,
-              isRead: false,
-              timeStamp: Date.now(),
-              title: "Application Accepted",
-              type: "application-accepted",
-            },
-            "users"
-          ).catch(e => { });
-
-          sendNotification(
-            {
-              users: [cardId.influencerID],
-            },
-            {
-              notification: {
-                title: "Application Accepted",
-                description: `Your application for ${data.collaboration.name} has been accepted`,
-              },
-            }
-          ).catch(e => { });
-
+        HttpWrapper.fetch(`/api/v1/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/accept`, {
+          method: "POST",
+        }).then(async (res) => {
+          Toaster.success("Application accepted successfully");
+          const body = await res.json()
           await connectUser();
-          router.navigate(`/channel/${channel.cid}`);
-        });
-
+          router.navigate(`/channel/${body.channel.cid}`);
+        })
         handleClose();
 
         Toaster.success("Application accepted successfully");
@@ -129,6 +102,9 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "rejected",
       }).then(() => {
+        HttpWrapper.fetch(`/api/v1/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/reject`, {
+          method: "POST",
+        })
         handleClose();
         Toaster.success("Application rejected successfully");
       });

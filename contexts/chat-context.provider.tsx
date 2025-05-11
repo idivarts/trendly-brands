@@ -7,7 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { Channel, DefaultGenerics, StreamChat } from "stream-chat";
+import { DefaultGenerics, StreamChat } from "stream-chat";
 import { useAuthContext } from "./auth-context.provider";
 import StreamWrapper from "./stream-wrapper";
 
@@ -16,15 +16,15 @@ export const streamClient = StreamChat.getInstance(
 );
 
 interface ChatContextProps {
-  createGroupWithMembers: (
-    groupName: string,
-    userId: string,
-    collaborationId: string,
-  ) => Promise<Channel>;
+  // createGroupWithMembers: (
+  //   groupName: string,
+  //   userId: string,
+  //   collaborationId: string,
+  // ) => Promise<Channel>;
   connectUser: () => Promise<string>;
   fetchMembers: (channel: string) => Promise<any>;
   addMemberToChannel: (channel: string, member: string) => void;
-  sendSystemMessage: (channel: string, message: string) => void;
+  // sendSystemMessage: (channel: string, message: string) => void;
   fetchChannelCid: (channelId: string) => Promise<string>;
   removeMemberFromChannel: (
     channel: string,
@@ -34,11 +34,11 @@ interface ChatContextProps {
 }
 
 const ChatContext = createContext<ChatContextProps>({
-  createGroupWithMembers: async () => Promise.resolve({} as Channel),
+  // createGroupWithMembers: async () => Promise.resolve({} as Channel),
   connectUser: async () => "",
   fetchMembers: async () => { },
   addMemberToChannel: async () => { },
-  sendSystemMessage: async () => { },
+  // sendSystemMessage: async () => { },
   fetchChannelCid: async () => "",
   removeMemberFromChannel: async () => false,
   hasError: false,
@@ -114,27 +114,27 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     };
   }, [user]);
 
-  const createGroupWithMembers = async (
-    groupName: string,
-    userId: string,
-    collaborationId: string,
-  ): Promise<Channel> => {
-    const response = await HttpWrapper.fetch("/api/v1/chat/channel", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: groupName,
-        userId,
-        collaborationId,
-      }),
-    });
+  // const createGroupWithMembers = async (
+  //   groupName: string,
+  //   userId: string,
+  //   collaborationId: string,
+  // ): Promise<Channel> => {
+  //   const response = await HttpWrapper.fetch("/api/v1/chat/channel", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({
+  //       name: groupName,
+  //       userId,
+  //       collaborationId,
+  //     }),
+  //   });
 
-    const data = await response.json();
+  //   const data = await response.json();
 
-    return data.channel;
-  };
+  //   return data.channel;
+  // };
 
   const fetchMembers = async (channel: string) => {
     const channelToWatch = streamClient.channel("messaging", channel);
@@ -158,18 +158,18 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }
   };
 
-  const sendSystemMessage = async (channel: string, message: string) => {
-    const channelToWatch = streamClient.channel("messaging", channel);
-    const messageToSend = {
-      text: message,
-      user: {
-        id: "system",
-        name: "system",
-      },
-      type: "system",
-    };
-    channelToWatch.sendMessage(messageToSend);
-  };
+  // const sendSystemMessage = async (channel: string, message: string) => {
+  //   const channelToWatch = streamClient.channel("messaging", channel);
+  //   const messageToSend = {
+  //     text: message,
+  //     user: {
+  //       id: "system",
+  //       name: "system",
+  //     },
+  //     type: "system",
+  //   };
+  //   channelToWatch.sendMessage(messageToSend);
+  // };
 
   const removeMemberFromChannel = async (channel: string, member: string) => {
     try {
@@ -200,11 +200,11 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <ChatContext.Provider
       value={{
-        createGroupWithMembers,
+        // createGroupWithMembers,
         connectUser,
         fetchMembers,
         addMemberToChannel,
-        sendSystemMessage,
+        // sendSystemMessage,
         fetchChannelCid,
         removeMemberFromChannel,
         hasError,

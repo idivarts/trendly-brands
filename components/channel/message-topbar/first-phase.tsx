@@ -1,8 +1,9 @@
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import { CHAT_MESSAGE_TOPBAR_DESCRIPTION } from "@/constants/ChatMessageTopbar";
-import { useChatContext, useContractContext } from "@/contexts";
+import { useContractContext } from "@/contexts";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import MessageTopbar from "@/shared-uis/components/chat-message-bar";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 
@@ -20,10 +21,6 @@ const FirstPhase: React.FC<FirstPhaseProps> = ({
   const {
     updateContract,
   } = useContractContext();
-
-  const {
-    sendSystemMessage,
-  } = useChatContext();
 
   const startContract = async () => {
     await updateContract(contractId, {
@@ -56,7 +53,11 @@ const FirstPhase: React.FC<FirstPhaseProps> = ({
             size="small"
             mode="text"
             onPress={() => {
-              sendSystemMessage(contractId, "Brand has requested to revise the quote.");
+              HttpWrapper.fetch(`/api/v1/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
+                method: "POST",
+              }).then(r => {
+                Toaster.success("Successfully notied influencer to revise quotation")
+              })
             }}
           >
             Ask to Revise Quote

@@ -13,6 +13,7 @@ import { useInfluencers } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -116,6 +117,10 @@ const InvitationsTabContent = (props: any) => {
       await setDoc(invitationDocRef, invitationPayload).then(() => {
         setIsInvitationModalVisible(false);
         Toaster.success("Invitation sent successfully");
+      }).then(() => {
+        HttpWrapper.fetch(`/api/v1/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
+          method: "POST",
+        })
       });
     } catch (error) {
       console.error(error);
