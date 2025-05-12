@@ -16,7 +16,7 @@ import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
-import { Dimensions, Platform, Pressable } from "react-native";
+import { Dimensions, Platform, Pressable, View } from "react-native";
 import Button from "../../ui/button";
 
 interface ApplicationCardProps {
@@ -62,26 +62,28 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         }
       />
       <Pressable onPress={profileModalAction}>
-        <InfluencerMetrics user={data.influencer} action={<Button
-          mode="outlined"
-          size="small"
-          onPress={() => {
-            if (data.application.status === "pending") {
-              acceptApplication();
-            }
-          }}
-        >
-          <FontAwesomeIcon
-            color={Colors(theme).primary}
-            icon={faCheck}
-            size={12}
-            style={{
-              marginRight: 6,
-              marginTop: -2,
+        <View style={{ paddingHorizontal: 16 }}>
+          <InfluencerMetrics user={data.influencer} action={<Button
+            mode="outlined"
+            size="small"
+            onPress={() => {
+              if (data.application.status === "pending") {
+                acceptApplication();
+              }
             }}
-          />
-          {data.application.status === "pending" ? "Accept" : "Accepted"}
-        </Button>} />
+          >
+            <FontAwesomeIcon
+              color={Colors(theme).primary}
+              icon={faCheck}
+              size={12}
+              style={{
+                marginRight: 6,
+                marginTop: -2,
+              }}
+            />
+            {data.application.status === "pending" ? "Accept" : "Accepted"}
+          </Button>} />
+        </View>
         <CardDescription text={truncateText(data.application.message, 160)} />
         <CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}
