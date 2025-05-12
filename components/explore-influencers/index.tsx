@@ -182,7 +182,7 @@ const ExploreInfluencers = () => {
                 influencer={item}
                 openProfile={(influencer) => {
                   if (influencer)
-                    setSelectedInfluencer(influencer as any);
+                    setSelectedInfluencer(influencer as User);
                   bottomSheetModalRef.current?.present();
                 }}
                 setSelectedInfluencer={setSelectedInfluencer as any}
