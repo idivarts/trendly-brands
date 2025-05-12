@@ -6,7 +6,7 @@ import { useTheme } from "@react-navigation/native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList } from "react-native";
 import CollaborationFilter from "../FilterModal";
-import InfluencerCard from "../InfluencerCard";
+// import InfluencerCard from "../InfluencerCard";
 import SearchComponent from "../SearchComponent";
 import { View } from "../theme/Themed";
 
@@ -20,7 +20,8 @@ import {
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
-import { collection, orderBy, query } from "firebase/firestore";
+import InfluencerCard from "@/shared-uis/components/InfluencerCard";
+import { collection, orderBy, query, where } from "firebase/firestore";
 import { IOScrollView } from "react-native-intersection-observer";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
@@ -70,7 +71,7 @@ const ExploreInfluencers = () => {
   const influencersRef = collection(FirestoreDB, "users");
   const q = query(
     influencersRef,
-    // where("profile.completionPercentage", ">=", 60),
+    where("profile.completionPercentage", ">=", 60),
     orderBy("creationTime", "desc")
   );
   const { loading: isLoading, data, onScrollEvent } = useInfiniteScroll<User>(q, 10)
@@ -180,11 +181,23 @@ const ExploreInfluencers = () => {
                 ToggleModal={ToggleModal}
                 influencer={item}
                 openProfile={(influencer) => {
-                  setSelectedInfluencer(influencer);
+                  if (influencer)
+                    setSelectedInfluencer(influencer as any);
                   bottomSheetModalRef.current?.present();
                 }}
-                setSelectedInfluencer={setSelectedInfluencer}
+                setSelectedInfluencer={setSelectedInfluencer as any}
               />
+              // <InfluencerCard
+              //   key={index}
+              //   type="explore"
+              //   ToggleModal={ToggleModal}
+              //   influencer={item}
+              //   openProfile={(influencer) => {
+              //     setSelectedInfluencer(influencer);
+              //     bottomSheetModalRef.current?.present();
+              //   }}
+              //   setSelectedInfluencer={setSelectedInfluencer}
+              // />
             )}
             keyExtractor={(item, index) => index.toString()}
             contentContainerStyle={{
