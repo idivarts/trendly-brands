@@ -37,6 +37,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         ToggleModal={bottomSheetAction}
         cardActionNode={<Button
           mode="outlined"
+          disabled={isAlreadyInvited ? true : false}
           onPress={() => {
             if (!isAlreadyInvited) {
               inviteInfluencer();
