@@ -6,10 +6,10 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import stylesFn from "@/styles/tab1.styles";
 import { imageUrl } from "@/utils/url";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import {
   faArrowRight,
-  faEnvelopeOpen,
-  faUserPlus,
+  faMailBulk
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -141,19 +141,20 @@ const PreSignIn = () => {
               {item.key === "connect" && (
                 <View style={styles.socialContainer}>
                   <SocialButton
-                    icon={faUserPlus}
-                    label="Create New Account"
-                    onPress={() => {
-                      router.push("/create-new-account");
-                    }}
-                  />
-                  <SocialButton
-                    icon={faEnvelopeOpen}
-                    label="Login"
+                    icon={faGoogle}
+                    label="Continue with Google"
                     onPress={() => {
                       router.push("/login");
                     }}
                   />
+                  <SocialButton
+                    icon={faMailBulk}
+                    label="Continue with Email/Password"
+                    onPress={() => {
+                      router.push("/create-new-account");
+                    }}
+                  />
+
                 </View>
               )}
             </View>
