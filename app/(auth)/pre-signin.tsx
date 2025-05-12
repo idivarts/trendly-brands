@@ -6,10 +6,11 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import stylesFn from "@/styles/tab1.styles";
 import { imageUrl } from "@/utils/url";
+import { useGoogleLogin } from "@/utils/use-google-login";
+import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import {
   faArrowRight,
-  faEnvelopeOpen,
-  faUserPlus,
+  faMailBulk
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -36,6 +37,7 @@ const PreSignIn = () => {
   const styles = stylesFn(theme);
   const [error, setError] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(false)
   const router = useRouter();
   const swiperRef = useRef<ICarouselInstance>(null);
   const nativeRef = useRef<Swiper>(null);
@@ -65,6 +67,7 @@ const PreSignIn = () => {
   };
 
   const { xl } = useBreakpoints();
+  const { googleLogin } = useGoogleLogin(setLoading, setError)
   return (
     <AppLayout>
       <>
@@ -141,20 +144,26 @@ const PreSignIn = () => {
               {item.key === "connect" && (
                 <View style={styles.socialContainer}>
                   <SocialButton
-                    icon={faUserPlus}
-                    label="Create New Account"
+                    icon={faGoogle}
+                    label="Continue with Google"
+                    onPress={() => {
+                      // router.push("/login");
+                      googleLogin()
+                    }}
+                  />
+                  <SocialButton
+                    icon={faMailBulk}
+                    label="Continue with Email/Password"
                     onPress={() => {
                       router.push("/create-new-account");
                     }}
                   />
-                  <SocialButton
-                    icon={faEnvelopeOpen}
-                    label="Login"
-                    onPress={() => {
-                      router.push("/login");
-                    }}
-                  />
                 </View>
+              )}
+              {error && (
+                <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+                  {error}
+                </Text>
               )}
             </View>
           )}
@@ -182,7 +191,7 @@ const PreSignIn = () => {
           onPress={onPressPagination}
         />
       </>
-      {error && <Text style={{ color: "red" }}>Error: {error}</Text>}
+      {/* {error && <Text style={{ color: "red" }}>Error: {error}</Text>} */}
     </AppLayout>
   );
 };

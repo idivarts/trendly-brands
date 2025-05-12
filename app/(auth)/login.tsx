@@ -3,7 +3,6 @@ import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import fnStyles from "@/styles/login.styles";
-import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import * as React from "react";
@@ -58,7 +57,7 @@ const LoginScreen = () => {
                 mode="outlined"
                 textColor={Colors(theme).text}
                 style={styles.input}
-                left={<Ionicons name="mail-outline" size={20} color={Colors(theme).text} />}
+                // left={<Ionicons name="mail-outline" size={20} color={Colors(theme).text} />}
                 theme={{ colors: { primary: Colors(theme).text } }}
               />
               <TextInput
@@ -68,7 +67,7 @@ const LoginScreen = () => {
                 secureTextEntry
                 mode="outlined"
                 style={[styles.input, { marginTop: 10 }]}
-                left={<Ionicons name="lock-closed-outline" size={20} color={Colors(theme).text} />}
+                // left={<Ionicons name="lock-closed-outline" size={20} color={Colors(theme).text} />}
                 textColor={Colors(theme).text}
                 theme={{ colors: { primary: Colors(theme).text } }}
               />

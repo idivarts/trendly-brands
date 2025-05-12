@@ -43,6 +43,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         cardActionNode={<Button
           mode="outlined"
           size="small"
+          disabled={data.application.status === "pending" ? false : true}
           onPress={() => {
             if (data.application.status === "pending") {
               acceptApplication();

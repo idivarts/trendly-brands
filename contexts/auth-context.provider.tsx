@@ -1,4 +1,5 @@
 import { useStorageState } from "@/hooks";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -15,6 +16,7 @@ import {
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
+  UserCredential,
 } from "firebase/auth";
 import {
   collection,
@@ -47,6 +49,8 @@ interface AuthContextProps {
     manager: Partial<Manager>
   ) => Promise<void>;
   manager: Manager | null;
+  firebaseSignIn: Function,
+  firebaseSignUp: Function
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -60,14 +64,18 @@ const AuthContext = createContext<AuthContextProps>({
   signUp: (name: string, email: string, password: string) => null,
   updateManager: () => Promise.resolve(),
   manager: null,
+  firebaseSignIn: () => { },
+  firebaseSignUp: () => { }
 });
 
 export const useAuthContext = () => useContext(AuthContext);
 
-const isWorkEmail = (email: string): boolean => {
-  const generalDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com"];
-  const emailDomain = email.split("@")[1]?.toLowerCase();
-  return emailDomain ? !generalDomains.includes(emailDomain) : false;
+export const isWorkEmail = (email: string): boolean => {
+  // For now made it so that all the emails are allowed to register
+  return true
+  // const generalDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com"];
+  // const emailDomain = email.split("@")[1]?.toLowerCase();
+  // return emailDomain ? !generalDomains.includes(emailDomain) : false;
 };
 
 export const AuthContextProvider: React.FC<PropsWithChildren> = ({
@@ -101,6 +109,46 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     fetchManager();
   }, [session]);
 
+  const firebaseSignIn = async (manager: UserCredential) => {
+    const managerCredential = manager
+    setSession(managerCredential.user.uid);
+
+    HttpWrapper.fetch("/api/v1/chat/auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    analyticsLogEvent("signed_in", {
+      id: managerCredential.user.uid,
+      name: managerCredential.user.displayName,
+      email: managerCredential.user.email,
+    });
+
+    // For existing managers, redirect to the main screen.
+    router.replace("/explore-influencers");
+    Toaster.success("Signed In Successfully!");
+  }
+
+  const firebaseSignUp = (manager: UserCredential) => {
+    setSession(manager.user.uid);
+
+    HttpWrapper.fetch("/api/v1/chat/auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    resetAndNavigate({
+      pathname: "/onboarding-your-brand",
+      params: {
+        firstBrand: "true",
+      },
+    });
+  }
+
   const signIn = async (email: string, password: string) => {
     try {
       const managerCredential = await signInWithEmailAndPassword(
@@ -122,24 +170,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         return;
       }
 
-      setSession(managerCredential.user.uid);
-
-      await HttpWrapper.fetch("/api/v1/chat/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      await analyticsLogEvent("signed_in", {
-        id: managerCredential.user.uid,
-        name: managerCredential.user.displayName,
-        email: managerCredential.user.email,
-      });
-
-      // For existing managers, redirect to the main screen.
-      router.replace("/explore-influencers");
-      Toaster.success("Signed In Successfully!");
+      await firebaseSignIn(managerCredential)
     } catch (error) {
       console.error("Error signing in: ", error);
       Toaster.error("Error signing in. Please try again.");
@@ -161,7 +192,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const colRef = collection(FirestoreDB, "managers");
         const docRef = doc(colRef, userCredential.user.uid);
 
-        let userData = {
+        let userData: IManagers = {
           name: name,
           email: email,
           pushNotificationToken: {
@@ -185,21 +216,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const checkVerification = async () => {
           await userCredential.user.reload();
           if (userCredential.user.emailVerified) {
-            setSession(userCredential.user.uid);
-
-            resetAndNavigate({
-              pathname: "/onboarding-your-brand",
-              params: {
-                firstBrand: "true",
-              },
-            });
-
-            await HttpWrapper.fetch("/api/v1/chat/auth", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            });
+            firebaseSignUp(userCredential)
           } else {
             setTimeout(checkVerification, 2000);
           }
@@ -313,6 +330,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         signUp,
         updateManager,
         manager,
+        firebaseSignIn,
+        firebaseSignUp
       }}
     >
       {children}

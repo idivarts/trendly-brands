@@ -1,3 +1,4 @@
+import { useAuthContext } from "@/contexts";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, DocumentData, getDocs, limit, onSnapshot, orderBy, query, QuerySnapshot, startAfter, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -15,6 +16,8 @@ const useInfluencers = ({
   const [hasMore, setHasMore] = useState(true);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  const { manager } = useAuthContext()
+
   const PAGE_SIZE = 5;
 
   const fetchInitialInfluencers = () => {
@@ -22,7 +25,8 @@ const useInfluencers = ({
     const influencerRef = collection(FirestoreDB, "users");
     const influencersQuery = query(
       influencerRef,
-      where("profile.completionPercentage", ">=", 60),
+      ...(manager?.isAdmin ? [] : [where("profile.completionPercentage", ">=", 60)]),
+      // where("profile.completionPercentage", ">=", 60),
       orderBy("lastUseTime", "desc"),
       limit(PAGE_SIZE)
     );
