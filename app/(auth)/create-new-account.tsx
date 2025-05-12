@@ -119,6 +119,15 @@ const SignUpScreen = () => {
               Login
             </Text>
           </Text>
+          <Text style={styles.loginText}>
+            Looking for Social Signup?{" "}
+            <Text
+              style={styles.loginLink}
+              onPress={() => router.back()}
+            >
+              Go Back
+            </Text>
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

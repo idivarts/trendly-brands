@@ -6,6 +6,7 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import stylesFn from "@/styles/tab1.styles";
 import { imageUrl } from "@/utils/url";
+import { useGoogleLogin } from "@/utils/use-google-login";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import {
   faArrowRight,
@@ -36,6 +37,7 @@ const PreSignIn = () => {
   const styles = stylesFn(theme);
   const [error, setError] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(false)
   const router = useRouter();
   const swiperRef = useRef<ICarouselInstance>(null);
   const nativeRef = useRef<Swiper>(null);
@@ -65,6 +67,7 @@ const PreSignIn = () => {
   };
 
   const { xl } = useBreakpoints();
+  const { googleLogin } = useGoogleLogin(setLoading, setError)
   return (
     <AppLayout>
       <>
@@ -144,7 +147,8 @@ const PreSignIn = () => {
                     icon={faGoogle}
                     label="Continue with Google"
                     onPress={() => {
-                      router.push("/login");
+                      // router.push("/login");
+                      googleLogin()
                     }}
                   />
                   <SocialButton
@@ -154,8 +158,12 @@ const PreSignIn = () => {
                       router.push("/create-new-account");
                     }}
                   />
-
                 </View>
+              )}
+              {error && (
+                <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+                  {error}
+                </Text>
               )}
             </View>
           )}
@@ -183,7 +191,7 @@ const PreSignIn = () => {
           onPress={onPressPagination}
         />
       </>
-      {error && <Text style={{ color: "red" }}>Error: {error}</Text>}
+      {/* {error && <Text style={{ color: "red" }}>Error: {error}</Text>} */}
     </AppLayout>
   );
 };
