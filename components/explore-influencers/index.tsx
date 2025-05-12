@@ -18,6 +18,7 @@ import {
 } from "@gorhom/bottom-sheet";
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useAuthContext } from "@/contexts";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
@@ -64,6 +65,7 @@ const ExploreInfluencers = () => {
 
   // const [isLoading, setIsLoading] = useState(true);
 
+  const { manager } = useAuthContext()
   const theme = useTheme();
 
   const { xl } = useBreakpoints();
@@ -71,7 +73,7 @@ const ExploreInfluencers = () => {
   const influencersRef = collection(FirestoreDB, "users");
   const q = query(
     influencersRef,
-    where("profile.completionPercentage", ">=", 60),
+    ...(manager?.isAdmin ? [] : [where("profile.completionPercentage", ">=", 60)]),
     orderBy("creationTime", "desc")
   );
   const { loading: isLoading, data, onScrollEvent } = useInfiniteScroll<User>(q, 10)
