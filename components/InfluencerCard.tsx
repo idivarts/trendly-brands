@@ -6,17 +6,14 @@ import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-mo
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import { MediaItem } from "@/shared-uis/components/carousel/render-media-item";
 import ImageComponent from "@/shared-uis/components/image-component";
+import { InfluencerMetrics } from "@/shared-uis/components/influencers/influencer-metrics";
 import { stylesFn } from "@/styles/InfluencerCard.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
-import { convertToKUnits } from "@/utils/conversion";
 import { truncateText } from "@/utils/text";
 import {
-  faChartLine,
   faCheck,
   faEllipsis,
-  faFaceSmile,
-  faPeopleRoof,
   faPlus
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -193,48 +190,7 @@ const InfluencerCard = (props: InfluencerCardPropsType) => {
         }}>
 
           <View style={styles.content}>
-            <View style={styles.stats}>
-              <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <FontAwesomeIcon
-                    icon={faPeopleRoof}
-                    color={Colors(theme).primary}
-                    size={20}
-                  />
-                  <Text style={styles.statsText}>
-                    {convertToKUnits(Number(influencer.backend?.followers))}
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <FontAwesomeIcon
-                    icon={faChartLine}
-                    color={Colors(theme).primary}
-                    size={20}
-                  />
-                  <Text style={styles.statsText}>
-                    {convertToKUnits(Number(influencer.backend?.reach))}
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <FontAwesomeIcon
-                    icon={faFaceSmile}
-                    color={Colors(theme).primary}
-                    size={20}
-                  />
-                  <Text style={styles.statsText}>
-                    {convertToKUnits(Number(influencer.backend?.rating))}
-                  </Text>
-                </View>
-              </View>
-              {/* <View style={styles.statItem}>
-              <FontAwesomeIcon
-                icon={faComment}
-                color={Colors(theme).primary}
-                size={18}
-              />
-            </View> */}
-            </View>
-
+            <InfluencerMetrics user={influencer} />
 
             <Text>
               <RenderHTML

@@ -1,23 +1,23 @@
+import { Card } from "@/components/ui/card/secondary";
+import { CardDescription } from "@/components/ui/card/secondary/card-description";
+import { CardFooter } from "@/components/ui/card/secondary/card-footer";
+import { CardHeader } from "@/components/ui/card/secondary/card-header";
+import Colors from "@/constants/Colors";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import Carousel from "@/shared-uis/components/carousel/carousel";
+import { InfluencerMetrics } from "@/shared-uis/components/influencers/influencer-metrics";
+import { InfluencerApplication } from "@/types/Collaboration";
+import { processRawAttachment } from "@/utils/attachments";
+import { convertToKUnits } from "@/utils/conversion";
+import { formatTimeToNow } from "@/utils/date";
+import { truncateText } from "@/utils/text";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { Dimensions, Platform, Pressable } from "react-native";
 import Button from "../../ui/button";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import { useTheme } from "@react-navigation/native";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import Colors from "@/constants/Colors";
-import { Card } from "@/components/ui/card/secondary";
-import { CardHeader } from "@/components/ui/card/secondary/card-header";
-import { CardActions } from "@/components/ui/card/secondary/card-actions";
-import { CardDescription } from "@/components/ui/card/secondary/card-description";
-import { CardFooter } from "@/components/ui/card/secondary/card-footer";
-import { processRawAttachment } from "@/utils/attachments";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { InfluencerApplication } from "@/types/Collaboration";
-import { convertToKUnits } from "@/utils/conversion";
-import { formatTimeToNow } from "@/utils/date";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
-import { truncateText } from "@/utils/text";
 
 interface ApplicationCardProps {
   acceptApplication: () => void;
@@ -62,35 +62,26 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         }
       />
       <Pressable onPress={profileModalAction}>
-        <CardActions
-          metrics={{
-            followers: data.influencer.backend?.followers || 0,
-            reach: data.influencer.backend?.reach || 0,
-            rating: data.influencer.backend?.rating || 0,
+        <InfluencerMetrics user={data.influencer} action={<Button
+          mode="outlined"
+          size="small"
+          onPress={() => {
+            if (data.application.status === "pending") {
+              acceptApplication();
+            }
           }}
-          action={
-            <Button
-              mode="outlined"
-              size="small"
-              onPress={() => {
-                if (data.application.status === "pending") {
-                  acceptApplication();
-                }
-              }}
-            >
-              <FontAwesomeIcon
-                color={Colors(theme).primary}
-                icon={faCheck}
-                size={12}
-                style={{
-                  marginRight: 6,
-                  marginTop: -2,
-                }}
-              />
-              {data.application.status === "pending" ? "Accept" : "Accepted"}
-            </Button>
-          }
-        />
+        >
+          <FontAwesomeIcon
+            color={Colors(theme).primary}
+            icon={faCheck}
+            size={12}
+            style={{
+              marginRight: 6,
+              marginTop: -2,
+            }}
+          />
+          {data.application.status === "pending" ? "Accept" : "Accepted"}
+        </Button>} />
         <CardDescription text={truncateText(data.application.message, 160)} />
         <CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}
