@@ -1,23 +1,13 @@
-import React from "react";
-import { Dimensions, Platform, Pressable } from "react-native";
-import Button from "../../ui/button";
-import Carousel from "@/shared-uis/components/carousel/carousel";
-import { useTheme } from "@react-navigation/native";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
-import Colors from "@/constants/Colors";
-import { Card } from "@/components/ui/card/secondary";
-import { CardHeader } from "@/components/ui/card/secondary/card-header";
-import { CardActions } from "@/components/ui/card/secondary/card-actions";
-import { CardDescription } from "@/components/ui/card/secondary/card-description";
 import { CardFooter } from "@/components/ui/card/secondary/card-footer";
-import { processRawAttachment } from "@/utils/attachments";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import Colors from "@/constants/Colors";
+import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { InfluencerApplication } from "@/types/Collaboration";
 import { convertToKUnits } from "@/utils/conversion";
-import { formatTimeToNow } from "@/utils/date";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
-import { truncateText } from "@/utils/text";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import React, { useState } from "react";
+import Button from "../../ui/button";
 
 interface ApplicationCardProps {
   acceptApplication: () => void;
@@ -33,72 +23,51 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   profileModalAction,
 }) => {
   const theme = useTheme();
-
+  const [influencer, setInfluencer] = useState(data.influencer)
   return (
-    <Card>
-      <CardHeader
-        avatar={data.influencer.profileImage || ""}
-        handle={data.influencer.socials?.[0]}
-        isVerified={data.influencer.isVerified}
-        leftAction={profileModalAction}
-        name={data.influencer.name}
-        rightAction={bottomSheetAction}
-        timestamp={formatTimeToNow(data.application.timeStamp)}
-      />
-      <Carousel
-        containerHeight={
-          data.application?.attachments?.length === 1
-            ? Platform.OS === "web"
-              ? 560
-              : 288
-            : undefined
-        }
-        data={data.application.attachments.map((attachment: Attachment) =>
-          processRawAttachment(attachment)
-        )}
-        theme={theme}
-        carouselWidth={
-          Platform.OS === "web" ? MAX_WIDTH_WEB : Dimensions.get("window").width
-        }
-      />
-      <Pressable onPress={profileModalAction}>
-        <CardActions
-          metrics={{
-            followers: data.influencer.backend?.followers || 0,
-            reach: data.influencer.backend?.reach || 0,
-            rating: data.influencer.backend?.rating || 0,
-          }}
-          action={
-            <Button
-              mode="outlined"
-              size="small"
-              onPress={() => {
-                if (data.application.status === "pending") {
-                  acceptApplication();
-                }
-              }}
-            >
-              <FontAwesomeIcon
-                color={Colors(theme).primary}
-                icon={faCheck}
-                size={12}
-                style={{
-                  marginRight: 6,
-                  marginTop: -2,
-                }}
-              />
-              {data.application.status === "pending" ? "Accept" : "Accepted"}
-            </Button>
+    <>
+      <InfluencerCard
+        influencer={{
+          ...influencer, profile: {
+            ...influencer.profile,
+            content: {
+              ...influencer.profile?.content,
+              about: data.application.message
+            }
           }
-        />
-        <CardDescription text={truncateText(data.application.message, 160)} />
-        <CardFooter
+        }}
+        openProfile={profileModalAction}
+        ToggleModal={bottomSheetAction}
+        type="application"
+        customAttachments={data.application.attachments}
+        cardActionNode={<Button
+          mode="outlined"
+          size="small"
+          onPress={() => {
+            if (data.application.status === "pending") {
+              acceptApplication();
+            }
+          }}
+        >
+          <FontAwesomeIcon
+            color={Colors(theme).primary}
+            icon={faCheck}
+            size={12}
+            style={{
+              marginRight: 6,
+              marginTop: -2,
+            }}
+          />
+          {data.application.status === "pending" ? "Accept" : "Accepted"}
+        </Button>}
+        footerNode={<CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}
           timeline={new Date(data.application.timeline).toLocaleDateString(
             "en-US"
           )}
-        />
-      </Pressable>
-    </Card>
+        />}
+      />
+    </>
+
   );
 };
