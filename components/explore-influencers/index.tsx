@@ -73,7 +73,7 @@ const ExploreInfluencers = () => {
   const influencersRef = collection(FirestoreDB, "users");
   const q = query(
     influencersRef,
-    ...(manager?.isAdmin ? [] : [where("profile.completionPercentage", ">=", 60)]),
+    ...((manager?.isAdmin || false) ? [] : [where("profile.completionPercentage", ">=", 60)]),
     orderBy("creationTime", "desc")
   );
   const { loading: isLoading, data, onScrollEvent } = useInfiniteScroll<User>(q, 10)
