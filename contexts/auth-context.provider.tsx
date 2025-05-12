@@ -71,9 +71,11 @@ const AuthContext = createContext<AuthContextProps>({
 export const useAuthContext = () => useContext(AuthContext);
 
 export const isWorkEmail = (email: string): boolean => {
-  const generalDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com"];
-  const emailDomain = email.split("@")[1]?.toLowerCase();
-  return emailDomain ? !generalDomains.includes(emailDomain) : false;
+  // For now made it so that all the emails are allowed to register
+  return true
+  // const generalDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com"];
+  // const emailDomain = email.split("@")[1]?.toLowerCase();
+  // return emailDomain ? !generalDomains.includes(emailDomain) : false;
 };
 
 export const AuthContextProvider: React.FC<PropsWithChildren> = ({
