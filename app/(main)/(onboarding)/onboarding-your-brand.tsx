@@ -12,6 +12,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/onboarding/brand.styles";
@@ -45,7 +46,7 @@ const OnboardingScreen = () => {
     uploadFile,
   } = useAWSContext();
   const { setSelectedBrand } = useBrandContext();
-  const { manager: user } = useAuthContext();
+  const { manager: user, setSession } = useAuthContext();
 
   const handleCreateBrand = async () => {
     setIsSubmitting(true);
@@ -99,14 +100,17 @@ const OnboardingScreen = () => {
         role: "Manager",
       })
         .then(() => {
-          router.replace({
-            pathname: "/onboarding-get-started",
-            params: {
-              brandId: docRef.id,
-              firstBrand: firstBrand === "true" ? "true" : "false",
-            },
-          });
+          // router.replace({
+          //   pathname: "/onboarding-get-started",
+          //   params: {
+          //     brandId: docRef.id,
+          //     firstBrand: firstBrand === "true" ? "true" : "false",
+          //   },
+          // });
           setSelectedBrand(brandData as Brand);
+          setSession(AuthApp.currentUser?.uid || "");
+          router.replace("/explore-influencers");
+          Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
         })
         .catch((error) => {
           Toaster.error("Error creating brand");

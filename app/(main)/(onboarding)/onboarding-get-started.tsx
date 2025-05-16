@@ -83,6 +83,9 @@ const GetStartedScreen = () => {
       console.error(error);
     }
   };
+  const htmlScript = `<script src="https://js.hsforms.net/forms/embed/48930010.js" defer></script>
+    <div class="hs-form-frame" data-region="na1" data-form-id="83acd98c-f2a8-44ff-b528-9291d6e26349" data-portal-id="48930010"></div>`
+
 
   return (
     <AppLayout withWebPadding={true}>
