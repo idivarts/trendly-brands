@@ -76,6 +76,7 @@ const PreSignIn = () => {
           style={styles.wrapper}
           loop={false}
           width={xl ? 800 : Dimensions.get("window").width}
+          height={Dimensions.get("window").height - 60}
           data={slides}
           onProgressChange={(_, absoluteProgress) => {
             runOnJS((value: number) => {
