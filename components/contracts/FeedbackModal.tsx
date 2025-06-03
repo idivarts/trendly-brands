@@ -15,10 +15,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet,
-  TextInput
+  StyleSheet
 } from "react-native";
 import { Modal } from "react-native-paper";
+import TextInput from "../ui/text-input";
 
 interface FeedbackModalProps {
   star: number;
@@ -104,7 +104,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
-        <Pressable style={styles.modal} onPress={() => Keyboard.dismiss()}>
+        <Pressable style={styles.modal} onPress={() => Platform.OS != "web" && Keyboard.dismiss()}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Feedback</Text>
             <Pressable onPress={() => setVisibility(false)}>
@@ -142,6 +142,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
               <TextInput
                 style={styles.textInput}
                 placeholder="Write your feedback here"
+                autoFocus
                 value={textFeedback}
                 onChangeText={(text) => setTextFeedback(text)}
                 numberOfLines={5}
@@ -156,6 +157,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   paddingHorizontal: 20,
                   borderRadius: 5,
                   marginVertical: 10,
+                  alignSelf: "flex-end",
                 }}
                 onPress={() => {
                   provideFeedback();
@@ -179,6 +181,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   paddingHorizontal: 20,
                   borderRadius: 5,
                   marginVertical: 10,
+                  alignSelf: "flex-end",
                 }}
                 onPress={() => setVisibility(false)}
               >
@@ -217,7 +220,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   modalText: {
     fontSize: 16,
