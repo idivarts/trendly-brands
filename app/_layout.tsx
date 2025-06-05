@@ -26,6 +26,7 @@ import {
   AuthContextProvider,
   useAuthContext
 } from "@/contexts";
+import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
@@ -66,11 +67,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-      <AuthContextProvider>
-        <BottomSheetModalProvider>
-          <RootLayoutStack />
-        </BottomSheetModalProvider>
-      </AuthContextProvider>
+      <UpdateProvider>
+        <AuthContextProvider>
+          <BottomSheetModalProvider>
+            <RootLayoutStack />
+          </BottomSheetModalProvider>
+        </AuthContextProvider>
+      </UpdateProvider>
     </GestureHandlerRootView>
   );
 }

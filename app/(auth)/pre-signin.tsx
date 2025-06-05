@@ -70,13 +70,14 @@ const PreSignIn = () => {
   const { googleLogin } = useGoogleLogin(setLoading, setError)
   return (
     <AppLayout>
-      <>
+      <View style={{ flex: 1, alignSelf: "center" }}>
         <Carousel
           ref={swiperRef} // Attach the ref to Swiper
-          style={styles.wrapper}
+          // style={styles.wrapper}
           loop={false}
           width={xl ? 800 : Dimensions.get("window").width}
-          height={Dimensions.get("window").height - 60}
+          height={Dimensions.get("window").height - 36 * Dimensions.get("window").scale}
+          pagingEnabled
           data={slides}
           onProgressChange={(_, absoluteProgress) => {
             runOnJS((value: number) => {
@@ -191,7 +192,7 @@ const PreSignIn = () => {
           horizontal
           onPress={onPressPagination}
         />
-      </>
+      </View>
       {/* {error && <Text style={{ color: "red" }}>Error: {error}</Text>} */}
     </AppLayout>
   );
