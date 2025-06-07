@@ -113,9 +113,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
 
             <RenderHTML
               source={{
-                html:
-                  props.userData.profile?.content?.about ||
-                  "<p>No content available.</p>",
+                html: truncateText(props.userData.profile?.content?.about as string, 160) || "<p>No content available.</p>",
               }}
               contentWidth={Dimensions.get("window").width}
               defaultTextProps={{
