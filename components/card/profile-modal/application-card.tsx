@@ -10,7 +10,6 @@ import { CardMetaData } from '@/components/ui/card/tertiary/card-metadata';
 import { CardQuestions } from '@/components/ui/card/tertiary/card-questions';
 import Colors from '@/constants/Colors';
 import { useBreakpoints } from '@/hooks';
-import { MAX_HEIGHT_WEB } from '@/shared-uis/components/carousel/carousel-util';
 import ScrollMedia from '@/shared-uis/components/carousel/scroll-media';
 import { Application } from '@/types/Collaboration';
 import { processRawAttachment } from '@/utils/attachments';
@@ -46,7 +45,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       />
       {
         data.attachments && data.attachments.length > 0 && (
-          <ScrollMedia MAX_WIDTH_WEB={MAX_HEIGHT_WEB}
+          <ScrollMedia MAX_WIDTH_WEB={"100%"}
             media={data.attachments.map(v => processRawAttachment(v))}
             xl={xl}
             theme={theme} />
