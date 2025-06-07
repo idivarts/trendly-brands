@@ -12,13 +12,16 @@ export const stylesFn = (theme: Theme) =>
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "flex-start",
+      alignItems: "center",
+      // gap: 16,
+      // alignContent: "center",
       marginBottom: 16,
     },
     logoSection: {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
+      flex: 1,
     },
     titleSection: {
       flex: 1,
