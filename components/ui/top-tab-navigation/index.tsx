@@ -1,8 +1,9 @@
-import { useTheme } from '@react-navigation/native';
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
 import Colors from '@/constants/Colors';
+import { useBreakpoints } from '@/hooks';
 import { stylesFn } from '@/styles/top-tab-navigation/TopTabNavigation.styles';
+import { useTheme } from '@react-navigation/native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 interface TopTabNavigationProps {
   tabs: {
@@ -11,11 +12,13 @@ interface TopTabNavigationProps {
     component: React.ReactNode;
   }[];
   size?: "compact" | "default";
+  mobileFullWidth?: boolean;
 }
 
 const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   tabs,
   size = "default",
+  mobileFullWidth = false
 }) => {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [tabLayout, setTabLayout] = useState<any>({});
@@ -23,6 +26,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const { xl } = useBreakpoints()
 
   useEffect(() => {
     setActiveTab(tabs[0]);
@@ -64,6 +68,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
         style={[
           styles.tabScroll,
           size === "compact" && styles.compactTabScroll,
+          (!xl && mobileFullWidth) && styles.mobileTabScroll,
         ]}
         contentContainerStyle={styles.tabScrollContainer}
       >

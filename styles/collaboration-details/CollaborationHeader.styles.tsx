@@ -6,7 +6,7 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     container: {
       paddingHorizontal: 16,
-      paddingBottom: 16,
+      // paddingBottom: 16,
       marginTop: 16
     },
     header: {

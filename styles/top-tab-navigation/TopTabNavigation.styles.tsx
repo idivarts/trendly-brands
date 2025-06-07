@@ -1,6 +1,6 @@
-import { StyleSheet } from "react-native";
-import { Theme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
+import { Theme } from "@react-navigation/native";
+import { StyleSheet } from "react-native";
 
 export const stylesFn = (theme: Theme) => StyleSheet.create({
   container: {
@@ -12,6 +12,9 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
     maxHeight: 68,
     padding: 8,
     paddingTop: 0,
+  },
+  mobileTabScroll: {
+    width: '100%',
   },
   tabScrollContainer: {
     paddingLeft: 8,
