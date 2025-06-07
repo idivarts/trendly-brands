@@ -5,7 +5,7 @@ import { imageUrl } from "@/utils/url";
 import { faArrowLeft, faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Pressable } from "react-native";
 import { Avatar } from "react-native-paper";
@@ -24,13 +24,17 @@ const CollaborationHeader: React.FC<ColloborationHeaderProps> = ({
   const pageID = useLocalSearchParams().pageID;
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const router = useRouter();
 
   return (
     <>
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => {
-            // setIsVisible(true)
+            if (router.canGoBack())
+              router.back();
+            else
+              router.push("/collaborations");
           }} style={{ paddingRight: 16 }}>
             <FontAwesomeIcon
               icon={faArrowLeft}
