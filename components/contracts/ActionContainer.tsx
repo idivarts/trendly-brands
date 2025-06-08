@@ -5,6 +5,7 @@ import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
@@ -96,6 +97,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
     fetchManager();
   }, [contract.feedbackFromBrand?.managerId]);
 
+  const { openModal } = useConfirmationModel()
+
   return (
     <View
       style={{
@@ -104,7 +107,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         gap: 16,
       }}
     >
-      {contract.status < 2 && (
+      {contract.status <= 3 && (
         <View
           style={{
             flexDirection: "row",
@@ -112,7 +115,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             gap: 16,
           }}
         >
-          {contract.status === 0 && (
+          {contract.status === 3 && (
             <>
               <Button
                 mode="outlined"
@@ -123,7 +126,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                   HttpWrapper.fetch(`/api/v1/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
                     method: "POST",
                   }).then(r => {
-                    Toaster.success("Successfully notied influencer to revise quotation")
+                    Toaster.success("Successfully notified influencer to revise quotation")
                   })
                 }}
               >
@@ -134,7 +137,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 style={{
                   flex: 1,
                 }}
-                onPress={startContract}
+                onPress={() => {
+                  openModal({
+                    confirmAction: startContract,
+                    confirmText: "Confirm",
+                    title: "Start this Contract?",
+                    description: "Are you sure? Make sure you discuss the pricing and final deliverable before starting the contract"
+                  })
+                }}
               >
                 Start Contract
               </Button>
@@ -147,7 +157,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 style={{
                   flex: 1,
                 }}
-                onPress={feedbackModalVisible}
+                onPress={() => {
+                  openModal({
+                    confirmAction: feedbackModalVisible,
+                    confirmText: "End Contract",
+                    title: "End your contract?",
+                    description: "Are you sure you want to end the contract? This action cant be reversed."
+                  })
+                }}
               >
                 End Contract
               </Button>

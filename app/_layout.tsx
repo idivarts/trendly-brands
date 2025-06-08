@@ -28,6 +28,7 @@ import {
 } from "@/contexts";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
+import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
@@ -72,7 +73,9 @@ export default function RootLayout() {
         <TrackingProvider>
           <AuthContextProvider>
             <BottomSheetModalProvider>
-              <RootLayoutStack />
+              <ConfirmationModalProvider>
+                <RootLayoutStack />
+              </ConfirmationModalProvider>
             </BottomSheetModalProvider>
           </AuthContextProvider>
         </TrackingProvider>
