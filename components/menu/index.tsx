@@ -1,21 +1,21 @@
-import { Text, View } from "../theme/Themed";
-import { useAuthContext } from "@/contexts";
-import stylesFn from "@/styles/menu/MenuItem.styles";
-import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import { MENU_ITEMS } from "@/constants/Menu";
-import { Image, Pressable, ScrollView } from "react-native";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useState } from "react";
-import ConfirmationModal from "../ui/modal/ConfirmationModal";
-import { imageUrl } from "@/utils/url";
 import Colors from "@/constants/Colors";
+import { MENU_ITEMS } from "@/constants/Menu";
+import { useAuthContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import ConfirmationModal from "@/shared-uis/components/ConfirmationModal";
+import ImageComponent from "@/shared-uis/components/image-component";
+import stylesFn from "@/styles/menu/MenuItem.styles";
+import { truncateText } from "@/utils/text";
+import { imageUrl } from "@/utils/url";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Image, Pressable, ScrollView } from "react-native";
 import ProfileItemCard from "../ProfileItemCard";
-import ImageComponent from "@/shared-uis/components/image-component";
+import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
-import { truncateText } from "@/utils/text";
 
 const Menu = () => {
   const theme = useTheme();

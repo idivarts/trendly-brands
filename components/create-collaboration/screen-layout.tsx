@@ -6,9 +6,9 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-nat
 import { View } from "../theme/Themed";
 
 import Colors from "@/constants/Colors";
+import ConfirmationModal from "@/shared-uis/components/ConfirmationModal";
 import { resetAndNavigate } from "@/utils/router";
 import { useRouter } from "expo-router";
-import ConfirmationModal from "../ui/modal/ConfirmationModal";
 import ScreenHeader from "../ui/screen-header";
 
 interface ScreenLayoutProps {
