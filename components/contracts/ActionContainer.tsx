@@ -107,7 +107,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         gap: 16,
       }}
     >
-      {contract.status <= 2 && (
+      {contract.status <= 3 && (
         <View
           style={{
             flexDirection: "row",
@@ -150,7 +150,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
               </Button>
             </>
           )}
-          {contract.status === 1 && (
+          {contract.status === 3 && (
             <>
               <Button
                 mode="contained-tonal"

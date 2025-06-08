@@ -211,12 +211,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
         feedbackModalVisible &&
         <Portal>
           <FeedbackModal
-            feedbackGiven={
-              false
-              // props.contractData.feedbackFromBrand?.feedbackReview
-              //   ? true
-              //   : false
-            }
+            feedbackGiven={false}
             setVisibility={() => setFeedbackModalVisible(false)}
             star={props.contractData.feedbackFromBrand?.ratings || 0}
             visible={feedbackModalVisible}
