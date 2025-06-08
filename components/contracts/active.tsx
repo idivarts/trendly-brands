@@ -175,6 +175,7 @@ const ActiveContracts = () => {
                   borderWidth: 0.3,
                   borderColor: Colors(theme).gray300,
                   borderRadius: 5,
+                  maxWidth: xl ? "48%" : "100%",
                   overflow: "hidden",
                 }}
               >
@@ -206,7 +207,7 @@ const ActiveContracts = () => {
             contentContainerStyle={{
               gap: 16,
               paddingBottom: 24,
-              alignItems: xl ? "center" : "stretch",
+              alignItems: "stretch",
             }}
             refreshControl={
               <RefreshControl
