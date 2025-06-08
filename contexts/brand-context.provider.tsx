@@ -1,7 +1,9 @@
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { Brand } from "@/types/Brand";
-import { addDoc, collection, doc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, collectionGroup, doc, documentId, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import React, {
   createContext,
   type PropsWithChildren,
@@ -15,7 +17,7 @@ interface BrandContextProps {
   brands: Brand[];
   createBrand: (brand: Partial<IBrands>) => Promise<void>;
   selectedBrand: Brand | undefined;
-  setSelectedBrand: React.Dispatch<React.SetStateAction<Brand | undefined>>;
+  setSelectedBrand: (brand: Brand | undefined) => void;
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
 }
 
@@ -36,42 +38,85 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
   const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
   const { manager } = useAuthContext();
 
+  const setSelectedBrandHandler = async (brand: Brand | undefined) => {
+    if (brand) {
+      Console.log("Setting Brand ID to storage:", brand.id);
+      PersistentStorage.set("selectedBrandId", brand.id)
+      setSelectedBrand(brand);
+    } else {
+      setSelectedBrand(undefined);
+    }
+  }
   useEffect(() => {
     if (!manager?.id) return;
 
-    const brandsCollection = collection(FirestoreDB, "brands");
+    const membersCollection = collectionGroup(FirestoreDB, "members");
+    const membersQuery = query(
+      membersCollection,
+      where("managerId", "==", manager.id)
+    );
+    Console.log("Brand ID from member Query:", manager.id);
 
-    const unsubscribe = onSnapshot(brandsCollection, (brandsSnapshot) => {
-      const brandsWithManagerId: Brand[] = [];
+    const unsubscribe = onSnapshot(membersQuery, (membersSnapshot) => {
+      Console.log("Brand ID from member Inside:", manager.id);
+      if (membersSnapshot.empty) {
+        Console.log("No members found for this manager");
+        setBrands([]);
+        setSelectedBrand(undefined);
+        return;
+      }
 
-      brandsSnapshot.docs.forEach((brandDoc) => {
-        const membersCollection = collection(brandDoc.ref, "members");
-        const membersQuery = query(
-          membersCollection,
-          where("managerId", "==", manager?.id)
-        );
+      const brandIds = new Set<string>();
+      membersSnapshot.docs.forEach((doc) => {
+        const brandId = doc.ref.parent.parent?.id; // Get the brand ID from the member's document reference
+        Console.log("Brand ID from member:", brandId);
+        if (brandId) {
+          brandIds.add(brandId);
+        }
+      });
 
-        onSnapshot(membersQuery, (membersSnapshot) => {
-          if (!membersSnapshot.empty) {
-            brandsWithManagerId.push({
-              ...(brandDoc.data() as Brand),
-              id: brandDoc.id,
-            });
-          }
+      if (brandIds.size === 0) {
+        Console.log("No brands associated with this manager");
+        setBrands([]);
+        setSelectedBrand(undefined);
+        return;
+      }
 
-          setBrands(brandsWithManagerId);
+      const brandsCollection = collection(FirestoreDB, "brands");
+      const brandsQuery = query(
+        brandsCollection,
+        where(documentId(), "in", Array.from(brandIds))
+      );
 
-          if (brandsWithManagerId.length > 0 && !selectedBrand) {
-            setSelectedBrand(brandsWithManagerId[0]);
-          }
+      getDocs(brandsQuery).then(async (brandsSnapshot) => {
+        const fetchedBrands: Brand[] = [];
+        brandsSnapshot.docs.forEach((brandDoc) => {
+          fetchedBrands.push({
+            ...(brandDoc.data() as Brand),
+            id: brandDoc.id,
+          });
         });
+
+        setBrands(fetchedBrands);
+
+        if (fetchedBrands.length > 0 && !selectedBrand) {
+          const bId = await PersistentStorage.get("selectedBrandId")
+          Console.log("Selected Brand ID from storage:", bId);
+          if (bId) {
+            const brand = fetchedBrands.find(b => b.id === bId);
+            if (brand) {
+              setSelectedBrandHandler(brand);
+            } else {
+              setSelectedBrandHandler(fetchedBrands[0]);
+            }
+          } else
+            setSelectedBrandHandler(fetchedBrands[0]);
+        }
       });
     });
 
     return () => {
       unsubscribe();
-      setSelectedBrand(undefined);
-      setBrands([]);
     };
   }, [manager?.id]);
 
@@ -97,7 +142,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
         brands,
         createBrand,
         selectedBrand,
-        setSelectedBrand,
+        setSelectedBrand: setSelectedBrandHandler,
         updateBrand,
       }}
     >
