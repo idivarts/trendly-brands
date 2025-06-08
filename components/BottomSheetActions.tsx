@@ -17,7 +17,8 @@ interface BottomSheetActionsProps {
   | "influencerCard"
   | "applicationCard"
   | "invitationCard"
-  | "activeCollab";
+  | "activeCollab"
+  | "contract";
   data?: any; // TODO: Update with the correct type
   cardId?: any;
   isVisible: boolean;
@@ -264,7 +265,18 @@ const BottomSheetActions = ({
             />
           </List.Section>
         );
-
+      case "contract":
+        return (
+          <List.Section style={{ paddingBottom: 28 }}>
+            <List.Item
+              title="View Collaboration"
+              onPress={() => {
+                handleClose();
+                router.push(`/collaboration-details/${cardId}`);
+              }}
+            />
+          </List.Section>
+        );
       default:
         return null;
     }
