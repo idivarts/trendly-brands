@@ -116,7 +116,7 @@ const ContractScreen = () => {
   return (
     <AppLayout withWebPadding={false}>
       <ScreenHeader
-        title="Collaboration Status"
+        title="Contract Details"
         rightAction
         rightActionButton={
           <IconButton
