@@ -2,6 +2,7 @@ import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
 import { addDoc, collection, collectionGroup, doc, documentId, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import React, {
@@ -42,6 +43,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     if (brand) {
       Console.log("Setting Brand ID to storage:", brand.id);
       PersistentStorage.set("selectedBrandId", brand.id)
+      Toaster.info("Brand changed to " + brand.name);
       setSelectedBrand(brand);
     } else {
       setSelectedBrand(undefined);
