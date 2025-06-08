@@ -107,7 +107,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         gap: 16,
       }}
     >
-      {contract.status <= 3 && (
+      {contract.status <= 2 && (
         <View
           style={{
             flexDirection: "row",
@@ -115,7 +115,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             gap: 16,
           }}
         >
-          {contract.status === 3 && (
+          {contract.status === 0 && (
             <>
               <Button
                 mode="outlined"
