@@ -2,11 +2,9 @@ import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/Members";
-import axios from "axios";
-import { doc, setDoc } from "firebase/firestore";
 import React from "react";
 import {
   ActivityIndicator,
@@ -47,57 +45,27 @@ const MembersModal: React.FC<MembersModalProps> = ({
     const user = await AuthApp.currentUser?.getIdToken();
     setLoading(true);
 
-    await axios
-      .post(
-        "https://be.trendly.now/api/v1/brands/members",
-        {
-          brandId: selectedBrand.id,
-          email,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${user}`,
-          },
-        }
-      )
-      .then(async (res) => {
-        Toaster.success("User Invited Successfully");
-        if (res.status === 200) {
-          try {
-            const userID = res.data.user.rawId;
-            const memberRef = doc(FirestoreDB, "managers", userID);
-            let userData = {
-              name: name,
-              email: email,
-              pushNotificationToken: {
-                ios: [],
-                android: [],
-                web: [],
-              },
-              settings: {
-                theme: "light",
-                emailNotification: true,
-                pushNotification: true,
-              },
-            };
-            await setDoc(memberRef, userData);
-          } catch (e) {
-            console.error(e);
-            Toaster.error("Something wrong happened");
-          }
-        }
-        refresh();
-        handleModalClose();
+    await HttpWrapper.fetch("/api/v1/brands/members", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        brandId: selectedBrand.id,
+        email,
+        name
       })
-      .catch((e) => {
-        Toaster.error("Something wrong happened");
-        console.error(e);
-      })
-      .finally(() => {
-        setEmail("");
-        setName("");
-        setLoading(false);
-      });
+    }).then(async (res) => {
+      const data = await res.json()
+      Toaster.success("User Invited Successfully");
+      refresh();
+    }).catch((e) => {
+      Toaster.error("Something wrong happened");
+      console.error(e);
+    }).finally(() => {
+      handleModalClose();
+      setEmail("");
+      setName("");
+      setLoading(false);
+    });
   };
 
   return (
