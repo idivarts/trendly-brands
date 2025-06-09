@@ -28,6 +28,15 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
   const closeMenu = () => setMenuVisible(false);
   const { selectedBrand } = useBrandContext()
 
+  const deleteAction = async () => {
+    try {
+      setLoading(true)
+      await removeAction()
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const resendInvite = async () => {
     if (!selectedBrand)
       return;
@@ -118,7 +127,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
             />}
           <Menu.Item
             onPress={() => {
-              removeAction();
+              deleteAction();
               closeMenu();
             }}
             title="Delete"
