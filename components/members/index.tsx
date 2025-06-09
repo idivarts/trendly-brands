@@ -2,8 +2,9 @@ import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   FlatList,
@@ -19,7 +20,7 @@ export interface ManagerCard extends IManagers {
   status: number;
 }
 
-const Preferences = () => {
+const Members = () => {
   const theme = useTheme();
   const { selectedBrand } = useBrandContext();
   const [members, setMembers] = useState<ManagerCard[]>([]);
@@ -62,6 +63,18 @@ const Preferences = () => {
     }
   };
 
+  const removeMember = async (manager: ManagerCard) => {
+    if (!selectedBrand)
+      return
+    const memberRef = doc(FirestoreDB, "brands", selectedBrand.id, "members", manager.managerId)
+    await deleteDoc(memberRef).then(() => {
+      Toaster.success("Successfully deleted the user")
+      handleRefresh()
+    }).catch(e => {
+      Toaster.error("Cant delete this member!")
+    })
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchMembers();
@@ -87,7 +100,7 @@ const Preferences = () => {
           <MembersCard
             manager={item}
             cardType="preferences"
-            action={() => { }}
+            removeAction={() => removeMember(item)}
           />
         )}
         keyExtractor={(item) => item.managerId}
@@ -122,4 +135,4 @@ const Preferences = () => {
   );
 };
 
-export default Preferences;
+export default Members;

@@ -21,6 +21,7 @@ interface ChatContextProps {
   //   userId: string,
   //   collaborationId: string,
   // ) => Promise<Channel>;
+  isStreamConnected: boolean,
   connectUser: () => Promise<string>;
   fetchMembers: (channel: string) => Promise<any>;
   addMemberToChannel: (channel: string, member: string) => void;
@@ -35,6 +36,7 @@ interface ChatContextProps {
 
 const ChatContext = createContext<ChatContextProps>({
   // createGroupWithMembers: async () => Promise.resolve({} as Channel),
+  isStreamConnected: false,
   connectUser: async () => "",
   fetchMembers: async () => { },
   addMemberToChannel: async () => { },
@@ -51,6 +53,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 }) => {
   const [token, setToken] = useState("");
   const [hasError, setHasError] = useState(false)
+  const [isStreamConnected, setIsStreamConnected] = useState(false)
 
   const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(null);
 
@@ -67,6 +70,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       setClient(streamClient);
       setToken(streamToken);
       setHasError(false);
+      setIsStreamConnected(true)
       registerPushTokenWithStream(await getToken())
     });
   };
@@ -201,6 +205,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     <ChatContext.Provider
       value={{
         // createGroupWithMembers,
+        isStreamConnected,
         connectUser,
         fetchMembers,
         addMemberToChannel,

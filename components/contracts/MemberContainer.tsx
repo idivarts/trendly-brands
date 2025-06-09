@@ -5,8 +5,9 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
-import React, { FC, useEffect } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { FlatList, Pressable } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 import MembersCard from "../brand-profile/members-card";
 import { Text, View } from "../theme/Themed";
 
@@ -24,11 +25,13 @@ const MemberContainer: FC<MemberContainerProps> = ({
   setShowModal,
 }) => {
   const theme = useTheme();
-  const { fetchMembers, removeMemberFromChannel } = useChatContext();
-  const [updateMember, setUpdateMember] = React.useState(false);
+  const { fetchMembers, removeMemberFromChannel, isStreamConnected } = useChatContext();
+  // const [updateMember, setUpdateMember] = React.useState(false);
   const [members, setMembers] = React.useState<any[]>([]);
+  const [loading, setLoading] = useState(true)
 
   const fetchMembersFromClient = async () => {
+    setLoading(true)
     try {
       const members = await fetchMembers(channelId);
       const memberData = await Promise.all(
@@ -55,12 +58,16 @@ const MemberContainer: FC<MemberContainerProps> = ({
       setMembersFromBrand(validMembers);
     } catch (e) {
       console.log(e);
+    } finally {
+      setLoading(false)
     }
   };
 
   useEffect(() => {
+    if (!isStreamConnected)
+      return
     fetchMembersFromClient();
-  }, [updateMemberContainer]);
+  }, [updateMemberContainer, isStreamConnected]);
 
   return (
     <View
@@ -90,25 +97,25 @@ const MemberContainer: FC<MemberContainerProps> = ({
           <FontAwesomeIcon icon={faPlus} size={20} color={Colors(theme).text} />
         </Pressable>
       </View>
-      <FlatList
-        data={members}
-        renderItem={({ item }) => (
-          <MembersCard
-            manager={item}
-            cardType="contract"
-            action={async () => {
-              await removeMemberFromChannel(channelId, item.managerId).then(
-                () => {
+      {loading ? <ActivityIndicator /> :
+        <FlatList
+          data={members}
+          renderItem={({ item }) => (
+            <MembersCard
+              manager={item}
+              cardType="contract"
+              removeAction={async () => {
+                await removeMemberFromChannel(channelId, item.managerId).then(() => {
                   fetchMembersFromClient();
                 }
-              );
-            }}
-          />
-        )}
-        contentContainerStyle={{
-          gap: 10,
-        }}
-      />
+                );
+              }}
+            />
+          )}
+          contentContainerStyle={{
+            gap: 10,
+          }}
+        />}
     </View>
   );
 };

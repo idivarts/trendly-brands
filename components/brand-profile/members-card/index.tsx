@@ -1,28 +1,66 @@
-import { ManagerCard } from "@/components/preferences";
-import { View, Text } from "@/components/theme/Themed";
+import { ManagerCard } from "@/components/members";
+import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import ImageComponent from "@/shared-uis/components/image-component";
-import { imageUrl } from "@/utils/url";
-import { faEllipsis, faEllipsisH } from "@fortawesome/free-solid-svg-icons";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { faEllipsis } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { FC, useState } from "react";
 import { Pressable } from "react-native";
-import { Avatar, Menu } from "react-native-paper";
+import { ActivityIndicator, Menu } from "react-native-paper";
 
 interface MembersCardProps {
   manager: ManagerCard;
   cardType: string;
-  action: () => void;
+  removeAction: () => void;
 }
 
-const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
+const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) => {
   const theme = useTheme();
   const [menuVisible, setMenuVisible] = useState(false); // State to handle menu visibility
 
+  const [loading, setLoading] = useState(false)
+
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
+  const { selectedBrand } = useBrandContext()
+
+  const deleteAction = async () => {
+    try {
+      setLoading(true)
+      await removeAction()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resendInvite = async () => {
+    if (!selectedBrand)
+      return;
+
+    setLoading(true)
+    await HttpWrapper.fetch("/api/v1/brands/members", {
+      method: "POST",
+      body: JSON.stringify({
+        brandId: selectedBrand.id,
+        email: manager.email,
+      }),
+      headers: {
+        "content-type": "application/json"
+      }
+    }).then(async (res) => {
+      const data = await res.json()
+      Toaster.success("User ReInvited Successfully");
+    }).catch((e) => {
+      Toaster.error("Something wrong happened");
+      console.error(e);
+    }).finally(() => {
+      setLoading(false)
+    })
+  }
 
   if (!manager) {
     return null;
@@ -63,6 +101,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
         {manager.status === 0 && (
           <Text style={{ color: Colors(theme).orange }}>Invite Sent</Text>
         )}
+        {loading && <ActivityIndicator size="small" />}
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
@@ -77,9 +116,18 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
             borderColor: Colors(theme).gray300,
           }}
         >
+          {manager.status === 0 &&
+            <Menu.Item
+              onPress={() => {
+                resendInvite();
+                closeMenu();
+              }}
+              title="Resend Invite"
+              titleStyle={{ color: Colors(theme).text }}
+            />}
           <Menu.Item
             onPress={() => {
-              action();
+              deleteAction();
               closeMenu();
             }}
             title="Delete"

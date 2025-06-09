@@ -1,4 +1,4 @@
-import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
@@ -55,7 +55,8 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     const membersCollection = collectionGroup(FirestoreDB, "members");
     const membersQuery = query(
       membersCollection,
-      where("managerId", "==", manager.id)
+      where("managerId", "==", manager.id),
+      // where("status", "not-in", [0, 2])
     );
     Console.log("Brand ID from member Query:", manager.id);
 
@@ -70,6 +71,11 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 
       const brandIds = new Set<string>();
       membersSnapshot.docs.forEach((doc) => {
+        const member = doc.data() as IBrandsMembers
+        if (member.status === 0 || member.status > 1) {
+          return
+        }
+
         const brandId = doc.ref.parent.parent?.id; // Get the brand ID from the member's document reference
         Console.log("Brand ID from member:", brandId);
         if (brandId) {

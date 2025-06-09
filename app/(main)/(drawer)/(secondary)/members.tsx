@@ -1,4 +1,4 @@
-import Preferences from "@/components/preferences";
+import Members from "@/components/members";
 import ScreenHeader from "@/components/ui/screen-header";
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
@@ -8,7 +8,7 @@ const PreferencesScreen = () => {
     <AppLayout withWebPadding={false}>
       <ScreenHeader title="Members" />
       <AppLayout>
-        <Preferences />
+        <Members />
       </AppLayout>
     </AppLayout>
   );
