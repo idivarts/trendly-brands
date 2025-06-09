@@ -55,7 +55,8 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     const membersCollection = collectionGroup(FirestoreDB, "members");
     const membersQuery = query(
       membersCollection,
-      where("managerId", "==", manager.id)
+      where("managerId", "==", manager.id),
+      where("status", "not-in", [0, 2])
     );
     Console.log("Brand ID from member Query:", manager.id);
 
