@@ -92,10 +92,10 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         uri: f.uri,
         type: f.type || "image"
       })))
-      if (files.length > 0) {
-        Console.log("All Files", files);
-        return
-      }
+      // if (files.length > 0) {
+      //   Console.log("All Files", files);
+      //   return
+      // }
 
       const date = new Date();
       await updateDoc(contractRef, {
