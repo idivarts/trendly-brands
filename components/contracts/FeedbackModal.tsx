@@ -9,7 +9,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faClose, faPlus, faStar } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
@@ -47,14 +47,19 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const [selectedStar, setSelectedStar] = useState(star);
   const [textFeedback, setTextFeedback] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const { manager } = useAuthContext();
   const pickDocuments = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'image/*',
-        multiple: true,
-        copyToCacheDirectory: true,
+      const perm = await ImagePicker.getMediaLibraryPermissionsAsync()
+      if (!perm.granted)
+        return;
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        // type: 'image/*',
+        // multiple: true,
+        // copyToCacheDirectory: true,
+        allowsMultipleSelection: true
       });
       if (!result.canceled && result.assets) {
         setSelectedFiles([...selectedFiles, ...result.assets]);
