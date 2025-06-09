@@ -209,7 +209,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   alignItems: "center"
                 }} onPress={pickDocuments}>
                   <FontAwesomeIcon icon={faPlus} size={18} color={Colors(theme).text} />
-                  <Text style={{ color: Colors(theme).text, marginTop: 12 }}>Upload Proof of Payment to proceed with ending the contract</Text>
+                  <Text style={{ color: Colors(theme).text, padding: 12 }}>Upload Proof of Payment to proceed with ending the contract</Text>
                 </Pressable>
 
               }
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderWidth: 1,
     borderRadius: 5,
-    padding: 10,
+    // padding: 10,
     fontSize: 16,
     marginVertical: 10,
   },
