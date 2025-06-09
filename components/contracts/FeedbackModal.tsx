@@ -158,11 +158,21 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           </View>
 
           <View style={styles.modalContent}>
-            <Text style={styles.modalText}>
-              {feedbackGiven
-                ? "Thank you for your feedback!"
-                : "Please provide your payment screenshot"}
-            </Text>
+            {feedbackGiven &&
+              <Text style={styles.modalText}>
+                Thank you for your feedback!
+              </Text>}
+            {!feedbackGiven &&
+              <>
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ marginTop: 12, lineHeight: 22 }}>Before ending contract, Please provide screenshots for:</Text>
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={{ lineHeight: 22 }}>1. Payment Screenshot (if paid collaboration)</Text>
+                    <Text style={{ lineHeight: 22 }}>2. Order delivered Screenshot (if you have sent a product to the creators)</Text>
+                    <Text style={{ lineHeight: 22 }}>3. Content delivered (if the creator successfully delivered the content)</Text>
+                  </View>
+                </View>
+              </>}
 
 
             {!feedbackGiven && <>
@@ -233,7 +243,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   alignItems: "center"
                 }} onPress={pickDocuments}>
                   <FontAwesomeIcon icon={faPlus} size={18} color={Colors(theme).text} />
-                  <Text style={{ color: Colors(theme).text, padding: 12 }}>Upload Proof of Payment to proceed with ending the contract</Text>
+                  <Text style={{ color: Colors(theme).text, padding: 12 }}>Upload Proof of Payment / Order delivered and Content delivered</Text>
                 </Pressable>
 
               }
@@ -270,7 +280,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
               />
               <Button style={{ alignSelf: "flex-end", marginVertical: 12 }}
                 onPress={provideFeedback}
-                disabled={loading}
+                disabled={loading || (textFeedback === "" || selectedStar === 0 || selectedFiles.length == 0)}
                 loading={loading}>End Contract with Feedback</Button>
             </>}
             {feedbackGiven && (
