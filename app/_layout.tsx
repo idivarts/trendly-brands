@@ -24,6 +24,7 @@ import { useColorScheme } from "@/components/theme/useColorScheme";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
   AuthContextProvider,
+  AWSContextProvider,
   useAuthContext
 } from "@/contexts";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
@@ -119,27 +120,29 @@ const RootLayoutStack = () => {
 
   return (
     <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Provider theme={CustomPaperTheme(theme)}>
-        <Stack
-          screenOptions={{
-            animation: "ios",
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="(main)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen
-            name="(modal)/create-collaboration"
-            options={{
-              presentation: "formSheet",
-              gestureEnabled: true,
+      <AWSContextProvider>
+        <Provider theme={CustomPaperTheme(theme)}>
+          <Stack
+            screenOptions={{
+              animation: "ios",
+              headerShown: false,
             }}
-          />
-          <Stack.Screen name="(modal)/edit-collaboration" />
-        </Stack>
-      </Provider>
+          >
+            <Stack.Screen name="(main)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="+not-found" />
+            <Stack.Screen
+              name="(modal)/create-collaboration"
+              options={{
+                presentation: "formSheet",
+                gestureEnabled: true,
+              }}
+            />
+            <Stack.Screen name="(modal)/edit-collaboration" />
+          </Stack>
+        </Provider>
+      </AWSContextProvider>
     </ThemeProvider>
   );
 };
