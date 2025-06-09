@@ -87,7 +87,7 @@ const Members = () => {
           <MembersCard
             manager={item}
             cardType="preferences"
-            action={() => { }}
+            removeAction={() => { }}
           />
         )}
         keyExtractor={(item) => item.managerId}

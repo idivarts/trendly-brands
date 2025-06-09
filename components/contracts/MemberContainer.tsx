@@ -96,11 +96,10 @@ const MemberContainer: FC<MemberContainerProps> = ({
           <MembersCard
             manager={item}
             cardType="contract"
-            action={async () => {
-              await removeMemberFromChannel(channelId, item.managerId).then(
-                () => {
-                  fetchMembersFromClient();
-                }
+            removeAction={async () => {
+              await removeMemberFromChannel(channelId, item.managerId).then(() => {
+                fetchMembersFromClient();
+              }
               );
             }}
           />

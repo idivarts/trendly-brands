@@ -15,10 +15,10 @@ import { ActivityIndicator, Menu } from "react-native-paper";
 interface MembersCardProps {
   manager: ManagerCard;
   cardType: string;
-  action: () => void;
+  removeAction: () => void;
 }
 
-const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
+const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) => {
   const theme = useTheme();
   const [menuVisible, setMenuVisible] = useState(false); // State to handle menu visibility
 
@@ -118,7 +118,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, action }) => {
             />}
           <Menu.Item
             onPress={() => {
-              action();
+              removeAction();
               closeMenu();
             }}
             title="Delete"
