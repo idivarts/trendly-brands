@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Modal } from "react-native-paper";
+import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 
 interface FeedbackModalProps {
@@ -40,6 +41,9 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   refreshData,
 }) => {
   const theme = useTheme();
+
+  const [loading, setLoading] = useState(false)
+
   const [selectedStar, setSelectedStar] = useState(star);
   const [textFeedback, setTextFeedback] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
@@ -244,51 +248,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 numberOfLines={5}
                 multiline
               />
-              <Pressable
-                style={{
-                  backgroundColor: Colors(theme).primary,
-                  paddingVertical: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 5,
-                  marginVertical: 10,
-                  alignSelf: "flex-end",
-                }}
-                // disabled={(textFeedback === "" || selectedStar === 0 || selectedFiles.length == 0)}
-                onPress={() => {
-                  provideFeedback();
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: Colors(theme).white,
-                  }}
-                >
-                  End Contract with Feedback
-                </Text>
-              </Pressable>
+              <Button style={{ alignSelf: "flex-end", marginVertical: 12 }}
+                onPress={provideFeedback}
+                loading={loading}>End Contract with Feedback</Button>
             </>}
             {feedbackGiven && (
-              <Pressable
-                style={{
-                  backgroundColor: Colors(theme).primary,
-                  paddingVertical: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 5,
-                  marginVertical: 10,
-                  alignSelf: "flex-end",
-                }}
-                onPress={() => setVisibility(false)}
-              >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: Colors(theme).white,
-                  }}
-                >
-                  Close
-                </Text>
-              </Pressable>
+              <Button style={{ alignSelf: "flex-end", marginVertical: 12 }} mode="outlined"
+                onPress={() => setVisibility(false)}>Close</Button>
             )}
           </View>
         </Pressable>
