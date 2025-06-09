@@ -72,14 +72,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
       contractTimestamp: {
         startedOn: timeStarted,
       },
-    }).then(() => {
-      HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}`, {
-        method: "POST",
-      }).then(r => {
-        Toaster.success("Contract has started")
-      })
-      refreshData();
-    });
+    })
+    await HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}`, {
+      method: "POST",
+    }).then(r => {
+      Toaster.success("Your Contract has started")
+    })
+    refreshData();
   };
 
   const fetchManager = async () => {
