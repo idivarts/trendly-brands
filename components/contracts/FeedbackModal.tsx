@@ -2,6 +2,7 @@ import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -66,6 +67,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const provideFeedback = async () => {
     try {
+      setLoading(true)
       const contractRef = doc(
         FirestoreDB,
         "contracts",
@@ -95,15 +97,12 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         Toaster.success("Contract has now ended")
       })
 
-      // if (contract.feedbackFromInfluencer?.ratings) {
-      //   await updateDoc(contractRef, {
-      //     status: 3,
-      //   });
-      // }
       setVisibility(false);
       refreshData();
     } catch (e) {
-      console.log(e);
+      Console.error(e);
+    } finally {
+      setLoading(false)
     }
   };
 
