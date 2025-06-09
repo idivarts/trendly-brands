@@ -4,7 +4,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import fnStyles from "@/styles/login.styles";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as React from "react";
 import {
   Image,
@@ -16,13 +16,16 @@ import {
 } from "react-native";
 
 const LoginScreen = () => {
-  const [email, setEmail] = React.useState("");
+  const search = useLocalSearchParams()
+
+  const [email, setEmail] = React.useState(search.email ? search.email as string : "");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
   const router = useRouter();
   const { signIn } = useAuthContext();
   const theme = useTheme();
   const styles = fnStyles(theme);
+
 
   const handleSignIn = () => {
     signIn(email, password);
