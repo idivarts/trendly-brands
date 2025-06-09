@@ -1,6 +1,6 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
-import { useAuthContext } from "@/contexts";
+import { useAuthContext, useAWSContext } from "@/contexts";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -48,7 +48,10 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [selectedStar, setSelectedStar] = useState(star);
   const [textFeedback, setTextFeedback] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<ImagePicker.ImagePickerAsset[]>([]);
+
   const { manager } = useAuthContext();
+  const { uploadFileUris } = useAWSContext()
+
   const pickDocuments = async () => {
     try {
       const perm = await ImagePicker.getMediaLibraryPermissionsAsync()
@@ -82,6 +85,18 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         alert("Please provide feedback and rating and payment proofs before submitting");
         return;
       }
+
+      const files = await uploadFileUris(selectedFiles.map(f => ({
+        id: f.assetId || "",
+        localUri: f.uri,
+        uri: f.uri,
+        type: f.type || "image"
+      })))
+      if (files.length > 0) {
+        Console.log("All Files", files);
+        return
+      }
+
       const date = new Date();
       await updateDoc(contractRef, {
         status: 2,
@@ -94,6 +109,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           feedbackReview: textFeedback,
           managerId: manager?.id,
           timeSubmitted: date.getTime(),
+          paymentProofs: files
         },
       });
       HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}/end`, {
@@ -254,6 +270,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
               />
               <Button style={{ alignSelf: "flex-end", marginVertical: 12 }}
                 onPress={provideFeedback}
+                disabled={loading}
                 loading={loading}>End Contract with Feedback</Button>
             </>}
             {feedbackGiven && (
