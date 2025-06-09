@@ -77,7 +77,7 @@ const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
       const contractQuery = query(
         contractsCol,
         where("brandId", "==", selectedBrand?.id),
-        ...(!isPast ? [where("status", "not-in", [0, 3])] : [where("status", "in", [3])]), // Exclude pending and completed contracts
+        ...(!isPast ? [where("status", "in", [1])] : [where("status", "in", [2, 3])]), // Exclude pending and completed contracts
       );
       const contractsSnapshot = await getDocs(contractQuery);
 
