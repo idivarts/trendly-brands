@@ -36,7 +36,7 @@ interface ICollaborationCard extends IContracts {
   collaborationData: ICollaboration;
 }
 
-const ActiveContracts = () => {
+const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [proposals, setProposals] = useState<ICollaborationCard[]>([]);
   const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
@@ -76,7 +76,8 @@ const ActiveContracts = () => {
       const contractsCol = collection(FirestoreDB, "contracts");
       const contractQuery = query(
         contractsCol,
-        where("brandId", "==", selectedBrand?.id)
+        where("brandId", "==", selectedBrand?.id),
+        ...(!isPast ? [where("status", "in", [1])] : [where("status", "in", [2, 3])]), // Exclude pending and completed contracts
       );
       const contractsSnapshot = await getDocs(contractQuery);
 
@@ -130,9 +131,10 @@ const ActiveContracts = () => {
   }, [user, selectedBrand]);
 
   const filteredProposals = useMemo(() => {
-    return proposals.filter((proposal) => {
-      return proposal.status !== 3 && proposal.status !== 0;
-    });
+    return proposals
+    // .filter((proposal) => {
+    //   return proposal.status !== 3 && proposal.status !== 0;
+    // });
   }, [proposals]);
 
   if (isLoading) {
@@ -175,6 +177,7 @@ const ActiveContracts = () => {
                   borderWidth: 0.3,
                   borderColor: Colors(theme).gray300,
                   borderRadius: 5,
+                  maxWidth: xl ? "48%" : "100%",
                   overflow: "hidden",
                 }}
               >
@@ -183,7 +186,7 @@ const ActiveContracts = () => {
                   username={item.userData?.name}
                   collabId={item.collaborationId}
                   collabName={item.collaborationData.name || ""}
-                  onOpenBottomSheet={() => { }}
+                  onOpenBottomSheet={() => { openBottomSheet(item.collaborationId) }}
                 />
                 <ContractDetails
                   application={
@@ -206,7 +209,7 @@ const ActiveContracts = () => {
             contentContainerStyle={{
               gap: 16,
               paddingBottom: 24,
-              alignItems: xl ? "center" : "stretch",
+              alignItems: "stretch",
             }}
             refreshControl={
               <RefreshControl
@@ -228,7 +231,7 @@ const ActiveContracts = () => {
       {isVisible && (
         <BottomSheetActions
           cardId={selectedCollabId || ""}
-          cardType="activeCollab"
+          cardType="contract"
           isVisible={isVisible}
           onClose={closeBottomSheet}
           snapPointsRange={["20%", "50%"]}

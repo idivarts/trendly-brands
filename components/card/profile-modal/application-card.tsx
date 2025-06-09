@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 
-import { Card } from '@/components/ui/card/tertiary';
-import { CardHeader } from '@/components/ui/card/tertiary/card-header';
-import { CardMetaData } from '@/components/ui/card/tertiary/card-metadata';
-import { CardFiles } from '@/components/ui/card/tertiary/card-files';
-import { CardFooter } from '@/components/ui/card/tertiary/card-footer';
-import { CardQuestions } from '@/components/ui/card/tertiary/card-questions';
 import { View } from '@/components/theme/Themed';
 import Button from '@/components/ui/button';
-import { Application } from '@/types/Collaboration';
-import { convertToKUnits } from '@/utils/conversion';
+import { Card } from '@/components/ui/card/tertiary';
+import { CardFiles } from '@/components/ui/card/tertiary/card-files';
+import { CardFooter } from '@/components/ui/card/tertiary/card-footer';
+import { CardHeader } from '@/components/ui/card/tertiary/card-header';
+import { CardMetaData } from '@/components/ui/card/tertiary/card-metadata';
+import { CardQuestions } from '@/components/ui/card/tertiary/card-questions';
 import Colors from '@/constants/Colors';
+import { useBreakpoints } from '@/hooks';
+import ScrollMedia from '@/shared-uis/components/carousel/scroll-media';
+import { Application } from '@/types/Collaboration';
+import { processRawAttachment } from '@/utils/attachments';
+import { convertToKUnits } from '@/utils/conversion';
 import { useTheme } from '@react-navigation/native';
 
 interface ApplicationCardProps {
@@ -32,6 +35,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const theme = useTheme();
   const [acceptingApplication, setAcceptingApplication] = useState(false);
   const [rejectingApplication, setRejectingApplication] = useState(false);
+  const { xl } = useBreakpoints();
 
   return (
     <Card>
@@ -39,6 +43,14 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         title="Application"
         description={data.message}
       />
+      {
+        data.attachments && data.attachments.length > 0 && (
+          <ScrollMedia MAX_WIDTH_WEB={"100%"}
+            media={data.attachments.map(v => processRawAttachment(v))}
+            xl={xl}
+            theme={theme} />
+        )
+      }
       {
         (data.quotation || data.timeline) && (
           <CardMetaData

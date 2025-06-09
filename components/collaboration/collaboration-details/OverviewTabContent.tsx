@@ -4,12 +4,14 @@ import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborat
 import Colors from "@/constants/Colors";
 import { CURRENCY } from "@/constants/Unit";
 import { useContractContext } from "@/contexts";
+import { useBreakpoints } from "@/hooks";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import ImageComponent from "@/shared-uis/components/image-component";
 import RatingSection from "@/shared-uis/components/rating-section";
+import ReadMore from "@/shared-uis/components/ReadMore";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { Contract } from "@/types/Contract";
 import { processRawAttachment } from "@/utils/attachments";
@@ -54,6 +56,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   const [brandModalVisible, setBrandModalVisible] = useState(false);
   const [managerModalVisible, setManagerModalVisible] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const { xl } = useBreakpoints();
 
   const { getContractsByCollaborationId } = useContractContext();
 
@@ -133,6 +136,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
       <View style={[styles.profileCard, { alignItems: "center" }]}>
         {props?.collaboration?.attachments &&
           props?.collaboration?.attachments.length > 0 && (
+            // !xl ? 
             <Carousel
               theme={theme}
               data={
@@ -141,6 +145,19 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 ) || []
               }
             />
+            // :<ScrollMedia
+            //     MAX_WIDTH_WEB={"100%"}
+            //     media={
+            //       props?.collaboration?.attachments?.map((attachment) =>
+            //         processRawAttachment(attachment)
+            //       ) || []
+            //     }
+            //     xl={xl}
+            //     mediaRes={{
+            //       height: 200,
+            //       width: 200,
+            //     }}
+            //     theme={theme} />
           )}
         <Card.Content style={styles.profileContent}>
           <View
@@ -180,9 +197,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 width: "100%",
               }}
             >
-              <Text variant="bodySmall" style={styles.shortDescription}>
-                {props.collaboration.description}
-              </Text>
+              <ReadMore style={styles.shortDescription} text={props.collaboration.description || ""} />
             </View>
           </View>
 

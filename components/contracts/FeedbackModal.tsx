@@ -1,23 +1,27 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
-import { useAuthContext } from "@/contexts";
+import { useAuthContext, useAWSContext } from "@/contexts";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { faClose, faStar } from "@fortawesome/free-solid-svg-icons";
+import { faClose, faPlus, faStar } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
-  Keyboard,
+  Image, Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet
-} from "react-native";
+} from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { Modal } from "react-native-paper";
+import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 
 interface FeedbackModalProps {
@@ -38,22 +42,61 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   refreshData,
 }) => {
   const theme = useTheme();
+
+  const [loading, setLoading] = useState(false)
+
   const [selectedStar, setSelectedStar] = useState(star);
   const [textFeedback, setTextFeedback] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<ImagePicker.ImagePickerAsset[]>([]);
+
   const { manager } = useAuthContext();
+  const { uploadFileUris } = useAWSContext()
+
+  const pickDocuments = async () => {
+    try {
+      const perm = await ImagePicker.getMediaLibraryPermissionsAsync()
+      if (!perm.granted)
+        return;
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        // type: 'image/*',
+        // multiple: true,
+        // copyToCacheDirectory: true,
+        allowsMultipleSelection: true
+      });
+      if (!result.canceled && result.assets) {
+        setSelectedFiles([...selectedFiles, ...result.assets]);
+      }
+    } catch (err) {
+      console.log("Document pick error:", err);
+    }
+  };
 
 
   const provideFeedback = async () => {
     try {
+      setLoading(true)
       const contractRef = doc(
         FirestoreDB,
         "contracts",
         contract.streamChannelId
       );
-      if (textFeedback === "" || selectedStar === 0) {
-        alert("Please provide feedback and rating before submitting");
+      if (textFeedback === "" || selectedStar === 0 || selectedFiles.length == 0) {
+        alert("Please provide feedback and rating and payment proofs before submitting");
         return;
       }
+
+      const files = await uploadFileUris(selectedFiles.map(f => ({
+        id: f.assetId || "",
+        localUri: f.uri,
+        uri: f.uri,
+        type: f.type || "image"
+      })))
+      // if (files.length > 0) {
+      //   Console.log("All Files", files);
+      //   return
+      // }
+
       const date = new Date();
       await updateDoc(contractRef, {
         status: 2,
@@ -66,6 +109,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           feedbackReview: textFeedback,
           managerId: manager?.id,
           timeSubmitted: date.getTime(),
+          paymentProofs: files
         },
       });
       HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}/end`, {
@@ -74,15 +118,12 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         Toaster.success("Contract has now ended")
       })
 
-      // if (contract.feedbackFromInfluencer?.ratings) {
-      //   await updateDoc(contractRef, {
-      //     status: 3,
-      //   });
-      // }
       setVisibility(false);
       refreshData();
     } catch (e) {
-      console.log(e);
+      Console.error(e);
+    } finally {
+      setLoading(false)
     }
   };
 
@@ -106,7 +147,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
       >
         <Pressable style={styles.modal} onPress={() => Platform.OS != "web" && Keyboard.dismiss()}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Feedback</Text>
+            <Text style={styles.modalTitle}>End Contract</Text>
             <Pressable onPress={() => setVisibility(false)}>
               <FontAwesomeIcon
                 icon={faClose}
@@ -115,13 +156,104 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
               />
             </Pressable>
           </View>
+
           <View style={styles.modalContent}>
-            <Text style={styles.modalText}>
-              {feedbackGiven
-                ? "Thank you for your feedback!"
-                : "Please provide your feedback"}
-            </Text>
-            {star === 0 && (
+            {feedbackGiven &&
+              <Text style={styles.modalText}>
+                Thank you for your feedback!
+              </Text>}
+            {!feedbackGiven &&
+              <>
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ marginTop: 12, lineHeight: 22 }}>Before ending contract, Please provide screenshots for:</Text>
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={{ lineHeight: 22 }}>1. Payment Screenshot (if paid collaboration)</Text>
+                    <Text style={{ lineHeight: 22 }}>2. Order delivered Screenshot (if you have sent a product to the creators)</Text>
+                    <Text style={{ lineHeight: 22 }}>3. Content delivered (if the creator successfully delivered the content)</Text>
+                  </View>
+                </View>
+              </>}
+
+
+            {!feedbackGiven && <>
+              {selectedFiles.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ width: "100%", overflow: "scroll" }}
+                  contentContainerStyle={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}
+                >
+                  {selectedFiles.map((file, index) => (
+                    <View key={index} style={{ position: 'relative' }}>
+                      <Pressable
+                        onPress={() => {
+                          setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: -5,
+                          right: -5,
+                          zIndex: 1,
+                          backgroundColor: Colors(theme).background,
+                          borderRadius: 20,
+                          padding: 2,
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faClose} size={18} color={Colors(theme).text} />
+                      </Pressable>
+                      {file.mimeType?.startsWith("image/") ? (
+                        <Image
+                          source={{ uri: file.uri }}
+                          style={{ width: 100, height: 100, borderRadius: 5 }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: 5,
+                            backgroundColor: Colors(theme).card,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{ color: Colors(theme).text, fontSize: 12, textAlign: 'center' }}>
+                            Doc
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                  <Pressable style={{
+                    width: 100, height: 100, borderRadius: 5,
+                    borderWidth: 1,
+                    justifyContent: "center",
+                    alignItems: "center"
+                  }} onPress={pickDocuments}>
+                    <FontAwesomeIcon icon={faPlus} size={24} color={Colors(theme).text} />
+                  </Pressable>
+                </ScrollView>
+              )}
+              {selectedFiles.length == 0 &&
+                <Pressable style={{
+                  width: "100%", height: 100, borderRadius: 5,
+                  borderWidth: 1,
+                  justifyContent: "center",
+                  alignItems: "center"
+                }} onPress={pickDocuments}>
+                  <FontAwesomeIcon icon={faPlus} size={18} color={Colors(theme).text} />
+                  <Text style={{ color: Colors(theme).text, padding: 12 }}>Upload Proof of Payment / Order delivered and Content delivered</Text>
+                </Pressable>
+
+              }
+            </>}
+
+
+            {!feedbackGiven && <>
+
+              <Text style={{ marginTop: 50, marginBottom: 12, fontSize: 18, fontWeight: 600 }}>Please give your feedback</Text>
+              <Text style={{ marginBottom: 12 }}>Rate the influencer/creator out of 5 and also tell us about your experience with this influencer</Text>
               <View style={styles.modalRating}>
                 {[1, 2, 3, 4, 5].map((i) => (
                   <Pressable key={i} onPress={() => setSelectedStar(i)}>
@@ -137,8 +269,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                   </Pressable>
                 ))}
               </View>
-            )}
-            {!feedbackGiven && (
               <TextInput
                 style={styles.textInput}
                 placeholder="Write your feedback here"
@@ -148,52 +278,14 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 numberOfLines={5}
                 multiline
               />
-            )}
-            {!feedbackGiven && (
-              <Pressable
-                style={{
-                  backgroundColor: Colors(theme).primary,
-                  paddingVertical: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 5,
-                  marginVertical: 10,
-                  alignSelf: "flex-end",
-                }}
-                onPress={() => {
-                  provideFeedback();
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: Colors(theme).white,
-                  }}
-                >
-                  End Contract with Feedback
-                </Text>
-              </Pressable>
-            )}
+              <Button style={{ alignSelf: "flex-end", marginVertical: 12 }}
+                onPress={provideFeedback}
+                disabled={loading || (textFeedback === "" || selectedStar === 0 || selectedFiles.length == 0)}
+                loading={loading}>End Contract with Feedback</Button>
+            </>}
             {feedbackGiven && (
-              <Pressable
-                style={{
-                  backgroundColor: Colors(theme).primary,
-                  paddingVertical: 10,
-                  paddingHorizontal: 20,
-                  borderRadius: 5,
-                  marginVertical: 10,
-                  alignSelf: "flex-end",
-                }}
-                onPress={() => setVisibility(false)}
-              >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: Colors(theme).white,
-                  }}
-                >
-                  Close
-                </Text>
-              </Pressable>
+              <Button style={{ alignSelf: "flex-end", marginVertical: 12 }} mode="outlined"
+                onPress={() => setVisibility(false)}>Close</Button>
             )}
           </View>
         </Pressable>
@@ -224,7 +316,8 @@ const styles = StyleSheet.create({
   },
   modalText: {
     fontSize: 16,
-    marginVertical: 10,
+    marginTop: 10,
+    marginBottom: 20,
   },
   modalRating: {
     flexDirection: "row",
@@ -236,7 +329,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderWidth: 1,
     borderRadius: 5,
-    padding: 10,
+    // padding: 10,
     fontSize: 16,
     marginVertical: 10,
   },

@@ -206,7 +206,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         <OverviewTabContent collaboration={collaboration} />
       )}
       {collaboration.status === "active" && (
-        <TopTabNavigation tabs={tabs} size="compact" />
+        <TopTabNavigation tabs={tabs} size="compact" mobileFullWidth={true} />
       )}
     </View>
   );

@@ -6,19 +6,22 @@ export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
     container: {
       paddingHorizontal: 16,
-      paddingBottom: 16,
+      // paddingBottom: 16,
       marginTop: 16
     },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "flex-start",
+      alignItems: "center",
+      // gap: 16,
+      // alignContent: "center",
       marginBottom: 16,
     },
     logoSection: {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
+      flex: 1,
     },
     titleSection: {
       flex: 1,

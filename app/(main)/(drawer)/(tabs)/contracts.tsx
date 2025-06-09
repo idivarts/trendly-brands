@@ -1,8 +1,8 @@
-import { View } from "@/components/theme/Themed";
-import AppLayout from "@/layouts/app-layout";
-import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import ActiveContracts from "@/components/contracts/active";
 import PastContracts from "@/components/contracts/past";
+import { View } from "@/components/theme/Themed";
+import TopTabNavigation from "@/components/ui/top-tab-navigation";
+import AppLayout from "@/layouts/app-layout";
 
 const tabs = [
   {

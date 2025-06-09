@@ -24,10 +24,12 @@ import { useColorScheme } from "@/components/theme/useColorScheme";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
   AuthContextProvider,
+  AWSContextProvider,
   useAuthContext
 } from "@/contexts";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
+import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
@@ -72,7 +74,9 @@ export default function RootLayout() {
         <TrackingProvider>
           <AuthContextProvider>
             <BottomSheetModalProvider>
-              <RootLayoutStack />
+              <ConfirmationModalProvider>
+                <RootLayoutStack />
+              </ConfirmationModalProvider>
             </BottomSheetModalProvider>
           </AuthContextProvider>
         </TrackingProvider>
@@ -116,27 +120,29 @@ const RootLayoutStack = () => {
 
   return (
     <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Provider theme={CustomPaperTheme(theme)}>
-        <Stack
-          screenOptions={{
-            animation: "ios",
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="(main)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="+not-found" />
-          <Stack.Screen
-            name="(modal)/create-collaboration"
-            options={{
-              presentation: "formSheet",
-              gestureEnabled: true,
+      <AWSContextProvider>
+        <Provider theme={CustomPaperTheme(theme)}>
+          <Stack
+            screenOptions={{
+              animation: "ios",
+              headerShown: false,
             }}
-          />
-          <Stack.Screen name="(modal)/edit-collaboration" />
-        </Stack>
-      </Provider>
+          >
+            <Stack.Screen name="(main)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="+not-found" />
+            <Stack.Screen
+              name="(modal)/create-collaboration"
+              options={{
+                presentation: "formSheet",
+                gestureEnabled: true,
+              }}
+            />
+            <Stack.Screen name="(modal)/edit-collaboration" />
+          </Stack>
+        </Provider>
+      </AWSContextProvider>
     </ThemeProvider>
   );
 };
