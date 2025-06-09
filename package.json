@@ -34,9 +34,9 @@
     "@react-native-community/netinfo": "11.3.1",
     "@react-native-firebase/analytics": "^21.0.0",
     "@react-native-firebase/app": "^21.0.0",
+    "@react-native-firebase/crashlytics": "~21.0.0",
     "@react-native-firebase/functions": "^21.0.0",
     "@react-native-firebase/messaging": "^21.0.0",
-    "@react-native-firebase/crashlytics": "~21.0.0",
     "@react-native-picker/picker": "^2.8.1",
     "@react-navigation/drawer": "^6.7.2",
     "@react-navigation/native": "^6.0.2",
@@ -64,6 +64,7 @@
     "expo-splash-screen": "~0.27.5",
     "expo-status-bar": "~1.12.1",
     "expo-system-ui": "~3.0.7",
+    "expo-tracking-transparency": "~4.0.2",
     "expo-web-browser": "~13.0.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -91,8 +92,7 @@
     "react-native-web": "~0.19.10",
     "serverless-certificate-creator": "^1.6.0",
     "serverless-domain-manager": "^8.0.0",
-    "stream-chat-expo": "^5.41.2",
-    "expo-tracking-transparency": "~4.0.2"
+    "stream-chat-expo": "^5.41.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
