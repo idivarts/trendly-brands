@@ -19,7 +19,7 @@ export interface ManagerCard extends IManagers {
   status: number;
 }
 
-const Preferences = () => {
+const Members = () => {
   const theme = useTheme();
   const { selectedBrand } = useBrandContext();
   const [members, setMembers] = useState<ManagerCard[]>([]);
@@ -122,4 +122,4 @@ const Preferences = () => {
   );
 };
 
-export default Preferences;
+export default Members;

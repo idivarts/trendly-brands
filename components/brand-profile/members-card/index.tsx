@@ -1,15 +1,13 @@
-import { ManagerCard } from "@/components/preferences";
-import { View, Text } from "@/components/theme/Themed";
+import { ManagerCard } from "@/components/members";
+import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import ImageComponent from "@/shared-uis/components/image-component";
-import { imageUrl } from "@/utils/url";
-import { faEllipsis, faEllipsisH } from "@fortawesome/free-solid-svg-icons";
+import { faEllipsis } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { FC, useState } from "react";
 import { Pressable } from "react-native";
-import { Avatar, Menu } from "react-native-paper";
+import { Menu } from "react-native-paper";
 
 interface MembersCardProps {
   manager: ManagerCard;
