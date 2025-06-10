@@ -15,7 +15,7 @@
     "simulator": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile simulator --local --output build/Trendly.tar.gz && tar -xzf build/Trendly.tar.gz -C build && xcrun simctl install booted build/Trendly.app",
     "build-ios": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile production --local --output build/Trendly.ipa",
     "submit-ios": "eas submit -p ios --path build/Trendly.ipa",
-    "postinstall": "sh shared-libs/scripts/setup-hooks.sh && npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants && node react-native-web-fix.js"
+    "postinstall": "npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants && node react-native-web-fix.js"
   },
   "jest": {
     "preset": "jest-expo"
