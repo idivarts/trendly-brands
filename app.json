@@ -6,6 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon2.png",
     "scheme": "trendly-brands",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "jsEngine": "hermes",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
