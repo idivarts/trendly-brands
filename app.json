@@ -5,9 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon2.png",
-    "scheme": [
-      "trendly-brands"
-    ],
+    "scheme": "trendly-brands",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
