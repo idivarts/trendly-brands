@@ -129,14 +129,6 @@ const RootLayoutStack = () => {
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="index" />
             <Stack.Screen name="+not-found" />
-            <Stack.Screen
-              name="(modal)/create-collaboration"
-              options={{
-                presentation: "formSheet",
-                gestureEnabled: true,
-              }}
-            />
-            <Stack.Screen name="(modal)/edit-collaboration" />
           </Stack>
         </Provider>
       </AWSContextProvider>
