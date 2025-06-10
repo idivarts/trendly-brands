@@ -18,7 +18,7 @@ interface BrandContextProps {
   brands: Brand[];
   createBrand: (brand: Partial<IBrands>) => Promise<void>;
   selectedBrand: Brand | undefined;
-  setSelectedBrand: (brand: Brand | undefined) => void;
+  setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
 }
 
@@ -39,11 +39,12 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
   const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
   const { manager } = useAuthContext();
 
-  const setSelectedBrandHandler = async (brand: Brand | undefined) => {
+  const setSelectedBrandHandler = async (brand: Brand | undefined, triggerToast = true) => {
     if (brand) {
       Console.log("Setting Brand ID to storage:", brand.id);
       PersistentStorage.set("selectedBrandId", brand.id)
-      Toaster.info("Brand changed to " + brand.name);
+      if (triggerToast)
+        Toaster.info("Brand changed to " + brand.name);
       setSelectedBrand(brand);
     } else {
       setSelectedBrand(undefined);
@@ -113,12 +114,12 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
           if (bId) {
             const brand = fetchedBrands.find(b => b.id === bId);
             if (brand) {
-              setSelectedBrandHandler(brand);
+              setSelectedBrandHandler(brand, false);
             } else {
-              setSelectedBrandHandler(fetchedBrands[0]);
+              setSelectedBrandHandler(fetchedBrands[0], false);
             }
           } else
-            setSelectedBrandHandler(fetchedBrands[0]);
+            setSelectedBrandHandler(fetchedBrands[0], false);
         }
       });
     });
