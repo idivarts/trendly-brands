@@ -5,10 +5,8 @@ import { processRawAttachment } from "@/utils/attachments";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
 import { FC } from "react";
-import { Platform, Pressable, ScrollView } from "react-native";
+import { Linking, Pressable, ScrollView } from "react-native";
 import { Text, View } from "../theme/Themed";
 
 interface UserResponseProps {
@@ -29,15 +27,16 @@ const UserResponse: FC<UserResponseProps> = ({
 
   const downloadAndSaveFile = async (url: string, filename: string) => {
     try {
-      const { uri } = await FileSystem.downloadAsync(
-        url,
-        FileSystem.documentDirectory + filename
-      );
-      if (Platform.OS === "web") {
-        Sharing.shareAsync(uri);
-      } else {
-        await Sharing.shareAsync(uri);
-      }
+      Linking.openURL(url)
+      // const { uri } = await FileSystem.downloadAsync(
+      //   url,
+      //   FileSystem.documentDirectory + filename
+      // );
+      // if (Platform.OS === "web") {
+      //   Sharing.shareAsync(uri);
+      // } else {
+      //   await Sharing.shareAsync(uri);
+      // }
     } catch (error) {
       Console.error(error, "Error downloading file");
       setConfirmationModalVisible(false);
