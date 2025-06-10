@@ -1,31 +1,33 @@
 #!/usr/bin/env bash
 
-mkdir -p ~/.ssh
+echo "Running eas-prebuild.sh"
 
-# Real origin URL is lost during the packaging process, so if your
-# submodules are defined using relative urls in .gitmodules then
-# you need to restore it with:
-#
-# git remote set-url origin git@github.com:example/repo.git
+# mkdir -p ~/.ssh
 
-cat .gitmodules
+# # Real origin URL is lost during the packaging process, so if your
+# # submodules are defined using relative urls in .gitmodules then
+# # you need to restore it with:
+# #
+# # git remote set-url origin git@github.com:example/repo.git
 
-# restore private key from env variable and generate public key
-echo "$SSH_KEY_BASE64" | base64 -d > ~/.ssh/id_rsa
-chmod 0600 ~/.ssh/id_rsa
-ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
+# cat .gitmodules
 
-# add your git provider to the list of known hosts
-ssh-keyscan github.com >> ~/.ssh/known_hosts
+# # restore private key from env variable and generate public key
+# echo "$SSH_KEY_BASE64" | base64 -d > ~/.ssh/id_rsa
+# chmod 0600 ~/.ssh/id_rsa
+# ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
 
-git init
+# # add your git provider to the list of known hosts
+# ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-git remote add origin git@github.com:idivarts/trendly-brands.git
+# git init
 
-git clean -df
-git checkout -- .
+# git remote add origin git@github.com:idivarts/trendly-brands.git
 
-git pull origin dev
+# git clean -df
+# git checkout -- .
 
-# restore the original origin URL
-git submodule update --init
+# git pull origin dev
+
+# # restore the original origin URL
+# git submodule update --init
