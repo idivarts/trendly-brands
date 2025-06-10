@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useChatContext, useNotificationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -64,7 +65,7 @@ const useApplications = ({
         });
       } else {
         const brandIds = brands.map((brand) => brand.id);
-        console.log("brandIds", brandIds);
+        Console.log("brandIds", brandIds);
 
         const activeCollabs = collection(FirestoreDB, "collaborations");
         const activeCollabsQuery = query(
@@ -75,7 +76,7 @@ const useApplications = ({
 
         const activeCollabsFetch = await getDocs(activeCollabsQuery);
         const activeCollabsIds = activeCollabsFetch.docs.map((doc) => doc.id);
-        console.log("activeCollabsIds", activeCollabsIds);
+        Console.log("activeCollabsIds", activeCollabsIds);
 
         const applicationRef = collectionGroup(FirestoreDB, "applications");
         const applicationQuery = query(
@@ -128,7 +129,7 @@ const useApplications = ({
 
       setInfluencers(influencers);
     } catch (error) {
-      console.error(error);
+      Console.error(error);
     } finally {
       setLoading(false);
     }
@@ -162,7 +163,7 @@ const useApplications = ({
         handleActionModalClose();
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
       handleActionModalClose();
       Toaster.error("Failed to accept application");
     }
@@ -192,7 +193,7 @@ const useApplications = ({
         Toaster.success("Application rejected successfully");
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
       handleActionModalClose();
       Toaster.error("Failed to reject application");
     }

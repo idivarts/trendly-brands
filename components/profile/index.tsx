@@ -1,6 +1,8 @@
 import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import AppLayout from "@/layouts/app-layout";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -23,7 +25,6 @@ import Button from "../ui/button";
 import ImageUploadModal from "../ui/modal/ImageUploadModal";
 import ScreenHeader from "../ui/screen-header";
 import TextInput from "../ui/text-input";
-import AppLayout from "@/layouts/app-layout";
 
 const Profile = () => {
   const [name, setName] = useState("");
@@ -44,7 +45,7 @@ const Profile = () => {
 
   const updateProfile = async () => {
     if (!manager || !manager.id) {
-      console.error("Manager ID is missing");
+      Console.error("Manager ID is missing");
       return;
     }
 
@@ -93,7 +94,7 @@ const Profile = () => {
       Toaster.success("Profile updated successfully");
       fetchRole();
     } catch (error) {
-      console.error("Error during profile update:", error);
+      Console.error(error, "Error during profile update");
       Toaster.error("Error during profile update");
     } finally {
       setLoading(false);
@@ -118,7 +119,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (!manager) {
-      console.error("Manager object is null");
+      Console.error("Manager object is null");
       return;
     }
     setName(manager.name || ""); // Fallback to empty string

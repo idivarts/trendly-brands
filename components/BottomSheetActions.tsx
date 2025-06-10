@@ -1,4 +1,5 @@
 import { useChatContext } from "@/contexts";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -85,7 +86,7 @@ const BottomSheetActions = ({
         Toaster.success("Application accepted successfully");
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
       handleClose();
       Toaster.error("Failed to accept application");
     }
@@ -110,7 +111,7 @@ const BottomSheetActions = ({
         Toaster.success("Application rejected successfully");
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
       handleClose();
       Toaster.error("Failed to reject application");
     }
@@ -126,7 +127,7 @@ const BottomSheetActions = ({
         Toaster.success("Collaboration delisted successfully");
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
       handleClose();
       Toaster.error("Failed to delist collaboration");
     }

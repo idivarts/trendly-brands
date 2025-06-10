@@ -9,6 +9,7 @@ import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
 import { useAuthContext, useContractContext } from "@/contexts";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { Console } from "@/shared-libs/utils/console";
 import { User } from "@/types/User";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
@@ -79,7 +80,7 @@ const ChannelNative = () => {
         try {
           await Notifications.setBadgeCountAsync(0);
         } catch (error) {
-          console.error("Failed to reset badge count:", error);
+          Console.error(error, "Failed to reset badge count");
         }
       }
     };

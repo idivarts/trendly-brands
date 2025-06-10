@@ -1,5 +1,6 @@
 import Colors from "@/constants/Colors";
 import { useChatContext } from "@/contexts";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -57,7 +58,7 @@ const MemberContainer: FC<MemberContainerProps> = ({
 
       setMembersFromBrand(validMembers);
     } catch (e) {
-      console.log(e);
+      Console.error(e);
     } finally {
       setLoading(false)
     }

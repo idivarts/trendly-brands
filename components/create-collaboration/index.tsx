@@ -12,6 +12,7 @@ import { useProcess } from "@/hooks";
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { Console } from '@/shared-libs/utils/console';
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
@@ -171,7 +172,7 @@ const CreateCollaboration = () => {
   ) => {
     try {
       if (!AuthApp.currentUser) {
-        console.error("User not logged in");
+        Console.error("User not logged in");
       }
 
       let locationAddress = collaboration?.location;
@@ -225,7 +226,7 @@ const CreateCollaboration = () => {
           });
         }, 3000);
       }).catch((error) => {
-        console.error(error);
+        Console.error(error);
         Toaster.error("Failed to save collaboration");
       }).finally(() => {
         setProcessPercentage(0);
@@ -233,7 +234,7 @@ const CreateCollaboration = () => {
         setIsProcessing(false);
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
     }
   };
 

@@ -1,3 +1,4 @@
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import * as SecureStore from 'expo-secure-store';
 import * as React from 'react';
@@ -23,7 +24,7 @@ export async function setStorageItemAsync(key: string, value: string | null) {
         localStorage.setItem(key, value);
       }
     } catch (e) {
-      console.error('Local storage is unavailable:', e);
+      Console.error(e, 'Local storage is unavailable');
     }
   } else {
     if (value == null) {
@@ -50,7 +51,7 @@ export function useStorageState(key: string): UseStateHook<string> {
               setState(localStorage.getItem(key));
             }
           } catch (e) {
-            console.error('Local storage is unavailable:', e);
+            Console.error(e, 'Local storage is unavailable');
           }
         } else {
           SecureStore.getItemAsync(key).then(value => {

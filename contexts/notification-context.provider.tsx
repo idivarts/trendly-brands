@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { INotifications } from "@/shared-libs/firestore/trendly-pro/models/notifications";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { Notification, PushNotificationPayload } from "@/types/Notification";
@@ -171,7 +172,7 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
 
       await batch.commit();
     } catch (error) {
-      console.error("Error updating notifications: ", error);
+      Console.error(error, "Error updating notifications");
     }
   }
 

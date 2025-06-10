@@ -68,7 +68,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         setSelectedFiles([...selectedFiles, ...result.assets]);
       }
     } catch (err) {
-      console.log("Document pick error:", err);
+      Console.log("Document pick error:", err);
     }
   };
 

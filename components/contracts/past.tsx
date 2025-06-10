@@ -96,7 +96,7 @@ const PastContracts = () => {
   //     setProposals(contracts);
   //     setIsLoading(false);
   //   } catch (error) {
-  //     console.error("Error fetching proposals: ", error);
+  //     Console.error(error, "Error fetching proposals");
   //   } finally {
   //     setIsLoading(false);
   //   }

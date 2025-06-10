@@ -3,6 +3,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -80,7 +81,7 @@ const GetStartedScreen = () => {
         Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
       }
     } catch (error) {
-      console.error(error);
+      Console.error(error);
     }
   };
   const htmlScript = `<script src="https://js.hsforms.net/forms/embed/48930010.js" defer></script>

@@ -1,5 +1,6 @@
 import { useStorageState } from "@/hooks";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -97,7 +98,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
           };
           setManager(managerData);
         } else {
-          console.error("Manager not found");
+          Console.error("Manager not found");
         }
       });
 
@@ -172,7 +173,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
       await firebaseSignIn(managerCredential)
     } catch (error) {
-      console.error("Error signing in: ", error);
+      Console.error(error, "Error signing in");
       Toaster.error("Error signing in. Please try again.");
     }
   };
@@ -269,7 +270,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         Toaster.success("Signed Out Successfully!");
       })
       .catch((error) => {
-        console.error("Error signing out: ", error);
+        Console.error(error, "Error signing out");
       });
   };
 

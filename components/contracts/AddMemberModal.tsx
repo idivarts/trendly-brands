@@ -2,6 +2,7 @@ import Colors from "@/constants/Colors";
 import { useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -84,7 +85,7 @@ const AddMembersModal: FC<AddMemberModalProps> = ({
       //@ts-ignore
       setMembers(members);
     } catch (error) {
-      console.error(error);
+      Console.error(error);
     }
   };
 
@@ -103,7 +104,7 @@ const AddMembersModal: FC<AddMemberModalProps> = ({
       }, 1000);
     } catch (error) {
       Toaster.error("Failed to add member");
-      console.error(error);
+      Console.error(error);
     }
   };
 
