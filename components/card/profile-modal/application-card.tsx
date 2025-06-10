@@ -10,12 +10,12 @@ import { CardMetaData } from '@/components/ui/card/tertiary/card-metadata';
 import { CardQuestions } from '@/components/ui/card/tertiary/card-questions';
 import Colors from '@/constants/Colors';
 import { useBreakpoints } from '@/hooks';
-import { Console } from '@/shared-libs/utils/console';
 import ScrollMedia from '@/shared-uis/components/carousel/scroll-media';
 import { Application } from '@/types/Collaboration';
 import { processRawAttachment } from '@/utils/attachments';
 import { convertToKUnits } from '@/utils/conversion';
 import { useTheme } from '@react-navigation/native';
+import { Linking } from 'react-native';
 
 interface ApplicationCardProps {
   data: Application;
@@ -64,7 +64,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         data.fileAttachments && data.fileAttachments.length > 0 && (
           <CardFiles
             files={data.fileAttachments}
-            onFilePress={(file) => Console.log('File pressed:', file.name)}
+            onFilePress={(file) => Linking.openURL(file.url)}
           />
         )
       }
