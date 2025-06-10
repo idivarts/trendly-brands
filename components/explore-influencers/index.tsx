@@ -189,17 +189,6 @@ const ExploreInfluencers = () => {
                 }}
                 setSelectedInfluencer={setSelectedInfluencer as any}
               />
-              // <InfluencerCard
-              //   key={index}
-              //   type="explore"
-              //   ToggleModal={ToggleModal}
-              //   influencer={item}
-              //   openProfile={(influencer) => {
-              //     setSelectedInfluencer(influencer);
-              //     bottomSheetModalRef.current?.present();
-              //   }}
-              //   setSelectedInfluencer={setSelectedInfluencer}
-              // />
             )}
             keyExtractor={(item, index) => index.toString()}
             contentContainerStyle={{
