@@ -5,6 +5,7 @@ import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
@@ -131,7 +132,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
         unsubscribe();
       };
     } catch (error) {
-      console.error("Error fetching proposals: ", error);
+      Console.error(error, "Error fetching proposals");
       setIsLoading(false);
     }
   };

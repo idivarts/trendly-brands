@@ -1,4 +1,5 @@
 import { useAuthContext } from "@/contexts";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, DocumentData, getDocs, limit, onSnapshot, orderBy, query, QuerySnapshot, startAfter, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -44,7 +45,7 @@ const useInfluencers = ({
         setIsInitialLoading(false);
       },
       error => {
-        console.error("Error fetching influencers:", error);
+        Console.error(error, "Error fetching influencers");
         setIsInitialLoading(false);
       }
     );
@@ -78,7 +79,7 @@ const useInfluencers = ({
         setIsLoading(false);
       },
       error => {
-        console.error("Error fetching more influencers:", error);
+        Console.error(error, "Error fetching more influencers");
         setIsLoading(false);
       }
     );

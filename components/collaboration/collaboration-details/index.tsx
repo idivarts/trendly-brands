@@ -4,6 +4,7 @@ import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import Colors from "@/constants/Colors";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
@@ -51,7 +52,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       Toaster.success("Collaboration is published successfully");
       fetchCollaboration();
     } catch (e) {
-      console.error(e);
+      Console.error(e);
     }
   };
 
@@ -84,7 +85,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
           : [],
       });
     } catch (e) {
-      console.error(e);
+      Console.error(e);
     } finally {
       setLoading(false);
     }

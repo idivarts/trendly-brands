@@ -27,7 +27,6 @@ import {
   AWSContextProvider,
   useAuthContext
 } from "@/contexts";
-import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { resetAndNavigate } from "@/utils/router";
@@ -71,15 +70,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView>
       <UpdateProvider force={true}>
-        <TrackingProvider>
-          <AuthContextProvider>
-            <BottomSheetModalProvider>
-              <ConfirmationModalProvider>
-                <RootLayoutStack />
-              </ConfirmationModalProvider>
-            </BottomSheetModalProvider>
-          </AuthContextProvider>
-        </TrackingProvider>
+        <AuthContextProvider>
+          <BottomSheetModalProvider>
+            <ConfirmationModalProvider>
+              <RootLayoutStack />
+            </ConfirmationModalProvider>
+          </BottomSheetModalProvider>
+        </AuthContextProvider>
       </UpdateProvider>
     </GestureHandlerRootView>
   );
@@ -132,14 +129,6 @@ const RootLayoutStack = () => {
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="index" />
             <Stack.Screen name="+not-found" />
-            <Stack.Screen
-              name="(modal)/create-collaboration"
-              options={{
-                presentation: "formSheet",
-                gestureEnabled: true,
-              }}
-            />
-            <Stack.Screen name="(modal)/edit-collaboration" />
           </Stack>
         </Provider>
       </AWSContextProvider>

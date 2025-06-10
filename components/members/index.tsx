@@ -1,6 +1,7 @@
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
@@ -59,7 +60,7 @@ const Members = () => {
 
       setMembers(members);
     } catch (error) {
-      console.error(error);
+      Console.error(error);
     }
   };
 

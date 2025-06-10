@@ -1,6 +1,7 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -59,7 +60,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
       refresh();
     }).catch((e) => {
       Toaster.error("Something wrong happened");
-      console.error(e);
+      Console.error(e);
     }).finally(() => {
       handleModalClose();
       setEmail("");

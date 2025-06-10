@@ -14,6 +14,7 @@ import {
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
@@ -94,7 +95,7 @@ const ContractScreen = () => {
         collaborationData,
       });
     } catch (error) {
-      console.error("Error fetching proposals: ", error);
+      Console.error(error, "Error fetching proposals");
     }
   };
 

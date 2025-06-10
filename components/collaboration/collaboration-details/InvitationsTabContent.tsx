@@ -11,6 +11,7 @@ import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -123,7 +124,7 @@ const InvitationsTabContent = (props: any) => {
         })
       });
     } catch (error) {
-      console.error(error);
+      Console.error(error);
       Toaster.error("Failed to send invitation");
     } finally {
       setMessage("");
@@ -277,7 +278,7 @@ const InvitationsTabContent = (props: any) => {
               <List.Item
                 title="Message User"
                 onPress={() => {
-                  console.log("Message User");
+                  Console.log("Message User");
                 }}
               />
             </List.Section>

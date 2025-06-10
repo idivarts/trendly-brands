@@ -5,9 +5,13 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon2.png",
-    "scheme": [
-      "trendly-brands"
+    "scheme": "trendly-brands",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
     ],
+    "jsEngine": "hermes",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -22,7 +26,11 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "pro.trendly.brands",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -60,9 +68,17 @@
       "@react-native-firebase/crashlytics",
       "@react-native-firebase/messaging",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration applications.",
+          "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
         "expo-av",
         {
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
+          "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations."
         }
       ],
       [
@@ -74,14 +90,14 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Trendly requires access to your location to create collaboration which are localized."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+          "photosPermission": "Trendly requires access to your photo library to select and upload images or videos for your profile and collaborations.",
+          "savePhotosPermission": "Trendly needs permission to save collaboration-related images and videos to your photo library.",
           "isAccessMediaLocationEnabled": true
         }
       ]

@@ -2,6 +2,7 @@ import { ManagerCard } from "@/components/members";
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -56,7 +57,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
       Toaster.success("User ReInvited Successfully");
     }).catch((e) => {
       Toaster.error("Something wrong happened");
-      console.error(e);
+      Console.error(e);
     }).finally(() => {
       setLoading(false)
     })

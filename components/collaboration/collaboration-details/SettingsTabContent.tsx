@@ -1,5 +1,6 @@
 import Select, { SelectItem } from "@/components/ui/select";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import SelectGroup from "@/shared-uis/components/select/select-group";
@@ -56,7 +57,7 @@ const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
         [`preferences.${field}`]: value,
       });
     } catch (error) {
-      console.error("Error updating Firestore:", error);
+      Console.error(error, "Error updating Firestore");
     }
   };
 
@@ -86,7 +87,7 @@ const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
         value: data.preferences.preferredVideoType,
       });
     } catch (e) {
-      console.error(e);
+      Console.error(e);
     }
   };
 

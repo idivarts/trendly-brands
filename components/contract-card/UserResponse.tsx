@@ -1,14 +1,13 @@
 import { IApplications } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { FC } from "react";
-import { Text, View } from "../theme/Themed";
-import { Platform, Pressable, ScrollView } from "react-native";
+import { Console } from "@/shared-libs/utils/console";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import { processRawAttachment } from "@/utils/attachments";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { FC } from "react";
+import { Linking, Pressable, ScrollView } from "react-native";
+import { Text, View } from "../theme/Themed";
 
 interface UserResponseProps {
   application?: IApplications;
@@ -28,17 +27,18 @@ const UserResponse: FC<UserResponseProps> = ({
 
   const downloadAndSaveFile = async (url: string, filename: string) => {
     try {
-      const { uri } = await FileSystem.downloadAsync(
-        url,
-        FileSystem.documentDirectory + filename
-      );
-      if (Platform.OS === "web") {
-        Sharing.shareAsync(uri);
-      } else {
-        await Sharing.shareAsync(uri);
-      }
+      Linking.openURL(url)
+      // const { uri } = await FileSystem.downloadAsync(
+      //   url,
+      //   FileSystem.documentDirectory + filename
+      // );
+      // if (Platform.OS === "web") {
+      //   Sharing.shareAsync(uri);
+      // } else {
+      //   await Sharing.shareAsync(uri);
+      // }
     } catch (error) {
-      console.error("Error downloading file:", error);
+      Console.error(error, "Error downloading file");
       setConfirmationModalVisible(false);
       alert("Failed to download file. Please try again.");
     }
@@ -82,7 +82,7 @@ const UserResponse: FC<UserResponseProps> = ({
               index={index}
               height={100}
               width={100}
-              handleImagePress={() => {}}
+              handleImagePress={() => { }}
             />
           ))}
         </ScrollView>

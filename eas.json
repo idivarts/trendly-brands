@@ -1,32 +1,33 @@
 {
   "cli": {
-    "version": ">= 12.5.0",
+    "version": ">= 16.6.2",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {}
+      "distribution": "internal"
     },
     "preview": {
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {}
+      "ios": {
+        "simulator": true
+      }
+    },
+    "simulator": {
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Debug"
+      }
     },
     "production": {
-      "autoIncrement": true,
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {}
+      "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "rahul.sinha1908@gmail.com"
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { useAuthContext } from "@/contexts";
 import { isWorkEmail } from "@/contexts/auth-context.provider";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -64,16 +65,16 @@ export const useGoogleLogin = (setLoading: Function, setError: Function) => {
         try {
             signInWithPopup(AuthApp, provider).catch((error) => {
                 Toaster.error('Error logging in with Google', error.message);
-                console.log(error);
+                Console.log(error);
             }).then(async (result) => {
                 await evalResult(result);
             }).catch(e => {
-                console.log("Error", e);
+                Console.log("Error", e);
                 Toaster.error('Error logging in with Google');
                 setLoading(false);
             })
         } catch (e) {
-            console.log("Error", e);
+            Console.log("Error", e);
         } finally {
             setLoading(false);
         }

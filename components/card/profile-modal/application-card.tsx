@@ -15,6 +15,7 @@ import { Application } from '@/types/Collaboration';
 import { processRawAttachment } from '@/utils/attachments';
 import { convertToKUnits } from '@/utils/conversion';
 import { useTheme } from '@react-navigation/native';
+import { Linking } from 'react-native';
 
 interface ApplicationCardProps {
   data: Application;
@@ -63,7 +64,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         data.fileAttachments && data.fileAttachments.length > 0 && (
           <CardFiles
             files={data.fileAttachments}
-            onFilePress={(file) => console.log('File pressed:', file.name)}
+            onFilePress={(file) => Linking.openURL(file.url)}
           />
         )
       }
