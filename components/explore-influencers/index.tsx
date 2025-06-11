@@ -150,8 +150,7 @@ const ExploreInfluencers = () => {
         style={{
           flex: 1,
           marginHorizontal: "auto",
-
-          width: xl ? MAX_WIDTH_WEB : "100%",
+          width: "100%", //xl ? MAX_WIDTH_WEB :
         }}
       >
         <IOScroll onScroll={(ev) => {
