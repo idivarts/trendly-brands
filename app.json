@@ -29,6 +29,7 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "Trendly Brands",
         "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account."
       }
     },
@@ -70,7 +71,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration applications.",
+          "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration campaigns.",
           "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations.",
           "recordAudioAndroid": true
         }
@@ -100,7 +101,8 @@
           "savePhotosPermission": "Trendly needs permission to save collaboration-related images and videos to your photo library.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-tracking-transparency"
     ],
     "experiments": {
       "typedRoutes": true

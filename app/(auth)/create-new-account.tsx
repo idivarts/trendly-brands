@@ -111,14 +111,21 @@ const SignUpScreen = () => {
           </View>
           {/* Login Prompt */}
           <Text style={styles.loginText}>
-            Already have an account?{" "}
-            <Text
+            Already have an account?{" "} Click Below
+            {/* <Text
               style={styles.loginLink}
               onPress={() => router.replace("/(auth)/login")}
             >
               Login
-            </Text>
+            </Text> */}
           </Text>
+          <Button
+            mode="outlined"
+            style={{ marginTop: 16, marginHorizontal: 16 }}
+            onPress={() => router.replace("/(auth)/login")}
+          >
+            Login
+          </Button>
           <Text style={styles.loginText}>
             Looking for Social Signup?{" "}
             <Text

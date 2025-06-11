@@ -5,6 +5,7 @@ import Colors from "@/constants/Colors";
 import { CURRENCY } from "@/constants/Unit";
 import { useContractContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
+import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -38,7 +39,6 @@ import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
-import { IOScrollView } from "react-native-intersection-observer";
 import { Card, Portal, Text } from "react-native-paper";
 import { CollaborationDetail } from ".";
 import BrandModal from "./modal/BrandModal";
@@ -131,7 +131,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   }, []);
 
   return (
-    <IOScrollView contentContainerStyle={styles.scrollContainer}>
+    <IOScroll contentContainerStyle={styles.scrollContainer}>
       {/* Collaboration Details */}
       <View style={[styles.profileCard, { alignItems: "center" }]}>
         {props?.collaboration?.attachments &&
@@ -561,7 +561,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
           setVisibility={setManagerModalVisible}
         />
       </Portal>
-    </IOScrollView>
+    </IOScroll>
   );
 };
 

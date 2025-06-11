@@ -18,8 +18,8 @@ const styles = (theme: Theme) =>
     },
     skipButtonContainer: {
       position: "absolute",
-      top: 10,
-      right: 20,
+      top: 16,
+      right: 16,
     },
     imageContainer: {
       marginBottom: 20,

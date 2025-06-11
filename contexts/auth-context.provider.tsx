@@ -86,7 +86,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   const [manager, setManager] = useState<Manager | null>(null);
   const router = useRouter();
 
-  const fetchManager = async () => {
+  const fetchManager = () => {
     if (session) {
       const managerDocRef = doc(FirestoreDB, "managers", session);
 
@@ -107,7 +107,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   };
 
   useEffect(() => {
-    fetchManager();
+    return fetchManager();
   }, [session]);
 
   const firebaseSignIn = async (manager: UserCredential) => {

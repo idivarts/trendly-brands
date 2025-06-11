@@ -3,7 +3,7 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
@@ -12,22 +12,20 @@ import { View } from "../theme/Themed";
 
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetScrollView,
+  BottomSheetBackdrop
 } from "@gorhom/bottom-sheet";
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
+import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { collection, orderBy, query, where } from "firebase/firestore";
-import { IOScrollView } from "react-native-intersection-observer";
-import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
+import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
+import InfluencerActionModal from "./InfluencerActionModal";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,8 +50,9 @@ const ExploreInfluencers = () => {
     null
   );
 
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const [openProfileModal, setOpenProfileModal] = useState(false)
 
   const insets = useSafeAreaInsets();
   const containerOffset = useSharedValue({
@@ -65,7 +64,7 @@ const ExploreInfluencers = () => {
 
   // const [isLoading, setIsLoading] = useState(true);
 
-  const { manager } = useAuthContext()
+  const { manager, updateManager } = useAuthContext()
   const theme = useTheme();
 
   const { xl } = useBreakpoints();
@@ -93,29 +92,13 @@ const ExploreInfluencers = () => {
 
   const filterInfluencers = () => {
     const newFilteredInfluencers = influencers.filter((influencer) => {
-      // const isCollaborationTypeMatch =
-      //   currentCollaborationType === "All" ||
-      //   influencer.profile?.category?.includes(currentCollaborationType);
-
-      // const isFollowersRangeMatch =
-      //   Number(influencer.backend?.followers) >= currentFollowersRange[0] &&
-      //   Number(influencer.backend?.followers) <= currentFollowersRange[1];
-      // const isReachRangeMatch =
-      //   Number(influencer.backend?.reach) >= currentReachRange[0] &&
-      //   Number(influencer.backend?.reach) <= currentReachRange[1];
-      // const isEngagementRangeMatch =
-      //   Number(influencer.backend?.engagement) >= currentEngagementRange[0] &&
-      //   Number(influencer.backend?.engagement) <= currentEngagementRange[1];
-
+      if (manager?.moderations?.blockedInfluencers?.includes(influencer.id))
+        return false
       const isSearchQueryMatch = influencer.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
       return (
-        // isCollaborationTypeMatch &&
-        // isFollowersRangeMatch &&
-        // isReachRangeMatch &&
-        // isEngagementRangeMatch &&
         isSearchQueryMatch
       );
     });
@@ -133,6 +116,7 @@ const ExploreInfluencers = () => {
     currentEngagementRange,
     searchQuery,
     influencers,
+    manager
   ]);
 
   const renderBackdrop = (props: any) => {
@@ -167,11 +151,10 @@ const ExploreInfluencers = () => {
         style={{
           flex: 1,
           marginHorizontal: "auto",
-
-          width: xl ? MAX_WIDTH_WEB : "100%",
+          width: "100%", //xl ? MAX_WIDTH_WEB :
         }}
       >
-        <IOScrollView onScroll={(ev) => {
+        <IOScroll onScroll={(ev) => {
           onScrollEvent(ev)
         }}>
           <FlatList
@@ -185,23 +168,12 @@ const ExploreInfluencers = () => {
                 openProfile={(influencer) => {
                   if (influencer)
                     setSelectedInfluencer(influencer as User);
-                  bottomSheetModalRef.current?.present();
+                  setOpenProfileModal(true)
                 }}
                 setSelectedInfluencer={setSelectedInfluencer as any}
               />
-              // <InfluencerCard
-              //   key={index}
-              //   type="explore"
-              //   ToggleModal={ToggleModal}
-              //   influencer={item}
-              //   openProfile={(influencer) => {
-              //     setSelectedInfluencer(influencer);
-              //     bottomSheetModalRef.current?.present();
-              //   }}
-              //   setSelectedInfluencer={setSelectedInfluencer}
-              // />
             )}
-            keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={{
               paddingTop: 16,
               paddingBottom: 16,
@@ -237,28 +209,10 @@ const ExploreInfluencers = () => {
             maxToRenderPerBatch={10}
             windowSize={5}
           />
-        </IOScrollView>
+        </IOScroll>
       </View>
 
-      {isModalVisible && (
-        <BottomSheetContainer
-          isVisible={isModalVisible}
-          snapPointsRange={["25%", "50%"]}
-          onClose={ToggleModal}
-        >
-          <List.Section style={{ paddingBottom: 28 }}>
-            <List.Item
-              title="View Profile"
-              onPress={() => {
-                bottomSheetModalRef.current?.present();
-                ToggleModal();
-              }}
-            />
-            <List.Item title="Send Message" onPress={() => null} />
-            <List.Item title="Block Influencer" onPress={() => null} />
-          </List.Section>
-        </BottomSheetContainer>
-      )}
+      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={ToggleModal} />
 
       {isFilterModalVisible && (
         <CollaborationFilter
@@ -279,24 +233,19 @@ const ExploreInfluencers = () => {
         />
       )}
 
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        index={2}
-        snapPoints={snapPoints}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose={true}
-        containerOffset={containerOffset}
-        topInset={insets.top}
+      <BottomSheetScrollContainer
+        isVisible={openProfileModal}
+        snapPointsRange={["90%", "90%"]}
+        onClose={() => { setOpenProfileModal(false) }}
       >
-        <BottomSheetScrollView>
-          <ProfileBottomSheet
-            influencer={selectedInfluencer as User}
-            theme={theme}
-            FireStoreDB={FirestoreDB}
-            isBrandsApp={true}
-          />
-        </BottomSheetScrollView>
-      </BottomSheetModal>
+        <ProfileBottomSheet
+          influencer={selectedInfluencer as User}
+          theme={theme}
+          FireStoreDB={FirestoreDB}
+          isBrandsApp={true}
+          closeModal={() => setOpenProfileModal(false)}
+        />
+      </BottomSheetScrollContainer>
     </AppLayout>
   );
 };

@@ -1,8 +1,11 @@
 import ChannelNative from "@/components/channel/channel";
+import AppLayout from "@/layouts/app-layout";
 
 const ChannelScreen = () => {
   return (
-    <ChannelNative />
+    <AppLayout>
+      <ChannelNative />
+    </AppLayout>
   );
 }
 

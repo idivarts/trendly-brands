@@ -1,3 +1,5 @@
+import TermsAndCondition from "@/components/TermsAndCondition";
+import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
 import Button from "@/components/ui/button";
 import SocialButton from "@/components/ui/button/social-button";
 import Colors from "@/constants/Colors";
@@ -24,23 +26,20 @@ import {
   Text,
   View,
 } from "react-native";
-import { Paragraph, Title } from "react-native-paper";
 import { runOnJS, useSharedValue } from "react-native-reanimated";
 import Carousel, {
   ICarouselInstance,
   Pagination,
 } from "react-native-reanimated-carousel";
-import Swiper from "react-native-swiper";
 
 const PreSignIn = () => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const [error, setError] = useState<string | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [termsCondition, setTermsCondition] = useState(false);
   const [loading, setLoading] = useState(false)
   const router = useRouter();
   const swiperRef = useRef<ICarouselInstance>(null);
-  const nativeRef = useRef<Swiper>(null);
   const progress = useSharedValue(0);
 
   const skipToConnect = () => {
@@ -53,8 +52,6 @@ const PreSignIn = () => {
           count: connectSlideIndex - progress.value,
           animated: true,
         });
-      } else {
-        nativeRef.current?.scrollTo(connectSlideIndex);
       }
     }
   };
@@ -90,6 +87,13 @@ const PreSignIn = () => {
           }}
           renderItem={({ item }) => (
             <View style={styles.slide}>
+              <View style={styles.imageContainer}>
+                <Image source={imageUrl(item.image)} style={styles.image} />
+              </View>
+              <Text style={[styles.title, { color: Colors(theme).primary }]}>
+                {item.title}
+              </Text>
+              <Text style={styles.paragraph}>{item.text}</Text>
               {item.key !== "connect" && (
                 <View style={styles.skipButtonContainer}>
                   <Button
@@ -104,13 +108,6 @@ const PreSignIn = () => {
                   </Button>
                 </View>
               )}
-              <View style={styles.imageContainer}>
-                <Image source={imageUrl(item.image)} style={styles.image} />
-              </View>
-              <Title style={[styles.title, { color: Colors(theme).primary }]}>
-                {item.title}
-              </Title>
-              <Paragraph style={styles.paragraph}>{item.text}</Paragraph>
               {item.key !== "connect" && (
                 <Pressable
                   style={{
@@ -145,14 +142,15 @@ const PreSignIn = () => {
               )}
               {item.key === "connect" && (
                 <View style={styles.socialContainer}>
-                  <SocialButton
-                    icon={faGoogle}
-                    label="Continue with Google"
-                    onPress={() => {
-                      // router.push("/login");
-                      googleLogin()
-                    }}
-                  />
+                  {Platform.OS != "ios" &&
+                    <SocialButton
+                      icon={faGoogle}
+                      label="Continue with Google"
+                      onPress={() => {
+                        // router.push("/login");
+                        googleLogin()
+                      }}
+                    />}
                   <SocialButton
                     icon={faMailBulk}
                     label="Continue with Email/Password"
@@ -162,6 +160,22 @@ const PreSignIn = () => {
                   />
                 </View>
               )}
+
+              {item.key === "connect" && (
+                <View style={{ marginTop: 40, paddingHorizontal: 20 }}>
+                  <Text style={{ fontSize: 12, textAlign: "center", color: Colors(theme).text }}>
+                    By proceeding to signup, you agree to{" "}
+                    <Text
+                      style={{ color: Colors(theme).primary, textDecorationLine: "underline" }}
+                      onPress={() => setTermsCondition(true)}
+                    >
+                      Terms & Condition (EULA)
+                    </Text>{" "}
+                    of Trendly
+                  </Text>
+                </View>
+              )}
+
               {error && (
                 <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
                   {error}
@@ -193,6 +207,14 @@ const PreSignIn = () => {
           onPress={onPressPagination}
         />
       </View>
+      <BottomSheetScrollContainer
+        isVisible={termsCondition}
+        snapPointsRange={["85%", "85%"]}
+        onClose={() => {
+          setTermsCondition(false)
+        }}>
+        <TermsAndCondition />
+      </BottomSheetScrollContainer>
       {/* {error && <Text style={{ color: "red" }}>Error: {error}</Text>} */}
     </AppLayout>
   );
