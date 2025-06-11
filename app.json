@@ -24,13 +24,15 @@
       }
     },
     "ios": {
+      "usesAppleSignIn": true,
       "supportsTablet": false,
       "bundleIdentifier": "pro.trendly.brands",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDisplayName": "Trendly Brands",
-        "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account."
+        "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
+        "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
       }
     },
     "android": {
@@ -57,6 +59,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {

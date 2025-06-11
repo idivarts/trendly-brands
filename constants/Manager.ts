@@ -1,3 +1,5 @@
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+
 export const DUMMY_MANAGER_ID = "IjOAHWjc3d8ff8u6Z2rD";
 
 export const DUMMY_IMAGE =
@@ -49,4 +51,20 @@ export const DUMMY_MANAGER_CREDENTIALS2 = {
     android: [],
     web: [],
   },
+};
+
+export const INITIAL_MANAGER_DATA: IManagers = {
+  pushNotificationToken: {
+    ios: [],
+    android: [],
+    web: [],
+  },
+  settings: {
+    theme: "light",
+    emailNotification: true,
+    pushNotification: true,
+  },
+  name: "",
+  email: "",
+  creationTime: Date.now()
 };

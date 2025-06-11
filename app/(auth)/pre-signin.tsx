@@ -8,8 +8,9 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import stylesFn from "@/styles/tab1.styles";
 import { imageUrl } from "@/utils/url";
+import { useAppleLogin } from "@/utils/use-apple-login";
 import { useGoogleLogin } from "@/utils/use-google-login";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
+import { faApple, faGoogle } from "@fortawesome/free-brands-svg-icons";
 import {
   faArrowRight,
   faMailBulk
@@ -47,12 +48,10 @@ const PreSignIn = () => {
       (slide) => slide.key === "connect"
     );
     if (connectSlideIndex !== -1) {
-      if (Platform.OS === "web") {
-        swiperRef.current?.scrollTo({
-          count: connectSlideIndex - progress.value,
-          animated: true,
-        });
-      }
+      swiperRef.current?.scrollTo({
+        count: connectSlideIndex - progress.value,
+        animated: true,
+      });
     }
   };
 
@@ -65,6 +64,7 @@ const PreSignIn = () => {
 
   const { xl } = useBreakpoints();
   const { googleLogin } = useGoogleLogin(setLoading, setError)
+  const { appleLogin } = useAppleLogin(setLoading, setError)
   return (
     <AppLayout>
       <View style={{ flex: 1, alignSelf: "center" }}>
@@ -149,6 +149,14 @@ const PreSignIn = () => {
                       onPress={() => {
                         // router.push("/login");
                         googleLogin()
+                      }}
+                    />}
+                  {Platform.OS == "ios" &&
+                    <SocialButton
+                      icon={faApple}
+                      label="Continue with Apple"
+                      onPress={() => {
+                        appleLogin()
                       }}
                     />}
                   <SocialButton

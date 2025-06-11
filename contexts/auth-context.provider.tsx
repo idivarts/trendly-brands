@@ -1,3 +1,4 @@
+import { INITIAL_MANAGER_DATA } from "@/constants/Manager";
 import { useStorageState } from "@/hooks";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { Console } from "@/shared-libs/utils/console";
@@ -43,7 +44,7 @@ interface AuthContextProps {
   session?: string | null;
   setSession: (value: string | null) => void;
   signIn: (email: string, password: string) => void;
-  signOutManager: () => void;
+  signOutManager: () => Promise<void>;
   signUp: (name: string, email: string, password: string) => void;
   updateManager: (
     managerId: string,
@@ -61,7 +62,7 @@ const AuthContext = createContext<AuthContextProps>({
   setSession: () => null,
   session: null,
   signIn: (email: string, password: string) => null,
-  signOutManager: () => null,
+  signOutManager: async () => { },
   signUp: (name: string, email: string, password: string) => null,
   updateManager: () => Promise.resolve(),
   manager: null,
@@ -126,6 +127,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
       name: managerCredential.user.displayName,
       email: managerCredential.user.email,
     });
+
+    console.log("Came before going to Explore influencer");
 
     // For existing managers, redirect to the main screen.
     router.replace("/explore-influencers");
@@ -193,19 +196,12 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         const colRef = collection(FirestoreDB, "managers");
         const docRef = doc(colRef, userCredential.user.uid);
 
+
         let userData: IManagers = {
+          ...INITIAL_MANAGER_DATA,
           name: name,
           email: email,
-          pushNotificationToken: {
-            ios: [],
-            android: [],
-            web: [],
-          },
-          settings: {
-            theme: "light",
-            emailNotification: true,
-            pushNotification: true,
-          },
+          creationTime: Date.now(),
         };
 
         await setDoc(docRef, userData);
