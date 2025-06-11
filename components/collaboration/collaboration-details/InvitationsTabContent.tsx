@@ -41,7 +41,7 @@ const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
-  const [selectedInfluencer, setSelectedInfluencer] = useState<User | null>(null);
+  const [selectedInfluencer, setSelectedInfluencer] = useState<(User & { documentId: string }) | null>(null);
   const [isInvitationModalVisible, setIsInvitationModalVisible] = useState(false);
   const [message, setMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
@@ -49,13 +49,12 @@ const InvitationsTabContent = (props: any) => {
   const collaborationId = props.pageID;
 
   const {
-    isInitialLoading,
     checkIfAlreadyInvited,
-    fetchInitialInfluencers,
-    setInfluencers,
-    fetchMoreInfluencers,
     influencers,
     isLoading,
+    resetData,
+    loadMore,
+    nextAvailable
   } = useInfluencers({
     collaborationId,
   });
@@ -132,7 +131,7 @@ const InvitationsTabContent = (props: any) => {
     }
   };
 
-  if (isInitialLoading) {
+  if (influencers.length === 0 && isLoading) {
     return (
       <View
         style={{
@@ -162,8 +161,7 @@ const InvitationsTabContent = (props: any) => {
       <FlatList
         refreshing={isLoading}
         onRefresh={() => {
-          setInfluencers([]);
-          fetchInitialInfluencers();
+          resetData()
         }}
         data={influencers}
         initialNumToRender={5}
@@ -172,18 +170,22 @@ const InvitationsTabContent = (props: any) => {
         renderItem={({ item }) => (
           <InvitationCard
             checkIfAlreadyInvited={checkIfAlreadyInvited}
+            // @ts-ignore
             data={item}
             profileModalAction={() => {
+              // @ts-ignore
               setSelectedInfluencer(item);
               setTimeout(() => {
                 bottomSheetModalRef.current?.present();
               }, 500);
             }}
             bottomSheetAction={() => {
+              // @ts-ignore
               setSelectedInfluencer(item);
               setIsActionModalVisible(true);
             }}
             inviteInfluencer={() => {
+              // @ts-ignore
               setSelectedInfluencer(item);
               setIsInvitationModalVisible(true);
             }}
@@ -196,7 +198,7 @@ const InvitationsTabContent = (props: any) => {
             />
           ) : null
         }
-        onEndReached={fetchMoreInfluencers}
+        onEndReached={loadMore}
         onEndReachedThreshold={0.1}
         keyExtractor={(item) => item.id}
         style={{
