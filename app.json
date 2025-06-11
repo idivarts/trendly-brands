@@ -29,6 +29,7 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "Trendly Brands",
         "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account."
       }
     },
