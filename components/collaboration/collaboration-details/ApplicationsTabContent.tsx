@@ -15,6 +15,7 @@ import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
+import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
@@ -24,7 +25,6 @@ import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import { IOScrollView } from "react-native-intersection-observer";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -125,7 +125,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
   };
 
   return (
-    <IOScrollView>
+    <IOScroll>
       <FlatList
         data={influencers}
         initialNumToRender={5}
@@ -253,7 +253,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           />
         </BottomSheetScrollView>
       </BottomSheetModal>
-    </IOScrollView>
+    </IOScroll>
   );
 };
 

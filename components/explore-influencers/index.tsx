@@ -19,11 +19,11 @@ import {
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
+import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { collection, orderBy, query, where } from "firebase/firestore";
-import { IOScrollView } from "react-native-intersection-observer";
 import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -171,7 +171,7 @@ const ExploreInfluencers = () => {
           width: xl ? MAX_WIDTH_WEB : "100%",
         }}
       >
-        <IOScrollView onScroll={(ev) => {
+        <IOScroll onScroll={(ev) => {
           onScrollEvent(ev)
         }}>
           <FlatList
@@ -226,7 +226,7 @@ const ExploreInfluencers = () => {
             maxToRenderPerBatch={10}
             windowSize={5}
           />
-        </IOScrollView>
+        </IOScroll>
       </View>
 
       {isModalVisible && (

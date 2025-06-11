@@ -10,6 +10,7 @@ import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
+import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -30,7 +31,6 @@ import {
   FlatList,
   Modal,
 } from "react-native";
-import { IOScrollView } from "react-native-intersection-observer";
 import {
   List,
 } from "react-native-paper";
@@ -158,7 +158,7 @@ const InvitationsTabContent = (props: any) => {
   };
 
   return (
-    <IOScrollView onScroll={(ev) => {
+    <IOScroll onScroll={(ev) => {
       onScrollEvent(ev)
     }}>
       <FlatList
@@ -329,7 +329,7 @@ const InvitationsTabContent = (props: any) => {
           />
         </BottomSheetScrollView>
       </BottomSheetModal>
-    </IOScrollView>
+    </IOScroll>
   );
 };
 
