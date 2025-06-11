@@ -30,7 +30,6 @@ import Carousel, {
   ICarouselInstance,
   Pagination,
 } from "react-native-reanimated-carousel";
-import Swiper from "react-native-swiper";
 
 const PreSignIn = () => {
   const theme = useTheme();
@@ -40,7 +39,6 @@ const PreSignIn = () => {
   const [loading, setLoading] = useState(false)
   const router = useRouter();
   const swiperRef = useRef<ICarouselInstance>(null);
-  const nativeRef = useRef<Swiper>(null);
   const progress = useSharedValue(0);
 
   const skipToConnect = () => {
@@ -53,8 +51,6 @@ const PreSignIn = () => {
           count: connectSlideIndex - progress.value,
           animated: true,
         });
-      } else {
-        nativeRef.current?.scrollTo(connectSlideIndex);
       }
     }
   };
