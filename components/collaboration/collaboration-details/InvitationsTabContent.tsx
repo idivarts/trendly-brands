@@ -4,6 +4,7 @@ import {
 } from "@/components/card/profile-modal/invitation-card";
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { Text, View } from "@/components/theme/Themed";
+import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
@@ -23,10 +24,10 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -60,8 +61,9 @@ const InvitationsTabContent = (props: any) => {
   } = useBreakpoints();
   const { manager } = useAuthContext()
 
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const [openProfileModal, setOpenProfileModal] = useState(false)
 
   const insets = useSafeAreaInsets();
   const containerOffset = useSharedValue({
@@ -175,7 +177,7 @@ const InvitationsTabContent = (props: any) => {
               // @ts-ignore
               setSelectedInfluencer(item);
               setTimeout(() => {
-                bottomSheetModalRef.current?.present();
+                setOpenProfileModal(true)
               }, 500);
             }}
             bottomSheetAction={() => {
@@ -255,78 +257,40 @@ const InvitationsTabContent = (props: any) => {
         </View>
       </Modal>
 
-      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isActionModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={toggleActionModal} />
-      {/* {
-        isActionModalVisible && (
-          <BottomSheetContainer
-            isVisible={isActionModalVisible}
-            onClose={toggleActionModal}
-            snapPoints={["25%", "50%"]}
-          >
-            <List.Section
+      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isActionModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={toggleActionModal} />
+      <BottomSheetScrollContainer
+        isVisible={openProfileModal}
+        snapPointsRange={["90%", "90%"]}
+        onClose={() => { setOpenProfileModal(false) }}
+      >
+        <ProfileBottomSheet
+          closeModal={() => setOpenProfileModal(false)}
+          actionCard={
+            <View
               style={{
-                paddingBottom: 28
+                backgroundColor: Colors(theme).transparent,
+                marginHorizontal: 16,
               }}
             >
-              <List.Item
-                title="Invite User"
-                onPress={() => {
-                  setIsActionModalVisible(false);
-                  setTimeout(() => {
-                    setIsInvitationModalVisible(true);
-                  }, 200);
+              <ProfileInvitationCard
+                checkIfAlreadyInvited={checkIfAlreadyInvited}
+                influencerId={selectedInfluencer?.id}
+                onInvite={() => {
+                  if (!selectedInfluencer) return;
+
+                  setIsInvitationModalVisible(true);
                 }}
               />
-              <List.Item
-                title="Message User"
-                onPress={() => {
-                  Console.log("Message User");
-                }}
-              />
-            </List.Section>
-          </BottomSheetContainer>
-        )
-      } */}
-
-      <BottomSheetModal
-        backdropComponent={renderBackdrop}
-        containerOffset={containerOffset}
-        enablePanDownToClose={true}
-        index={2}
-        ref={bottomSheetModalRef}
-        snapPoints={snapPoints}
-        topInset={insets.top}
-      >
-        <BottomSheetScrollView>
-          <ProfileBottomSheet
-            closeModal={() => bottomSheetModalRef.current?.dismiss()}
-            actionCard={
-              <View
-                style={{
-                  backgroundColor: Colors(theme).transparent,
-                  marginHorizontal: 16,
-                }}
-              >
-                <ProfileInvitationCard
-                  checkIfAlreadyInvited={checkIfAlreadyInvited}
-                  influencerId={selectedInfluencer?.id}
-                  onInvite={() => {
-                    if (!selectedInfluencer) return;
-
-                    setIsInvitationModalVisible(true);
-                  }}
-                />
-              </View>
-            }
-            carouselMedia={selectedInfluencer?.profile?.attachments?.map((attachment: Attachment) => processRawAttachment(attachment))}
-            FireStoreDB={FirestoreDB}
-            influencer={selectedInfluencer as User}
-            isBrandsApp={true}
-            theme={theme}
-          />
-        </BottomSheetScrollView>
-      </BottomSheetModal>
-    </IOScroll>
+            </View>
+          }
+          carouselMedia={selectedInfluencer?.profile?.attachments?.map((attachment: Attachment) => processRawAttachment(attachment))}
+          FireStoreDB={FirestoreDB}
+          influencer={selectedInfluencer as User}
+          isBrandsApp={true}
+          theme={theme}
+        />
+      </BottomSheetScrollContainer>
+    </IOScroll >
   );
 };
 

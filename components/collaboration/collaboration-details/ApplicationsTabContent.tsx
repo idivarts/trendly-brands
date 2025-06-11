@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList } from "react-native";
 
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/components/card/profile-modal/application-card";
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { View } from "@/components/theme/Themed";
+import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
 import { CardHeader } from "@/components/ui/card/secondary/card-header";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
@@ -24,7 +25,7 @@ import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Mod
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -48,8 +49,9 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     xl,
   } = useBreakpoints();
 
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const [openProfileModal, setOpenProfileModal] = useState(false)
 
   const insets = useSafeAreaInsets();
   const containerOffset = useSharedValue({
@@ -159,7 +161,8 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
               profileModalAction={() => {
                 setSelectedInfluencerApplication(item);
                 setTimeout(() => {
-                  bottomSheetModalRef.current?.present();
+                  setOpenProfileModal(true);
+                  // bottomSheetModalRef.current?.present();
                 }, 500);
               }}
             />
@@ -183,82 +186,48 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         }
       />
 
-      <InfluencerActionModal influencerId={selectedInfluencerApplication?.influencer.id} isModalVisible={isActionModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={toggleActionModal} />
-      {/* {
-        isActionModalVisible && (
-          <BottomSheetContainer
-            isVisible={isActionModalVisible}
-            onClose={toggleActionModal}
-            snapPoints={["25%", "50%"]}
-          >
-            <List.Section
+      <InfluencerActionModal influencerId={selectedInfluencerApplication?.influencer.id} isModalVisible={isActionModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={toggleActionModal} />
+
+      <BottomSheetScrollContainer
+        isVisible={openProfileModal}
+        snapPointsRange={["90%", "90%"]}
+        onClose={() => { setOpenProfileModal(false) }}
+      >
+        <ProfileBottomSheet
+          closeModal={() => setOpenProfileModal(false)}
+          actionCard={
+            <View
               style={{
-                paddingBottom: 28
+                backgroundColor: Colors(theme).transparent,
+                marginHorizontal: 16,
               }}
             >
-              <List.Item
-                title="Accept Application"
-                onPress={() => {
-                  handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication);
+              <ProfileApplicationCard
+                data={selectedInfluencerApplication?.application as Application}
+                onReject={async () => {
+                  await handleRejectApplication(selectedInfluencerApplication as InfluencerApplication).then(() => {
+                    setOpenProfileModal(false)
+                  });
                 }}
+                onAccept={async () => {
+                  await handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication).then(() => {
+                    setOpenProfileModal(false)
+                  });
+                }}
+                questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer, index) => ({
+                  question: selectedInfluencerApplication.collaboration?.questionsToInfluencers?.[index] || "",
+                  answer: answer.answer
+                })) || []}
               />
-              <List.Item
-                title="Reject Application"
-                onPress={() => {
-                  handleRejectApplication(selectedInfluencerApplication as InfluencerApplication);
-                }}
-              />
-            </List.Section>
-          </BottomSheetContainer>
-        )
-      } */}
-
-      <BottomSheetModal
-        backdropComponent={renderBackdrop}
-        containerOffset={containerOffset}
-        enablePanDownToClose={true}
-        index={2}
-        ref={bottomSheetModalRef}
-        snapPoints={snapPoints}
-        topInset={insets.top}
-      >
-        <BottomSheetScrollView>
-          <ProfileBottomSheet
-            closeModal={() => bottomSheetModalRef.current?.dismiss()}
-            actionCard={
-              <View
-                style={{
-                  backgroundColor: Colors(theme).transparent,
-                  marginHorizontal: 16,
-                }}
-              >
-                <ProfileApplicationCard
-                  data={selectedInfluencerApplication?.application as Application}
-                  onReject={async () => {
-                    await handleRejectApplication(selectedInfluencerApplication as InfluencerApplication).then(() => {
-                      bottomSheetModalRef.current?.close();
-                    });
-                  }}
-                  onAccept={async () => {
-                    await handleAcceptApplication(selectedInfluencerApplication as InfluencerApplication).then(() => {
-                      bottomSheetModalRef.current?.close();
-                    });
-                  }}
-                  questions={selectedInfluencerApplication?.application.answersFromInfluencer.map((answer, index) => ({
-                    question: selectedInfluencerApplication.collaboration?.questionsToInfluencers?.[index] || "",
-                    answer: answer.answer
-                  })) || []}
-                />
-              </View>
-            }
-            carouselMedia={selectedInfluencerApplication?.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
-            FireStoreDB={FirestoreDB}
-            influencer={selectedInfluencerApplication?.influencer as User}
-            isBrandsApp={true}
-            theme={theme}
-          />
-        </BottomSheetScrollView>
-      </BottomSheetModal>
+            </View>
+          }
+          carouselMedia={selectedInfluencerApplication?.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
+          FireStoreDB={FirestoreDB}
+          influencer={selectedInfluencerApplication?.influencer as User}
+          isBrandsApp={true}
+          theme={theme}
+        />
+      </BottomSheetScrollContainer>
     </IOScroll>
   );
 };

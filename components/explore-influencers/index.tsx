@@ -3,7 +3,7 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
@@ -12,9 +12,7 @@ import { View } from "../theme/Themed";
 
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetScrollView,
+  BottomSheetBackdrop
 } from "@gorhom/bottom-sheet";
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
@@ -26,6 +24,7 @@ import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import InfluencerActionModal from "./InfluencerActionModal";
 
 const ExploreInfluencers = () => {
@@ -51,8 +50,9 @@ const ExploreInfluencers = () => {
     null
   );
 
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const [openProfileModal, setOpenProfileModal] = useState(false)
 
   const insets = useSafeAreaInsets();
   const containerOffset = useSharedValue({
@@ -168,7 +168,7 @@ const ExploreInfluencers = () => {
                 openProfile={(influencer) => {
                   if (influencer)
                     setSelectedInfluencer(influencer as User);
-                  bottomSheetModalRef.current?.present();
+                  setOpenProfileModal(true)
                 }}
                 setSelectedInfluencer={setSelectedInfluencer as any}
               />
@@ -212,7 +212,7 @@ const ExploreInfluencers = () => {
         </IOScroll>
       </View>
 
-      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={ToggleModal} />
+      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={ToggleModal} />
 
       {isFilterModalVisible && (
         <CollaborationFilter
@@ -233,25 +233,19 @@ const ExploreInfluencers = () => {
         />
       )}
 
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        index={2}
-        snapPoints={snapPoints}
-        backdropComponent={renderBackdrop}
-        enablePanDownToClose={true}
-        containerOffset={containerOffset}
-        topInset={insets.top}
+      <BottomSheetScrollContainer
+        isVisible={openProfileModal}
+        snapPointsRange={["90%", "90%"]}
+        onClose={() => { setOpenProfileModal(false) }}
       >
-        <BottomSheetScrollView>
-          <ProfileBottomSheet
-            influencer={selectedInfluencer as User}
-            theme={theme}
-            FireStoreDB={FirestoreDB}
-            isBrandsApp={true}
-            closeModal={() => bottomSheetModalRef.current?.dismiss()}
-          />
-        </BottomSheetScrollView>
-      </BottomSheetModal>
+        <ProfileBottomSheet
+          influencer={selectedInfluencer as User}
+          theme={theme}
+          FireStoreDB={FirestoreDB}
+          isBrandsApp={true}
+          closeModal={() => setOpenProfileModal(false)}
+        />
+      </BottomSheetScrollContainer>
     </AppLayout>
   );
 };
