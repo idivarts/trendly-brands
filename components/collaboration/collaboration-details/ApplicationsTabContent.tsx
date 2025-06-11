@@ -218,6 +218,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
       >
         <BottomSheetScrollView>
           <ProfileBottomSheet
+            closeModal={() => bottomSheetModalRef.current?.dismiss()}
             actionCard={
               <View
                 style={{

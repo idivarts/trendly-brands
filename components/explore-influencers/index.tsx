@@ -283,6 +283,7 @@ const ExploreInfluencers = () => {
             theme={theme}
             FireStoreDB={FirestoreDB}
             isBrandsApp={true}
+            closeModal={() => bottomSheetModalRef.current?.dismiss()}
           />
         </BottomSheetScrollView>
       </BottomSheetModal>

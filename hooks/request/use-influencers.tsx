@@ -27,7 +27,7 @@ const useInfluencers = ({
     ...((manager?.isAdmin || false) ? [] : [where("profile.completionPercentage", ">=", 60)]),
     orderBy("creationTime", "desc")
   );
-  const { loading: isLoading, data, resetData, loadMore, nextAvailable } = useInfiniteScroll<User>(q, 10)
+  const { loading: isLoading, data, resetData, loadMore, nextAvailable, onScrollEvent } = useInfiniteScroll<User>(q, 10)
 
   const influencers: User[] = data?.map(d => ({
     ...d,
@@ -56,7 +56,8 @@ const useInfluencers = ({
     checkIfAlreadyInvited,
     influencers,
     isLoading,
-    loadMore, resetData, nextAvailable
+    loadMore, resetData, nextAvailable,
+    onScrollEvent
   };
 };
 

@@ -52,9 +52,10 @@ const InvitationsTabContent = (props: any) => {
     checkIfAlreadyInvited,
     influencers,
     isLoading,
-    resetData,
-    loadMore,
-    nextAvailable
+    onScrollEvent
+    // resetData,
+    // loadMore,
+    // nextAvailable
   } = useInfluencers({
     collaborationId,
   });
@@ -157,12 +158,14 @@ const InvitationsTabContent = (props: any) => {
   };
 
   return (
-    <IOScrollView>
+    <IOScrollView onScroll={(ev) => {
+      onScrollEvent(ev)
+    }}>
       <FlatList
         refreshing={isLoading}
-        onRefresh={() => {
-          resetData()
-        }}
+        // onRefresh={() => {
+        //   resetData()
+        // }}
         data={influencers}
         initialNumToRender={5}
         maxToRenderPerBatch={10}
@@ -198,8 +201,8 @@ const InvitationsTabContent = (props: any) => {
             />
           ) : null
         }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.1}
+        // onEndReached={loadMore}
+        // onEndReachedThreshold={0.1}
         keyExtractor={(item) => item.id}
         style={{
           paddingBottom: 16,
@@ -299,6 +302,7 @@ const InvitationsTabContent = (props: any) => {
       >
         <BottomSheetScrollView>
           <ProfileBottomSheet
+            closeModal={() => bottomSheetModalRef.current?.dismiss()}
             actionCard={
               <View
                 style={{
