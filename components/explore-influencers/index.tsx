@@ -116,6 +116,7 @@ const ExploreInfluencers = () => {
     currentEngagementRange,
     searchQuery,
     influencers,
+    manager
   ]);
 
   const renderBackdrop = (props: any) => {
