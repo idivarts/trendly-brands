@@ -101,7 +101,8 @@
           "savePhotosPermission": "Trendly needs permission to save collaboration-related images and videos to your photo library.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-tracking-transparency"
     ],
     "experiments": {
       "typedRoutes": true
