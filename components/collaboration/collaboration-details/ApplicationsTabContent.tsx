@@ -13,20 +13,19 @@ import { CardHeader } from "@/components/ui/card/secondary/card-header";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -43,6 +42,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
   const theme = useTheme();
   const [selectedInfluencerApplication, setSelectedInfluencerApplication] = useState<InfluencerApplication | null>(null);
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
+  const { manager } = useAuthContext()
 
   const {
     xl,
@@ -83,7 +83,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     fetchApplications,
     handleAcceptApplication,
     handleRejectApplication,
-    influencers,
+    influencers: rawInfluencers,
     loading,
   } = useApplications({
     isApplicationConcised,
@@ -114,6 +114,10 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
       </View>
     );
   }
+
+  const influencers = rawInfluencers.filter(i => {
+    return !(manager?.moderations?.blockedInfluencers || []).includes(i.influencer.id)
+  })
 
   if (influencers.length === 0) {
     return (
@@ -179,8 +183,8 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         }
       />
 
-      <InfluencerActionModal selectedInfluencer={selectedInfluencerApplication} isModalVisible={isModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={ToggleModal} />
-      {
+      <InfluencerActionModal influencerId={selectedInfluencerApplication?.influencer.id} isModalVisible={isActionModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={toggleActionModal} />
+      {/* {
         isActionModalVisible && (
           <BottomSheetContainer
             isVisible={isActionModalVisible}
@@ -207,7 +211,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
             </List.Section>
           </BottomSheetContainer>
         )
-      }
+      } */}
 
       <BottomSheetModal
         backdropComponent={renderBackdrop}

@@ -2,12 +2,14 @@ import InvitationCard from "@/components/card/collaboration-details/invitation-c
 import {
   InvitationCard as ProfileInvitationCard
 } from "@/components/card/profile-modal/invitation-card";
+import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
+import { useAuthContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
@@ -16,7 +18,6 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
@@ -31,9 +32,6 @@ import {
   FlatList,
   Modal,
 } from "react-native";
-import {
-  List,
-} from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -50,12 +48,9 @@ const InvitationsTabContent = (props: any) => {
 
   const {
     checkIfAlreadyInvited,
-    influencers,
+    influencers: rawInfluencers,
     isLoading,
     onScrollEvent
-    // resetData,
-    // loadMore,
-    // nextAvailable
   } = useInfluencers({
     collaborationId,
   });
@@ -63,6 +58,7 @@ const InvitationsTabContent = (props: any) => {
   const {
     xl,
   } = useBreakpoints();
+  const { manager } = useAuthContext()
 
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -87,10 +83,6 @@ const InvitationsTabContent = (props: any) => {
 
   const toggleActionModal = () => {
     setIsActionModalVisible(!isActionModalVisible);
-  }
-
-  const handleActionModalClose = () => {
-    setIsActionModalVisible(false);
   }
 
   const handleCollaborationInvite = async () => {
@@ -131,6 +123,10 @@ const InvitationsTabContent = (props: any) => {
       setIsInviting(false);
     }
   };
+
+  const influencers = rawInfluencers.filter(i => {
+    return !(manager?.moderations?.blockedInfluencers || []).includes(i.id)
+  })
 
   if (influencers.length === 0 && isLoading) {
     return (
@@ -259,7 +255,8 @@ const InvitationsTabContent = (props: any) => {
         </View>
       </Modal>
 
-      {
+      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isActionModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={toggleActionModal} />
+      {/* {
         isActionModalVisible && (
           <BottomSheetContainer
             isVisible={isActionModalVisible}
@@ -289,7 +286,7 @@ const InvitationsTabContent = (props: any) => {
             </List.Section>
           </BottomSheetContainer>
         )
-      }
+      } */}
 
       <BottomSheetModal
         backdropComponent={renderBackdrop}
