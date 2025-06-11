@@ -71,7 +71,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration applications.",
+          "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration campaigns.",
           "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations.",
           "recordAudioAndroid": true
         }
