@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/contexts';
+import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal';
 import Toaster from '@/shared-uis/components/toaster/Toaster';
 import React from 'react';
 import { List } from 'react-native-paper';
@@ -8,6 +9,7 @@ interface IProps { influencerId: string | undefined, isModalVisible: boolean, to
 
 const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible, toggleModal, openProfile }) => {
     const { manager, updateManager } = useAuthContext()
+    const { openModal } = useConfirmationModel()
     const blockInfluencer = async () => {
         if (!manager?.id || !influencerId)
             return;
@@ -59,11 +61,21 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
                         />
                         {/* <List.Item title="Send Message" onPress={() => null} /> */}
                         <List.Item title="Report and Block Influencer" onPress={() => {
-                            reportAndBlockInfluencer()
+                            openModal({
+                                title: "Report and Block User",
+                                description: "Are you sure you want to report and block this user? You wont be seeing any of their activities. We will review this report within 24 hours",
+                                confirmText: "Report and Block",
+                                confirmAction: reportAndBlockInfluencer
+                            })
                             toggleModal()
                         }} />
                         <List.Item title="Block Influencer" onPress={() => {
-                            blockInfluencer()
+                            openModal({
+                                title: "Block user?",
+                                description: "Are you sure you want to block this user? You wont be seeing any of their activities.",
+                                confirmText: "Block",
+                                confirmAction: blockInfluencer
+                            })
                             toggleModal()
                         }} />
                     </List.Section>
