@@ -24,10 +24,9 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { collection, orderBy, query, where } from "firebase/firestore";
-import { List } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
+import InfluencerActionModal from "./InfluencerActionModal";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,7 +64,7 @@ const ExploreInfluencers = () => {
 
   // const [isLoading, setIsLoading] = useState(true);
 
-  const { manager } = useAuthContext()
+  const { manager, updateManager } = useAuthContext()
   const theme = useTheme();
 
   const { xl } = useBreakpoints();
@@ -93,29 +92,13 @@ const ExploreInfluencers = () => {
 
   const filterInfluencers = () => {
     const newFilteredInfluencers = influencers.filter((influencer) => {
-      // const isCollaborationTypeMatch =
-      //   currentCollaborationType === "All" ||
-      //   influencer.profile?.category?.includes(currentCollaborationType);
-
-      // const isFollowersRangeMatch =
-      //   Number(influencer.backend?.followers) >= currentFollowersRange[0] &&
-      //   Number(influencer.backend?.followers) <= currentFollowersRange[1];
-      // const isReachRangeMatch =
-      //   Number(influencer.backend?.reach) >= currentReachRange[0] &&
-      //   Number(influencer.backend?.reach) <= currentReachRange[1];
-      // const isEngagementRangeMatch =
-      //   Number(influencer.backend?.engagement) >= currentEngagementRange[0] &&
-      //   Number(influencer.backend?.engagement) <= currentEngagementRange[1];
-
+      if (manager?.moderations?.blockedInfluencers?.includes(influencer.id))
+        return false
       const isSearchQueryMatch = influencer.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
       return (
-        // isCollaborationTypeMatch &&
-        // isFollowersRangeMatch &&
-        // isReachRangeMatch &&
-        // isEngagementRangeMatch &&
         isSearchQueryMatch
       );
     });
@@ -190,7 +173,7 @@ const ExploreInfluencers = () => {
                 setSelectedInfluencer={setSelectedInfluencer as any}
               />
             )}
-            keyExtractor={(item, index) => index.toString()}
+            keyExtractor={(item) => item.id}
             contentContainerStyle={{
               paddingTop: 16,
               paddingBottom: 16,
@@ -229,25 +212,7 @@ const ExploreInfluencers = () => {
         </IOScroll>
       </View>
 
-      {isModalVisible && (
-        <BottomSheetContainer
-          isVisible={isModalVisible}
-          snapPointsRange={["25%", "50%"]}
-          onClose={ToggleModal}
-        >
-          <List.Section style={{ paddingBottom: 28 }}>
-            <List.Item
-              title="View Profile"
-              onPress={() => {
-                bottomSheetModalRef.current?.present();
-                ToggleModal();
-              }}
-            />
-            <List.Item title="Send Message" onPress={() => null} />
-            <List.Item title="Block Influencer" onPress={() => null} />
-          </List.Section>
-        </BottomSheetContainer>
-      )}
+      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={ToggleModal} />
 
       {isFilterModalVisible && (
         <CollaborationFilter

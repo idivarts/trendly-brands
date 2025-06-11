@@ -7,6 +7,7 @@ import {
 import {
   ApplicationCard as ProfileApplicationCard
 } from "@/components/card/profile-modal/application-card";
+import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { View } from "@/components/theme/Themed";
 import { CardHeader } from "@/components/ui/card/secondary/card-header";
 import EmptyState from "@/components/ui/empty-state";
@@ -178,6 +179,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         }
       />
 
+      <InfluencerActionModal selectedInfluencer={selectedInfluencerApplication} isModalVisible={isModalVisible} openProfile={() => bottomSheetModalRef.current?.present()} toggleModal={ToggleModal} />
       {
         isActionModalVisible && (
           <BottomSheetContainer
