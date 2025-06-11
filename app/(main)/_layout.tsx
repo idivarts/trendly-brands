@@ -1,6 +1,7 @@
 import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import { streamClient } from "@/contexts/chat-context.provider";
+import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import { Stack } from "expo-router";
 import React from "react";
@@ -20,33 +21,35 @@ const MainLayout = () => {
                 <ContractContextProvider>
                   <AutocompleteDropdownContextProvider>
                     <ChatContextProvider>
-                      <Stack
-                        screenOptions={{
-                          animation: "ios",
-                          headerShown: false,
-                        }}
-                      >
-                        <Stack.Screen
-                          name="(drawer)"
-                          options={{
+                      <ScrollProvider>
+                        <Stack
+                          screenOptions={{
+                            animation: "ios",
                             headerShown: false,
                           }}
-                        />
-                        <Stack.Screen
-                          name="(onboarding)"
-                          options={{
-                            headerShown: false,
-                          }}
-                        />
-                        <Stack.Screen
-                          name="(modal)/create-collaboration"
-                          options={{
-                            presentation: "formSheet",
-                            gestureEnabled: true,
-                          }}
-                        />
-                        <Stack.Screen name="(modal)/edit-collaboration" />
-                      </Stack>
+                        >
+                          <Stack.Screen
+                            name="(drawer)"
+                            options={{
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="(onboarding)"
+                            options={{
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="(modal)/create-collaboration"
+                            options={{
+                              presentation: "formSheet",
+                              gestureEnabled: true,
+                            }}
+                          />
+                          <Stack.Screen name="(modal)/edit-collaboration" />
+                        </Stack>
+                      </ScrollProvider>
                     </ChatContextProvider>
                   </AutocompleteDropdownContextProvider>
                 </ContractContextProvider>
