@@ -8,8 +8,8 @@ import React, {
     useState
 } from 'react';
 import { Chat, OverlayProvider } from "stream-chat-expo";
+import { streamClient } from "./streamClient";
 
-import { streamClient } from './chat-context.provider';
 
 const StreamWrapper: FC<PropsWithChildren> = ({ children }) => {
     const theme = useTheme();

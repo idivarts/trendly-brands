@@ -160,10 +160,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
               data={item}
               profileModalAction={() => {
                 setSelectedInfluencerApplication(item);
-                setTimeout(() => {
-                  setOpenProfileModal(true);
-                  // bottomSheetModalRef.current?.present();
-                }, 500);
+                setOpenProfileModal(true);
               }}
             />
           </>
@@ -195,6 +192,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
       >
         <ProfileBottomSheet
           closeModal={() => setOpenProfileModal(false)}
+          isPhoneMasked={false}
           actionCard={
             <View
               style={{

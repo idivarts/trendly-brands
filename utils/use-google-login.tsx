@@ -1,3 +1,4 @@
+import { INITIAL_MANAGER_DATA } from "@/constants/Manager";
 import { useAuthContext } from "@/contexts";
 import { isWorkEmail } from "@/contexts/auth-context.provider";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
@@ -37,18 +38,10 @@ export const useGoogleLogin = (setLoading: Function, setError: Function) => {
 
         if (!isExistingUser) {
             const userData: IManagers = {
+                ...INITIAL_MANAGER_DATA,
                 name: result.user.displayName || "",
                 email: result.user.email || "",
-                pushNotificationToken: {
-                    ios: [],
-                    android: [],
-                    web: [],
-                },
-                settings: {
-                    theme: "light",
-                    emailNotification: true,
-                    pushNotification: true,
-                },
+                creationTime: Date.now()
             };
             await setDoc(managerRef, userData);
         }

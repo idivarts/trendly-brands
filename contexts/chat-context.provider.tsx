@@ -11,11 +11,9 @@ import {
 import { DefaultGenerics, StreamChat } from "stream-chat";
 import { useAuthContext } from "./auth-context.provider";
 import StreamWrapper from "./stream-wrapper";
+import { streamClient } from "./streamClient";
 
-export const streamClient = StreamChat.getInstance(
-  process.env.EXPO_PUBLIC_STREAM_API_KEY!
-);
-
+export { streamClient };
 interface ChatContextProps {
   // createGroupWithMembers: (
   //   groupName: string,
