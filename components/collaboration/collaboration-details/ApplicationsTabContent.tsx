@@ -195,6 +195,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
       >
         <ProfileBottomSheet
           closeModal={() => setOpenProfileModal(false)}
+          isPhoneMasked={false}
           actionCard={
             <View
               style={{
