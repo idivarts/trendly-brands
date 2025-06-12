@@ -2,8 +2,7 @@ import { useAuthContext } from "@/contexts";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import { User } from "@/types/User";
-import { collection, DocumentData, getDocs, orderBy, query, where } from "firebase/firestore";
-import { useState } from "react";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 
 interface UseInfluencersProps {
   collaborationId: string;
@@ -13,13 +12,12 @@ const useInfluencers = ({
   collaborationId,
 }: UseInfluencersProps) => {
   // const [influencers, setInfluencers] = useState<any[]>([]);
-  const [lastVisible, setLastVisible] = useState<DocumentData | null>(null);
-  const [hasMore, setHasMore] = useState(true);
+  // const [lastVisible, setLastVisible] = useState<DocumentData | null>(null);
+  // const [hasMore, setHasMore] = useState(true);
   // const [isInitialLoading, setIsInitialLoading] = useState(true);
+  // const PAGE_SIZE = 5;
 
   const { manager } = useAuthContext()
-
-  const PAGE_SIZE = 5;
 
   const influencersRef = collection(FirestoreDB, "users");
   const q = query(
