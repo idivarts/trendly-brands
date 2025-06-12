@@ -43,6 +43,16 @@ const MembersModal: React.FC<MembersModalProps> = ({
       Toaster.error("Please enter all fields");
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Toaster.error("Please enter a valid email address");
+      return;
+    }
+
+    if (name.trim().length < 3) {
+      Toaster.error("Name must be at least 3 characters long");
+      return;
+    }
     const user = await AuthApp.currentUser?.getIdToken();
     setLoading(true);
 
@@ -101,6 +111,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                 <TextInput
                   label="Email"
                   mode="outlined"
+                  inputMode="email"
                   value={email}
                   onChangeText={(value) => setEmail(value)}
                   style={styles.input}
