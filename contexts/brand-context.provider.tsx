@@ -20,6 +20,7 @@ interface BrandContextProps {
   selectedBrand: Brand | undefined;
   setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
+  loading: boolean
 }
 
 const BrandContext = createContext<BrandContextProps>({
@@ -28,6 +29,7 @@ const BrandContext = createContext<BrandContextProps>({
   selectedBrand: undefined,
   setSelectedBrand: () => { },
   updateBrand: () => Promise.resolve(),
+  loading: true
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -36,13 +38,14 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true)
   const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
   const { manager } = useAuthContext();
 
   const setSelectedBrandHandler = async (brand: Brand | undefined, triggerToast = true) => {
     if (brand) {
       Console.log("Setting Brand ID to storage:", brand.id);
-      PersistentStorage.set("selectedBrandId", brand.id)
+      await PersistentStorage.set("selectedBrandId", brand.id)
       if (triggerToast)
         Toaster.info("Brand changed to " + brand.name);
       setSelectedBrand(brand);
@@ -61,67 +64,72 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     );
     Console.log("Brand ID from member Query:", manager.id);
 
-    const unsubscribe = onSnapshot(membersQuery, (membersSnapshot) => {
-      Console.log("Brand ID from member Inside:", manager.id);
-      if (membersSnapshot.empty) {
-        Console.log("No members found for this manager");
-        setBrands([]);
-        setSelectedBrand(undefined);
-        return;
-      }
-
-      const brandIds = new Set<string>();
-      membersSnapshot.docs.forEach((doc) => {
-        const member = doc.data() as IBrandsMembers
-        if (member.status === 0 || member.status > 1) {
-          return
+    const unsubscribe = onSnapshot(membersQuery, async (membersSnapshot) => {
+      setLoading(true)
+      try {
+        Console.log("Brand ID from member Inside:", manager.id);
+        if (membersSnapshot.empty) {
+          Console.log("No members found for this manager");
+          setBrands([]);
+          setSelectedBrand(undefined);
+          return;
         }
 
-        const brandId = doc.ref.parent.parent?.id; // Get the brand ID from the member's document reference
-        Console.log("Brand ID from member:", brandId);
-        if (brandId) {
-          brandIds.add(brandId);
-        }
-      });
+        const brandIds = new Set<string>();
+        membersSnapshot.docs.forEach((doc) => {
+          const member = doc.data() as IBrandsMembers
+          if (member.status === 0 || member.status > 1) {
+            return
+          }
 
-      if (brandIds.size === 0) {
-        Console.log("No brands associated with this manager");
-        setBrands([]);
-        setSelectedBrand(undefined);
-        return;
-      }
-
-      const brandsCollection = collection(FirestoreDB, "brands");
-      const brandsQuery = query(
-        brandsCollection,
-        where(documentId(), "in", Array.from(brandIds))
-      );
-
-      getDocs(brandsQuery).then(async (brandsSnapshot) => {
-        const fetchedBrands: Brand[] = [];
-        brandsSnapshot.docs.forEach((brandDoc) => {
-          fetchedBrands.push({
-            ...(brandDoc.data() as Brand),
-            id: brandDoc.id,
-          });
+          const brandId = doc.ref.parent.parent?.id; // Get the brand ID from the member's document reference
+          Console.log("Brand ID from member:", brandId);
+          if (brandId) {
+            brandIds.add(brandId);
+          }
         });
 
-        setBrands(fetchedBrands);
-
-        if (fetchedBrands.length > 0 && !selectedBrand) {
-          const bId = await PersistentStorage.get("selectedBrandId")
-          Console.log("Selected Brand ID from storage:", bId);
-          if (bId) {
-            const brand = fetchedBrands.find(b => b.id === bId);
-            if (brand) {
-              setSelectedBrandHandler(brand, false);
-            } else {
-              setSelectedBrandHandler(fetchedBrands[0], false);
-            }
-          } else
-            setSelectedBrandHandler(fetchedBrands[0], false);
+        if (brandIds.size === 0) {
+          Console.log("No brands associated with this manager");
+          setBrands([]);
+          setSelectedBrand(undefined);
+          return;
         }
-      });
+
+        const brandsCollection = collection(FirestoreDB, "brands");
+        const brandsQuery = query(
+          brandsCollection,
+          where(documentId(), "in", Array.from(brandIds))
+        );
+
+        await getDocs(brandsQuery).then(async (brandsSnapshot) => {
+          const fetchedBrands: Brand[] = [];
+          brandsSnapshot.docs.forEach((brandDoc) => {
+            fetchedBrands.push({
+              ...(brandDoc.data() as Brand),
+              id: brandDoc.id,
+            });
+          });
+
+          setBrands(fetchedBrands);
+
+          if (fetchedBrands.length > 0 && !selectedBrand) {
+            const bId = await PersistentStorage.get("selectedBrandId")
+            Console.log("Selected Brand ID from storage:", bId);
+            if (bId) {
+              const brand = fetchedBrands.find(b => b.id === bId);
+              if (brand) {
+                await setSelectedBrandHandler(brand, false);
+              } else {
+                await setSelectedBrandHandler(fetchedBrands[0], false);
+              }
+            } else
+              await setSelectedBrandHandler(fetchedBrands[0], false);
+          }
+        });
+      } finally {
+        setLoading(false)
+      }
     });
 
     return () => {
@@ -153,6 +161,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
         selectedBrand,
         setSelectedBrand: setSelectedBrandHandler,
         updateBrand,
+        loading
       }}
     >
       {children}
