@@ -176,9 +176,7 @@ const InvitationsTabContent = (props: any) => {
             profileModalAction={() => {
               // @ts-ignore
               setSelectedInfluencer(item);
-              setTimeout(() => {
-                setOpenProfileModal(true)
-              }, 500);
+              setOpenProfileModal(true)
             }}
             bottomSheetAction={() => {
               // @ts-ignore

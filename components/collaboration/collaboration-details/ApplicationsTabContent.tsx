@@ -160,10 +160,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
               data={item}
               profileModalAction={() => {
                 setSelectedInfluencerApplication(item);
-                setTimeout(() => {
-                  setOpenProfileModal(true);
-                  // bottomSheetModalRef.current?.present();
-                }, 500);
+                setOpenProfileModal(true);
               }}
             />
           </>
