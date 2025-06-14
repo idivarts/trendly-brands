@@ -1,11 +1,12 @@
 import Button from "@/components/ui/button";
 import AppLayout from "@/layouts/app-layout";
+import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, Platform, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
 const TrendlyScreen = () => {
@@ -22,21 +23,6 @@ const TrendlyScreen = () => {
           justifyContent: "space-between",
         }}
       >
-        {/* Header */}
-        {/* <View style={styles.header}>
-          <Text style={styles.title}>Trendly</Text>
-          <Button
-            mode="text"
-            labelStyle={{
-              color: Colors(theme).primary,
-              fontSize: 16,
-            }}
-            onPress={() => { }}
-          >
-            Logout
-          </Button>
-        </View> */}
-
         <View style={{ flex: 1, justifyContent: "center" }}>
           {/* Illustration */}
           <View>
@@ -57,12 +43,16 @@ const TrendlyScreen = () => {
                 marginBottom: 30,
               }}
             >
-              Influencers can only join Trendly after they connect their social
-              media to Trendly App
+              Welcome to the Trendly community! To get started, let us know which audience you belong to — are you a brand or an agency looking to collaborate with creators?
             </Text>
             <View style={[styles.buttonContainer, { display: "flex", alignContent: "stretch", gap: 16, alignItems: "stretch", width: 300, alignSelf: "center" }]}>
               <Button onPress={() => router.push("/pre-signin")}>Join as Brand / Agency</Button>
-              <Button mode={"outlined"} onPress={() => router.push("/wrong-app")}>Join as Influencer</Button>
+              <Button mode={"outlined"} onPress={() => {
+                if (Platform.OS === "web")
+                  window.open(CREATORS_FE_URL, "_blank");
+                else
+                  router.push("/wrong-app")
+              }}>Join as Influencer</Button>
               {/* <InstagramLoginButton />
               <FacebookLoginButton /> */}
             </View>

@@ -1,11 +1,11 @@
 import Button from "@/components/ui/button";
 import AppLayout from "@/layouts/app-layout";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { CREATORS_APPSTORE_URL, CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { Image, Linking, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
 const TrendlyScreen = () => {
@@ -22,20 +22,6 @@ const TrendlyScreen = () => {
           justifyContent: "space-between",
         }}
       >
-        {/* Header */}
-        {/* <View style={styles.header}>
-          <Text style={styles.title}>Trendly</Text>
-          <Button
-            mode="text"
-            labelStyle={{
-              color: Colors(theme).primary,
-              fontSize: 16,
-            }}
-            onPress={() => { }}
-          >
-            Logout
-          </Button>
-        </View> */}
 
         <View style={{ flex: 1, justifyContent: "center" }}>
           {/* Illustration */}
@@ -49,7 +35,7 @@ const TrendlyScreen = () => {
             </View>
 
             {/* No Account Text */}
-            <Text style={styles.noAccountText}>You are on the wrong app</Text>
+            <Text style={styles.noAccountText}>You're currently on the wrong app!</Text>
             <Text
               style={{
                 textAlign: "center",
@@ -57,12 +43,13 @@ const TrendlyScreen = () => {
                 marginBottom: 30,
               }}
             >
-              Influencers can only join Trendly after they connect their social
-              media to Trendly App
+              If you're a creator, please download the Trendly app from the App Store or continue using the web version.
             </Text>
             <View style={[styles.buttonContainer, { display: "flex", alignContent: "stretch", gap: 16, alignItems: "stretch", width: 300, alignSelf: "center" }]}>
-              <Button>Download on AppStore</Button>
-              <Button mode={"outlined"} onPress={() => Toaster.error("Opening on web")}>Open on Web</Button>
+              <Button onPress={() => {
+                Linking.openURL(CREATORS_APPSTORE_URL)
+              }}> Download on AppStore</Button>
+              <Button mode={"outlined"} onPress={() => Linking.openURL(CREATORS_FE_URL)}>Open on Web</Button>
               {/* <InstagramLoginButton />
               <FacebookLoginButton /> */}
             </View>
@@ -72,7 +59,7 @@ const TrendlyScreen = () => {
         {/* Buttons */}
 
       </View>
-    </AppLayout>
+    </AppLayout >
   );
 };
 
