@@ -33,6 +33,8 @@ interface NotificationContextProps {
   ) => Promise<void>;
 }
 
+export const NotficationTypesToHandle = ["application", "new-quotation", "contract-start-request", "contract-end-request", "feedback-given"]
+
 const NotificationContext = createContext<NotificationContextProps>(null!);
 
 export const useNotificationContext = () => useContext(NotificationContext);

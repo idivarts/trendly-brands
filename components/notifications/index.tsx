@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/app-layout";
 import { stylesFn } from "@/styles/NotificationCard.styles";
 import { Notification } from "@/types/Notification";
 import { useTheme } from "@react-navigation/native";
-import { ScrollView } from "react-native";
+import { FlatList } from "react-native";
 import { NotificationCard } from "../NotificationCard";
 import { View } from "../theme/Themed";
 
@@ -32,29 +32,31 @@ const Notifications: React.FC<NotificationsProps> = ({
             />
           </View >
         ) : (
-          <ScrollView
+          <FlatList
             style={styles.container}
             contentContainerStyle={styles.contentContainer}
-          >
-            {
-              notifications.map((item) => (
-                <NotificationCard
-                  avatar="https://cdn.iconscout.com/icon/free/png-256/avatar-370-456322.png"
-                  data={{
-                    collaborationId: item.data?.collaborationId,
-                    groupId: item.data?.groupId,
-                    userId: item.data?.userId,
-                  }}
-                  description={item.description}
-                  isRead={item.isRead}
-                  key={item.id}
-                  onMarkAsRead={() => onMarkAsRead(item.id)}
-                  time={item.timeStamp}
-                  title={item.title}
-                />
-              ))
+            data={notifications}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) =>
+              <NotificationCard
+                // avatar="https://cdn.iconscout.com/icon/free/png-256/avatar-370-456322.png"
+                data={{
+                  collaborationId: item.data?.collaborationId,
+                  groupId: item.data?.groupId,
+                  userId: item.data?.userId,
+                }}
+                description={item.description}
+                isRead={item.isRead}
+                onMarkAsRead={() => onMarkAsRead(item.id)}
+                time={item.timeStamp}
+                title={item.title}
+                type={item.type}
+              />
             }
-          </ScrollView>
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+          />
         )
       }
     </AppLayout>

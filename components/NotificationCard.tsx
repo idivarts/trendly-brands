@@ -1,13 +1,13 @@
-import React from "react";
-import { View } from "react-native";
-import { Text, Card, Avatar } from "react-native-paper";
-import { stylesFn } from "@/styles/NotificationCard.styles";
-import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import Button from "./ui/button";
+import Colors from "@/constants/Colors";
+import { NotficationTypesToHandle } from "@/contexts/notification-context.provider";
+import { Theme, useTheme } from "@react-navigation/native";
+import { Href, useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Card, Text } from "react-native-paper";
 
 interface NotificationCardProps {
-  avatar: string;
+  // avatar: string;
   data: {
     collaborationId?: string;
     groupId?: string;
@@ -18,33 +18,56 @@ interface NotificationCardProps {
   onMarkAsRead: () => void;
   time: number;
   title: string;
+  type: string
 }
 
 export const NotificationCard: React.FC<NotificationCardProps> = ({
-  avatar,
+  // avatar,
   data,
   description,
   isRead,
   onMarkAsRead,
   time,
   title,
+  type
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const router = useRouter();
+  const [loading, setLoading] = useState(false)
 
-  let action: string | undefined;
+  const action = async () => {
+    try {
+      setLoading(true);
+      if (NotficationTypesToHandle.includes(type)) {
+        let redirectUrl: Href;
 
-  if (data.collaborationId) {
-    action = `/collaboration-details/${data.collaborationId}`;
-  } else if (data.groupId) {
-    action = `/channel/${data.groupId}`; // TODO: Save the groupId or cid in the database
+        // "application", "new-quotation", "contract-start-request", "contract-end-request", "feedback-given"
+        if (type === "application") {
+          redirectUrl = `/collaboration-details/${data.collaborationId}`;
+        } else if (type === "new-quotation") {
+          redirectUrl = `/contract-details/${data.groupId}`; // TODO: Save the groupId or cid in the database
+        } else if (type === "contract-start-request") {
+          redirectUrl = `/contract-details/${data.groupId}`;
+        } else if (type === "contract-end-request") {
+          redirectUrl = `/contract-details/${data.groupId}`;
+        } else if (type === "feedback-given") {
+          redirectUrl = `/contract-details/${data.collaborationId}`;
+        } else
+          return;
+        router.push(redirectUrl);
+      }
+    } finally {
+      setLoading(false);
+    }
   }
-
   return (
-    <Card style={styles.card}>
-      <View style={styles.row}>
-        <Avatar.Image size={50} source={{ uri: avatar }} />
+    <Card style={[styles.card, isRead && styles.cardRead]}>
+      <Pressable style={styles.row} onPress={() => {
+        onMarkAsRead();
+        action();
+      }}>
+        {/* <Avatar.Image size={50} source={{ uri: avatar }} /> */}
         <View style={styles.content}>
           <Text style={styles.title}>
             {title}
@@ -75,28 +98,58 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
             }
           </Text>
         </View>
-      </View>
-      <View style={styles.actions}>
-        {action && (
-          <Button
-            mode="contained"
-            onPress={action ? () => {
-              onMarkAsRead();
-              router.push(action as string);
-            } : undefined}
-          >
-            Open
-          </Button>
-        )}
-        {!isRead && (
-          <Button
-            mode="outlined"
-            onPress={onMarkAsRead}
-          >
-            Mark as Read
-          </Button>
-        )}
-      </View>
+        {loading && <ActivityIndicator size="small" color={Colors(theme).primary} style={{ paddingHorizontal: 8 }} />}
+      </Pressable>
     </Card>
   );
 };
+
+export const stylesFn = (theme: Theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: Colors(theme).background,
+  },
+  contentContainer: {
+    gap: 16,
+    paddingBottom: 24,
+  },
+  card: {
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: Colors(theme).card,
+    shadowColor: Colors(theme).transparent,
+  },
+  cardRead: {
+    backgroundColor: Colors(theme).background,
+    borderWidth: 0,
+    borderColor: Colors(theme).border,
+    opacity: 0.6,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  content: {
+    marginLeft: 16,
+    flex: 1,
+    color: Colors(theme).text,
+  },
+  title: {
+    fontWeight: "bold",
+    color: Colors(theme).text,
+  },
+  time: {
+    color: Colors(theme).text,
+    marginTop: 5,
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    flexWrap: "wrap",
+    rowGap: 10,
+    columnGap: 10,
+    marginTop: 10,
+  },
+});
+
