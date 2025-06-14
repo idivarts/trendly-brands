@@ -107,47 +107,49 @@ const ChannelNative = () => {
   const title = channelName + influencerName || 'Chat';
 
   return (
-    <Channel
-      AttachButton={AttachButton}
-      audioRecordingEnabled
-      channel={channel}
-      CommandsButton={CommandsButton}
-      MoreOptionsButton={MoreOptionsButton}
-      SendButton={SendButton}
-    >
-      <ScreenHeader
-        title={title}
-        rightAction
-        rightActionButton={
-          <Pressable
-            style={{
-              marginRight: 8,
-            }}
-            onPress={() => {
-              router.push(`/contract-details/${contract.streamChannelId}`);
-            }}
-          >
-            <Avatar.Image
+    <View style={{ flex: 1 }}>
+      <Channel
+        AttachButton={AttachButton}
+        audioRecordingEnabled
+        channel={channel}
+        CommandsButton={CommandsButton}
+        MoreOptionsButton={MoreOptionsButton}
+        SendButton={SendButton}
+      >
+        <ScreenHeader
+          title={title}
+          rightAction
+          rightActionButton={
+            <Pressable
               style={{
-                backgroundColor: Colors(theme).transparent,
+                marginRight: 8,
               }}
-              size={40}
-              source={imageUrl(influencer?.profileImage)}
-            />
-          </Pressable>
-        }
-      />
-      <ChatMessageTopbar
-        contract={{
-          ...contract,
-          id: channel?.data?.contractId as string,
-        }}
-      />
-      <MessageList />
-      <MessageInput
-        AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
-      />
-    </Channel>
+              onPress={() => {
+                router.push(`/contract-details/${contract.streamChannelId}`);
+              }}
+            >
+              <Avatar.Image
+                style={{
+                  backgroundColor: Colors(theme).transparent,
+                }}
+                size={40}
+                source={imageUrl(influencer?.profileImage)}
+              />
+            </Pressable>
+          }
+        />
+        <ChatMessageTopbar
+          contract={{
+            ...contract,
+            id: channel?.data?.contractId as string,
+          }}
+        />
+        <MessageList />
+        <MessageInput
+          AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
+        />
+      </Channel>
+    </View>
   );
 }
 

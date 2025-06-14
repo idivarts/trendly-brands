@@ -110,6 +110,7 @@ const RootLayoutStack = () => {
     ) {
       // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
       resetAndNavigate("/pre-signin");
+      // resetAndNavigate("/lets-start");
     }
     // Redirect to respective screen
   }, [session, isLoading]);

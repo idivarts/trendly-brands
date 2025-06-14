@@ -14,16 +14,12 @@ import {
 import {
   faComment as faCommentSolid,
   faHeart as faHeartSolid,
-  faMagnifyingGlass,
   faPlus,
-  faStar as faStarSolid,
+  faStar as faStarSolid
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { DrawerActions, Theme, useTheme } from "@react-navigation/native";
 import { useNavigation, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
-import { Searchbar } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ProfileIcon from "../explore-influencers/profile-icon";
 import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
@@ -64,6 +60,7 @@ const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
         <DrawerIcon href="/messages" icon={faComment} />
       ),
     label: "Messages",
+    showUnreadCount: true
   },
   {
     href: "/contracts",
@@ -86,29 +83,12 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const styles = stylesFn(theme);
   const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
 
-  const [filteredBrands, setFilteredBrands] = useState<Brand[]>(brands);
-  const [search, setSearch] = useState("");
-
   const handleBrandChange = (brand: Brand) => {
+    navigation.dispatch(DrawerActions.closeDrawer());
     setSelectedBrand(brand);
   };
 
-  useEffect(() => {
-    if (!search) {
-      setFilteredBrands(brands);
-      return;
-    }
-
-    setFilteredBrands(
-      brands.filter((brand) =>
-        brand.name.toLowerCase().includes(search.toLowerCase())
-      )
-    );
-  }, [search, brands]);
-
-  const handleSearchChange = (text: string) => {
-    setSearch(text);
-  };
+  const filteredBrands = brands
 
   return (
     <View
@@ -146,35 +126,6 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
             {xl && <BrandSwitcher />}
           </View>
         </Pressable>
-
-
-        {!xl && (
-          <View style={{ marginTop: 8 }}>
-            <Searchbar
-              icon={() => (
-                <FontAwesomeIcon
-                  color={Colors(theme).gray100}
-                  icon={faMagnifyingGlass}
-                  size={18}
-                />
-              )}
-              iconColor={Colors(theme).gray100}
-              inputStyle={styles.searchbarInput}
-              onChangeText={handleSearchChange}
-              placeholder="Search Brands"
-              placeholderTextColor={Colors(theme).gray100}
-              style={[
-                styles.searchbar,
-                {
-                  backgroundColor: Colors(theme).card,
-                  borderRadius: 12,
-                  marginBottom: 4,
-                },
-              ]}
-              value={search}
-            />
-          </View>
-        )}
       </View>
 
       {/* Scrollable Menu Section */}
