@@ -31,6 +31,7 @@ import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationM
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
+import DownloadApp from "@/components/download";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -119,6 +120,7 @@ const RootLayoutStack = () => {
     <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
       <AWSContextProvider>
         <Provider theme={CustomPaperTheme(theme)}>
+          <DownloadApp />
           <Stack
             screenOptions={{
               animation: "ios",
