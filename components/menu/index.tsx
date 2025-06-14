@@ -1,8 +1,8 @@
 import Colors from "@/constants/Colors";
 import { MENU_ITEMS } from "@/constants/Menu";
-import { useAuthContext } from "@/contexts";
+import { useAuthContext, useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import ConfirmationModal from "@/shared-uis/components/ConfirmationModal";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { truncateText } from "@/utils/text";
@@ -26,10 +26,13 @@ const Menu = () => {
   const { selectedBrand } = useBrandContext();
 
   const { signOutManager: signOut, manager } = useAuthContext();
+  const { deregisterTokens } = useChatContext();
+  const { openModal } = useConfirmationModel();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setLogoutModalVisible(false);
-    signOut();
+    await deregisterTokens?.();
+    await signOut();
   };
 
   return (
@@ -81,6 +84,7 @@ const Menu = () => {
               key={item.id}
               item={item}
               onPress={() => {
+                // @ts-ignore
                 router.push(item.href);
               }}
             />
@@ -123,21 +127,18 @@ const Menu = () => {
             mode="contained"
             style={styles.menuButton}
             onPress={() => {
-              setLogoutModalVisible(true);
+              openModal({
+                title: "Logout",
+                description: "Are you sure you want to logout?",
+                confirmAction: handleSignOut,
+                confirmText: "Logout",
+              });
             }}
           >
             Logout
           </Button>
         </View>
       </View>
-      <ConfirmationModal
-        cancelAction={() => setLogoutModalVisible(false)}
-        confirmAction={handleSignOut}
-        confirmText="Logout"
-        description="Are you sure you want to logout?"
-        setVisible={setLogoutModalVisible}
-        visible={logoutModalVisible}
-      />
     </ScrollView>
   );
 };

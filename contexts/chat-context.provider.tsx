@@ -15,22 +15,17 @@ import { streamClient } from "./streamClient";
 
 export { streamClient };
 interface ChatContextProps {
-  // createGroupWithMembers: (
-  //   groupName: string,
-  //   userId: string,
-  //   collaborationId: string,
-  // ) => Promise<Channel>;
   isStreamConnected: boolean,
   connectUser: () => Promise<string>;
   fetchMembers: (channel: string) => Promise<any>;
   addMemberToChannel: (channel: string, member: string) => void;
-  // sendSystemMessage: (channel: string, message: string) => void;
   fetchChannelCid: (channelId: string) => Promise<string>;
   removeMemberFromChannel: (
     channel: string,
     member: string
   ) => Promise<boolean>;
   hasError?: boolean;
+  deregisterTokens?: Function;
 }
 
 const ChatContext = createContext<ChatContextProps>({
@@ -43,6 +38,7 @@ const ChatContext = createContext<ChatContextProps>({
   fetchChannelCid: async () => "",
   removeMemberFromChannel: async () => false,
   hasError: false,
+  deregisterTokens: () => { Console.log("No deregister function provided") },
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -56,7 +52,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 
   const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(null);
 
-  const { getToken, registerPushTokenWithStream } = useCloudMessagingContext()
+  const { getToken, registerPushTokenWithStream, updatedTokens } = useCloudMessagingContext()
 
   const { manager: user } = useAuthContext();
 
@@ -117,28 +113,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     };
   }, [user]);
 
-  // const createGroupWithMembers = async (
-  //   groupName: string,
-  //   userId: string,
-  //   collaborationId: string,
-  // ): Promise<Channel> => {
-  //   const response = await HttpWrapper.fetch("/api/v1/chat/channel", {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //     body: JSON.stringify({
-  //       name: groupName,
-  //       userId,
-  //       collaborationId,
-  //     }),
-  //   });
-
-  //   const data = await response.json();
-
-  //   return data.channel;
-  // };
-
   const fetchMembers = async (channel: string) => {
     const channelToWatch = streamClient.channel("messaging", channel);
     await channelToWatch.watch();
@@ -160,19 +134,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       Console.error(error);
     }
   };
-
-  // const sendSystemMessage = async (channel: string, message: string) => {
-  //   const channelToWatch = streamClient.channel("messaging", channel);
-  //   const messageToSend = {
-  //     text: message,
-  //     user: {
-  //       id: "system",
-  //       name: "system",
-  //     },
-  //     type: "system",
-  //   };
-  //   channelToWatch.sendMessage(messageToSend);
-  // };
 
   const removeMemberFromChannel = async (channel: string, member: string) => {
     try {
@@ -203,15 +164,14 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <ChatContext.Provider
       value={{
-        // createGroupWithMembers,
         isStreamConnected,
         connectUser,
         fetchMembers,
         addMemberToChannel,
-        // sendSystemMessage,
         fetchChannelCid,
         removeMemberFromChannel,
         hasError,
+        deregisterTokens: updatedTokens
       }}
     >
       <StreamWrapper>
