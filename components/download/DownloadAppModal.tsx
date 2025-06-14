@@ -49,7 +49,7 @@ const DownloadAppModal: React.FC<DownloadAppModalProps> = ({
         <View
           style={styles.header}
         >
-          <Image source={require('@/assets/images/icon.png')} style={{ width: 80, height: 80, borderColor: ColorsStatic.primary, borderWidth: 2, borderRadius: 20 }} />
+          <Image source={require('@/assets/images/icon2.png')} style={{ width: 80, height: 80, borderColor: ColorsStatic.primary, borderWidth: 2, borderRadius: 20 }} />
           <View style={{ flex: 1, alignItems: "flex-start", marginLeft: 16, gap: 8 }}>
             <Text style={styles.headerTitle}>
               Available on AppStore
