@@ -7,6 +7,7 @@ import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import Colors from "@/constants/Colors";
+import { useChatContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import {
   faComment,
@@ -22,10 +23,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { Badge } from "react-native-paper";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
   const theme = useTheme();
+  const { unreadCount } = useChatContext()
 
   return (
     <Tabs
@@ -95,11 +98,29 @@ const TabLayout = () => {
         name="messages"
         options={{
           tabBarIcon: ({ color, focused }) => (
-            <FontAwesomeIcon
-              color={color}
-              icon={focused ? faCommentSolid : faComment}
-              size={22}
-            />
+            <>
+              <FontAwesomeIcon
+                color={color}
+                icon={focused ? faCommentSolid : faComment}
+                size={22}
+              />
+              {(unreadCount > 0) && (
+                <Badge
+                  visible={true}
+                  size={16}
+                  selectionColor={Colors(theme).red}
+                  style={{
+                    backgroundColor: Colors(theme).red,
+                    zIndex: 1,
+                    position: "absolute",
+                    top: 0,
+                    right: 20,
+                  }}
+                >
+                  {unreadCount}
+                </Badge>
+              )}
+            </>
           ),
           title: "Messages",
           headerTitleAlign: "left",

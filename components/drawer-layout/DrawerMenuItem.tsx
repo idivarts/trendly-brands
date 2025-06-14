@@ -1,7 +1,9 @@
 import Colors from "@/constants/Colors";
+import { useChatContext } from "@/contexts";
 import { useTheme } from "@react-navigation/native";
 import { usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet } from "react-native";
+import { Badge } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
 
 export interface IconPropFn {
@@ -12,6 +14,7 @@ type Tab = {
   href: string;
   icon: (props: IconPropFn) => JSX.Element;
   label: string;
+  showUnreadCount?: boolean;
 };
 
 type DrawerMenuItemProps = {
@@ -22,12 +25,14 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
+  const { unreadCount } = useChatContext()
 
   const isActive = tab.href.includes(pathname);
   const colorSet = Colors(theme);
 
   return (
     <Pressable
+      // @ts-ignore
       onPress={() => router.push(tab.href)}
       android_ripple={{ color: colorSet.primary + "30" }}
       style={[
@@ -56,6 +61,17 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
         >
           {tab.label}
         </Text>
+        {tab.showUnreadCount && unreadCount > 0 && (
+          <Badge
+            visible={true}
+            size={24}
+            selectionColor={Colors(theme).red}
+            style={{
+              backgroundColor: Colors(theme).red,
+            }}
+          >
+            {unreadCount}
+          </Badge>)}
       </View>
     </Pressable>
   );

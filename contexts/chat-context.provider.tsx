@@ -1,6 +1,8 @@
 import { useCloudMessagingContext } from "@/shared-libs/contexts/cloud-messaging.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { router } from "expo-router";
 import {
   createContext,
   useContext,
@@ -8,6 +10,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
+import { Platform } from "react-native";
 import { DefaultGenerics, StreamChat } from "stream-chat";
 import { useAuthContext } from "./auth-context.provider";
 import StreamWrapper from "./stream-wrapper";
@@ -26,6 +29,7 @@ interface ChatContextProps {
   ) => Promise<boolean>;
   hasError?: boolean;
   deregisterTokens?: Function;
+  unreadCount: number;
 }
 
 const ChatContext = createContext<ChatContextProps>({
@@ -39,6 +43,7 @@ const ChatContext = createContext<ChatContextProps>({
   removeMemberFromChannel: async () => false,
   hasError: false,
   deregisterTokens: () => { Console.log("No deregister function provided") },
+  unreadCount: 0,
 });
 
 export const useChatContext = () => useContext(ChatContext);
@@ -49,6 +54,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   const [token, setToken] = useState("");
   const [hasError, setHasError] = useState(false)
   const [isStreamConnected, setIsStreamConnected] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(null);
 
@@ -64,11 +70,52 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }, streamToken).then(async () => {
       setClient(streamClient);
       setToken(streamToken);
+      listenToNewMessages();
       setHasError(false);
       setIsStreamConnected(true)
       registerPushTokenWithStream(await getToken())
     });
   };
+
+  const listenToNewMessages = async () => {
+    if (!streamClient) return;
+
+    const uCount = await streamClient.getUnreadCount()
+    setUnreadCount(uCount.total_unread_count);
+
+    const updateReadCount = async () => {
+      const unreadCounts = await streamClient.getUnreadCount();
+      setUnreadCount(unreadCounts.total_unread_count);
+    }
+
+    streamClient.on("notification.message_new", async (event) => {
+      if (Platform.OS === "web") {
+        const channel = event.channel;
+        const message = event.message;
+
+        console.log("Event received:", event);
+        Toaster.notification(channel?.name || "New message received", message?.text || "You have a new message", () => {
+          if (channel) {
+            router.push(`/channel/${channel.cid}`);
+          }
+        });
+      }
+      updateReadCount()
+    });
+
+    streamClient.on("notification.mark_read", async () => {
+      updateReadCount();
+    });
+    streamClient.on("notification.mark_all_read", async () => {
+      updateReadCount();
+    });
+    streamClient.on("message.new", async (event) => {
+      updateReadCount();
+    });
+    streamClient.on("connection.recovered", async () => {
+      updateReadCount();
+    });
+  }
 
   const connectUser = async () => {
     if (token) {
@@ -171,7 +218,8 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         fetchChannelCid,
         removeMemberFromChannel,
         hasError,
-        deregisterTokens: updatedTokens
+        deregisterTokens: updatedTokens,
+        unreadCount,
       }}
     >
       <StreamWrapper>

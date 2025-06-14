@@ -60,6 +60,7 @@ const DRAWER_MENU_CONTENT_ITEMS = (theme: Theme) => [
         <DrawerIcon href="/messages" icon={faComment} />
       ),
     label: "Messages",
+    showUnreadCount: true
   },
   {
     href: "/contracts",
