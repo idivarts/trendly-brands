@@ -2,35 +2,12 @@ import ApplicationsTabContent from "@/components/collaboration/collaboration-det
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
-import {
-    useAuthContext,
-    useNotificationContext
-} from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 
 const ApplicationsScreen = () => {
     const theme = useTheme();
-
-    const {
-        manager,
-    } = useAuthContext();
-    const {
-        markAllNotificationsAsRead,
-        managerNotifications,
-        updateManagerNotification,
-    } = useNotificationContext();
-
-    const onMarkAsRead = (notificationId: string) => {
-        updateManagerNotification(
-            manager?.id as string,
-            notificationId,
-            {
-                isRead: true,
-            },
-        );
-    };
 
     return (
         <AppLayout withWebPadding={false}>

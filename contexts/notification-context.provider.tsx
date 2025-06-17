@@ -6,13 +6,10 @@ import {
   useState,
 } from "react";
 
-import { INotifications } from "@/shared-libs/firestore/trendly-pro/models/notifications";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { Notification, PushNotificationPayload } from "@/types/Notification";
+import { Notification } from "@/types/Notification";
 import {
-  addDoc,
   collection,
   doc,
   getDocs,
@@ -21,25 +18,13 @@ import {
   query,
   updateDoc,
   where,
-  writeBatch,
+  writeBatch
 } from "firebase/firestore";
 import { useAuthContext } from "./auth-context.provider";
 
 interface NotificationContextProps {
-  createNotification: (
-    userId: string,
-    notification: INotifications,
-    userType: string,
-  ) => Promise<void>;
   managerNotifications: Notification[];
   markAllNotificationsAsRead: (managerId: string) => Promise<void>;
-  sendNotification: (
-    ids: {
-      users?: string[];
-      managers?: string[];
-    },
-    payload: PushNotificationPayload,
-  ) => Promise<void>;
   unreadNotifications: number;
   updateManagerNotification: (
     managerId: string,
@@ -47,6 +32,8 @@ interface NotificationContextProps {
     data: Partial<Notification>,
   ) => Promise<void>;
 }
+
+export const NotficationTypesToHandle = ["application", "new-quotation", "contract-start-request", "contract-end-request", "feedback-given"]
 
 const NotificationContext = createContext<NotificationContextProps>(null!);
 
@@ -87,55 +74,13 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
   }
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
     if (manager && manager.id) {
-      unsubscribe = fetchManagerNotifications(manager.id);
-    }
-
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
+      const unsubscribe = fetchManagerNotifications(manager.id);
+      return () => {
+        unsubscribe()
       }
-    };
+    }
   }, [manager]);
-
-  const sendNotification = async (
-    ids: {
-      users?: string[];
-      managers?: string[];
-    },
-    payload: PushNotificationPayload,
-  ) => {
-    await HttpWrapper.fetch("/api/v1/chat/notification", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: ids.users || [],
-        managerId: ids.managers || [],
-        payload,
-      }),
-    });
-  }
-
-  const createNotification = async (
-    userId: string,
-    notification: INotifications,
-    userType: string = "managers",
-  ) => {
-    const userRef = doc(FirestoreDB, userType, userId);
-    const notificationsRef = collection(userRef, "notifications");
-    await addDoc(notificationsRef, {
-      data: notification.data,
-      description: notification.description,
-      isRead: notification.isRead,
-      timeStamp: notification.timeStamp,
-      title: notification.title,
-      type: notification.type,
-    });
-  }
 
   const updateManagerNotification = async (
     managerId: string,
@@ -179,10 +124,8 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
   return (
     <NotificationContext.Provider
       value={{
-        createNotification,
         managerNotifications,
         markAllNotificationsAsRead,
-        sendNotification,
         unreadNotifications,
         updateManagerNotification,
       }}

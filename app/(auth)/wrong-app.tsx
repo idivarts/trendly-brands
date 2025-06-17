@@ -28,14 +28,14 @@ const TrendlyScreen = () => {
           <View>
             <View style={styles.imageContainer}>
               <Image
-                source={imageUrl(require("@/assets/images/design1.png"))} // Replace with your local image
+                source={imageUrl(require("@/assets/images/wrong-app.png"))} // Replace with your local image
                 style={styles.image}
                 resizeMode="contain"
               />
             </View>
 
             {/* No Account Text */}
-            <Text style={styles.noAccountText}>You're currently on the wrong app!</Text>
+            <Text style={styles.noAccountText}>Oops! you are on wrong app!</Text>
             <Text
               style={{
                 textAlign: "center",
@@ -78,8 +78,9 @@ const styles = StyleSheet.create({
     // marginVertical: 0,
   },
   image: {
-    height: 300,
-    width: 300,
+    height: 250,
+    width: 250,
+    marginBottom: 40
   },
   noAccountText: {
     textAlign: "center",

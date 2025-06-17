@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, updateDoc, where } from "firebase/firestore";
 import { useState } from "react";
 
-import { useChatContext, useNotificationContext } from "@/contexts";
+import { useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -31,10 +31,6 @@ const useApplications = ({
   handleActionModalClose,
 }: UseApplicationsProps) => {
   const { connectUser } = useChatContext();
-  const {
-    createNotification,
-    sendNotification,
-  } = useNotificationContext();
   const router = useRouter();
   const [influencers, setInfluencers] = useState<InfluencerApplication[]>([]);
   const [loading, setLoading] = useState(true);

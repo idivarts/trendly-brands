@@ -19,6 +19,7 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
+import DownloadApp from "@/components/download";
 import { useColorScheme } from "@/components/theme/useColorScheme";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
@@ -109,8 +110,8 @@ const RootLayoutStack = () => {
       && (inMainGroup || pathname === "/")
     ) {
       // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
-      resetAndNavigate("/pre-signin");
-      // resetAndNavigate("/lets-start");
+      // resetAndNavigate("/pre-signin");
+      resetAndNavigate("/lets-start");
     }
     // Redirect to respective screen
   }, [session, isLoading]);
@@ -119,6 +120,7 @@ const RootLayoutStack = () => {
     <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
       <AWSContextProvider>
         <Provider theme={CustomPaperTheme(theme)}>
+          <DownloadApp />
           <Stack
             screenOptions={{
               animation: "ios",
