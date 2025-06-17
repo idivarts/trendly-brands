@@ -19,6 +19,7 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
+import DownloadApp from "@/components/download";
 import { useColorScheme } from "@/components/theme/useColorScheme";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
@@ -31,7 +32,6 @@ import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationM
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
-import DownloadApp from "@/components/download";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -110,8 +110,8 @@ const RootLayoutStack = () => {
       && (inMainGroup || pathname === "/")
     ) {
       // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
-      resetAndNavigate("/pre-signin");
-      // resetAndNavigate("/lets-start");
+      // resetAndNavigate("/pre-signin");
+      resetAndNavigate("/lets-start");
     }
     // Redirect to respective screen
   }, [session, isLoading]);
