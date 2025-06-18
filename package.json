@@ -42,6 +42,7 @@
     "@react-native-picker/picker": "^2.8.1",
     "@react-navigation/drawer": "^6.7.2",
     "@react-navigation/native": "^6.0.2",
+    "@shopify/flash-list": "^1.8.3",
     "@stream-io/flat-list-mvcp": "^0.10.3",
     "@vis.gl/react-google-maps": "^1.4.2",
     "axios": "^1.7.7",

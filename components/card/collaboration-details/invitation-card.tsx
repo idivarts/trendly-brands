@@ -1,4 +1,5 @@
 import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import useInvitation from "@/hooks/use-invitation";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { User } from "@/types/User";
@@ -28,10 +29,12 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
     checkIfAlreadyInvited,
     influencerId: data.id,
   });
+  const { xl } = useBreakpoints()
 
   return (
     <>
       <InfluencerCard
+        xl={xl}
         influencer={data}
         type="invitation"
         ToggleModal={bottomSheetAction}

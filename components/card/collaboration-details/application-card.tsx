@@ -1,5 +1,6 @@
 import { CardFooter } from "@/components/ui/card/secondary/card-footer";
 import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { InfluencerApplication } from "@/types/Collaboration";
 import { convertToKUnits } from "@/utils/conversion";
@@ -24,9 +25,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
 }) => {
   const theme = useTheme();
   const [influencer, setInfluencer] = useState(data.influencer)
+  const { xl } = useBreakpoints()
   return (
     <>
       <InfluencerCard
+        xl={xl}
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,
