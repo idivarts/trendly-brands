@@ -19,6 +19,7 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
@@ -26,12 +27,12 @@ import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
+import { FlashList } from "@shopify/flash-list";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
-  Modal,
+  Modal
 } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -159,15 +160,13 @@ const InvitationsTabContent = (props: any) => {
     <IOScroll onScroll={(ev) => {
       onScrollEvent(ev)
     }}>
-      <FlatList
+      <FlashList
         refreshing={isLoading}
-        // onRefresh={() => {
-        //   resetData()
-        // }}
         data={influencers}
-        initialNumToRender={5}
-        maxToRenderPerBatch={10}
-        windowSize={5}
+        estimatedItemSize={APPROX_CARD_HEIGHT}
+        // initialNumToRender={5}
+        // maxToRenderPerBatch={10}
+        // windowSize={5}
         renderItem={({ item }) => (
           <InvitationCard
             checkIfAlreadyInvited={checkIfAlreadyInvited}
@@ -210,7 +209,7 @@ const InvitationsTabContent = (props: any) => {
             <View
               style={{
                 height: 16,
-                backgroundColor: theme.dark ? Colors(theme).background : Colors(theme).aliceBlue,
+                backgroundColor: !xl ? (theme.dark ? Colors(theme).background : Colors(theme).aliceBlue) : "unset",
               }}
             />
           )

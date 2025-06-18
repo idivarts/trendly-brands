@@ -4,22 +4,24 @@ import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList } from "react-native";
+import { ActivityIndicator } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
+import { FlashList } from "@shopify/flash-list";
 import SearchComponent from "../SearchComponent";
 import { View } from "../theme/Themed";
+
 
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import {
   BottomSheetBackdrop
 } from "@gorhom/bottom-sheet";
 
-import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
+import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
@@ -157,10 +159,11 @@ const ExploreInfluencers = () => {
         <IOScroll onScroll={(ev) => {
           onScrollEvent(ev)
         }}>
-          <FlatList
+          <FlashList
             data={filteredInfluencers}
             renderItem={({ item, index }) => (
               <InfluencerCard
+                xl={xl}
                 key={index}
                 type="explore"
                 ToggleModal={ToggleModal}
@@ -177,14 +180,15 @@ const ExploreInfluencers = () => {
             contentContainerStyle={{
               paddingTop: 16,
               paddingBottom: 16,
+              paddingHorizontal: xl ? 16 : 0,
             }}
             ItemSeparatorComponent={() => (
               <View
                 style={{
                   height: 16,
-                  backgroundColor: theme.dark
+                  backgroundColor: !xl ? (theme.dark
                     ? Colors(theme).background
-                    : Colors(theme).aliceBlue,
+                    : Colors(theme).aliceBlue) : "unset",
                 }}
               />
             )}
@@ -193,6 +197,7 @@ const ExploreInfluencers = () => {
                 style={{
                   paddingHorizontal: xl ? 0 : 16,
                   paddingBottom: theme.dark ? 16 : 0,
+                  marginBottom: xl ? 16 : 0
                 }}
               >
                 <SearchComponent
@@ -205,9 +210,10 @@ const ExploreInfluencers = () => {
               width: xl ? MAX_WIDTH_WEB : "100%",
               marginHorizontal: "auto",
             }}
-            initialNumToRender={5}
-            maxToRenderPerBatch={10}
-            windowSize={5}
+            estimatedItemSize={APPROX_CARD_HEIGHT}
+          // initialNumToRender={5}
+          // maxToRenderPerBatch={10}
+          // windowSize={5}
           />
         </IOScroll>
       </View>
