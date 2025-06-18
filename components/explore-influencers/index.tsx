@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
-import { FlashList } from "@shopify/flash-list";
 import SearchComponent from "../SearchComponent";
 import { View } from "../theme/Themed";
 
@@ -21,8 +20,9 @@ import { useAuthContext } from "@/contexts";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
-import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
+import InfluencerScroller from "@/shared-uis/components/scroller/InfluencerScroller";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -159,7 +159,7 @@ const ExploreInfluencers = () => {
         <IOScroll onScroll={(ev) => {
           onScrollEvent(ev)
         }}>
-          <FlashList
+          <InfluencerScroller
             data={filteredInfluencers}
             renderItem={({ item, index }) => (
               <InfluencerCard
@@ -210,7 +210,6 @@ const ExploreInfluencers = () => {
               width: xl ? MAX_WIDTH_WEB : "100%",
               marginHorizontal: "auto",
             }}
-            estimatedItemSize={APPROX_CARD_HEIGHT}
           // initialNumToRender={5}
           // maxToRenderPerBatch={10}
           // windowSize={5}

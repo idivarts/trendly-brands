@@ -21,14 +21,13 @@ import { useApplications } from "@/hooks/request";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import InfluencerScroller from "@/shared-uis/components/scroller/InfluencerScroller";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import { FlashList } from "@shopify/flash-list";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -135,9 +134,8 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
 
   return (
     <IOScroll>
-      <FlashList
+      <InfluencerScroller
         data={influencers}
-        estimatedItemSize={APPROX_CARD_HEIGHT}
         // initialNumToRender={5}
         // maxToRenderPerBatch={10}
         // windowSize={5}

@@ -19,15 +19,14 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import InfluencerScroller from "@/shared-uis/components/scroller/InfluencerScroller";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import { FlashList } from "@shopify/flash-list";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
@@ -160,10 +159,9 @@ const InvitationsTabContent = (props: any) => {
     <IOScroll onScroll={(ev) => {
       onScrollEvent(ev)
     }}>
-      <FlashList
+      <InfluencerScroller
         refreshing={isLoading}
         data={influencers}
-        estimatedItemSize={APPROX_CARD_HEIGHT}
         // initialNumToRender={5}
         // maxToRenderPerBatch={10}
         // windowSize={5}
