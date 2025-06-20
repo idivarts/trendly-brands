@@ -4,10 +4,9 @@ import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Dimensions } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
-import SearchComponent from "../SearchComponent";
 import { View } from "../theme/Themed";
 
 
@@ -16,13 +15,13 @@ import {
   BottomSheetBackdrop
 } from "@gorhom/bottom-sheet";
 
+import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
-import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
-import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
-import InfluencerScroller from "@/shared-uis/components/scroller/InfluencerScroller";
+import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -77,7 +76,7 @@ const ExploreInfluencers = () => {
     ...((manager?.isAdmin || false) ? [] : [where("profile.completionPercentage", ">=", 60)]),
     orderBy("creationTime", "desc")
   );
-  const { loading: isLoading, data, onScrollEvent } = useInfiniteScroll<User>(q, 10)
+  const { loading: isLoading, data, loadMore } = useInfiniteScroll<User>(q, 10)
 
   useEffect(() => {
     const fetchedInfluencers: User[] = [];
@@ -147,6 +146,9 @@ const ExploreInfluencers = () => {
     );
   }
 
+  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
+  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
+
   return (
     <AppLayout>
       <View
@@ -156,10 +158,8 @@ const ExploreInfluencers = () => {
           width: "100%", //xl ? MAX_WIDTH_WEB :
         }}
       >
-        <IOScroll onScroll={(ev) => {
-          onScrollEvent(ev)
-        }}>
-          <InfluencerScroller
+        <View style={{ alignSelf: "center" }}>
+          <CarouselScroller
             data={filteredInfluencers}
             renderItem={({ item, index }) => (
               <InfluencerCard
@@ -168,53 +168,21 @@ const ExploreInfluencers = () => {
                 type="explore"
                 ToggleModal={ToggleModal}
                 influencer={item}
-                openProfile={(influencer) => {
-                  if (influencer)
-                    setSelectedInfluencer(influencer as User);
-                  setOpenProfileModal(true)
-                }}
                 setSelectedInfluencer={setSelectedInfluencer as any}
               />
             )}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{
-              paddingTop: 16,
-              paddingBottom: 16,
-              paddingHorizontal: xl ? 16 : 0,
+            objectKey='id'
+            vertical={false}
+            width={width} // Default width if not provided
+            height={height}
+            onLoadMore={() => loadMore()}
+            onPressView={(item, ind) => {
+              if (item)
+                setSelectedInfluencer(item as User);
+              setOpenProfileModal(true)
             }}
-            ItemSeparatorComponent={() => (
-              <View
-                style={{
-                  height: 16,
-                  backgroundColor: !xl ? (theme.dark
-                    ? Colors(theme).background
-                    : Colors(theme).aliceBlue) : "unset",
-                }}
-              />
-            )}
-            ListHeaderComponent={
-              <View
-                style={{
-                  paddingHorizontal: xl ? 0 : 16,
-                  paddingBottom: theme.dark ? 16 : 0,
-                  marginBottom: xl ? 16 : 0
-                }}
-              >
-                <SearchComponent
-                  setSearchQuery={setSearchQuery}
-                  ToggleModal={() => setIsFilterModalVisible(true)}
-                />
-              </View>
-            }
-            style={{
-              width: xl ? MAX_WIDTH_WEB : "100%",
-              marginHorizontal: "auto",
-            }}
-          // initialNumToRender={5}
-          // maxToRenderPerBatch={10}
-          // windowSize={5}
           />
-        </IOScroll>
+        </View>
       </View>
 
       <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={ToggleModal} />
