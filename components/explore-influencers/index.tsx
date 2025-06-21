@@ -171,6 +171,11 @@ const ExploreInfluencers = () => {
                   ToggleModal={ToggleModal}
                   influencer={item}
                   setSelectedInfluencer={setSelectedInfluencer as any}
+                  openProfile={(item) => {
+                    if (item)
+                      setSelectedInfluencer(item as User);
+                    setOpenProfileModal(true)
+                  }}
                 />
               )}
               objectKey='id'
