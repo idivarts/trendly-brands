@@ -21,6 +21,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
+import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import { collection, orderBy, query, where } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
@@ -159,29 +160,31 @@ const ExploreInfluencers = () => {
         }}
       >
         <View style={{ alignSelf: "center" }}>
-          <CarouselScroller
-            data={filteredInfluencers}
-            renderItem={({ item, index }) => (
-              <InfluencerCard
-                xl={xl}
-                key={index}
-                type="explore"
-                ToggleModal={ToggleModal}
-                influencer={item}
-                setSelectedInfluencer={setSelectedInfluencer as any}
-              />
-            )}
-            objectKey='id'
-            vertical={false}
-            width={width} // Default width if not provided
-            height={height}
-            onLoadMore={() => loadMore()}
-            onPressView={(item, ind) => {
-              if (item)
-                setSelectedInfluencer(item as User);
-              setOpenProfileModal(true)
-            }}
-          />
+          <CarouselInViewProvider>
+            <CarouselScroller
+              data={filteredInfluencers}
+              renderItem={({ item, index }) => (
+                <InfluencerCard
+                  xl={xl}
+                  key={item.id}
+                  type="explore"
+                  ToggleModal={ToggleModal}
+                  influencer={item}
+                  setSelectedInfluencer={setSelectedInfluencer as any}
+                />
+              )}
+              objectKey='id'
+              vertical={false}
+              width={width} // Default width if not provided
+              height={height}
+              onLoadMore={() => loadMore()}
+              onPressView={(item, ind) => {
+                if (item)
+                  setSelectedInfluencer(item as User);
+                setOpenProfileModal(true)
+              }}
+            />
+          </CarouselInViewProvider>
         </View>
       </View>
 
