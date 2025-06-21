@@ -159,7 +159,7 @@ const ExploreInfluencers = () => {
           width: "100%", //xl ? MAX_WIDTH_WEB :
         }}
       >
-        <View style={{ alignSelf: "center" }}>
+        <View style={{ alignSelf: "stretch" }}>
           <CarouselInViewProvider>
             <CarouselScroller
               data={filteredInfluencers}
