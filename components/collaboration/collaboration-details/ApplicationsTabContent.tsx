@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Dimensions } from "react-native";
 
 import {
   ApplicationCard
@@ -19,7 +19,7 @@ import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { MAX_HEIGHT_WEB, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
@@ -132,14 +132,17 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     );
   };
 
+  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
+  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
+
   return (
     <View style={{ alignSelf: "stretch", height: "100%" }}>
       <CarouselInViewProvider>
         <CarouselScroller
           data={influencers}
-          height={MAX_HEIGHT_WEB}
+          height={height}
           vertical={false}
-          width={MAX_WIDTH_WEB}
+          width={width}
           renderItem={({ item }) => (
             <>
               {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>

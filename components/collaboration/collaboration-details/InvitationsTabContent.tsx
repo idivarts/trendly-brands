@@ -17,7 +17,7 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { MAX_HEIGHT_WEB, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
@@ -31,6 +31,7 @@ import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Modal
 } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
@@ -155,13 +156,16 @@ const InvitationsTabContent = (props: any) => {
     );
   };
 
+  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
+  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
+
   return (
     <View style={{ alignSelf: "stretch", height: "100%" }}>
       <CarouselInViewProvider>
         <CarouselScroller
           data={influencers}
-          height={MAX_HEIGHT_WEB}
-          width={MAX_WIDTH_WEB}
+          height={height}
+          width={width}
           vertical={false}
           renderItem={({ item }) => (
             <InvitationCard
