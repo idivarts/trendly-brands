@@ -1,6 +1,6 @@
-import { StyleSheet } from "react-native";
-import { Theme } from "@react-navigation/native";
 import Colors from "@/constants/Colors";
+import { Theme } from "@react-navigation/native";
+import { StyleSheet } from "react-native";
 
 export const stylesFn = (theme: Theme) =>
   StyleSheet.create({
@@ -72,11 +72,13 @@ export const stylesFn = (theme: Theme) =>
       padding: 20,
       borderRadius: 10,
       alignItems: "center",
+      maxWidth: 600
     },
     modalTitle: {
       fontSize: 18,
       fontWeight: "bold",
       marginBottom: 10,
+      alignSelf: "flex-start"
     },
     messageInput: {
       width: "100%",
@@ -90,7 +92,8 @@ export const stylesFn = (theme: Theme) =>
     },
     buttonContainer: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      justifyContent: "flex-end",
       width: "100%",
+      gap: 16
     },
   });

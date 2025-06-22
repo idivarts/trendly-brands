@@ -9,29 +9,29 @@ import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
-import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
+import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
+import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import { FlashList } from "@shopify/flash-list";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Modal
 } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
@@ -156,65 +156,42 @@ const InvitationsTabContent = (props: any) => {
     );
   };
 
+  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
+  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
+
   return (
-    <IOScroll onScroll={(ev) => {
-      onScrollEvent(ev)
-    }}>
-      <FlashList
-        refreshing={isLoading}
-        data={influencers}
-        estimatedItemSize={APPROX_CARD_HEIGHT}
-        // initialNumToRender={5}
-        // maxToRenderPerBatch={10}
-        // windowSize={5}
-        renderItem={({ item }) => (
-          <InvitationCard
-            checkIfAlreadyInvited={checkIfAlreadyInvited}
-            // @ts-ignore
-            data={item}
-            profileModalAction={() => {
+    <View style={{ alignSelf: "stretch", height: "100%" }}>
+      <CarouselInViewProvider>
+        <CarouselScroller
+          data={influencers}
+          height={height}
+          width={width}
+          vertical={false}
+          renderItem={({ item }) => (
+            <InvitationCard
+              checkIfAlreadyInvited={checkIfAlreadyInvited}
               // @ts-ignore
-              setSelectedInfluencer(item);
-              setOpenProfileModal(true)
-            }}
-            bottomSheetAction={() => {
-              // @ts-ignore
-              setSelectedInfluencer(item);
-              setIsActionModalVisible(true);
-            }}
-            inviteInfluencer={() => {
-              // @ts-ignore
-              setSelectedInfluencer(item);
-              setIsInvitationModalVisible(true);
-            }}
-          />
-        )}
-        ListFooterComponent={
-          isLoading ? (
-            <ActivityIndicator
-              size="large"
-            />
-          ) : null
-        }
-        // onEndReached={loadMore}
-        // onEndReachedThreshold={0.1}
-        keyExtractor={(item) => item.id}
-        style={{
-          paddingBottom: 16,
-          width: xl ? MAX_WIDTH_WEB : '100%',
-          marginHorizontal: "auto",
-        }}
-        ItemSeparatorComponent={
-          () => (
-            <View
-              style={{
-                height: 16,
-                backgroundColor: !xl ? (theme.dark ? Colors(theme).background : Colors(theme).aliceBlue) : "unset",
+              data={item}
+              profileModalAction={() => {
+                // @ts-ignore
+                setSelectedInfluencer(item);
+                setOpenProfileModal(true)
+              }}
+              bottomSheetAction={() => {
+                // @ts-ignore
+                setSelectedInfluencer(item);
+                setIsActionModalVisible(true);
+              }}
+              inviteInfluencer={() => {
+                // @ts-ignore
+                setSelectedInfluencer(item);
+                setIsInvitationModalVisible(true);
               }}
             />
-          )
-        }
-      />
+          )}
+          objectKey="id"
+        />
+      </CarouselInViewProvider>
 
       <Modal
         visible={isInvitationModalVisible}
@@ -234,6 +211,13 @@ const InvitationsTabContent = (props: any) => {
               multiline
             />
             <View style={styles.buttonContainer}>
+
+              <Button
+                mode="outlined"
+                onPress={() => setIsInvitationModalVisible(false)}
+              >
+                Cancel
+              </Button>
               <Button
                 mode="contained"
                 onPress={() => {
@@ -242,12 +226,6 @@ const InvitationsTabContent = (props: any) => {
                 loading={isInviting}
               >
                 Send Invitation
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => setIsInvitationModalVisible(false)}
-              >
-                Cancel
               </Button>
             </View>
           </View>
@@ -274,7 +252,7 @@ const InvitationsTabContent = (props: any) => {
                 influencerId={selectedInfluencer?.id}
                 onInvite={() => {
                   if (!selectedInfluencer) return;
-
+                  setOpenProfileModal(false)
                   setIsInvitationModalVisible(true);
                 }}
               />
@@ -287,7 +265,7 @@ const InvitationsTabContent = (props: any) => {
           theme={theme}
         />
       </BottomSheetScrollContainer>
-    </IOScroll >
+    </View>
   );
 };
 
