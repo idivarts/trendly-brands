@@ -13,16 +13,16 @@ import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheet
 import { CardHeader } from "@/components/ui/card/secondary/card-header";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
-import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
-import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { MAX_HEIGHT_WEB, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
-import InfluencerScroller from "@/shared-uis/components/scroller/InfluencerScroller";
+import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
+import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
@@ -133,56 +133,59 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
   };
 
   return (
-    <IOScroll>
-      <InfluencerScroller
-        data={influencers}
-        // initialNumToRender={5}
-        // maxToRenderPerBatch={10}
-        // windowSize={5}
-        renderItem={({ item }) => (
-          <>
-            {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
-              <CardHeader
-                avatar={item.brand?.image || ""}
-                handle={item.brand?.name || ""}
-                // isVerified={true}
-                name={item.collaboration?.name || ""}
+    <View style={{ alignSelf: "stretch", height: "100%" }}>
+      <CarouselInViewProvider>
+        <CarouselScroller
+          data={influencers}
+          height={MAX_HEIGHT_WEB}
+          vertical={false}
+          width={MAX_WIDTH_WEB}
+          renderItem={({ item }) => (
+            <>
+              {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
+                <CardHeader
+                  avatar={item.brand?.image || ""}
+                  handle={item.brand?.name || ""}
+                  // isVerified={true}
+                  name={item.collaboration?.name || ""}
+                />
+              </View>}
+              <ApplicationCard
+                acceptApplication={() => {
+                  setSelectedInfluencerApplication(item);
+                  handleAcceptApplication(item);
+                }}
+                bottomSheetAction={() => {
+                  setSelectedInfluencerApplication(item);
+                  setIsActionModalVisible(true);
+                }}
+                data={item}
+                profileModalAction={() => {
+                  setSelectedInfluencerApplication(item);
+                  setOpenProfileModal(true);
+                }}
               />
-            </View>}
-            <ApplicationCard
-              acceptApplication={() => {
-                setSelectedInfluencerApplication(item);
-                handleAcceptApplication(item);
-              }}
-              bottomSheetAction={() => {
-                setSelectedInfluencerApplication(item);
-                setIsActionModalVisible(true);
-              }}
-              data={item}
-              profileModalAction={() => {
-                setSelectedInfluencerApplication(item);
-                setOpenProfileModal(true);
-              }}
-            />
-          </>
-        )}
-        keyExtractor={(item, index) => item.application.id + index}
-        style={{
-          paddingBottom: 16,
-          width: xl ? MAX_WIDTH_WEB : '100%',
-          marginHorizontal: "auto",
-        }}
-        ItemSeparatorComponent={
-          () => (
-            <View
-              style={{
-                height: 16,
-                backgroundColor: !xl ? (theme.dark ? Colors(theme).background : Colors(theme).aliceBlue) : "unset",
-              }}
-            />
-          )
-        }
-      />
+            </>
+          )}
+          objectKey="id"
+        // keyExtractor={(item, index) => item.application.id + index}
+        // style={{
+        //   paddingBottom: 16,
+        //   width: xl ? MAX_WIDTH_WEB : '100%',
+        //   marginHorizontal: "auto",
+        // }}
+        // ItemSeparatorComponent={
+        //   () => (
+        //     <View
+        //       style={{
+        //         height: 16,
+        //         backgroundColor: !xl ? (theme.dark ? Colors(theme).background : Colors(theme).aliceBlue) : "unset",
+        //       }}
+        //     />
+        //   )
+        // }
+        />
+      </CarouselInViewProvider>
 
       <InfluencerActionModal influencerId={selectedInfluencerApplication?.influencer.id} isModalVisible={isActionModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={toggleActionModal} />
 
@@ -227,7 +230,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           theme={theme}
         />
       </BottomSheetScrollContainer>
-    </IOScroll>
+    </View>
   );
 };
 
