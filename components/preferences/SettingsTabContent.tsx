@@ -1,19 +1,16 @@
 import Select, { SelectItem } from "@/components/ui/select";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import SelectGroup from "@/shared-uis/components/select/select-group";
 import { useTheme } from "@react-navigation/native";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { FC, useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 
 interface SettingsTabContentProps {
-  pageID: string;
+  collaborationId: string;
 }
 
-const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
+const SettingsTabContent: FC<SettingsTabContentProps> = (props) => {
   const theme = useTheme();
   const [timeCommitment, setTimeCommitment] = useState<{
     label: string;
@@ -52,10 +49,10 @@ const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
     value: string | string[]
   ) => {
     try {
-      const collabRef = doc(FirestoreDB, "collaborations", pageID);
-      await updateDoc(collabRef, {
-        [`preferences.${field}`]: value,
-      });
+      // const collabRef = doc(FirestoreDB, "collaborations", pageID);
+      // await updateDoc(collabRef, {
+      //   [`preferences.${field}`]: value,
+      // });
     } catch (error) {
       Console.error(error, "Error updating Firestore");
     }
@@ -63,29 +60,29 @@ const SettingsTabContent: FC<SettingsTabContentProps> = ({ pageID }) => {
 
   const fetchSettings = async () => {
     try {
-      const collabRef = doc(FirestoreDB, "collaborations", pageID);
-      const snapshot = await getDoc(collabRef);
-      const data = snapshot.data() as ICollaboration;
-      if (!data) return;
+      // const collabRef = doc(FirestoreDB, "collaborations", pageID);
+      // const snapshot = await getDoc(collabRef);
+      // const data = snapshot.data() as ICollaboration;
+      // if (!data) return;
 
-      setTimeCommitment({
-        label: data.preferences.timeCommitment,
-        value: data.preferences.timeCommitment,
-      });
-      setNiches(
-        data.preferences.influencerNiche.map((niche) => ({
-          label: niche,
-          value: niche,
-        }))
-      );
-      setInfluencerLookingFor({
-        label: data.preferences.influencerRelation,
-        value: data.preferences.influencerRelation,
-      });
-      setPreferredVideoType({
-        label: data.preferences.preferredVideoType,
-        value: data.preferences.preferredVideoType,
-      });
+      // setTimeCommitment({
+      //   label: data.preferences.timeCommitment,
+      //   value: data.preferences.timeCommitment,
+      // });
+      // setNiches(
+      //   data.preferences.influencerNiche.map((niche) => ({
+      //     label: niche,
+      //     value: niche,
+      //   }))
+      // );
+      // setInfluencerLookingFor({
+      //   label: data.preferences.influencerRelation,
+      //   value: data.preferences.influencerRelation,
+      // });
+      // setPreferredVideoType({
+      //   label: data.preferences.preferredVideoType,
+      //   value: data.preferences.preferredVideoType,
+      // });
     } catch (e) {
       Console.error(e);
     }
