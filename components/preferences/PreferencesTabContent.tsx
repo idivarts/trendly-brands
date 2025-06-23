@@ -1,19 +1,18 @@
 import Select, { SelectItem } from "@/components/ui/select";
-import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
+import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { COLLABORATION_TYPES } from "@/shared-constants/preferences/collab-type";
+import { TIME_COMMITMENTS } from "@/shared-constants/preferences/time-commitment";
 import { Console } from "@/shared-libs/utils/console";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
-import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import SelectGroup from "@/shared-uis/components/select/select-group";
 import Colors from "@/shared-uis/constants/Colors";
-import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Brand } from "@/types/Brand";
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { FC, useEffect, useState } from "react";
-import { ScrollView } from "react-native";
+import React, { FC, useEffect, useState } from "react";
+import { ScrollView, View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
+import Button from "../ui/button";
 
 interface PreferencesTabContentProps {
   collaborationId?: string;
@@ -24,10 +23,27 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   const {
     updateBrand,
     selectedBrand,
-    setSelectedBrand,
   } = useBrandContext();
 
-  const [brandData, setBrandData] = useState<Partial<Brand>>(selectedBrand || {});
+  const [preferences, setPreferences] = useState<Brand["preferences"]>({
+    promotionType: [],
+    influencerCategories: [],
+    languages: [],
+    locations: [],
+    platforms: [],
+    collaborationPostTypes: [],
+    timeCommitments: [],
+    contentVideoType: [],
+  });
+
+  useEffect(() => {
+    if (selectedBrand && selectedBrand.preferences) {
+      setPreferences({
+        ...preferences,
+        ...selectedBrand.preferences
+      })
+    }
+  }, [selectedBrand])
 
   const [timeCommitment, setTimeCommitment] = useState<{
     label: string;
@@ -109,158 +125,155 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
     fetchSettings();
   }, []);
 
-  return (
-    <ScrollView
-      contentContainerStyle={{
-        flex: 1,
-        padding: 16,
-        gap: 16
-      }}
-    >
-      <ContentWrapper
-        title="Influencer Category"
-        description="Which content format are you willing to post on your social media account for promotions."
-        theme={theme}
-      >
-        <MultiSelectExtendable
-          buttonIcon={
-            <FontAwesomeIcon
-              icon={faArrowRight}
-              color={Colors(theme).primary}
-              size={14}
-            />
-          }
-          buttonLabel="See Other Options"
-          initialItemsList={includeSelectedItems(
-            INFLUENCER_CATEGORIES,
-            brandData.preferences?.influencerCategories || []
-          )}
-          initialMultiselectItemsList={includeSelectedItems(
-            INITIAL_INFLUENCER_CATEGORIES,
-            brandData.preferences?.influencerCategories || []
-          )}
-          onSelectedItemsChange={(value) => {
-            setBrandData({
-              ...brandData,
-              preferences: {
-                ...brandData.preferences,
-                influencerCategories: value.map((value) => value),
-              },
-            });
-          }}
-          selectedItems={brandData.preferences?.influencerCategories || []}
-          theme={theme}
-        />
-      </ContentWrapper>
-      <ContentWrapper
-        title="Promotion Type"
-        description="What type of promotion are you looking for?"
-        theme={theme}
-      >
-        <Select
-          items={COLLABORATION_TYPES.map(v => ({ label: v, value: v }))}
-          multiselect
-          onSelect={(item) => {
-            setBrandData({
-              ...brandData,
-              preferences: {
-                ...brandData.preferences,
-                promotionType: item.map((item) => item.value),
-              },
-            });
-          }}
-          selectItemIcon
-          value={
-            brandData.preferences?.promotionType?.map((value) => ({
-              label: value,
-              value,
-            })) || []
-          }
-        />
-      </ContentWrapper>
+  if (!selectedBrand || !selectedBrand.preferences)
+    return <ActivityIndicator />
 
-      <ContentWrapper
-        title="Influencer's Time Commitment"
-        description="Match with influencer with your seriousness level"
-        theme={theme}
+  return (
+    <>
+      <ScrollView
+        style={{
+          flex: 1,
+          height: "100%",
+          marginTop: 8,
+        }}
+        contentContainerStyle={{
+          // flex: 1,
+          padding: 16,
+          paddingBottom: 150,
+          gap: 42
+        }}
       >
-        <SelectGroup
-          items={[
-            { label: "Full Time", value: "Full Time" },
-            { label: "Part Time", value: "Part Time" },
-            { label: "Hobby", value: "Hobby" },
-          ]}
-          selectedItem={timeCommitment}
-          onValueChange={(value) => {
-            setTimeCommitment(value);
-            updateCollaboration("timeCommitment", value.value);
-          }}
+        <ContentWrapper
+          title="Influencer Category"
+          description="Which content format are you willing to post on your social media account for promotions."
           theme={theme}
-        />
-      </ContentWrapper>
-      <ContentWrapper
-        title="Content Niche / Category"
-        description="This would help us understand what type of content you create and also better match with influencers"
-        theme={theme}
-      >
-        <Select
-          items={[
-            { label: "Fashion", value: "Fashion" },
-            { label: "Lifestyle", value: "Lifestyle" },
-            { label: "Food", value: "Food" },
-            { label: "Travel", value: "Travel" },
-            { label: "Health", value: "Health" },
-          ]}
-          selectItemIcon={true}
-          value={niches}
-          multiselect
-          onSelect={(selectedOptions) => {
-            const selectedValues = selectedOptions.map(
-              (option) => option.value
-            );
-            setNiches(selectedOptions);
-            updateCollaboration("influencerNiche", selectedValues);
-          }}
-        />
-      </ContentWrapper>
-      <ContentWrapper
-        title="Influencer's looking for"
-        description="What kind of relation you are looking for with the brands"
-        theme={theme}
-      >
-        <SelectGroup
-          items={[
-            { label: "Long Term", value: "Long Term" },
-            { label: "Short Term", value: "Short Term" },
-            { label: "One Time", value: "One Time" },
-          ]}
-          selectedItem={influencerLookingFor}
-          onValueChange={(value) => {
-            setInfluencerLookingFor(value);
-            updateCollaboration("influencerRelation", value.value);
-          }}
+        >
+          <Select
+            items={INFLUENCER_CATEGORIES.map(v => ({ label: v, value: v }))}
+            multiselect
+            onSelect={(item) => {
+              setPreferences({
+                ...preferences,
+                influencerCategories: item.map((value) => value.value)
+              });
+            }}
+            selectItemIcon
+            value={preferences?.influencerCategories?.map((value) => ({ label: value, value })) || []}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          title="Promotion Type"
+          description="What type of promotion are you looking for?"
           theme={theme}
-        />
-      </ContentWrapper>
-      <ContentWrapper
-        description="Do you want your content to be integrated or dedicated focusing on your brand or product"
-        title="Preferred Video Type"
-        theme={theme}
-      >
-        <SelectGroup
-          items={[
-            { label: "Integrated Video", value: "Integrated Video" },
-            { label: "Dedicated Video", value: "Dedicated Video" },
-          ]}
-          selectedItem={preferredVideoType}
-          onValueChange={(value) => {
-            setPreferredVideoType(value);
-            updateCollaboration("preferredVideoType", value.value);
-          }}
+        >
+          <Select
+            items={COLLABORATION_TYPES.map(v => ({ label: v, value: v }))}
+            multiselect
+            onSelect={(item) => {
+              setPreferences({
+                ...preferences,
+                promotionType: item.map((item) => item.value),
+              });
+            }}
+            selectItemIcon
+            value={preferences?.promotionType?.map((value) => ({ label: value, value })) || []}
+          />
+        </ContentWrapper>
+
+        <ContentWrapper
+          title="Influencer's Time Commitment"
+          description="Match with influencer with your seriousness level"
           theme={theme}
-        />
-      </ContentWrapper>
-    </ScrollView>
+        >
+          <Select
+            items={TIME_COMMITMENTS.map(v => ({ label: v, value: v }))}
+            multiselect
+            onSelect={(item) => {
+              setPreferences({
+                ...preferences,
+                timeCommitments: item.map((item) => item.value),
+              });
+            }}
+            selectItemIcon
+            value={preferences?.timeCommitments?.map((value) => ({ label: value, value })) || []}
+          />
+        </ContentWrapper>
+
+        <ContentWrapper
+          title="Content Niche / Category"
+          description="This would help us understand what type of content you create and also better match with influencers"
+          theme={theme}
+        >
+          <Select
+            items={[
+              { label: "Fashion", value: "Fashion" },
+              { label: "Lifestyle", value: "Lifestyle" },
+              { label: "Food", value: "Food" },
+              { label: "Travel", value: "Travel" },
+              { label: "Health", value: "Health" },
+            ]}
+            selectItemIcon={true}
+            value={niches}
+            multiselect
+            onSelect={(selectedOptions) => {
+              const selectedValues = selectedOptions.map(
+                (option) => option.value
+              );
+              setNiches(selectedOptions);
+              updateCollaboration("influencerNiche", selectedValues);
+            }}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          title="Influencer's looking for"
+          description="What kind of relation you are looking for with the brands"
+          theme={theme}
+        >
+          <SelectGroup
+            items={[
+              { label: "Long Term", value: "Long Term" },
+              { label: "Short Term", value: "Short Term" },
+              { label: "One Time", value: "One Time" },
+            ]}
+            selectedItem={influencerLookingFor}
+            onValueChange={(value) => {
+              setInfluencerLookingFor(value);
+              updateCollaboration("influencerRelation", value.value);
+            }}
+            theme={theme}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          description="Do you want your content to be integrated or dedicated focusing on your brand or product"
+          title="Preferred Video Type"
+          theme={theme}
+        >
+          <SelectGroup
+            items={[
+              { label: "Integrated Video", value: "Integrated Video" },
+              { label: "Dedicated Video", value: "Dedicated Video" },
+            ]}
+            selectedItem={preferredVideoType}
+            onValueChange={(value) => {
+              setPreferredVideoType(value);
+              updateCollaboration("preferredVideoType", value.value);
+            }}
+            theme={theme}
+          />
+        </ContentWrapper>
+      </ScrollView>
+      <View style={{
+        position: "absolute",
+        bottom: 0,
+        display: "flex",
+        padding: 16,
+        width: "100%",
+        alignItems: "stretch",
+        backgroundColor: Colors(theme).background
+      }}>
+        <Button style={{ flex: 1, paddingVertical: 4 }}>Save</Button>
+      </View>
+    </>
   );
 };
 
