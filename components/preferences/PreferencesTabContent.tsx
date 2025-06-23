@@ -6,11 +6,11 @@ import { useTheme } from "@react-navigation/native";
 import { FC, useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 
-interface SettingsTabContentProps {
-  collaborationId: string;
+interface PreferencesTabContentProps {
+  collaborationId?: string;
 }
 
-const SettingsTabContent: FC<SettingsTabContentProps> = (props) => {
+const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   const theme = useTheme();
   const [timeCommitment, setTimeCommitment] = useState<{
     label: string;
@@ -185,4 +185,4 @@ const SettingsTabContent: FC<SettingsTabContentProps> = (props) => {
   );
 };
 
-export default SettingsTabContent;
+export default PreferencesTabContent;

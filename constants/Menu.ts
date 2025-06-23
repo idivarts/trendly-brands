@@ -1,19 +1,20 @@
 import {
   faGears,
+  faPrescription,
   faUsersBetweenLines,
 } from "@fortawesome/free-solid-svg-icons";
 
 export const MENU_ITEMS = [
   {
     id: "1",
-    icon: faUsersBetweenLines,
-    title: "Preferences",
+    icon: faPrescription,
+    title: "Brand Preferences",
     href: "/preferences",
   },
   {
     id: "2",
     icon: faUsersBetweenLines,
-    title: "Members",
+    title: "Manage Brand Members",
     href: "/members",
   },
   {
