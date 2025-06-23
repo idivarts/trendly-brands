@@ -1,100 +1,18 @@
-export const INFLUENCER_CATEGORIES = [
-  "Fashion",
-  "Beauty",
-  "Food Vlogs",
-  "Technology",
-  "Fitness & Health",
-  "Travel",
-  "Entertainment",
-];
+import { BRAND_INDUSTRIES, INITIAL_BRAND_INDUSTRIES, INITIAL_LANGUAGES, LANGUAGES } from "@/shared-constants/ItemsList";
+import { CONTENT_NICHE } from "@/shared-constants/preferences/content-niche";
+import { PLATFORMS } from "@/shared-constants/preferences/platforms";
+import { POST_TYPES } from "@/shared-constants/preferences/post-types";
 
-export const INITIAL_INFLUENCER_CATEGORIES = [
-  "Fashion",
-  "Beauty",
-  "Food Vlogs",
-  "Technology",
-  "Fitness & Health",
-  "Travel",
-  "Entertainment",
-];
+export const INFLUENCER_CATEGORIES = CONTENT_NICHE
 
-export const BRAND_INDUSTRIES = [
-  "Beauty & Skincare",
-  "Fashion & Apparel",
-  "Food & Beverages",
-  "Health & Wellness",
-  "Holidays & Stays",
-  "Restaurant & Cafes",
-  "Technology",
-  "Travel & Tourism",
-  "Lifestyle",
-  "Travel",
-  "Fitness",
-  "Tech",
-  "Automobile",
-  "Home Decor",
-  "Education",
-  "Finance",
-  "Entertainment",
-  "Sports",
-  "Gaming",
-  "Career",
-];
+export const INITIAL_INFLUENCER_CATEGORIES = CONTENT_NICHE;
 
-export const INITIAL_BRAND_INDUSTRIES = [
-  "Beauty & Skincare",
-  "Fashion & Apparel",
-  "Food & Beverages",
-  "Health & Wellness",
-  "Technology",
-  "Travel & Tourism",
-];
+export { BRAND_INDUSTRIES, INITIAL_BRAND_INDUSTRIES };
 
-export const LANGUAGES = [
-  "Bengali",
-  "English",
-  "Gujarati",
-  "Hindi",
-  "Kannada",
-  "Malayalam",
-  "Marathi",
-  "Odia",
-  "Punjabi",
-  "Sindhi",
-  "Tamil",
-  "Telugu",
-  "Urdu",
-];
+export { INITIAL_LANGUAGES, LANGUAGES };
 
-export const INITIAL_LANGUAGES = [
-  "English",
-  "Hindi",
-  "Bengali",
-  "Marathi",
-  "Punjabi",
-];
+export const INITIAL_CONTENT_FORMATS = POST_TYPES;
+export const CONTENT_FORMATS = POST_TYPES;
 
-export const INITIAL_CONTENT_FORMATS = [
-  "Posts",
-  "Reels",
-  "Stories",
-  "Live",
-  "Product Reviews",
-];
-
-export const CONTENT_FORMATS = [
-  "Posts",
-  "Reels",
-  "Stories",
-  "Live",
-  "Product Reviews",
-];
-
-export const INITIAL_PLATFORMS = [
-  "Instagram",
-  "Facebook",
-  "YouTube",
-  "LinkedIn",
-];
-
-export const PLATFORMS = ["Instagram", "Facebook", "YouTube", "LinkedIn"];
+const INITIAL_PLATFORMS = PLATFORMS;
+export { INITIAL_PLATFORMS, PLATFORMS };

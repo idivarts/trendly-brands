@@ -6,9 +6,7 @@ import { ScrollView } from "react-native";
 import Colors from "@/constants/Colors";
 import {
   BRAND_INDUSTRIES,
-  INFLUENCER_CATEGORIES,
-  INITIAL_BRAND_INDUSTRIES,
-  INITIAL_INFLUENCER_CATEGORIES,
+  INITIAL_BRAND_INDUSTRIES
 } from "@/constants/ItemsList";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import ImageUpload from "@/shared-uis/components/image-upload";
@@ -16,7 +14,6 @@ import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-exten
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Brand } from "@/types/Brand";
 import { View } from "../theme/Themed";
-import Select from "../ui/select";
 import TextInput from "../ui/text-input";
 
 interface BrandProfileProps {
@@ -143,73 +140,8 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
           theme={theme}
         />
       </ContentWrapper>
-      <ContentWrapper
-        title="Influencer Category"
-        description="Which content format are you willing to post on your social media account for promotions."
-        theme={theme}
-      >
-        <MultiSelectExtendable
-          buttonIcon={
-            <FontAwesomeIcon
-              icon={faArrowRight}
-              color={Colors(theme).primary}
-              size={14}
-            />
-          }
-          buttonLabel="See Other Options"
-          initialItemsList={includeSelectedItems(
-            INFLUENCER_CATEGORIES,
-            brandData.preferences?.influencerCategories || []
-          )}
-          initialMultiselectItemsList={includeSelectedItems(
-            INITIAL_INFLUENCER_CATEGORIES,
-            brandData.preferences?.influencerCategories || []
-          )}
-          onSelectedItemsChange={(value) => {
-            setBrandData({
-              ...brandData,
-              preferences: {
-                ...brandData.preferences,
-                influencerCategories: value.map((value) => value),
-              },
-            });
-          }}
-          selectedItems={brandData.preferences?.influencerCategories || []}
-          theme={theme}
-        />
-      </ContentWrapper>
-      <ContentWrapper
-        title="Promotion Type"
-        description="What type of promotion are you looking for?"
-        theme={theme}
-      >
-        <Select
-          items={[
-            { label: "Paid", value: "Paid" },
-            { label: "Unpaid", value: "Unpaid" },
-            { label: "Barter", value: "Barter" },
-          ]}
-          multiselect
-          onSelect={(item) => {
-            setBrandData({
-              ...brandData,
-              preferences: {
-                ...brandData.preferences,
-                promotionType: item.map((item) => item.value),
-              },
-            });
-          }}
-          selectItemIcon
-          value={
-            brandData.preferences?.promotionType?.map((value) => ({
-              label: value,
-              value,
-            })) || []
-          }
-        />
-      </ContentWrapper>
 
-      {type === "create" && action && action}
+      {(type === "create" && !!action) && action}
     </ScrollView>
   );
 };

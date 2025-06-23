@@ -10,6 +10,7 @@ import { Text, View } from "../theme/Themed";
 interface BrandActionItemProps {
   active?: boolean;
   icon?: IconProp;
+  image?: any;
   onPress: () => void;
   showChevron?: boolean;
   title: string;
@@ -23,6 +24,7 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
   onPress,
   showChevron = true,
   title,
+  image = null,
   removeTopBorder,
   removeBottomBorder
 }) => {
@@ -63,6 +65,7 @@ const BrandActionItem: React.FC<BrandActionItemProps> = ({
               />
             )
           }
+          {image}
           <Text
             style={[
               styles.text,

@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 import React from "react";
 
 import Header from "@/components/explore-influencers/header";
@@ -7,8 +7,9 @@ import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import Colors from "@/constants/Colors";
-import { useChatContext } from "@/contexts";
+import { useAuthContext, useChatContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
+import ImageComponent from "@/shared-uis/components/image-component";
 import {
   faComment,
   faFileLines,
@@ -23,12 +24,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { Pressable } from "react-native";
 import { Badge } from "react-native-paper";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
   const theme = useTheme();
   const { unreadCount } = useChatContext()
+  const { manager } = useAuthContext();
 
   return (
     <Tabs
@@ -160,6 +163,16 @@ const TabLayout = () => {
         options={{
           title: "My Brand",
           tabBarIcon: () => <ProfileIcon />,
+          headerRight: () => (!xl && <Pressable style={{ paddingHorizontal: 16 }} onPress={() => router.push('/profile')}>
+            <ImageComponent
+              url={manager?.profileImage || ""}
+              initials={manager?.name}
+              shape="circle"
+              size="small"
+              altText="Image"
+              style={{ width: 40, height: 40 }}
+            />
+          </Pressable>)
         }}
       />
     </Tabs>

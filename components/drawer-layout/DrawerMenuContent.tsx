@@ -1,7 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import ImageComponent from "@/shared-uis/components/image-component";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
 import { Brand } from "@/types/Brand";
 import {
@@ -82,6 +84,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
+  const { manager } = useAuthContext()
 
   const handleBrandChange = (brand: Brand) => {
     navigation.dispatch(DrawerActions.closeDrawer());
@@ -190,6 +193,52 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           removeTopBorder={true}
           removeBottomBorder={true}
         />
+        <BrandActionItem
+          key="view-profile"
+          image={<ImageComponent
+            url={manager?.profileImage || ""}
+            initials={manager?.name}
+            shape="circle"
+            size="small"
+            altText="Image"
+            style={{ width: 30, height: 30 }}
+          />}
+          showChevron={false}
+          onPress={() => {
+            router.push({
+              pathname: "/profile",
+            });
+            navigation.dispatch(DrawerActions.closeDrawer());
+          }}
+          title={manager?.name || "My Profile"}
+          removeTopBorder={true}
+          removeBottomBorder={true}
+        />
+        {/* <Pressable
+          onPress={() => {
+            router.push("/profile");
+          }}
+        >
+          <View style={styles.userProfileContainer}>
+
+            <View style={styles.textContainer}>
+              <Text style={styles.titleText}>{manager?.name}</Text>
+              <Text
+                style={{
+                  opacity: 0.8,
+                }}
+              >
+                {manager?.email}
+              </Text>
+            </View>
+            <FontAwesomeIcon
+              color={Colors(theme).text}
+              icon={faChevronRight}
+              size={20}
+              style={styles.chevron}
+            />
+          </View>
+        </Pressable> */}
       </View>
     </View>
   );

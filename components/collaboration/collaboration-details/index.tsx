@@ -17,7 +17,6 @@ import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import OverviewTabContent from "./OverviewTabContent";
-import SettingsTabContent from "./SettingsTabContent";
 
 export interface CollaborationDetail extends ICollaboration {
   id: string;
@@ -117,13 +116,8 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     },
     {
       id: "Invitations",
-      title: "Invitations",
+      title: "Send Invitations",
       component: <InvitationsTabContent pageID={pageID} />,
-    },
-    {
-      id: "Preferences",
-      title: "Preferences",
-      component: <SettingsTabContent pageID={pageID} />,
     },
   ];
 
