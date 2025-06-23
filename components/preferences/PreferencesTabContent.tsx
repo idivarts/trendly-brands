@@ -101,7 +101,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
       }}
     >
       <ContentWrapper
-        title="Time Commitment"
+        title="Influencer's Time Commitment"
         description="Match with influencer with your seriousness level"
         theme={theme}
       >
