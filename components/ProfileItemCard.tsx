@@ -1,13 +1,14 @@
+import Colors from "@/constants/Colors";
+import { MENU_ITEMS } from "@/constants/Menu";
+import stylesFn from "@/styles/profile/ProfileItemCard.styles";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import { Pressable } from "react-native";
 import { Text, View } from "./theme/Themed";
-import Colors from "@/constants/Colors";
-import stylesFn from "@/styles/profile/ProfileItemCard.styles";
-import { useTheme } from "@react-navigation/native";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
 
 interface ProfileItemCardProps {
-  item: any;
+  item: typeof MENU_ITEMS[0];
   onPress: () => void;
 }
 

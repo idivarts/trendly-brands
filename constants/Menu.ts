@@ -7,6 +7,12 @@ export const MENU_ITEMS = [
   {
     id: "1",
     icon: faUsersBetweenLines,
+    title: "Preferences",
+    href: "/preferences",
+  },
+  {
+    id: "2",
+    icon: faUsersBetweenLines,
     title: "Members",
     href: "/members",
   },
