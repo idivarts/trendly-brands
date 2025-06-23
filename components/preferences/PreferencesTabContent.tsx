@@ -1,7 +1,16 @@
 import Select, { SelectItem } from "@/components/ui/select";
+import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { COLLABORATION_TYPES } from "@/shared-constants/preferences/collab-type";
 import { Console } from "@/shared-libs/utils/console";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import SelectGroup from "@/shared-uis/components/select/select-group";
+import Colors from "@/shared-uis/constants/Colors";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { Brand } from "@/types/Brand";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { FC, useEffect, useState } from "react";
 import { ScrollView } from "react-native";
@@ -12,6 +21,14 @@ interface PreferencesTabContentProps {
 
 const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   const theme = useTheme();
+  const {
+    updateBrand,
+    selectedBrand,
+    setSelectedBrand,
+  } = useBrandContext();
+
+  const [brandData, setBrandData] = useState<Partial<Brand>>(selectedBrand || {});
+
   const [timeCommitment, setTimeCommitment] = useState<{
     label: string;
     value: string;
@@ -100,6 +117,68 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         gap: 16
       }}
     >
+      <ContentWrapper
+        title="Influencer Category"
+        description="Which content format are you willing to post on your social media account for promotions."
+        theme={theme}
+      >
+        <MultiSelectExtendable
+          buttonIcon={
+            <FontAwesomeIcon
+              icon={faArrowRight}
+              color={Colors(theme).primary}
+              size={14}
+            />
+          }
+          buttonLabel="See Other Options"
+          initialItemsList={includeSelectedItems(
+            INFLUENCER_CATEGORIES,
+            brandData.preferences?.influencerCategories || []
+          )}
+          initialMultiselectItemsList={includeSelectedItems(
+            INITIAL_INFLUENCER_CATEGORIES,
+            brandData.preferences?.influencerCategories || []
+          )}
+          onSelectedItemsChange={(value) => {
+            setBrandData({
+              ...brandData,
+              preferences: {
+                ...brandData.preferences,
+                influencerCategories: value.map((value) => value),
+              },
+            });
+          }}
+          selectedItems={brandData.preferences?.influencerCategories || []}
+          theme={theme}
+        />
+      </ContentWrapper>
+      <ContentWrapper
+        title="Promotion Type"
+        description="What type of promotion are you looking for?"
+        theme={theme}
+      >
+        <Select
+          items={COLLABORATION_TYPES.map(v => ({ label: v, value: v }))}
+          multiselect
+          onSelect={(item) => {
+            setBrandData({
+              ...brandData,
+              preferences: {
+                ...brandData.preferences,
+                promotionType: item.map((item) => item.value),
+              },
+            });
+          }}
+          selectItemIcon
+          value={
+            brandData.preferences?.promotionType?.map((value) => ({
+              label: value,
+              value,
+            })) || []
+          }
+        />
+      </ContentWrapper>
+
       <ContentWrapper
         title="Influencer's Time Commitment"
         description="Match with influencer with your seriousness level"
