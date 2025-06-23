@@ -17,6 +17,7 @@ import {
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
 import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
@@ -66,8 +67,10 @@ const ExploreInfluencers = () => {
 
   // const [isLoading, setIsLoading] = useState(true);
 
-  const { manager, updateManager } = useAuthContext()
+  const { manager } = useAuthContext()
   const theme = useTheme();
+  const { selectedBrand } = useBrandContext()
+  const preferences = selectedBrand?.preferences || {}
 
   const { xl } = useBreakpoints();
 
@@ -75,6 +78,7 @@ const ExploreInfluencers = () => {
   const q = query(
     influencersRef,
     ...((manager?.isAdmin || false) ? [] : [where("profile.completionPercentage", ">=", 60)]),
+    // where(),
     orderBy("creationTime", "desc")
   );
   const { loading: isLoading, data, loadMore } = useInfiniteScroll<User>(q, 10)
