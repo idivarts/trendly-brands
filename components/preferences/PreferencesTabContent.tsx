@@ -1,13 +1,20 @@
-import Select, { SelectItem } from "@/components/ui/select";
-import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
+import Select from "@/components/ui/select";
+import { INFLUENCER_CATEGORIES, INITIAL_LANGUAGES, LANGUAGES, PLATFORMS } from "@/constants/ItemsList";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { COLLABORATION_TYPES } from "@/shared-constants/preferences/collab-type";
+import { CITIES, POPULAR_CITIES } from "@/shared-constants/preferences/locations";
+import { POST_TYPES } from "@/shared-constants/preferences/post-types";
 import { TIME_COMMITMENTS } from "@/shared-constants/preferences/time-commitment";
+import { VIDEO_TYPE } from "@/shared-constants/preferences/video-type";
 import { Console } from "@/shared-libs/utils/console";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
-import SelectGroup from "@/shared-uis/components/select/select-group";
+import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Brand } from "@/types/Brand";
+import { faArrowRight, faLocation } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { FC, useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -24,106 +31,50 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
     updateBrand,
     selectedBrand,
   } = useBrandContext();
+  const [loading, setLoading] = useState(false)
 
   const [preferences, setPreferences] = useState<Brand["preferences"]>({
     promotionType: [],
     influencerCategories: [],
-    languages: [],
-    locations: [],
     platforms: [],
-    collaborationPostTypes: [],
     timeCommitments: [],
+    collaborationPostTypes: [],
     contentVideoType: [],
   });
 
   useEffect(() => {
     if (selectedBrand && selectedBrand.preferences) {
+      Console.log("Selected Data", selectedBrand.preferences)
       setPreferences({
         ...preferences,
+        // Initiated here just to avoid the initial state issue
+        locations: [],
+        languages: [],
         ...selectedBrand.preferences
       })
     }
   }, [selectedBrand])
 
-  const [timeCommitment, setTimeCommitment] = useState<{
-    label: string;
-    value: string;
-  }>({
-    label: "None",
-    value: "None",
-  });
-  const [niches, setNiches] = useState<SelectItem[]>([]);
-  const [influencerLookingFor, setInfluencerLookingFor] = useState<{
-    label: string;
-    value: string;
-  }>({
-    label: "None",
-    value: "None",
-  });
-  const [preferredVideoType, setPreferredVideoType] = useState<{
-    label: string;
-    value: string;
-  }>({
-    label: "None",
-    value: "None",
-  });
 
-  const handleNicheSelect = (
-    selectedOptions: {
-      label: string;
-      value: string;
-    }[]
-  ) => {
-    setNiches(selectedOptions);
-  };
-
-  const updateCollaboration = async (
-    field: string,
-    value: string | string[]
-  ) => {
+  const updatePreference = async () => {
+    if (!selectedBrand)
+      return;
     try {
-      // const collabRef = doc(FirestoreDB, "collaborations", pageID);
-      // await updateDoc(collabRef, {
-      //   [`preferences.${field}`]: value,
-      // });
+      setLoading(true)
+      Console.log("All preferences", preferences)
+      await updateBrand(selectedBrand.id, {
+        ...selectedBrand,
+        preferences
+      })
+      Toaster.success("Preference Saved")
     } catch (error) {
+      Toaster.error("Error saving Preferences")
       Console.error(error, "Error updating Firestore");
+    } finally {
+      setLoading(false)
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      // const collabRef = doc(FirestoreDB, "collaborations", pageID);
-      // const snapshot = await getDoc(collabRef);
-      // const data = snapshot.data() as ICollaboration;
-      // if (!data) return;
-
-      // setTimeCommitment({
-      //   label: data.preferences.timeCommitment,
-      //   value: data.preferences.timeCommitment,
-      // });
-      // setNiches(
-      //   data.preferences.influencerNiche.map((niche) => ({
-      //     label: niche,
-      //     value: niche,
-      //   }))
-      // );
-      // setInfluencerLookingFor({
-      //   label: data.preferences.influencerRelation,
-      //   value: data.preferences.influencerRelation,
-      // });
-      // setPreferredVideoType({
-      //   label: data.preferences.preferredVideoType,
-      //   value: data.preferences.preferredVideoType,
-      // });
-    } catch (e) {
-      Console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
 
   if (!selectedBrand || !selectedBrand.preferences)
     return <ActivityIndicator />
@@ -144,7 +95,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         }}
       >
         <ContentWrapper
-          title="Influencer Category"
+          title="Influencer's Content Niche"
           description="Which content format are you willing to post on your social media account for promotions."
           theme={theme}
         >
@@ -162,7 +113,40 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
           />
         </ContentWrapper>
         <ContentWrapper
-          title="Promotion Type"
+          title="Influencer's Location"
+          description="From which location do you want your influencer to be. If you have no preference, leave this blank."
+          theme={theme}
+        >
+          {!!preferences?.locations &&
+            <MultiSelectExtendable
+              buttonIcon={
+                <FontAwesomeIcon
+                  icon={faLocation}
+                  color={Colors(theme).primary}
+                  size={14}
+                />
+              }
+              buttonLabel="See Other Options"
+              initialItemsList={includeSelectedItems(
+                CITIES,
+                preferences?.locations
+              )}
+              initialMultiselectItemsList={includeSelectedItems(
+                POPULAR_CITIES,
+                preferences.locations
+              )}
+              onSelectedItemsChange={(values) => {
+                setPreferences({
+                  ...preferences,
+                  locations: values.map(v => v),
+                });
+              }}
+              selectedItems={preferences.locations}
+              theme={theme}
+            />}
+        </ContentWrapper>
+        <ContentWrapper
+          title="Preferrable Promotion Type"
           description="What type of promotion are you looking for?"
           theme={theme}
         >
@@ -177,6 +161,59 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
             }}
             selectItemIcon
             value={preferences?.promotionType?.map((value) => ({ label: value, value })) || []}
+          />
+        </ContentWrapper>
+        <ContentWrapper
+          title="Influencer's Content Language"
+          description="Please tell us in what language do you want influencers to create content in?"
+          theme={theme}
+        >
+          {!!preferences?.languages &&
+            <MultiSelectExtendable
+              buttonIcon={
+                <FontAwesomeIcon
+                  icon={faArrowRight}
+                  color={Colors(theme).primary}
+                  size={14}
+                />
+              }
+              buttonLabel="See All Languages"
+              initialItemsList={includeSelectedItems(
+                LANGUAGES,
+                preferences?.languages || []
+              )}
+              initialMultiselectItemsList={includeSelectedItems(
+                INITIAL_LANGUAGES,
+                preferences?.languages || []
+              )}
+              onSelectedItemsChange={(values) => {
+                console.log("Lanugages Changed", values);
+                setPreferences({
+                  ...preferences,
+                  languages: values.map(v => v),
+                });
+              }}
+              selectedItems={preferences?.languages || []}
+              theme={theme}
+            />}
+        </ContentWrapper>
+
+        <ContentWrapper
+          title="Social Media Platforms"
+          description="Which all social media platform do you wish to promote your brand?"
+          theme={theme}
+        >
+          <Select
+            items={PLATFORMS.map(v => ({ label: v, value: v }))}
+            multiselect
+            onSelect={(item) => {
+              setPreferences({
+                ...preferences,
+                platforms: item.map((item) => item.value),
+              });
+            }}
+            selectItemIcon
+            value={preferences?.platforms?.map((value) => ({ label: value, value })) || []}
           />
         </ContentWrapper>
 
@@ -200,68 +237,46 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         </ContentWrapper>
 
         <ContentWrapper
-          title="Content Niche / Category"
-          description="This would help us understand what type of content you create and also better match with influencers"
+          title="Collaboration Post Types"
+          description="What type of posts do you want your influencers to post when they are a part of your campaign?"
           theme={theme}
         >
           <Select
-            items={[
-              { label: "Fashion", value: "Fashion" },
-              { label: "Lifestyle", value: "Lifestyle" },
-              { label: "Food", value: "Food" },
-              { label: "Travel", value: "Travel" },
-              { label: "Health", value: "Health" },
-            ]}
-            selectItemIcon={true}
-            value={niches}
+            items={POST_TYPES.map(v => ({ label: v, value: v }))}
             multiselect
-            onSelect={(selectedOptions) => {
-              const selectedValues = selectedOptions.map(
-                (option) => option.value
-              );
-              setNiches(selectedOptions);
-              updateCollaboration("influencerNiche", selectedValues);
+            onSelect={(item) => {
+              setPreferences({
+                ...preferences,
+                collaborationPostTypes: item.map((item) => item.value),
+              });
             }}
+            selectItemIcon
+            value={preferences?.collaborationPostTypes?.map((value) => ({ label: value, value })) || []}
           />
         </ContentWrapper>
+
         <ContentWrapper
-          title="Influencer's looking for"
-          description="What kind of relation you are looking for with the brands"
+          title="Video Types"
+          description="Do you want the shooted video to be integrated video or dedicated video?"
           theme={theme}
         >
-          <SelectGroup
-            items={[
-              { label: "Long Term", value: "Long Term" },
-              { label: "Short Term", value: "Short Term" },
-              { label: "One Time", value: "One Time" },
-            ]}
-            selectedItem={influencerLookingFor}
-            onValueChange={(value) => {
-              setInfluencerLookingFor(value);
-              updateCollaboration("influencerRelation", value.value);
+          <Select
+            items={VIDEO_TYPE.map(v => ({ label: v, value: v }))}
+            multiselect
+            onSelect={(item) => {
+              setPreferences({
+                ...preferences,
+                contentVideoType: item.map((item) => item.value),
+              });
             }}
-            theme={theme}
+            selectItemIcon
+            value={preferences?.contentVideoType?.map((value) => ({ label: value, value })) || []}
           />
         </ContentWrapper>
-        <ContentWrapper
-          description="Do you want your content to be integrated or dedicated focusing on your brand or product"
-          title="Preferred Video Type"
-          theme={theme}
-        >
-          <SelectGroup
-            items={[
-              { label: "Integrated Video", value: "Integrated Video" },
-              { label: "Dedicated Video", value: "Dedicated Video" },
-            ]}
-            selectedItem={preferredVideoType}
-            onValueChange={(value) => {
-              setPreferredVideoType(value);
-              updateCollaboration("preferredVideoType", value.value);
-            }}
-            theme={theme}
-          />
-        </ContentWrapper>
+
       </ScrollView>
+
+
       <View style={{
         position: "absolute",
         bottom: 0,
@@ -271,7 +286,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         alignItems: "stretch",
         backgroundColor: Colors(theme).background
       }}>
-        <Button style={{ flex: 1, paddingVertical: 4 }}>Save</Button>
+        <Button style={{ flex: 1, paddingVertical: 4 }} onPress={() => updatePreference()} loading={loading}>Save</Button>
       </View>
     </>
   );

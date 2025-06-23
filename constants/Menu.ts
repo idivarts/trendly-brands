@@ -18,7 +18,7 @@ export const MENU_ITEMS = [
     href: "/members",
   },
   {
-    id: "2",
+    id: "3",
     title: "Settings",
     href: "/settings",
     icon: faGears,
