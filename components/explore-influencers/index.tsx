@@ -19,12 +19,14 @@ import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { useInfiniteScroll } from "@/shared-libs/utils/infinite-scroll";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useInfiniteIdScroll } from "@/shared-libs/utils/infinite-id-scroll";
 import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
-import { collection, orderBy, query, where } from "firebase/firestore";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { collection, query } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
@@ -74,14 +76,27 @@ const ExploreInfluencers = () => {
 
   const { xl } = useBreakpoints();
 
+  const [influencerIds, setInfluencerIds] = useState<string[]>([])
+
   const influencersRef = collection(FirestoreDB, "users");
   const q = query(
     influencersRef,
-    ...((manager?.isAdmin || false) ? [] : [where("profile.completionPercentage", ">=", 60)]),
-    // where(),
-    orderBy("creationTime", "desc")
   );
-  const { loading: isLoading, data, loadMore } = useInfiniteScroll<User>(q, 10)
+
+  useEffect(() => {
+    if (!selectedBrand)
+      return;
+    HttpWrapper.fetch(`/api/v1/influencers?brandId=${selectedBrand?.id}`, {
+      method: "GET",
+    }).then(async (res) => {
+      const body = await res.json()
+      setInfluencerIds(body.data as string[])
+    }).catch(e => {
+      Toaster.error("Cant fetch Influencers")
+    })
+  }, [selectedBrand])
+
+  const { loading: isLoading, data, loadMore } = useInfiniteIdScroll<User>(influencerIds, q, 10)
 
   useEffect(() => {
     const fetchedInfluencers: User[] = [];
