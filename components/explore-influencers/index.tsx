@@ -249,7 +249,7 @@ const ExploreInfluencers = () => {
                 marginHorizontal: 16,
               }}
             >
-              <InfluencerInvite />
+              <InfluencerInvite selectedInfluencer={selectedInfluencer as User} />
             </View>
           }
           FireStoreDB={FirestoreDB}

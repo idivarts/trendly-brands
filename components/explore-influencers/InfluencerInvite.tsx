@@ -1,18 +1,27 @@
 import { useCollaborationContext } from '@/contexts'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
+import { Console } from '@/shared-libs/utils/console'
+import { AuthApp } from '@/shared-libs/utils/firebase/auth'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
+import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
+import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { Collaboration } from '@/types/Collaboration'
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore'
+import { User } from '@/types/User'
+import { collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
 import React, { useEffect, useState } from 'react'
 import { Button, Card, Checkbox } from 'react-native-paper'
 
-const InfluencerInvite = () => {
+interface IProps {
+    selectedInfluencer: User
+}
+const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
     const { } = useCollaborationContext()
     const { selectedBrand } = useBrandContext()
     const [collaborations, setCollaborations] = useState<Collaboration[]>([])
     const [selectedIds, setSelectedIds] = useState<string[]>([])
+    const [loading, setLoading] = useState(false)
 
     const fetchCollaborations = async () => {
         const collaborationCol = collection(FirestoreDB, "collaborations");
@@ -43,9 +52,44 @@ const InfluencerInvite = () => {
         )
     }
 
-    const sendInvite = () => {
-        console.log('Inviting to:', selectedIds)
-    }
+    const sendInvite = async () => {
+        try {
+            setLoading(true)
+            if (!selectedInfluencer) return;
+
+            for (let i = 0; i < selectedIds.length; i++) {
+                const collaborationId = selectedIds[i];
+                const invitationColRef = collection(
+                    FirestoreDB,
+                    "collaborations",
+                    collaborationId,
+                    "invitations"
+                );
+
+                const invitationPayload = {
+                    userId: selectedInfluencer.id,
+                    managerId: AuthApp.currentUser?.uid,
+                    collaborationId,
+                    status: "pending",
+                    message: "",
+                };
+
+                // Invitation Id as influencer id
+                const invitationDocRef = doc(invitationColRef, selectedInfluencer.id);
+                setDoc(invitationDocRef, invitationPayload).then(() => {
+                    HttpWrapper.fetch(`/api/v1/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
+                        method: "POST",
+                    })
+                });
+            }
+            Toaster.success("Invitation sent successfully");
+        } catch (error) {
+            Console.error(error);
+            Toaster.error("Failed to send invitation");
+        } finally {
+            setLoading(false)
+        }
+    };
 
     if (collaborations.length == 0)
         return []
@@ -64,7 +108,7 @@ const InfluencerInvite = () => {
                 ))}
             </Card.Content>
             <Card.Actions>
-                <Button mode="contained" onPress={sendInvite}>
+                <Button mode="contained" onPress={sendInvite} loading={loading}>
                     Send Invite
                 </Button>
             </Card.Actions>
