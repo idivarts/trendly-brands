@@ -30,12 +30,12 @@ const CreateCollaboration = () => {
     promotionType: PromotionType.BARTER_COLLAB,
     budget: {
       min: 0,
-      max: 500,
+      max: 0,
     },
     preferredContentLanguage: ["English", "Hindi"],
     contentFormat: [],
     platform: [],
-    numberOfInfluencersNeeded: 0,
+    numberOfInfluencersNeeded: 1,
     location: {
       type: "Remote",
       name: "",

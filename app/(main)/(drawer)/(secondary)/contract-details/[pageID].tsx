@@ -1,6 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { IconButton } from "react-native-paper";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
 import { View } from "@/components/theme/Themed";
@@ -17,8 +16,9 @@ import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import {
   collectionGroup,
@@ -29,6 +29,7 @@ import {
   where,
 } from "firebase/firestore";
 import { ActivityIndicator } from "react-native";
+import { Button } from "react-native-paper";
 
 interface ICollaborationCard extends IContracts {
   userData: IUsers;
@@ -44,6 +45,8 @@ const ContractScreen = () => {
   const { manager } = useAuthContext()
   const { pageID } = useLocalSearchParams();
   const [contract, setContract] = useState<ICollaborationCard>();
+  const [openProfileModal, setOpenProfileModal] = useState(false)
+  const [selectedInfluencer, setSelectedInfluencer] = useState<User | undefined>(undefined)
 
   const fetchProposals = async () => {
     try {
@@ -65,6 +68,10 @@ const ContractScreen = () => {
       const userDataRef = doc(FirestoreDB, "users", contract.userId);
       const userSnapshot = await getDoc(userDataRef);
       const userData = userSnapshot.data() as IUsers;
+      setSelectedInfluencer({
+        ...userData as IUsers,
+        id: userSnapshot.id
+      })
 
       const hasAppliedQuery = query(
         collectionGroup(FirestoreDB, "applications"),
@@ -120,19 +127,7 @@ const ContractScreen = () => {
         title="Contract Details"
         rightAction
         rightActionButton={
-          <IconButton
-            icon={() => (
-              <FontAwesomeIcon
-                icon={faEllipsisV}
-                size={20}
-                color={Colors(theme).text}
-              />
-            )}
-            onPress={() => {
-              setIsVisible(true);
-            }}
-            iconColor={Colors(theme).text}
-          />
+          <Button mode="outlined" style={{ marginHorizontal: 16 }} onPress={() => setOpenProfileModal(true)}>View Profile</Button>
         }
       />
       <ContractDetailsContent
@@ -142,6 +137,20 @@ const ContractScreen = () => {
         contractData={contract}
         refreshData={fetchProposals}
       />
+      <BottomSheetScrollContainer
+        isVisible={openProfileModal}
+        snapPointsRange={["90%", "90%"]}
+        onClose={() => { setOpenProfileModal(false) }}
+      >
+        <ProfileBottomSheet
+          influencer={selectedInfluencer as User}
+          theme={theme}
+          FireStoreDB={FirestoreDB}
+          isBrandsApp={true}
+          isPhoneMasked={false}
+          closeModal={() => setOpenProfileModal(false)}
+        />
+      </BottomSheetScrollContainer>
     </AppLayout>
   );
 };

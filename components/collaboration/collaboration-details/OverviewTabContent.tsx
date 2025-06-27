@@ -36,7 +36,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { Card, Portal, Text } from "react-native-paper";
@@ -56,6 +56,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   const [brandModalVisible, setBrandModalVisible] = useState(false);
   const [managerModalVisible, setManagerModalVisible] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [applicationCount, setApplicationCount] = useState(0)
+  const [invitationCount, setInvitationCount] = useState(0)
   const { xl } = useBreakpoints();
 
   const { getContractsByCollaborationId } = useContractContext();
@@ -89,12 +91,21 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     });
   };
 
-  const fetchContracts = async () => {
+  const fetchCollaboration = async () => {
     const fetchedContracts = await getContractsByCollaborationId(
       props.collaboration.id
     );
-
     setContracts(fetchedContracts);
+
+    getDocs(collection(FirestoreDB, "collaborations", props.collaboration.id, "applications")).then(applications => {
+      const applicationCount = applications.size
+      setApplicationCount(applicationCount)
+    })
+    getDocs(collection(FirestoreDB, "collaborations", props.collaboration.id, "invitations")).then(invites => {
+      const inviteCount = invites.size
+      setInvitationCount(inviteCount)
+    })
+
   };
 
   const getFeedbacks = (contract: Contract[]) => {
@@ -127,7 +138,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   }, []);
 
   useEffect(() => {
-    fetchContracts();
+    fetchCollaboration();
   }, []);
 
   return (
@@ -321,7 +332,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 color: Colors(theme).text,
               }}
             >
-              Influencer Applied: 10
+              Influencer Applied: {applicationCount}
             </Text>
             <Text
               style={{
@@ -329,7 +340,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 color: Colors(theme).text,
               }}
             >
-              Brand Hire Rate: 70%
+              Invitations Sent: {invitationCount}
             </Text>
             {props.collaboration.promotionType ===
               PromotionType.PAID_COLLAB && (

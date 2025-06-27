@@ -43,7 +43,7 @@ export const useAppleLogin = (setLoading: Function, setError: Function) => {
         if (!result) throw new Error("No result returned from signInWithCredential");
         if (!result.user) throw new Error("No user found in the result");
         if (!result.user.uid) throw new Error("No user ID found in the user object");
-        if (!result.user.email) throw new Error("No email found in the user object");
+        // if (!result.user.email) throw new Error("No email found in the user object");
         if (!appleCredential) throw new Error("No Apple credential returned");
 
         setLoading(true);
