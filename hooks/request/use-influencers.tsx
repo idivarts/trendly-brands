@@ -5,7 +5,7 @@ import { useInfiniteIdScroll } from "@/shared-libs/utils/infinite-id-scroll";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { User } from "@/types/User";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface UseInfluencersProps {
   collaborationId: string;
@@ -43,7 +43,7 @@ const useInfluencers = ({
     })
   }, [selectedBrand])
 
-  const { loading: isLoading, data, resetData, loadMore, nextAvailable, onScrollEvent } = useInfiniteIdScroll<User>(influencerIds, q, 10)
+  const { loading: isLoading, data, resetData, loadMore, nextAvailable, onScrollEvent } = useInfiniteIdScroll<User>(influencerIds, q, 5)
 
   // const influencersRef = collection(FirestoreDB, "users");
   // const q = query(

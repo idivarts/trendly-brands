@@ -52,6 +52,7 @@ const InvitationsTabContent = (props: any) => {
     checkIfAlreadyInvited,
     influencers: rawInfluencers,
     isLoading,
+    loadMore,
     onScrollEvent
   } = useInfluencers({
     collaborationId,
@@ -167,6 +168,7 @@ const InvitationsTabContent = (props: any) => {
           height={height}
           width={width}
           vertical={false}
+          onLoadMore={() => loadMore()}
           renderItem={({ item }) => (
             <InvitationCard
               checkIfAlreadyInvited={checkIfAlreadyInvited}
