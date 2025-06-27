@@ -35,7 +35,7 @@ const CreateCollaboration = () => {
     preferredContentLanguage: ["English", "Hindi"],
     contentFormat: [],
     platform: [],
-    numberOfInfluencersNeeded: 0,
+    numberOfInfluencersNeeded: 1,
     location: {
       type: "Remote",
       name: "",
