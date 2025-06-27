@@ -25,7 +25,6 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
-import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
@@ -52,6 +51,7 @@ const InvitationsTabContent = (props: any) => {
     checkIfAlreadyInvited,
     influencers: rawInfluencers,
     isLoading,
+    loadMore,
     onScrollEvent
   } = useInfluencers({
     collaborationId,
@@ -73,16 +73,6 @@ const InvitationsTabContent = (props: any) => {
     left: insets.left,
     right: insets.right,
   });
-
-  const renderBackdrop = (props: any) => {
-    return (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-      />
-    );
-  };
 
   const toggleActionModal = () => {
     setIsActionModalVisible(!isActionModalVisible);
@@ -167,6 +157,7 @@ const InvitationsTabContent = (props: any) => {
           height={height}
           width={width}
           vertical={false}
+          onLoadMore={() => loadMore()}
           renderItem={({ item }) => (
             <InvitationCard
               checkIfAlreadyInvited={checkIfAlreadyInvited}

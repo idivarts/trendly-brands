@@ -56,7 +56,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
               marginTop: -1,
             }}
           />
-          {isAlreadyInvited ? "Already Invited" : "Invite"}
+          {isAlreadyInvited ? "Already Invited" : "Invite Influencer"}
         </Button>}
         openProfile={profileModalAction}
       />

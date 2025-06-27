@@ -62,7 +62,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
               marginTop: -2,
             }}
           />
-          {data.application.status === "pending" ? "Accept" : "Accepted"}
+          {data.application.status === "pending" ? "Accept Application" : "Application Already Accepted"}
         </Button>}
         footerNode={<CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}

@@ -3,7 +3,7 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
@@ -31,6 +31,7 @@ import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import InfluencerActionModal from "./InfluencerActionModal";
+import InfluencerInvite from "./InfluencerInvite";
 
 const ExploreInfluencers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -241,6 +242,16 @@ const ExploreInfluencers = () => {
         <ProfileBottomSheet
           influencer={selectedInfluencer as User}
           theme={theme}
+          actionCard={
+            <View
+              style={{
+                backgroundColor: Colors(theme).transparent,
+                marginHorizontal: 16,
+              }}
+            >
+              <InfluencerInvite selectedInfluencer={selectedInfluencer as User} />
+            </View>
+          }
           FireStoreDB={FirestoreDB}
           isBrandsApp={true}
           closeModal={() => setOpenProfileModal(false)}
