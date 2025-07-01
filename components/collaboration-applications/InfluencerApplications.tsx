@@ -1,4 +1,4 @@
-import { IApplications } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
+import { IApplications, ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import ProfileBottomSheet from '@/shared-uis/components/ProfileModal/Profile-Modal'
@@ -21,6 +21,8 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     const theme = useTheme()
 
     const [influencer, setInfluencer] = useState<User | undefined>(undefined)
+    const [application, setApplication] = useState<IApplications | undefined>(undefined)
+    const [collaboration, setCollaboration] = useState<ICollaboration | undefined>(undefined)
 
     const initiate = async () => {
         setLoading(true)
@@ -32,6 +34,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 return;
             }
             const application = applicationDoc.data() as IApplications
+            setApplication(application)
             const userId = application.userId
 
             const userRef = doc(collection(FirestoreDB, "users"), userId)
@@ -49,6 +52,15 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 },
                 id: userDoc.id
             })
+
+            const collaborationRef = doc(collection(FirestoreDB, "collaborations"), collaborationId)
+            const collaborationDoc = await getDoc(collaborationRef)
+            if (!collaborationDoc.exists()) {
+                setError(true)
+                return;
+            }
+            const collaboration = collaborationDoc.data() as ICollaboration
+            setCollaboration(collaboration)
 
         } finally {
             setLoading(false)
@@ -73,9 +85,40 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
         <View style={{ flex: 1, alignItems: "stretch", justifyContent: "center" }}>
             <ProfileBottomSheet FireStoreDB={FirestoreDB}
                 influencer={influencer}
-                actionCard={<View style={{ marginBottom: 60 }}>
+                actionCard={
+                    <View style={{ padding: 20, gap: 24 }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                Message from {influencer.name}
+                            </Text>
+                            <Text style={{ fontSize: 17, lineHeight: 26 }}>
+                                {application?.message}
+                            </Text>
+                        </View>
 
-                </View>}
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                Questions we asked {influencer.name}
+                            </Text>
+                            {application?.answersFromInfluencer.map((v, index) => (
+                                <View key={index} style={{ marginBottom: 20 }}>
+                                    <Text style={{ fontSize: 17, fontWeight: '600', marginBottom: 6, lineHeight: 24 }}>
+                                        Q. {(collaboration?.questionsToInfluencers || [])[v.question]}
+                                    </Text>
+                                    <Text style={{ fontSize: 17, lineHeight: 24 }}>
+                                        Ans. {v.answer}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={{ borderTopWidth: 1, borderColor: '#ddd', marginTop: 24, paddingTop: 20 }}>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                {influencer.name}'s Profile
+                            </Text>
+                        </View>
+                    </View>
+                }
                 isBrandsApp={true} theme={theme} isPhoneMasked={false} />
         </View>
     )
