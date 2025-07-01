@@ -1,3 +1,4 @@
+import InfluencerApplication from '@/components/collaboration-applications/InfluencerApplications'
 import { View } from '@/components/theme/Themed'
 import { usePublicContext } from '@/contexts/public-context-provider'
 import { useLocalSearchParams } from 'expo-router'
@@ -20,7 +21,7 @@ const CollaborationApplication = () => {
         )
     }
     return (
-        <View>Hello there</View>
+        <InfluencerApplication collaborationId={collaborationId as string} applicationId={applicationId as string} />
     )
 }
 
