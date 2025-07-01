@@ -43,6 +43,10 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
             const user = await userDoc.data() as IUsers
             setInfluencer({
                 ...user,
+                profile: {
+                    ...user.profile,
+                    attachments: [...application.attachments, ...(user.profile?.attachments || [])],
+                },
                 id: userDoc.id
             })
 
@@ -67,7 +71,12 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     }
     return (
         <View style={{ flex: 1, alignItems: "stretch", justifyContent: "center" }}>
-            <ProfileBottomSheet FireStoreDB={FirestoreDB} influencer={influencer} isBrandsApp={true} theme={theme} isPhoneMasked={false} />
+            <ProfileBottomSheet FireStoreDB={FirestoreDB}
+                influencer={influencer}
+                actionCard={<View style={{ marginBottom: 60 }}>
+
+                </View>}
+                isBrandsApp={true} theme={theme} isPhoneMasked={false} />
         </View>
     )
 }
