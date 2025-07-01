@@ -1,0 +1,127 @@
+import { IApplications, ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
+import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users'
+import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
+import ProfileBottomSheet from '@/shared-uis/components/ProfileModal/Profile-Modal'
+import { View } from '@/shared-uis/components/theme/Themed'
+import { User } from '@/types/User'
+import { useTheme } from '@react-navigation/native'
+import { collection, doc, getDoc } from 'firebase/firestore'
+import React, { useEffect, useState } from 'react'
+import { Text } from 'react-native'
+import { ActivityIndicator } from 'react-native-paper'
+
+interface IInfluencerApplication {
+    collaborationId: string,
+    applicationId: string
+}
+
+const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaborationId, applicationId }) => {
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(false)
+    const theme = useTheme()
+
+    const [influencer, setInfluencer] = useState<User | undefined>(undefined)
+    const [application, setApplication] = useState<IApplications | undefined>(undefined)
+    const [collaboration, setCollaboration] = useState<ICollaboration | undefined>(undefined)
+
+    const initiate = async () => {
+        setLoading(true)
+        try {
+            const applicationRef = doc(collection(FirestoreDB, "collaborations", collaborationId, "applications"), applicationId)
+            const applicationDoc = await getDoc(applicationRef)
+            if (!applicationDoc.exists()) {
+                setError(true)
+                return;
+            }
+            const application = applicationDoc.data() as IApplications
+            setApplication(application)
+            const userId = application.userId
+
+            const userRef = doc(collection(FirestoreDB, "users"), userId)
+            const userDoc = await getDoc(userRef)
+            if (!userDoc.exists()) {
+                setError(true)
+                return;
+            }
+            const user = await userDoc.data() as IUsers
+            setInfluencer({
+                ...user,
+                profile: {
+                    ...user.profile,
+                    attachments: [...application.attachments, ...(user.profile?.attachments || [])],
+                },
+                id: userDoc.id
+            })
+
+            const collaborationRef = doc(collection(FirestoreDB, "collaborations"), collaborationId)
+            const collaborationDoc = await getDoc(collaborationRef)
+            if (!collaborationDoc.exists()) {
+                setError(true)
+                return;
+            }
+            const collaboration = collaborationDoc.data() as ICollaboration
+            setCollaboration(collaboration)
+
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        initiate()
+    }, [])
+
+    if (loading) {
+        return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size={"small"} />
+        </View>
+    }
+    if (error || !influencer) {
+        return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: "red", fontSize: 16 }}>Something went wrong. Unable to load application details.</Text>
+        </View>
+    }
+    return (
+        <View style={{ flex: 1, alignItems: "stretch", justifyContent: "center" }}>
+            <ProfileBottomSheet FireStoreDB={FirestoreDB}
+                influencer={influencer}
+                actionCard={
+                    <View style={{ padding: 20, gap: 24 }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                Message from {influencer.name}
+                            </Text>
+                            <Text style={{ fontSize: 17, lineHeight: 26 }}>
+                                {application?.message}
+                            </Text>
+                        </View>
+
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                Questions we asked {influencer.name}
+                            </Text>
+                            {application?.answersFromInfluencer.map((v, index) => (
+                                <View key={index} style={{ marginBottom: 20 }}>
+                                    <Text style={{ fontSize: 17, fontWeight: '600', marginBottom: 6, lineHeight: 24 }}>
+                                        Q. {(collaboration?.questionsToInfluencers || [])[v.question]}
+                                    </Text>
+                                    <Text style={{ fontSize: 17, lineHeight: 24 }}>
+                                        Ans. {v.answer}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={{ borderTopWidth: 1, borderColor: '#ddd', marginTop: 24, paddingTop: 20 }}>
+                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                {influencer.name}'s Profile
+                            </Text>
+                        </View>
+                    </View>
+                }
+                isBrandsApp={true} theme={theme} isPhoneMasked={false} />
+        </View>
+    )
+}
+
+export default InfluencerApplication

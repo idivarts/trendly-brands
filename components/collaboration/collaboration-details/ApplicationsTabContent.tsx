@@ -190,7 +190,11 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         />
       </CarouselInViewProvider>
 
-      <InfluencerActionModal influencerId={selectedInfluencerApplication?.influencer.id} isModalVisible={isActionModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={toggleActionModal} />
+      <InfluencerActionModal influencerId={selectedInfluencerApplication?.influencer.id} isModalVisible={isActionModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={toggleActionModal}
+        applicationCopy={selectedInfluencerApplication ? {
+          collaborationId: selectedInfluencerApplication.application.collaborationId || "",
+          applicationId: selectedInfluencerApplication.application.id || ""
+        } : undefined} />
 
       <BottomSheetScrollContainer
         isVisible={openProfileModal}

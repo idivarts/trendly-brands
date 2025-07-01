@@ -1,13 +1,19 @@
 import { useAuthContext } from '@/contexts';
+import { BRANDS_FE_URL } from '@/shared-constants/app';
 import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal';
 import Toaster from '@/shared-uis/components/toaster/Toaster';
+import * as Clipboard from "expo-clipboard";
 import React from 'react';
 import { List } from 'react-native-paper';
 import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
 
-interface IProps { influencerId: string | undefined, isModalVisible: boolean, toggleModal: () => void, openProfile: Function }
+interface IProps {
+    influencerId: string | undefined,
+    isModalVisible: boolean, toggleModal: () => void, openProfile: Function,
+    applicationCopy?: { collaborationId: string, applicationId: string }
+}
 
-const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible, toggleModal, openProfile }) => {
+const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible, toggleModal, openProfile, applicationCopy }) => {
     const { manager, updateManager } = useAuthContext()
     const { openModal } = useConfirmationModel()
     const blockInfluencer = async () => {
@@ -47,10 +53,17 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
             {isModalVisible && (
                 <BottomSheetContainer
                     isVisible={isModalVisible}
-                    snapPointsRange={["25%", "50%"]}
+                    snapPointsRange={applicationCopy ? ["35%", "50%"] : ["25%", "50%"]}
                     onClose={toggleModal}
                 >
                     <List.Section style={{ paddingBottom: 28 }}>
+                        {applicationCopy && <List.Item title="Copy Application Link" onPress={async () => {
+                            await Clipboard.setStringAsync(
+                                `${BRANDS_FE_URL}/collaboration-application?collaborationId=${applicationCopy.collaborationId}&applicationId=${applicationCopy.applicationId}`
+                            );
+                            Toaster.success("Copied the link on Clipboard")
+                            toggleModal()
+                        }} />}
                         <List.Item
                             title="View Profile"
                             onPress={() => {
@@ -78,6 +91,7 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
                             })
                             toggleModal()
                         }} />
+
                     </List.Section>
                 </BottomSheetContainer>
             )}
