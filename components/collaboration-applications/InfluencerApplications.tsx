@@ -48,7 +48,10 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 ...user,
                 profile: {
                     ...user.profile,
-                    attachments: [...application.attachments, ...(user.profile?.attachments || [])],
+                    attachments: [...application.attachments, {
+                        type: "image",
+                        imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
+                    }, ...(user.profile?.attachments || [])],
                 },
                 id: userDoc.id
             })
@@ -96,6 +99,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                             </Text>
                         </View>
 
+                        {/*     "imageUrl": "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png", */}
                         <View>
                             <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
                                 Questions we asked {influencer.name}
