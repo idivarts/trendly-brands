@@ -7,14 +7,15 @@ import { Channel as ChannelType } from "stream-chat";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
-import { useAuthContext, useContractContext } from "@/contexts";
+import { useAuthContext, useChatContext, useContractContext } from "@/contexts";
+import { streamClient } from "@/contexts/streamClient";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { Console } from "@/shared-libs/utils/console";
 import { User } from "@/types/User";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
 import { Avatar } from "react-native-paper";
-import { Channel, MessageInput, MessageList, useChatContext } from "stream-chat-expo";
+import { Channel, MessageInput, MessageList } from "stream-chat-expo";
 import ChatMessageTopbar from "./chat-message-topbar";
 import {
   AttachButton,
@@ -32,7 +33,9 @@ const ChannelNative = () => {
 
   const theme = useTheme();
 
-  const { client } = useChatContext();
+  const client = streamClient
+  const { connectUser } = useChatContext()
+
   const { getContractById } = useContractContext();
 
   const router = useRouter();
@@ -57,6 +60,7 @@ const ChannelNative = () => {
 
   useEffect(() => {
     const fetchChannel = async () => {
+      await connectUser()
       const channels = await client.queryChannels({ cid });
       setChannel(channels[0]);
 
