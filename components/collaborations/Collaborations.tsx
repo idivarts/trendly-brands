@@ -175,14 +175,16 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             data={filteredProposals}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <View style={{
-                width: "100%",
-                borderWidth: 0.3,
-                borderColor: Colors(theme).gray300,
-                gap: 8,
-                borderRadius: 5,
-                overflow: "hidden",
-              }}>
+              <View
+                key={item.id}
+                style={{
+                  width: "100%",
+                  borderWidth: 0.3,
+                  borderColor: Colors(theme).gray300,
+                  gap: 8,
+                  borderRadius: 5,
+                  overflow: "hidden",
+                }}>
 
                 {item.attachments && item.attachments?.length > 0 && (
                   <ScrollMedia
