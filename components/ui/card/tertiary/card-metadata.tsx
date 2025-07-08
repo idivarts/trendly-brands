@@ -1,10 +1,10 @@
+import { Theme, useTheme } from '@react-navigation/native';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Theme, useTheme } from '@react-navigation/native';
 
 import { Text, View } from '@/components/theme/Themed';
-import { CURRENCY_SYMBOL } from '@/constants/Unit';
 import Colors from '@/constants/Colors';
+import { CURRENCY_SYMBOL } from '@/constants/Unit';
 
 type CardMetaDataProps = {
   quote?: string;

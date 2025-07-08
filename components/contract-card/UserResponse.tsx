@@ -2,11 +2,9 @@ import { IApplications } from "@/shared-libs/firestore/trendly-pro/models/collab
 import { Console } from "@/shared-libs/utils/console";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import { processRawAttachment } from "@/utils/attachments";
-import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { FC } from "react";
-import { Linking, Pressable, ScrollView } from "react-native";
+import { Linking, ScrollView } from "react-native";
 import { Text, View } from "../theme/Themed";
 
 interface UserResponseProps {
@@ -97,14 +95,14 @@ const UserResponse: FC<UserResponseProps> = ({
           <Text style={{ fontSize: 16 }}>
             Quote: {application?.quotation || "N/A"}
           </Text>
-          {application?.timeline && (
+          {/* {application?.timeline && (
             <Text style={{ fontSize: 16 }}>
               Timeline:{" "}
               {new Date(application?.timeline).toLocaleDateString() || "N/A"}
             </Text>
-          )}
+          )} */}
         </View>
-        {application?.fileAttachments &&
+        {/* {application?.fileAttachments &&
           application.fileAttachments.map((attachment, index) => {
             return (
               <Pressable
@@ -126,7 +124,7 @@ const UserResponse: FC<UserResponseProps> = ({
                 </Text>
               </Pressable>
             );
-          })}
+          })} */}
 
         <View
           style={{

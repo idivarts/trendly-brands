@@ -1,9 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-import { FC } from "react";
 import { IApplications } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { truncateText } from "@/utils/text";
+import { useTheme } from "@react-navigation/native";
+import { FC } from "react";
 
 interface ContractDetailsProps {
   application: IApplications;
@@ -53,15 +53,14 @@ const ContractDetails: FC<ContractDetailsProps> = ({ application }) => {
         >
           Quote: Rs {application.quotation}
         </Text>
-        <Text
+        {/* <Text
           style={{
             fontSize: 16,
             color: Colors(theme).text,
           }}
         >
-          {/* timeline */}
           Timeline: {new Date(application.timeline).toLocaleDateString()}
-        </Text>
+        </Text> */}
       </View>
     </View>
   );

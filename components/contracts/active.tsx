@@ -194,7 +194,7 @@ const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
                     item.applications[0] || {
                       message: "No message",
                       quotation: "No quotation",
-                      timeline: new Date().toISOString(),
+                      // timeline: new Date().toISOString(),
                     }
                   }
                 />

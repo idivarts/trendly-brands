@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { View } from '@/components/theme/Themed';
 import Button from '@/components/ui/button';
 import { Card } from '@/components/ui/card/tertiary';
-import { CardFiles } from '@/components/ui/card/tertiary/card-files';
 import { CardFooter } from '@/components/ui/card/tertiary/card-footer';
 import { CardHeader } from '@/components/ui/card/tertiary/card-header';
 import { CardMetaData } from '@/components/ui/card/tertiary/card-metadata';
@@ -15,7 +14,6 @@ import { Application } from '@/types/Collaboration';
 import { processRawAttachment } from '@/utils/attachments';
 import { convertToKUnits } from '@/utils/conversion';
 import { useTheme } from '@react-navigation/native';
-import { Linking } from 'react-native';
 
 interface ApplicationCardProps {
   data: Application;
@@ -53,21 +51,21 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         )
       }
       {
-        (data.quotation || data.timeline) && (
+        (data.quotation) && (
           <CardMetaData
             quote={convertToKUnits(Number(data.quotation)) as string}
-            timeline={new Date(data.timeline).toLocaleDateString('en-US')}
+          // timeline={new Date(data.timeline).toLocaleDateString('en-US')}
           />
         )
       }
-      {
+      {/* {
         data.fileAttachments && data.fileAttachments.length > 0 && (
           <CardFiles
             files={data.fileAttachments}
             onFilePress={(file) => Linking.openURL(file.url)}
           />
         )
-      }
+      } */}
       {
         data.answersFromInfluencer && data.answersFromInfluencer.length > 0 && (
           <CardQuestions
