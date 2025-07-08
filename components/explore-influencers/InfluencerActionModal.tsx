@@ -77,7 +77,7 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
                             onPress={async () => {
                                 // bottomSheetModalRef.current?.present();
                                 await Clipboard.setStringAsync(
-                                    `${BRANDS_FE_URL}/profile/${influencerId}`
+                                    `${BRANDS_FE_URL}/influencer/${influencerId}`
                                 );
                                 Toaster.success("Copied the Influencer Profile on Clipboard")
                                 toggleModal();
