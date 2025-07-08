@@ -1,6 +1,7 @@
 import { useCloudMessagingContext } from "@/shared-libs/contexts/cloud-messaging.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { router } from "expo-router";
 import {
@@ -70,10 +71,11 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }, streamToken).then(async () => {
       setClient(streamClient);
       setToken(streamToken);
+      PersistentStorage.set("streamToken", streamToken)
       listenToNewMessages();
       setHasError(false);
       setIsStreamConnected(true)
-      registerPushTokenWithStream(await getToken())
+      getToken().then(token => registerPushTokenWithStream(token))
     });
   };
 
@@ -124,6 +126,11 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     }
     Console.log("Connecting to Chat")
     try {
+      const storedToken = await PersistentStorage.get("streamToken")
+      if (storedToken) {
+        await connectStream(storedToken);
+        return storedToken
+      }
       const response = await HttpWrapper.fetch("/api/v1/chat/connect", {
         method: "POST",
         headers: {
