@@ -11,11 +11,11 @@ import { Text } from 'react-native'
 import { ActivityIndicator } from 'react-native-paper'
 
 interface IInfluencerApplication {
-    collaborationId: string,
-    applicationId: string
+    collaborationId?: string,
+    influencerId: string
 }
 
-const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaborationId, applicationId }) => {
+const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaborationId, influencerId }) => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const theme = useTheme()
@@ -27,16 +27,27 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     const initiate = async () => {
         setLoading(true)
         try {
-            const applicationRef = doc(collection(FirestoreDB, "collaborations", collaborationId, "applications"), applicationId)
-            const applicationDoc = await getDoc(applicationRef)
-            if (!applicationDoc.exists()) {
-                setError(true)
-                return;
-            }
-            const application = applicationDoc.data() as IApplications
-            setApplication(application)
-            const userId = application.userId
+            if (collaborationId) {
+                const applicationRef = doc(collection(FirestoreDB, "collaborations", collaborationId, "applications"), influencerId)
+                const applicationDoc = await getDoc(applicationRef)
+                if (!applicationDoc.exists()) {
+                    setError(true)
+                    return;
+                }
+                const application = applicationDoc.data() as IApplications
+                setApplication(application)
 
+                const collaborationRef = doc(collection(FirestoreDB, "collaborations"), collaborationId)
+                const collaborationDoc = await getDoc(collaborationRef)
+                if (!collaborationDoc.exists()) {
+                    setError(true)
+                    return;
+                }
+                const collaboration = collaborationDoc.data() as ICollaboration
+                setCollaboration(collaboration)
+            }
+
+            const userId = influencerId
             const userRef = doc(collection(FirestoreDB, "users"), userId)
             const userDoc = await getDoc(userRef)
             if (!userDoc.exists()) {
@@ -48,22 +59,13 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 ...user,
                 profile: {
                     ...user.profile,
-                    attachments: [...application.attachments, {
+                    attachments: application ? [...application.attachments, {
                         type: "image",
                         imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
-                    }, ...(user.profile?.attachments || [])],
+                    }, ...(user.profile?.attachments || [])] : user.profile?.attachments,
                 },
                 id: userDoc.id
             })
-
-            const collaborationRef = doc(collection(FirestoreDB, "collaborations"), collaborationId)
-            const collaborationDoc = await getDoc(collaborationRef)
-            if (!collaborationDoc.exists()) {
-                setError(true)
-                return;
-            }
-            const collaboration = collaborationDoc.data() as ICollaboration
-            setCollaboration(collaboration)
 
         } finally {
             setLoading(false)
@@ -89,39 +91,40 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
             <ProfileBottomSheet FireStoreDB={FirestoreDB}
                 influencer={influencer}
                 actionCard={
-                    <View style={{ padding: 20, gap: 24 }}>
-                        <View>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
-                                Message from {influencer.name}
-                            </Text>
-                            <Text style={{ fontSize: 17, lineHeight: 26 }}>
-                                {application?.message}
-                            </Text>
-                        </View>
+                    (!!application && !!collaboration) ?
+                        <View style={{ padding: 20, gap: 24 }}>
+                            <View>
+                                <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                    Message from {influencer.name}
+                                </Text>
+                                <Text style={{ fontSize: 17, lineHeight: 26 }}>
+                                    {application?.message}
+                                </Text>
+                            </View>
 
-                        {/*     "imageUrl": "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png", */}
-                        <View>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
-                                Questions we asked {influencer.name}
-                            </Text>
-                            {application?.answersFromInfluencer.map((v, index) => (
-                                <View key={index} style={{ marginBottom: 20 }}>
-                                    <Text style={{ fontSize: 17, fontWeight: '600', marginBottom: 6, lineHeight: 24 }}>
-                                        Q. {(collaboration?.questionsToInfluencers || [])[v.question]}
-                                    </Text>
-                                    <Text style={{ fontSize: 17, lineHeight: 24 }}>
-                                        Ans. {v.answer}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
+                            {/*     "imageUrl": "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png", */}
+                            <View>
+                                <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                    Questions we asked {influencer.name}
+                                </Text>
+                                {application?.answersFromInfluencer.map((v, index) => (
+                                    <View key={index} style={{ marginBottom: 20 }}>
+                                        <Text style={{ fontSize: 17, fontWeight: '600', marginBottom: 6, lineHeight: 24 }}>
+                                            Q. {(collaboration?.questionsToInfluencers || [])[v.question]}
+                                        </Text>
+                                        <Text style={{ fontSize: 17, lineHeight: 24 }}>
+                                            Ans. {v.answer}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
 
-                        <View style={{ borderTopWidth: 1, borderColor: '#ddd', marginTop: 24, paddingTop: 20 }}>
-                            <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
-                                {influencer.name}'s Profile
-                            </Text>
-                        </View>
-                    </View>
+                            <View style={{ borderTopWidth: 1, borderColor: '#ddd', marginTop: 24, paddingTop: 20 }}>
+                                <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
+                                    {influencer.name}'s Profile
+                                </Text>
+                            </View>
+                        </View> : null
                 }
                 isBrandsApp={true} theme={theme} isPhoneMasked={false} />
         </View>

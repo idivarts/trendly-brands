@@ -53,7 +53,7 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
             {isModalVisible && (
                 <BottomSheetContainer
                     isVisible={isModalVisible}
-                    snapPointsRange={applicationCopy ? ["35%", "50%"] : ["25%", "50%"]}
+                    snapPointsRange={applicationCopy ? ["45%", "50%"] : ["35%", "50%"]}
                     onClose={toggleModal}
                 >
                     <List.Section style={{ paddingBottom: 28 }}>
@@ -69,6 +69,17 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
                             onPress={() => {
                                 // bottomSheetModalRef.current?.present();
                                 openProfile()
+                                toggleModal();
+                            }}
+                        />
+                        <List.Item
+                            title="Copy Influencer Profile"
+                            onPress={async () => {
+                                // bottomSheetModalRef.current?.present();
+                                await Clipboard.setStringAsync(
+                                    `${BRANDS_FE_URL}/profile/${influencerId}`
+                                );
+                                Toaster.success("Copied the Influencer Profile on Clipboard")
                                 toggleModal();
                             }}
                         />
