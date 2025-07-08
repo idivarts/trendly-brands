@@ -1,8 +1,8 @@
-import { TextInput } from "react-native-paper";
-import AddModal from "./add-modal";
-import { useState } from "react";
-import { useChatContext } from "stream-chat-expo";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import React, { useState } from "react";
+import { TextInput } from "react-native-paper";
+import { useChatContext } from "stream-chat-expo";
+import AddModal from "./add-modal";
 
 interface AddGroupProps {
   setVisible: (visible: boolean) => void;
@@ -38,14 +38,12 @@ const AddGroup: React.FC<AddGroupProps> = ({
       actionLabel="Add"
       title="Add Group"
       content={
-        <>
-          <TextInput
-            label="Group name"
-            mode="flat"
-            onChangeText={setGroupName}
-            value={groupName}
-          />
-        </>
+        <TextInput
+          label="Group name"
+          mode="flat"
+          onChangeText={setGroupName}
+          value={groupName}
+        />
       }
       visible={visible}
       setVisible={setVisible}

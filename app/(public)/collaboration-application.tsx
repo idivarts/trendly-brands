@@ -21,7 +21,7 @@ const CollaborationApplication = () => {
         )
     }
     return (
-        <InfluencerApplication collaborationId={collaborationId as string} applicationId={applicationId as string} />
+        <InfluencerApplication collaborationId={collaborationId as string} influencerId={applicationId as string} />
     )
 }
 
