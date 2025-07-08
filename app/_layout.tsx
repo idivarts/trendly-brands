@@ -127,8 +127,8 @@ const RootLayoutStack = () => {
               headerShown: false,
             }}
           >
-            <Stack.Screen name="(main)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            {/* <Stack.Screen name="(main)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} /> */}
             <Stack.Screen name="index" />
             <Stack.Screen name="+not-found" />
           </Stack>

@@ -22,7 +22,7 @@ const DrawerLayout = () => {
             headerShown: false,
           }}
         >
-          <Stack.Screen
+          {/* <Stack.Screen
             name="(tabs)"
             options={{
               headerShown: false,
@@ -33,7 +33,7 @@ const DrawerLayout = () => {
             options={{
               headerShown: false,
             }}
-          />
+          /> */}
         </Stack>
       </CustomDrawerWrapper>
     </BrandProtectedScreen>

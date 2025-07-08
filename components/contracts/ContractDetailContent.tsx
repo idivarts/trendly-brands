@@ -9,18 +9,18 @@ import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import Carousel from "@/shared-uis/components/carousel/carousel";
 import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
+import { Text } from "@/shared-uis/components/theme/Themed";
+import { truncateText } from "@/shared-uis/utils/text";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
-import { truncateText } from "@/utils/text";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Dimensions, Pressable, ScrollView, View } from "react-native";
-import { Card, Portal, Text } from "react-native-paper";
-import RenderHTML from "react-native-render-html";
+import { Pressable, ScrollView, View } from "react-native";
+import { Card, Portal } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
 import FeedbackModal from "./FeedbackModal";
@@ -95,7 +95,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 alignItems: "center",
               }}
             >
-              <Text variant="headlineMedium" style={styles.name}>
+              <Text style={styles.name}>
                 {props.userData.name}
               </Text>
               {props.collaborationDetail.timeStamp ? (
@@ -111,19 +111,11 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
               ) : null}
             </View>
 
-            <RenderHTML
-              source={{
-                html: truncateText(props.userData.profile?.content?.about as string, 160) || "<p>No content available.</p>",
-              }}
-              contentWidth={Dimensions.get("window").width}
-              defaultTextProps={{
-                style: {
-                  color: Colors(theme).text,
-                  fontSize: 16,
-                  lineHeight: 22,
-                },
-              }}
-            />
+            <Text style={{
+              color: Colors(theme).text,
+              fontSize: 16,
+              lineHeight: 22,
+            }}>{truncateText(props.userData.profile?.content?.about as string, 160)}</Text>
           </View>
 
           <ActionContainer
