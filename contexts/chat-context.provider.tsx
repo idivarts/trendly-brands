@@ -128,6 +128,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     try {
       const storedToken = await PersistentStorage.get("streamToken")
       if (storedToken) {
+        Console.log("Connecting from Stored Token", storedToken)
         await connectStream(storedToken);
         return storedToken
       }
@@ -150,6 +151,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
       Console.log("Error connecting to chat", error);
       setToken("")
       setHasError(true)
+      PersistentStorage.clear("streamToken")
     }
     return ""
   };
