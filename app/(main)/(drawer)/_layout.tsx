@@ -1,36 +1,41 @@
+// import DrawerMenuContent from "@/components/drawer-layout/DrawerMenuContent";
+// import BackButton from "@/components/ui/back-button/BackButton";
 import DrawerMenuContent from "@/components/drawer-layout/DrawerMenuContent";
-import BackButton from "@/components/ui/back-button/BackButton";
 import { useBreakpoints } from "@/hooks";
 import { BrandProtectedScreen } from "@/layouts/protected";
-import { Drawer } from "expo-router/drawer";
+import CustomDrawerWrapper from "@/shared-uis/components/CustomDrawer";
+import { Stack } from "expo-router";
+import React from "react";
+// import { Drawer } from "expo-router/drawer";
+
+
 
 const DrawerLayout = () => {
   const { xl } = useBreakpoints();
 
   return (
     <BrandProtectedScreen>
-      <Drawer
-        backBehavior="history"
-        drawerContent={() => <DrawerMenuContent />}
-        screenOptions={{
-          drawerType: xl ? "permanent" : "slide",
-          headerShown: false,
-          headerLeft: () => xl ? null : <BackButton />,
-        }}
-      >
-        <Drawer.Screen
-          name="(tabs)"
-          options={{
+      <CustomDrawerWrapper DrawerContent={<DrawerMenuContent />} isFixed={xl}>
+        <Stack
+          screenOptions={{
+            animation: "ios",
             headerShown: false,
           }}
-        />
-        <Drawer.Screen
-          name="(secondary)"
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Drawer>
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="(secondary)"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack>
+      </CustomDrawerWrapper>
     </BrandProtectedScreen>
   );
 };

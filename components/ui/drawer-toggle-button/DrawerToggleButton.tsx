@@ -1,11 +1,12 @@
-import { Pressable } from 'react-native';
-import { DrawerActions, useTheme } from '@react-navigation/native';
+import { useTheme } from '@react-navigation/native';
 import { useNavigation } from "expo-router";
+import { Pressable } from 'react-native';
 
-import Colors from '@/constants/Colors';
 import { View } from '@/components/theme/Themed';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import Colors from '@/constants/Colors';
+import { OpenDrawerSubject } from '@/shared-uis/components/CustomDrawer';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 
 interface DrawerToggleButtonProps extends React.ComponentProps<typeof Pressable> {
   icon?: React.ReactNode;
@@ -21,7 +22,7 @@ const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({
   return (
     <Pressable
       {...props}
-      onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+      onPress={() => OpenDrawerSubject.next(undefined)}
     >
       <View
         style={{
