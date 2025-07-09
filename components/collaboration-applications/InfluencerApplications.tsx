@@ -62,21 +62,20 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
             if (showImages) {
                 const userImagesRef = doc(collection(FirestoreDB, "userImages"), userId)
                 const userImagesDoc = await getDoc(userImagesRef)
-                if (!userImagesDoc.exists()) {
-                    return;
-                }
-                const userImages = await userImagesDoc.data() as { images: { imageUrl: string }[] }
-                console.log("User Images", userImages);
+                if (userImagesDoc.exists()) {
+                    const userImages = await userImagesDoc.data() as { images: { imageUrl: string }[] }
+                    console.log("User Images", userImages);
 
-                const data: Attachment[] = userImages?.images.map(i => ({
-                    type: "image",
-                    imageUrl: i.imageUrl
-                })) || []
-                if (user.profile)
-                    user.profile.attachments = [...data, {
+                    const data: Attachment[] = userImages?.images.map(i => ({
                         type: "image",
-                        imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
-                    }, ...(user.profile?.attachments || [])]
+                        imageUrl: i.imageUrl
+                    })) || []
+                    if (user.profile)
+                        user.profile.attachments = [...data, {
+                            type: "image",
+                            imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
+                        }, ...(user.profile?.attachments || [])]
+                }
             }
             setInfluencer({
                 ...user,
