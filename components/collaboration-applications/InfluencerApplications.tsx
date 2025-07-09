@@ -27,6 +27,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     const initiate = async () => {
         setLoading(true)
         try {
+            let applicationLocal: IApplications | null = null;
             if (collaborationId) {
                 const applicationRef = doc(collection(FirestoreDB, "collaborations", collaborationId, "applications"), influencerId)
                 const applicationDoc = await getDoc(applicationRef)
@@ -34,8 +35,8 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                     setError(true)
                     return;
                 }
-                const application = applicationDoc.data() as IApplications
-                setApplication(application)
+                applicationLocal = applicationDoc.data() as IApplications
+                setApplication(applicationLocal)
 
                 const collaborationRef = doc(collection(FirestoreDB, "collaborations"), collaborationId)
                 const collaborationDoc = await getDoc(collaborationRef)
@@ -59,7 +60,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 ...user,
                 profile: {
                     ...user.profile,
-                    attachments: application ? [...application.attachments, {
+                    attachments: applicationLocal ? [...applicationLocal.attachments, {
                         type: "image",
                         imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
                     }, ...(user.profile?.attachments || [])] : user.profile?.attachments,
