@@ -37,11 +37,11 @@ const DownloadAppModal: React.FC<DownloadAppModalProps> = ({
       const mWindow = window.open(url, "_parent");
       if (mWindow) {
         // setIsAppInstalled(true)
-        setTimeout(() => {
-          if (mWindow && !mWindow.closed) {
-            mWindow.close();
-          }
-        }, 5000);
+        // setTimeout(() => {
+        //   if (mWindow && !mWindow.closed) {
+        //     mWindow.close();
+        //   }
+        // }, 5000);
       }
     }
   }
