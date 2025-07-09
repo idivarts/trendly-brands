@@ -2,12 +2,14 @@ import { Theme, useTheme } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 
 import { useBreakpoints } from "@/hooks";
+import { Console } from "@/shared-libs/utils/console";
 import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { handleDeepLink } from "@/utils/deeplink";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { Image, Pressable, StyleSheet } from "react-native";
+import { usePathname } from "expo-router";
+import { Image, Linking, Pressable, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 
@@ -23,11 +25,29 @@ const DownloadAppModal: React.FC<DownloadAppModalProps> = ({
   const theme = useTheme();
   const styles = stylesFn(theme);
   const [isVisible, setIsVisible] = useState(false);
+  const pathname = usePathname()
 
+  const openUrl = async () => {
+    const url = `trendly-brands:/${pathname}`
+    Console.log("Opening URL", url)
+    const canOpen = await Linking.canOpenURL(url)
+    Console.log("Can Open URL ", canOpen)
+    if (canOpen) {
+      const mWindow = window.open(url, "_parent");
+      if (mWindow) {
+        setTimeout(() => {
+          if (mWindow && !mWindow.closed) {
+            mWindow.close();
+          }
+        }, 5000);
+      }
+    }
+  }
   useEffect(() => {
     setTimeout(() => {
       setIsVisible(true);
     }, 5000);
+    openUrl()
   }, [])
 
   const {
