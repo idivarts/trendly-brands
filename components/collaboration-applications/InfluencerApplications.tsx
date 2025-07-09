@@ -68,10 +68,10 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 const userImages = await userImagesDoc.data() as { images: { imageUrl: string }[] }
                 console.log("User Images", userImages);
 
-                const data: Attachment[] = userImages.images.map(i => ({
+                const data: Attachment[] = userImages?.images.map(i => ({
                     type: "image",
                     imageUrl: i.imageUrl
-                }))
+                })) || []
                 if (user.profile)
                     user.profile.attachments = [...data, {
                         type: "image",
