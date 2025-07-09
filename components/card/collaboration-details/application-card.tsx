@@ -42,7 +42,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         openProfile={profileModalAction}
         ToggleModal={bottomSheetAction}
         type="application"
-        customAttachments={data.application.attachments}
+        // customAttachments={data.application.attachments}
         cardActionNode={<Button
           mode="outlined"
           size="small"
@@ -66,9 +66,9 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         </Button>}
         footerNode={<CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}
-          timeline={new Date(data.application.timeline).toLocaleDateString(
-            "en-US"
-          )}
+        // timeline={new Date(data.application.timeline).toLocaleDateString(
+        //   "en-US"
+        // )}
         />}
       />
     </>

@@ -30,7 +30,7 @@ const MainLayout = () => {
                               headerShown: false,
                             }}
                           >
-                            <Stack.Screen
+                            {/* <Stack.Screen
                               name="(drawer)"
                               options={{
                                 headerShown: false,
@@ -41,7 +41,7 @@ const MainLayout = () => {
                               options={{
                                 headerShown: false,
                               }}
-                            />
+                            /> */}
                             <Stack.Screen
                               name="(modal)/create-collaboration"
                               options={{

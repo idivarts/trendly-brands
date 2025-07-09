@@ -6,6 +6,7 @@ import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Manager } from "@/types/Manager";
 import { User } from "@/types/User";
@@ -110,6 +111,14 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   useEffect(() => {
     return fetchManager();
   }, [session]);
+
+  useEffect(() => {
+    AuthApp.authStateReady().then(() => {
+      if (!AuthApp.currentUser) {
+        PersistentStorage.clear("streamToken")
+      }
+    })
+  }, [])
 
   const firebaseSignIn = async (manager: UserCredential) => {
     const managerCredential = manager
@@ -241,15 +250,20 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   };
 
   const signOutManager = async () => {
-    if (Platform.OS !== "web") {
-      // Remove push notification token from the database
-      const newUpdatedTokens = await updatedTokens(manager);
+    try {
+      if (Platform.OS !== "web") {
+        // Remove push notification token from the database
+        const newUpdatedTokens = await updatedTokens(manager);
 
-      if (newUpdatedTokens) {
-        await updateManager(session as string, {
-          pushNotificationToken: newUpdatedTokens,
-        });
+        if (newUpdatedTokens) {
+          await updateManager(session as string, {
+            pushNotificationToken: newUpdatedTokens,
+          });
+        }
       }
+      PersistentStorage.clear("streamToken")
+    } catch (e) {
+      Console.error(e, "Sign out Error")
     }
 
     signOut(AuthApp)
