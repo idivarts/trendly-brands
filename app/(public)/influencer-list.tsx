@@ -40,7 +40,7 @@ const InfluencerList = () => {
         getInfluencer()
     }, [])
 
-    if (Platform.OS != "web" || window.location.hostname != "localhost")
+    if (Platform.OS != "web")
         return null
     if (loading) {
         <ActivityIndicator />
