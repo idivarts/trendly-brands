@@ -1,5 +1,7 @@
+import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment'
 import { IApplications, ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users'
+import { Console } from '@/shared-libs/utils/console'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import ProfileBottomSheet from '@/shared-uis/components/ProfileModal/Profile-Modal'
 import { View } from '@/shared-uis/components/theme/Themed'
@@ -7,7 +9,7 @@ import { User } from '@/types/User'
 import { useTheme } from '@react-navigation/native'
 import { collection, doc, getDoc } from 'firebase/firestore'
 import React, { useEffect, useState } from 'react'
-import { Text } from 'react-native'
+import { Platform, Text } from 'react-native'
 import { ActivityIndicator } from 'react-native-paper'
 
 interface IInfluencerApplication {
@@ -56,6 +58,26 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                 return;
             }
             const user = await userDoc.data() as IUsers
+
+            const showImages = Platform.OS == "web" && window.location.hostname == "localhost"
+            if (showImages) {
+                const userImagesRef = doc(collection(FirestoreDB, "userImages"), userId)
+                const userImagesDoc = await getDoc(userImagesRef)
+                if (userImagesDoc.exists()) {
+                    const userImages = await userImagesDoc.data() as { images: { imageUrl: string }[] }
+                    Console.log("User Images", userImages);
+
+                    const data: Attachment[] = userImages?.images.map(i => ({
+                        type: "image",
+                        imageUrl: i.imageUrl
+                    })) || []
+                    if (user.profile)
+                        user.profile.attachments = [...data, {
+                            type: "image",
+                            imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
+                        }, ...(user.profile?.attachments || [])]
+                }
+            }
             setInfluencer({
                 ...user,
                 profile: {
