@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users';
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore';
 import { FlashList } from '@shopify/flash-list';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Image, Platform, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -24,14 +24,17 @@ const InfluencerList = () => {
                 if (docData.id == "config")
                     return undefined
                 const data = docData.data() as InfluencerInterface;
-                // const userDoc = await getDoc(doc(collection(FirestoreDB, "users"), docData.id));
+                const userDoc = await getDoc(doc(collection(FirestoreDB, "users"), docData.id));
                 return {
                     ...data,
                     id: docData.id,
-                    // user: userDoc.data() as IUsers,
+                    user: userDoc.data() as IUsers,
                 };
             }));
-            setInfluencerList(list.filter(l => l) as InfluencerInterface[]);
+            const finalInfluencer = list.filter(l => l).sort((a, b) => {
+                return ((b?.user?.lastUseTime || 0) - (a?.user?.lastUseTime || 0))
+            })
+            setInfluencerList(finalInfluencer as InfluencerInterface[]);
         } finally {
             setLoading(false)
         }
@@ -53,7 +56,10 @@ const InfluencerList = () => {
                     data={influencerList}
                     renderItem={({ item, index }) => {
                         return <View>
-                            <Text onPress={() => window.open(`/influencer/${item.id}`, "_blank")}>Influencer Id: {item.id}</Text>
+                            <Text
+                                onPress={() => window.open(`/influencer/${item.id}`, "_blank")}
+                                style={{ padding: 16 }}
+                            >{index}. {item.user?.name} : {item.id} - {item.images.length} / {item.totalImages}</Text>
                             <FlashList
                                 data={item.images}
                                 renderItem={({ item }) => {
