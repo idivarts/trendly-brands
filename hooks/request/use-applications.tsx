@@ -109,7 +109,7 @@ const useApplications = ({
           }
 
           return {
-            id: application.id,
+            id: userFetch.id,
             application: {
               ...application,
               id: application.id,
