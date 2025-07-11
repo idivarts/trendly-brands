@@ -19,6 +19,7 @@ export interface Invitation extends IInvitations {
 }
 
 export type InfluencerApplication = {
+  id: string,
   application: Application;
   influencer: User;
   collaboration?: Partial<Collaboration>;
