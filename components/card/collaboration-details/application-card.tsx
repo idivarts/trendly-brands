@@ -33,9 +33,13 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,
+            attachments: [...data.application.attachments, {
+              type: "image",
+              imageUrl: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1751392603_images-1751392601990-Profile%20Images%20v2.png"
+            }, ...(influencer.profile?.attachments || [])],
             content: {
               ...influencer.profile?.content,
-              about: data.application.message
+              about: data.application.message,
             }
           }
         }}
