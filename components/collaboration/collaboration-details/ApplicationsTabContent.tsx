@@ -17,7 +17,6 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
@@ -25,7 +24,6 @@ import { CarouselInViewProvider } from "@/shared-uis/components/scroller/Carouse
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
-import { processRawAttachment } from "@/utils/attachments";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
 import { useSharedValue } from "react-native-reanimated";
@@ -144,7 +142,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           vertical={false}
           width={width}
           renderItem={({ item }) => (
-            <>
+            <View style={{ paddingBottom: 24 }} key={(item as InfluencerApplication).application.id}>
               {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
                 <CardHeader
                   avatar={item.brand?.image || ""}
@@ -168,7 +166,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                   setOpenProfileModal(true);
                 }}
               />
-            </>
+            </View>
           )}
           objectKey="id"
         // keyExtractor={(item, index) => item.application.id + index}
@@ -230,7 +228,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
               />
             </View>
           }
-          carouselMedia={selectedInfluencerApplication?.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
+          // carouselMedia={selectedInfluencerApplication?.application.attachments.map((attachment: Attachment) => processRawAttachment(attachment))}
           FireStoreDB={FirestoreDB}
           influencer={selectedInfluencerApplication?.influencer as User}
           isBrandsApp={true}
