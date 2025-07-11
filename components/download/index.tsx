@@ -1,8 +1,10 @@
+import { usePathname } from "expo-router";
 import { useEffect, useState } from "react";
 import DownloadAppModal from "./DownloadAppModal";
 
 const DownloadApp = () => {
     const [showModal, setShowModal] = useState(false);
+    const pathname = usePathname()
 
     useEffect(() => {
         if (typeof window == "undefined")
@@ -17,6 +19,9 @@ const DownloadApp = () => {
             setShowModal(true);
         }
     }, []);
+
+    if (pathname.includes("collaboration-application"))
+        return null
 
     if (!showModal) return null;
 
