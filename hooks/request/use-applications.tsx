@@ -109,6 +109,7 @@ const useApplications = ({
           }
 
           return {
+            id: application.id,
             application: {
               ...application,
               id: application.id,
