@@ -87,7 +87,7 @@ const ExploreInfluencers = () => {
   useEffect(() => {
     if (!selectedBrand)
       return;
-    HttpWrapper.fetch(`/api/v1/influencers?brandId=${selectedBrand?.id}`, {
+    HttpWrapper.fetch(`/api/matchmaking/influencer-for-brand?brandId=${selectedBrand?.id}`, {
       method: "GET",
     }).then(async (res) => {
       const body = await res.json()
