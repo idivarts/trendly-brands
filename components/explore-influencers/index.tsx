@@ -4,7 +4,7 @@ import AppLayout from "@/layouts/app-layout";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions } from "react-native";
+import { Dimensions } from "react-native";
 import CollaborationFilter from "../FilterModal";
 // import InfluencerCard from "../InfluencerCard";
 import { View } from "../theme/Themed";
@@ -29,6 +29,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { collection, query } from "firebase/firestore";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import SlowLoader from "../../shared-uis/components/SlowLoader";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import InfluencerActionModal from "./InfluencerActionModal";
 import InfluencerInvite from "./InfluencerInvite";
@@ -87,7 +88,7 @@ const ExploreInfluencers = () => {
   useEffect(() => {
     if (!selectedBrand)
       return;
-    HttpWrapper.fetch(`/api/v1/influencers?brandId=${selectedBrand?.id}`, {
+    HttpWrapper.fetch(`/api/matchmaking/influencer-for-brand?brandId=${selectedBrand?.id}`, {
       method: "GET",
     }).then(async (res) => {
       const body = await res.json()
@@ -161,7 +162,7 @@ const ExploreInfluencers = () => {
             alignItems: "center",
           }}
         >
-          <ActivityIndicator size="large" color={Colors(theme).primary} />
+          <SlowLoader />
         </View>
       </AppLayout>
     );

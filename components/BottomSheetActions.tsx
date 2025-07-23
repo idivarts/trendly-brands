@@ -73,7 +73,7 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        HttpWrapper.fetch(`/api/v1/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/accept`, {
+        HttpWrapper.fetch(`/api/collabs/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/accept`, {
           method: "POST",
         }).then(async (res) => {
           Toaster.success("Application accepted successfully");
@@ -104,7 +104,7 @@ const BottomSheetActions = ({
       await updateDoc(applicationRef, {
         status: "rejected",
       }).then(() => {
-        HttpWrapper.fetch(`/api/v1/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/reject`, {
+        HttpWrapper.fetch(`/api/collabs/collaborations/${cardId.collaborationID}/applications/${cardId.influencerID}/reject`, {
           method: "POST",
         })
         handleClose();

@@ -148,7 +148,7 @@ const useApplications = ({
       await updateDoc(applicationRef, {
         status: "accepted",
       }).then(() => {
-        HttpWrapper.fetch(`/api/v1/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
+        HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
           method: "POST",
         }).then(async (res) => {
           Toaster.success("Application accepted successfully");
@@ -182,7 +182,7 @@ const useApplications = ({
       await updateDoc(applicationRef, {
         status: "rejected",
       }).then(() => {
-        HttpWrapper.fetch(`/api/v1/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/reject`, {
+        HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/reject`, {
           method: "POST",
         })
         fetchApplications();

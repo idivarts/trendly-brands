@@ -61,7 +61,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 
   const { getToken, registerPushTokenWithStream, updatedTokens } = useCloudMessagingContext()
 
-  const { manager: user } = useAuthContext();
+  const { manager: user, session } = useAuthContext();
 
   const connectStream = async (streamToken: string) => {
     await streamClient.connectUser({
@@ -132,7 +132,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         await connectStream(storedToken);
         return storedToken
       }
-      const response = await HttpWrapper.fetch("/api/v1/chat/connect", {
+      const response = await HttpWrapper.fetch("/api/v2/chat/connect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +157,8 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
   };
 
   useEffect(() => {
-    if (user) {
+    if (session) {
+      HttpWrapper.fetch("/api/v2/chat/auth", { method: "POST", });
       connectUser();
     }
 
@@ -167,7 +168,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         setToken("");
       }
     };
-  }, [user]);
+  }, [session]);
 
   const fetchMembers = async (channel: string) => {
     const channelToWatch = streamClient.channel("messaging", channel);

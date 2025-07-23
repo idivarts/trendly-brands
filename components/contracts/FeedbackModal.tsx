@@ -112,7 +112,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           paymentProofs: files
         },
       });
-      HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}/end`, {
+      HttpWrapper.fetch(`/api/collabs/contracts/${contract.streamChannelId}/end`, {
         method: "POST",
       }).then(r => {
         Toaster.success("Contract has now ended")
