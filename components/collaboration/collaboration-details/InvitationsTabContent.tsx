@@ -21,6 +21,7 @@ import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carou
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
@@ -29,7 +30,6 @@ import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   Modal
 } from "react-native";
@@ -131,7 +131,7 @@ const InvitationsTabContent = (props: any) => {
           gap: 40,
         }}
       >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <SlowLoader />
       </View>
     );
   }
