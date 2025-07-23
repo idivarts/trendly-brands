@@ -56,7 +56,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
     const user = await AuthApp.currentUser?.getIdToken();
     setLoading(true);
 
-    await HttpWrapper.fetch("/api/v1/brands/members", {
+    await HttpWrapper.fetch("/api/v2/brands/members", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

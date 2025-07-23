@@ -43,7 +43,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
       return;
 
     setLoading(true)
-    await HttpWrapper.fetch("/api/v1/brands/members", {
+    await HttpWrapper.fetch("/api/v2/brands/members", {
       method: "POST",
       body: JSON.stringify({
         brandId: selectedBrand.id,

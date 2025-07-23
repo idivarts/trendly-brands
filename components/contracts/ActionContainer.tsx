@@ -73,7 +73,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         startedOn: timeStarted,
       },
     })
-    await HttpWrapper.fetch(`/api/v1/contracts/${contract.streamChannelId}`, {
+    await HttpWrapper.fetch(`/api/collabs/contracts/${contract.streamChannelId}`, {
       method: "POST",
     }).then(r => {
       Toaster.success("Your Contract has started")
@@ -122,7 +122,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                   flex: 1,
                 }}
                 onPress={() => {
-                  HttpWrapper.fetch(`/api/v1/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
+                  HttpWrapper.fetch(`/api/collabs/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
                     method: "POST",
                   }).then(r => {
                     Toaster.success("Successfully notified influencer to revise quotation")

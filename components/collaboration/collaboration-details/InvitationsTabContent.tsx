@@ -104,7 +104,7 @@ const InvitationsTabContent = (props: any) => {
         setIsInvitationModalVisible(false);
         Toaster.success("Invitation sent successfully");
       }).then(() => {
-        HttpWrapper.fetch(`/api/v1/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
+        HttpWrapper.fetch(`/api/collabs/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
           method: "POST",
         })
       });

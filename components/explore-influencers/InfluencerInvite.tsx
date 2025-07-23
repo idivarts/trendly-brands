@@ -77,7 +77,7 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
                 // Invitation Id as influencer id
                 const invitationDocRef = doc(invitationColRef, selectedInfluencer.id);
                 setDoc(invitationDocRef, invitationPayload).then(() => {
-                    HttpWrapper.fetch(`/api/v1/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
+                    HttpWrapper.fetch(`/api/collabs/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
                         method: "POST",
                     })
                 });

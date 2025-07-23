@@ -132,7 +132,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         await connectStream(storedToken);
         return storedToken
       }
-      const response = await HttpWrapper.fetch("/api/v1/chat/connect", {
+      const response = await HttpWrapper.fetch("/api/v2/chat/connect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +158,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
 
   useEffect(() => {
     if (session) {
-      HttpWrapper.fetch("/api/v1/chat/auth", { method: "POST", });
+      HttpWrapper.fetch("/api/v2/chat/auth", { method: "POST", });
       connectUser();
     }
 

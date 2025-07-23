@@ -124,7 +124,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     const managerCredential = manager
     setSession(managerCredential.user.uid);
 
-    HttpWrapper.fetch("/api/v1/chat/auth", {
+    HttpWrapper.fetch("/api/v2/chat/auth", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -147,7 +147,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
   const firebaseSignUp = (manager: UserCredential) => {
     setSession(manager.user.uid);
 
-    HttpWrapper.fetch("/api/v1/chat/auth", {
+    HttpWrapper.fetch("/api/v2/chat/auth", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
