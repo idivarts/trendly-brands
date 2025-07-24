@@ -7,6 +7,7 @@ import { POST_TYPES } from "@/shared-constants/preferences/post-types";
 import { TIME_COMMITMENTS } from "@/shared-constants/preferences/time-commitment";
 import { VIDEO_TYPE } from "@/shared-constants/preferences/video-type";
 import { Console } from "@/shared-libs/utils/console";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -66,6 +67,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         ...selectedBrand,
         preferences
       })
+      PersistentStorage.clear("matchmaking_influencers")
       Toaster.success("Preference Saved")
     } catch (error) {
       Toaster.error("Error saving Preferences")

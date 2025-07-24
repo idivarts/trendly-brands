@@ -21,6 +21,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useInfiniteIdScroll } from "@/shared-libs/utils/infinite-id-scroll";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
@@ -85,17 +86,25 @@ const ExploreInfluencers = () => {
     influencersRef,
   );
 
+  const loadInfluencers = async () => {
+    const influencerIds = await PersistentStorage.getItemWithExpiry("matchmaking_influencers")
+    if (influencerIds) {
+      setInfluencerIds(influencerIds as string[])
+    } else
+      HttpWrapper.fetch(`/api/matchmaking/influencer-for-brand?brandId=${selectedBrand?.id}`, {
+        method: "GET",
+      }).then(async (res) => {
+        const body = await res.json()
+        setInfluencerIds(body.data as string[])
+        PersistentStorage.setItemWithExpiry("matchmaking_influencers", body.data as string[])
+      }).catch(e => {
+        Toaster.error("Cant fetch Influencers")
+      })
+  }
   useEffect(() => {
     if (!selectedBrand)
       return;
-    HttpWrapper.fetch(`/api/matchmaking/influencer-for-brand?brandId=${selectedBrand?.id}`, {
-      method: "GET",
-    }).then(async (res) => {
-      const body = await res.json()
-      setInfluencerIds(body.data as string[])
-    }).catch(e => {
-      Toaster.error("Cant fetch Influencers")
-    })
+    loadInfluencers()
   }, [selectedBrand])
 
   const { loading: isLoading, data, loadMore } = useInfiniteIdScroll<User>(influencerIds, q, 10)
