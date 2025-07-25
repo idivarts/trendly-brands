@@ -58,19 +58,21 @@ const ChannelNative = () => {
     setContract(contractData);
   }
 
+  const { isStreamConnected } = useChatContext()
+  const fetchChannel = async () => {
+    await connectUser()
+    const channels = await client.queryChannels({ cid });
+    setChannel(channels[0]);
+
+    if (channels[0]?.data?.contractId) {
+      await fetchContract(channels[0]?.data?.contractId as string);
+    }
+  };
+
   useEffect(() => {
-    const fetchChannel = async () => {
-      await connectUser()
-      const channels = await client.queryChannels({ cid });
-      setChannel(channels[0]);
-
-      if (channels[0]?.data?.contractId) {
-        await fetchContract(channels[0]?.data?.contractId as string);
-      }
-    };
-
-    fetchChannel();
-  }, [cid]);
+    if (cid && isStreamConnected)
+      fetchChannel();
+  }, [cid, isStreamConnected]);
 
   useEffect(() => {
     if (contract?.userId) {
