@@ -46,8 +46,9 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     if (brand) {
       Console.log("Setting Brand ID to storage:", brand.id);
       await PersistentStorage.set("selectedBrandId", brand.id)
-      if (triggerToast)
+      if (triggerToast) {
         Toaster.info("Brand changed to " + brand.name);
+      }
       setSelectedBrand(brand);
     } else {
       setSelectedBrand(undefined);
