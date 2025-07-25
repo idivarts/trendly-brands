@@ -67,7 +67,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         ...selectedBrand,
         preferences
       })
-      PersistentStorage.clear("matchmaking_influencers")
+      PersistentStorage.clear("matchmaking_influencers-" + selectedBrand?.id)
       Toaster.success("Preference Saved")
     } catch (error) {
       Toaster.error("Error saving Preferences")

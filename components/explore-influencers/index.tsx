@@ -87,7 +87,7 @@ const ExploreInfluencers = () => {
   );
 
   const loadInfluencers = async () => {
-    const influencerIds = await PersistentStorage.getItemWithExpiry("matchmaking_influencers")
+    const influencerIds = await PersistentStorage.getItemWithExpiry("matchmaking_influencers-" + selectedBrand?.id)
     if (influencerIds) {
       setInfluencerIds(influencerIds as string[])
     } else
@@ -96,7 +96,7 @@ const ExploreInfluencers = () => {
       }).then(async (res) => {
         const body = await res.json()
         setInfluencerIds(body.data as string[])
-        PersistentStorage.setItemWithExpiry("matchmaking_influencers", body.data as string[])
+        PersistentStorage.setItemWithExpiry("matchmaking_influencers-" + selectedBrand?.id, body.data as string[])
       }).catch(e => {
         Toaster.error("Cant fetch Influencers")
       })
@@ -104,6 +104,7 @@ const ExploreInfluencers = () => {
   useEffect(() => {
     if (!selectedBrand)
       return;
+    setInfluencerIds([])
     loadInfluencers()
   }, [selectedBrand])
 
