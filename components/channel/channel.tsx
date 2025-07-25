@@ -42,6 +42,7 @@ const ChannelNative = () => {
 
   const {
     getInfluencerById,
+    manager
   } = useAuthContext();
 
   const fetchInfluencer = async (
@@ -75,10 +76,10 @@ const ChannelNative = () => {
   }, [cid, isStreamConnected]);
 
   useEffect(() => {
-    if (contract?.userId) {
+    if (contract?.userId && manager) {
       fetchInfluencer(contract.userId);
     }
-  }, [contract]);
+  }, [contract, manager]);
 
   useEffect(() => {
     const resetBadgeCount = async () => {
