@@ -59,8 +59,21 @@ const OnboardingScreen = () => {
     if (!brandData.name) {
       Toaster.error("Brand name is required");
       setIsSubmitting(false);
-
       return;
+    }
+
+    if (!brandData.profile?.phone) {
+      Toaster.error("Phone number is required");
+      setIsSubmitting(false);
+      return;
+    } else {
+      // use regex to validate phone number brandData.profile?.phone
+      const phoneRegex = /^\+?[1-9]\d{0,2}[\s-]?(\(?\d{1,4}\)?[\s-]?)?\d{1,4}([\s-]?\d{1,4}){1,3}$/; // Allows spaces, brackets, and dashes
+      if (!phoneRegex.test(brandData.profile?.phone)) {
+        Toaster.error("Invalid phone number format");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     let imageUrl = "";
