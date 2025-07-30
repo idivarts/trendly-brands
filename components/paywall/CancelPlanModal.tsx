@@ -1,5 +1,6 @@
 import Colors from '@/constants/Colors'
 import { Text } from '@/shared-uis/components/theme/Themed'
+import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { useTheme } from '@react-navigation/native'
 import React, { useState } from 'react'
 import { View } from 'react-native'
@@ -22,6 +23,15 @@ const CancelPlanModal: React.FC<{ onClose: Function }> = ({ onClose }) => {
 
     const cancelPlan = async () => {
         console.log('Cancel plan with reason:', selectedReason, 'and note:', customNote)
+        try {
+            setLoading(true)
+
+            // Write Logic to cancel the plan
+        } catch (err) {
+            Toaster.error("Something went wrong!!")
+        } finally {
+            setLoading(false)
+        }
     }
     return (
         <Portal>

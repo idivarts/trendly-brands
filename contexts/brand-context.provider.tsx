@@ -1,4 +1,5 @@
 import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
@@ -158,15 +159,15 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
     await updateDoc(brandRef, brand);
   }
 
-  // useEffect(() => {
-  //   if (selectedBrand) {
-  //     if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
-  //       router.resetAndNavigate("/pay-wall")
-  //     } else if (pathName == "pay-wall") {
-  //       router.resetAndNavigate("/explore-influencers")
-  //     }
-  //   }
-  // }, [selectedBrand])
+  useEffect(() => {
+    if (selectedBrand) {
+      if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
+        router.resetAndNavigate("/pay-wall")
+      } else if (pathName == "pay-wall") {
+        router.resetAndNavigate("/explore-influencers")
+      }
+    }
+  }, [selectedBrand])
 
   return (
     <BrandContext.Provider
