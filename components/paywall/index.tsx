@@ -1,5 +1,7 @@
-import React from 'react'
-import { ScrollView, useWindowDimensions, View } from 'react-native'
+import { useBreakpoints } from '@/hooks'
+import { Console } from '@/shared-libs/utils/console'
+import React, { useEffect } from 'react'
+import { Platform, ScrollView, View } from 'react-native'
 import { Button, Card, Chip, Text, useTheme } from 'react-native-paper'
 
 const growthPlanFeatures = [
@@ -18,9 +20,47 @@ const businessPlanFeatures = [
 
 const PayWallComponent = () => {
     const theme = useTheme()
-    const { width } = useWindowDimensions()
+    const { xl } = useBreakpoints()
+    const isMobile = !xl
 
-    const isMobile = width < 600
+    const handleFocus = async () => {
+        Console.log("Handling Focus")
+    }
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return
+
+        let isRunning = false
+
+        const safeHandleFocus = async () => {
+            if (isRunning) return
+            isRunning = true
+
+            try {
+                await handleFocus()
+            } finally {
+                isRunning = false
+            }
+        }
+
+        const onFocus = () => {
+            safeHandleFocus()
+        }
+
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                safeHandleFocus()
+            }
+        }
+
+        window.addEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onVisibilityChange)
+
+        return () => {
+            window.removeEventListener('focus', onFocus)
+            document.removeEventListener('visibilitychange', onVisibilityChange)
+        }
+    }, [])
 
     return (
         <ScrollView contentContainerStyle={{ padding: isMobile ? 20 : 40, backgroundColor: theme.colors.background, maxWidth: 860, alignSelf: "center" }}>
