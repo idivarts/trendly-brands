@@ -175,7 +175,7 @@ const PayWallComponent = () => {
                                 </Text>
                             </Card.Content>
                             <Card.Actions>
-                                <View style={{ width: '100%' }}>
+                                <View style={{ width: '100%', backgroundColor: "transparent" }}>
                                     <Button mode="contained" onPress={() => { openPurchase(false) }} style={{ width: '100%' }}>Choose Business</Button>
                                 </View>
                             </Card.Actions>
