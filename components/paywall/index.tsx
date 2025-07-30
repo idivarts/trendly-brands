@@ -1,8 +1,10 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
+import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { Console } from '@/shared-libs/utils/console'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
+import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
@@ -29,6 +31,7 @@ const PayWallComponent = () => {
     const { xl } = useBreakpoints()
     const { selectedBrand } = useBrandContext()
     const isMobile = !xl
+    const router = useMyNavigation()
 
     const [loading, setLoading] = useState(false)
     const [myBrand, setMyBrand] = useState(selectedBrand)
@@ -60,7 +63,15 @@ const PayWallComponent = () => {
     }
     const handleFocus = async () => {
         Console.log("Handling Focus")
+        if (!myBrand)
+            return
+        if (myBrand.billing?.status == ModelStatus.Accepted)
+            router.resetAndNavigate("/explore-influencers")
     }
+
+    useEffect(() => {
+        handleFocus()
+    }, [myBrand])
 
     useEffect(() => {
         if (selectedBrand?.id) {
