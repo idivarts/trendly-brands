@@ -2,11 +2,12 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { Console } from '@/shared-libs/utils/console'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
+import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Platform, ScrollView } from 'react-native'
+import { ActivityIndicator, Linking, Platform, ScrollView } from 'react-native'
 import { Button, Card, Chip, Text, useTheme } from 'react-native-paper'
 
 const growthPlanFeatures = [
@@ -31,11 +32,26 @@ const PayWallComponent = () => {
 
     const [loading, setLoading] = useState(false)
     const [myBrand, setMyBrand] = useState(selectedBrand)
-    const [link, setlink] = useState("")
+    const [link, setLink] = useState("")
 
-    const openPurchase = (isGrowth: boolean) => {
+    const openPurchase = async (isGrowth: boolean) => {
         try {
             setLoading(true)
+            await HttpWrapper.fetch("/razorpay/create-subscription", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                    brandId: myBrand?.id,
+                    isGrowthPlan: isGrowth
+                })
+            }).then(async res => {
+                const data = await res.json()
+                const link = data.link
+                setLink(link)
+                Linking.openURL(link)
+            })
 
         } catch (err) {
             setLoading(false)
