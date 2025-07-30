@@ -2,10 +2,11 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { Console } from '@/shared-libs/utils/console'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
+import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import React, { useEffect, useState } from 'react'
-import { Platform, ScrollView, View } from 'react-native'
+import { ActivityIndicator, Platform, ScrollView } from 'react-native'
 import { Button, Card, Chip, Text, useTheme } from 'react-native-paper'
 
 const growthPlanFeatures = [
@@ -30,7 +31,17 @@ const PayWallComponent = () => {
 
     const [loading, setLoading] = useState(false)
     const [myBrand, setMyBrand] = useState(selectedBrand)
+    const [link, setlink] = useState("")
 
+    const openPurchase = (isGrowth: boolean) => {
+        try {
+            setLoading(true)
+
+        } catch (err) {
+            setLoading(false)
+            Toaster.error("Something went wrong!!")
+        }
+    }
     const handleFocus = async () => {
         Console.log("Handling Focus")
     }
@@ -127,7 +138,7 @@ const PayWallComponent = () => {
                             </Card.Content>
                             <Card.Actions>
                                 <View style={{ width: '100%' }}>
-                                    <Button mode="contained-tonal" onPress={() => { }} style={{ width: '100%' }}>Choose Growth</Button>
+                                    <Button mode="contained-tonal" onPress={() => { openPurchase(true) }} style={{ width: '100%' }}>Choose Growth</Button>
                                 </View>
                             </Card.Actions>
                             <Card.Content style={{ marginTop: 24 }}>
@@ -165,7 +176,7 @@ const PayWallComponent = () => {
                             </Card.Content>
                             <Card.Actions>
                                 <View style={{ width: '100%' }}>
-                                    <Button mode="contained" onPress={() => { }} style={{ width: '100%' }}>Choose Business</Button>
+                                    <Button mode="contained" onPress={() => { openPurchase(false) }} style={{ width: '100%' }}>Choose Business</Button>
                                 </View>
                             </Card.Actions>
                             <Card.Content style={{ marginTop: 24 }}>
@@ -173,7 +184,7 @@ const PayWallComponent = () => {
                                     Benefits:
                                 </Text>
                                 {businessPlanFeatures.map((item, index) => (
-                                    <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
+                                    <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, backgroundColor: "transparent" }}>
                                         <Text style={{ fontSize: 12, color: theme.colors.onPrimaryContainer, alignSelf: "center" }}>✔</Text>
                                         <Text style={{ fontSize: 18, marginLeft: 8, color: theme.colors.onPrimaryContainer }}>{item}</Text>
                                     </View>
@@ -198,23 +209,45 @@ const PayWallComponent = () => {
                     </Card>
                 </View>
             </ScrollView>
-            {/* {loading && (
+            {loading && (
                 <View style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     height: '100%',
                     width: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)',
                     justifyContent: 'center',
                     alignItems: 'center',
                     zIndex: 1000,
+                    padding: 16,
                     gap: 16
                 }}>
-                    <ActivityIndicator />
-                    <Text style={{ color: 'white', fontSize: 18 }}>Setting up your brand...</Text>
+                    <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
+                    <ActivityIndicator size={"large"} />
+                    <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
+                        Redirecting you to the payment page. Please wait ...
+                    </Text>
+
+                    {link && (
+                        <View style={{ flexDirection: "row", gap: 12, marginTop: 44 }}>
+                            <Text style={{ fontSize: 16 }}>
+                                If you didn’t redirect automatically
+                            </Text>
+                            <Text
+                                style={{ fontSize: 16, color: 'blue', textDecorationLine: 'underline' }}
+                                onPress={() => {
+                                    if (Platform.OS === 'web') {
+                                        window.open(link, '_blank')
+                                    }
+                                }}
+                            >
+                                Click Here
+                            </Text>
+                        </View>
+                    )}
+
                 </View>
-            )} */}
+            )}
         </>
     )
 }
