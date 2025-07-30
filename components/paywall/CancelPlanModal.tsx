@@ -1,4 +1,7 @@
 import Colors from '@/constants/Colors'
+import { useBrandContext } from '@/contexts/brand-context.provider'
+import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
+import { useMyNavigation } from '@/shared-libs/utils/router'
 import { Text } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { useTheme } from '@react-navigation/native'
@@ -16,6 +19,8 @@ const reasons = [
 ]
 
 const CancelPlanModal: React.FC<{ onClose: Function }> = ({ onClose }) => {
+    const { selectedBrand } = useBrandContext()
+    const router = useMyNavigation()
     const [selectedReason, setSelectedReason] = useState('')
     const [customNote, setCustomNote] = useState('')
     const [loading, setLoading] = useState(false)
@@ -25,7 +30,19 @@ const CancelPlanModal: React.FC<{ onClose: Function }> = ({ onClose }) => {
         console.log('Cancel plan with reason:', selectedReason, 'and note:', customNote)
         try {
             setLoading(true)
-
+            await HttpWrapper.fetch("/razorpay/cancel-subscription", {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                    brandId: selectedBrand?.id,
+                    reason: selectedReason,
+                    note: customNote
+                })
+            }).then(() => {
+                router.resetAndNavigate("/pay-wall")
+            })
             // Write Logic to cancel the plan
         } catch (err) {
             Toaster.error("Something went wrong!!")
