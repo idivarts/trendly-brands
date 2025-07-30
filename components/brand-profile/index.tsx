@@ -67,7 +67,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         }}
       >
         <TextInput
-          label={"Brand Name"}
+          label={"Brand Name*"}
           value={brandData.name}
           onChangeText={(value) =>
             setBrandData({
@@ -91,7 +91,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
           }
         />
         <TextInput
-          label={"Phone"}
+          label={"Phone*"}
           value={brandData.profile?.phone}
           onChangeText={(value) =>
             setBrandData({
