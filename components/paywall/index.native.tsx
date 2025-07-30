@@ -1,10 +1,9 @@
-import { View } from '@/shared-uis/components/theme/Themed'
+import { Text, View } from '@/shared-uis/components/theme/Themed'
 import React from 'react'
 import { Linking } from 'react-native'
-import { Button, Text, useTheme } from 'react-native-paper'
+import { Button } from 'react-native-paper'
 
 const PayWallComponent = () => {
-    const theme = useTheme()
 
     const handleWhatsApp = () => {
         const phoneNumber = '+917604007156' // Replace with actual number
@@ -18,8 +17,8 @@ const PayWallComponent = () => {
     }
 
     return (
-        <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: theme.colors.background }}>
-            <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 16 }}>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
+            <Text style={{ fontWeight: 'bold', marginBottom: 16, fontSize: 24, lineHeight: 24 * 1.5 }}>
                 Your Brand Request is Being Reviewed
             </Text>
             <Text style={{ fontSize: 16, lineHeight: 24, marginBottom: 24 }}>
