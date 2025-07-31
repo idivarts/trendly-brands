@@ -22,6 +22,7 @@ const businessPlanFeatures = [
     'Unlimited posting',
     'Guaranteed influencer availability',
     'Fraud recovery support',
+    'Premium Badge to show-off',
     'Fast-track support',
     'First hire assistance included *',
 ]
