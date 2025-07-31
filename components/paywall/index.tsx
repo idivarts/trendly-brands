@@ -141,17 +141,18 @@ const PayWallComponent = () => {
                         Pick a Plan
                     </Text>
                     <Text style={{ marginBottom: 24, fontSize: 16 }}>
-                        You are just one step away to access 100s of creators database and start running your campaigns
+                        You are just one step away to access 1000s of creators database and start running your campaigns
                     </Text>
 
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                        <Chip icon="clock-fast" style={{ backgroundColor: '#FFF3CD' }}>
-                            <Text style={{ color: '#856404' }}>3-Day Free Trial</Text>
-                        </Chip>
-                        <Chip icon="cash-refund" style={{ backgroundColor: '#D4EDDA' }}>
-                            <Text style={{ color: '#155724' }}>14-Day Money Back Guarantee</Text>
-                        </Chip>
-                    </View>
+                    {myBrand?.billing === undefined &&
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                            <Chip icon="clock-fast" style={{ backgroundColor: '#FFF3CD' }}>
+                                <Text style={{ color: '#856404' }}>3-Day Free Trial</Text>
+                            </Chip>
+                            <Chip icon="cash-refund" style={{ backgroundColor: '#D4EDDA' }}>
+                                <Text style={{ color: '#155724' }}>7-Day Money Back Guarantee</Text>
+                            </Chip>
+                        </View>}
                 </View>
 
                 {/* Pricing Section */}
