@@ -26,6 +26,15 @@ const businessPlanFeatures = [
     'First hire assistance included *',
 ]
 
+const enterPriseFeatures = [
+    'Agency Level Support',
+    'Collaboration Boosting Support',
+    'Other Mentorship Support',
+    'Social Media Management',
+    'And Other ...',
+]
+
+
 const PayWallComponent = () => {
     const theme = useTheme()
     const { xl } = useBreakpoints()
@@ -125,7 +134,7 @@ const PayWallComponent = () => {
 
     return (
         <>
-            <ScrollView contentContainerStyle={{ padding: isMobile ? 20 : 40, backgroundColor: theme.colors.background, maxWidth: 860, alignSelf: "center" }}>
+            <ScrollView contentContainerStyle={{ padding: isMobile ? 20 : 40, backgroundColor: theme.colors.background, alignSelf: "center" }}>
                 {/* Marketing Section */}
                 <View style={{ marginBottom: 40, alignItems: "center" }}>
                     <Text variant="headlineLarge" style={{ fontWeight: 'bold', marginBottom: 20 }}>
@@ -136,23 +145,23 @@ const PayWallComponent = () => {
                     </Text>
 
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                        <Chip icon="clock-fast" style={{ backgroundColor: theme.colors.secondaryContainer }}>
-                            3-Day Free Trial
+                        <Chip icon="clock-fast" style={{ backgroundColor: '#FFF3CD' }}>
+                            <Text style={{ color: '#856404' }}>3-Day Free Trial</Text>
                         </Chip>
-                        <Chip icon="cash-refund" style={{ backgroundColor: "green" }}>
-                            14-Day Money Back Guarantee
+                        <Chip icon="cash-refund" style={{ backgroundColor: '#D4EDDA' }}>
+                            <Text style={{ color: '#155724' }}>14-Day Money Back Guarantee</Text>
                         </Chip>
                     </View>
                 </View>
 
                 {/* Pricing Section */}
-                <View style={{ flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: isMobile ? 24 : 60 }}>
-                    <View style={{ maxWidth: 400, width: '100%' }}>
+                <View style={{ flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 24 }}>
+                    <View style={[{ width: '100%', paddingTop: isMobile ? 0 : 54 }, !isMobile && { maxWidth: 300 }]}>
                         <Card style={{ flex: 1, padding: isMobile ? 12 : 20 }}>
                             <Card.Content style={{ gap: 4 }}>
-                                {!isMobile && <Chip style={{ alignSelf: 'flex-start', marginBottom: 10, backgroundColor: theme.colors.backdrop }}>
+                                {/* {!isMobile && <Chip style={{ alignSelf: 'flex-start', marginBottom: 10, backgroundColor: theme.colors.backdrop }}>
                                     For New Brands
-                                </Chip>}
+                                </Chip>} */}
                                 <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>
                                     Growth Plan
                                 </Text>
@@ -164,8 +173,8 @@ const PayWallComponent = () => {
                                 </Text>
                             </Card.Content>
                             <Card.Actions>
-                                <View style={{ width: '100%' }}>
-                                    <Button mode="contained-tonal" onPress={() => { openPurchase(true) }} style={{ width: '100%' }}>Choose Growth</Button>
+                                <View style={{ width: '100%', marginTop: 16 }}>
+                                    <Button mode="outlined" onPress={() => { openPurchase(true) }} style={{ width: '100%' }}>Choose Growth</Button>
                                 </View>
                             </Card.Actions>
                             <Card.Content style={{ marginTop: 24 }}>
@@ -175,7 +184,7 @@ const PayWallComponent = () => {
                                 {growthPlanFeatures.map((item, index) => (
                                     <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
                                         <Text style={{ fontSize: 12, alignSelf: "center" }}>✔</Text>
-                                        <Text style={{ fontSize: 18, marginLeft: 8 }}>{item}</Text>
+                                        <Text style={{ fontSize: 16, marginLeft: 8 }}>{item}</Text>
                                     </View>
                                 ))}
                             </Card.Content>
@@ -183,18 +192,26 @@ const PayWallComponent = () => {
                         </Card>
                     </View>
 
-                    <View style={{ maxWidth: 400, width: '100%' }}>
-                        <Card style={{ flex: 1, padding: isMobile ? 12 : 20, borderWidth: 2, borderColor: theme.colors.primary, backgroundColor: theme.colors.primaryContainer }}>
+                    <View style={[{ width: '100%' }, !isMobile && { maxWidth: 320 }]}>
+                        <Card style={[{
+                            flex: 1, padding: isMobile ? 12 : 20, backgroundColor: "#F0FFF0",
+                        }, !isMobile && {
+                            elevation: 6, // For Android
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 10 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 24,
+                        }]}>
                             <Card.Content style={{ gap: 4 }}>
-                                <Chip icon="check-circle" style={{ alignSelf: 'flex-start', marginBottom: 10, backgroundColor: theme.colors.secondaryContainer }}>
-                                    Preferred
+                                <Chip icon="check-circle" style={{ alignSelf: 'flex-start', marginBottom: 10, backgroundColor: '#A8E4A0' }}>
+                                    <Text style={{ color: '#004085' }}>Preferred</Text>
                                 </Chip>
                                 <Text variant="titleLarge" style={{ fontWeight: 'bold', color: theme.colors.onPrimaryContainer, marginBottom: 12 }}>
                                     Business Plan
                                 </Text>
                                 <Text style={{ fontSize: 22, color: theme.colors.onPrimaryContainer, marginBottom: 8 }}>
                                     ₹ <Text style={{ fontSize: 28, color: theme.colors.onPrimaryContainer }}>4,999 </Text>
-                                    <Text style={{ textDecorationLine: 'line-through', color: theme.colors.onPrimaryContainer }}>6000</Text>
+                                    <Text style={{ fontSize: 16, textDecorationLine: 'line-through', color: theme.colors.onPrimaryContainer }}> 6000 </Text>
                                     <Text style={{ fontWeight: 'bold', color: theme.colors.onPrimaryContainer }}> / year</Text>
                                 </Text>
                                 <Text style={{ marginTop: 8, fontSize: 16, color: theme.colors.onPrimaryContainer }}>
@@ -202,7 +219,7 @@ const PayWallComponent = () => {
                                 </Text>
                             </Card.Content>
                             <Card.Actions>
-                                <View style={{ width: '100%', backgroundColor: "transparent" }}>
+                                <View style={{ width: '100%', backgroundColor: "transparent", marginTop: 16 }}>
                                     <Button mode="contained" onPress={() => { openPurchase(false) }} style={{ width: '100%' }}>Choose Business</Button>
                                 </View>
                             </Card.Actions>
@@ -213,29 +230,54 @@ const PayWallComponent = () => {
                                 {businessPlanFeatures.map((item, index) => (
                                     <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, backgroundColor: "transparent" }}>
                                         <Text style={{ fontSize: 12, color: theme.colors.onPrimaryContainer, alignSelf: "center" }}>✔</Text>
-                                        <Text style={{ fontSize: 18, marginLeft: 8, color: theme.colors.onPrimaryContainer }}>{item}</Text>
+                                        <Text style={{ fontSize: 16, marginLeft: 8, color: theme.colors.onPrimaryContainer }}>{item}</Text>
                                     </View>
                                 ))}
                             </Card.Content>
                         </Card>
                     </View>
+                    <View style={[{ width: '100%', paddingTop: isMobile ? 0 : 54 }, !isMobile && { maxWidth: 300 }]}>
+                        <Card style={{ flex: 1, padding: isMobile ? 12 : 20 }}>
+                            <Card.Content style={{ gap: 4 }}>
+                                <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>
+                                    Enterprise
+                                </Text>
+                                <Text style={{ fontSize: 22, marginBottom: 8 }}>
+                                    <Text style={{ fontSize: 28 }}>Contact Us</Text>
+                                </Text>
+                                <Text style={{ marginTop: 8, fontSize: 16 }}>
+                                    If you are looking for something custom
+                                </Text>
+                            </Card.Content>
+                            <Card.Actions>
+                                <View style={{ width: '100%', marginTop: 16 }}>
+                                    <Button mode="outlined" onPress={() => { window.open("mailto:support@trendly.now") }} style={{ width: '100%' }}>Contact Sales</Button>
+                                </View>
+                            </Card.Actions>
+                            <Card.Content style={{ marginTop: 24 }}>
+                                <Text style={{ marginBottom: 12, fontWeight: 600 }}>
+                                    Benefits:
+                                </Text>
+                                {enterPriseFeatures.map((item, index) => (
+                                    <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
+                                        <Text style={{ fontSize: 12, alignSelf: "center" }}>✔</Text>
+                                        <Text style={{ fontSize: 16, marginLeft: 8 }}>{item}</Text>
+                                    </View>
+                                ))}
+                            </Card.Content>
+
+                        </Card>
+                    </View>
                 </View>
 
                 {/* Contact Support Section */}
-                <View style={{ marginTop: 40 }}>
-                    <Card style={{ padding: 20 }}>
-                        <Card.Content>
-                            <Text variant="titleLarge">Need Help or Custom Plan?</Text>
-                            <Text style={{ marginTop: 10, fontSize: 16 }}>
-                                If you have custom requirements or want to discuss anything before booking, feel free to reach out.
-                            </Text>
-                            <Text style={{ marginTop: 10, fontWeight: 'bold', fontSize: 16 }}>
-                                Contact us at: support@trendly.now
-                            </Text>
-                        </Card.Content>
-                    </Card>
+                <View style={{ marginTop: 40, alignItems: "center" }}>
+                    <Text variant="titleLarge">Facing issues with Purchase?</Text>
+                    <Text style={{ marginTop: 10, fontSize: 16, textAlign: "center" }}>
+                        Dont worry! We are here to assist you! Contact us at: support@trendly.now
+                    </Text>
                 </View>
-            </ScrollView>
+            </ScrollView >
             {loading && (
                 <View style={{
                     position: 'absolute',
@@ -274,7 +316,8 @@ const PayWallComponent = () => {
                     )}
 
                 </View>
-            )}
+            )
+            }
         </>
     )
 }
