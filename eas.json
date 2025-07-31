@@ -17,6 +17,9 @@
       "ios": {
         "simulator": true,
         "buildConfiguration": "Debug"
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
@@ -27,7 +30,8 @@
     "production": {
       "ios": {
         "appleId": "rahul.sinha1908@gmail.com"
-      }
+      },
+      "android": {}
     }
   }
 }

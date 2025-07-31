@@ -1,9 +1,12 @@
 import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
+import { usePathname } from "expo-router";
 import { addDoc, collection, collectionGroup, doc, documentId, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import React, {
   createContext,
@@ -41,6 +44,8 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
   const [loading, setLoading] = useState(true)
   const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
   const { manager } = useAuthContext();
+  const router = useMyNavigation()
+  const pathName = usePathname()
 
   const setSelectedBrandHandler = async (brand: Brand | undefined, triggerToast = true) => {
     if (brand) {
@@ -153,6 +158,16 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 
     await updateDoc(brandRef, brand);
   }
+
+  useEffect(() => {
+    if (selectedBrand) {
+      if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
+        router.resetAndNavigate("/pay-wall")
+      } else if (pathName == "pay-wall") {
+        router.resetAndNavigate("/explore-influencers")
+      }
+    }
+  }, [selectedBrand])
 
   return (
     <BrandContext.Provider

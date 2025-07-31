@@ -1,10 +1,11 @@
-import { usePathname } from "expo-router";
+import { usePathname, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import DownloadAppModal from "./DownloadAppModal";
 
 const DownloadApp = () => {
     const [showModal, setShowModal] = useState(false);
     const pathname = usePathname()
+    const segments = useSegments();
 
     useEffect(() => {
         if (typeof window == "undefined")
@@ -19,6 +20,11 @@ const DownloadApp = () => {
             setShowModal(true);
         }
     }, []);
+
+    if (segments.length > 0 && segments[0] == "(auth)")
+        return null
+    if (segments.length > 1 && segments[1] == "(onboarding)")
+        return null
 
     if (pathname.includes("collaboration-application"))
         return null

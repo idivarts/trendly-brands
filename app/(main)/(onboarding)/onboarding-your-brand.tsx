@@ -1,5 +1,5 @@
 import { useTheme } from "@react-navigation/native";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
@@ -14,6 +14,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/onboarding/brand.styles";
 import { Brand } from "@/types/Brand";
@@ -36,6 +37,7 @@ const OnboardingScreen = () => {
   });
   const [role, setRole] = useState("");
   const [brandWebImage, setBrandWebImage] = useState<File | null>(null);
+  const router = useMyNavigation()
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const theme = useTheme();
@@ -59,8 +61,21 @@ const OnboardingScreen = () => {
     if (!brandData.name) {
       Toaster.error("Brand name is required");
       setIsSubmitting(false);
-
       return;
+    }
+
+    if (!brandData.profile?.phone) {
+      Toaster.error("Phone number is required");
+      setIsSubmitting(false);
+      return;
+    } else {
+      // use regex to validate phone number brandData.profile?.phone
+      const phoneRegex = /^\+?[1-9]\d{0,2}[\s-]?(\(?\d{1,4}\)?[\s-]?)?\d{1,4}([\s-]?\d{1,4}){1,3}$/; // Allows spaces, brackets, and dashes
+      if (!phoneRegex.test(brandData.profile?.phone)) {
+        Toaster.error("Invalid phone number format");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     let imageUrl = "";
@@ -98,26 +113,23 @@ const OnboardingScreen = () => {
       await setDoc(managerRef, {
         managerId: user.id,
         role: "Manager",
-      })
-        .then(() => {
-          // router.replace({
-          //   pathname: "/onboarding-get-started",
-          //   params: {
-          //     brandId: docRef.id,
-          //     firstBrand: firstBrand === "true" ? "true" : "false",
-          //   },
-          // });
-          setSelectedBrand(brandData as Brand);
-          setSession(AuthApp.currentUser?.uid || "");
-          router.replace("/explore-influencers");
-          Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
-        })
-        .catch((error) => {
-          Toaster.error("Error creating brand");
-        })
-        .finally(() => {
-          setIsSubmitting(false);
-        });
+      }).then(() => {
+        // router.replace({
+        //   pathname: "/onboarding-get-started",
+        //   params: {
+        //     brandId: docRef.id,
+        //     firstBrand: firstBrand === "true" ? "true" : "false",
+        //   },
+        // });
+        setSelectedBrand(brandData as Brand);
+        setSession(AuthApp.currentUser?.uid || "");
+        router.resetAndNavigate("/pay-wall");
+        Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
+      }).catch((error) => {
+        Toaster.error("Error creating brand");
+      }).finally(() => {
+        setIsSubmitting(false);
+      });
     }
   };
 
