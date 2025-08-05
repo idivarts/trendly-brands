@@ -14,10 +14,11 @@ import { ActivityIndicator } from 'react-native-paper'
 
 interface IInfluencerApplication {
     collaborationId?: string,
-    influencerId: string
+    influencerId: string,
+    isPublic?: boolean
 }
 
-const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaborationId, influencerId }) => {
+const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaborationId, influencerId, isPublic = false }) => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const theme = useTheme()
@@ -149,7 +150,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                             </View>
                         </View> : null
                 }
-                isBrandsApp={true} theme={theme} isPhoneMasked={false} />
+                isBrandsApp={true} theme={theme} isPhoneMasked={isPublic} isEmailMasked={isPublic} />
         </View>
     )
 }
