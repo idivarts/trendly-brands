@@ -21,7 +21,7 @@ const InflucerProfile = () => {
         )
     }
     return (
-        <InfluencerApplication influencerId={influencerId as string} />
+        <InfluencerApplication influencerId={influencerId as string} isPublic={true} />
     )
 }
 
