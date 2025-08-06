@@ -17,8 +17,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -42,15 +42,16 @@ const PreSignIn = () => {
   const router = useRouter();
   const swiperRef = useRef<ICarouselInstance>(null);
   const progress = useSharedValue(0);
+  const { skip } = useLocalSearchParams()
 
-  const skipToConnect = () => {
+  const skipToConnect = (animated = true) => {
     const connectSlideIndex = slides.findIndex(
       (slide) => slide.key === "connect"
     );
     if (connectSlideIndex !== -1) {
       swiperRef.current?.scrollTo({
         count: connectSlideIndex - progress.value,
-        animated: true,
+        animated: animated,
       });
     }
   };
@@ -61,6 +62,12 @@ const PreSignIn = () => {
       animated: true,
     });
   };
+
+  useEffect(() => {
+    if (skip) {
+      skipToConnect(false)
+    }
+  }, [skip])
 
   const { xl } = useBreakpoints();
   const { googleLogin } = useGoogleLogin(setLoading, setError)
