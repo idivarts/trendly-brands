@@ -1,33 +1,32 @@
-import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
-import { BLUE, BLUE_DARK, BLUE_LIGHT, TEXT } from './const'
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { BLUE, BLUE_DARK, BLUE_LIGHT, TEXT } from './const';
 
-const Stepper = ({ count = 2 }) => {
+const Stepper = ({ count = 2, total = 3 }) => {
+
+    const steps = Array.from({ length: total }, (_, i) => i + 1);
+
     {/* Stepper */ }
     return (
         <View style={styles.stepperWrap}>
-            <Text style={styles.stepperLabel}>Step {count} of 3</Text>
+            <Text style={styles.stepperLabel}>Step {count} of {total}</Text>
             <View style={styles.stepperRow}>
-                {/* Step 1 */}
-                <View style={styles.stepGroup}>
-                    <View style={[styles.stepDot, styles.stepDone]}>
-                        <Text style={styles.stepNum}>1</Text>
+                {steps.map((step, index) => (
+                    <View key={step} style={styles.stepGroup}>
+                        <View style={[
+                            styles.stepDot,
+                            step < count ? styles.stepDone : step === count ? styles.stepCurrent : styles.stepPending
+                        ]}>
+                            <Text style={styles.stepNum}>{step}</Text>
+                        </View>
+                        {index !== steps.length - 1 && (
+                            <View style={[
+                                styles.stepBar,
+                                step < count ? styles.stepBarDone : styles.stepBarPending
+                            ]} />
+                        )}
                     </View>
-                    <View style={[styles.stepBar, styles.stepBarDone]} />
-                </View>
-                {/* Step 2 (current) */}
-                <View style={styles.stepGroup}>
-                    <View style={[styles.stepDot, count == 2 ? styles.stepCurrent : styles.stepDone]}>
-                        <Text style={styles.stepNum}>2</Text>
-                    </View>
-                    <View style={[styles.stepBar, count == 2 ? styles.stepBarPending : styles.stepBarDone]} />
-                </View>
-                {/* Step 3 */}
-                <View style={styles.stepGroup}>
-                    <View style={[styles.stepDot, styles.stepPending]}>
-                        <Text style={styles.stepNum}>3</Text>
-                    </View>
-                </View>
+                ))}
             </View>
         </View>
     )
