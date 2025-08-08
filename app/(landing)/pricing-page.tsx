@@ -237,7 +237,7 @@ export default function PricingPage() {
                                     <Text style={styles.pricePer}>/month</Text>
                                     <Text style={styles.pricePer}>when paid yearly</Text>
                                 </View>
-                                <Text style={styles.savingsText}>Billed ₹4,999/year — Save 30% vs monthly</Text>
+                                <Text style={styles.savingsText}>Billed ₹4,999/year — Save 2 months cost</Text>
                                 <View style={styles.divider} />
                                 {YEARLY_FEATURES.map((f, i) => (
                                     <View key={i} style={styles.featureRow}>
