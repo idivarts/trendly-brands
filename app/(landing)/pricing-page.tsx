@@ -141,7 +141,7 @@ export default function PricingPage() {
 
                     {/* Right: Form */}
                     <View style={styles.formCard}>
-                        <Stepper count={3} total={3} />
+                        <Stepper count={4} total={4} />
 
                         <Text style={styles.formHeading}>Choose your plan</Text>
                         <Text style={styles.formSub}>Your trial continues. Pay nothing today.</Text>

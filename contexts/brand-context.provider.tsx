@@ -7,7 +7,7 @@ import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
 import { usePathname } from "expo-router";
-import { addDoc, collection, collectionGroup, doc, documentId, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, collectionGroup, doc, DocumentData, documentId, DocumentReference, getDocs, onSnapshot, query, setDoc, updateDoc, where } from "firebase/firestore";
 import React, {
   createContext,
   type PropsWithChildren,
@@ -19,7 +19,7 @@ import { useAuthContext } from "./auth-context.provider";
 
 interface BrandContextProps {
   brands: Brand[];
-  createBrand: (brand: Partial<IBrands>) => Promise<void>;
+  createBrand: (brand: Partial<IBrands>) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
   selectedBrand: Brand | undefined;
   setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
@@ -28,7 +28,7 @@ interface BrandContextProps {
 
 const BrandContext = createContext<BrandContextProps>({
   brands: [],
-  createBrand: () => Promise.resolve(),
+  createBrand: () => Promise.resolve(null),
   selectedBrand: undefined,
   setSelectedBrand: () => { },
   updateBrand: () => Promise.resolve(),
@@ -146,9 +146,20 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
 
   const createBrand = async (
     brand: Partial<IBrands>,
-  ): Promise<void> => {
+  ) => {
+    if (!manager)
+      return null;
+
     const brandRef = collection(FirestoreDB, "brands");
-    await addDoc(brandRef, brand);
+    const brandDoc = await addDoc(brandRef, brand);
+
+    const managerRef = doc(FirestoreDB, "brands", brandDoc.id, "members", manager.id);
+    await setDoc(managerRef, {
+      managerId: manager.id,
+      role: "Manager",
+    })
+
+    return brandDoc
   }
 
   const updateBrand = async (

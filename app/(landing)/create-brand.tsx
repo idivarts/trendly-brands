@@ -1,8 +1,11 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import Stepper from "@/components/landing/Stepper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import React, { useState } from "react";
 import {
     ImageBackground,
@@ -30,6 +33,8 @@ const AGE_OPTIONS = [
 
 export default function CreateBrandPage() {
     const router = useMyNavigation()
+    const { createBrand, setSelectedBrand } = useBrandContext()
+
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
@@ -38,11 +43,6 @@ export default function CreateBrandPage() {
     const [errors, setErrors] = useState<{ brand?: string; phone?: string; brandAge?: string }>({});
     const [submitting, setSubmitting] = useState(false);
     const [brandAge, setBrandAge] = useState<string>("");
-
-    const open = (url: string) => {
-        // Linking.openURL(url).catch(() => { })
-        router.resetAndNavigate("/about-brand")
-    };
 
     function validate() {
         const e: { brand?: string; phone?: string; brandAge?: string } = {};
@@ -59,8 +59,26 @@ export default function CreateBrandPage() {
         if (!validate()) return;
         try {
             setSubmitting(true);
-            const url = `${CREATE_BRAND_LINK}&brand=${encodeURIComponent(brandName.trim())}&phone=${encodeURIComponent(phone.trim())}`;
-            open(url);
+            const brandObj: IBrands = {
+                name: brandName,
+                profile: {
+                    phone: phone
+                },
+                age: brandAge,
+                isBillingDisabled: false,
+
+            }
+            const brand = await createBrand(brandObj)
+            if (!brand) {
+                Toaster.error("Something went wrong!", "Couldn't create your brand")
+                return
+            }
+            setSelectedBrand({
+                ...brandObj,
+                id: brand.id
+            })
+
+            router.resetAndNavigate("/about-brand")
         } finally {
             setSubmitting(false);
         }
@@ -119,7 +137,7 @@ export default function CreateBrandPage() {
 
                     {/* Right: Form */}
                     <View style={styles.formCard}>
-                        <Stepper count={2} total={3} />
+                        <Stepper count={2} total={4} />
 
                         <Text style={styles.formHeading}>Create your brand</Text>
                         <Text style={styles.formSub}>It takes less than a minute to get started.</Text>
