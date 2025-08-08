@@ -1,11 +1,13 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import Stepper from "@/components/landing/Stepper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
-import React, { useState } from "react";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import React, { useEffect, useState } from "react";
 import {
     ImageBackground,
-    Linking,
     Platform,
     Pressable,
     ScrollView,
@@ -14,6 +16,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 
 const ONBOARD_IMG =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
@@ -39,32 +42,62 @@ const MONTHLY_FEATURES = [
 ];
 
 export default function PricingPage() {
+    const { selectedBrand } = useBrandContext()
+
+    const [loading, setLoading] = useState(false)
+    const [link, setlink] = useState<number | undefined>(undefined)
+    const [planLinks, setPlanLinks] = useState(["", ""])
+
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
-    const [brandName, setBrandName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [errors, setErrors] = useState<{ brand?: string; phone?: string }>({});
     const [submitting, setSubmitting] = useState(false);
 
-    const open = (url: string) => Linking.openURL(url).catch(() => { });
-
-    function validate() {
-        const e: { brand?: string; phone?: string } = {};
-        if (!brandName || brandName.trim().length < 2) e.brand = "Please enter your brand name.";
-        const digits = phone.replace(/\D/g, "");
-        if (digits.length < 10 || digits.length > 15) e.phone = "Enter a valid phone number.";
-        setErrors(e);
-        return Object.keys(e).length === 0;
+    const getPlanLinks = async () => {
+        try {
+            setLoading(true)
+            const mPlanLinks = await Promise.all([
+                HttpWrapper.fetch("/razorpay/create-subscription", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        brandId: selectedBrand?.id,
+                        isGrowthPlan: true
+                    })
+                }).then(async r => ((await r.json()).link as string)),
+                HttpWrapper.fetch("/razorpay/create-subscription", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        brandId: selectedBrand?.id,
+                        isGrowthPlan: false
+                    })
+                }).then(async r => ((await r.json()).link as string))
+            ])
+            setPlanLinks(mPlanLinks)
+            if (link != undefined) {
+                window.open(mPlanLinks[link], '_blank')
+            }
+        } catch (e) {
+            Toaster.error("Something went wrong!!", "Was not able to fetch the plans")
+        } finally {
+            setLoading(false)
+        }
     }
+    useEffect(() => {
+        if (selectedBrand)
+            getPlanLinks()
+    }, [selectedBrand])
 
-    async function handleSubmit() {
+    const handleSubmit = (isGrowthPlan: boolean) => {
         if (submitting) return;
-        if (!validate()) return;
         try {
             setSubmitting(true);
-            const url = `${CREATE_BRAND_LINK}&brand=${encodeURIComponent(brandName.trim())}&phone=${encodeURIComponent(phone.trim())}`;
-            open(url);
+            setlink(isGrowthPlan ? 0 : 1)
         } finally {
             setSubmitting(false);
         }
@@ -166,7 +199,7 @@ export default function PricingPage() {
                                         <Text style={styles.featureCopy}>{f}</Text>
                                     </View>
                                 ))}
-                                <Pressable onPress={() => open(BUY_YEARLY_LINK)} style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
+                                <Pressable onPress={() => handleSubmit(false)} style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
                                     <Text style={styles.buyText}>Start yearly — Pay nothing today</Text>
                                 </Pressable>
                             </View>
@@ -185,7 +218,7 @@ export default function PricingPage() {
                                         <Text style={styles.featureCopy}>{f}</Text>
                                     </View>
                                 ))}
-                                <Pressable onPress={() => open(BUY_MONTHLY_LINK)} style={({ pressed }) => [styles.buyBtnAlt, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
+                                <Pressable onPress={() => handleSubmit(true)} style={({ pressed }) => [styles.buyBtnAlt, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
                                     <Text style={styles.buyTextAlt}>Start monthly — Pay nothing today</Text>
                                 </Pressable>
                             </View>
@@ -198,6 +231,45 @@ export default function PricingPage() {
 
                 <LandingFooter />
             </ScrollView>
+
+            {link != undefined && (
+                <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: '100%',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000,
+                    padding: 16,
+                    gap: 16
+                }}>
+                    <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
+                    <ActivityIndicator size={"large"} />
+                    <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
+                        Redirecting you to the payment page. Please wait ...
+                    </Text>
+
+                    {!loading && planLinks[link] && (
+                        <View style={{ flexDirection: "row", gap: 12, marginTop: 44 }}>
+                            <Text style={{ fontSize: 16 }}>
+                                If you didn’t redirect automatically
+                            </Text>
+                            <Text
+                                style={{ fontSize: 16, color: 'blue', textDecorationLine: 'underline' }}
+                                onPress={() => {
+                                    if (Platform.OS === 'web') {
+                                        window.open(planLinks[link], '_blank')
+                                    }
+                                }}
+                            >
+                                Click Here
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            )}
         </AppLayout>
     );
 }
