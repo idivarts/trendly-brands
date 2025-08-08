@@ -18,7 +18,7 @@ type GrowthBookProviderProps = {
 
 export const useMyGrowthBook = () => useContext(GrowthBookContext)
 // GrowthBookProvider functional component
-const GrowthBookProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
+const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const [loading, setLoading] = useState(false)
 
     return (
@@ -30,4 +30,4 @@ const GrowthBookProvider: React.FC<GrowthBookProviderProps> = ({ children }) => 
 // npm i --save @growthbook/growthbook-react
 
 
-export default GrowthBookProvider;
+export default GBProvider;
