@@ -32,7 +32,7 @@ const CREATE_BRAND_LINK =
 const YT_LINK = "https://youtu.be/X1Of8cALHRo?si=FsHvfKuDdjs4Sf3s";
 
 // ---- Discount countdown config ----
-const OFFER_HOURS = 72; // 3 days window
+const OFFER_HOURS = 10 * 1.0 / 60; // 3 days window
 const nowTs = () => new Date().getTime();
 
 function getCountdownParts(ms: number) {
