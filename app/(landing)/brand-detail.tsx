@@ -2,6 +2,7 @@ import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import Stepper from "@/components/landing/Stepper";
 import AppLayout from "@/layouts/app-layout";
+import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import React, { useState } from "react";
 import {
@@ -39,11 +40,6 @@ export default function BrandDetailPage() {
         { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
         { key: "LT_5", title: "Less than 5 years", desc: "Established but growing" },
         { key: "GT_5", title: "5+ years", desc: "Well established brand" },
-    ];
-
-    const INDUSTRY_OPTIONS = [
-        "Fashion", "Beauty & Personal Care", "Food & Beverage", "Tech & Gadgets", "Health & Fitness",
-        "Education", "Home & Living", "Travel", "Finance", "Entertainment", "Automotive", "Parenting & Kids"
     ];
 
     const toggleIndustry = (name: string) => {
@@ -93,7 +89,7 @@ export default function BrandDetailPage() {
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
-                    <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
+                    <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>BRAND ONBOARDING</Text>
                         <Text style={styles.title}>
                             Tell us about your <Text style={styles.titleAccent}>brand</Text>
@@ -184,7 +180,7 @@ export default function BrandDetailPage() {
                         <View style={styles.field}>
                             <Text style={styles.label}>Brand industry <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
                             <View style={styles.chipWrap}>
-                                {INDUSTRY_OPTIONS.map((name) => {
+                                {LANDING_BRAND_INDUSTRIES.map((name) => {
                                     const active = selectedIndustries.includes(name);
                                     return (
                                         <Pressable

@@ -78,7 +78,7 @@ export default function CreateBrandPage() {
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
-                    <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
+                    <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>BRAND ONBOARDING</Text>
                         {true && <Text style={styles.title}>
                             Create your <Text style={styles.titleAccent}>brand</Text>

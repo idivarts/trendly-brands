@@ -82,7 +82,7 @@ export default function PricingPage() {
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
-                    <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
+                    <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>PRICING & PLANS</Text>
                         <Text style={styles.title}>
                             Choose your <Text style={styles.titleAccent}>plan</Text>
