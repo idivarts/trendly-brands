@@ -1,20 +1,23 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 const FEATURE_ITEMS = [
-    { icon: "📘", title: "Marketing Partner", sub: "Facebook Premier Level Agency Partner" },
-    { icon: "🟦", title: "Google Endorsed", sub: "Marketing Partner" },
-    { icon: "📰", title: "Forbes Agency", sub: "Council Member" },
-    { icon: "🏆", title: "Inc. 5000", sub: "Fastest Growing Company" },
-    // { icon: "$", title: "$100M", sub: "In Annual Digital Ad Spend" },
-    // { icon: "⏱️", title: "15+", sub: "Years of Facebook Advertising Experience" },
+    { icon: "🤝", title: "Direct Brand-Influencer Match", sub: "Connect with verified influencers without middlemen" },
+    { icon: "💰", title: "Zero Commission", sub: "Keep 100% of your budget for campaigns" },
+    { icon: "⚡", title: "Fast Campaign Setup", sub: "Post collaborations and start getting applications instantly" },
+    { icon: "📊", title: "Guaranteed ROI", sub: "Smart matching ensures higher engagement and conversions" },
+    // { icon: "🌍", title: "Wide Influencer Network", sub: "Access influencers across multiple niches and locations" },
+    // { icon: "🔒", title: "Secure Payments", sub: "Escrow system ensures safe transactions for both parties" },
 ];
 
 const LandingFooter = () => {
+    const { width } = useWindowDimensions();
+    const isWide = width >= 1000;
+
     {/* Feature summary strip */ }
     return (
         <View style={styles.featuresBar} >
-            <View style={styles.featuresInner}>
+            <View style={[styles.featuresInner, !isWide && { flexDirection: "column", gap: 32 }]}>
                 {FEATURE_ITEMS.map((f, idx) => (
                     <View key={idx} style={styles.featureItem}>
                         <Text style={styles.featureIcon}>{f.icon}</Text>
@@ -44,14 +47,14 @@ const styles = StyleSheet.create({
     featuresInner: {
         flexDirection: "row",
         flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "space-between",
-        rowGap: 12,
+        alignItems: "stretch",
+        // justifyContent: "space-between",
         gap: 12,
     },
     featureItem: {
         flexDirection: "row",
-        alignItems: "center",
+        alignItems: "flex-start",
+        flex: 1,
         paddingVertical: 6,
         // Use a width that allows 3–6 items per row depending on screen size
         // width: 180,

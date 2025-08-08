@@ -87,7 +87,7 @@ export default function TrendlyHero() {
                         </Text>
 
                         {showOffer && (
-                            <View style={styles.offerCard}>
+                            <View style={[styles.offerCard, !isWide && { paddingBottom: 16 }]}>
                                 {/* <Pressable style={styles.offerClose} onPress={() => setShowOffer(false)}>
                                     <Text style={styles.offerCloseText}>✕</Text>
                                 </Pressable> */}
@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
     },
     heroCol: {
         flexDirection: "column",
+        gap: 42
     },
 
     /* Left */
