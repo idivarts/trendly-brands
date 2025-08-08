@@ -37,8 +37,9 @@ const BrandContext = createContext<BrandContextProps>({
 
 export const useBrandContext = () => useContext(BrandContext);
 
-export const BrandContextProvider: React.FC<PropsWithChildren> = ({
+export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPayment?: boolean }> = ({
   children,
+  restrictForPayment = true
 }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true)
@@ -161,6 +162,9 @@ export const BrandContextProvider: React.FC<PropsWithChildren> = ({
 
   useEffect(() => {
     if (selectedBrand) {
+      if (!restrictForPayment)
+        return;
+
       if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
         router.resetAndNavigate("/pay-wall")
       } else if (pathName == "pay-wall") {

@@ -1,10 +1,11 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import Stepper from "@/components/landing/Stepper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -23,6 +24,8 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 
 export default function BrandDetailPage() {
     const router = useMyNavigation()
+    const { selectedBrand } = useBrandContext()
+
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
@@ -76,6 +79,12 @@ export default function BrandDetailPage() {
         // Go to next step without validating or sending optional data
         open(`${CREATE_BRAND_LINK}&skipped=1`);
     }
+
+    useEffect(() => {
+        if (!selectedBrand) {
+            router.resetAndNavigate("/create-brand")
+        }
+    }, [selectedBrand])
 
     return (
         <AppLayout>

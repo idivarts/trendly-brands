@@ -41,7 +41,7 @@ export default function CreateBrandPage() {
 
     const open = (url: string) => {
         // Linking.openURL(url).catch(() => { })
-        router.resetAndNavigate("/brand-detail")
+        router.resetAndNavigate("/about-brand")
     };
 
     function validate() {
