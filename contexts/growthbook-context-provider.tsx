@@ -1,6 +1,6 @@
 
 
-import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
+import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffect } from "react";
 
 import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
@@ -41,10 +41,9 @@ type GrowthBookProviderProps = {
 export const useMyGrowthBook = () => useContext(GrowthBookContext)
 // GrowthBookProvider functional component
 const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
-    const [loading, setLoading] = useState(true)
-    const x = useFeatureValue<string>("demoLink", "");
-    Console.log("Demo Link", x);
+    const loading = useFeatureValue<boolean>("loading", false);
 
+    Console.log("Growthbook Initialized", loading)
     return (
         <GrowthBookContext.Provider value={{ loading }}>
             {children}
