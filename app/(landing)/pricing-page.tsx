@@ -295,7 +295,7 @@ export default function PricingPage() {
                     <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
                     <ActivityIndicator size={"large"} />
                     <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
-                        Redirecting you to the payment page. Please wait ...
+                        Redirecting you to the payment page. Please wait...
                     </Text>
 
                     {!loading && planLinks[link] && (

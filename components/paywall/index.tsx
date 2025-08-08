@@ -39,35 +39,71 @@ const enterPriseFeatures = [
 const PayWallComponent = () => {
     const theme = useTheme()
     const { xl } = useBreakpoints()
-    const { selectedBrand } = useBrandContext()
+    const { selectedBrand, updateBrand } = useBrandContext()
     const isMobile = !xl
     const router = useMyNavigation()
 
     const [loading, setLoading] = useState(false)
     const [myBrand, setMyBrand] = useState(selectedBrand)
-    const [link, setLink] = useState("")
+    const [link, setlink] = useState<number | undefined>(undefined)
+    const [planLinks, setPlanLinks] = useState(["", ""])
+
+    const getPlanLinks = async () => {
+        try {
+            setLoading(true)
+            const mPlanLinks = await Promise.all([
+                HttpWrapper.fetch("/razorpay/create-subscription", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        brandId: selectedBrand?.id,
+                        isGrowthPlan: true
+                    })
+                }).then(async r => ((await r.json()).link as string)),
+                HttpWrapper.fetch("/razorpay/create-subscription", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        brandId: selectedBrand?.id,
+                        isGrowthPlan: false
+                    })
+                }).then(async r => ((await r.json()).link as string))
+            ])
+            setPlanLinks(mPlanLinks)
+            updateBrand(selectedBrand?.id || "", {
+                paymentLinks: mPlanLinks
+            })
+            if (link != undefined) {
+                window.open(mPlanLinks[link], '_blank')
+            }
+        } catch (e) {
+            Toaster.error("Something went wrong!!", "Was not able to fetch the plans")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        if (selectedBrand) {
+            if ((!selectedBrand.paymentLinks || selectedBrand.paymentLinks.length != 2))
+                getPlanLinks()
+            else
+                setPlanLinks(selectedBrand.paymentLinks)
+        }
+    }, [selectedBrand])
 
     const openPurchase = async (isGrowth: boolean) => {
         try {
-            setLoading(true)
-            await HttpWrapper.fetch("/razorpay/create-subscription", {
-                method: "POST",
-                headers: {
-                    "content-type": "application/json"
-                },
-                body: JSON.stringify({
-                    brandId: myBrand?.id,
-                    isGrowthPlan: isGrowth
-                })
-            }).then(async res => {
-                const data = await res.json()
-                const link = data.link
-                setLink(link)
-                Linking.openURL(link)
-            })
-
+            const link = isGrowth ? 0 : 1
+            setlink(link)
+            if (planLinks[link]) {
+                Linking.openURL(planLinks[link])
+            }
         } catch (err) {
-            setLoading(false)
             Toaster.error("Something went wrong!!")
         }
     }
@@ -280,7 +316,7 @@ const PayWallComponent = () => {
                     </Text>
                 </View>
             </ScrollView >
-            {loading && (
+            {link != undefined && (
                 <View style={{
                     position: 'absolute',
                     top: 0,
@@ -296,10 +332,10 @@ const PayWallComponent = () => {
                     <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
                     <ActivityIndicator size={"large"} />
                     <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
-                        Redirecting you to the payment page. Please wait ...
+                        Redirecting you to the payment page. Please wait...
                     </Text>
 
-                    {link && (
+                    {!loading && planLinks[link] && (
                         <View style={{ flexDirection: "row", gap: 12, marginTop: 44 }}>
                             <Text style={{ fontSize: 16 }}>
                                 If you didn’t redirect automatically
@@ -308,7 +344,7 @@ const PayWallComponent = () => {
                                 style={{ fontSize: 16, color: 'blue', textDecorationLine: 'underline' }}
                                 onPress={() => {
                                     if (Platform.OS === 'web') {
-                                        window.open(link, '_blank')
+                                        window.open(planLinks[link], '_blank')
                                     }
                                 }}
                             >
