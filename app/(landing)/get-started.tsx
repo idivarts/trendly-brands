@@ -1,10 +1,15 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
+import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useGoogleLogin } from "@/utils/use-google-login";
+import { UserCredential } from "firebase/auth";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ImageBackground,
+    Linking,
     Platform,
     Pressable,
     ScrollView,
@@ -39,8 +44,26 @@ function getCountdownParts(ms: number) {
 
 export default function TrendlyHero() {
     const router = useMyNavigation()
+    const { setSession } = useAuthContext()
+
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState("")
+
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
+
+
+    const singupHandler = (manager: UserCredential) => {
+        setSession(manager.user.uid);
+
+        HttpWrapper.fetch("/api/v2/chat/auth", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        router.resetAndNavigate("/create-brand");
+    }
 
     const [showOffer, setShowOffer] = useState(true);
     // End time persists for the session; fallback to 72h from first render
@@ -56,9 +79,10 @@ export default function TrendlyHero() {
 
     const parts = useMemo(() => getCountdownParts(remaining), [remaining]);
 
+    const { googleLogin } = useGoogleLogin(setLoading, setError, singupHandler);
+
     const open = (url: string) => {
-        // Linking.openURL(url).catch(() => { })
-        router.resetAndNavigate("/create-brand")
+        Linking.openURL(url).catch(() => { })
     };
 
     return (
@@ -107,13 +131,14 @@ export default function TrendlyHero() {
                             </View>
                         )}
                         <Pressable
-                            onPress={() => open(CREATE_BRAND_LINK)}
+                            onPress={() => googleLogin()}
+                            disabled={loading}
                             style={({ pressed }) => [
                                 styles.cta,
                                 pressed && { transform: [{ scale: 0.98 }] },
                             ]}
                         >
-                            <Text style={styles.ctaText}>Register now to Claim Offer</Text>
+                            <Text style={styles.ctaText}>{loading ? "Registering your claim…" : "Register now to Claim Offer"}</Text>
                             <Text style={styles.ctaArrow}>›</Text>
                         </Pressable>
 

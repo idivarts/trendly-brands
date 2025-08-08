@@ -16,7 +16,7 @@ import {
 import { useEffect } from "react";
 
 
-export const useGoogleLogin = (setLoading: Function, setError: Function) => {
+export const useGoogleLogin = (setLoading: Function, setError: Function, signupHandler: Function | null = null) => {
     const { firebaseSignIn, firebaseSignUp } = useAuthContext();
 
     useEffect(() => {
@@ -55,7 +55,10 @@ export const useGoogleLogin = (setLoading: Function, setError: Function) => {
         if (isExistingUser) {
             firebaseSignIn(result);
         } else {
-            firebaseSignUp(result);
+            if (signupHandler)
+                signupHandler(result)
+            else
+                firebaseSignUp(result);
         }
         Toaster.success('Logged in with Google successfully');
     }
