@@ -1,5 +1,6 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
+import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -187,6 +188,7 @@ export default function PricingPage() {
                                 <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
                             </View>
                         </View>
+                        <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
                         <Text style={styles.subtitle}>
                             Still Confused? Look into the <Text style={{ fontWeight: '800' }}>demo of the platform</Text> below to know what you get out of it!
                         </Text>

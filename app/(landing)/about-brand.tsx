@@ -1,12 +1,12 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
+import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
-import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
     Platform,
     Pressable,
@@ -25,7 +25,7 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 
 export default function BrandDetailPage() {
     const router = useMyNavigation()
-    const { selectedBrand } = useBrandContext()
+    const { selectedBrand, updateBrand } = useBrandContext()
 
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
@@ -52,14 +52,9 @@ export default function BrandDetailPage() {
         );
     };
 
-    const open = (url: string) => {
-        // Linking.openURL(url).catch(() => { })
-        router.resetAndNavigate("/pricing-page")
-    };
-
-
     async function handleSubmit() {
         if (submitting) return;
+        if (!selectedBrand) return;
         try {
             setSubmitting(true);
             const url = `${CREATE_BRAND_LINK}` +
@@ -69,7 +64,18 @@ export default function BrandDetailPage() {
                 (about ? `&about=${encodeURIComponent(about.trim())}` : "") +
                 (website ? `&website=${encodeURIComponent(website.trim())}` : "") +
                 (selectedIndustries.length ? `&industries=${encodeURIComponent(selectedIndustries.join(","))}` : "");
-            open(url);
+
+            await updateBrand(selectedBrand.id, {
+                profile: {
+                    ...selectedBrand.profile,
+                    about: about,
+                    website: website,
+                    industries: selectedIndustries,
+                }
+            })
+
+            router.resetAndNavigate("/pricing-page")
+            // open(url);
         } finally {
             setSubmitting(false);
         }
@@ -78,16 +84,16 @@ export default function BrandDetailPage() {
     function handleSkip() {
         if (submitting) return;
         // Go to next step without validating or sending optional data
-        open(`${CREATE_BRAND_LINK}&skipped=1`);
+        router.resetAndNavigate("/pricing-page")
     }
 
-    useEffect(() => {
-        AuthApp.authStateReady().then(() => {
-            if (!selectedBrand) {
-                router.resetAndNavigate("/create-brand")
-            }
-        })
-    }, [selectedBrand])
+    // useEffect(() => {
+    //     AuthApp.authStateReady().then(() => {
+    //         if (!selectedBrand) {
+    //             router.resetAndNavigate("/create-brand")
+    //         }
+    //     })
+    // }, [selectedBrand])
 
     return (
         <AppLayout>
@@ -104,7 +110,7 @@ export default function BrandDetailPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>BRAND ONBOARDING</Text>
                         <Text style={styles.title}>
-                            Tell us about <Text style={styles.titleAccent}>{selectedBrand?.name || ""}</Text>
+                            Tell us about <Text style={styles.titleAccent}>{selectedBrand?.name || "your brand"}</Text>
                         </Text>
                         <Text style={styles.subtitle}>
                             Start hiring verified influencers without middlemen. Post a collaboration,
@@ -126,7 +132,7 @@ export default function BrandDetailPage() {
                                 <Text style={styles.pointText}>Fraud protection and dispute assistance</Text>
                             </View>
                         </View>
-
+                        <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
                         {/* Visual */}
                         {/* <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
@@ -211,7 +217,7 @@ export default function BrandDetailPage() {
 
                         <Pressable
                             onPress={handleSubmit}
-                            disabled={submitting}
+                            disabled={submitting || !selectedBrand}
                             style={({ pressed }) => [
                                 styles.cta,
                                 (pressed || submitting) && { transform: [{ scale: 0.98 }], opacity: 0.9 },

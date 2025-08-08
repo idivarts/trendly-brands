@@ -1,5 +1,6 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
+import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -133,8 +134,10 @@ export default function CreateBrandPage() {
                             </View>
                         </View>}
 
+                        {true && <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>}
+
                         {/* Visual */}
-                        {true && <ImageBackground
+                        {false && <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
                             style={styles.visual}
                             imageStyle={styles.visualImg}
