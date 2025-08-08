@@ -126,12 +126,9 @@ export default function PricingPage() {
                                 <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
                             </View>
                         </View>
-                        {/* <Text style={styles.subtitle}>
-                            Pick a plan that matches your growth. Your trial continues — you won’t be charged
-                            today. A special <Text style={{ fontWeight: '800' }}>50% discount</Text> is applied for today only; if you skip now,
-                            standard pricing will apply later. Cancel anytime during the trial, and enjoy a
-                            7‑day money‑back guarantee after your first charge.
-                        </Text> */}
+                        <Text style={styles.subtitle}>
+                            Still Confused? Look into the <Text style={{ fontWeight: '800' }}>demo of the platform</Text> below to know what you get out of it!
+                        </Text>
 
                         {/* <View style={styles.points}>
                             <View style={styles.pointItem}>
@@ -199,11 +196,12 @@ export default function PricingPage() {
                                 <View style={styles.planTagPreferred}><Text style={styles.planTagText}>Preferred</Text></View>
                                 <Text style={styles.planName}>Business (Yearly)</Text>
                                 <View style={styles.priceRow}>
-                                    <Text style={styles.priceMain}>₹4,999</Text>
-                                    <Text style={styles.priceSlash}>₹6,000</Text>
-                                    <Text style={styles.pricePer}>/year</Text>
+                                    <Text style={styles.priceMain}>₹417</Text>
+                                    <Text style={styles.priceSlash}>₹499</Text>
+                                    <Text style={styles.pricePer}>/month</Text>
+                                    <Text style={styles.pricePer}>when paid yearly</Text>
                                 </View>
-                                <Text style={styles.savingsText}>Save 30% vs monthly</Text>
+                                <Text style={styles.savingsText}>Billed ₹4,999/year — Save 30% vs monthly</Text>
                                 <View style={styles.divider} />
                                 {YEARLY_FEATURES.map((f, i) => (
                                     <View key={i} style={styles.featureRow}>
