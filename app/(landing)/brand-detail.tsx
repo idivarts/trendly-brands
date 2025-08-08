@@ -247,12 +247,12 @@ const styles = StyleSheet.create({
 
     /* Hero layout */
     hero: {
-        backgroundColor: "#F8FBFF",
         borderRadius: 24,
-        padding: 28,
         marginTop: 0,
     },
     heroRow: {
+        backgroundColor: "#F8FBFF",
+        padding: 28,
         flexDirection: "row",
         alignItems: "center",
     },

@@ -80,16 +80,17 @@ export default function CreateBrandPage() {
                     {/* Left: Explainer */}
                     <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>BRAND ONBOARDING</Text>
-                        <Text style={styles.title}>
+                        {true && <Text style={styles.title}>
                             Create your <Text style={styles.titleAccent}>brand</Text>
-                        </Text>
-                        <Text style={styles.subtitle}>
+                        </Text>}
+
+                        {isWide && <Text style={styles.subtitle}>
                             Start hiring verified influencers without middlemen. Post a collaboration,
                             pick applications you like, and pay securely when you finalize. No setup
                             fees and no commissions — just direct connections that work.
-                        </Text>
+                        </Text>}
 
-                        <View style={styles.points}>
+                        {isWide && <View style={styles.points}>
                             <View style={styles.pointItem}>
                                 <Text style={styles.pointIcon}>✅</Text>
                                 <Text style={styles.pointText}>Get matched to niche influencers fast</Text>
@@ -102,10 +103,10 @@ export default function CreateBrandPage() {
                                 <Text style={styles.pointIcon}>✅</Text>
                                 <Text style={styles.pointText}>Fraud protection and dispute assistance</Text>
                             </View>
-                        </View>
+                        </View>}
 
                         {/* Visual */}
-                        <ImageBackground
+                        {true && <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
                             style={styles.visual}
                             imageStyle={styles.visualImg}
@@ -113,7 +114,7 @@ export default function CreateBrandPage() {
                             <View style={styles.playBadge}>
                                 <Text style={styles.playBadgeText}>Overview</Text>
                             </View>
-                        </ImageBackground>
+                        </ImageBackground>}
                     </View>
 
                     {/* Right: Form */}
@@ -220,12 +221,12 @@ const styles = StyleSheet.create({
 
     /* Hero layout */
     hero: {
-        backgroundColor: "#F8FBFF",
         borderRadius: 24,
-        padding: 28,
         marginTop: 0,
     },
     heroRow: {
+        backgroundColor: "#F8FBFF",
+        padding: 28,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     cardGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 12,
+        gap: 8,
         marginTop: 8,
     },
     ageHelp: { color: "#6C7A89", fontSize: 12, marginTop: 2 },

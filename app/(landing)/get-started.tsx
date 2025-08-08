@@ -164,13 +164,13 @@ const styles = StyleSheet.create({
 
     /* Hero layout */
     hero: {
-        backgroundColor: "#F8FBFF",
         borderRadius: 24,
-        padding: 28,
         marginTop: 24,
         // marginBottom: 55,
     },
     heroRow: {
+        backgroundColor: "#F8FBFF",
+        padding: 28,
         flexDirection: "row",
         alignItems: "center",
     },
@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 6 },
         flexDirection: "row",
         justifyContent: "space-between",
+        flexWrap: "wrap-reverse",
         ...Platform.select({ android: { elevation: 4 } }),
     },
     offerClose: {
