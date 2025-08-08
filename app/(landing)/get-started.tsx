@@ -8,6 +8,8 @@ import { useGoogleLogin } from "@/utils/use-google-login";
 import { UserCredential } from "firebase/auth";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    Animated,
+    Easing,
     ImageBackground,
     Linking,
     Platform,
@@ -16,7 +18,7 @@ import {
     StyleSheet,
     Text,
     useWindowDimensions,
-    View
+    View,
 } from "react-native";
 
 
@@ -52,6 +54,20 @@ export default function TrendlyHero() {
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
+    // ---- Animations ----
+    const leftFade = useRef(new Animated.Value(0)).current; // opacity for left column
+    const leftTranslateY = useRef(new Animated.Value(16)).current; // slide-up for left
+
+    const videoOpacity = useRef(new Animated.Value(0)).current;
+    const videoScale = useRef(new Animated.Value(0.96)).current;
+
+    const offerScale = useRef(new Animated.Value(0.9)).current;
+
+    // subtle pulsing for play button
+    const playPulse = useRef(new Animated.Value(1)).current;
+
+    const [ctaHovered, setCtaHovered] = useState(false);
+    const [videoHovered, setVideoHovered] = useState(false);
 
     const singupHandler = (manager: UserCredential) => {
         setSession(manager.user.uid);
@@ -74,6 +90,65 @@ export default function TrendlyHero() {
         const t = setInterval(() => {
             setRemaining(endRef.current - nowTs());
         }, 1000);
+
+        // page enter animations (staggered)
+        Animated.sequence([
+            Animated.parallel([
+                Animated.timing(leftFade, {
+                    toValue: 1,
+                    duration: 500,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(leftTranslateY, {
+                    toValue: 0,
+                    duration: 500,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]),
+            Animated.parallel([
+                Animated.timing(videoOpacity, {
+                    toValue: 1,
+                    duration: 450,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.spring(videoScale, {
+                    toValue: 1,
+                    friction: 7,
+                    tension: 80,
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]).start();
+
+        // bounce-in offer card (if visible)
+        Animated.spring(offerScale, {
+            toValue: 1,
+            friction: 6,
+            tension: 90,
+            useNativeDriver: true,
+        }).start();
+
+        // looped subtle pulse on play button
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(playPulse, {
+                    toValue: 1.06,
+                    duration: 1200,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(playPulse, {
+                    toValue: 1,
+                    duration: 1200,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+
         return () => clearInterval(t);
     }, []);
 
@@ -97,7 +172,12 @@ export default function TrendlyHero() {
                 {/* Hero */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left copy */}
-                    <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
+                    <Animated.View style={[
+                        isWide && styles.left,
+                        isWide ? { paddingRight: 90 } : {},
+                        { opacity: leftFade, transform: [{ translateY: leftTranslateY }] },
+                    ]}
+                    >
                         {/* <Text style={styles.kicker}>FOR BRANDS</Text> */}
                         <Text style={styles.title}>
                             Find <Text style={styles.titleAccent}>Right Influencers</Text> to
@@ -111,7 +191,11 @@ export default function TrendlyHero() {
                         </Text>
 
                         {showOffer && (
-                            <View style={[styles.offerCard, !isWide && { paddingBottom: 16 }]}>
+                            <Animated.View style={[
+                                styles.offerCard,
+                                !isWide && { paddingBottom: 16 },
+                                { transform: [{ scale: offerScale }] },
+                            ]}>
                                 {/* <Pressable style={styles.offerClose} onPress={() => setShowOffer(false)}>
                                     <Text style={styles.offerCloseText}>✕</Text>
                                 </Pressable> */}
@@ -128,38 +212,50 @@ export default function TrendlyHero() {
                                     <View style={styles.timerBox}><Text style={styles.timerNum}>{String(parts.seconds).padStart(2, '0')}</Text><Text style={styles.timerLbl}>seconds</Text></View>
                                 </View>
                                 {/* <Text style={styles.offerFoot}>Special offer runs for a limited time</Text> */}
-                            </View>
+                            </Animated.View>
                         )}
                         <Pressable
                             onPress={() => googleLogin()}
+                            onHoverIn={() => setCtaHovered(true)}
+                            onHoverOut={() => setCtaHovered(false)}
                             disabled={loading}
                             style={({ pressed }) => [
                                 styles.cta,
-                                pressed && { transform: [{ scale: 0.98 }] },
+                                (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
                             ]}
                         >
                             <Text style={styles.ctaText}>{loading ? "Registering your claim…" : "Register now to Claim Offer"}</Text>
                             <Text style={styles.ctaArrow}>›</Text>
                         </Pressable>
 
-                    </View>
+                    </Animated.View>
 
                     {/* Right video */}
-                    <Pressable
-                        accessibilityRole="imagebutton"
-                        onPress={() => open(YT_LINK)}
-                        style={[styles.videoWrap, !isWide && { marginTop: 28 }]}
-                    >
-                        <ImageBackground
-                            source={{ uri: VIDEO_THUMB }}
-                            style={styles.video}
-                            imageStyle={styles.videoImg}
+                    <Animated.View style={[
+                        styles.videoWrap,
+                        !isWide && { marginTop: 28 },
+                        { opacity: videoOpacity, transform: [{ scale: videoScale }] },
+                    ]}>
+                        <Pressable
+                            accessibilityRole="imagebutton"
+                            onPress={() => open(YT_LINK)}
+                            onHoverIn={() => setVideoHovered(true)}
+                            onHoverOut={() => setVideoHovered(false)}
+                            style={({ pressed }) => [
+                                videoHovered || pressed ? { transform: [{ scale: 0.995 }] } : null,
+                            ]}
                         >
-                            <View style={styles.playCircle}>
-                                <Text style={styles.playIcon}>▶︎</Text>
-                            </View>
-                        </ImageBackground>
-                    </Pressable>
+                            <ImageBackground
+                                source={{ uri: VIDEO_THUMB }}
+                                style={styles.video}
+                                imageStyle={styles.videoImg}
+                            >
+                                <Animated.View style={[styles.playCircle, { transform: [{ scale: playPulse }] }]}>
+                                    <Text style={styles.playIcon}>▶︎</Text>
+                                </Animated.View>
+                            </ImageBackground>
+                        </Pressable>
+                    </Animated.View>
 
                 </View>
 
