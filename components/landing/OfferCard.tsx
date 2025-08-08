@@ -260,14 +260,14 @@ const styles = StyleSheet.create({
     offerCtaText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
     offerFoot: { marginTop: 10, color: '#6C7A89', fontSize: 12 },
     expiredPill: {
-        marginTop: 16,
+        marginVertical: 16,
         paddingHorizontal: 14,
         paddingVertical: 6,
         borderRadius: 999,
         backgroundColor: 'rgba(255,255,255,0.12)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.22)',
-        alignSelf: 'flex-start'
+        alignSelf: 'center'
     },
     expiredPillText: { color: '#E5ECF5', fontWeight: '800', letterSpacing: 0.5 },
     offerEndedNote: { marginTop: 6, color: '#E5ECF5', fontSize: 12 }
