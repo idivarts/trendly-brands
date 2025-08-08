@@ -88,7 +88,7 @@ export default function TrendlyHero() {
                 {/* Hero */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left copy */}
-                    <View style={[styles.left, isWide ? { paddingRight: 40 } : {}]}>
+                    <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         {/* <Text style={styles.kicker}>FOR BRANDS</Text> */}
                         <Text style={styles.title}>
                             Find <Text style={styles.titleAccent}>Right Influencers</Text> to
@@ -221,7 +221,8 @@ const styles = StyleSheet.create({
         backgroundColor: "#F8FBFF",
         borderRadius: 24,
         padding: 28,
-        marginTop: 16,
+        marginTop: 24,
+        // marginBottom: 55,
     },
     heroRow: {
         flexDirection: "row",
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
 
     /* Left */
     left: {
-        flex: 1,
+        flex: 1.3,
     },
     kicker: {
         color: BLUE_LIGHT,
@@ -244,20 +245,20 @@ const styles = StyleSheet.create({
     },
     title: {
         color: TEXT,
-        fontSize: 38,
-        lineHeight: 46,
-        fontWeight: "800",
+        fontSize: 48,
+        lineHeight: 62,
+        fontWeight: "600",
         marginTop: 24,
     },
     titleAccent: {
         color: BLUE,
-        marginTop: 16,
         textDecorationLine: "underline",
         textDecorationColor: "#CFE2F7",
         textDecorationStyle: "solid",
     },
     subtitle: {
-        marginTop: 14,
+        marginTop: 24,
+        marginBottom: 12,
         color: "#53657A",
         fontSize: 16,
         lineHeight: 24,
