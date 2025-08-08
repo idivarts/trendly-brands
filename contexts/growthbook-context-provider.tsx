@@ -2,6 +2,7 @@
 
 import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
 
+import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { GrowthBook } from "@growthbook/growthbook";
 import { GrowthBookProvider, useFeatureValue } from "@growthbook/growthbook-react";
@@ -42,7 +43,7 @@ export const useMyGrowthBook = () => useContext(GrowthBookContext)
 const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const [loading, setLoading] = useState(true)
     const x = useFeatureValue<string>("demoLink", "");
-    console.log("Demo Link", x);
+    Console.log("Demo Link", x);
 
     return (
         <GrowthBookContext.Provider value={{ loading }}>
