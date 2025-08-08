@@ -109,7 +109,7 @@ export default function CreateBrandPage() {
 
                     {/* Right: Form */}
                     <View style={styles.formCard}>
-                        <Stepper />
+                        <Stepper count={2} total={3} />
 
                         <Text style={styles.formHeading}>Create your brand</Text>
                         <Text style={styles.formSub}>It takes less than a minute to get started.</Text>

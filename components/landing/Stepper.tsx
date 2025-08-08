@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BLUE, BLUE_DARK, BLUE_LIGHT, TEXT } from './const';
 
-const Stepper = ({ count = 2, total = 3 }) => {
+const Stepper = ({ count = 0, total = 3 }) => {
 
     const steps = Array.from({ length: total }, (_, i) => i + 1);
 
