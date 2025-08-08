@@ -24,13 +24,39 @@ const growthbook = new GrowthBook({
     plugins: [autoAttributesPlugin()],
 });
 
-interface IGBContext {
-    loading: boolean
+interface GBFeatures {
+    actionType: string;
+    demoLink: string;
+    discountTimer: number;
+    imageUrl: string;
+    isPaywallClosable: boolean;
+    limitedTimeDiscount: number;
+    moneyBackGuarantee: number;
+    trialDays: number;
+    videoMediaType: boolean;
+    videoUrl: string;
 }
 
-// Create the GrowthBookContext with an empty object as default value
+interface IGBContext {
+    loading: boolean;
+    features: GBFeatures;
+}
+
+// Create the GrowthBookContext with an initial default value
 export const GrowthBookContext = createContext<IGBContext>({
-    loading: true
+    loading: true,
+    features: {
+        actionType: "",
+        demoLink: "https://cal.com/rahul-idiv/30min",
+        discountTimer: 10,
+        imageUrl: "",
+        isPaywallClosable: false,
+        limitedTimeDiscount: 10,
+        moneyBackGuarantee: 7,
+        trialDays: 3,
+        videoMediaType: true,
+        videoUrl: "https://youtu.be/X1Of8cALHRo?si=XvXxb94STjnr7-XW"
+    }
 });
 
 // Define the props type for the provider
@@ -43,9 +69,35 @@ export const useMyGrowthBook = () => useContext(GrowthBookContext)
 const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const loading = useFeatureValue<boolean>("loading", false);
 
-    Console.log("Growthbook Initialized", loading)
+    // Fetch feature values from GrowthBook
+    const actionType = useFeatureValue<string>("action-type", "");
+    const demoLink = useFeatureValue<string>("demoLink", "https://cal.com/rahul-idiv/30min");
+    const discountTimer = useFeatureValue<number>("discount-timer", 10);
+    const imageUrl = useFeatureValue<string>("imageUrl", "");
+    const isPaywallClosable = useFeatureValue<boolean>("is-paywall-closable", false);
+    const limitedTimeDiscount = useFeatureValue<number>("limited-time-discount", 10);
+    const moneyBackGuarantee = useFeatureValue<number>("money-back-guarantee", 7);
+    const trialDays = useFeatureValue<number>("trial-days", 3);
+    const videoMediaType = useFeatureValue<boolean>("videoMediaType", true);
+    const videoUrl = useFeatureValue<string>("videoUrl", "https://youtu.be/X1Of8cALHRo?si=XvXxb94STjnr7-XW");
+
+    const features: GBFeatures = {
+        actionType,
+        demoLink,
+        discountTimer,
+        imageUrl,
+        isPaywallClosable,
+        limitedTimeDiscount,
+        moneyBackGuarantee,
+        trialDays,
+        videoMediaType,
+        videoUrl,
+    };
+
+    Console.log("Growthbook Initialized", { loading, features });
+
     return (
-        <GrowthBookContext.Provider value={{ loading }}>
+        <GrowthBookContext.Provider value={{ loading, features }}>
             {children}
         </GrowthBookContext.Provider>
     );
