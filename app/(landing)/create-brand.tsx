@@ -1,12 +1,14 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import Stepper from "@/components/landing/Stepper";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     ImageBackground,
     Platform,
@@ -33,6 +35,7 @@ const AGE_OPTIONS = [
 
 export default function CreateBrandPage() {
     const router = useMyNavigation()
+    const { manager, session } = useAuthContext()
     const { createBrand, setSelectedBrand } = useBrandContext()
 
     const { width } = useWindowDimensions();
@@ -83,6 +86,13 @@ export default function CreateBrandPage() {
             setSubmitting(false);
         }
     }
+
+    useEffect(() => {
+        AuthApp.authStateReady().then(() => {
+            if (!AuthApp.currentUser)
+                router.resetAndNavigate("/get-started")
+        })
+    }, [])
 
     return (
         <AppLayout>

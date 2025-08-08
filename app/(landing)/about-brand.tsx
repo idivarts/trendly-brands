@@ -4,6 +4,7 @@ import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import React, { useEffect, useState } from "react";
 import {
@@ -81,9 +82,11 @@ export default function BrandDetailPage() {
     }
 
     useEffect(() => {
-        if (!selectedBrand) {
-            router.resetAndNavigate("/create-brand")
-        }
+        AuthApp.authStateReady().then(() => {
+            if (!selectedBrand) {
+                router.resetAndNavigate("/create-brand")
+            }
+        })
     }, [selectedBrand])
 
     return (
@@ -101,7 +104,7 @@ export default function BrandDetailPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>BRAND ONBOARDING</Text>
                         <Text style={styles.title}>
-                            Tell us about your <Text style={styles.titleAccent}>brand</Text>
+                            Tell us about <Text style={styles.titleAccent}>{selectedBrand?.name || ""}</Text>
                         </Text>
                         <Text style={styles.subtitle}>
                             Start hiring verified influencers without middlemen. Post a collaboration,
