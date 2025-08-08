@@ -1,15 +1,14 @@
 import AppLayout from "@/layouts/app-layout";
-import { useMyNavigation } from "@/shared-libs/utils/router";
 import React, { useState } from "react";
 import {
     Image,
     ImageBackground,
+    Linking,
     Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     useWindowDimensions,
     View
 } from "react-native";
@@ -28,8 +27,25 @@ const ONBOARD_IMG =
 const CAL_LINK = "https://cal.com/rahul-idiv/30min";
 const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 
-export default function CreateBrandPage() {
-    const router = useMyNavigation()
+const BUY_YEARLY_LINK = "https://brands.trendly.now/checkout?plan=yearly&trial=1&discount=today50";
+const BUY_MONTHLY_LINK = "https://brands.trendly.now/checkout?plan=monthly&trial=1&discount=today50";
+
+const YEARLY_FEATURES = [
+    "Unlimited collaboration postings",
+    "Guaranteed Influencer Availability",
+    "Fraud Protection & Recovery Assistance",
+    "Fast‑Track Customer Support",
+    "First collaboration handled by us (worth ₹1,500)",
+];
+
+const MONTHLY_FEATURES = [
+    "5 collaborations per month",
+    "Unlimited invites & applications",
+    "Unlimited hiring contracts",
+    "7‑day money‑back guarantee",
+];
+
+export default function PricingPage() {
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
@@ -38,10 +54,7 @@ export default function CreateBrandPage() {
     const [errors, setErrors] = useState<{ brand?: string; phone?: string }>({});
     const [submitting, setSubmitting] = useState(false);
 
-    const open = (url: string) => {
-        // Linking.openURL(url).catch(() => { })
-        router.resetAndNavigate("/pricing-page")
-    };
+    const open = (url: string) => Linking.openURL(url).catch(() => { });
 
     function validate() {
         const e: { brand?: string; phone?: string } = {};
@@ -88,30 +101,52 @@ export default function CreateBrandPage() {
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
                     <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <Text style={styles.kicker}>BRAND ONBOARDING</Text>
+                        <Text style={styles.kicker}>PRICING & PLANS</Text>
                         <Text style={styles.title}>
-                            Create your <Text style={styles.titleAccent}>brand</Text>
+                            Choose your <Text style={styles.titleAccent}>plan</Text>
                         </Text>
-                        <Text style={styles.subtitle}>
-                            Start hiring verified influencers without middlemen. Post a collaboration,
-                            pick applications you like, and pay securely when you finalize. No setup
-                            fees and no commissions — just direct connections that work.
-                        </Text>
-
-                        <View style={styles.points}>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Get matched to niche influencers fast</Text>
+                        {/* Trust / Reasons */}
+                        <View style={styles.reasonsBox}>
+                            <View style={styles.discountPill}>
+                                <Text style={styles.discountText}>Today only: Flat 50% OFF</Text>
                             </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Transparent chats, contracts, and payouts</Text>
+                            <View style={styles.reasonItem}>
+                                <Text style={styles.pointIcon}>🛡️</Text>
+                                <Text style={styles.reasonText}>We only collect payment info now — you won't be charged until your trial ends.</Text>
                             </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Fraud protection and dispute assistance</Text>
+                            <View style={styles.reasonItem}>
+                                <Text style={styles.pointIcon}>↩️</Text>
+                                <Text style={styles.reasonText}>Cancel anytime during trial in one tap — no questions asked.</Text>
+                            </View>
+                            <View style={styles.reasonItem}>
+                                <Text style={styles.pointIcon}>💯</Text>
+                                <Text style={styles.reasonText}>7‑day money‑back guarantee after your first payment.</Text>
+                            </View>
+                            <View style={styles.noticeRow}>
+                                <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
                             </View>
                         </View>
+                        {/* <Text style={styles.subtitle}>
+                            Pick a plan that matches your growth. Your trial continues — you won’t be charged
+                            today. A special <Text style={{ fontWeight: '800' }}>50% discount</Text> is applied for today only; if you skip now,
+                            standard pricing will apply later. Cancel anytime during the trial, and enjoy a
+                            7‑day money‑back guarantee after your first charge.
+                        </Text> */}
+
+                        {/* <View style={styles.points}>
+                            <View style={styles.pointItem}>
+                                <Text style={styles.pointIcon}>✅</Text>
+                                <Text style={styles.pointText}>Verified influencers with fraud protection</Text>
+                            </View>
+                            <View style={styles.pointItem}>
+                                <Text style={styles.pointIcon}>✅</Text>
+                                <Text style={styles.pointText}>Unlimited invites, clear contracts & secure payouts</Text>
+                            </View>
+                            <View style={styles.pointItem}>
+                                <Text style={styles.pointIcon}>✅</Text>
+                                <Text style={styles.pointText}>Yearly plan = priority support & best savings</Text>
+                            </View>
+                        </View> */}
 
                         {/* Visual */}
                         <ImageBackground
@@ -120,7 +155,7 @@ export default function CreateBrandPage() {
                             imageStyle={styles.visualImg}
                         >
                             <View style={styles.playBadge}>
-                                <Text style={styles.playBadgeText}>Overview</Text>
+                                <Text style={styles.playBadgeText}>Plans</Text>
                             </View>
                         </ImageBackground>
                     </View>
@@ -129,7 +164,7 @@ export default function CreateBrandPage() {
                     <View style={styles.formCard}>
                         {/* Stepper */}
                         <View style={styles.stepperWrap}>
-                            <Text style={styles.stepperLabel}>Step 2 of 3</Text>
+                            <Text style={styles.stepperLabel}>Step 3 of 3</Text>
                             <View style={styles.stepperRow}>
                                 {/* Step 1 */}
                                 <View style={styles.stepGroup}>
@@ -140,67 +175,69 @@ export default function CreateBrandPage() {
                                 </View>
                                 {/* Step 2 (current) */}
                                 <View style={styles.stepGroup}>
-                                    <View style={[styles.stepDot, styles.stepCurrent]}>
+                                    <View style={[styles.stepDot, styles.stepDone]}>
                                         <Text style={styles.stepNum}>2</Text>
                                     </View>
-                                    <View style={[styles.stepBar, styles.stepBarPending]} />
+                                    <View style={[styles.stepBar, styles.stepBarDone]} />
                                 </View>
                                 {/* Step 3 */}
                                 <View style={styles.stepGroup}>
-                                    <View style={[styles.stepDot, styles.stepPending]}>
+                                    <View style={[styles.stepDot, styles.stepCurrent]}>
                                         <Text style={styles.stepNum}>3</Text>
                                     </View>
                                 </View>
                             </View>
                         </View>
-                        <Text style={styles.formHeading}>Create your brand</Text>
-                        <Text style={styles.formSub}>It takes less than a minute to get started.</Text>
 
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Brand name</Text>
-                            <TextInput
-                                value={brandName}
-                                onChangeText={setBrandName}
-                                placeholder="e.g., Acme Naturals"
-                                style={[styles.input, !!errors.brand && styles.inputError]}
-                                autoCapitalize="words"
-                                autoCorrect={false}
-                                accessibilityLabel="Brand name"
-                            />
-                            {!!errors.brand && <Text style={styles.error}>{errors.brand}</Text>}
+                        <Text style={styles.formHeading}>Choose your plan</Text>
+                        <Text style={styles.formSub}>Your trial continues. Pay nothing today.</Text>
+
+                        {/* Plans */}
+                        <View style={styles.plansWrap}>
+                            {/* Yearly (Preferred) */}
+                            <View style={[styles.planCard, styles.planPreferred]}>
+                                <View style={styles.planTagPreferred}><Text style={styles.planTagText}>Preferred</Text></View>
+                                <Text style={styles.planName}>Business (Yearly)</Text>
+                                <View style={styles.priceRow}>
+                                    <Text style={styles.priceMain}>₹4,999</Text>
+                                    <Text style={styles.priceSlash}>₹6,000</Text>
+                                    <Text style={styles.pricePer}>/year</Text>
+                                </View>
+                                <Text style={styles.savingsText}>Save 30% vs monthly</Text>
+                                <View style={styles.divider} />
+                                {YEARLY_FEATURES.map((f, i) => (
+                                    <View key={i} style={styles.featureRow}>
+                                        <Text style={styles.featureTick}>✓</Text>
+                                        <Text style={styles.featureCopy}>{f}</Text>
+                                    </View>
+                                ))}
+                                <Pressable onPress={() => open(BUY_YEARLY_LINK)} style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
+                                    <Text style={styles.buyText}>Start yearly — Pay nothing today</Text>
+                                </Pressable>
+                            </View>
+
+                            {/* Monthly */}
+                            <View style={styles.planCard}>
+                                <Text style={styles.planName}>Growth (Monthly)</Text>
+                                <View style={styles.priceRow}>
+                                    <Text style={styles.priceMain}>₹499</Text>
+                                    <Text style={styles.pricePer}>/month</Text>
+                                </View>
+                                <View style={styles.divider} />
+                                {MONTHLY_FEATURES.map((f, i) => (
+                                    <View key={i} style={styles.featureRow}>
+                                        <Text style={styles.featureTick}>✓</Text>
+                                        <Text style={styles.featureCopy}>{f}</Text>
+                                    </View>
+                                ))}
+                                <Pressable onPress={() => open(BUY_MONTHLY_LINK)} style={({ pressed }) => [styles.buyBtnAlt, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
+                                    <Text style={styles.buyTextAlt}>Start monthly — Pay nothing today</Text>
+                                </Pressable>
+                            </View>
                         </View>
 
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Phone number</Text>
-                            <TextInput
-                                value={phone}
-                                onChangeText={setPhone}
-                                placeholder="e.g., 9876543210"
-                                style={[styles.input, !!errors.phone && styles.inputError]}
-                                keyboardType={Platform.select({ ios: "number-pad", android: "phone-pad", default: "numeric" }) as any}
-                                accessibilityLabel="Phone number"
-                            />
-                            {!!errors.phone && <Text style={styles.error}>{errors.phone}</Text>}
-                        </View>
-
-                        <Pressable
-                            onPress={handleSubmit}
-                            disabled={submitting}
-                            style={({ pressed }) => [
-                                styles.cta,
-                                (pressed || submitting) && { transform: [{ scale: 0.98 }], opacity: 0.9 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel="Create brand"
-                        >
-                            <Text style={styles.ctaText}>{submitting ? "Please wait…" : "Create brand"}</Text>
-                            <Text style={styles.ctaArrow}>›</Text>
-                        </Pressable>
-
-                        <Text style={styles.disclaimer}>
-                            By continuing, you agree to receive updates about your brand setup on the
-                            phone number provided.
-                        </Text>
+                        {/* Comparison note */}
+                        <Text style={styles.compareHint}>Both plans include full access, verified influencer hiring, unlimited invites, and fraud protection. Yearly plan adds priority support and faster dispute handling.</Text>
                     </View>
                 </View>
 
@@ -502,4 +539,37 @@ const styles = StyleSheet.create({
     stepBarPending: {
         backgroundColor: '#E9F0F8',
     },
+    /* Reasons / discount */
+    reasonsBox: { marginTop: 8, backgroundColor: '#F8FBFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E6EEF8' },
+    discountPill: { alignSelf: 'flex-start', backgroundColor: '#1f3f73', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
+    discountText: { color: '#fff', fontWeight: '800', fontSize: 12 },
+    reasonItem: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 8 },
+    reasonText: { color: TEXT, fontSize: 13, lineHeight: 18, flex: 1 },
+    noticeRow: { marginTop: 10 },
+    noticeText: { color: '#D64545', fontSize: 12, fontWeight: '700' },
+
+    /* Plans */
+    plansWrap: { marginTop: 16, gap: 16 },
+    planCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E1E6EE', padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, ...Platform.select({ android: { elevation: 1 } }) },
+    planPreferred: { borderColor: BLUE, shadowOpacity: 0.08, ...Platform.select({ android: { elevation: 2 } }) },
+    planTagPreferred: { position: 'absolute', top: 12, right: 12, backgroundColor: BLUE, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+    planTagText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+    planName: { color: TEXT, fontSize: 18, fontWeight: '800', marginTop: 2 },
+    priceRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 6 },
+    priceMain: { color: TEXT, fontSize: 28, fontWeight: '900' },
+    priceSlash: { color: '#8AA0BA', textDecorationLine: 'line-through', marginLeft: 8, marginBottom: 2 },
+    pricePer: { color: '#6C7A89', marginLeft: 6, marginBottom: 2 },
+    savingsText: { color: '#1A7F37', fontWeight: '700', fontSize: 12, marginTop: 4 },
+    divider: { height: 1, backgroundColor: '#EEF3F9', marginVertical: 12 },
+    featureRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+    featureTick: { fontSize: 16, marginRight: 10 },
+    featureCopy: { color: TEXT, fontSize: 13 },
+    buyBtn: { marginTop: 14, backgroundColor: BLUE, height: 46, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    buyText: { color: '#fff', fontWeight: '800' },
+    buyBtnAlt: { marginTop: 14, backgroundColor: '#EEF4FB', height: 46, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    buyTextAlt: { color: TEXT, fontWeight: '800' },
+
+    /* Compare hint */
+    compareHint: { marginTop: 12, color: '#6C7A89', fontSize: 12 },
 });
+

@@ -1,16 +1,16 @@
 import AppLayout from "@/layouts/app-layout";
+import { useMyNavigation } from "@/shared-libs/utils/router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Image,
     ImageBackground,
-    Linking,
     Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     useWindowDimensions,
-    View,
+    View
 } from "react-native";
 
 const FEATURE_ITEMS = [
@@ -46,6 +46,7 @@ function getCountdownParts(ms: number) {
 }
 
 export default function TrendlyHero() {
+    const router = useMyNavigation()
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
@@ -63,7 +64,10 @@ export default function TrendlyHero() {
 
     const parts = useMemo(() => getCountdownParts(remaining), [remaining]);
 
-    const open = (url: string) => Linking.openURL(url).catch(() => { });
+    const open = (url: string) => {
+        // Linking.openURL(url).catch(() => { })
+        router.resetAndNavigate("/create-brand")
+    };
 
     return (
         <AppLayout>
