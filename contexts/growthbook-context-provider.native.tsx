@@ -8,7 +8,7 @@ interface IGBContext {
 
 // Create the GrowthBookContext with an empty object as default value
 export const GrowthBookContext = createContext<IGBContext>({
-    loading: true
+    loading: false
 });
 
 // Define the props type for the provider
@@ -19,7 +19,7 @@ type GrowthBookProviderProps = {
 export const useMyGrowthBook = () => useContext(GrowthBookContext)
 // GrowthBookProvider functional component
 const GrowthBookProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(false)
 
     return (
         <GrowthBookContext.Provider value={{ loading }}>
