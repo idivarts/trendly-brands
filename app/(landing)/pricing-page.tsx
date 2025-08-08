@@ -1,7 +1,9 @@
+import LandingFooter from "@/components/landing/LandingFooter";
+import LandingHeader from "@/components/landing/LandingHeader";
+import Stepper from "@/components/landing/Stepper";
 import AppLayout from "@/layouts/app-layout";
 import React, { useState } from "react";
 import {
-    Image,
     ImageBackground,
     Linking,
     Platform,
@@ -13,18 +15,9 @@ import {
     View
 } from "react-native";
 
-// --- Content & links ---
-const FEATURE_ITEMS = [
-    { icon: "📘", title: "Marketing Partner", sub: "Facebook Premier Level Agency Partner" },
-    { icon: "🟦", title: "Google Endorsed", sub: "Marketing Partner" },
-    { icon: "📰", title: "Forbes Agency", sub: "Council Member" },
-    { icon: "🏆", title: "Inc. 5000", sub: "Fastest Growing Company" },
-];
-
 const ONBOARD_IMG =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
 
-const CAL_LINK = "https://cal.com/rahul-idiv/30min";
 const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 
 const BUY_YEARLY_LINK = "https://brands.trendly.now/checkout?plan=yearly&trial=1&discount=today50";
@@ -84,18 +77,7 @@ export default function PricingPage() {
                 bounces={false}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <Image
-                        source={require("@/assets/images/rectangluar blue logo transparent.png")}
-                        style={styles.logo}
-                        resizeMode="contain"
-                    />
-                    <Pressable style={styles.demoBtn} onPress={() => open(CAL_LINK)}>
-                        <Text style={styles.demoIcon}>🎥</Text>
-                        <Text style={styles.demoText}>Request a Demo</Text>
-                    </Pressable>
-                </View>
+                <LandingHeader />
 
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
@@ -159,32 +141,7 @@ export default function PricingPage() {
 
                     {/* Right: Form */}
                     <View style={styles.formCard}>
-                        {/* Stepper */}
-                        <View style={styles.stepperWrap}>
-                            <Text style={styles.stepperLabel}>Step 3 of 3</Text>
-                            <View style={styles.stepperRow}>
-                                {/* Step 1 */}
-                                <View style={styles.stepGroup}>
-                                    <View style={[styles.stepDot, styles.stepDone]}>
-                                        <Text style={styles.stepNum}>1</Text>
-                                    </View>
-                                    <View style={[styles.stepBar, styles.stepBarDone]} />
-                                </View>
-                                {/* Step 2 (current) */}
-                                <View style={styles.stepGroup}>
-                                    <View style={[styles.stepDot, styles.stepDone]}>
-                                        <Text style={styles.stepNum}>2</Text>
-                                    </View>
-                                    <View style={[styles.stepBar, styles.stepBarDone]} />
-                                </View>
-                                {/* Step 3 */}
-                                <View style={styles.stepGroup}>
-                                    <View style={[styles.stepDot, styles.stepCurrent]}>
-                                        <Text style={styles.stepNum}>3</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
+                        <Stepper count={3} />
 
                         <Text style={styles.formHeading}>Choose your plan</Text>
                         <Text style={styles.formSub}>Your trial continues. Pay nothing today.</Text>
@@ -239,20 +196,7 @@ export default function PricingPage() {
                     </View>
                 </View>
 
-                {/* Feature summary strip */}
-                <View style={styles.featuresBar}>
-                    <View style={styles.featuresInner}>
-                        {FEATURE_ITEMS.map((f, idx) => (
-                            <View key={idx} style={styles.featureItem}>
-                                <Text style={styles.featureIcon}>{f.icon}</Text>
-                                <View style={styles.featureTextWrap}>
-                                    <Text style={styles.featureTitle}>{f.title}</Text>
-                                    <Text style={styles.featureSub}>{f.sub}</Text>
-                                </View>
-                            </View>
-                        ))}
-                    </View>
-                </View>
+                <LandingFooter />
             </ScrollView>
         </AppLayout>
     );
@@ -274,33 +218,6 @@ const styles = StyleSheet.create({
         alignSelf: "center",
         width: "100%",
     },
-
-    /* Header */
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 24,
-    },
-    logo: {
-        width: 180,
-        height: 75,
-    },
-    demoBtn: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 18,
-        height: 42,
-        borderRadius: 999,
-        backgroundColor: "#EEF4FB",
-        shadowColor: "#000",
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 3 },
-        ...Platform.select({ android: { elevation: 3 } }),
-    },
-    demoIcon: { fontSize: 16, marginRight: 8 },
-    demoText: { color: TEXT, fontSize: 14, fontWeight: "600" },
 
     /* Hero layout */
     hero: {
@@ -441,102 +358,6 @@ const styles = StyleSheet.create({
         marginTop: -2,
     },
 
-    /* Feature summary strip */
-    featuresBar: {
-        marginTop: 40,
-        backgroundColor: "#1f3f73",
-        borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 32,
-    },
-    featuresInner: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "space-between",
-        rowGap: 12,
-        gap: 12,
-    },
-    featureItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 6,
-        minWidth: 150,
-        flexShrink: 0,
-    },
-    featureIcon: {
-        fontSize: 42,
-        marginRight: 16,
-        color: "#FFFFFF",
-    },
-    featureTextWrap: { flexShrink: 1, gap: 8 },
-    featureTitle: {
-        color: "#FFFFFF",
-        fontSize: 14,
-        fontWeight: "800",
-        letterSpacing: 0.2,
-    },
-    featureSub: { color: "#D6E2F5", fontSize: 12, marginTop: 2 },
-    // Stepper
-    stepperWrap: {
-        marginBottom: 28,
-    },
-    stepperLabel: {
-        color: TEXT,
-        fontSize: 12,
-        fontWeight: '700',
-        opacity: 0.8,
-        marginBottom: 8,
-    },
-    stepperRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    stepGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    stepDot: {
-        width: 16,
-        height: 16,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#E9F0F8',
-        borderWidth: 1,
-        borderColor: '#E1E6EE',
-    },
-    stepNum: {
-        color: TEXT,
-        fontSize: 13,
-        fontWeight: '800',
-    },
-    stepBar: {
-        height: 4,
-        borderRadius: 4,
-        marginHorizontal: 10,
-        flex: 1,
-        backgroundColor: '#E9F0F8',
-    },
-    stepDone: {
-        backgroundColor: BLUE,
-        borderColor: BLUE,
-    },
-    stepCurrent: {
-        backgroundColor: BLUE_DARK,
-        borderColor: BLUE_DARK,
-    },
-    stepPending: {
-        backgroundColor: '#E9F0F8',
-        borderColor: '#E1E6EE',
-    },
-    stepBarDone: {
-        backgroundColor: BLUE_LIGHT,
-    },
-    stepBarPending: {
-        backgroundColor: '#E9F0F8',
-    },
     /* Reasons / discount */
     reasonsBox: { marginTop: 8, backgroundColor: '#F8FBFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E6EEF8' },
     discountPill: { alignSelf: 'flex-start', backgroundColor: '#1f3f73', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
