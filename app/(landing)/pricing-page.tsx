@@ -164,7 +164,7 @@ export default function PricingPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>PRICING & PLANS</Text>
                         <Text style={styles.title}>
-                            Choose your <Text style={styles.titleAccent}>plan</Text> for {selectedBrand?.name}
+                            Choose your <Text style={styles.titleAccent}>plan</Text> for {selectedBrand?.name || "your brand"}
                         </Text>
                         {/* Trust / Reasons */}
                         <View style={styles.reasonsBox}>
