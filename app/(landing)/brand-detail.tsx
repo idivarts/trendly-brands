@@ -5,7 +5,6 @@ import AppLayout from "@/layouts/app-layout";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import React, { useState } from "react";
 import {
-    ImageBackground,
     Platform,
     Pressable,
     ScrollView,
@@ -20,50 +19,66 @@ import {
 const ONBOARD_IMG =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
 const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
-const AGE_OPTIONS = [
-    { key: "JUST_STARTING", title: "Just starting", desc: "New or pre-launch brand" },
-    { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
-    { key: "LT_5", title: "Less than 5 years", desc: "Established but growing" },
-    { key: "GT_5", title: "5+ years", desc: "Well established brand" },
-];
 
-
-export default function CreateBrandPage() {
+export default function BrandDetailPage() {
     const router = useMyNavigation()
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
     const [brandName, setBrandName] = useState("");
     const [phone, setPhone] = useState("");
-    const [errors, setErrors] = useState<{ brand?: string; phone?: string; brandAge?: string }>({});
-    const [submitting, setSubmitting] = useState(false);
     const [brandAge, setBrandAge] = useState<string>("");
+    const [about, setAbout] = useState("");
+    const [website, setWebsite] = useState("");
+    const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+    const [errors, setErrors] = useState<{ brand?: string; phone?: string }>({});
+    const [submitting, setSubmitting] = useState(false);
+
+    const AGE_OPTIONS = [
+        { key: "JUST_STARTING", title: "Just starting", desc: "New or pre-launch brand" },
+        { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
+        { key: "LT_5", title: "Less than 5 years", desc: "Established but growing" },
+        { key: "GT_5", title: "5+ years", desc: "Well established brand" },
+    ];
+
+    const INDUSTRY_OPTIONS = [
+        "Fashion", "Beauty & Personal Care", "Food & Beverage", "Tech & Gadgets", "Health & Fitness",
+        "Education", "Home & Living", "Travel", "Finance", "Entertainment", "Automotive", "Parenting & Kids"
+    ];
+
+    const toggleIndustry = (name: string) => {
+        setSelectedIndustries((prev) =>
+            prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+        );
+    };
 
     const open = (url: string) => {
         // Linking.openURL(url).catch(() => { })
-        router.resetAndNavigate("/brand-detail")
+        router.resetAndNavigate("/pricing-page")
     };
 
-    function validate() {
-        const e: { brand?: string; phone?: string; brandAge?: string } = {};
-        if (!brandName || brandName.trim().length < 2) e.brand = "Please enter your brand name.";
-        const digits = phone.replace(/\D/g, "");
-        if (digits.length < 10 || digits.length > 15) e.phone = "Enter a valid phone number.";
-        if (!brandAge) e.brandAge = "Please select your brand age.";
-        setErrors(e);
-        return Object.keys(e).length === 0;
-    }
 
     async function handleSubmit() {
         if (submitting) return;
-        if (!validate()) return;
         try {
             setSubmitting(true);
-            const url = `${CREATE_BRAND_LINK}&brand=${encodeURIComponent(brandName.trim())}&phone=${encodeURIComponent(phone.trim())}`;
+            const url = `${CREATE_BRAND_LINK}` +
+                `&brand=${encodeURIComponent(brandName.trim())}` +
+                `&phone=${encodeURIComponent(phone.trim())}` +
+                (brandAge ? `&brandAge=${encodeURIComponent(brandAge)}` : "") +
+                (about ? `&about=${encodeURIComponent(about.trim())}` : "") +
+                (website ? `&website=${encodeURIComponent(website.trim())}` : "") +
+                (selectedIndustries.length ? `&industries=${encodeURIComponent(selectedIndustries.join(","))}` : "");
             open(url);
         } finally {
             setSubmitting(false);
         }
+    }
+
+    function handleSkip() {
+        if (submitting) return;
+        // Go to next step without validating or sending optional data
+        open(`${CREATE_BRAND_LINK}&skipped=1`);
     }
 
     return (
@@ -81,7 +96,7 @@ export default function CreateBrandPage() {
                     <View style={[styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>BRAND ONBOARDING</Text>
                         <Text style={styles.title}>
-                            Create your <Text style={styles.titleAccent}>brand</Text>
+                            Tell us about your <Text style={styles.titleAccent}>brand</Text>
                         </Text>
                         <Text style={styles.subtitle}>
                             Start hiring verified influencers without middlemen. Post a collaboration,
@@ -105,7 +120,7 @@ export default function CreateBrandPage() {
                         </View>
 
                         {/* Visual */}
-                        <ImageBackground
+                        {/* <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
                             style={styles.visual}
                             imageStyle={styles.visualImg}
@@ -113,66 +128,78 @@ export default function CreateBrandPage() {
                             <View style={styles.playBadge}>
                                 <Text style={styles.playBadgeText}>Overview</Text>
                             </View>
-                        </ImageBackground>
+                        </ImageBackground> */}
                     </View>
 
                     {/* Right: Form */}
                     <View style={styles.formCard}>
-                        <Stepper count={2} total={3} />
+                        <Stepper count={3} total={4} />
 
-                        <Text style={styles.formHeading}>Create your brand</Text>
-                        <Text style={styles.formSub}>It takes less than a minute to get started.</Text>
+                        <View style={styles.headerRow}>
+                            <View style={{ flexShrink: 1 }}>
+                                <Text style={styles.formHeading}>Brand Profile</Text>
+                                <Text style={styles.formSub}>It takes less than a minute to get started.</Text>
+                            </View>
+                            <Pressable
+                                onPress={handleSkip}
+                                accessibilityRole="button"
+                                accessibilityLabel="Skip this step"
+                                style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.85 }]}
+                            >
+                                <Text style={styles.skipText}>Skip for now</Text>
+                            </Pressable>
+                        </View>
 
+
+                        {/* About Brand (Optional) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>Brand name</Text>
+                            <Text style={styles.label}>About brand <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
                             <TextInput
-                                value={brandName}
-                                onChangeText={setBrandName}
-                                placeholder="e.g., Acme Naturals"
-                                style={[styles.input, !!errors.brand && styles.inputError]}
-                                autoCapitalize="words"
+                                value={about}
+                                onChangeText={setAbout}
+                                placeholder="Tell us a bit about your brand and what you sell"
+                                multiline
+                                textAlignVertical="top"
+                                style={[styles.input, styles.textArea]}
+                                accessibilityLabel="About brand"
+                            />
+                        </View>
+
+                        {/* Brand Website (Optional) */}
+                        <View style={styles.field}>
+                            <Text style={styles.label}>Brand website <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <TextInput
+                                value={website}
+                                onChangeText={setWebsite}
+                                placeholder="e.g., https://www.acme.com"
+                                style={styles.input}
+                                autoCapitalize="none"
                                 autoCorrect={false}
-                                accessibilityLabel="Brand name"
+                                keyboardType={Platform.select({ ios: "url", android: "url", default: "url" }) as any}
+                                accessibilityLabel="Brand website"
                             />
-                            {!!errors.brand && <Text style={styles.error}>{errors.brand}</Text>}
                         </View>
 
+                        {/* Brand Industry (Optional, multi-select) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>Phone number</Text>
-                            <TextInput
-                                value={phone}
-                                onChangeText={setPhone}
-                                placeholder="e.g., 9876543210"
-                                style={[styles.input, !!errors.phone && styles.inputError]}
-                                keyboardType={Platform.select({ ios: "number-pad", android: "phone-pad", default: "numeric" }) as any}
-                                accessibilityLabel="Phone number"
-                            />
-                            {!!errors.phone && <Text style={styles.error}>{errors.phone}</Text>}
-                        </View>
-                        {/* Brand Age */}
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Brand age</Text>
-                            <Text style={styles.ageHelp}>How established is your brand?</Text>
-                            <View style={styles.cardGrid}>
-                                {AGE_OPTIONS.map((opt) => {
-                                    const active = brandAge === opt.key;
+                            <Text style={styles.label}>Brand industry <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <View style={styles.chipWrap}>
+                                {INDUSTRY_OPTIONS.map((name) => {
+                                    const active = selectedIndustries.includes(name);
                                     return (
                                         <Pressable
-                                            key={opt.key}
-                                            onPress={() => setBrandAge(opt.key)}
-                                            style={[styles.ageCard, active && styles.ageCardSelected]}
+                                            key={name}
+                                            onPress={() => toggleIndustry(name)}
+                                            style={[styles.chip, active && styles.chipSelected]}
                                             accessibilityRole="button"
                                             accessibilityState={{ selected: active }}
                                         >
-                                            <Text style={[styles.ageCardTitle, active && { color: "#12324F" }]}>{opt.title}</Text>
-                                            <Text style={styles.ageCardDesc}>{opt.desc}</Text>
+                                            <Text style={[styles.chipText, active && styles.chipTextSelected]}>{name}</Text>
                                         </Pressable>
                                     );
                                 })}
                             </View>
-                            {!!errors.brandAge && <Text style={styles.error}>{errors.brandAge}</Text>}
                         </View>
-
 
                         <Pressable
                             onPress={handleSubmit}
@@ -182,9 +209,9 @@ export default function CreateBrandPage() {
                                 (pressed || submitting) && { transform: [{ scale: 0.98 }], opacity: 0.9 },
                             ]}
                             accessibilityRole="button"
-                            accessibilityLabel="Create brand"
+                            accessibilityLabel="Get Started"
                         >
-                            <Text style={styles.ctaText}>{submitting ? "Please wait…" : "Create brand"}</Text>
+                            <Text style={styles.ctaText}>{submitting ? "Please wait…" : "Get Started"}</Text>
                             <Text style={styles.ctaArrow}>›</Text>
                         </Pressable>
 
@@ -314,6 +341,27 @@ const styles = StyleSheet.create({
     },
     formHeading: { fontSize: 24, fontWeight: "800", color: TEXT },
     formSub: { marginTop: 6, color: "#6C7A89", fontSize: 13 },
+    headerRow: {
+        marginTop: 0,
+        marginBottom: 4,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+    },
+    skipBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "#E1E6EE",
+        backgroundColor: "#F5FAFF",
+    },
+    skipText: {
+        color: BLUE,
+        fontWeight: "800",
+        fontSize: 12,
+    },
     field: { marginTop: 16 },
     label: { color: TEXT, fontSize: 13, fontWeight: "700", marginBottom: 6 },
     input: {
@@ -328,34 +376,6 @@ const styles = StyleSheet.create({
     inputError: { borderColor: "#E87070" },
     error: { color: "#D64545", marginTop: 6, fontSize: 12 },
     disclaimer: { color: "#6C7A89", marginTop: 12, fontSize: 12 },
-
-    /* CTA reused */
-    cta: {
-        marginTop: 18,
-        alignSelf: "flex-start",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 22,
-        height: 48,
-        borderRadius: 999,
-        backgroundColor: BLUE,
-        shadowColor: "#2B5C8F",
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 8 },
-        ...Platform.select({ android: { elevation: 6 } }),
-    },
-    ctaText: {
-        color: "#FFFFFF",
-        fontSize: 16,
-        fontWeight: "700",
-    },
-    ctaArrow: {
-        color: "#FFFFFF",
-        fontSize: 22,
-        marginLeft: 10,
-        marginTop: -2,
-    },
 
     // Age select cards
     cardGrid: {
@@ -386,4 +406,60 @@ const styles = StyleSheet.create({
     ageCardTitle: { fontSize: 14, fontWeight: "800", color: TEXT },
     ageCardDesc: { fontSize: 12, color: "#6C7A89", marginTop: 4 },
 
+    // Text area
+    textArea: {
+        height: 120,
+        paddingTop: 12,
+        paddingBottom: 12,
+    },
+
+    // Industry chips
+    chipWrap: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+        marginTop: 6,
+    },
+    chip: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "#E1E6EE",
+        backgroundColor: "#FFFFFF",
+    },
+    chipSelected: {
+        backgroundColor: BLUE,
+        borderColor: BLUE,
+    },
+    chipText: { color: TEXT, fontSize: 12, fontWeight: "700" },
+    chipTextSelected: { color: "#FFFFFF" },
+
+    /* CTA reused */
+    cta: {
+        marginTop: 18,
+        alignSelf: "flex-start",
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 22,
+        height: 48,
+        borderRadius: 999,
+        backgroundColor: BLUE,
+        shadowColor: "#2B5C8F",
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        ...Platform.select({ android: { elevation: 6 } }),
+    },
+    ctaText: {
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    ctaArrow: {
+        color: "#FFFFFF",
+        fontSize: 22,
+        marginLeft: 10,
+        marginTop: -2,
+    },
 });
