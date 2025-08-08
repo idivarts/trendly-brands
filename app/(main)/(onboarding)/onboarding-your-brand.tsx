@@ -12,6 +12,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -95,9 +96,10 @@ const OnboardingScreen = () => {
     if (user) {
       const brandRef = collection(FirestoreDB, "brands");
 
-      let brand = {
+      let brand: Partial<IBrands> = {
         ...brandData,
         image: imageUrl,
+        creationTime: Date.now()
       };
 
       const docRef = await addDoc(brandRef, brand);
