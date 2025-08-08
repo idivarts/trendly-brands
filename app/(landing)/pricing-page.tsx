@@ -3,8 +3,13 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
+import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
+import { Console } from "@/shared-libs/utils/console";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
     ImageBackground,
@@ -42,8 +47,10 @@ const MONTHLY_FEATURES = [
 ];
 
 export default function PricingPage() {
-    const { selectedBrand } = useBrandContext()
+    const { selectedBrand, updateBrand } = useBrandContext()
+    const router = useMyNavigation()
 
+    const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)
     const [link, setlink] = useState<number | undefined>(undefined)
     const [planLinks, setPlanLinks] = useState(["", ""])
@@ -79,6 +86,9 @@ export default function PricingPage() {
                 }).then(async r => ((await r.json()).link as string))
             ])
             setPlanLinks(mPlanLinks)
+            updateBrand(selectedBrand?.id || "", {
+                paymentLinks: mPlanLinks
+            })
             if (link != undefined) {
                 window.open(mPlanLinks[link], '_blank')
             }
@@ -89,15 +99,51 @@ export default function PricingPage() {
         }
     }
     useEffect(() => {
-        if (selectedBrand)
-            getPlanLinks()
+        if (selectedBrand) {
+            if ((!selectedBrand.paymentLinks || selectedBrand.paymentLinks.length != 2))
+                getPlanLinks()
+            else
+                setPlanLinks(selectedBrand.paymentLinks)
+        }
     }, [selectedBrand])
+
+    useEffect(() => {
+        if (selectedBrand?.id) {
+            const bSnapShop = onSnapshot(doc(collection(FirestoreDB, "brands"), selectedBrand.id), (data) => {
+                setMyBrand({
+                    ...data.data() as any,
+                    id: data.id
+                })
+            }, (err) => {
+                Toaster.error("Something went wrong!", "Cant load your brand")
+            })
+
+            return () => bSnapShop()
+        }
+    }, [selectedBrand])
+
+    const handleFocus = async () => {
+        Console.log("Handling Focus")
+        if (!myBrand)
+            return
+        if (myBrand.billing?.status == ModelStatus.Accepted)
+            router.resetAndNavigate("/explore-influencers")
+    }
+
+    useEffect(() => {
+        handleFocus()
+    }, [myBrand])
+
 
     const handleSubmit = (isGrowthPlan: boolean) => {
         if (submitting) return;
         try {
             setSubmitting(true);
-            setlink(isGrowthPlan ? 0 : 1)
+            const link = isGrowthPlan ? 0 : 1
+            setlink(link)
+            if (planLinks[link]) {
+                window.open(planLinks[link], "_blank")
+            }
         } finally {
             setSubmitting(false);
         }
@@ -118,7 +164,7 @@ export default function PricingPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <Text style={styles.kicker}>PRICING & PLANS</Text>
                         <Text style={styles.title}>
-                            Choose your <Text style={styles.titleAccent}>plan</Text>
+                            Choose your <Text style={styles.titleAccent}>plan</Text> for {selectedBrand?.name}
                         </Text>
                         {/* Trust / Reasons */}
                         <View style={styles.reasonsBox}>
@@ -240,6 +286,7 @@ export default function PricingPage() {
                     height: '100%',
                     width: '100%',
                     justifyContent: 'center',
+                    backgroundColor: "white",
                     alignItems: 'center',
                     zIndex: 1000,
                     padding: 16,
