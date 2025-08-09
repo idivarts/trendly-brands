@@ -32,10 +32,6 @@ import VideoPlayer from "../VideoPlayer";
 const VIDEO_THUMB =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif";
 
-const CREATE_BRAND_LINK =
-    "https://brands.trendly.now/pre-signin?skip=1";
-const YT_LINK = "https://youtu.be/X1Of8cALHRo?si=FsHvfKuDdjs4Sf3s";
-
 
 export default function TrendlyHero() {
     const router = useMyNavigation()
@@ -167,7 +163,7 @@ export default function TrendlyHero() {
                         !isWide && { marginTop: 28 },
                         { opacity: videoOpacity, transform: [{ scale: videoScale }] },
                     ]}>
-                        <VideoPlayer videoLink={YT_LINK} thumbnail={VIDEO_THUMB} />
+                        <VideoPlayer videoLink={features.videoUrl} thumbnail={VIDEO_THUMB} />
                     </Animated.View>
 
                 </View>

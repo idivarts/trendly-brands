@@ -1,6 +1,6 @@
 import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, ImageBackground, Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { Animated, Easing, ImageBackground, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { BLUE_DARK } from './const';
 
 const VideoPlayer: React.FC<{ videoLink: string, thumbnail?: string }> = ({ videoLink, thumbnail }) => {
@@ -37,16 +37,15 @@ const VideoPlayer: React.FC<{ videoLink: string, thumbnail?: string }> = ({ vide
     return (
         showPlayer ? (
             (
-                <video src={"https://www.youtube.com/embed/X1Of8cALHRo?si=0odsu5WFT6WEt4K4"}
-                    style={{ width: "100%", height: "315px" }}
-                    controls />
+                // @ts-ignore
+                <iframe width="100%" height="315" src={videoLink + "&autoplay=1"} title="YouTube video player" frameborder={0} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
             )
         ) : (
             <Pressable
                 accessibilityRole="imagebutton"
                 onPress={() => {
                     analyticsLogEvent("clicked_video", { video_link: videoLink })
-                    Linking.openURL(videoLink)
+                    setShowPlayer(true)
                 }}
                 onHoverIn={() => setVideoHovered(true)}
                 onHoverOut={() => setVideoHovered(false)}
