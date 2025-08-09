@@ -14,7 +14,6 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ImageBackground,
     Platform,
     Pressable,
     ScrollView,
@@ -215,9 +214,9 @@ export default function PricingPage() {
                             </View>
                         </View>
                         <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
-                        <Text style={styles.subtitle}>
+                        {/* <Text style={styles.subtitle}>
                             Still Confused? Look into the <Text style={{ fontWeight: '800' }}>demo of the platform</Text> below to know what you get out of it!
-                        </Text>
+                        </Text> */}
 
                         {/* <View style={styles.points}>
                             <View style={styles.pointItem}>
@@ -235,7 +234,7 @@ export default function PricingPage() {
                         </View> */}
 
                         {/* Visual */}
-                        <ImageBackground
+                        {/* <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
                             style={styles.visual}
                             imageStyle={styles.visualImg}
@@ -243,7 +242,7 @@ export default function PricingPage() {
                             <View style={styles.playBadge}>
                                 <Text style={styles.playBadgeText}>Plans</Text>
                             </View>
-                        </ImageBackground>
+                        </ImageBackground> */}
                     </View>
 
                     {/* Right: Form */}
