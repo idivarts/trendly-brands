@@ -116,9 +116,7 @@ export default function BrandDetailPage() {
                             Tell us about <Text style={styles.titleAccent}>{selectedBrand?.name || "your brand"}</Text>
                         </Text>
                         <Text style={styles.subtitle}>
-                            Start hiring verified influencers without middlemen. Post a collaboration,
-                            pick applications you like, and pay securely when you finalize. No setup
-                            fees and no commissions — just direct connections that work.
+                            Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.
                         </Text>
 
                         <View style={styles.points}>

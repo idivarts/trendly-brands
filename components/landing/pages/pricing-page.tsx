@@ -169,8 +169,16 @@ export default function PricingPage() {
                         </Text>
                         {/* Trust / Reasons */}
                         <View style={styles.reasonsBox}>
-                            <View style={styles.discountPill}>
-                                <Text style={styles.discountText}>Today only: Flat 50% OFF</Text>
+                            <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
+                                <View style={styles.discountPill}>
+                                    <Text style={styles.discountText}>Today only: Flat 50% OFF</Text>
+                                </View>
+                                <View style={styles.discountPill}>
+                                    <Text style={styles.discountText}>3 days free trial</Text>
+                                </View>
+                                <View style={styles.discountPill}>
+                                    <Text style={styles.discountText}>7 days Money-Back Guarantee</Text>
+                                </View>
                             </View>
                             <View style={styles.reasonItem}>
                                 <Text style={styles.pointIcon}>🛡️</Text>
@@ -486,7 +494,7 @@ const styles = StyleSheet.create({
     reasonItem: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 8 },
     reasonText: { color: TEXT, fontSize: 13, lineHeight: 18, flex: 1 },
     noticeRow: { marginTop: 10 },
-    noticeText: { color: '#D64545', fontSize: 12, fontWeight: '700' },
+    noticeText: { color: '#D64545', fontSize: 14, fontWeight: '700' },
 
     /* Plans */
     plansWrap: { marginTop: 16, gap: 16 },
