@@ -23,6 +23,8 @@ const DownloadApp = () => {
 
     if (segments.length > 0 && segments[0] == "(auth)")
         return null
+    if (segments.length > 0 && segments[0] == "(landing)")
+        return null
     if (segments.length > 1 && segments[1] == "(onboarding)")
         return null
 

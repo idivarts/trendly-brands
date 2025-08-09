@@ -16,7 +16,7 @@ import {
 import { useEffect } from "react";
 
 
-export const useGoogleLogin = (setLoading: Function, setError: Function) => {
+export const useGoogleLogin = (setLoading: Function, setError: Function, signupHandler: Function | null = null) => {
     const { firebaseSignIn, firebaseSignUp } = useAuthContext();
 
     useEffect(() => {

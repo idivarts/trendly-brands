@@ -17,7 +17,7 @@ provider.addScope('email');
 //     'login_hint': 'user@example.com'
 // });
 
-export const useGoogleLogin = (setLoading: Function, setError: Function) => {
+export const useGoogleLogin = (setLoading: Function, setError: Function, signupHandler: Function | null = null) => {
     const { firebaseSignIn, firebaseSignUp } = useAuthContext();
 
     const evalResult = async (result: void | UserCredential) => {
@@ -46,7 +46,9 @@ export const useGoogleLogin = (setLoading: Function, setError: Function) => {
             await setDoc(managerRef, userData);
         }
         // userRef.
-        if (isExistingUser) {
+        if (signupHandler)
+            signupHandler(result)
+        else if (isExistingUser) {
             firebaseSignIn(result);
         } else {
             firebaseSignUp(result);
