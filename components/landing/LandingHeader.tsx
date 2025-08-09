@@ -1,12 +1,10 @@
 import { useMyGrowthBook } from '@/contexts/growthbook-context-provider'
-import { useMyNavigation } from '@/shared-libs/utils/router'
 import React from 'react'
 import { Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { CAL_LINK, TEXT } from './const'
 
 const LandingHeader = () => {
     const { features: { demoLink } } = useMyGrowthBook()
-    const router = useMyNavigation()
     return (
         <View style={styles.header}>
             <Pressable onPress={() => Linking.openURL("https://www.trendly.now")}>
