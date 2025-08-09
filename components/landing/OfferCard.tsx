@@ -28,7 +28,7 @@ function getCountdownParts(ms: number) {
 }
 
 const OfferCard = () => {
-    const { features: { limitedTimeDiscount } } = useMyGrowthBook()
+    const { features: { discountTimer, limitedTimeDiscount }, discountEndTime } = useMyGrowthBook()
 
     // heartbeat pulse for countdown timer
     const timerPulse = useRef(new Animated.Value(1)).current;
@@ -38,11 +38,10 @@ const OfferCard = () => {
     const isWide = width >= 1000;
 
 
-    const storedVal = sessionStorage.getItem("discountEndTime")
     // End time persists for the session; fallback to 72h from first render
-    const endRef = useRef<number>(storedVal ? parseInt(storedVal) : 0);
+    const endRef = useRef<number>(discountEndTime);
     const [remaining, setRemaining] = useState(endRef.current - nowTs());
-    const isExpired = remaining <= 0;
+    const isExpired = remaining <= 0 && discountTimer > 0;
 
     useEffect(() => {
         if (isExpired) {
@@ -51,10 +50,6 @@ const OfferCard = () => {
     }, [isExpired])
 
     useEffect(() => {// looped heartbeat on countdown timer
-        const t = setInterval(() => {
-            setRemaining(endRef.current - nowTs());
-        }, 1000);
-
         // bounce-in offer card (if visible)
         Animated.spring(offerScale, {
             toValue: 1,
@@ -62,9 +57,16 @@ const OfferCard = () => {
             tension: 90,
             useNativeDriver: true,
         }).start();
-
-        return () => clearInterval(t);
     }, []);
+
+    useEffect(() => {
+        if (discountTimer > 0) {
+            const t = setInterval(() => {
+                setRemaining(endRef.current - nowTs());
+            }, 1000);
+            return () => clearInterval(t);
+        }
+    }, [discountTimer])
 
     // urgency thresholds for color + pulse
     const isWarn = remaining <= 10 * 60 * 1000;   // <= 10 minutes
@@ -143,6 +145,9 @@ const OfferCard = () => {
 
     const parts = useMemo(() => getCountdownParts(Math.max(0, remaining)), [remaining]);
 
+    if (limitedTimeDiscount == 0)
+        return null
+
     return (
         <Animated.View
             style={[
@@ -160,7 +165,7 @@ const OfferCard = () => {
                 <View>
                     {!isExpired ? (
                         <>
-                            <Text style={styles.offerHeading}>Special Offer for you - Ends soon...</Text>
+                            <Text style={styles.offerHeading}>Special Offer for you {discountTimer > 0 && '- Ends soon...'}</Text>
                             <Text style={styles.offerTitle}>Flat <Text style={{ fontWeight: '900' }}>{limitedTimeDiscount}% OFF</Text></Text>
                         </>
                     ) : (
@@ -173,6 +178,7 @@ const OfferCard = () => {
                 </View>
 
                 {!isExpired ? (
+                    discountTimer > 0 &&
                     <Animated.View style={[styles.timerRow, { transform: [{ scale: timerPulse }] }]}>
                         <View style={[styles.timerBox, { backgroundColor: timerTheme.bg, borderColor: timerTheme.border }]}>
                             <Text style={[styles.timerNum, { color: timerTheme.num }]}>{String(parts.minutes).padStart(2, '0')}</Text>

@@ -1,6 +1,6 @@
 
 
-import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffect } from "react";
+import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
 
 import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
@@ -40,6 +40,7 @@ interface GBFeatures {
 interface IGBContext {
     loading: boolean;
     features: GBFeatures;
+    discountEndTime: number,
 }
 
 // Create the GrowthBookContext with an initial default value
@@ -56,7 +57,8 @@ export const GrowthBookContext = createContext<IGBContext>({
         trialDays: 3,
         videoMediaType: true,
         videoUrl: "https://youtu.be/X1Of8cALHRo?si=XvXxb94STjnr7-XW"
-    }
+    },
+    discountEndTime: 0
 });
 
 // Define the props type for the provider
@@ -69,6 +71,7 @@ export const useMyGrowthBook = () => useContext(GrowthBookContext)
 const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const loading = useFeatureValue<boolean>("loading", false);
 
+    const [discountEndTime, setDiscountEndTime] = useState(0)
     // Fetch feature values from GrowthBook
     const actionType = useFeatureValue<string>("action-type", "");
     const demoLink = useFeatureValue<string>("demoLink", "https://cal.com/rahul-idiv/30min");
@@ -96,8 +99,18 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
 
     Console.log("Growthbook Initialized", { loading, features });
 
+    useEffect(() => {
+        if (discountTimer > 0) {
+            if (!sessionStorage.getItem("discountEndTime"))
+                sessionStorage.setItem("discountEndTime", "" + (Date.now() + discountTimer * 60 * 1000))
+            const p = sessionStorage.getItem("discountEndTime")
+            setDiscountEndTime(p ? parseInt(p) : 0)
+        }
+    }, [discountTimer])
+
+
     return (
-        <GrowthBookContext.Provider value={{ loading, features }}>
+        <GrowthBookContext.Provider value={{ loading, features, discountEndTime }}>
             {children}
         </GrowthBookContext.Provider>
     );

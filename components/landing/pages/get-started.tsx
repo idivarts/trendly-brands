@@ -22,7 +22,6 @@ import {
 } from "react-native";
 
 import OfferCard from "@/components/landing/OfferCard";
-import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import VideoPlayer from "../VideoPlayer";
 
 
@@ -39,7 +38,6 @@ const YT_LINK = "https://youtu.be/X1Of8cALHRo?si=FsHvfKuDdjs4Sf3s";
 export default function TrendlyHero() {
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
-    const { features: { discountTimer } } = useMyGrowthBook()
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
@@ -67,16 +65,6 @@ export default function TrendlyHero() {
         });
         router.resetAndNavigate("/create-brand");
     }
-
-    const [showOffer, setShowOffer] = useState(false);
-
-    useEffect(() => {
-        if (discountTimer > 0) {
-            if (!sessionStorage.getItem("discountEndTime"))
-                sessionStorage.setItem("discountEndTime", "" + (Date.now() + discountTimer * 60 * 1000))
-            setShowOffer(true)
-        }
-    }, [discountTimer])
 
     useEffect(() => {
         // page enter animations (staggered)
@@ -147,10 +135,7 @@ export default function TrendlyHero() {
                             and engagement. Save on huge commissions you pay working with
                             agencies and other middlemen!
                         </Text>
-
-                        {showOffer && (
-                            <OfferCard />
-                        )}
+                        <OfferCard />
                         <Pressable
                             onPress={() => googleLogin()}
                             onHoverIn={() => setCtaHovered(true)}

@@ -3,6 +3,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
@@ -50,6 +51,7 @@ const MONTHLY_FEATURES = [
 export default function PricingPage() {
     const { selectedBrand, updateBrand } = useBrandContext()
     const router = useMyNavigation()
+    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount } } = useMyGrowthBook()
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)
