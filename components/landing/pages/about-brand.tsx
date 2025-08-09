@@ -243,7 +243,7 @@ export default function BrandDetailPage() {
             </ScrollView>
             <SuccessCelebration
                 visible={showSuccess}
-                message="Brand created!"
+                message="Profile Updated!"
                 onDone={() => {
                     setShowSuccess(false);
                     router.resetAndNavigate("/pricing-page")
