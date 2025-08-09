@@ -11,7 +11,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
     Animated,
     Easing,
-    ImageBackground,
     Linking,
     Platform,
     Pressable,
@@ -19,10 +18,11 @@ import {
     StyleSheet,
     Text,
     useWindowDimensions,
-    View,
+    View
 } from "react-native";
 
 import OfferCard from "@/components/landing/OfferCard";
+import VideoPlayer from "../VideoPlayer";
 
 
 // const LOGO =
@@ -52,11 +52,7 @@ export default function TrendlyHero() {
     const videoOpacity = useRef(new Animated.Value(0)).current;
     const videoScale = useRef(new Animated.Value(0.96)).current;
 
-    // subtle pulsing for play button
-    const playPulse = useRef(new Animated.Value(1)).current;
-
     const [ctaHovered, setCtaHovered] = useState(false);
-    const [videoHovered, setVideoHovered] = useState(false);
 
     const singupHandler = (manager: UserCredential) => {
         setSession(manager.user.uid);
@@ -104,24 +100,6 @@ export default function TrendlyHero() {
                 }),
             ]),
         ]).start();
-
-        // looped subtle pulse on play button
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(playPulse, {
-                    toValue: 1.06,
-                    duration: 1200,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(playPulse, {
-                    toValue: 1,
-                    duration: 1200,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
     }, []);
 
     const { googleLogin } = useGoogleLogin(setLoading, setError, singupHandler);
@@ -185,25 +163,7 @@ export default function TrendlyHero() {
                         !isWide && { marginTop: 28 },
                         { opacity: videoOpacity, transform: [{ scale: videoScale }] },
                     ]}>
-                        <Pressable
-                            accessibilityRole="imagebutton"
-                            onPress={() => open(YT_LINK)}
-                            onHoverIn={() => setVideoHovered(true)}
-                            onHoverOut={() => setVideoHovered(false)}
-                            style={({ pressed }) => [
-                                videoHovered || pressed ? { transform: [{ scale: 0.995 }] } : null,
-                            ]}
-                        >
-                            <ImageBackground
-                                source={{ uri: VIDEO_THUMB }}
-                                style={styles.video}
-                                imageStyle={styles.videoImg}
-                            >
-                                <Animated.View style={[styles.playCircle, { transform: [{ scale: playPulse }] }]}>
-                                    <Text style={styles.playIcon}>▶︎</Text>
-                                </Animated.View>
-                            </ImageBackground>
-                        </Pressable>
+                        <VideoPlayer videoLink={YT_LINK} thumbnail={VIDEO_THUMB} />
                     </Animated.View>
 
                 </View>
@@ -311,35 +271,5 @@ const styles = StyleSheet.create({
     /* Right / Video */
     videoWrap: {
         flex: 1,
-    },
-    video: {
-        width: "100%",
-        aspectRatio: 16 / 9,
-        borderRadius: 20,
-        overflow: "hidden",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#E7F0F9",
-        shadowColor: "#000",
-        shadowOpacity: 0.12,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-        ...Platform.select({ android: { elevation: 6 } }),
-    },
-    videoImg: {
-        resizeMode: "cover",
-    },
-    playCircle: {
-        width: 96,
-        height: 96,
-        borderRadius: 999,
-        backgroundColor: "rgba(255,255,255,0.9)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    playIcon: {
-        fontSize: 48,
-        color: BLUE_DARK,
-        marginLeft: 6, // optical centering for the triangle glyph
     },
 });

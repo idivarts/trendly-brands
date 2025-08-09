@@ -61,7 +61,6 @@ export default function CreateBrandPage() {
     }
 
     async function handleSubmit() {
-        setShowSuccess(true);
         if (submitting) return;
         if (!validate()) return;
         try {
