@@ -17,6 +17,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
+import { SuccessCelebration } from "../SuccessCelebration";
 
 
 const ONBOARD_IMG =
@@ -35,6 +36,8 @@ export default function BrandDetailPage() {
     const [brandAge, setBrandAge] = useState<string>("");
     const [about, setAbout] = useState("");
     const [website, setWebsite] = useState("");
+
+    const [showSuccess, setShowSuccess] = useState(false)
     const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
     const [errors, setErrors] = useState<{ brand?: string; phone?: string }>({});
     const [submitting, setSubmitting] = useState(false);
@@ -74,7 +77,7 @@ export default function BrandDetailPage() {
                 }
             })
 
-            router.resetAndNavigate("/pricing-page")
+            setShowSuccess(true)
             // open(url);
         } finally {
             setSubmitting(false);
@@ -238,6 +241,14 @@ export default function BrandDetailPage() {
 
                 <LandingFooter />
             </ScrollView>
+            <SuccessCelebration
+                visible={showSuccess}
+                message="Brand created!"
+                onDone={() => {
+                    setShowSuccess(false);
+                    router.resetAndNavigate("/pricing-page")
+                }}
+            />
         </AppLayout>
     );
 }
