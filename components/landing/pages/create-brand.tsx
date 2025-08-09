@@ -91,6 +91,7 @@ export default function CreateBrandPage() {
     }
 
     useEffect(() => {
+        Toaster.success("User successfully Register", "Proceed to create your brand")
         AuthApp.authStateReady().then(() => {
             if (!AuthApp.currentUser)
                 router.resetAndNavigate("/get-started")

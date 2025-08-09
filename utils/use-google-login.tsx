@@ -55,10 +55,7 @@ export const useGoogleLogin = (setLoading: Function, setError: Function, signupH
         if (isExistingUser) {
             firebaseSignIn(result);
         } else {
-            if (signupHandler)
-                signupHandler(result)
-            else
-                firebaseSignUp(result);
+            firebaseSignUp(result);
         }
         Toaster.success('Logged in with Google successfully');
     }
