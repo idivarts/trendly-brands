@@ -104,7 +104,8 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
             if (!sessionStorage.getItem("discountEndTime"))
                 sessionStorage.setItem("discountEndTime", "" + (Date.now() + discountTimer * 60 * 1000))
             const p = sessionStorage.getItem("discountEndTime")
-            setDiscountEndTime(p ? parseInt(p) : 0)
+            const dTime = p ? parseInt(p) : 0
+            setDiscountEndTime(dTime)
         }
     }, [discountTimer])
 
