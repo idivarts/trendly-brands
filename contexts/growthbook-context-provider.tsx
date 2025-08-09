@@ -7,6 +7,7 @@ import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { GrowthBook } from "@growthbook/growthbook";
 import { GrowthBookProvider, useFeatureValue } from "@growthbook/growthbook-react";
 import { autoAttributesPlugin } from "@growthbook/growthbook/plugins";
+import { useBrandContext } from "./brand-context.provider";
 
 const growthbook = new GrowthBook({
     apiHost: "https://cdn.growthbook.io",
@@ -85,6 +86,7 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const trialDays = useFeatureValue<number>("trial-days", 3);
     const videoMediaType = useFeatureValue<boolean>("videoMediaType", true);
     const videoUrl = useFeatureValue<string>("videoUrl", "https://youtu.be/X1Of8cALHRo?si=XvXxb94STjnr7-XW");
+    const { selectedBrand, updateBrand } = useBrandContext()
 
     const features: GBFeatures = {
         actionType,
@@ -110,6 +112,17 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
             setDiscountEndTime(dTime)
         }
     }, [discountTimer])
+
+    useEffect(() => {
+        if (selectedBrand) {
+            updateBrand(selectedBrand.id, {
+                growthBook: {
+                    ...features,
+                    discountEndTime,
+                }
+            })
+        }
+    }, [selectedBrand])
 
     const discountPercentage = () => {
         if (discountTimer > 0 && discountEndTime < Date.now()) {
