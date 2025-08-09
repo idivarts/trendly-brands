@@ -21,6 +21,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
+import { SuccessCelebration } from "../SuccessCelebration";
 
 
 const ONBOARD_IMG =
@@ -47,6 +48,7 @@ export default function CreateBrandPage() {
     const [errors, setErrors] = useState<{ brand?: string; phone?: string; brandAge?: string }>({});
     const [submitting, setSubmitting] = useState(false);
     const [brandAge, setBrandAge] = useState<string>("");
+    const [showSuccess, setShowSuccess] = useState(false);
 
     function validate() {
         const e: { brand?: string; phone?: string; brandAge?: string } = {};
@@ -59,6 +61,7 @@ export default function CreateBrandPage() {
     }
 
     async function handleSubmit() {
+        setShowSuccess(true);
         if (submitting) return;
         if (!validate()) return;
         try {
@@ -82,7 +85,7 @@ export default function CreateBrandPage() {
                 id: brand.id
             })
 
-            router.resetAndNavigate("/about-brand")
+            setShowSuccess(true);
         } finally {
             setSubmitting(false);
         }
@@ -229,6 +232,14 @@ export default function CreateBrandPage() {
 
                 <LandingFooter />
             </ScrollView>
+            <SuccessCelebration
+                visible={showSuccess}
+                message="Brand created!"
+                onDone={() => {
+                    setShowSuccess(false);
+                    router.resetAndNavigate("/about-brand");
+                }}
+            />
         </AppLayout>
     );
 }
