@@ -1,3 +1,4 @@
+import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ImageBackground, Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { BLUE_DARK } from './const';
@@ -43,7 +44,10 @@ const VideoPlayer: React.FC<{ videoLink: string, thumbnail?: string }> = ({ vide
         ) : (
             <Pressable
                 accessibilityRole="imagebutton"
-                onPress={() => Linking.openURL(videoLink)}
+                onPress={() => {
+                    analyticsLogEvent("clicked_video", { video_link: videoLink })
+                    Linking.openURL(videoLink)
+                }}
                 onHoverIn={() => setVideoHovered(true)}
                 onHoverOut={() => setVideoHovered(false)}
                 style={({ pressed }) => [

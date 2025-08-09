@@ -22,6 +22,8 @@ import {
 } from "react-native";
 
 import OfferCard from "@/components/landing/OfferCard";
+import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import VideoPlayer from "../VideoPlayer";
 
 
@@ -38,6 +40,7 @@ const YT_LINK = "https://youtu.be/X1Of8cALHRo?si=FsHvfKuDdjs4Sf3s";
 export default function TrendlyHero() {
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
+    const { features, discountEndTime } = useMyGrowthBook()
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
@@ -137,7 +140,13 @@ export default function TrendlyHero() {
                         </Text>
                         <OfferCard />
                         <Pressable
-                            onPress={() => googleLogin()}
+                            onPress={() => {
+                                analyticsLogEvent("clicked_register", {
+                                    ...features,
+                                    discountEndTime
+                                })
+                                googleLogin()
+                            }}
                             onHoverIn={() => setCtaHovered(true)}
                             onHoverOut={() => setCtaHovered(false)}
                             disabled={loading}

@@ -7,6 +7,7 @@ import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
+import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -151,6 +152,10 @@ export default function PricingPage() {
     const handleSubmit = (isGrowthPlan: boolean) => {
         if (submitting) return;
         try {
+            analyticsLogEvent("selected_plan", {
+                isGrowthPlan,
+                discountPercentage: discountPercentage()
+            })
             setSubmitting(true);
             const link = isGrowthPlan ? 0 : 1
             setlink(link)

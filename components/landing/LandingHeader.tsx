@@ -1,10 +1,13 @@
 import { useMyGrowthBook } from '@/contexts/growthbook-context-provider'
+import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics'
+import { usePathname } from 'expo-router'
 import React from 'react'
 import { Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { CAL_LINK, TEXT } from './const'
 
 const LandingHeader = () => {
     const { features: { demoLink } } = useMyGrowthBook()
+    const path = usePathname()
     return (
         <View style={styles.header}>
             <Pressable onPress={() => Linking.openURL("https://www.trendly.now")}>
@@ -14,7 +17,12 @@ const LandingHeader = () => {
                     resizeMode="contain"
                 />
             </Pressable>
-            <Pressable style={styles.demoBtn} onPress={() => open(demoLink ? demoLink : CAL_LINK)}>
+            <Pressable style={styles.demoBtn} onPress={() => {
+                analyticsLogEvent("request_demo", {
+                    pathName: path
+                })
+                open(demoLink ? demoLink : CAL_LINK)
+            }}>
                 <Text style={styles.demoIcon}>🎥</Text>
                 <Text style={styles.demoText}>Request a Demo</Text>
             </Pressable>

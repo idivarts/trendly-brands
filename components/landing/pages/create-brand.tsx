@@ -6,6 +6,7 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -64,6 +65,9 @@ export default function CreateBrandPage() {
         if (submitting) return;
         if (!validate()) return;
         try {
+            analyticsLogEvent("create_brand", {
+                brandName, phone, brandAge
+            })
             setSubmitting(true);
             const brandObj: IBrands = {
                 name: brandName,

@@ -5,6 +5,7 @@ import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
+import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import React, { useState } from "react";
 import {
@@ -31,9 +32,6 @@ export default function BrandDetailPage() {
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
 
-    const [brandName, setBrandName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [brandAge, setBrandAge] = useState<string>("");
     const [about, setAbout] = useState("");
     const [website, setWebsite] = useState("");
 
@@ -60,13 +58,10 @@ export default function BrandDetailPage() {
         if (!selectedBrand) return;
         try {
             setSubmitting(true);
-            const url = `${CREATE_BRAND_LINK}` +
-                `&brand=${encodeURIComponent(brandName.trim())}` +
-                `&phone=${encodeURIComponent(phone.trim())}` +
-                (brandAge ? `&brandAge=${encodeURIComponent(brandAge)}` : "") +
-                (about ? `&about=${encodeURIComponent(about.trim())}` : "") +
-                (website ? `&website=${encodeURIComponent(website.trim())}` : "") +
-                (selectedIndustries.length ? `&industries=${encodeURIComponent(selectedIndustries.join(","))}` : "");
+
+            analyticsLogEvent("update_brand_profile", {
+                about, website, selectedIndustries
+            })
 
             await updateBrand(selectedBrand.id, {
                 profile: {
