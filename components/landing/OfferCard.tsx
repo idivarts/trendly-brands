@@ -10,6 +10,7 @@ import {
     View
 } from "react-native";
 
+import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -27,6 +28,8 @@ function getCountdownParts(ms: number) {
 }
 
 const OfferCard = () => {
+    const { features: { limitedTimeDiscount } } = useMyGrowthBook()
+
     // heartbeat pulse for countdown timer
     const timerPulse = useRef(new Animated.Value(1)).current;
     const offerScale = useRef(new Animated.Value(0.9)).current;
@@ -35,8 +38,9 @@ const OfferCard = () => {
     const isWide = width >= 1000;
 
 
+    const storedVal = sessionStorage.getItem("discountEndTime")
     // End time persists for the session; fallback to 72h from first render
-    const endRef = useRef<number>(nowTs() + OFFER_HOURS * 60 * 60 * 1000);
+    const endRef = useRef<number>(storedVal ? parseInt(storedVal) : 0);
     const [remaining, setRemaining] = useState(endRef.current - nowTs());
     const isExpired = remaining <= 0;
 
@@ -156,8 +160,8 @@ const OfferCard = () => {
                 <View>
                     {!isExpired ? (
                         <>
-                            <Text style={styles.offerHeading}>Special Offer for you - Ends in</Text>
-                            <Text style={styles.offerTitle}>Flat <Text style={{ fontWeight: '900' }}>50% OFF</Text></Text>
+                            <Text style={styles.offerHeading}>Special Offer for you - Ends soon...</Text>
+                            <Text style={styles.offerTitle}>Flat <Text style={{ fontWeight: '900' }}>{limitedTimeDiscount}% OFF</Text></Text>
                         </>
                     ) : (
                         <>
