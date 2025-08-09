@@ -113,16 +113,17 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
         }
     }, [discountTimer])
 
+    const brandId = selectedBrand?.id
     useEffect(() => {
-        if (selectedBrand) {
-            updateBrand(selectedBrand.id, {
+        if (brandId) {
+            updateBrand(brandId, {
                 growthBook: {
                     ...features,
                     discountEndTime,
                 }
             })
         }
-    }, [selectedBrand])
+    }, [brandId])
 
     const discountPercentage = () => {
         if (discountTimer > 0 && discountEndTime < Date.now()) {
