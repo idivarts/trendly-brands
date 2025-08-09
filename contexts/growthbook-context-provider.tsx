@@ -41,6 +41,7 @@ interface IGBContext {
     loading: boolean;
     features: GBFeatures;
     discountEndTime: number,
+    discountPercentage: () => number
 }
 
 // Create the GrowthBookContext with an initial default value
@@ -58,7 +59,8 @@ export const GrowthBookContext = createContext<IGBContext>({
         videoMediaType: true,
         videoUrl: "https://youtu.be/X1Of8cALHRo?si=XvXxb94STjnr7-XW"
     },
-    discountEndTime: 0
+    discountEndTime: 0,
+    discountPercentage: () => 0
 });
 
 // Define the props type for the provider
@@ -109,9 +111,15 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
         }
     }, [discountTimer])
 
+    const discountPercentage = () => {
+        if (discountTimer > 0 && discountEndTime < Date.now()) {
+            return 0
+        }
+        return limitedTimeDiscount
+    }
 
     return (
-        <GrowthBookContext.Provider value={{ loading, features, discountEndTime }}>
+        <GrowthBookContext.Provider value={{ loading, features, discountEndTime, discountPercentage }}>
             {children}
         </GrowthBookContext.Provider>
     );
