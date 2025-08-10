@@ -28,8 +28,6 @@ import { ExplainerDynamic } from "../ExplainerDynamic";
 import VideoPlayer from "../VideoPlayer";
 
 
-// const LOGO =
-//     "https://www.trendly.now/wp-content/uploads/2025/03/rectangluar-blue-logo-transparent-png.avif";
 const VIDEO_THUMB =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif";
 
@@ -166,7 +164,7 @@ export default function TrendlyHero() {
                         !isWide && { marginTop: 28 },
                         { opacity: videoOpacity, transform: [{ scale: videoScale }] },
                     ]}>
-                        <VideoPlayer videoLink={features.videoUrl} thumbnail={VIDEO_THUMB} />
+                        <VideoPlayer videoLink={features.videoUrl} thumbnail={getStarted?.image || VIDEO_THUMB} />
                     </Animated.View>
 
                 </View>
