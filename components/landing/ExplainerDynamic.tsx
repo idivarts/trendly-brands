@@ -1,3 +1,4 @@
+import { ExplainerConfig } from "@/contexts/growthbook-context-provider";
 import React from "react";
 import {
     ImageBackground,
@@ -9,23 +10,6 @@ import {
 import { BLUE, BLUE_DARK, BLUE_LIGHT, TEXT } from "./const";
 
 
-export interface ExplainerConfig {
-    /**
-     * Title with an optional focused fragment wrapped in curly braces.
-     * Example: "Create your {brand}" -> "brand" uses `styles.titleAccent`.
-     */
-    title: string;
-    /** Optional Short text on top of the title. */
-    kicker?: string
-    /** Optional short paragraph shown under the title (hidden on narrow layouts). */
-    description?: string;
-    /** Optional bullet/point items (hidden on narrow layouts). */
-    items?: string[];
-    /** Optional image URL. If provided, a 16:9 visual is rendered. */
-    image?: string;
-    /** Optional Button text */
-    action?: string;
-}
 
 /**
  * Reusable explainer section that conditionally renders pieces based on the provided config.
