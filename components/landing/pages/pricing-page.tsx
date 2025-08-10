@@ -192,7 +192,7 @@ export default function PricingPage() {
                             config={explainerConfig}
                             viewBelowItems={<><View style={styles.reasonsBox}>
                                 <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
-                                    {limitedTimeDiscount > 0 &&
+                                    {discountPercentage() > 0 &&
                                         <View style={styles.discountPill}>
                                             <Text style={styles.discountText}>Today only: Flat {limitedTimeDiscount}% OFF</Text>
                                         </View>}
@@ -275,7 +275,7 @@ export default function PricingPage() {
                                 <View style={styles.priceRow}>
                                     <Text style={styles.priceMain}>₹{plans.business.finalAmount}</Text>
                                     <Text style={styles.priceSlash}>₹499</Text>
-                                    <Text style={styles.pricePer}>/month</Text>
+                                    <Text style={styles.pricePer}>/ month</Text>
                                     <Text style={styles.pricePer}>when paid yearly</Text>
                                 </View>
                                 <Text style={styles.savingsText}>Billed ₹{plans.business.finalAmount * 12}/year — Save 2 months cost</Text>
@@ -296,8 +296,9 @@ export default function PricingPage() {
                                 <Text style={styles.planName}>Growth (Monthly)</Text>
                                 <View style={styles.priceRow}>
                                     <Text style={styles.priceMain}>₹{plans.growth.finalAmount}</Text>
-                                    <Text style={styles.priceSlash}>₹499</Text>
-                                    <Text style={styles.pricePer}>/month</Text>
+                                    {discountPercentage() > 0 &&
+                                        <Text style={styles.priceSlash}>₹499</Text>}
+                                    <Text style={styles.pricePer}>/ month</Text>
                                 </View>
                                 <View style={styles.divider} />
                                 {MONTHLY_FEATURES.map((f, i) => (
