@@ -123,7 +123,7 @@ export default function BrandDetailPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <ExplainerDynamic
                             config={explainerConfig}
-                            viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>}
+                            viewBelowItems={aboutBrand?.showOfferCard && <View style={{ paddingVertical: 16 }}><OfferCard /></View>}
                         />
                         {/* Visual */}
                         {/* <ImageBackground

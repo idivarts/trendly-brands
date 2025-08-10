@@ -132,7 +132,7 @@ export default function CreateBrandPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <ExplainerDynamic
                             config={explainerConfig}
-                            viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}>
+                            viewBelowItems={cJson?.showOfferCard && <View style={{ paddingVertical: 16, }}>
                                 <OfferCard />
                             </View>}
                         />

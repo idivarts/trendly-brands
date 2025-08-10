@@ -41,6 +41,8 @@ export interface ExplainerConfig {
     image?: string;
     /** Optional Button text */
     action?: string;
+    /** Optional Button text */
+    showOfferCard?: boolean;
 }
 
 interface GBFeatures {
