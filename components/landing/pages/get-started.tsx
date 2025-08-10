@@ -156,7 +156,8 @@ export default function TrendlyHero() {
                                     <FontAwesome name="google" size={20} color="#fff" style={{ marginRight: 8 }} />
                                 )}
                                 <Text style={styles.ctaText}>{!loading ? (getStarted?.action || "Join Now to claim Offer") : "Please wait..."}</Text>
-                                <Text style={styles.ctaArrow}>›</Text>
+                                {actionType == "demo" &&
+                                    <Text style={styles.ctaArrow}>›</Text>}
                             </Pressable>}
                         />
 
