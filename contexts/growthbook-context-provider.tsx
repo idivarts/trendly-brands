@@ -103,7 +103,7 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     // Fetch feature values from GrowthBook
     const actionType = useFeatureValue<string>("action-type", "");
     const demoLink = useFeatureValue<string>("demoLink", "https://cal.com/rahul-idiv/30min");
-    const discountTimer = useFeatureValue<number>("discount-timer", 10);
+    const discountTimer = useFeatureValue<number>("discount-timer", 0);
     const imageUrl = useFeatureValue<string>("imageUrl", "");
     const isPaywallClosable = useFeatureValue<boolean>("is-paywall-closable", false);
     const limitedTimeDiscount = useFeatureValue<number>("limited-time-discount", 10);

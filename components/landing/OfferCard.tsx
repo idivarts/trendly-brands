@@ -28,6 +28,13 @@ function getCountdownParts(ms: number) {
 }
 
 const OfferCard = () => {
+    const { loading, features: { discountTimer }, discountEndTime } = useMyGrowthBook()
+    if (!loading || (discountEndTime == 0 && discountTimer > 0))
+        return null
+    return <WaitToRender />
+}
+
+const WaitToRender = () => {
     const { features: { discountTimer, limitedTimeDiscount }, discountEndTime } = useMyGrowthBook()
 
     // heartbeat pulse for countdown timer
@@ -39,8 +46,9 @@ const OfferCard = () => {
 
 
     // End time persists for the session; fallback to 72h from first render
-    const endRef = useRef<number>(discountEndTime);
-    const [remaining, setRemaining] = useState(endRef.current - nowTs());
+    const [remaining, setRemaining] = useState(discountEndTime - nowTs());
+    console.log("Offer Reminaind", discountEndTime, nowTs(), remaining);
+
     const isExpired = remaining <= 0 && discountTimer > 0;
 
     useEffect(() => {
@@ -62,7 +70,7 @@ const OfferCard = () => {
     useEffect(() => {
         if (discountTimer > 0) {
             const t = setInterval(() => {
-                setRemaining(endRef.current - nowTs());
+                setRemaining(discountEndTime - nowTs());
             }, 1000);
             return () => clearInterval(t);
         }
