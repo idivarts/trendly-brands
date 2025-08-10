@@ -22,7 +22,7 @@ import {
 } from "react-native";
 
 import OfferCard from "@/components/landing/OfferCard";
-import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { ExplainerDynamic } from "../ExplainerDynamic";
 import VideoPlayer from "../VideoPlayer";
@@ -38,6 +38,7 @@ export default function TrendlyHero() {
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
     const { features, discountEndTime } = useMyGrowthBook()
+    const { features: { getStarted, actionType, demoLink } } = useMyGrowthBook()
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
@@ -64,6 +65,11 @@ export default function TrendlyHero() {
             },
         });
         router.resetAndNavigate("/create-brand");
+    }
+
+    const config: ExplainerConfig = getStarted ? getStarted : {
+        title: "Find {Right Influencers} to promote your brand",
+        description: "Connect with the right influencers to increase your brand’s reach and engagement. Save on huge commissions you pay working with agencies and other middlemen!",
     }
 
     useEffect(() => {
@@ -125,18 +131,19 @@ export default function TrendlyHero() {
                     ]}
                     >
                         <ExplainerDynamic
-                            config={{
-                                title: "Find {Right Influencers} to promote your brand",
-                                description: "Connect with the right influencers to increase your brand’s reach and engagement. Save on huge commissions you pay working with agencies and other middlemen!"
-                            }}
+                            config={config}
                             viewBelowItems={<OfferCard />}
                             viewAtBottom={<Pressable
                                 onPress={() => {
-                                    analyticsLogEvent("clicked_register", {
-                                        ...features,
-                                        discountEndTime
-                                    })
-                                    googleLogin()
+                                    if (actionType == "demo") {
+                                        Linking.openURL(demoLink)
+                                    } else {
+                                        analyticsLogEvent("clicked_register", {
+                                            ...features,
+                                            discountEndTime
+                                        })
+                                        googleLogin()
+                                    }
                                 }}
                                 onHoverIn={() => setCtaHovered(true)}
                                 onHoverOut={() => setCtaHovered(false)}
@@ -146,7 +153,7 @@ export default function TrendlyHero() {
                                     (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
                                 ]}
                             >
-                                <Text style={styles.ctaText}>{loading ? "Registering your claim…" : "Register now to Claim Offer"}</Text>
+                                <Text style={styles.ctaText}>{!loading ? (getStarted?.action || "Join Now to claim Offer") : "Please wait..."}</Text>
                                 <Text style={styles.ctaArrow}>›</Text>
                             </Pressable>}
                         />
