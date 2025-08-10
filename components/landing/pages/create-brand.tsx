@@ -38,7 +38,7 @@ const AGE_OPTIONS = [
 
 export default function CreateBrandPage() {
     const router = useMyNavigation()
-    const { features: { createBrand: cJson } } = useMyGrowthBook()
+    const { features: { createBrand: cJson, hideAboutBrand } } = useMyGrowthBook()
     const { manager, session } = useAuthContext()
     const { createBrand, setSelectedBrand } = useBrandContext()
 
@@ -224,7 +224,10 @@ export default function CreateBrandPage() {
                 message="Brand created!"
                 onDone={() => {
                     setShowSuccess(false);
-                    router.resetAndNavigate("/about-brand");
+                    if (hideAboutBrand)
+                        router.resetAndNavigate("/pricing-page");
+                    else
+                        router.resetAndNavigate("/about-brand");
                 }}
             />
         </AppLayout>

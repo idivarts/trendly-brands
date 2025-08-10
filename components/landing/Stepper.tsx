@@ -1,28 +1,34 @@
+import { useMyGrowthBook } from '@/contexts/growthbook-context-provider';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BLUE, BLUE_DARK, BLUE_LIGHT, TEXT } from './const';
 
 const Stepper = ({ count = 0, total = 3 }) => {
 
-    const steps = Array.from({ length: total }, (_, i) => i + 1);
+    const { features: { hideAboutBrand } } = useMyGrowthBook()
+
+    const finalCount = (count > 2 && hideAboutBrand) ? count - 1 : count
+    const finalTotal = (hideAboutBrand) ? total - 1 : total
+
+    const steps = Array.from({ length: finalTotal }, (_, i) => i + 1);
 
     {/* Stepper */ }
     return (
         <View style={styles.stepperWrap}>
-            <Text style={styles.stepperLabel}>Step {count} of {total}</Text>
+            <Text style={styles.stepperLabel}>Step {finalCount} of {finalTotal}</Text>
             <View style={styles.stepperRow}>
                 {steps.map((step, index) => (
                     <View key={step} style={styles.stepGroup}>
                         <View style={[
                             styles.stepDot,
-                            step < count ? styles.stepDone : step === count ? styles.stepCurrent : styles.stepPending
+                            step < finalCount ? styles.stepDone : step === finalCount ? styles.stepCurrent : styles.stepPending
                         ]}>
                             <Text style={styles.stepNum}>{step}</Text>
                         </View>
                         {index !== steps.length - 1 && (
                             <View style={[
                                 styles.stepBar,
-                                step < count ? styles.stepBarDone : styles.stepBarPending
+                                step < finalCount ? styles.stepBarDone : styles.stepBarPending
                             ]} />
                         )}
                     </View>
