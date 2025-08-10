@@ -18,6 +18,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
+import { ExplainerDynamic } from "../ExplainerDynamic";
 import { SuccessCelebration } from "../SuccessCelebration";
 
 
@@ -106,29 +107,19 @@ export default function BrandDetailPage() {
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <Text style={styles.kicker}>BRAND ONBOARDING</Text>
-                        <Text style={styles.title}>
-                            Tell us about <Text style={styles.titleAccent}>{selectedBrand?.name || "your brand"}</Text>
-                        </Text>
-                        <Text style={styles.subtitle}>
-                            Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.
-                        </Text>
-
-                        <View style={styles.points}>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Get matched to niche influencers fast</Text>
-                            </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Transparent chats, contracts, and payouts</Text>
-                            </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Fraud protection and dispute assistance</Text>
-                            </View>
-                        </View>
-                        <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                        <ExplainerDynamic
+                            config={{
+                                kicker: "BRAND ONBOARDING",
+                                title: `Tell us about {${selectedBrand?.name || "your brand"}}`,
+                                description: "Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.",
+                                items: [
+                                    "Get matched to niche influencers fast",
+                                    "Transparent chats, contracts, and payouts",
+                                    "Fraud protection and dispute assistance"
+                                ]
+                            }}
+                            viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>}
+                        />
                         {/* Visual */}
                         {/* <ImageBackground
                             source={{ uri: ONBOARD_IMG }}

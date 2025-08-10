@@ -24,6 +24,7 @@ import {
     View
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import { ExplainerDynamic } from "../ExplainerDynamic";
 
 const ONBOARD_IMG =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
@@ -180,45 +181,49 @@ export default function PricingPage() {
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <Text style={styles.kicker}>PRICING & PLANS</Text>
-                        <Text style={styles.title}>
-                            Choose your <Text style={styles.titleAccent}>plan</Text> for {selectedBrand?.name || "your brand"}
-                        </Text>
-                        {/* Trust / Reasons */}
-                        <View style={styles.reasonsBox}>
-                            <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
-                                {limitedTimeDiscount > 0 &&
-                                    <View style={styles.discountPill}>
-                                        <Text style={styles.discountText}>Today only: Flat {limitedTimeDiscount}% OFF</Text>
-                                    </View>}
+                        <ExplainerDynamic
+                            config={{
+                                kicker: "PRICING & PLANS",
+                                title: `Chose your {plan} for ${selectedBrand?.name || "your brand"}`
+                            }}
+                            viewBelowItems={<><View style={styles.reasonsBox}>
+                                <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
+                                    {limitedTimeDiscount > 0 &&
+                                        <View style={styles.discountPill}>
+                                            <Text style={styles.discountText}>Today only: Flat {limitedTimeDiscount}% OFF</Text>
+                                        </View>}
+                                    {trialDays > 0 &&
+                                        <View style={styles.discountPill}>
+                                            <Text style={styles.discountText}>{trialDays} days free trial</Text>
+                                        </View>}
+                                    {moneyBackGuarantee > 0 &&
+                                        <View style={styles.discountPill}>
+                                            <Text style={styles.discountText}>{moneyBackGuarantee} days Money-Back Guarantee</Text>
+                                        </View>}
+                                </View>
                                 {trialDays > 0 &&
-                                    <View style={styles.discountPill}>
-                                        <Text style={styles.discountText}>{trialDays} days free trial</Text>
+                                    <View style={styles.reasonItem}>
+                                        <Text style={styles.pointIcon}>🛡️</Text>
+                                        <Text style={styles.reasonText}>We only collect payment info now — you won't be charged until your trial ends.</Text>
                                     </View>}
+                                <View style={styles.reasonItem}>
+                                    <Text style={styles.pointIcon}>↩️</Text>
+                                    <Text style={styles.reasonText}>Cancel anytime during trial in one tap — no questions asked.</Text>
+                                </View>
                                 {moneyBackGuarantee > 0 &&
-                                    <View style={styles.discountPill}>
-                                        <Text style={styles.discountText}>{moneyBackGuarantee} days Money-Back Guarantee</Text>
+                                    <View style={styles.reasonItem}>
+                                        <Text style={styles.pointIcon}>💯</Text>
+                                        <Text style={styles.reasonText}>{moneyBackGuarantee}‑day money‑back guarantee after your first payment.</Text>
                                     </View>}
+                                <View style={styles.noticeRow}>
+                                    <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
+                                </View>
                             </View>
-                            {trialDays > 0 &&
-                                <View style={styles.reasonItem}>
-                                    <Text style={styles.pointIcon}>🛡️</Text>
-                                    <Text style={styles.reasonText}>We only collect payment info now — you won't be charged until your trial ends.</Text>
-                                </View>}
-                            <View style={styles.reasonItem}>
-                                <Text style={styles.pointIcon}>↩️</Text>
-                                <Text style={styles.reasonText}>Cancel anytime during trial in one tap — no questions asked.</Text>
-                            </View>
-                            {moneyBackGuarantee > 0 &&
-                                <View style={styles.reasonItem}>
-                                    <Text style={styles.pointIcon}>💯</Text>
-                                    <Text style={styles.reasonText}>{moneyBackGuarantee}‑day money‑back guarantee after your first payment.</Text>
-                                </View>}
-                            <View style={styles.noticeRow}>
-                                <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
-                            </View>
-                        </View>
-                        <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                                <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                            </>}
+                        />
+                        {/* Trust / Reasons */}
+
                         {/* <Text style={styles.subtitle}>
                             Still Confused? Look into the <Text style={{ fontWeight: '800' }}>demo of the platform</Text> below to know what you get out of it!
                         </Text> */}

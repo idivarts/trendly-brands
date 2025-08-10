@@ -27,7 +27,6 @@ import { SuccessCelebration } from "../SuccessCelebration";
 
 const ONBOARD_IMG =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
-const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 const AGE_OPTIONS = [
     { key: "JUST_STARTING", title: "Just starting", desc: "New or pre-launch brand" },
     { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
@@ -113,7 +112,7 @@ export default function CreateBrandPage() {
             "Transparent chats, contracts, and payouts",
             "Fraud protection and dispute assistance",
         ],
-        image: ONBOARD_IMG,
+        // image: ONBOARD_IMG,
     };
 
     return (
@@ -131,7 +130,6 @@ export default function CreateBrandPage() {
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <ExplainerDynamic
                             config={explainerConfig}
-                            isWide={isWide}
                             viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}>
                                 <OfferCard />
                             </View>}

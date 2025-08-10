@@ -34,12 +34,10 @@ export interface ExplainerConfig {
  */
 export function ExplainerDynamic({
     config,
-    isWide,
     viewBelowItems,
     viewAtBottom
 }: {
     config: ExplainerConfig;
-    isWide?: boolean;
     viewBelowItems?: any;
     viewAtBottom?: any;
 }) {
@@ -72,12 +70,12 @@ export function ExplainerDynamic({
             {renderTitle(title)}
 
             {/* Description (wide only) */}
-            {isWide && !!description && (
+            {!!description && (
                 <Text style={styles.subtitle}>{description}</Text>
             )}
 
             {/* Items list (wide only) */}
-            {isWide && Array.isArray(items) && items.length > 0 && (
+            {Array.isArray(items) && items.length > 0 && (
                 <View style={styles.points}>
                     {items.map((pt, idx) => (
                         <View style={styles.pointItem} key={idx}>

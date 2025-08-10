@@ -24,6 +24,7 @@ import {
 import OfferCard from "@/components/landing/OfferCard";
 import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { ExplainerDynamic } from "../ExplainerDynamic";
 import VideoPlayer from "../VideoPlayer";
 
 
@@ -123,37 +124,32 @@ export default function TrendlyHero() {
                         { opacity: leftFade, transform: [{ translateY: leftTranslateY }] },
                     ]}
                     >
-                        {/* <Text style={styles.kicker}>FOR BRANDS</Text> */}
-                        <Text style={styles.title}>
-                            Find <Text style={styles.titleAccent}>Right Influencers</Text> to
-                            {"\n"}promote your Brand
-                        </Text>
-
-                        <Text style={styles.subtitle}>
-                            Connect with the right influencers to increase your brand’s reach
-                            and engagement. Save on huge commissions you pay working with
-                            agencies and other middlemen!
-                        </Text>
-                        <OfferCard />
-                        <Pressable
-                            onPress={() => {
-                                analyticsLogEvent("clicked_register", {
-                                    ...features,
-                                    discountEndTime
-                                })
-                                googleLogin()
+                        <ExplainerDynamic
+                            config={{
+                                title: "Find {Right Influencers} to promote your brand",
+                                description: "Connect with the right influencers to increase your brand’s reach and engagement. Save on huge commissions you pay working with agencies and other middlemen!"
                             }}
-                            onHoverIn={() => setCtaHovered(true)}
-                            onHoverOut={() => setCtaHovered(false)}
-                            disabled={loading}
-                            style={({ pressed }) => [
-                                styles.cta,
-                                (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
-                            ]}
-                        >
-                            <Text style={styles.ctaText}>{loading ? "Registering your claim…" : "Register now to Claim Offer"}</Text>
-                            <Text style={styles.ctaArrow}>›</Text>
-                        </Pressable>
+                            viewBelowItems={<OfferCard />}
+                            viewAtBottom={<Pressable
+                                onPress={() => {
+                                    analyticsLogEvent("clicked_register", {
+                                        ...features,
+                                        discountEndTime
+                                    })
+                                    googleLogin()
+                                }}
+                                onHoverIn={() => setCtaHovered(true)}
+                                onHoverOut={() => setCtaHovered(false)}
+                                disabled={loading}
+                                style={({ pressed }) => [
+                                    styles.cta,
+                                    (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
+                                ]}
+                            >
+                                <Text style={styles.ctaText}>{loading ? "Registering your claim…" : "Register now to Claim Offer"}</Text>
+                                <Text style={styles.ctaArrow}>›</Text>
+                            </Pressable>}
+                        />
 
                     </Animated.View>
 
