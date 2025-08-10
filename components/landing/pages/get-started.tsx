@@ -24,6 +24,7 @@ import {
 import OfferCard from "@/components/landing/OfferCard";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { FontAwesome } from "@expo/vector-icons";
 import { ExplainerDynamic } from "../ExplainerDynamic";
 import VideoPlayer from "../VideoPlayer";
 
@@ -151,6 +152,9 @@ export default function TrendlyHero() {
                                     (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
                                 ]}
                             >
+                                {actionType != "demo" && (
+                                    <FontAwesome name="google" size={20} color="#fff" style={{ marginRight: 8 }} />
+                                )}
                                 <Text style={styles.ctaText}>{!loading ? (getStarted?.action || "Join Now to claim Offer") : "Please wait..."}</Text>
                                 <Text style={styles.ctaArrow}>›</Text>
                             </Pressable>}
