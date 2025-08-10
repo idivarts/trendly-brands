@@ -4,7 +4,7 @@ import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffe
 
 import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
-import { GrowthBook } from "@growthbook/growthbook";
+import { GrowthBook, JSONValue } from "@growthbook/growthbook";
 import { GrowthBookProvider, useFeatureValue } from "@growthbook/growthbook-react";
 import { autoAttributesPlugin } from "@growthbook/growthbook/plugins";
 import { useBrandContext } from "./brand-context.provider";
@@ -25,6 +25,24 @@ const growthbook = new GrowthBook({
     plugins: [autoAttributesPlugin()],
 });
 
+export interface ExplainerConfig {
+    /**
+     * Title with an optional focused fragment wrapped in curly braces.
+     * Example: "Create your {brand}" -> "brand" uses `styles.titleAccent`.
+     */
+    title: string;
+    /** Optional Short text on top of the title. */
+    kicker?: string
+    /** Optional short paragraph shown under the title (hidden on narrow layouts). */
+    description?: string;
+    /** Optional bullet/point items (hidden on narrow layouts). */
+    items?: Array<string>;
+    /** Optional image URL. If provided, a 16:9 visual is rendered. */
+    image?: string;
+    /** Optional Button text */
+    action?: string;
+}
+
 interface GBFeatures {
     actionType: string;
     demoLink: string;
@@ -36,6 +54,12 @@ interface GBFeatures {
     trialDays: number;
     videoMediaType: boolean;
     videoUrl: string;
+    getStarted?: ExplainerConfig,
+    createBrand?: ExplainerConfig,
+    aboutBrand?: ExplainerConfig,
+    pricingPage?: ExplainerConfig,
+    businessFeatures?: string[]
+    growthFeatures?: string[]
 }
 
 interface IGBContext {
@@ -88,6 +112,14 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const videoUrl = useFeatureValue<string>("videoUrl", "https://youtu.be/X1Of8cALHRo?si=XvXxb94STjnr7-XW");
     const { selectedBrand, updateBrand } = useBrandContext()
 
+    const getStarted: any = useFeatureValue<JSONValue>("get-started", null);
+    const createBrand: any = useFeatureValue<JSONValue>("create-brand", null);
+    const aboutBrand: any = useFeatureValue<JSONValue>("about-brand", null);
+    const pricingPage: any = useFeatureValue<JSONValue>("pricing-page", null);
+
+    const businessFeatures: any = useFeatureValue<string[] | null>("business-features", null);
+    const growthFeatures: any = useFeatureValue<string[] | null>("growth-features", null);
+
     const features: GBFeatures = {
         actionType,
         demoLink,
@@ -99,6 +131,12 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
         trialDays,
         videoMediaType,
         videoUrl,
+        getStarted,
+        createBrand,
+        aboutBrand,
+        pricingPage,
+        businessFeatures,
+        growthFeatures
     };
 
     Console.log("Growthbook Initialized", { loading, features });

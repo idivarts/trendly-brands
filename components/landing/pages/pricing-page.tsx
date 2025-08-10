@@ -3,7 +3,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
@@ -24,6 +24,7 @@ import {
     View
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import { ExplainerDynamic } from "../ExplainerDynamic";
 
 const ONBOARD_IMG =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
@@ -33,24 +34,11 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 const BUY_YEARLY_LINK = "https://brands.trendly.now/checkout?plan=yearly&trial=1&discount=today50";
 const BUY_MONTHLY_LINK = "https://brands.trendly.now/checkout?plan=monthly&trial=1&discount=today50";
 
-const YEARLY_FEATURES = [
-    "Unlimited collaboration postings",
-    "Guaranteed Influencer Availability",
-    "Fraud Protection & Recovery Assistance",
-    "Fast‑Track Customer Support",
-    "First collaboration handled by us (worth ₹1,500)",
-];
-
-const MONTHLY_FEATURES = [
-    "5 collaborations per month",
-    "Unlimited invites & applications",
-    "Unlimited hiring contracts",
-];
 
 export default function PricingPage() {
     const { selectedBrand, updateBrand } = useBrandContext()
     const router = useMyNavigation()
-    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount }, discountEndTime, discountPercentage } = useMyGrowthBook()
+    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountEndTime, discountPercentage } = useMyGrowthBook()
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)
@@ -167,6 +155,26 @@ export default function PricingPage() {
         }
     }
 
+    const YEARLY_FEATURES = businessFeatures ? businessFeatures : [
+        "Unlimited collaboration postings",
+        "Guaranteed Influencer Availability",
+        "Fraud Protection & Recovery Assistance",
+        "Fast‑Track Customer Support",
+        "First collaboration handled by us (worth ₹1,500)",
+    ];
+
+    const MONTHLY_FEATURES = growthFeatures ? growthFeatures : [
+        "5 collaborations per month",
+        "Unlimited invites & applications",
+        "Unlimited hiring contracts",
+    ];
+
+    const explainerConfig: ExplainerConfig = pricingPage ? pricingPage : {
+        kicker: "PRICING & PLANS",
+        title: `Chose your {plan} for <BRAND_NAME>`
+    }
+    explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
+
     return (
         <AppLayout>
             <ScrollView
@@ -180,45 +188,46 @@ export default function PricingPage() {
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <Text style={styles.kicker}>PRICING & PLANS</Text>
-                        <Text style={styles.title}>
-                            Choose your <Text style={styles.titleAccent}>plan</Text> for {selectedBrand?.name || "your brand"}
-                        </Text>
-                        {/* Trust / Reasons */}
-                        <View style={styles.reasonsBox}>
-                            <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
-                                {limitedTimeDiscount > 0 &&
-                                    <View style={styles.discountPill}>
-                                        <Text style={styles.discountText}>Today only: Flat {limitedTimeDiscount}% OFF</Text>
-                                    </View>}
+                        <ExplainerDynamic
+                            config={explainerConfig}
+                            viewBelowItems={<><View style={styles.reasonsBox}>
+                                <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
+                                    {discountPercentage() > 0 &&
+                                        <View style={styles.discountPill}>
+                                            <Text style={styles.discountText}>Today only: Flat {limitedTimeDiscount}% OFF</Text>
+                                        </View>}
+                                    {trialDays > 0 &&
+                                        <View style={styles.discountPill}>
+                                            <Text style={styles.discountText}>{trialDays} days free trial</Text>
+                                        </View>}
+                                    {moneyBackGuarantee > 0 &&
+                                        <View style={styles.discountPill}>
+                                            <Text style={styles.discountText}>{moneyBackGuarantee} days Money-Back Guarantee</Text>
+                                        </View>}
+                                </View>
                                 {trialDays > 0 &&
-                                    <View style={styles.discountPill}>
-                                        <Text style={styles.discountText}>{trialDays} days free trial</Text>
+                                    <View style={styles.reasonItem}>
+                                        <Text style={styles.pointIcon}>🛡️</Text>
+                                        <Text style={styles.reasonText}>We only collect payment info now — you won't be charged until your trial ends.</Text>
                                     </View>}
+                                <View style={styles.reasonItem}>
+                                    <Text style={styles.pointIcon}>↩️</Text>
+                                    <Text style={styles.reasonText}>Cancel anytime during trial in one tap — no questions asked.</Text>
+                                </View>
                                 {moneyBackGuarantee > 0 &&
-                                    <View style={styles.discountPill}>
-                                        <Text style={styles.discountText}>{moneyBackGuarantee} days Money-Back Guarantee</Text>
+                                    <View style={styles.reasonItem}>
+                                        <Text style={styles.pointIcon}>💯</Text>
+                                        <Text style={styles.reasonText}>{moneyBackGuarantee}‑day money‑back guarantee after your first payment.</Text>
                                     </View>}
+                                <View style={styles.noticeRow}>
+                                    <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
+                                </View>
                             </View>
-                            {trialDays > 0 &&
-                                <View style={styles.reasonItem}>
-                                    <Text style={styles.pointIcon}>🛡️</Text>
-                                    <Text style={styles.reasonText}>We only collect payment info now — you won't be charged until your trial ends.</Text>
-                                </View>}
-                            <View style={styles.reasonItem}>
-                                <Text style={styles.pointIcon}>↩️</Text>
-                                <Text style={styles.reasonText}>Cancel anytime during trial in one tap — no questions asked.</Text>
-                            </View>
-                            {moneyBackGuarantee > 0 &&
-                                <View style={styles.reasonItem}>
-                                    <Text style={styles.pointIcon}>💯</Text>
-                                    <Text style={styles.reasonText}>{moneyBackGuarantee}‑day money‑back guarantee after your first payment.</Text>
-                                </View>}
-                            <View style={styles.noticeRow}>
-                                <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
-                            </View>
-                        </View>
-                        <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                                <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                            </>}
+                        />
+                        {/* Trust / Reasons */}
+
                         {/* <Text style={styles.subtitle}>
                             Still Confused? Look into the <Text style={{ fontWeight: '800' }}>demo of the platform</Text> below to know what you get out of it!
                         </Text> */}
@@ -266,7 +275,7 @@ export default function PricingPage() {
                                 <View style={styles.priceRow}>
                                     <Text style={styles.priceMain}>₹{plans.business.finalAmount}</Text>
                                     <Text style={styles.priceSlash}>₹499</Text>
-                                    <Text style={styles.pricePer}>/month</Text>
+                                    <Text style={styles.pricePer}>/ month</Text>
                                     <Text style={styles.pricePer}>when paid yearly</Text>
                                 </View>
                                 <Text style={styles.savingsText}>Billed ₹{plans.business.finalAmount * 12}/year — Save 2 months cost</Text>
@@ -278,7 +287,7 @@ export default function PricingPage() {
                                     </View>
                                 ))}
                                 <Pressable onPress={() => handleSubmit(false)} style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-                                    <Text style={styles.buyText}>Start yearly — Pay nothing today</Text>
+                                    <Text style={styles.buyText}>Start yearly {pricingPage?.action || "— Pay nothing today"}</Text>
                                 </Pressable>
                             </View>
 
@@ -287,8 +296,9 @@ export default function PricingPage() {
                                 <Text style={styles.planName}>Growth (Monthly)</Text>
                                 <View style={styles.priceRow}>
                                     <Text style={styles.priceMain}>₹{plans.growth.finalAmount}</Text>
-                                    <Text style={styles.priceSlash}>₹499</Text>
-                                    <Text style={styles.pricePer}>/month</Text>
+                                    {discountPercentage() > 0 &&
+                                        <Text style={styles.priceSlash}>₹499</Text>}
+                                    <Text style={styles.pricePer}>/ month</Text>
                                 </View>
                                 <View style={styles.divider} />
                                 {MONTHLY_FEATURES.map((f, i) => (
@@ -298,7 +308,7 @@ export default function PricingPage() {
                                     </View>
                                 ))}
                                 <Pressable onPress={() => handleSubmit(true)} style={({ pressed }) => [styles.buyBtnAlt, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-                                    <Text style={styles.buyTextAlt}>Start monthly — Pay nothing today</Text>
+                                    <Text style={styles.buyTextAlt}>Start monthly {pricingPage?.action || "— Pay nothing today"}</Text>
                                 </Pressable>
                             </View>
                         </View>

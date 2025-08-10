@@ -3,6 +3,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
@@ -18,6 +19,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
+import { ExplainerDynamic } from "../ExplainerDynamic";
 import { SuccessCelebration } from "../SuccessCelebration";
 
 
@@ -28,6 +30,7 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 export default function BrandDetailPage() {
     const router = useMyNavigation()
     const { selectedBrand, updateBrand } = useBrandContext()
+    const { features: { aboutBrand } } = useMyGrowthBook()
 
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
@@ -93,6 +96,18 @@ export default function BrandDetailPage() {
     //     })
     // }, [selectedBrand])
 
+    const explainerConfig: ExplainerConfig = aboutBrand ? aboutBrand : {
+        kicker: "BRAND ONBOARDING",
+        title: `Tell us about {<BRAND_NAME>}`,
+        description: "Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.",
+        items: [
+            "Get matched to niche influencers fast",
+            "Transparent chats, contracts, and payouts",
+            "Fraud protection and dispute assistance"
+        ]
+    }
+    explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
+
     return (
         <AppLayout>
             <ScrollView
@@ -106,29 +121,10 @@ export default function BrandDetailPage() {
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <Text style={styles.kicker}>BRAND ONBOARDING</Text>
-                        <Text style={styles.title}>
-                            Tell us about <Text style={styles.titleAccent}>{selectedBrand?.name || "your brand"}</Text>
-                        </Text>
-                        <Text style={styles.subtitle}>
-                            Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.
-                        </Text>
-
-                        <View style={styles.points}>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Get matched to niche influencers fast</Text>
-                            </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Transparent chats, contracts, and payouts</Text>
-                            </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Fraud protection and dispute assistance</Text>
-                            </View>
-                        </View>
-                        <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                        <ExplainerDynamic
+                            config={explainerConfig}
+                            viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>}
+                        />
                         {/* Visual */}
                         {/* <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
