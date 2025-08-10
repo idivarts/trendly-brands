@@ -12,7 +12,6 @@ import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import React, { useEffect, useState } from "react";
 import {
-    ImageBackground,
     Platform,
     Pressable,
     ScrollView,
@@ -22,6 +21,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
+import { ExplainerConfig, ExplainerDynamic } from "../ExplainerDynamic";
 import { SuccessCelebration } from "../SuccessCelebration";
 
 
@@ -102,6 +102,20 @@ export default function CreateBrandPage() {
         })
     }, [])
 
+    // --- Explainer config for left block ---
+    const explainerConfig: ExplainerConfig = {
+        kicker: "BRAND ONBOARDING",
+        title: "Create your {brand}",
+        description:
+            "Start hiring verified influencers without middlemen. Post a collaboration, pick applications you like, and pay securely when you finalize. No setup fees and no commissions, just direct connections that work.",
+        items: [
+            "Get matched to niche influencers fast",
+            "Transparent chats, contracts, and payouts",
+            "Fraud protection and dispute assistance",
+        ],
+        image: ONBOARD_IMG,
+    };
+
     return (
         <AppLayout>
             <ScrollView
@@ -115,44 +129,13 @@ export default function CreateBrandPage() {
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <Text style={styles.kicker}>BRAND ONBOARDING</Text>
-                        {true && <Text style={styles.title}>
-                            Create your <Text style={styles.titleAccent}>brand</Text>
-                        </Text>}
-
-                        {isWide && <Text style={styles.subtitle}>
-                            Start hiring verified influencers without middlemen. Post a collaboration,
-                            pick applications you like, and pay securely when you finalize. No setup
-                            fees and no commissions — just direct connections that work.
-                        </Text>}
-
-                        {isWide && <View style={styles.points}>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Get matched to niche influencers fast</Text>
-                            </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Transparent chats, contracts, and payouts</Text>
-                            </View>
-                            <View style={styles.pointItem}>
-                                <Text style={styles.pointIcon}>✅</Text>
-                                <Text style={styles.pointText}>Fraud protection and dispute assistance</Text>
-                            </View>
-                        </View>}
-
-                        {true && <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>}
-
-                        {/* Visual */}
-                        {false && <ImageBackground
-                            source={{ uri: ONBOARD_IMG }}
-                            style={styles.visual}
-                            imageStyle={styles.visualImg}
-                        >
-                            <View style={styles.playBadge}>
-                                <Text style={styles.playBadgeText}>Overview</Text>
-                            </View>
-                        </ImageBackground>}
+                        <ExplainerDynamic
+                            config={explainerConfig}
+                            isWide={isWide}
+                            viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}>
+                                <OfferCard />
+                            </View>}
+                        />
                     </View>
 
                     {/* Right: Form */}
@@ -248,7 +231,6 @@ export default function CreateBrandPage() {
     );
 }
 
-/* --------- Styles --------- */
 const BLUE = "#254F7A";
 const BLUE_DARK = "#1A3B5C";
 const BLUE_LIGHT = "#6C91BA";
