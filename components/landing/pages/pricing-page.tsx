@@ -223,7 +223,9 @@ export default function PricingPage() {
                                     <Text style={styles.noticeText}>Skip today and the discount won't apply later.</Text>
                                 </View>
                             </View>
-                                <View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>
+                                {pricingPage?.showOfferCard && <View style={{ paddingVertical: 16 }}>
+                                    <OfferCard />
+                                </View>}
                             </>}
                         />
                         {/* Trust / Reasons */}

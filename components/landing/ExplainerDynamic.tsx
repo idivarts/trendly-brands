@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         maxWidth: 640,
     },
-    points: { marginTop: 8, gap: 10 },
+    points: { marginTop: 8, gap: 10, marginBottom: 16 },
     pointItem: { flexDirection: "row", alignItems: "center" },
     pointIcon: { fontSize: 18, marginRight: 10 },
     pointText: { color: TEXT, fontSize: 14 },
