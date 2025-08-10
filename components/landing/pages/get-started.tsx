@@ -129,7 +129,7 @@ export default function TrendlyHero() {
                     ]}
                     >
                         <ExplainerDynamic
-                            config={config}
+                            config={{ ...config, image: undefined }}
                             viewBelowItems={<OfferCard />}
                             viewAtBottom={<Pressable
                                 onPress={() => {
