@@ -57,7 +57,9 @@ interface GBFeatures {
     getStarted?: ExplainerConfig,
     createBrand?: ExplainerConfig,
     aboutBrand?: ExplainerConfig,
-    pricingPage?: ExplainerConfig
+    pricingPage?: ExplainerConfig,
+    businessFeatures?: string[]
+    growthFeatures?: string[]
 }
 
 interface IGBContext {
@@ -115,6 +117,9 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const aboutBrand: any = useFeatureValue<JSONValue>("about-brand", null);
     const pricingPage: any = useFeatureValue<JSONValue>("pricing-page", null);
 
+    const businessFeatures: any = useFeatureValue<string[] | null>("business-features", null);
+    const growthFeatures: any = useFeatureValue<string[] | null>("growth-features", null);
+
     const features: GBFeatures = {
         actionType,
         demoLink,
@@ -129,7 +134,9 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
         getStarted,
         createBrand,
         aboutBrand,
-        pricingPage
+        pricingPage,
+        businessFeatures,
+        growthFeatures
     };
 
     Console.log("Growthbook Initialized", { loading, features });

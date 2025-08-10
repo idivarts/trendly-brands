@@ -3,6 +3,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
@@ -29,6 +30,7 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 export default function BrandDetailPage() {
     const router = useMyNavigation()
     const { selectedBrand, updateBrand } = useBrandContext()
+    const { features: { aboutBrand } } = useMyGrowthBook()
 
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
@@ -94,6 +96,18 @@ export default function BrandDetailPage() {
     //     })
     // }, [selectedBrand])
 
+    const explainerConfig: ExplainerConfig = aboutBrand ? aboutBrand : {
+        kicker: "BRAND ONBOARDING",
+        title: `Tell us about {<BRAND_NAME>}`,
+        description: "Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.",
+        items: [
+            "Get matched to niche influencers fast",
+            "Transparent chats, contracts, and payouts",
+            "Fraud protection and dispute assistance"
+        ]
+    }
+    explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
+
     return (
         <AppLayout>
             <ScrollView
@@ -108,16 +122,7 @@ export default function BrandDetailPage() {
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <ExplainerDynamic
-                            config={{
-                                kicker: "BRAND ONBOARDING",
-                                title: `Tell us about {${selectedBrand?.name || "your brand"}}`,
-                                description: "Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.",
-                                items: [
-                                    "Get matched to niche influencers fast",
-                                    "Transparent chats, contracts, and payouts",
-                                    "Fraud protection and dispute assistance"
-                                ]
-                            }}
+                            config={explainerConfig}
                             viewBelowItems={<View style={{ paddingVertical: 16, marginTop: 12 }}><OfferCard /></View>}
                         />
                         {/* Visual */}

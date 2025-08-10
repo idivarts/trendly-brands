@@ -3,7 +3,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
@@ -34,24 +34,11 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 const BUY_YEARLY_LINK = "https://brands.trendly.now/checkout?plan=yearly&trial=1&discount=today50";
 const BUY_MONTHLY_LINK = "https://brands.trendly.now/checkout?plan=monthly&trial=1&discount=today50";
 
-const YEARLY_FEATURES = [
-    "Unlimited collaboration postings",
-    "Guaranteed Influencer Availability",
-    "Fraud Protection & Recovery Assistance",
-    "Fast‑Track Customer Support",
-    "First collaboration handled by us (worth ₹1,500)",
-];
-
-const MONTHLY_FEATURES = [
-    "5 collaborations per month",
-    "Unlimited invites & applications",
-    "Unlimited hiring contracts",
-];
 
 export default function PricingPage() {
     const { selectedBrand, updateBrand } = useBrandContext()
     const router = useMyNavigation()
-    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount }, discountEndTime, discountPercentage } = useMyGrowthBook()
+    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountEndTime, discountPercentage } = useMyGrowthBook()
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)
@@ -168,6 +155,26 @@ export default function PricingPage() {
         }
     }
 
+    const YEARLY_FEATURES = businessFeatures ? businessFeatures : [
+        "Unlimited collaboration postings",
+        "Guaranteed Influencer Availability",
+        "Fraud Protection & Recovery Assistance",
+        "Fast‑Track Customer Support",
+        "First collaboration handled by us (worth ₹1,500)",
+    ];
+
+    const MONTHLY_FEATURES = growthFeatures ? growthFeatures : [
+        "5 collaborations per month",
+        "Unlimited invites & applications",
+        "Unlimited hiring contracts",
+    ];
+
+    const explainerConfig: ExplainerConfig = pricingPage ? pricingPage : {
+        kicker: "PRICING & PLANS",
+        title: `Chose your {plan} for <BRAND_NAME>`
+    }
+    explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
+
     return (
         <AppLayout>
             <ScrollView
@@ -182,10 +189,7 @@ export default function PricingPage() {
                     {/* Left: Explainer */}
                     <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
                         <ExplainerDynamic
-                            config={{
-                                kicker: "PRICING & PLANS",
-                                title: `Chose your {plan} for ${selectedBrand?.name || "your brand"}`
-                            }}
+                            config={explainerConfig}
                             viewBelowItems={<><View style={styles.reasonsBox}>
                                 <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12 }}>
                                     {limitedTimeDiscount > 0 &&
@@ -283,7 +287,7 @@ export default function PricingPage() {
                                     </View>
                                 ))}
                                 <Pressable onPress={() => handleSubmit(false)} style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-                                    <Text style={styles.buyText}>Start yearly — Pay nothing today</Text>
+                                    <Text style={styles.buyText}>Start yearly {pricingPage?.action || "— Pay nothing today"}</Text>
                                 </Pressable>
                             </View>
 
@@ -303,7 +307,7 @@ export default function PricingPage() {
                                     </View>
                                 ))}
                                 <Pressable onPress={() => handleSubmit(true)} style={({ pressed }) => [styles.buyBtnAlt, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-                                    <Text style={styles.buyTextAlt}>Start monthly — Pay nothing today</Text>
+                                    <Text style={styles.buyTextAlt}>Start monthly {pricingPage?.action || "— Pay nothing today"}</Text>
                                 </Pressable>
                             </View>
                         </View>

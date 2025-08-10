@@ -4,6 +4,7 @@ import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
@@ -21,7 +22,7 @@ import {
     useWindowDimensions,
     View
 } from "react-native";
-import { ExplainerConfig, ExplainerDynamic } from "../ExplainerDynamic";
+import { ExplainerDynamic } from "../ExplainerDynamic";
 import { SuccessCelebration } from "../SuccessCelebration";
 
 
@@ -37,6 +38,7 @@ const AGE_OPTIONS = [
 
 export default function CreateBrandPage() {
     const router = useMyNavigation()
+    const { features: { createBrand: cJson } } = useMyGrowthBook()
     const { manager, session } = useAuthContext()
     const { createBrand, setSelectedBrand } = useBrandContext()
 
@@ -102,7 +104,7 @@ export default function CreateBrandPage() {
     }, [])
 
     // --- Explainer config for left block ---
-    const explainerConfig: ExplainerConfig = {
+    const explainerConfig: ExplainerConfig = cJson ? cJson : {
         kicker: "BRAND ONBOARDING",
         title: "Create your {brand}",
         description:
