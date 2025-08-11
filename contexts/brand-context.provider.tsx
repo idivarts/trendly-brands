@@ -1,4 +1,5 @@
 import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
@@ -22,7 +23,8 @@ interface BrandContextProps {
   selectedBrand: Brand | undefined;
   setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
-  loading: boolean
+  loading: boolean,
+  isOnFreeTrial?: boolean
 }
 
 const BrandContext = createContext<BrandContextProps>({
@@ -183,6 +185,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     }
   }, [selectedBrand])
 
+  const isOnFreeTrial = selectedBrand && (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted)
   return (
     <BrandContext.Provider
       value={{
@@ -191,7 +194,8 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         selectedBrand,
         setSelectedBrand: setSelectedBrandHandler,
         updateBrand,
-        loading
+        loading,
+        isOnFreeTrial
       }}
     >
       {children}

@@ -8,6 +8,8 @@ import { TIME_COMMITMENTS } from "@/shared-constants/preferences/time-commitment
 import { VIDEO_TYPE } from "@/shared-constants/preferences/video-type";
 import { Console } from "@/shared-libs/utils/console";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -31,35 +33,52 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   const {
     updateBrand,
     selectedBrand,
+    isOnFreeTrial
   } = useBrandContext();
   const [loading, setLoading] = useState(false)
+  const { openModal } = useConfirmationModel()
+  const router = useMyNavigation()
 
-  const [preferences, setPreferences] = useState<Brand["preferences"]>({
+  const defaultPreferences = {
     promotionType: [],
     influencerCategories: [],
     platforms: [],
     timeCommitments: [],
     collaborationPostTypes: [],
     contentVideoType: [],
-  });
+    locations: [],
+    languages: [],
+  }
+  const [preferences, setPreferences] = useState<Brand["preferences"]>(defaultPreferences);
 
   useEffect(() => {
-    if (selectedBrand && selectedBrand.preferences) {
+    if (selectedBrand) {
       Console.log("Selected Data", selectedBrand.preferences)
       setPreferences({
-        ...preferences,
-        // Initiated here just to avoid the initial state issue
-        locations: [],
-        languages: [],
+        ...defaultPreferences,
         ...selectedBrand.preferences
       })
     }
   }, [selectedBrand])
 
 
+  const notifyUprade = () => {
+    openModal({
+      title: "Upgrade to Paid Plan!",
+      description: "Setting Brand Preferencese is just member only functionality. Please upgrade the plan now to not lose any data",
+      confirmAction: () => {
+        router.push("/billing")
+      },
+      confirmText: "Upgrade Now"
+    })
+  }
   const updatePreference = async () => {
     if (!selectedBrand)
       return;
+    if (isOnFreeTrial) {
+      notifyUprade()
+      return
+    }
     try {
       setLoading(true)
       Console.log("All preferences", preferences)
@@ -78,7 +97,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   };
 
 
-  if (!selectedBrand || !selectedBrand.preferences)
+  if (!selectedBrand || !preferences)
     return <ActivityIndicator />
 
   return (

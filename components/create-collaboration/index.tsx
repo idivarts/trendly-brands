@@ -12,7 +12,6 @@ import { useProcess } from "@/hooks";
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status';
 import { Console } from '@/shared-libs/utils/console';
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal';
@@ -86,6 +85,7 @@ const CreateCollaboration = () => {
 
   const {
     selectedBrand,
+    isOnFreeTrial
   } = useBrandContext();
   const {
     getCollaborationById,
@@ -187,7 +187,6 @@ const CreateCollaboration = () => {
       }
 
       let status = myStatus
-      const isOnFreeTrial = !selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted
       if (isOnFreeTrial && status == "active") {
         notifyUprade()
         status = "draft"
