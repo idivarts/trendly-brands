@@ -42,14 +42,6 @@ const MainLayout = () => {
                                 headerShown: false,
                               }}
                             /> */}
-                            <Stack.Screen
-                              name="(modal)/create-collaboration"
-                              options={{
-                                presentation: "formSheet",
-                                gestureEnabled: true,
-                              }}
-                            />
-                            <Stack.Screen name="(modal)/edit-collaboration" />
                           </Stack>
                         </ScrollProvider>
                       </ChatContextProvider>
