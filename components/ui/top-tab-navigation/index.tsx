@@ -13,12 +13,14 @@ interface TopTabNavigationProps {
   }[];
   size?: "compact" | "default";
   mobileFullWidth?: boolean;
+  splitTwoColumns?: boolean
 }
 
 const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   tabs,
   size = "default",
-  mobileFullWidth = false
+  mobileFullWidth = false,
+  splitTwoColumns = false
 }) => {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   const [tabLayout, setTabLayout] = useState<any>({});
@@ -26,7 +28,8 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   const scrollViewRef = useRef<ScrollView>(null);
   const theme = useTheme();
   const styles = stylesFn(theme);
-  const { xl } = useBreakpoints()
+  const { xl: xlRaw } = useBreakpoints()
+  const xl = splitTwoColumns && xlRaw
 
   useEffect(() => {
     setActiveTab(tabs[0]);
@@ -41,6 +44,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
       <View
         style={[
           styles.tabContent,
+          xl && { flex: 1, height: "100%" }
         ]}
       >
         {content}
@@ -59,21 +63,36 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, {
+        flexDirection: xl ? "row" : "column"
+      }]}
     >
       <ScrollView
         ref={scrollViewRef}
-        horizontal
+        horizontal={!xl}
         showsHorizontalScrollIndicator={false}
         style={[
           styles.tabScroll,
           size === "compact" && styles.compactTabScroll,
           (!xl && mobileFullWidth) && styles.mobileTabScroll,
+          // @ts-ignore
+          (xl && {
+            maxWidth: 300, height: "100%", alignSelf: "stretch",
+            maxHeight: "unset"
+          })
         ]}
-        contentContainerStyle={styles.tabScrollContainer}
+        contentContainerStyle={[styles.tabScrollContainer]}
       >
         <View
-          style={styles.tabContainer}
+          style={[styles.tabContainer, xl && {
+            flexDirection: "column",
+            alignSelf: "stretch",
+            justifyContent: "flex-start",
+            paddingTop: 16,
+            paddingBottom: 400,
+            paddingHorizontal: 16,
+            marginTop: 24
+          }]}
         >
           {tabs.map((tab, index) => (
             <Pressable

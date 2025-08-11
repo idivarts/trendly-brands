@@ -6,9 +6,6 @@ import { useBreakpoints } from "@/hooks";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { Brand } from "@/types/Brand";
 import {
-  faEye
-} from "@fortawesome/free-regular-svg-icons";
-import {
   faPlus
 } from "@fortawesome/free-solid-svg-icons";
 import { DrawerActions, useTheme } from "@react-navigation/native";
@@ -104,7 +101,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           gap: 12,
         }}
       >
-        <BrandActionItem
+        {/* <BrandActionItem
           key="view-applications"
           icon={faEye}
           showChevron={false}
@@ -116,7 +113,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
           }}
           title="View All Applications"
           removeBottomBorder={true}
-        />
+        /> */}
         <BrandActionItem
           key="create-brand"
           icon={faPlus}

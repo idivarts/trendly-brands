@@ -2,6 +2,7 @@ import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
@@ -12,7 +13,6 @@ import { router } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
-import Toast from "react-native-toast-message";
 import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
@@ -40,6 +40,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   >(undefined);
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
+  const { xl } = useBreakpoints()
 
   const publishCollaboration = async () => {
     if (!pageID) return;
@@ -90,7 +91,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     }
   };
 
-  const tabs = [
+  const tabs = (xl: boolean) => [
     {
       id: "Overview",
       title: "Overview",
@@ -105,6 +106,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       title: "Applications",
       component: (
         <ApplicationsTabContent
+          key={"applications"}
           pageID={pageID}
           collaboration={{
             id: pageID,
@@ -114,11 +116,33 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         />
       ),
     },
+    ...(xl ? [{
+      id: "Applications-Sent",
+      title: "Accepted Applications",
+      component: (
+        <ApplicationsTabContent
+          key={"applications-sent"}
+          pageID={pageID}
+          collaboration={{
+            id: pageID,
+            name: collaboration?.name || "",
+            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
+          }}
+        />
+      ),
+    }] : []),
     {
       id: "Invitations",
       title: "Send Invitations",
-      component: <InvitationsTabContent pageID={pageID} />,
+      component: <InvitationsTabContent key={"invitations"} pageID={pageID} />,
     },
+    ...(xl ? [{
+      id: "Invitations-Sent",
+      title: "Invited Members",
+      component: (
+        <InvitationsTabContent key={"invitations-sent"} pageID={pageID} />
+      ),
+    }] : []),
   ];
 
   useEffect(() => {
@@ -146,13 +170,13 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         flex: 1,
       }}
     >
-      <View
+      {/* <View
         style={{
           zIndex: 1000,
         }}
       >
         <Toast />
-      </View>
+      </View> */}
       <CollaborationHeader collaboration={collaboration} />
 
       {collaboration.status === "draft" && (
@@ -201,7 +225,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         <OverviewTabContent collaboration={collaboration} />
       )}
       {collaboration.status === "active" && (
-        <TopTabNavigation tabs={tabs} size="compact" mobileFullWidth={true} />
+        <TopTabNavigation tabs={tabs(xl)} size="compact" mobileFullWidth={true} splitTwoColumns={true} />
       )}
     </View>
   );
