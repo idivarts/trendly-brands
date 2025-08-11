@@ -63,6 +63,7 @@ interface GBFeatures {
     businessFeatures?: string[]
     growthFeatures?: string[]
     hideAboutBrand?: boolean,
+    payWall?: boolean
 }
 
 interface IGBContext {
@@ -120,6 +121,8 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const aboutBrand: any = useFeatureValue<JSONValue>("about-brand", null);
     const pricingPage: any = useFeatureValue<JSONValue>("pricing-page", null);
 
+    const payWall: any = useFeatureValue<boolean>("pay-wall", false);
+
     const businessFeatures: any = useFeatureValue<string[] | null>("business-features", null);
     const growthFeatures: any = useFeatureValue<string[] | null>("growth-features", null);
 
@@ -142,7 +145,8 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
         pricingPage,
         businessFeatures,
         growthFeatures,
-        hideAboutBrand
+        hideAboutBrand,
+        payWall
     };
 
     Console.log("Growthbook Initialized", { loading, features });
@@ -164,7 +168,8 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
                 growthBook: {
                     ...features,
                     discountEndTime,
-                }
+                },
+                hasPayWall: payWall
             })
         }
     }, [brandId])

@@ -177,11 +177,14 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       if (!restrictForPayment)
         return;
 
-      // if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
-      //   router.resetAndNavigate("/pay-wall")
-      // } else if (pathName == "pay-wall") {
-      //   router.resetAndNavigate("/explore-influencers")
-      // }
+      if (!selectedBrand.hasPayWall)
+        return;
+
+      if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
+        router.resetAndNavigate("/pay-wall")
+      } else if (pathName == "pay-wall") {
+        router.resetAndNavigate("/explore-influencers")
+      }
     }
   }, [selectedBrand])
 

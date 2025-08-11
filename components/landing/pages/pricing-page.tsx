@@ -38,7 +38,7 @@ const BUY_MONTHLY_LINK = "https://brands.trendly.now/checkout?plan=monthly&trial
 export default function PricingPage() {
     const { selectedBrand, updateBrand } = useBrandContext()
     const router = useMyNavigation()
-    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountEndTime, discountPercentage } = useMyGrowthBook()
+    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures, payWall }, discountEndTime, discountPercentage } = useMyGrowthBook()
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)
@@ -102,6 +102,10 @@ export default function PricingPage() {
     }
     useEffect(() => {
         if (selectedBrand) {
+            if (!payWall) {
+                router.resetAndNavigate("/explore-influencers")
+                return;
+            }
             if ((!selectedBrand.paymentLinks || selectedBrand.paymentLinks.length != 2))
                 getPlanLinks()
             else
