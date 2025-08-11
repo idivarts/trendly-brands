@@ -275,7 +275,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
           key={selectedCollabId}
         />
       )}
-      {filteredProposals.length !== 0 && (
+      {filteredProposals.length !== 0 && !xl && (
         <View
           style={{
             position: "absolute",

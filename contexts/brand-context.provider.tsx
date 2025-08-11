@@ -15,6 +15,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
 
 interface BrandContextProps {
@@ -23,7 +24,8 @@ interface BrandContextProps {
   selectedBrand: Brand | undefined;
   setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
-  loading: boolean
+  loading: boolean,
+  isOnFreeTrial?: boolean
 }
 
 const BrandContext = createContext<BrandContextProps>({
@@ -176,6 +178,11 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       if (!restrictForPayment)
         return;
 
+      if (Platform.OS == "web" && !selectedBrand.hasPayWall)
+        return;
+
+      console.log("Evaluation Paywall condition", (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted));
+
       if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
         router.resetAndNavigate("/pay-wall")
       } else if (pathName == "pay-wall") {
@@ -184,6 +191,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     }
   }, [selectedBrand])
 
+  const isOnFreeTrial = selectedBrand && (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted)
   return (
     <BrandContext.Provider
       value={{
@@ -192,7 +200,8 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         selectedBrand,
         setSelectedBrand: setSelectedBrandHandler,
         updateBrand,
-        loading
+        loading,
+        isOnFreeTrial
       }}
     >
       {children}

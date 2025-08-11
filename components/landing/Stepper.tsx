@@ -5,10 +5,13 @@ import { BLUE, BLUE_DARK, BLUE_LIGHT, TEXT } from './const';
 
 const Stepper = ({ count = 0, total = 3 }) => {
 
-    const { features: { hideAboutBrand } } = useMyGrowthBook()
+    const { features: { hideAboutBrand, payWall } } = useMyGrowthBook()
 
-    const finalCount = (count > 2 && hideAboutBrand) ? count - 1 : count
-    const finalTotal = (hideAboutBrand) ? total - 1 : total
+    const subs = (!payWall ? 1 : 0) + (hideAboutBrand ? 1 : 0)
+    // count - 3
+    // count - 4
+    const finalCount = (count == 4 && hideAboutBrand) ? count - 1 : count
+    const finalTotal = total - subs
 
     const steps = Array.from({ length: finalTotal }, (_, i) => i + 1);
 

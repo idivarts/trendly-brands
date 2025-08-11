@@ -38,7 +38,7 @@ const BUY_MONTHLY_LINK = "https://brands.trendly.now/checkout?plan=monthly&trial
 export default function PricingPage() {
     const { selectedBrand, updateBrand } = useBrandContext()
     const router = useMyNavigation()
-    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountEndTime, discountPercentage } = useMyGrowthBook()
+    const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountPercentage } = useMyGrowthBook()
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)

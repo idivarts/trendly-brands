@@ -156,7 +156,7 @@ const InvitationsTabContent = (props: any) => {
           data={influencers}
           height={height}
           width={width}
-          vertical={false}
+          vertical={xl ? true : false}
           onLoadMore={() => loadMore()}
           renderItem={({ item }) => (
             <InvitationCard

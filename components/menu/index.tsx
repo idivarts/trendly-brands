@@ -6,7 +6,7 @@ import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal"
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { truncateText } from "@/utils/text";
 import { imageUrl } from "@/utils/url";
-import { faCancel, faSignOut } from "@fortawesome/free-solid-svg-icons";
+import { faCancel } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -92,7 +92,7 @@ const Menu = () => {
               <ProfileItemCard
                 key={"cancel-plan"}
                 item={{
-                  href: "",
+                  href: "/",
                   icon: faCancel,
                   id: "cancel-plan",
                   title: "Cancel Plan"
@@ -101,23 +101,6 @@ const Menu = () => {
                   setCancelPlan(true)
                 }}
               />}
-            <ProfileItemCard
-              key={"logout"}
-              item={{
-                href: "",
-                icon: faSignOut,
-                id: "logout",
-                title: "Logout"
-              }}
-              onPress={() => {
-                openModal({
-                  title: "Logout",
-                  description: "Are you sure you want to logout?",
-                  confirmAction: handleSignOut,
-                  confirmText: "Logout",
-                });
-              }}
-            />
           </View>
         </View>
       </ScrollView>

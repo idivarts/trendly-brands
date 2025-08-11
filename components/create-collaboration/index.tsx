@@ -6,7 +6,7 @@ import ScreenFour from "@/components/create-collaboration/screen-four";
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
 import Colors from "@/constants/Colors";
-import { useAWSContext, useCollaborationContext } from "@/contexts";
+import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
@@ -14,6 +14,7 @@ import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/pro
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from '@/shared-libs/utils/console';
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal';
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
@@ -80,20 +81,19 @@ const CreateCollaboration = () => {
     setProcessMessage,
     setProcessPercentage,
   } = useProcess();
-
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const {
     selectedBrand,
+    isOnFreeTrial
   } = useBrandContext();
   const {
     getCollaborationById,
     createCollaboration,
     updateCollaboration,
   } = useCollaborationContext();
-  const {
-    uploadNewAssets,
-  } = useAWSContext();
+
+  const { openModal } = useConfirmationModel()
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -167,12 +167,29 @@ const CreateCollaboration = () => {
     }
   }
 
+  const notifyUprade = () => {
+    openModal({
+      title: "Free Trial!",
+      description: "You need to upgrade your plan to be able to post a collaboration",
+      confirmAction: () => {
+        router.push("/billing")
+      },
+      confirmText: "Upgrade Now"
+    })
+  }
   const saveCollaboration = async (
-    status: "draft" | "active",
+    myStatus: "draft" | "active",
   ) => {
     try {
-      if (!AuthApp.currentUser) {
-        Console.error("User not logged in");
+      if (!AuthApp.currentUser || !selectedBrand) {
+        Console.error("User or brand not selected");
+        return;
+      }
+
+      let status = myStatus
+      if (isOnFreeTrial && status == "active") {
+        notifyUprade()
+        status = "draft"
       }
 
       let locationAddress = collaboration?.location;
@@ -232,6 +249,9 @@ const CreateCollaboration = () => {
         setProcessPercentage(0);
         setProcessMessage('');
         setIsProcessing(false);
+        if (myStatus == "draft") {
+          notifyUprade()
+        }
       });
     } catch (error) {
       Console.error(error);

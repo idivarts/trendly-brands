@@ -1,12 +1,14 @@
 import Colors from "@/constants/Colors";
-import { useAuthContext, useAWSContext } from "@/contexts";
+import { useAuthContext, useAWSContext, useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { faGears, faPen, faSignOut } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
@@ -20,13 +22,14 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text } from "../theme/Themed";
+import ProfileItemCard from "../ProfileItemCard";
 import Button from "../ui/button";
 import ImageUploadModal from "../ui/modal/ImageUploadModal";
 import ScreenHeader from "../ui/screen-header";
 import TextInput from "../ui/text-input";
 
 const Profile = () => {
+  const router = useMyNavigation()
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
@@ -116,6 +119,15 @@ const Profile = () => {
       }
     }
   };
+  const { signOutManager: signOut } = useAuthContext();
+  const { deregisterTokens } = useChatContext();
+  const { openModal } = useConfirmationModel();
+
+  const handleSignOut = async () => {
+    await deregisterTokens?.();
+    await signOut();
+  };
+
 
   useEffect(() => {
     if (!manager) {
@@ -135,22 +147,6 @@ const Profile = () => {
       <View style={{}}>
         <ScreenHeader
           title="Profile"
-          rightAction
-          rightActionButton={
-            <Pressable
-              onPress={updateProfile}
-            >
-              <Text
-                style={{
-                  color: Colors(theme).text,
-                  fontSize: 16,
-                  marginRight: 16,
-                }}
-              >
-                Save
-              </Text>
-            </Pressable>
-          }
         />
       </View>
       <AppLayout>
@@ -162,72 +158,102 @@ const Profile = () => {
             backgroundColor: Colors(theme).background,
           }}
         >
-          {/* Profile Picture */}
-          <View style={styles.avatarContainer}>
-            <ImageComponent
-              url={capturedImage}
-              size="medium"
-              altText="Profile Image"
-              shape="circle"
-              initialsSize={40}
-              initials={manager?.name}
-              style={{
-                backgroundColor: Colors(theme).primary,
+          <View style={styles.sectionCard}>
+            {/* Profile Picture */}
+            <View style={styles.avatarContainer}>
+              <ImageComponent
+                url={capturedImage}
+                size="medium"
+                altText="Profile Image"
+                shape="circle"
+                initialsSize={40}
+                initials={manager?.name}
+                style={{ backgroundColor: Colors(theme).primary }}
+              />
+              <Pressable onPress={() => setIsModalVisible(true)} style={styles.editIcon}>
+                <FontAwesomeIcon
+                  icon={faPen}
+                  color={theme.dark ? Colors(theme).white : Colors(theme).primary}
+                  size={22}
+                />
+              </Pressable>
+            </View>
+
+            {/* Name Input */}
+            <TextInput
+              label="Name"
+              value={name}
+              onChangeText={(text) => setName(text)}
+              mode="outlined"
+              style={styles.input}
+            />
+
+            {/* Email (Static) */}
+            <TextInput
+              label="Email"
+              value={email}
+              mode="outlined"
+              style={styles.input}
+              editable={false}
+            />
+
+            {/* Role Input */}
+            <TextInput
+              label="Role"
+              value={role}
+              mode="outlined"
+              style={styles.input}
+              onChangeText={(text) => setRole(text)}
+            />
+
+            {/* Save Profile Button */}
+            {loading ? (
+              <ActivityIndicator size="large" color={Colors(theme).primary} />
+            ) : (
+              <Button
+                mode="contained"
+                style={styles.saveButton}
+                onPress={updateProfile}
+                disabled={loading}
+              >
+                Save Profile
+              </Button>
+            )}
+          </View>
+          <View style={styles.sectionDivider} />
+          <View style={styles.middleRow}>
+            <ProfileItemCard
+              key={"settings-menu"}
+              item={{
+                id: "settings-menu",
+                title: "Settings",
+                href: "/settings",
+                icon: faGears,
+              }}
+              onPress={() => {
+                router.push('/settings');
               }}
             />
-            <Pressable
-              onPress={() => setIsModalVisible(true)}
-              style={styles.editIcon}
-            >
-              <FontAwesomeIcon
-                icon={faPen}
-                color={theme.dark ? Colors(theme).white : Colors(theme).primary}
-                size={22}
-              />
-            </Pressable>
+            <ProfileItemCard
+              key={"logout"}
+              item={{
+                href: "/",
+                icon: faSignOut,
+                id: "logout",
+                title: "Logout"
+              }}
+              onPress={() => {
+                openModal({
+                  title: "Logout",
+                  description: "Are you sure you want to logout?",
+                  confirmAction: handleSignOut,
+                  confirmText: "Logout",
+                });
+              }}
+            />
           </View>
-
-          {/* Name Input */}
-          <TextInput
-            label="Name"
-            value={name}
-            onChangeText={(text) => setName(text)}
-            mode="outlined"
-            style={styles.input}
-          />
-
-          {/* Email (Static) */}
-          <TextInput
-            label="Email"
-            value={email}
-            mode="outlined"
-            style={styles.input}
-            editable={false}
-          />
-
-          {/* Role Input */}
-          <TextInput
-            label="Role"
-            value={role}
-            mode="outlined"
-            style={styles.input}
-            onChangeText={(text) => setRole(text)}
-          />
-
-          {/* Save Profile Button */}
-          {loading ? (
-            <ActivityIndicator size="large" color={Colors(theme).primary} />
-          ) : (
-            <Button
-              mode="contained"
-              style={styles.saveButton}
-              onPress={updateProfile}
-              disabled={loading} // Disable button while loading
-            >
-              Save Profile
-            </Button>
-          )}
         </ScrollView>
+
       </AppLayout>
       <ImageUploadModal
         setVisible={setIsModalVisible}
@@ -260,11 +286,121 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   input: {
     width: "100%",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   saveButton: {
     width: "100%",
-    marginTop: 16,
+    marginTop: 8,
+  },
+  container: {
+    flex: 1,
+  },
+  backgroundImage: {
+    width: "100%",
+    height: 100,
+  },
+  brandAvatar: {
+    bottom: 36,
+    marginBottom: -72,
+    left: 20,
+    zIndex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors(theme).primary,
+  },
+  brandName: {
+    fontSize: 24,
+    textAlign: "center",
+    color: Colors(theme).text,
+  },
+  menuItemsContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    gap: 16,
+    justifyContent: "space-between",
+  },
+  topRow: {
+    gap: 20,
+    alignItems: "center",
+    paddingTop: 20,
+  },
+  middleRow: {
+    flex: 1,
+    flexDirection: "column",
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
+    gap: 12,
+  },
+  bottomRow: {
+    gap: 14,
+  },
+  menuRow: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors(theme).aliceBlue,
+    paddingVertical: 14,
+  },
+  menuRowText: {
+    fontSize: 16,
+  },
+  userProfileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+  avatar: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors(theme).primary,
+  },
+  avatarBrandImage: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors(theme).primary,
+    width: 200,
+    height: 200,
+    borderRadius: 20,
+  },
+
+  textContainer: {
+    flex: 1,
+  },
+  titleText: {
+    fontSize: 16,
+  },
+  chevron: {
+    backgroundColor: Colors(theme).background,
+    color: Colors(theme).primary,
+  },
+  menuButton: {
+    backgroundColor: Colors(theme).primary,
+  },
+  sectionCard: {
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
+    backgroundColor: Colors(theme).card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    // subtle shadow
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors(theme).aliceBlue,
+  },
+  sectionDivider: {
+    width: "100%",
+    maxWidth: 640,
+    alignSelf: "center",
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors(theme).aliceBlue,
+    marginBottom: 20,
   },
 });
 

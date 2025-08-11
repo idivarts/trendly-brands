@@ -133,7 +133,7 @@ const TabLayout = () => {
       <Tabs.Screen
         name="collaborations"
         options={{
-          title: "Collaborations",
+          title: "Campaigns",
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
