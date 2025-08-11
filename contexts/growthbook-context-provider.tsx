@@ -163,6 +163,9 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
 
     const brandId = selectedBrand?.id
     useEffect(() => {
+        if (!loading)
+            return;
+
         if (brandId) {
             updateBrand(brandId, {
                 growthBook: {
@@ -172,7 +175,7 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
                 hasPayWall: payWall
             })
         }
-    }, [brandId])
+    }, [brandId, loading])
 
     const discountPercentage = () => {
         if (discountTimer > 0 && discountEndTime < Date.now()) {

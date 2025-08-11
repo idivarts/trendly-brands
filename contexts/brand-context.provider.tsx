@@ -180,6 +180,8 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       if (!selectedBrand.hasPayWall)
         return;
 
+      console.log("Evaluation Paywall condition", (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted));
+
       if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
         router.resetAndNavigate("/pay-wall")
       } else if (pathName == "pay-wall") {
