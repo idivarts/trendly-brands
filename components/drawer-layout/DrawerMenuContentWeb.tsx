@@ -118,7 +118,7 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
   {
     href: "/applications",
     icon: () => <DrawerIcon href="/applications" icon={faEye} />,
-    label: "View All Applications",
+    label: "All Applications",
   },
 ];
 

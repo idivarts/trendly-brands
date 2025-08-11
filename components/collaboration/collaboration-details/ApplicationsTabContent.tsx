@@ -143,7 +143,9 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           width={width}
           renderItem={({ item }) => (
             <View style={{ paddingBottom: 24 }} key={(item as InfluencerApplication).application.id}>
-              {isApplicationConcised && <View style={{ borderBottomColor: Colors(theme).border, borderBottomWidth: 1, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card }}>
+              {isApplicationConcised && <View style={{
+                paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card
+              }}>
                 <CardHeader
                   avatar={item.brand?.image || ""}
                   handle={item.brand?.name || ""}
