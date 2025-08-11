@@ -23,7 +23,6 @@ import {
   View,
 } from "react-native";
 import ProfileItemCard from "../ProfileItemCard";
-import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import ImageUploadModal from "../ui/modal/ImageUploadModal";
 import ScreenHeader from "../ui/screen-header";
@@ -148,22 +147,6 @@ const Profile = () => {
       <View style={{}}>
         <ScreenHeader
           title="Profile"
-          rightAction
-          rightActionButton={
-            <Pressable
-              onPress={updateProfile}
-            >
-              <Text
-                style={{
-                  color: Colors(theme).text,
-                  fontSize: 16,
-                  marginRight: 16,
-                }}
-              >
-                Save
-              </Text>
-            </Pressable>
-          }
         />
       </View>
       <AppLayout>

@@ -43,7 +43,7 @@ const Collaborations = () => {
         <TopTabNavigation
           tabs={tabs(xl)}
           splitTwoColumns={true}
-          defaultSelection={2}
+          defaultSelection={xl ? 2 : 0}
         />
       </View>
     </AppLayout>
