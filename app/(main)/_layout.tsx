@@ -18,7 +18,7 @@ const MainLayout = () => {
         <FirebaseStorageContextProvider>
           <NotificationContextProvider>
             <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
-              <BrandContextProvider>
+              <BrandContextProvider restrictForPayment={false}>
                 <CollaborationContextProvider>
                   <ContractContextProvider>
                     <AutocompleteDropdownContextProvider>

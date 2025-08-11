@@ -12,6 +12,7 @@ import { useProcess } from "@/hooks";
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status';
 import { Console } from '@/shared-libs/utils/console';
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -80,7 +81,6 @@ const CreateCollaboration = () => {
     setProcessMessage,
     setProcessPercentage,
   } = useProcess();
-
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const {
@@ -171,8 +171,12 @@ const CreateCollaboration = () => {
     status: "draft" | "active",
   ) => {
     try {
-      if (!AuthApp.currentUser) {
-        Console.error("User not logged in");
+      if (!AuthApp.currentUser || !selectedBrand) {
+        Console.error("User or brand not selected");
+        return;
+      }
+      if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
+        return;
       }
 
       let locationAddress = collaboration?.location;
