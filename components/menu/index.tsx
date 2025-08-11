@@ -92,7 +92,7 @@ const Menu = () => {
               <ProfileItemCard
                 key={"cancel-plan"}
                 item={{
-                  href: "",
+                  href: "/",
                   icon: faCancel,
                   id: "cancel-plan",
                   title: "Cancel Plan"
@@ -104,7 +104,7 @@ const Menu = () => {
             <ProfileItemCard
               key={"logout"}
               item={{
-                href: "",
+                href: "/",
                 icon: faSignOut,
                 id: "logout",
                 title: "Logout"
