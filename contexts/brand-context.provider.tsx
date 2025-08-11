@@ -15,6 +15,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
 
 interface BrandContextProps {
@@ -177,7 +178,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       if (!restrictForPayment)
         return;
 
-      if (!selectedBrand.hasPayWall)
+      if (Platform.OS == "web" && !selectedBrand.hasPayWall)
         return;
 
       console.log("Evaluation Paywall condition", (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted));
