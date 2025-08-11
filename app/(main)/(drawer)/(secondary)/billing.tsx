@@ -1,15 +1,15 @@
-import Billing from "@/components/billing";
-import ScreenHeader from "@/components/ui/screen-header";
+import PayWallComponent from "@/components/paywall";
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
 
 const BillingScreen = () => {
   return (
     <AppLayout withWebPadding={false}>
-      <ScreenHeader
+      {/* <ScreenHeader
         title="Billing"
-      />
-      <Billing />
+      /> */}
+      <PayWallComponent />
+      {/* <Billing /> */}
     </AppLayout>
   );
 };

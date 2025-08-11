@@ -21,6 +21,7 @@ import {
   faUsers
 } from "@fortawesome/free-solid-svg-icons";
 import { Theme, useTheme } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
@@ -199,6 +200,60 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
           </View>
         </View>
 
+        {/* Promotional Banner */}
+        <LinearGradient
+          colors={['#3b82f6', '#8b5cf6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{
+            borderRadius: 12,
+            padding: 16,
+            marginHorizontal: 8,
+            marginBottom: 12,
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: 14,
+              marginBottom: 4,
+            }}
+          >
+            You’re on the Free Plan
+          </Text>
+          <Text
+            style={{
+              color: 'rgba(255,255,255,0.85)',
+              fontSize: 12,
+              marginBottom: 12,
+            }}
+          >
+            Upgrade now to keep your community access
+          </Text>
+          <Pressable
+            onPress={() => router.push("/billing")}
+            style={({ pressed }) => ({
+              backgroundColor: pressed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.4)',
+              paddingVertical: 8,
+              paddingHorizontal: 16,
+              borderRadius: 20,
+              alignSelf: 'flex-start',
+            })}
+          >
+            <Text
+              style={{
+                color: 'white',
+                fontWeight: '600',
+                fontSize: 13,
+              }}
+            >
+              Upgrade Now
+            </Text>
+          </Pressable>
+        </LinearGradient>
+
         {/* Brand Details Section */}
         <View style={{ marginTop: 16, gap: 8 }}>
           <Pressable
@@ -240,11 +295,12 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
       {/* Bottom Actions */}
       <View
         style={{
-          paddingHorizontal: 16,
-          paddingBottom: bottom + (Platform.OS === "android" ? 20 : 28),
+          paddingHorizontal: 8,
+          paddingTop: 4,
+          paddingBottom: bottom,
           borderTopColor: Colors(theme).border,
           borderTopWidth: StyleSheet.hairlineWidth,
-          gap: 8,
+          gap: 4,
         }}
       >
         {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map((tab, idx) => (
