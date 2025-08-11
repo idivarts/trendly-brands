@@ -96,7 +96,7 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
       ) : (
         <DrawerIcon href="/collaborations" icon={faStar} />
       ),
-    label: "Collaborations",
+    label: "Campaigns",
   },
   {
     href: "/messages",
