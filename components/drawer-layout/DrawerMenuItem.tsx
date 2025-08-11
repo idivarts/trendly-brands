@@ -1,7 +1,10 @@
 import Colors from "@/constants/Colors";
 import { useChatContext } from "@/contexts";
+import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { usePathname, useRouter } from "expo-router";
+import { Href, usePathname, useRouter } from "expo-router";
+import React, { useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Badge } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
@@ -10,8 +13,8 @@ export interface IconPropFn {
   focused: boolean;
 }
 
-type Tab = {
-  href: string;
+export type Tab = {
+  href: Href;
   icon: (props: IconPropFn) => JSX.Element;
   label: string;
   showUnreadCount?: boolean;
@@ -25,53 +28,67 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
-  const { unreadCount } = useChatContext()
+  const { unreadCount } = useChatContext();
+  const [hovered, setHovered] = useState(false);
 
-  const isActive = tab.href.includes(pathname);
+  // Avoid marking blank href items as active
+  const isActive = !!tab.href && pathname.startsWith(tab.href.toString());
   const colorSet = Colors(theme);
 
   return (
     <Pressable
-      // @ts-ignore
-      onPress={() => router.push(tab.href)}
-      android_ripple={{ color: colorSet.primary + "30" }}
-      style={[
+      onPress={() => {
+        if (tab.href) router.push(tab.href);
+      }}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      android_ripple={{ color: colorSet.primary + "22" }}
+      style={({ pressed }) => [
         styles.wrapper,
         {
+          // Backgrounds
           backgroundColor: isActive
             ? colorSet.primary
-            : colorSet.background,
-          borderColor: isActive
-            ? colorSet.primary
-            : colorSet.background,
-          // shadowColor: isActive ? "#000" : "transparent",
+            : pressed || hovered
+              ? colorSet.background + "F2"
+              : colorSet.background,
+          // Borders: only on active or hover
+          borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
+          borderColor: isActive ? colorSet.primary : colorSet.border,
+          // Active accent on the left
+          borderLeftWidth: isActive ? 3 : 0,
+          borderLeftColor: isActive ? colorSet.white : "transparent",
         },
       ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
     >
       <View style={styles.innerContainer}>
         {tab.icon({ focused: isActive })}
         <Text
           style={[
             styles.label,
-            {
-              color: isActive ? colorSet.white : colorSet.text,
-              fontWeight: isActive ? "600" : "400",
-            },
+            { color: isActive ? colorSet.white : colorSet.text, fontWeight: isActive ? "600" : "500" },
           ]}
+          numberOfLines={1}
         >
           {tab.label}
         </Text>
         {tab.showUnreadCount && unreadCount > 0 && (
           <Badge
             visible={true}
-            size={24}
+            size={16}
             selectionColor={Colors(theme).red}
             style={{
               backgroundColor: Colors(theme).red,
+              minWidth: 16,
+              alignSelf: "center",
             }}
           >
             {unreadCount}
-          </Badge>)}
+          </Badge>
+        )}
       </View>
     </Pressable>
   );
@@ -79,23 +96,45 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginHorizontal: 12,
-    marginVertical: 6,
-    borderRadius: 12,
+    marginHorizontal: 8,
+    marginVertical: 2,
+    borderRadius: 10,
     overflow: "hidden",
-    elevation: 2,
   },
   innerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    backgroundColor: "transparent"
+    gap: 10,
+    backgroundColor: "transparent",
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
+    flex: 1,
   },
 });
 
+interface DrawerIconProps {
+  href?: string;
+  icon: IconProp;
+  size?: number
+}
+
+const DrawerIcon: React.FC<DrawerIconProps> = ({ href, icon, size = 20 }) => {
+  const theme = useTheme();
+  const pathname = usePathname();
+
+  const active = !!href && pathname.startsWith(href);
+
+  return (
+    <FontAwesomeIcon
+      icon={icon}
+      color={active ? Colors(theme).white : Colors(theme).text}
+      size={size}
+    />
+  );
+};
+
 export default DrawerMenuItem;
+export { DrawerIcon };
