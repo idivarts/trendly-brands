@@ -1,10 +1,13 @@
+import { faCreditCard } from "@fortawesome/free-regular-svg-icons";
 import {
   faGears,
   faSliders,
   faUsers
 } from "@fortawesome/free-solid-svg-icons";
+import { Href } from "expo-router";
+import { Platform } from "react-native";
 
-export const MENU_ITEMS = [
+export const MENU_ITEMS: { id: string, icon: any, title: string, href: Href }[] = [
   {
     id: "1",
     icon: faSliders,
@@ -17,10 +20,16 @@ export const MENU_ITEMS = [
     title: "Manage Brand Members",
     href: "/members",
   },
-  {
+  ...(Platform.OS == "web" ? [{
     id: "3",
-    title: "Settings",
-    href: "/settings",
+    icon: faCreditCard,
+    title: "Billing",
+    href: "/billing" as Href,
+  }] : []),
+  ...(Platform.OS != "web" ? [{
+    id: "4",
     icon: faGears,
-  },
+    title: "Settings",
+    href: "/settings" as Href,
+  }] : []),
 ];
