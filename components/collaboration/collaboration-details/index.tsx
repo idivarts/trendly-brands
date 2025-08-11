@@ -9,7 +9,7 @@ import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
+import { Href, router } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
@@ -101,6 +101,11 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         />
       ),
     },
+    ...(xl ? [{
+      id: "d2",
+      title: "---",
+      href: "/" as Href
+    }] : []),
     {
       id: "Applications",
       title: "Applications",
@@ -130,6 +135,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
           }}
         />
       ),
+    }, {
+      id: "d1",
+      title: "---",
+      href: "/" as Href
     }] : []),
     {
       id: "Invitations",
