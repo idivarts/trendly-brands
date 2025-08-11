@@ -139,7 +139,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         <CarouselScroller
           data={influencers}
           height={height}
-          vertical={false}
+          vertical={xl ? true : false}
           width={width}
           renderItem={({ item }) => (
             <View style={{ paddingBottom: 24 }} key={(item as InfluencerApplication).application.id}>

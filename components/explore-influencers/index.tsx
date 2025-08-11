@@ -210,7 +210,7 @@ const ExploreInfluencers = () => {
                 />
               )}
               objectKey='id'
-              vertical={false}
+              vertical={xl ? true : false}
               width={width} // Default width if not provided
               height={height}
               onLoadMore={() => loadMore()}
