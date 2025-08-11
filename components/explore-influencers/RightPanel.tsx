@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, List, Surface, Text } from 'react-native-paper'
+import { Badge, Button, Divider, List, Surface, Text } from 'react-native-paper'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -69,32 +69,6 @@ const RightPanel = () => {
                     </Button>
                 </Block>
 
-                {/* Search helpers */}
-                <Block>
-                    <SectionHeader icon="search" title="Search influencers" subtitle="Find the right match" />
-                    <Text variant="bodyMedium" style={styles.muted}>
-                        Use filters to narrow by name, category, and more.
-                    </Text>
-
-                    {/* <View style={styles.chipsRow}>
-                        <Chip compact icon="magnify">Text search</Chip>
-                        <Chip compact icon="shape">Category</Chip>
-                        <Chip compact icon="map-marker">Location</Chip>
-                    </View> */}
-                    {/* 
-                    <Divider style={styles.divider} />
-                    <Button
-                        mode="contained-tonal"
-                        icon="filter"
-                        onPress={() => router.push('/explore-influencers')}
-                        style={styles.ctaBtn}
-                    >
-                        Open search
-                    </Button> */}
-                </Block>
-
-
-
                 {/* Influencer Preference */}
                 <Block>
                     <SectionHeader icon="sliders" title="Influencer preference" subtitle="Advanced filters" />
@@ -133,6 +107,70 @@ const RightPanel = () => {
                         Set preferences
                     </Button>
                 </Block>
+
+                {/* Search helpers */}
+                <Block style={{ padding: 0, borderWidth: 0 }}>
+                    <LinearGradient
+                        colors={[Colors(theme).secondary, Colors(theme).primary]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.comingSoonCard}
+                    >
+                        <View style={styles.headerRow}>
+                            <View style={[styles.headerIconWrap, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+                                <FontAwesome name="search" size={16} color="#fff" />
+                            </View>
+                            <View style={{ flex: 1, backgroundColor: "transparent" }}>
+                                <Text variant="titleSmall" style={styles.soonTitle}>Search (coming soon)</Text>
+                                <Text variant="labelSmall" style={styles.soonSubtitle}>Powerful ways to find creators</Text>
+                            </View>
+                            <Badge size={18} style={styles.soonBadge}>Soon</Badge>
+                        </View>
+                        <Divider style={{ marginVertical: 16 }} />
+
+                        <View style={styles.soonList}>
+                            <View style={styles.soonListItem}>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="user" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Search by creator name</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Know a creator already? Just type their name.</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.soonListItem}>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="tag" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Keyword search</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Find influencers by content keywords like “fashion” or “GRWM”.</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.soonListItem}>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Look‑alike search</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Paste a creator’s link and our AI finds similar vibes, style, and audience.</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <Button
+                            mode="contained"
+                            buttonColor="#fff"
+                            labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
+                            style={styles.soonCtaBtn}
+                            icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
+                            onPress={() => router.push('/billing')}
+                        >
+                            Get yearly & lock price
+                        </Button>
+
+                        <Text variant="labelSmall" style={styles.soonFootnote}>
+                            Register on the yearly plan today. When search launches, any price hike won’t affect your current plan.
+                        </Text>
+                    </LinearGradient>
+                </Block>
+
             </View>
         </ScrollView>
     )
@@ -163,6 +201,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 10,
         marginBottom: 8,
+        backgroundColor: "transparent"
     },
     headerIconWrap: {
         width: 28,
@@ -228,6 +267,56 @@ const styles = StyleSheet.create({
         width: 18,
         textAlign: 'center',
     },
+    comingSoonCard: {
+        borderRadius: 14,
+        padding: 14,
+        overflow: 'hidden',
+    },
+    soonBadge: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        color: 'white',
+    },
+    soonTitle: {
+        color: '#fff',
+        fontWeight: '700',
+    },
+    soonSubtitle: {
+        color: 'rgba(255,255,255,0.85)',
+    },
+    soonList: {
+        marginTop: 6,
+        gap: 10,
+        backgroundColor: "transparent"
+    },
+    soonListItem: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        backgroundColor: "transparent"
+    },
+    soonBulletIcon: {
+        width: 26,
+        height: 26,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.18)',
+    },
+    soonListTitle: {
+        color: '#fff',
+        fontWeight: '600',
+    },
+    soonListDesc: {
+        color: 'rgba(255,255,255,0.9)',
+    },
+    soonCtaBtn: {
+        alignSelf: 'flex-start',
+        marginTop: 24,
+    },
+    soonFootnote: {
+        color: 'rgba(255,255,255,0.85)',
+        marginTop: 10,
+    }
 })
 
 export default RightPanel
