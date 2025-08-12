@@ -145,7 +145,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
             <ApplicationCard
               key={(item as InfluencerApplication).application.id}
               topHeaderNode={isApplicationConcised && <View style={{
-                paddingVertical: 16, backgroundColor: Colors(theme).card
+                paddingBottom: 16, backgroundColor: Colors(theme).card
               }}>
                 <View style={{
                   flexDirection: "column",
