@@ -139,11 +139,12 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         <CarouselScroller
           data={influencers}
           height={height}
-          vertical={xl ? true : false}
+          vertical={true}
           width={width}
           renderItem={({ item }) => (
-            <View style={{ paddingBottom: 24 }} key={(item as InfluencerApplication).application.id}>
-              {isApplicationConcised && <View style={{
+            <ApplicationCard
+              key={(item as InfluencerApplication).application.id}
+              topHeaderNode={isApplicationConcised && <View style={{
                 paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card
               }}>
                 <CardHeader
@@ -153,22 +154,20 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                   name={item.collaboration?.name || ""}
                 />
               </View>}
-              <ApplicationCard
-                acceptApplication={() => {
-                  setSelectedInfluencerApplication(item);
-                  handleAcceptApplication(item);
-                }}
-                bottomSheetAction={() => {
-                  setSelectedInfluencerApplication(item);
-                  setIsActionModalVisible(true);
-                }}
-                data={item}
-                profileModalAction={() => {
-                  setSelectedInfluencerApplication(item);
-                  setOpenProfileModal(true);
-                }}
-              />
-            </View>
+              acceptApplication={() => {
+                setSelectedInfluencerApplication(item);
+                handleAcceptApplication(item);
+              }}
+              bottomSheetAction={() => {
+                setSelectedInfluencerApplication(item);
+                setIsActionModalVisible(true);
+              }}
+              data={item}
+              profileModalAction={() => {
+                setSelectedInfluencerApplication(item);
+                setOpenProfileModal(true);
+              }}
+            />
           )}
           objectKey="id"
         // keyExtractor={(item, index) => item.application.id + index}

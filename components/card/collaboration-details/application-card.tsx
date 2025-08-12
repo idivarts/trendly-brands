@@ -15,6 +15,7 @@ interface ApplicationCardProps {
   bottomSheetAction?: () => void;
   data: InfluencerApplication;
   profileModalAction?: () => void;
+  topHeaderNode?: any
 }
 
 export const ApplicationCard: React.FC<ApplicationCardProps> = ({
@@ -22,6 +23,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   bottomSheetAction,
   data,
   profileModalAction,
+  topHeaderNode = null,
 }) => {
   const theme = useTheme();
   const [influencer, setInfluencer] = useState(data.influencer)
@@ -45,6 +47,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         }}
         openProfile={profileModalAction}
         ToggleModal={bottomSheetAction}
+        fullHeight={true}
         type="application"
         // customAttachments={data.application.attachments}
         cardActionNode={<Button
@@ -70,10 +73,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         </Button>}
         footerNode={<CardFooter
           quote={convertToKUnits(Number(data.application.quotation)) as string}
-        // timeline={new Date(data.application.timeline).toLocaleDateString(
-        //   "en-US"
-        // )}
         />}
+        topHeaderNode={topHeaderNode}
       />
     </>
 
