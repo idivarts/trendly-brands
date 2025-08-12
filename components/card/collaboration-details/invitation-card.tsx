@@ -38,6 +38,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         influencer={data}
         type="invitation"
         ToggleModal={bottomSheetAction}
+        fullHeight={true}
         cardActionNode={<Button
           mode="outlined"
           disabled={isAlreadyInvited ? true : false}

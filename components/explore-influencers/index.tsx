@@ -201,6 +201,7 @@ const ExploreInfluencers = () => {
                   type="explore"
                   ToggleModal={ToggleModal}
                   influencer={item}
+                  fullHeight={true}
                   setSelectedInfluencer={setSelectedInfluencer as any}
                   openProfile={(item) => {
                     if (item)
@@ -210,7 +211,7 @@ const ExploreInfluencers = () => {
                 />
               )}
               objectKey='id'
-              vertical={xl ? true : false}
+              vertical={true}
               width={width} // Default width if not provided
               height={height}
               onLoadMore={() => loadMore()}
