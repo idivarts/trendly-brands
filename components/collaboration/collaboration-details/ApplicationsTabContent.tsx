@@ -174,22 +174,6 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
             />
           )}
           objectKey="id"
-        // keyExtractor={(item, index) => item.application.id + index}
-        // style={{
-        //   paddingBottom: 16,
-        //   width: xl ? MAX_WIDTH_WEB : '100%',
-        //   marginHorizontal: "auto",
-        // }}
-        // ItemSeparatorComponent={
-        //   () => (
-        //     <View
-        //       style={{
-        //         height: 16,
-        //         backgroundColor: !xl ? (theme.dark ? Colors(theme).background : Colors(theme).aliceBlue) : "unset",
-        //       }}
-        //     />
-        //   )
-        // }
         />
       </CarouselInViewProvider>
 
