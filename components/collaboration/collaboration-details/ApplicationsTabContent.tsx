@@ -10,7 +10,6 @@ import {
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { View } from "@/components/theme/Themed";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
-import { CardHeader } from "@/components/ui/card/secondary/card-header";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
@@ -22,6 +21,7 @@ import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carou
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
+import { Text } from "@/shared-uis/components/theme/Themed";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
@@ -145,14 +145,18 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
             <ApplicationCard
               key={(item as InfluencerApplication).application.id}
               topHeaderNode={isApplicationConcised && <View style={{
-                paddingVertical: 16, paddingHorizontal: 8, backgroundColor: Colors(theme).card
+                paddingVertical: 16, backgroundColor: Colors(theme).card
               }}>
-                <CardHeader
-                  avatar={item.brand?.image || ""}
-                  handle={item.brand?.name || ""}
-                  // isVerified={true}
-                  name={item.collaboration?.name || ""}
-                />
+                <View style={{
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  // paddingHorizontal: 16,
+                }}>
+                  <Text style={{ fontWeight: "600", fontSize: 16 }}>{item.collaboration?.name || ""}</Text>
+                  <Text style={{ fontWeight: "400", fontSize: 12 }}>{item.brand?.name || ""}</Text>
+                </View>
+
               </View>}
               acceptApplication={() => {
                 setSelectedInfluencerApplication(item);
