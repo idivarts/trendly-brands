@@ -11,9 +11,6 @@ import { View } from "../theme/Themed";
 
 
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
-import {
-  BottomSheetBackdrop
-} from "@gorhom/bottom-sheet";
 
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
@@ -152,15 +149,9 @@ const ExploreInfluencers = () => {
     manager
   ]);
 
-  const renderBackdrop = (props: any) => {
-    return (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-      />
-    );
-  };
+  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
+  const [height, setHeight] = useState(Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height))
+
 
   if (isLoading && influencers.length == 0) {
     return (
@@ -177,20 +168,22 @@ const ExploreInfluencers = () => {
       </AppLayout>
     );
   }
-
-  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
-  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
-
   return (
     <AppLayout>
       <View
         style={{
           flex: 1,
-          marginHorizontal: "auto",
-          width: "100%", //xl ? MAX_WIDTH_WEB :
+          width: "100%",
+          height: "100%",
+          alignSelf: "stretch",
+          minHeight: 0,
         }}
+      // onLayout={(event) => {
+      //   const next = Math.round(event.nativeEvent.layout.height);
+      //   setHeight((prev) => (prev === next ? prev : next));
+      // }}
       >
-        <View style={{ alignSelf: "stretch" }}>
+        <View style={{ alignSelf: "stretch", flex: 1, minHeight: 0 }}>
           <CarouselInViewProvider>
             <CarouselScroller
               data={filteredInfluencers}
