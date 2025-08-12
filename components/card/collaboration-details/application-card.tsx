@@ -78,7 +78,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
               />
 
               {/* Right: Action */}
-              <View style={{ flex: 1, alignItems: "flex-end" }}>
+              <View style={{ flexShrink: 0, flexGrow: 0, alignItems: "flex-end" }}>
                 {data.application.status === "pending" ? (
                   <PaperButton
                     mode="contained"
