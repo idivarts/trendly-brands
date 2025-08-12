@@ -3,6 +3,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { Brand } from "@/types/Brand";
 import {
@@ -29,7 +30,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
   const filteredBrands = brands
 
   const handleBrandChange = (brand: Brand) => {
-    navigation.dispatch(DrawerActions.closeDrawer());
+    OpenDrawerSubject.next(false)
     setSelectedBrand(brand);
   };
 

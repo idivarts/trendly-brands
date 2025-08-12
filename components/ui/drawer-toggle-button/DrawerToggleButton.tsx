@@ -1,5 +1,4 @@
 import { useTheme } from '@react-navigation/native';
-import { useNavigation } from "expo-router";
 import { Pressable } from 'react-native';
 
 import { View } from '@/components/theme/Themed';
@@ -16,13 +15,11 @@ const DrawerToggleButton: React.FC<DrawerToggleButtonProps> = ({
   icon,
   ...props
 }) => {
-  const navigation = useNavigation();
   const theme = useTheme();
-
   return (
     <Pressable
       {...props}
-      onPress={() => OpenDrawerSubject.next(undefined)}
+      onPress={() => OpenDrawerSubject.next(true)}
     >
       <View
         style={{
