@@ -30,10 +30,12 @@ const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
 export default function BrandDetailPage() {
     const router = useMyNavigation()
     const { selectedBrand, updateBrand } = useBrandContext()
-    const { features: { aboutBrand } } = useMyGrowthBook()
+    const { features: { aboutBrand, showDetailsOnMobile } } = useMyGrowthBook()
 
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
+
+    const showDetails = isWide || showDetailsOnMobile;
 
     const [about, setAbout] = useState("");
     const [website, setWebsite] = useState("");
@@ -42,13 +44,6 @@ export default function BrandDetailPage() {
     const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
     const [errors, setErrors] = useState<{ brand?: string; phone?: string }>({});
     const [submitting, setSubmitting] = useState(false);
-
-    const AGE_OPTIONS = [
-        { key: "JUST_STARTING", title: "Just starting", desc: "New or pre-launch brand" },
-        { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
-        { key: "LT_5", title: "Less than 5 years", desc: "Established but growing" },
-        { key: "GT_5", title: "5+ years", desc: "Well established brand" },
-    ];
 
     const toggleIndustry = (name: string) => {
         setSelectedIndustries((prev) =>
@@ -115,18 +110,19 @@ export default function BrandDetailPage() {
                 bounces={false}
                 showsVerticalScrollIndicator={false}
             >
-                <LandingHeader />
+                {showDetails && <LandingHeader />}
 
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
-                    <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <ExplainerDynamic
-                            config={explainerConfig}
-                            viewBelowItems={aboutBrand?.showOfferCard && <View style={{ paddingVertical: 16 }}><OfferCard /></View>}
-                        />
-                        {/* Visual */}
-                        {/* <ImageBackground
+                    {showDetails && (
+                        <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
+                            <ExplainerDynamic
+                                config={explainerConfig}
+                                viewBelowItems={aboutBrand?.showOfferCard && <View style={{ paddingVertical: 16 }}><OfferCard /></View>}
+                            />
+                            {/* Visual */}
+                            {/* <ImageBackground
                             source={{ uri: ONBOARD_IMG }}
                             style={styles.visual}
                             imageStyle={styles.visualImg}
@@ -135,10 +131,11 @@ export default function BrandDetailPage() {
                                 <Text style={styles.playBadgeText}>Overview</Text>
                             </View>
                         </ImageBackground> */}
-                    </View>
+                        </View>
+                    )}
 
                     {/* Right: Form */}
-                    <View style={styles.formCard}>
+                    <View style={[styles.formCard, showDetails && styles.formCardWide]}>
                         <Stepper count={3} total={4} />
 
                         <View style={styles.headerRow}>
@@ -228,7 +225,8 @@ export default function BrandDetailPage() {
                     </View>
                 </View>
 
-                <LandingFooter />
+                {showDetails &&
+                    <LandingFooter />}
             </ScrollView>
             <SuccessCelebration
                 visible={showSuccess}
@@ -342,16 +340,19 @@ const styles = StyleSheet.create({
     formCard: {
         flex: 1,
         backgroundColor: "#FFFFFF",
+        gap: 12,
+        ...Platform.select({ web: { maxWidth: 520 } }),
+        ...Platform.select({ android: { elevation: 4 } }),
+    },
+    formCardWide: {
         borderRadius: 16,
         paddingVertical: 22,
         paddingHorizontal: 22,
         marginTop: 18,
-        ...Platform.select({ web: { maxWidth: 520 } }),
         shadowColor: "#000",
         shadowOpacity: 0.08,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 },
-        ...Platform.select({ android: { elevation: 4 } }),
     },
     formHeading: { fontSize: 24, fontWeight: "800", color: TEXT },
     formSub: { marginTop: 6, color: "#6C7A89", fontSize: 13 },
