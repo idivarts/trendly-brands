@@ -38,12 +38,14 @@ const AGE_OPTIONS = [
 
 export default function CreateBrandPage() {
     const router = useMyNavigation()
-    const { features: { createBrand: cJson, hideAboutBrand } } = useMyGrowthBook()
+    const { features: { createBrand: cJson, hideAboutBrand, showDetailsOnMobile } } = useMyGrowthBook()
     const { manager, session } = useAuthContext()
     const { createBrand, setSelectedBrand } = useBrandContext()
 
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
+
+    const showDetails = isWide || showDetailsOnMobile;
 
     const [brandName, setBrandName] = useState("");
     const [phone, setPhone] = useState("");
@@ -124,26 +126,30 @@ export default function CreateBrandPage() {
                 bounces={false}
                 showsVerticalScrollIndicator={false}
             >
-                <LandingHeader />
+                {showDetails && <LandingHeader />}
 
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left: Explainer */}
-                    <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
-                        <ExplainerDynamic
-                            config={explainerConfig}
-                            viewBelowItems={cJson?.showOfferCard && <View style={{ paddingVertical: 16, }}>
-                                <OfferCard />
-                            </View>}
-                        />
-                    </View>
+                    {showDetails && (
+                        <View style={[isWide && styles.left, isWide ? { paddingRight: 90 } : {}]}>
+                            <ExplainerDynamic
+                                config={explainerConfig}
+                                viewBelowItems={cJson?.showOfferCard && <View style={{ paddingVertical: 16, }}>
+                                    <OfferCard />
+                                </View>}
+                            />
+                        </View>
+                    )}
 
                     {/* Right: Form */}
-                    <View style={styles.formCard}>
+                    <View style={[styles.formCard, showDetails && styles.formCardWide]}>
                         <Stepper count={2} total={4} />
 
-                        <Text style={styles.formHeading}>Create your brand</Text>
-                        <Text style={styles.formSub}>It takes less than a minute to get started.</Text>
+                        <View>
+                            <Text style={styles.formHeading}>Create your brand</Text>
+                            <Text style={styles.formSub}>It takes less than a minute to get started.</Text>
+                        </View>
 
                         <View style={styles.field}>
                             <Text style={styles.label}>Brand name</Text>
@@ -217,7 +223,8 @@ export default function CreateBrandPage() {
                     </View>
                 </View>
 
-                <LandingFooter />
+                {showDetails &&
+                    <LandingFooter />}
             </ScrollView>
             <SuccessCelebration
                 visible={showSuccess}
@@ -333,16 +340,19 @@ const styles = StyleSheet.create({
     formCard: {
         flex: 1,
         backgroundColor: "#FFFFFF",
+        gap: 12,
+        ...Platform.select({ web: { maxWidth: 520 } }),
+        ...Platform.select({ android: { elevation: 4 } }),
+    },
+    formCardWide: {
         borderRadius: 16,
         paddingVertical: 22,
         paddingHorizontal: 22,
         marginTop: 18,
-        ...Platform.select({ web: { maxWidth: 520 } }),
         shadowColor: "#000",
         shadowOpacity: 0.08,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 },
-        ...Platform.select({ android: { elevation: 4 } }),
     },
     formHeading: { fontSize: 24, fontWeight: "800", color: TEXT },
     formSub: { marginTop: 6, color: "#6C7A89", fontSize: 13 },
