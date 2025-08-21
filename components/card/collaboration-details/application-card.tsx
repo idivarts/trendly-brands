@@ -1,4 +1,5 @@
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { Text, View } from "@/shared-uis/components/theme/Themed";
@@ -28,10 +29,12 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const theme = useTheme();
   const [influencer, setInfluencer] = useState(data.influencer)
   const { xl } = useBreakpoints()
+  const { isOnFreeTrial } = useBrandContext();
   return (
     <>
       <InfluencerCard
         xl={xl}
+        isOnFreePlan={isOnFreeTrial}
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,
@@ -78,7 +81,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
               />
 
               {/* Right: Action */}
-              <View style={{ flex: 1, alignItems: "flex-end" }}>
+              <View style={{ flexShrink: 0, flexGrow: 0, alignItems: "flex-end" }}>
                 {data.application.status === "pending" ? (
                   <PaperButton
                     mode="contained"

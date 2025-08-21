@@ -1,9 +1,9 @@
+import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { FontAwesome } from '@expo/vector-icons'
 import { useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useRouter } from 'expo-router'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
 import { Badge, Button, Divider, List, Surface, Text } from 'react-native-paper'
@@ -32,7 +32,7 @@ const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, s
 
 const RightPanel = () => {
     const theme = useTheme()
-    const router = useRouter()
+    const router = useMyNavigation()
 
     return (
         <ScrollView
@@ -84,6 +84,7 @@ const RightPanel = () => {
                             left={() => <FontAwesome name="users" size={16} color={Colors(theme).text} style={styles.listIcon} />}
                             right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
                             style={styles.listItem}
+                            onPress={() => router.push('/preferences')}
                         />
                         <List.Item
                             title="Platforms"
@@ -92,6 +93,7 @@ const RightPanel = () => {
                             left={() => <FontAwesome name="hashtag" size={16} color={Colors(theme).text} style={styles.listIcon} />}
                             right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
                             style={styles.listItem}
+                            onPress={() => router.push('/preferences')}
                         />
                         <List.Item
                             title="Languages & budget"
@@ -100,6 +102,7 @@ const RightPanel = () => {
                             left={() => <FontAwesome name="globe" size={16} color={Colors(theme).text} style={styles.listIcon} />}
                             right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
                             style={styles.listItem}
+                            onPress={() => router.push('/preferences')}
                         />
                     </List.Section>
 

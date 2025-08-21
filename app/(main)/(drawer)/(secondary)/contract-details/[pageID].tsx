@@ -6,6 +6,7 @@ import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import {
   IApplications,
@@ -43,6 +44,7 @@ const ContractScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { manager } = useAuthContext()
+  const { isOnFreeTrial } = useBrandContext()
   const { pageID } = useLocalSearchParams();
   const [contract, setContract] = useState<ICollaborationCard>();
   const [openProfileModal, setOpenProfileModal] = useState(false)
@@ -143,6 +145,7 @@ const ContractScreen = () => {
         onClose={() => { setOpenProfileModal(false) }}
       >
         <ProfileBottomSheet
+          isOnFreePlan={isOnFreeTrial}
           influencer={selectedInfluencer as User}
           theme={theme}
           FireStoreDB={FirestoreDB}

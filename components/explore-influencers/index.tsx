@@ -71,7 +71,7 @@ const ExploreInfluencers = () => {
 
   const { manager } = useAuthContext()
   const theme = useTheme();
-  const { selectedBrand } = useBrandContext()
+  const { selectedBrand, isOnFreeTrial } = useBrandContext()
   const preferences = selectedBrand?.preferences || {}
 
   const { xl } = useBreakpoints();
@@ -177,12 +177,7 @@ const ExploreInfluencers = () => {
           height: "100%",
           alignSelf: "stretch",
           minHeight: 0,
-        }}
-      // onLayout={(event) => {
-      //   const next = Math.round(event.nativeEvent.layout.height);
-      //   setHeight((prev) => (prev === next ? prev : next));
-      // }}
-      >
+        }}>
         <View style={{ alignSelf: "stretch", flex: 1, minHeight: 0 }}>
           <CarouselInViewProvider>
             <CarouselScroller
@@ -191,6 +186,7 @@ const ExploreInfluencers = () => {
                 <InfluencerCard
                   xl={xl}
                   key={item.id}
+                  isOnFreePlan={isOnFreeTrial}
                   type="explore"
                   ToggleModal={ToggleModal}
                   influencer={item}
@@ -247,6 +243,7 @@ const ExploreInfluencers = () => {
         <ProfileBottomSheet
           influencer={selectedInfluencer as User}
           theme={theme}
+          isOnFreePlan={isOnFreeTrial}
           actionCard={
             <View
               style={{

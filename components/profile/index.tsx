@@ -7,6 +7,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
+import { Text } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faGears, faPen, faSignOut } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -20,7 +21,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  View,
+  View
 } from "react-native";
 import ProfileItemCard from "../ProfileItemCard";
 import Button from "../ui/button";
@@ -174,7 +175,7 @@ const Profile = () => {
                 <FontAwesomeIcon
                   icon={faPen}
                   color={theme.dark ? Colors(theme).white : Colors(theme).primary}
-                  size={22}
+                  size={16}
                 />
               </Pressable>
             </View>
@@ -221,7 +222,9 @@ const Profile = () => {
             )}
           </View>
           <View style={styles.sectionDivider} />
+
           <View style={styles.middleRow}>
+            <Text style={{ fontSize: 16, fontWeight: "600", textAlign: "left", alignSelf: "flex-start", paddingVertical: 24 }}> Other Items</Text>
             <ProfileItemCard
               key={"settings-menu"}
               item={{
@@ -276,13 +279,13 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
   },
   editIcon: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: 40,
+    // right: Dimensions.get("screen").width / 2 - 100,
     padding: 10,
     backgroundColor: theme.dark ? Colors(theme).card : Colors(theme).tag,
     borderRadius: 100,
-    borderWidth: 1,
-    borderColor: theme.dark ? Colors(theme).white : Colors(theme).primary,
+    // borderWidth: 1,
+    // borderColor: theme.dark ? Colors(theme).white : Colors(theme).primary,
   },
   input: {
     width: "100%",
@@ -331,7 +334,10 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     width: "100%",
     maxWidth: 640,
     alignSelf: "center",
-    gap: 12,
+    paddingTop: 0,
+    paddingBottom: 50,
+    paddingHorizontal: 16,
+    gap: 0,
   },
   bottomRow: {
     gap: 14,
@@ -386,19 +392,19 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     // subtle shadow
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors(theme).aliceBlue,
+    // shadowColor: "#000",
+    // shadowOpacity: 0.08,
+    // shadowOffset: { width: 0, height: 4 },
+    // shadowRadius: 10,
+    // elevation: 2,
+    // borderWidth: StyleSheet.hairlineWidth,
+    // borderColor: Colors(theme).aliceBlue,
   },
   sectionDivider: {
     width: "100%",
     maxWidth: 640,
     alignSelf: "center",
-    height: StyleSheet.hairlineWidth,
+    height: StyleSheet.hairlineWidth * 3,
     backgroundColor: Colors(theme).aliceBlue,
     marginBottom: 20,
   },

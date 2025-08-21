@@ -34,7 +34,8 @@ const BrandContext = createContext<BrandContextProps>({
   selectedBrand: undefined,
   setSelectedBrand: () => { },
   updateBrand: () => Promise.resolve(),
-  loading: true
+  loading: true,
+  isOnFreeTrial: true,
 });
 
 export const useBrandContext = () => useContext(BrandContext);

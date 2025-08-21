@@ -2,14 +2,17 @@ import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { Href, router } from "expo-router";
+import { Href } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
@@ -41,9 +44,24 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const { xl } = useBreakpoints()
+  const { isOnFreeTrial } = useBrandContext()
+  const { openModal } = useConfirmationModel()
+  const router = useMyNavigation()
 
   const publishCollaboration = async () => {
     if (!pageID) return;
+    if (isOnFreeTrial) {
+      openModal({
+        title: "Upgrade to Publish",
+        description: "You need to upgrade your plan to publish collaborations.",
+        confirmText: "Upgrade Now",
+        confirmAction: () => {
+          router.push("/billing");
+        },
+      })
+      return;
+    }
+
     try {
       const collabRef = doc(FirestoreDB, "collaborations", pageID);
       await updateDoc(collabRef, {

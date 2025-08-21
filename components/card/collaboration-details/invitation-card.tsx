@@ -1,4 +1,5 @@
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import useInvitation from "@/hooks/use-invitation";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
@@ -29,6 +30,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
     checkIfAlreadyInvited,
     influencerId: data.id,
   });
+  const { isOnFreeTrial } = useBrandContext()
   const { xl } = useBreakpoints()
 
   return (
@@ -39,6 +41,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         type="invitation"
         ToggleModal={bottomSheetAction}
         fullHeight={true}
+        isOnFreePlan={isOnFreeTrial}
         cardActionNode={<Button
           mode="outlined"
           disabled={isAlreadyInvited ? true : false}

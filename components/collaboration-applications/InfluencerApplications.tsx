@@ -1,3 +1,4 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment'
 import { IApplications, ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users'
@@ -22,6 +23,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const theme = useTheme()
+    const { isOnFreeTrial } = useBrandContext()
 
     const [influencer, setInfluencer] = useState<User | undefined>(undefined)
     const [application, setApplication] = useState<IApplications | undefined>(undefined)
@@ -114,6 +116,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
         <View style={{ flex: 1, alignItems: "stretch", justifyContent: "center" }}>
             <ProfileBottomSheet FireStoreDB={FirestoreDB}
                 influencer={influencer}
+                isOnFreePlan={isOnFreeTrial}
                 actionCard={
                     (!!application && !!collaboration) ?
                         <View style={{ padding: 20, gap: 24 }}>
