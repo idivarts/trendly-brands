@@ -95,7 +95,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     handleActionModalClose,
   });
 
-  const { brands } = useBrandContext();
+  const { brands, isOnFreeTrial } = useBrandContext();
 
   useEffect(() => {
     fetchApplications();
@@ -191,6 +191,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         <ProfileBottomSheet
           closeModal={() => setOpenProfileModal(false)}
           isPhoneMasked={false}
+          isOnFreePlan={isOnFreeTrial}
           actionCard={
             <View
               style={{

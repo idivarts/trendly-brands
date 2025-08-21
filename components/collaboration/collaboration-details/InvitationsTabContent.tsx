@@ -10,6 +10,7 @@ import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
@@ -61,6 +62,7 @@ const InvitationsTabContent = (props: any) => {
     xl,
   } = useBreakpoints();
   const { manager } = useAuthContext()
+  const { isOnFreeTrial } = useBrandContext()
 
   // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -231,6 +233,7 @@ const InvitationsTabContent = (props: any) => {
       >
         <ProfileBottomSheet
           closeModal={() => setOpenProfileModal(false)}
+          isOnFreePlan={isOnFreeTrial}
           actionCard={
             <View
               style={{

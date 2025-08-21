@@ -1,4 +1,5 @@
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { Text, View } from "@/shared-uis/components/theme/Themed";
@@ -28,10 +29,12 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const theme = useTheme();
   const [influencer, setInfluencer] = useState(data.influencer)
   const { xl } = useBreakpoints()
+  const { isOnFreeTrial } = useBrandContext();
   return (
     <>
       <InfluencerCard
         xl={xl}
+        isOnFreePlan={isOnFreeTrial}
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,

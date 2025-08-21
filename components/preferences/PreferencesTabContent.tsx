@@ -33,8 +33,11 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   const {
     updateBrand,
     selectedBrand,
-    isOnFreeTrial
   } = useBrandContext();
+
+  // NOTE: this is marked as false as we no longer put restriction on setting the preferences
+  const isOnFreeTrial = false;
+
   const [loading, setLoading] = useState(false)
   const { openModal } = useConfirmationModel()
   const router = useMyNavigation()
