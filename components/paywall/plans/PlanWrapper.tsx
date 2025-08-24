@@ -1,6 +1,6 @@
 // import pricingPage from "@/app/(landing)/pricing-page";
-import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React from "react";
 import {
@@ -224,11 +224,7 @@ const stylesFn = (theme: Theme) => {
     const colors = Colors(theme);
 
     /* --------- Styles --------- */
-    const BLUE = "#254F7A";
-    const BLUE_DARK = "#1A3B5C";
-    const BLUE_LIGHT = "#6C91BA";
-    const TEXT = "#243A53";
-
+    // Removed hardcoded color constants
 
     return StyleSheet.create({
         /* Container helpers kept for future reuse (page/hero/etc. preserved from prior file) */
@@ -236,7 +232,7 @@ const stylesFn = (theme: Theme) => {
             paddingHorizontal: 24,
             paddingTop: Platform.select({ web: 36, default: 24 }),
             paddingBottom: 48,
-            backgroundColor: "#FFFFFF",
+            backgroundColor: colors.background,
             maxWidth: 1300,
             alignSelf: "center",
             width: "100%",
@@ -245,10 +241,10 @@ const stylesFn = (theme: Theme) => {
         /* Plans */
         plansWrap: { marginTop: 16, gap: 16 },
         planCard: {
-            backgroundColor: "#FFFFFF",
+            backgroundColor: colors.card,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: "#E1E6EE",
+            borderColor: colors.border,
             padding: 16,
             shadowColor: "#000",
             shadowOpacity: 0.04,
@@ -257,7 +253,7 @@ const stylesFn = (theme: Theme) => {
             ...Platform.select({ android: { elevation: 1 } }),
         },
         planPreferred: {
-            borderColor: BLUE,
+            borderColor: colors.primary,
             shadowOpacity: 0.08,
             ...Platform.select({ android: { elevation: 2 } }),
         },
@@ -265,44 +261,44 @@ const stylesFn = (theme: Theme) => {
             position: "absolute",
             top: 12,
             right: 12,
-            backgroundColor: BLUE,
+            backgroundColor: colors.primary,
             paddingHorizontal: 10,
             paddingVertical: 4,
             borderRadius: 999,
         },
-        planTagText: { color: "#fff", fontSize: 11, fontWeight: "800" },
-        planName: { color: TEXT, fontSize: 18, fontWeight: "800", marginTop: 2 },
+        planTagText: { color: colors.background, fontSize: 11, fontWeight: "800" },
+        planName: { color: colors.text, fontSize: 18, fontWeight: "800", marginTop: 2 },
         priceRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 6, flexWrap: "wrap" },
-        priceMain: { color: TEXT, fontSize: 28, fontWeight: "900" },
-        priceSlash: { color: "#8AA0BA", textDecorationLine: "line-through", marginLeft: 8, marginBottom: 2 },
-        pricePer: { color: "#6C7A89", marginLeft: 6, marginBottom: 2 },
-        savingsText: { color: "#1A7F37", fontWeight: "700", fontSize: 12, marginTop: 4 },
-        billingNote: { color: "#6C7A89", fontSize: 12, marginTop: 4 },
-        divider: { height: 1, backgroundColor: "#EEF3F9", marginVertical: 12 },
+        priceMain: { color: colors.text, fontSize: 28, fontWeight: "900" },
+        priceSlash: { color: colors.textSecondary, textDecorationLine: "line-through", marginLeft: 8, marginBottom: 2 },
+        pricePer: { color: colors.textSecondary, marginLeft: 6, marginBottom: 2 },
+        savingsText: { color: colors.success, fontWeight: "700", fontSize: 12, marginTop: 4 },
+        billingNote: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
+        divider: { height: 1, backgroundColor: colors.surface, marginVertical: 12 },
         featureRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-        featureTick: { fontSize: 16, marginRight: 10 },
-        featureCopy: { color: TEXT, fontSize: 13 },
+        featureTick: { fontSize: 16, marginRight: 10, color: colors.primary },
+        featureCopy: { color: colors.text, fontSize: 13 },
         buyBtn: {
             marginVertical: 14,
-            backgroundColor: BLUE,
+            backgroundColor: colors.primary,
             height: 46,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
         },
-        buyText: { color: "#fff", fontWeight: "800" },
+        buyText: { color: colors.background, fontWeight: "800" },
         buyBtnAlt: {
             marginVertical: 14,
-            backgroundColor: "#EEF4FB",
+            backgroundColor: colors.surface,
             height: 46,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
         },
-        buyTextAlt: { color: TEXT, fontWeight: "800" },
+        buyTextAlt: { color: colors.text, fontWeight: "800" },
 
         /* Compare hint kept for reuse */
-        compareHint: { marginTop: 12, color: "#6C7A89", fontSize: 12 },
+        compareHint: { marginTop: 12, color: colors.textSecondary, fontSize: 12 },
 
         /* Toggle */
         toggleWrap: {
@@ -313,11 +309,11 @@ const stylesFn = (theme: Theme) => {
         },
         togglePill: {
             flexDirection: "row",
-            backgroundColor: "#EEF4FB",
+            backgroundColor: colors.surface,
             borderRadius: 999,
             padding: 4,
             borderWidth: 1,
-            borderColor: "#E1E6EE",
+            borderColor: colors.border,
         },
         toggleItem: {
             paddingHorizontal: 14,
@@ -327,26 +323,26 @@ const stylesFn = (theme: Theme) => {
             justifyContent: "center",
         },
         toggleItemActive: {
-            backgroundColor: "#FFFFFF",
+            backgroundColor: colors.background,
             borderWidth: 1,
-            borderColor: "#D9E4F2",
+            borderColor: colors.primaryLight,
             shadowColor: "#000",
             shadowOpacity: 0.06,
             shadowRadius: 6,
             shadowOffset: { width: 0, height: 3 },
             ...Platform.select({ android: { elevation: 2 } }),
         },
-        toggleText: { color: TEXT, fontWeight: "700", fontSize: 14 },
-        toggleTextActive: { color: BLUE_DARK },
+        toggleText: { color: colors.text, fontWeight: "700", fontSize: 14 },
+        toggleTextActive: { color: colors.primaryDark },
         discountPillAlt: {
             alignSelf: "flex-start",
-            backgroundColor: "#1f3f73",
+            backgroundColor: colors.primaryDark,
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 999,
             marginLeft: 16,
         },
-        discountText: { color: "#fff", fontWeight: "600", fontSize: 10 },
+        discountText: { color: colors.background, fontWeight: "600", fontSize: 10 },
 
         /* Misc */
         pressed: { opacity: 0.9 },
