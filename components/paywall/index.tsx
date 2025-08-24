@@ -10,7 +10,8 @@ import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { default as React, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Linking, Platform, ScrollView } from 'react-native'
-import { Button, Card, Chip, SegmentedButtons, Text, useTheme } from 'react-native-paper'
+import { Chip, Text, useTheme } from 'react-native-paper'
+import PlanWrapper from './plans/PlanWrapper'
 
 type BillingCycle = 'annually' | 'monthly'
 type PlanKey = 'starter' | 'growth' | 'pro'
@@ -239,38 +240,6 @@ const PayWallComponent = () => {
             <Text style={{ opacity: 0.8, textAlign: 'center', maxWidth: 680 }}>
                 Explore our flexible pricing designed to fit every brand’s budget and objectives.
             </Text>
-
-            <View style={{ marginTop: 16, width: '100%', alignItems: 'center' }}>
-                {/* {true && (
-                    <Chip
-                        icon="sale"
-                        style={{ marginTop: 8, alignSelf: 'center', backgroundColor: '#FFE8CC', marginBottom: 16 }}
-                        textStyle={{ fontWeight: '600', color: '#FF6F00' }}
-                    >
-                        Save 2 months on Annual
-                    </Chip>
-                )} */}
-
-                <SegmentedButtons
-                    value={cycle}
-                    onValueChange={(v) => setCycle(v as BillingCycle)}
-                    density="regular"
-                    style={{ maxWidth: 500, width: '100%' }}
-                    buttons={[
-                        {
-                            value: 'annually',
-                            label: 'Annually (Save 2 months)',
-                            icon: 'calendar-multiple-check',
-                        },
-                        {
-                            value: 'monthly',
-                            label: 'Monthly',
-                            icon: 'calendar-month',
-                        },
-                    ]}
-                />
-
-            </View>
         </View>
     ), [cycle])
 
@@ -311,91 +280,7 @@ const PayWallComponent = () => {
             <ScrollView contentContainerStyle={{ padding: isMobile ? 20 : 40, backgroundColor: theme.colors.background, alignSelf: 'center' }}>
                 {Header}
 
-                <View style={{ flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: 24 }}>
-                    {/* Starter */}
-                    <View style={[{ width: '100%', paddingTop: isMobile ? 0 : 54 }, !isMobile && { maxWidth: 300 }]}>
-                        <Card style={{ flex: 1, padding: isMobile ? 12 : 20 }}>
-                            <Card.Content style={{ gap: 4 }}>
-                                <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>Starter</Text>
-                                <Price plan="starter" c={cycle} />
-                                <Text style={{ marginTop: 8, fontSize: 16 }}>For early experiments, limited usage</Text>
-                            </Card.Content>
-
-                            <Card.Actions>
-                                <View style={{ width: '100%', marginTop: 16 }}>
-                                    <Button mode="outlined" onPress={() => openPurchase('starter', cycle)} style={{ width: '100%' }}>Choose Plan</Button>
-                                </View>
-                            </Card.Actions>
-
-                            <Card.Content style={{ marginTop: 24 }}>
-                                <Text style={{ marginBottom: 12, fontWeight: 600 }}>What’s included:</Text>
-                                {starterFeatures.map((f, i) => (
-                                    <Feature key={i}>{f}</Feature>
-                                ))}
-                            </Card.Content>
-                        </Card>
-                    </View>
-
-                    {/* Growth (Preferred) */}
-                    <View style={[{ width: '100%' }, !isMobile && { maxWidth: 320 }]}>
-                        <Card
-                            style={[
-                                { flex: 1, padding: isMobile ? 12 : 20, backgroundColor: '#F0F6FF' },
-                                !isMobile && {
-                                    elevation: 6,
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 10 },
-                                    shadowOpacity: 0.2,
-                                    shadowRadius: 24,
-                                },
-                            ]}
-                        >
-                            <Card.Content style={{ gap: 4 }}>
-                                <Chip icon="star-circle" style={{ alignSelf: 'flex-start', marginBottom: 10, backgroundColor: '#CFE2FF' }}>
-                                    <Text style={{ color: '#003087' }}>Preferred</Text>
-                                </Chip>
-                                <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>Growth</Text>
-                                <Price plan="growth" c={cycle} />
-                                <Text style={{ marginTop: 8, fontSize: 16 }}>For serious brands, multiple collabs, real hiring.</Text>
-                            </Card.Content>
-                            <Card.Actions>
-                                <View style={{ width: '100%', marginTop: 16 }}>
-                                    <Button mode="contained" onPress={() => openPurchase('growth', cycle)} style={{ width: '100%' }}>Choose Plan</Button>
-                                </View>
-                            </Card.Actions>
-                            <Card.Content style={{ marginTop: 24 }}>
-                                <Text style={{ marginBottom: 12, fontWeight: 600 }}>What’s included:</Text>
-                                {growthFeatures.map((f, i) => (
-                                    <Feature key={i}>{f}</Feature>
-                                ))}
-                            </Card.Content>
-                        </Card>
-                    </View>
-
-                    {/* Pro */}
-                    <View style={[{ width: '100%', paddingTop: isMobile ? 0 : 54 }, !isMobile && { maxWidth: 300 }]}>
-                        <Card style={{ flex: 1, padding: isMobile ? 12 : 20 }}>
-                            <Card.Content style={{ gap: 4 }}>
-                                <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 12 }}>Pro</Text>
-                                <Price plan="pro" c={cycle} />
-                                <Text style={{ marginTop: 8, fontSize: 16 }}>Unlimited scale, end‑to‑end support, recovery safety net.</Text>
-                            </Card.Content>
-
-                            <Card.Actions>
-                                <View style={{ width: '100%', marginTop: 16 }}>
-                                    <Button mode="outlined" onPress={() => openPurchase('pro', cycle)} style={{ width: '100%' }}>Choose Plan</Button>
-                                </View>
-                            </Card.Actions>
-
-                            <Card.Content style={{ marginTop: 24 }}>
-                                <Text style={{ marginBottom: 12, fontWeight: 600 }}>What’s included:</Text>
-                                {proFeatures.map((f, i) => (
-                                    <Feature key={i}>{f}</Feature>
-                                ))}
-                            </Card.Content>
-                        </Card>
-                    </View>
-                </View>
+                <PlanWrapper />
 
                 {/* Contact Support */}
                 <View style={{ marginTop: 40, alignItems: 'center' }}>
