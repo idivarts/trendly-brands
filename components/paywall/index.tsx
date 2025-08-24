@@ -1,64 +1,16 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
-import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
-import { Console } from '@/shared-libs/utils/console'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
-import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
-import { default as React, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Linking, Platform, ScrollView } from 'react-native'
-import { Chip, Text, useTheme } from 'react-native-paper'
-import PlanWrapper from './plans/PlanWrapper'
+import { default as React, useEffect, useState } from 'react'
+import { ActivityIndicator, ScrollView } from 'react-native'
+import { Text, useTheme } from 'react-native-paper'
+import CancelPlanModal from './CancelPlanModal'
+import PlanWrapper, { BillingCycle, PlanKey } from './plans/PlanWrapper'
 
-type BillingCycle = 'annually' | 'monthly'
-type PlanKey = 'starter' | 'growth' | 'pro'
-
-/**
- * Base monthly prices (without any savings). The "Annually" option shows
- * the effective monthly price with a 2‑month discount (10/12 of base).
- * These match the new pricing you shared in the screenshot:
- * Starter 240/mo → 200/mo annually,
- * Growth 750/mo  → 625/mo annually,
- * Pro 1500/mo    → 1250/mo annually.
- */
-const BASE_MONTHLY_PRICES: Record<PlanKey, number> = {
-    starter: 240,
-    growth: 750,
-    pro: 1500,
-}
-
-const starterFeatures = [
-    'Unlimited Influencer Browsing',
-    'Advanced Filtering / Preferences',
-    '20 influencer connects',
-    'Upto 1 Collaboration',
-    'Unlimited Applications / Invitations',
-    'Max One Hiring (Contract)',
-    'No Recovery Support',
-]
-
-const growthFeatures = [
-    'Everything from Starter Plan',
-    'Upto 50 influencer connects',
-    '5 Collaboration posting',
-    'One Free Collaboration Boosting',
-    'Upto 8 Hiring (Contracts)',
-    'General Hiring Support',
-    'General Recovery Support',
-]
-
-const proFeatures = [
-    'Everything on Growth Plan',
-    'Unlimited Influencer Connects',
-    'Unlimited Collaboration Postings',
-    'Upto 5 Collaboration Boostings',
-    'Unlimited Hirings (Contracts)',
-    'End to End Hiring Support *',
-    'Guaranteed Money Recovery Support *',
-]
 
 const PayWallComponent = () => {
     const theme = useTheme()
@@ -70,128 +22,11 @@ const PayWallComponent = () => {
 
     const [loading, setLoading] = useState(false)
     const [myBrand, setMyBrand] = useState(selectedBrand)
-
-    // Frequency toggle
-    const [cycle, setCycle] = useState<BillingCycle>('annually')
-
-    // Payment links keyed by plan and cycle, if configured server-side
-    const [links, setLinks] = useState<Partial<Record<`${PlanKey}:${BillingCycle}`, string>>>({})
-    const [linkKeyPending, setLinkKeyPending] = useState<`${PlanKey}:${BillingCycle}` | undefined>(undefined)
-
-    const priceFor = (plan: PlanKey, c: BillingCycle) => {
-        const base = BASE_MONTHLY_PRICES[plan]
-        if (c === 'monthly') return base
-        // annually → 2 months free (effective monthly)
-        return Math.round((base * 10) / 12)
-    }
-
-    const strikePriceFor = (plan: PlanKey, c: BillingCycle) => {
-        // Only show strike-through when "Annually" (to highlight savings)
-        if (c === 'annually') return BASE_MONTHLY_PRICES[plan]
-        return undefined
-    }
-
-    const prettyNum = (n: number) => n.toLocaleString('en-IN')
-
-    const fetchLinksIfNeeded = async () => {
-        try {
-            setLoading(true)
-            // Attempt to fetch per-plan, per-cycle links from backend if available.
-            // These endpoints are placeholders compatible with existing API style.
-            // If your backend isn't ready yet, the UI will still work and simply
-            // show a helpful message on purchase.
-            const makeBody = (plan: PlanKey, c: BillingCycle) => ({
-                brandId: selectedBrand?.id,
-                plan,
-                cycle: c,
-            })
-
-            const candidates: Array<[`${PlanKey}:${BillingCycle}`, RequestInit]> = [
-                ['starter:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('starter', 'monthly')) }],
-                ['starter:annually', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('starter', 'annually')) }],
-                ['growth:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('growth', 'monthly')) }],
-                ['growth:annually', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('growth', 'annually')) }],
-                ['pro:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('pro', 'monthly')) }],
-                ['pro:annually', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('pro', 'annually')) }],
-            ]
-
-            const results = await Promise.allSettled(
-                candidates.map(async ([key, init]) => {
-                    // Reuse the same endpoint you already use for subscriptions.
-                    // Backward compatible: if the server doesn't understand the new
-                    // params it can ignore them and return 4xx which we swallow.
-                    const res = await HttpWrapper.fetch('/razorpay/create-subscription', init)
-                    if (!res.ok) throw new Error('no-link')
-                    const data = await res.json()
-                    return [key, data.link as string] as const
-                })
-            )
-
-            const map: Record<string, string> = {}
-            results.forEach(r => {
-                if (r.status === 'fulfilled') {
-                    const [key, v] = r.value
-                    if (v) map[key] = v
-                }
-            })
-
-            if (Object.keys(map).length) {
-                setLinks(prev => ({ ...prev, ...map }))
-                // Persist on the brand so you don't refetch on next load
-                // updateBrand(selectedBrand?.id || '', { paymentLinksByPlan: { ...(selectedBrand?.paymentLinksByPlan as any), ...map } })
-            }
-        } catch (e) {
-            // Silent; links are optional until backend is ready.
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    useEffect(() => {
-        // if (selectedBrand?.paymentLinksByPlan) {
-        //     setLinks(selectedBrand.paymentLinksByPlan as any)
-        // } else {
-        //     // Best-effort fetch
-        //     fetchLinksIfNeeded()
-        // }
-    }, [selectedBrand?.id])
+    const [cancelPlan, setCancelPlan] = useState(false)
 
     const openPurchase = async (plan: PlanKey, c: BillingCycle) => {
-        const key: `${PlanKey}:${BillingCycle}` = `${plan}:${c}`
-        setLinkKeyPending(key)
-
-        const url = links[key]
-        if (url) {
-            try {
-                if (Platform.OS === 'web') {
-                    window.open(url, '_blank')
-                } else {
-                    Linking.openURL(url)
-                }
-            } catch {
-                Toaster.error('Something went wrong!!')
-            } finally {
-                setLinkKeyPending(undefined)
-            }
-            return
-        }
-
-        // Fallback: tell user payments for this combo aren't configured yet.
-        setLinkKeyPending(undefined)
         Toaster.info('Almost ready', 'This plan will be enabled shortly. Please contact support@trendly.now if you need early access.')
     }
-
-    const handleFocus = async () => {
-        Console.log('Handling Focus')
-        if (!myBrand) return
-        if (myBrand.billing?.status === ModelStatus.Accepted) {
-            router.resetAndNavigate('/explore-influencers')
-        }
-    }
-
-    useEffect(() => {
-        handleFocus()
-    }, [myBrand])
 
     // Live billing status listener
     useEffect(() => {
@@ -209,71 +44,13 @@ const PayWallComponent = () => {
         }
     }, [selectedBrand?.id])
 
-    // Re-run focus checks when the tab regains visibility (web)
-    useEffect(() => {
-        if (Platform.OS !== 'web') return
-        let isRunning = false
-        const safeHandleFocus = async () => {
-            if (isRunning) return
-            isRunning = true
-            try {
-                await handleFocus()
-            } finally {
-                isRunning = false
-            }
-        }
-        const onFocus = () => safeHandleFocus()
-        const onVisibilityChange = () => {
-            if (document.visibilityState === 'visible') safeHandleFocus()
-        }
-        window.addEventListener('focus', onFocus)
-        document.addEventListener('visibilitychange', onVisibilityChange)
-        return () => {
-            window.removeEventListener('focus', onFocus)
-            document.removeEventListener('visibilitychange', onVisibilityChange)
-        }
-    }, [])
 
-    const Header = useMemo(() => (
-        <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 8 }}>Our Pricing</Text>
-            <Text style={{ opacity: 0.8, textAlign: 'center', maxWidth: 680 }}>
-                Explore our flexible pricing designed to fit every brand’s budget and objectives.
-            </Text>
-        </View>
-    ), [cycle])
-
-    const Price = ({ plan, c }: { plan: PlanKey; c: BillingCycle }) => {
-        const strike = strikePriceFor(plan, c)
-        const price = priceFor(plan, c)
-        return (
-            <View style={{ backgroundColor: "transparent" }}>
-                <Text style={{ fontSize: 22, marginBottom: 8 }}>
-                    ₹ <Text style={{ fontSize: 28 }}>{prettyNum(price)}</Text>
-                    &nbsp;{strike !== undefined && (
-                        <Text style={{ fontSize: 16, textDecorationLine: 'line-through', opacity: 0.7 }}>{prettyNum(strike)}</Text>
-                    )}
-                    &nbsp;<Text style={{ fontWeight: 'bold' }}>/ mon</Text>
-                </Text>
-                {strike !== undefined && (
-                    <Chip
-                        icon="sale"
-                        style={{ marginTop: 4, alignSelf: 'flex-start', backgroundColor: '#FFE8CC' }}
-                        textStyle={{ fontWeight: '600', color: '#FF6F00' }}
-                    >
-                        Save ₹{prettyNum((strike - price) * 12)} on yearly plan
-                    </Chip>
-                )}
-            </View>
-        )
-    }
-
-    const Feature = ({ children, dim }: { children: React.ReactNode; dim?: boolean }) => (
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, opacity: dim ? 0.9 : 1, backgroundColor: "transparent" }}>
-            <Text style={{ fontSize: 12, alignSelf: 'center' }}>✔</Text>
-            <Text style={{ fontSize: 16, marginLeft: 8 }}>{children}</Text>
-        </View>
-    )
+    const Header = <View style={{ alignItems: 'center', marginBottom: 24 }}>
+        <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 8 }}>Our Pricing</Text>
+        <Text style={{ opacity: 0.8, textAlign: 'center', maxWidth: 680 }}>
+            Explore our flexible pricing designed to fit every brand’s budget and objectives.
+        </Text>
+    </View>
 
     return (
         <>
@@ -289,10 +66,18 @@ const PayWallComponent = () => {
                         I’m here to help. Email: support@trendly.now
                     </Text>
                 </View>
+
+                <View style={{ marginTop: 40, alignItems: 'center' }}>
+                    <Text variant="bodyLarge" onPress={() => setCancelPlan(true)}>Need to Cancel Plan? Click Here</Text>
+                    {/* <Text style={{ marginTop: 10, fontSize: 16, textAlign: 'center' }} >
+                        Click here to cancel
+                    </Text> */}
+                </View>
             </ScrollView>
+            {cancelPlan && <CancelPlanModal onClose={() => setCancelPlan(false)} />}
 
             {/* Overlay while redirecting */}
-            {linkKeyPending && (
+            {loading && (
                 <View
                     style={{
                         position: 'absolute',

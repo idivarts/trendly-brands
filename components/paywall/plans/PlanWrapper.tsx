@@ -1,8 +1,10 @@
 // import pricingPage from "@/app/(landing)/pricing-page";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -11,61 +13,72 @@ import {
     View,
 } from "react-native";
 
+export type PlanKey = 'starter' | 'growth' | 'pro'
+export type BillingCycle = "yearly" | "monthly";
+
 /* ----------------------- Config ----------------------- */
-const PLANS: { key: any, name: string, monthly: number, features: string[], preferred: boolean }[] = [
+const starterFeatures = [
+    'Unlimited Influencer Browsing',
+    'Advanced Filtering / Preferences',
+    '20 influencer connects',
+    'Upto 1 Collaboration',
+    'Unlimited Applications / Invitations',
+    'Max One Hiring (Contract)',
+    'No Recovery Support',
+]
+
+const growthFeatures = [
+    'Everything from Starter Plan',
+    'Upto 50 influencer connects',
+    '5 Collaboration posting',
+    'One Free Collaboration Boosting',
+    'Upto 8 Hiring (Contracts)',
+    'General Hiring Support',
+    'General Recovery Support',
+]
+
+const proFeatures = [
+    'Everything on Growth Plan',
+    'Unlimited Influencer Connects',
+    'Unlimited Collaboration Postings',
+    'Upto 5 Collaboration Boostings',
+    'Unlimited Hirings (Contracts)',
+    'End to End Hiring Support *',
+    'Guaranteed Money Recovery Support *',
+]
+const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean }[] = [
     {
-        key: "starter" as const,
+        key: "starter",
         name: "Starter",
         monthly: 240,
-        features: [
-            "Unlimited influencer browsing",
-            "Advanced filtering",
-            "20 influencer unlocks per month",
-            "1 collaboration per month",
-            "Unlimited applications & invitations",
-            "1 hiring (contract) per month",
-        ],
+        features: starterFeatures,
         preferred: false
     },
     {
-        key: "growth" as const,
+        key: "growth",
         name: "Growth",
         monthly: 750,
-        features: [
-            "Everything in Starter",
-            "5 collaborations per month",
-            "1 boosted collaboration - guaranteed hiring",
-            "Unlimited applications & invitations",
-            "Unlimited hirings",
-        ],
+        features: growthFeatures,
         preferred: true, // visually highlight
     },
     {
-        key: "pro" as const,
+        key: "pro",
         name: "Pro",
         monthly: 1500,
-        features: [
-            "Everything in Growth",
-            "Unlimited influencer unlocks",
-            "Unlimited collaboration postings",
-            "End-to-end hiring support",
-            "Fraud protection & recovery assistance",
-        ],
+        features: proFeatures,
         preferred: false
     },
 ] as const;
 
-type Billing = "yearly" | "monthly";
-
 interface PlanWrapperProps {
     verticallyStacked?: boolean;
-    onSelect?: (planKey: typeof PLANS[number]["key"], billing: Billing) => void;
+    onSelect?: (planKey: typeof PLANS[number]["key"], billing: BillingCycle) => void;
 }
 
 const PlanWrapper = (props: PlanWrapperProps) => {
     const theme = useTheme();
 
-    const [billing, setBilling] = React.useState<Billing>("yearly"); // default Yearly
+    const [billing, setBilling] = React.useState<BillingCycle>("yearly"); // default Yearly
     const isYearly = billing === "yearly";
 
     const handleSubmit = (planKey: typeof PLANS[number]["key"]) => {
@@ -80,6 +93,77 @@ const PlanWrapper = (props: PlanWrapperProps) => {
         return b.monthly - a.monthly; // both are either preferred or not
     }) : PLANS;
 
+    const { selectedBrand, updateBrand } = useBrandContext()
+    const [loading, setLoading] = useState(false)
+
+
+    // Payment links keyed by plan and cycle, if configured server-side
+    const [links, setLinks] = useState<Partial<Record<`${PlanKey}:${BillingCycle}`, string>>>({})
+    const [linkKeyPending, setLinkKeyPending] = useState<`${PlanKey}:${BillingCycle}` | undefined>(undefined)
+
+
+    const fetchLinksIfNeeded = async () => {
+        try {
+            setLoading(true)
+            // Attempt to fetch per-plan, per-cycle links from backend if available.
+            // These endpoints are placeholders compatible with existing API style.
+            // If your backend isn't ready yet, the UI will still work and simply
+            // show a helpful message on purchase.
+            const makeBody = (plan: PlanKey, c: BillingCycle) => ({
+                brandId: selectedBrand?.id,
+                plan,
+                cycle: c,
+            })
+
+            const candidates: Array<[`${PlanKey}:${BillingCycle}`, RequestInit]> = [
+                ['starter:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('starter', 'monthly')) }],
+                ['starter:yearly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('starter', 'yearly')) }],
+                ['growth:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('growth', 'monthly')) }],
+                ['growth:yearly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('growth', 'yearly')) }],
+                ['pro:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('pro', 'monthly')) }],
+                ['pro:yearly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('pro', 'yearly')) }],
+            ]
+
+            const results = await Promise.allSettled(
+                candidates.map(async ([key, init]) => {
+                    // Reuse the same endpoint you already use for subscriptions.
+                    // Backward compatible: if the server doesn't understand the new
+                    // params it can ignore them and return 4xx which we swallow.
+                    const res = await HttpWrapper.fetch('/razorpay/create-subscription', init)
+                    if (!res.ok) throw new Error('no-link')
+                    const data = await res.json()
+                    return [key, data.link as string] as const
+                })
+            )
+
+            const map: Record<string, string> = {}
+            results.forEach(r => {
+                if (r.status === 'fulfilled') {
+                    const [key, v] = r.value
+                    if (v) map[key] = v
+                }
+            })
+
+            if (Object.keys(map).length) {
+                setLinks(prev => ({ ...prev, ...map }))
+                // Persist on the brand so you don't refetch on next load
+                // updateBrand(selectedBrand?.id || '', { paymentLinksByPlan: { ...(selectedBrand?.paymentLinksByPlan as any), ...map } })
+            }
+        } catch (e) {
+            // Silent; links are optional until backend is ready.
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        // if (selectedBrand?.paymentLinksByPlan) {
+        //     setLinks(selectedBrand.paymentLinksByPlan as any)
+        // } else {
+        //     // Best-effort fetch
+        //     fetchLinksIfNeeded()
+        // }
+    }, [selectedBrand?.id])
 
     const styles = stylesFn(theme);
 
