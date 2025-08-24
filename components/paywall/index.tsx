@@ -292,7 +292,7 @@ const PayWallComponent = () => {
                         style={{ marginTop: 4, alignSelf: 'flex-start', backgroundColor: '#FFE8CC' }}
                         textStyle={{ fontWeight: '600', color: '#FF6F00' }}
                     >
-                        Save ₹{prettyNum((strike - price) * 12)} this year
+                        Save ₹{prettyNum((strike - price) * 12)} on yearly plan
                     </Chip>
                 )}
             </View>
