@@ -81,8 +81,9 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const isYearly = billing === "yearly";
 
     const handleSubmit = (planKey: typeof PLANS[number]["key"]) => {
-        props.onSelect?.(planKey, billing);
+
     };
+
     const { xl } = useBreakpoints()
     const vStacked = xl ? props.verticallyStacked : true
 
