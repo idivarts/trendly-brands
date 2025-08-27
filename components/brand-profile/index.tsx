@@ -169,7 +169,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
           Brand age
         </PaperText>
         <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-          How established is your brand?
+          How established is your brand? (required)
         </PaperText>
         <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
 
