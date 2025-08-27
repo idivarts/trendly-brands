@@ -2,6 +2,7 @@ import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
+import PlanWrapper from "@/components/paywall/plans/PlanWrapper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
@@ -16,7 +17,6 @@ import { collection, doc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
     Platform,
-    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -25,14 +25,6 @@ import {
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { ExplainerDynamic } from "../ExplainerDynamic";
-
-const ONBOARD_IMG =
-    "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif"; // placeholder visual
-
-const CREATE_BRAND_LINK = "https://brands.trendly.now/pre-signin?skip=1";
-
-const BUY_YEARLY_LINK = "https://brands.trendly.now/checkout?plan=yearly&trial=1&discount=today50";
-const BUY_MONTHLY_LINK = "https://brands.trendly.now/checkout?plan=monthly&trial=1&discount=today50";
 
 
 export default function PricingPage() {
@@ -269,51 +261,7 @@ export default function PricingPage() {
                         <Text style={styles.formSub}>Your trial continues. Pay nothing today.</Text>
 
                         {/* Plans */}
-                        <View style={styles.plansWrap}>
-                            {/* Yearly (Preferred) */}
-                            <View style={[styles.planCard, styles.planPreferred]}>
-                                <View style={styles.planTagPreferred}><Text style={styles.planTagText}>Preferred</Text></View>
-                                <Text style={styles.planName}>Business (Yearly)</Text>
-                                <View style={styles.priceRow}>
-                                    <Text style={styles.priceMain}>₹{plans.business.finalAmount}</Text>
-                                    <Text style={styles.priceSlash}>₹499</Text>
-                                    <Text style={styles.pricePer}>/ month</Text>
-                                    <Text style={styles.pricePer}>when paid yearly</Text>
-                                </View>
-                                <Text style={styles.savingsText}>Billed ₹{plans.business.finalAmount * 12}/year — Save 2 months cost</Text>
-                                <View style={styles.divider} />
-                                {YEARLY_FEATURES.map((f, i) => (
-                                    <View key={i} style={styles.featureRow}>
-                                        <Text style={styles.featureTick}>✓</Text>
-                                        <Text style={styles.featureCopy}>{f}</Text>
-                                    </View>
-                                ))}
-                                <Pressable onPress={() => handleSubmit(false)} style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-                                    <Text style={styles.buyText}>Start yearly {pricingPage?.action || "— Pay nothing today"}</Text>
-                                </Pressable>
-                            </View>
-
-                            {/* Monthly */}
-                            <View style={styles.planCard}>
-                                <Text style={styles.planName}>Growth (Monthly)</Text>
-                                <View style={styles.priceRow}>
-                                    <Text style={styles.priceMain}>₹{plans.growth.finalAmount}</Text>
-                                    {discountPercentage() > 0 &&
-                                        <Text style={styles.priceSlash}>₹499</Text>}
-                                    <Text style={styles.pricePer}>/ month</Text>
-                                </View>
-                                <View style={styles.divider} />
-                                {MONTHLY_FEATURES.map((f, i) => (
-                                    <View key={i} style={styles.featureRow}>
-                                        <Text style={styles.featureTick}>✓</Text>
-                                        <Text style={styles.featureCopy}>{f}</Text>
-                                    </View>
-                                ))}
-                                <Pressable onPress={() => handleSubmit(true)} style={({ pressed }) => [styles.buyBtnAlt, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}>
-                                    <Text style={styles.buyTextAlt}>Start monthly {pricingPage?.action || "— Pay nothing today"}</Text>
-                                </Pressable>
-                            </View>
-                        </View>
+                        <PlanWrapper verticallyStacked={true} />
 
                         {/* Comparison note */}
                         <Text style={styles.compareHint}>Both plans include full access, verified influencer hiring, unlimited invites, and fraud protection. Yearly plan adds priority support and faster dispute handling.</Text>

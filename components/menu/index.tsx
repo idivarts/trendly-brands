@@ -6,12 +6,10 @@ import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal"
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { truncateText } from "@/utils/text";
 import { imageUrl } from "@/utils/url";
-import { faCancel } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Platform, ScrollView } from "react-native";
-import CancelPlanModal from "../paywall/CancelPlanModal";
+import { Image, ScrollView } from "react-native";
 import ProfileItemCard from "../ProfileItemCard";
 import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
@@ -88,23 +86,9 @@ const Menu = () => {
                 }}
               />
             ))}
-            {Platform.OS == "web" &&
-              <ProfileItemCard
-                key={"cancel-plan"}
-                item={{
-                  href: "/",
-                  icon: faCancel,
-                  id: "cancel-plan",
-                  title: "Cancel Plan"
-                }}
-                onPress={() => {
-                  setCancelPlan(true)
-                }}
-              />}
           </View>
         </View>
       </ScrollView>
-      {cancelPlan && <CancelPlanModal onClose={() => setCancelPlan(false)} />}
     </>
   );
 };
