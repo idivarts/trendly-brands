@@ -78,6 +78,20 @@ const OnboardingScreen = () => {
         return;
       }
     }
+    if (!brandData.age) {
+      Toaster.error("Please specify your brand age");
+      setIsSubmitting(false);
+      return;
+    }
+    if (brandData.profile.website) {
+      // Standard website validation
+      const websiteRegex = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
+      if (!websiteRegex.test(brandData.profile.website)) {
+        Toaster.error("Invalid website format");
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     let imageUrl = "";
     if (Platform.OS === "web" && brandWebImage) {
