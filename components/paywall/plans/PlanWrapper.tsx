@@ -216,18 +216,19 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         && selectedBrand?.billing?.status == ModelStatus.Accepted
                     const BuyButton = (<Pressable
                         onPress={() => {
-                            if (currentPlan)
+                            if (currentPlan) {
                                 window.open(selectedBrand?.billing?.subscriptionUrl, "_blank")
-                            else
+                            } else
                                 handleSubmit(plan.key)
                         }}
+                        disabled={currentPlan}
                         style={({ pressed }) => [
                             currentPlan ? styles.buyBtnCurrent : (plan.preferred ? styles.buyBtn : styles.buyBtnAlt),
                             pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
                         ]}
                     >
                         <Text style={currentPlan ? styles.buyTextCurrent : (plan.preferred ? styles.buyText : styles.buyTextAlt)}>
-                            {currentPlan ? "Edit Current Plan" : `Start ${plan.name} Plan`}
+                            {currentPlan ? "Current Plan" : `Start ${plan.name} Plan`}
                         </Text>
                     </Pressable>)
                     return (
