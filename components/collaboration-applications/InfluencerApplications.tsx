@@ -116,7 +116,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
         <View style={{ flex: 1, alignItems: "stretch", justifyContent: "center" }}>
             <ProfileBottomSheet FireStoreDB={FirestoreDB}
                 influencer={influencer}
-                isOnFreePlan={isOnFreeTrial}
+                isOnFreePlan={isPublic}
                 actionCard={
                     (!!application && !!collaboration) ?
                         <View style={{ padding: 20, gap: 24 }}>
