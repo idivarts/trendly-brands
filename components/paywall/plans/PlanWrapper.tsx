@@ -1,6 +1,7 @@
 // import pricingPage from "@/app/(landing)/pricing-page";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
@@ -210,7 +211,9 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         ? Math.round((plan.monthly * 10) / 12)
                         : plan.monthly;
                     const billedYearly = plan.monthly * 10; // pay for 10 months
-                    const currentPlan = currentPlanKey === plan.key && currentPlanCycle === billing
+                    const currentPlan = currentPlanKey === plan.key
+                        && currentPlanCycle === billing
+                        && selectedBrand?.billing?.status == ModelStatus.Accepted
                     const BuyButton = (<Pressable
                         onPress={() => {
                             if (currentPlan)
