@@ -1,7 +1,6 @@
 // import pricingPage from "@/app/(landing)/pricing-page";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
@@ -96,74 +95,15 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const { selectedBrand, updateBrand } = useBrandContext()
     const [loading, setLoading] = useState(false)
 
-
-    // Payment links keyed by plan and cycle, if configured server-side
-    const [links, setLinks] = useState<Partial<Record<`${PlanKey}:${BillingCycle}`, string>>>({})
-    const [linkKeyPending, setLinkKeyPending] = useState<`${PlanKey}:${BillingCycle}` | undefined>(undefined)
-
-
-    const fetchLinksIfNeeded = async () => {
-        try {
-            setLoading(true)
-            // Attempt to fetch per-plan, per-cycle links from backend if available.
-            // These endpoints are placeholders compatible with existing API style.
-            // If your backend isn't ready yet, the UI will still work and simply
-            // show a helpful message on purchase.
-            const makeBody = (plan: PlanKey, c: BillingCycle) => ({
-                brandId: selectedBrand?.id,
-                plan,
-                cycle: c,
-            })
-
-            const candidates: Array<[`${PlanKey}:${BillingCycle}`, RequestInit]> = [
-                ['starter:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('starter', 'monthly')) }],
-                ['starter:yearly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('starter', 'yearly')) }],
-                ['growth:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('growth', 'monthly')) }],
-                ['growth:yearly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('growth', 'yearly')) }],
-                ['pro:monthly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('pro', 'monthly')) }],
-                ['pro:yearly', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(makeBody('pro', 'yearly')) }],
-            ]
-
-            const results = await Promise.allSettled(
-                candidates.map(async ([key, init]) => {
-                    // Reuse the same endpoint you already use for subscriptions.
-                    // Backward compatible: if the server doesn't understand the new
-                    // params it can ignore them and return 4xx which we swallow.
-                    const res = await HttpWrapper.fetch('/razorpay/create-subscription', init)
-                    if (!res.ok) throw new Error('no-link')
-                    const data = await res.json()
-                    return [key, data.link as string] as const
-                })
-            )
-
-            const map: Record<string, string> = {}
-            results.forEach(r => {
-                if (r.status === 'fulfilled') {
-                    const [key, v] = r.value
-                    if (v) map[key] = v
-                }
-            })
-
-            if (Object.keys(map).length) {
-                setLinks(prev => ({ ...prev, ...map }))
-                // Persist on the brand so you don't refetch on next load
-                // updateBrand(selectedBrand?.id || '', { paymentLinksByPlan: { ...(selectedBrand?.paymentLinksByPlan as any), ...map } })
-            }
-        } catch (e) {
-            // Silent; links are optional until backend is ready.
-        } finally {
-            setLoading(false)
-        }
-    }
-
     useEffect(() => {
-        // if (selectedBrand?.paymentLinksByPlan) {
-        //     setLinks(selectedBrand.paymentLinksByPlan as any)
-        // } else {
-        //     // Best-effort fetch
-        //     fetchLinksIfNeeded()
-        // }
-    }, [selectedBrand?.id])
+        if (!selectedBrand)
+            return;
+        setBilling(selectedBrand.billing?.planCycle == "monthly" ? "monthly" : "yearly")
+    }, [selectedBrand])
+
+    const currentPlanKey = selectedBrand?.billing?.planKey as PlanKey | undefined
+    const currentPlanCycle = selectedBrand?.billing?.planCycle as BillingCycle | undefined
+
 
     const styles = stylesFn(theme);
 
@@ -231,15 +171,21 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         ? Math.round((plan.monthly * 10) / 12)
                         : plan.monthly;
                     const billedYearly = plan.monthly * 10; // pay for 10 months
+                    const currentPlan = currentPlanKey === plan.key && currentPlanCycle === billing
                     const BuyButton = (<Pressable
-                        onPress={() => handleSubmit(plan.key)}
+                        onPress={() => {
+                            if (currentPlan)
+                                window.open(selectedBrand?.billing?.subscriptionUrl, "_blank")
+                            else
+                                handleSubmit(plan.key)
+                        }}
                         style={({ pressed }) => [
-                            plan.preferred ? styles.buyBtn : styles.buyBtnAlt,
+                            currentPlan ? styles.buyBtnCurrent : (plan.preferred ? styles.buyBtn : styles.buyBtnAlt),
                             pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
                         ]}
                     >
-                        <Text style={plan.preferred ? styles.buyText : styles.buyTextAlt}>
-                            Start {plan.name} Plan
+                        <Text style={currentPlan ? styles.buyTextCurrent : (plan.preferred ? styles.buyText : styles.buyTextAlt)}>
+                            {currentPlan ? "Edit Current Plan" : `Start ${plan.name} Plan`}
                         </Text>
                     </Pressable>)
                     return (
@@ -380,6 +326,19 @@ const stylesFn = (theme: Theme) => {
             justifyContent: "center",
         },
         buyTextAlt: { color: colors.text, fontWeight: "800" },
+
+        buyBtnCurrent: {
+            marginVertical: 14,
+            backgroundColor: colors.gray100,
+            borderWidth: 1,
+            borderColor: colors.gray200,
+            opacity: 0.95,
+            height: 46,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        buyTextCurrent: { color: colors.background, fontWeight: "900" },
 
         /* Compare hint kept for reuse */
         compareHint: { marginTop: 12, color: colors.textSecondary, fontSize: 12 },
