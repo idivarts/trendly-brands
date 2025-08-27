@@ -1,11 +1,10 @@
 import React, { useRef, useState } from "react";
-import { ActivityIndicator, Platform, Pressable } from "react-native";
+import { Platform } from "react-native";
 import Toast from "react-native-toast-message";
 
 import BrandProfile from "@/components/brand-profile";
-import { Text } from "@/components/theme/Themed";
+import Button from "@/components/ui/button";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -81,32 +80,41 @@ const BrandProfileScreen = () => {
     <AppLayout withWebPadding={false}>
       <ScreenHeader
         title="Brand Profile"
-        rightAction
-        rightActionButton={
-          <Pressable
-            onPress={handleSave}
-            style={{
-              padding: 10,
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 8,
-              flexDirection: "row",
-            }}
-          >
-            {
-              isSaving && (
-                <ActivityIndicator
-                  size="small"
-                  color={Colors(theme).primary}
-                />
-              )
-            }
-            <Text>Save</Text>
-          </Pressable>
-        }
+      // rightAction
+      // rightActionButton={
+      //   <Pressable
+      //     onPress={handleSave}
+      //     style={{
+      //       padding: 10,
+      //       justifyContent: "center",
+      //       alignItems: "center",
+      //       gap: 8,
+      //       flexDirection: "row",
+      //     }}
+      //   >
+      //     {
+      //       isSaving && (
+      //         <ActivityIndicator
+      //           size="small"
+      //           color={Colors(theme).primary}
+      //         />
+      //       )
+      //     }
+      //     <Text>Save</Text>
+      //   </Pressable>
+      // }
       />
       <AppLayout>
         <BrandProfile
+          action={
+            <Button
+              loading={isSaving}
+              mode="contained"
+              onPress={handleSave}
+            >
+              Save Brand Details
+            </Button>
+          }
           brandData={brandData}
           setBrandData={setBrandData}
           setBrandWebImage={setBrandWebImage}
