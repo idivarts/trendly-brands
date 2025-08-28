@@ -22,6 +22,7 @@ interface UseApplicationsProps {
     },
   };
   handleActionModalClose: () => void;
+  statusFilter?: string
 }
 
 const useApplications = ({
@@ -29,6 +30,7 @@ const useApplications = ({
   collaborationId,
   data,
   handleActionModalClose,
+  statusFilter
 }: UseApplicationsProps) => {
   const { connectUser } = useChatContext();
   const router = useRouter();
@@ -46,9 +48,13 @@ const useApplications = ({
           collaborationId,
           "applications"
         );
+        let sQuery = ["pending", "accepted"]
+        if (statusFilter) {
+          sQuery = [statusFilter]
+        }
         const applicationQuery = query(
           applicationRef,
-          where("status", "in", ["pending", "accepted"]),
+          where("status", "in", sQuery),
           orderBy("timeStamp", "desc"),
         );
         const applicationFetch = await getDocs(applicationQuery);
