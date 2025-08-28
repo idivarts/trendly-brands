@@ -124,12 +124,43 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       title: "---",
       href: "/" as Href
     }] : []),
-    {
-      id: "Applications",
-      title: "Applications",
+    ...(xl ? [{
+      id: "Applications-Pending",
+      title: "Pending/New Applications",
       component: (
         <ApplicationsTabContent
-          key={"applications"}
+          key={"applications-pending"}
+          pageID={pageID}
+          filter="pending"
+          collaboration={{
+            id: pageID,
+            name: collaboration?.name || "",
+            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
+          }}
+        />
+      ),
+    }, {
+      id: "Applications-Shortlisted",
+      title: "Shortlisted Applications",
+      component: (
+        <ApplicationsTabContent
+          key={"applications-shortlisted"}
+          pageID={pageID}
+          filter="shortlisted"
+          collaboration={{
+            id: pageID,
+            name: collaboration?.name || "",
+            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
+          }}
+        />
+      ),
+    }, {
+      id: "Applications-Accepted",
+      title: "Accepted Applications",
+      component: (
+        <ApplicationsTabContent
+          key={"applications-accepted"}
+          filter="accepted"
           pageID={pageID}
           collaboration={{
             id: pageID,
@@ -138,13 +169,13 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
           }}
         />
       ),
-    },
-    ...(xl ? [{
-      id: "Applications-Sent",
-      title: "Accepted Applications",
+    }, {
+      id: "Applications-Rejected",
+      title: "Rejected Applications",
       component: (
         <ApplicationsTabContent
-          key={"applications-sent"}
+          filter="rejected"
+          key={"applications-rejected"}
           pageID={pageID}
           collaboration={{
             id: pageID,
@@ -157,7 +188,23 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       id: "d1",
       title: "---",
       href: "/" as Href
-    }] : []),
+    }] : [
+      {
+        id: "Applications",
+        title: "Applications",
+        component: (
+          <ApplicationsTabContent
+            key={"applications"}
+            pageID={pageID}
+            collaboration={{
+              id: pageID,
+              name: collaboration?.name || "",
+              questionsToInfluencers: collaboration?.questionsToInfluencers || [],
+            }}
+          />
+        ),
+      }
+    ]),
     {
       id: "Invitations",
       title: "Send Invitations",

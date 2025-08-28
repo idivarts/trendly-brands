@@ -37,6 +37,8 @@ interface IProps {
     name: string;
     questionsToInfluencers: string[];
   };
+  filter?: "pending" | "shortlisted" | "rejected" | "accepted"
+  // "active", "rejected", "accepted"
 }
 const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => {
   const theme = useTheme();
@@ -93,6 +95,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
       collaboration: props.collaboration,
     },
     handleActionModalClose,
+    statusFilter: props.filter
   });
 
   const { brands, isOnFreeTrial } = useBrandContext();
@@ -161,6 +164,10 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
               acceptApplication={() => {
                 setSelectedInfluencerApplication(item);
                 handleAcceptApplication(item);
+              }}
+              rejectApplication={() => {
+                setSelectedInfluencerApplication(item);
+                handleRejectApplication(item);
               }}
               bottomSheetAction={() => {
                 setSelectedInfluencerApplication(item);
