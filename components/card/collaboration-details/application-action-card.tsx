@@ -58,16 +58,19 @@ export const ApplicationActionBar: React.FC<{
             case "shortlist":
                 await handleApplication("shortlisted")
                 if (onShortlist) onShortlist();
+                Toaster.success("Application Shortlisted")
                 setStatus("shortlisted")
                 break;
             case "reject":
                 await handleApplication("rejected")
                 if (onReject) onReject();
+                Toaster.success("Application Rejected")
                 setStatus("rejected")
                 break;
             case "reopen":
                 await handleApplication("pending")
                 if (onReopen) onReopen();
+                Toaster.success("Application Reopened")
                 setStatus("pending")
                 break;
         }
