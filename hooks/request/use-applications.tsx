@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, updateDoc, where } from "firebase/firestore";
+import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import { useState } from "react";
 
 import { useChatContext } from "@/contexts";
@@ -143,28 +143,16 @@ const useApplications = ({
   ) => {
     try {
       if (!influencerApplication.application) return;
-
-      const applicationRef = doc(
-        FirestoreDB,
-        "collaborations",
-        influencerApplication.application.collaborationId,
-        "applications",
-        influencerApplication.application.id,
-      );
-      await updateDoc(applicationRef, {
-        status: "accepted",
-      }).then(() => {
-        HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
-          method: "POST",
-        }).then(async (res) => {
-          Toaster.success("Application accepted successfully");
-          const body = await res.json()
-          await connectUser();
-          router.navigate(`/channel/${body.channel.cid}`);
-        })
-        fetchApplications();
-        handleActionModalClose();
-      });
+      HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
+        method: "POST",
+      }).then(async (res) => {
+        Toaster.success("Application accepted successfully");
+        const body = await res.json()
+        await connectUser();
+        router.navigate(`/channel/${body.channel.cid}`);
+      })
+      fetchApplications();
+      handleActionModalClose();
     } catch (error) {
       Console.error(error);
       handleActionModalClose();
@@ -177,24 +165,12 @@ const useApplications = ({
   ) => {
     try {
       if (!influencerApplication.application) return;
-
-      const applicationRef = doc(
-        FirestoreDB,
-        "collaborations",
-        influencerApplication.application.collaborationId,
-        "applications",
-        influencerApplication.application.id
-      );
-      await updateDoc(applicationRef, {
-        status: "rejected",
-      }).then(() => {
-        HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/reject`, {
-          method: "POST",
-        })
-        fetchApplications();
-        handleActionModalClose();
-        Toaster.success("Application rejected successfully");
-      });
+      HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/reject`, {
+        method: "POST",
+      })
+      fetchApplications();
+      handleActionModalClose();
+      Toaster.success("Application rejected successfully");
     } catch (error) {
       Console.error(error);
       handleActionModalClose();

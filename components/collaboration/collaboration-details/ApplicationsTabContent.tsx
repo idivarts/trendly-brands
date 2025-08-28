@@ -165,6 +165,10 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                 setSelectedInfluencerApplication(item);
                 handleAcceptApplication(item);
               }}
+              rejectApplication={() => {
+                setSelectedInfluencerApplication(item);
+                handleRejectApplication(item);
+              }}
               bottomSheetAction={() => {
                 setSelectedInfluencerApplication(item);
                 setIsActionModalVisible(true);
