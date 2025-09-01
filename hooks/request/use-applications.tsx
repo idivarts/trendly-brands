@@ -83,7 +83,7 @@ const useApplications = ({
         const applicationRef = collectionGroup(FirestoreDB, "applications");
         const applicationQuery = query(
           applicationRef,
-          where("status", "in", ["pending", "accepted"]),
+          where("status", "in", ["pending"]),
           where("collaborationId", "in", activeCollabsIds),
           orderBy("timeStamp", "desc"),
         );
