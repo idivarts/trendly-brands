@@ -8,8 +8,10 @@ import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import Colors from "@/constants/Colors";
 import { useAuthContext, useChatContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
   faComment,
   faFileLines,
@@ -18,6 +20,7 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
+  faCopy,
   faFileLines as faFileLinesSolid,
   faHeart as faHeartSolid,
   faStar as faStarSolid,
@@ -32,6 +35,7 @@ const TabLayout = () => {
   const theme = useTheme();
   const { unreadCount } = useChatContext()
   const { manager } = useAuthContext();
+  const { selectedBrand } = useBrandContext()
 
   return (
     <Tabs
@@ -163,16 +167,29 @@ const TabLayout = () => {
         options={{
           title: "My Brand",
           tabBarIcon: () => <ProfileIcon />,
-          headerRight: () => (!xl && <Pressable style={{ paddingHorizontal: 16 }} onPress={() => router.push('/profile')}>
-            <ImageComponent
-              url={manager?.profileImage || ""}
-              initials={manager?.name}
-              shape="circle"
-              size="small"
-              altText="Image"
-              style={{ width: 40, height: 40 }}
-            />
-          </Pressable>)
+          headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Pressable
+              style={{ paddingHorizontal: 16 }}
+              onPress={() => {
+                if (selectedBrand?.id) {
+                  navigator.clipboard.writeText(selectedBrand.id);
+                  Toaster.success("Brand ID copied!", "Share this with customer support if asked for")
+                }
+              }}
+            >
+              <FontAwesomeIcon icon={faCopy} size={20} color={Colors(theme).text} />
+            </Pressable>
+            {!xl && <Pressable style={{ paddingHorizontal: 16 }} onPress={() => router.push('/profile')}>
+              <ImageComponent
+                url={manager?.profileImage || ""}
+                initials={manager?.name}
+                shape="circle"
+                size="small"
+                altText="Image"
+                style={{ width: 40, height: 40 }}
+              />
+            </Pressable>}
+          </View>)
         }}
       />
     </Tabs>
