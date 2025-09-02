@@ -139,7 +139,7 @@ const OnboardingScreen = () => {
         // });
         setSelectedBrand(brandData as Brand);
         setSession(AuthApp.currentUser?.uid || "");
-        router.resetAndNavigate("/pay-wall");
+        router.resetAndNavigate("/explore-influencers");
         Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
       }).catch((error) => {
         Toaster.error("Error creating brand");
