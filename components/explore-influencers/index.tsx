@@ -71,7 +71,7 @@ const ExploreInfluencers = () => {
 
   const { manager } = useAuthContext()
   const theme = useTheme();
-  const { selectedBrand, isOnFreeTrial } = useBrandContext()
+  const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext()
   const preferences = selectedBrand?.preferences || {}
 
   const { xl } = useBreakpoints();
@@ -187,6 +187,7 @@ const ExploreInfluencers = () => {
                   xl={xl}
                   key={item.id}
                   isOnFreePlan={isOnFreeTrial}
+                  lockProfile={isProfileLocked(item.id)}
                   type="explore"
                   ToggleModal={ToggleModal}
                   influencer={item}
@@ -256,6 +257,7 @@ const ExploreInfluencers = () => {
           }
           FireStoreDB={FirestoreDB}
           isBrandsApp={true}
+          lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
           closeModal={() => setOpenProfileModal(false)}
         />
       </BottomSheetScrollContainer>

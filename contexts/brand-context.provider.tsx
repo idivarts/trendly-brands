@@ -11,8 +11,10 @@ import { addDoc, collection, collectionGroup, doc, DocumentData, documentId, Doc
 import React, {
   createContext,
   type PropsWithChildren,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { Platform } from "react-native";
@@ -26,6 +28,7 @@ interface BrandContextProps {
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
   loading: boolean,
   isOnFreeTrial?: boolean
+  isProfileLocked: (influencerId: string) => boolean
 }
 
 const BrandContext = createContext<BrandContextProps>({
@@ -36,6 +39,7 @@ const BrandContext = createContext<BrandContextProps>({
   updateBrand: () => Promise.resolve(),
   loading: true,
   isOnFreeTrial: true,
+  isProfileLocked: (influencerId: string) => true
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -147,6 +151,24 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     };
   }, [manager?.id]);
 
+  const isProfileLocked = useCallback((influencerId?: string) => {
+    // TODO: replace this placeholder logic with your real rules.
+    // Example of using state that should trigger recomputation when they change:
+    // - selectedBrand
+    // - loading
+    // - manager
+    // - isOnFreeTrial
+    if (!selectedBrand) return true;
+
+    // Example rule: lock profiles when brand is on free trial or billing not accepted
+    const lockedByBilling = !selectedBrand.isBillingDisabled && selectedBrand.billing?.status !== ModelStatus.Accepted;
+
+    // Example rule: optionally lock specific influencer IDs (extend as needed)
+    // const lockedById = Boolean(influencerId && selectedBrand.lockedInfluencers?.includes?.(influencerId));
+
+    return true;
+  }, [selectedBrand, manager?.id]);
+
   const createBrand = async (
     brand: Partial<IBrands>,
   ) => {
@@ -193,18 +215,29 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
   }, [selectedBrand])
 
   const isOnFreeTrial = selectedBrand && (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted)
+
+  const ctxValue = useMemo(() => ({
+    brands,
+    createBrand,
+    selectedBrand,
+    setSelectedBrand: setSelectedBrandHandler,
+    updateBrand,
+    loading,
+    isOnFreeTrial,
+    isProfileLocked,
+  }), [
+    brands,
+    createBrand,
+    selectedBrand,
+    updateBrand,
+    loading,
+    isOnFreeTrial,
+    isProfileLocked,
+    setSelectedBrandHandler,
+  ]);
+
   return (
-    <BrandContext.Provider
-      value={{
-        brands,
-        createBrand,
-        selectedBrand,
-        setSelectedBrand: setSelectedBrandHandler,
-        updateBrand,
-        loading,
-        isOnFreeTrial
-      }}
-    >
+    <BrandContext.Provider value={ctxValue}>
       {children}
     </BrandContext.Provider>
   );

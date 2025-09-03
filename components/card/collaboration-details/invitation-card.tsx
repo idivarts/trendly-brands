@@ -30,7 +30,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
     checkIfAlreadyInvited,
     influencerId: data.id,
   });
-  const { isOnFreeTrial } = useBrandContext()
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext()
   const { xl } = useBreakpoints()
 
   return (
@@ -42,6 +42,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         ToggleModal={bottomSheetAction}
         fullHeight={true}
         isOnFreePlan={isOnFreeTrial}
+        lockProfile={isProfileLocked(data.id)}
         cardActionNode={<Button
           mode="outlined"
           disabled={isAlreadyInvited ? true : false}

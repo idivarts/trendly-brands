@@ -26,12 +26,13 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const theme = useTheme();
   const [influencer, setInfluencer] = useState(data.influencer)
   const { xl } = useBreakpoints()
-  const { isOnFreeTrial } = useBrandContext();
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext();
   return (
     <>
       <InfluencerCard
         xl={xl}
         isOnFreePlan={isOnFreeTrial}
+        lockProfile={isProfileLocked(influencer.id)}
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,
