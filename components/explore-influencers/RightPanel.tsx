@@ -6,7 +6,7 @@ import { useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, Divider, List, Surface, Text } from 'react-native-paper'
+import { Badge, Button, Divider, List, SegmentedButtons, Surface, Text } from 'react-native-paper'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -30,7 +30,11 @@ const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, s
     <Surface elevation={1} style={[styles.surface, style]}> {children} </Surface>
 )
 
-const RightPanel = () => {
+interface IProps {
+    connectedInfluencers: boolean,
+    setConnectedInfluencers: Function
+}
+const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInfluencers }) => {
     const theme = useTheme()
     const router = useMyNavigation()
 
@@ -67,6 +71,40 @@ const RightPanel = () => {
                     >
                         Create campaign
                     </Button>
+                </Block>
+
+                {/* Explore vs Connected switch */}
+                <Block>
+                    <SectionHeader
+                        icon={connectedInfluencers ? 'link' : 'compass'}
+                        title={connectedInfluencers ? 'Connected influencers' : 'Explore influencers'}
+                        subtitle={connectedInfluencers ? 'See the creators already in touch with your brand' : 'Browse and discover new creators that match your vibe'}
+                    />
+
+                    <Text variant="bodyMedium" style={styles.muted}>
+                        Pick a mode to tailor what you see.
+                    </Text>
+
+                    <SegmentedButtons
+                        value={connectedInfluencers ? 'connected' : 'explore'}
+                        onValueChange={(v) => setConnectedInfluencers(v === 'connected')}
+                        buttons={[
+                            {
+                                value: 'explore',
+                                label: 'Explore',
+                                icon: 'magnify',
+                                style: styles.segmentBtn,
+                            },
+                            {
+                                value: 'connected',
+                                label: 'Connected',
+                                icon: 'link-variant',
+                                style: styles.segmentBtn,
+                            },
+                        ]}
+                        density="regular"
+                        style={styles.segmentGroup}
+                    />
                 </Block>
 
                 {/* Influencer Preference */}
@@ -319,7 +357,13 @@ const styles = StyleSheet.create({
     soonFootnote: {
         color: 'rgba(255,255,255,0.85)',
         marginTop: 10,
-    }
+    },
+    segmentGroup: {
+        marginTop: 4,
+    },
+    segmentBtn: {
+        // keep it subtle and premium-looking
+    },
 })
 
 export default RightPanel
