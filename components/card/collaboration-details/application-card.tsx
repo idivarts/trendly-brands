@@ -4,7 +4,7 @@ import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { InfluencerApplication } from "@/types/Collaboration";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
-import { ApplicationActionBar } from "./application-action-card";
+import { ApplicationActionBar } from "../../../shared-uis/components/application-action-card";
 
 interface ApplicationCardProps {
   acceptApplication: () => void;
