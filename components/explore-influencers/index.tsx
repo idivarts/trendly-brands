@@ -245,6 +245,7 @@ const ExploreInfluencers = () => {
           influencer={selectedInfluencer as User}
           theme={theme}
           isOnFreePlan={isOnFreeTrial}
+          isPhoneMasked={false}
           actionCard={
             <View
               style={{
