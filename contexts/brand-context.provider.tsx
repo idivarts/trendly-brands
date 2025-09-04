@@ -2,8 +2,10 @@ import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/mod
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import { ProfileModalSendMessage, ProfileModalUnlockRequest } from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
 import { usePathname } from "expo-router";
@@ -151,7 +153,51 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     };
   }, [manager?.id]);
 
-  const isProfileLocked = useCallback((influencerId?: string) => {
+  useEffect(() => {
+    const subscription1 = ProfileModalUnlockRequest.subscribe(async (influencerId) => {
+      Console.log("Unlocking Influencer on brand", selectedBrand);
+      if (!selectedBrand)
+        return
+      const uCredit = selectedBrand?.unlockCredits || 0
+      if (uCredit <= 0) {
+        Toaster.error("Your Profile has no unlock Credits")
+        return
+      }
+      Console.log("Unlocking Influencer", influencerId);
+
+      const influencerSet = new Set([...(selectedBrand.unlockedInfluencers || []), influencerId])
+      await updateBrand(selectedBrand.id, {
+        unlockedInfluencers: [...influencerSet],
+        unlockCredits: uCredit - 1
+      })
+      setSelectedBrand({
+        ...selectedBrand,
+        unlockedInfluencers: [...influencerSet],
+        unlockCredits: uCredit - 1
+      })
+      Console.log("Unlocked Influencer", [...influencerSet]);
+    })
+    const subscription2 = ProfileModalSendMessage.subscribe(async (influencerId) => {
+      await HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}`, {
+        method: "POST",
+        body: JSON.stringify({
+          brandId: selectedBrand?.id
+        }),
+        headers: {
+          "content-type": "application/json"
+        }
+      }).then(r => {
+        Toaster.success("Message thread is created")
+        router.push("/messages")
+      })
+    })
+    return () => {
+      subscription1.unsubscribe()
+      subscription2.unsubscribe()
+    }
+  }, [selectedBrand])
+
+  const isProfileLocked = useCallback((influencerId: string) => {
     // TODO: replace this placeholder logic with your real rules.
     // Example of using state that should trigger recomputation when they change:
     // - selectedBrand
@@ -166,7 +212,9 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     // Example rule: optionally lock specific influencer IDs (extend as needed)
     // const lockedById = Boolean(influencerId && selectedBrand.lockedInfluencers?.includes?.(influencerId));
 
-    return true;
+    // https://brands.trendly.now/influencer/GB9YIOsx1ESc7SBxuqm4pI9wZP53
+    const unlockedProfiles = selectedBrand.unlockedInfluencers || []
+    return !unlockedProfiles.includes(influencerId);
   }, [selectedBrand, manager?.id]);
 
   const createBrand = async (

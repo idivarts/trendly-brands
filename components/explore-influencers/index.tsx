@@ -103,7 +103,7 @@ const ExploreInfluencers = () => {
       return;
     setInfluencerIds([])
     loadInfluencers()
-  }, [selectedBrand])
+  }, [selectedBrand?.id])
 
   const { loading: isLoading, data, loadMore } = useInfiniteIdScroll<User>(influencerIds, q, 10)
 
