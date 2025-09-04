@@ -154,42 +154,63 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
   }, [manager?.id]);
 
   useEffect(() => {
-    const subscription1 = ProfileModalUnlockRequest.subscribe(async (influencerId) => {
-      Console.log("Unlocking Influencer on brand", selectedBrand);
-      if (!selectedBrand)
-        return
-      const uCredit = selectedBrand?.unlockCredits || 0
-      if (uCredit <= 0) {
-        Toaster.error("Your Profile has no unlock Credits")
-        return
-      }
-      Console.log("Unlocking Influencer", influencerId);
-
-      const influencerSet = new Set([...(selectedBrand.unlockedInfluencers || []), influencerId])
-      await updateBrand(selectedBrand.id, {
-        unlockedInfluencers: [...influencerSet],
-        unlockCredits: uCredit - 1
-      })
-      setSelectedBrand({
-        ...selectedBrand,
-        unlockedInfluencers: [...influencerSet],
-        unlockCredits: uCredit - 1
-      })
-      Console.log("Unlocked Influencer", [...influencerSet]);
-    })
-    const subscription2 = ProfileModalSendMessage.subscribe(async (influencerId) => {
-      await HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          brandId: selectedBrand?.id
-        }),
-        headers: {
-          "content-type": "application/json"
+    const subscription1 = ProfileModalUnlockRequest.subscribe(async ({ influencerId, callback }) => {
+      try {
+        Console.log("Unlocking Influencer on brand", selectedBrand);
+        if (!selectedBrand)
+          return
+        const uCredit = selectedBrand?.unlockCredits || 0
+        if (uCredit <= 0) {
+          Toaster.error("Your Profile has no unlock Credits")
+          return
         }
-      }).then(r => {
-        Toaster.success("Message thread is created")
-        router.push("/messages")
-      })
+        Console.log("Unlocking Influencer", influencerId);
+
+        const influencerSet = new Set([...(selectedBrand.unlockedInfluencers || []), influencerId])
+        await updateBrand(selectedBrand.id, {
+          unlockedInfluencers: [...influencerSet],
+          unlockCredits: uCredit - 1
+        })
+        setSelectedBrand({
+          ...selectedBrand,
+          unlockedInfluencers: [...influencerSet],
+          unlockCredits: uCredit - 1
+        })
+        Console.log("Unlocked Influencer", [...influencerSet]);
+
+        HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/unlock`, {
+          method: "POST",
+          body: JSON.stringify({
+            brandId: selectedBrand?.id
+          }),
+          headers: {
+            "content-type": "application/json"
+          }
+        })
+      } finally {
+        callback(true)
+      }
+    })
+
+    const subscription2 = ProfileModalSendMessage.subscribe(async ({ influencerId, callback }) => {
+      try {
+
+        await HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/message`, {
+          method: "POST",
+          body: JSON.stringify({
+            brandId: selectedBrand?.id
+          }),
+          headers: {
+            "content-type": "application/json"
+          }
+        }).then(r => {
+          Toaster.success("Message thread is created")
+          router.push("/messages")
+          callback(true)
+        })
+      } catch (e) {
+        callback(false)
+      }
     })
     return () => {
       subscription1.unsubscribe()
