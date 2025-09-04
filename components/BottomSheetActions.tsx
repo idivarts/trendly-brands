@@ -2,6 +2,7 @@ import { useChatContext } from "@/contexts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Clipboard from "expo-clipboard";
@@ -39,6 +40,7 @@ const BottomSheetActions = ({
   const [isMessageModalVisible, setIsMessageModalVisible] =
     React.useState(false);
   const router = useRouter();
+  const { openModal } = useConfirmationModel()
 
   const { connectUser } = useChatContext();
 
@@ -117,20 +119,49 @@ const BottomSheetActions = ({
     }
   };
 
-  const delistCollaboration = async () => {
-    try {
-      const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
-      await updateDoc(collaborationRef, {
-        status: "inactive",
-      }).then(() => {
-        handleClose();
-        Toaster.success("Collaboration delisted successfully");
-      });
-    } catch (error) {
-      Console.error(error);
-      handleClose();
-      Toaster.error("Failed to delist collaboration");
-    }
+  const deleteCollaboration = async () => {
+    handleClose();
+    openModal({
+      title: "Delist Collaboration",
+      description: "This would completely delete the collaboration and you would no longer be able to recover this",
+      confirmText: "Delete Collaboration",
+      confirmAction: async () => {
+        try {
+          const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
+          await updateDoc(collaborationRef, {
+            status: "deleted",
+          }).then(() => {
+            Toaster.success("Collaboration delisted successfully");
+          });
+        } catch (error) {
+          Console.error(error);
+          Toaster.error("Failed to delist collaboration");
+        }
+      }
+    })
+
+  };
+  const stopCollaboration = async () => {
+    handleClose();
+    openModal({
+      title: "Stop Collaboration",
+      description: "This means you have either already hired or changed your mind and hence no longer want to receive new applications",
+      confirmText: "Stop Collaboration",
+      confirmAction: async () => {
+        try {
+          const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
+          await updateDoc(collaborationRef, {
+            status: "stopped",
+          }).then(() => {
+            Toaster.success("Collaboration Stopped successfully");
+          });
+        } catch (error) {
+          Console.error(error);
+          Toaster.error("Failed to delist collaboration");
+        }
+      }
+    })
+
   };
 
   const renderContent = () => {
@@ -259,9 +290,15 @@ const BottomSheetActions = ({
               }}
             />
             <List.Item
-              title="Delist Collaboration"
+              title="Delete Collaboration"
               onPress={() => {
-                delistCollaboration();
+                deleteCollaboration();
+              }}
+            />
+            <List.Item
+              title="Stop Collaboration"
+              onPress={() => {
+                stopCollaboration();
               }}
             />
           </List.Section>
