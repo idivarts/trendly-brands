@@ -29,6 +29,7 @@ import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SlowLoader from "../../shared-uis/components/SlowLoader";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
+import EmptyState from "../ui/empty-state";
 import InfluencerActionModal from "./InfluencerActionModal";
 import InfluencerInvite from "./InfluencerInvite";
 
@@ -160,6 +161,18 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
   const [height, setHeight] = useState(Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height))
 
 
+  if (influencers.length == 0 && connectedInfluencers) {
+    return (
+      <AppLayout>
+        <EmptyState
+          image={require("@/assets/images/illustration6.png")}
+          subtitle="You don’t have any influencers connected yet. Switch to Explore Mode from the right panel to start discovering and unlocking influencers."
+          title="No Influencers Connected"
+          hideAction={true}
+        />
+      </AppLayout>
+    );
+  }
   if (isLoading && influencers.length == 0) {
     return (
       <AppLayout>
