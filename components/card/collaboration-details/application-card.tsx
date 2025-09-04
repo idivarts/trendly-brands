@@ -32,7 +32,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       <InfluencerCard
         xl={xl}
         isOnFreePlan={isOnFreeTrial}
-        lockProfile={isProfileLocked(influencer.id)}
+        lockProfile={false}
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,

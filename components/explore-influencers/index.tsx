@@ -32,7 +32,10 @@ import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll
 import InfluencerActionModal from "./InfluencerActionModal";
 import InfluencerInvite from "./InfluencerInvite";
 
-const ExploreInfluencers = () => {
+interface IProps {
+  connectedInfluencers?: boolean
+}
+const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -84,6 +87,10 @@ const ExploreInfluencers = () => {
   );
 
   const loadInfluencers = async () => {
+    if (connectedInfluencers) {
+      setInfluencerIds(selectedBrand?.unlockedInfluencers || [])
+      return
+    }
     const influencerIds = await PersistentStorage.getItemWithExpiry("matchmaking_influencers-" + selectedBrand?.id)
     if (influencerIds) {
       setInfluencerIds(influencerIds as string[])

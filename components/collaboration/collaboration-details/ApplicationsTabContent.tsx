@@ -199,7 +199,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           closeModal={() => setOpenProfileModal(false)}
           isPhoneMasked={false}
           isOnFreePlan={isOnFreeTrial}
-          lockProfile={isProfileLocked(selectedInfluencerApplication?.influencer.id || "")}
+          lockProfile={false}
           actionCard={
             <View
               style={{
