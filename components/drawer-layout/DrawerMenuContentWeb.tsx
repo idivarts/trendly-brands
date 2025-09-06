@@ -3,6 +3,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
+import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import {
   faComment,
@@ -25,7 +26,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useNavigation, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -99,7 +99,8 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
       ) : (
         <DrawerIcon href="/discover" icon={faGem} />
       ),
-    label: "Enterprise Discovery (Preview)",
+    label: "Enterprise Discovery",
+    enterprise: true
   },
   {
     href: "/collaborations",
@@ -135,12 +136,13 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
 ];
 
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
-  const navigation = useNavigation();
-  const router = useRouter();
+  const router = useMyNavigation();
   const { bottom } = useSafeAreaInsets();
   const theme = useTheme();
   const { selectedBrand } = useBrandContext();
   const { manager } = useAuthContext();
+
+  const planKey = selectedBrand?.billing?.planKey || ""
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -208,7 +210,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
           </Text>
           <View style={{ gap: 2 }}>
             {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-              <DrawerMenuItem key={`campaign-${idx}`} tab={tab} />
+              <DrawerMenuItem key={`campaign-${idx}`}
+                tab={tab}
+                enterpriseLock={tab.enterprise && planKey != "enterprise"}
+              />
             ))}
           </View>
         </View>
