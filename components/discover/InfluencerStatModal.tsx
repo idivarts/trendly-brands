@@ -1,47 +1,75 @@
 import { View } from '@/shared-uis/components/theme/Themed'
+import Colors from '@/shared-uis/constants/Colors'
+import { Theme, useTheme } from '@react-navigation/native'
 import React from 'react'
-import { Image, Linking, StyleSheet } from 'react-native'
-import { Card, IconButton, Modal, Portal, Text, useTheme as usePaperTheme } from 'react-native-paper'
+import { Image, Linking, ScrollView, StyleSheet } from 'react-native'
+import { Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
 import { InfluencerItem, StatChip } from './DiscoverInfluencer'
 
-const useStatsModalStyles = () => StyleSheet.create({
-    modalCard: { margin: 16, borderRadius: 16, overflow: 'hidden' },
+const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
+    container: {
+        alignSelf: 'center',
+        width: 650,
+        maxHeight: "90%",
+        maxWidth: '92%',
+        marginVertical: 16,
+    },
+    modalCard: {
+        borderRadius: 18,
+        overflow: 'hidden',
+        backgroundColor: Colors(theme).modalBackground,
+    },
     row: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     avatar: { width: 64, height: 64, borderRadius: 8, marginRight: 12 },
     chip: { marginRight: 6, marginBottom: 6 },
 })
 
 export const InfluencerStatsModal: React.FC<{ visible: boolean; item: InfluencerItem | null; onClose: () => void }> = ({ visible, item, onClose }) => {
-    const paper = usePaperTheme()
-    const styles = useStatsModalStyles()
+    const theme = useTheme()
+    const styles = useStatsModalStyles(theme)
 
     return (
         <Portal>
-            <Modal visible={visible} onDismiss={onClose}>
+            <Modal visible={visible} onDismiss={onClose} contentContainerStyle={styles.container}>
+
                 <Card style={styles.modalCard}>
-                    <Card.Title title={item?.fullname} subtitle={item ? `@${item.username}` : undefined} />
-                    <Card.Content>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginLeft: 24, marginTop: 24 }}>
                         <View style={styles.row}>
                             {!!item?.picture && (
                                 <Image source={{ uri: item.picture }} style={styles.avatar} />
                             )}
-                            {!!item?.url && (
-                                <Text onPress={() => Linking.openURL(item.url)} style={{ color: paper.colors.primary }}>
-                                    {item.url}
-                                </Text>
-                            )}
+                            <Card.Title title={item?.fullname} subtitle={item ? `@${item.username}` : undefined} />
                         </View>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                            <StatChip label="Followers" value={item?.followers} />
-                            <StatChip label="Engagements" value={item?.engagements} />
-                            <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
-                            <StatChip label="Reel Plays" value={item?.reelPlays} />
-                        </View>
-                    </Card.Content>
-                    <Card.Actions>
-                        <IconButton icon="open-in-new" onPress={() => item?.url && Linking.openURL(item.url)} />
-                        <IconButton icon="close" onPress={onClose} />
-                    </Card.Actions>
+                        <Card.Actions>
+                            <IconButton icon="open-in-new" onPress={() => item?.url && Linking.openURL(item.url)} />
+                            <IconButton icon="close" onPress={onClose} />
+                        </Card.Actions>
+                    </View>
+                    <Divider style={{ marginBottom: 16 }} />
+                    <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ flex: 1, marginBottom: 24 }}>
+                        <Card.Content>
+                            <Card.Title title={"Statistics"} />
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                                <StatChip label="Followers" value={item?.followers} />
+                                <StatChip label="Engagements" value={item?.engagements} />
+                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
+                                <StatChip label="Reel Plays" value={item?.reelPlays} />
+                            </View>
+                        </Card.Content>
+                        <Card.Content>
+                            <Card.Title title={"Growth"} />
+                            <View style={{ height: 200 }}>
+
+                            </View>
+                        </Card.Content>
+
+                        <Card.Content>
+                            <Card.Title title={"Some Other Metrics"} />
+                            <View style={{ height: 400 }}>
+
+                            </View>
+                        </Card.Content>
+                    </ScrollView>
                 </Card>
             </Modal>
         </Portal>
