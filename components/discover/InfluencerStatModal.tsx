@@ -1,9 +1,10 @@
 import { View } from '@/shared-uis/components/theme/Themed'
+import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import { Theme, useTheme } from '@react-navigation/native'
 import React from 'react'
 import { Image, Linking, ScrollView, StyleSheet } from 'react-native'
-import { Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
+import { Button, Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
 import { InfluencerItem, StatChip } from './DiscoverInfluencer'
 
 const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
@@ -41,6 +42,9 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                             <Card.Title title={item?.fullname} subtitle={item ? `@${item.username}` : undefined} />
                         </View>
                         <Card.Actions>
+                            <Button mode="contained" onPress={() => {
+                                Toaster.success("Our team is notifed", "We are working to bring the influencer in your contact")
+                            }}>Request Connection</Button>
                             <IconButton icon="open-in-new" onPress={() => item?.url && Linking.openURL(item.url)} />
                             <IconButton icon="close" onPress={onClose} />
                         </Card.Actions>
@@ -49,7 +53,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                     <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ flex: 1, marginBottom: 24 }}>
                         <Card.Content>
                             <Card.Title title={"Statistics"} />
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 16 }}>
                                 <StatChip label="Followers" value={item?.followers} />
                                 <StatChip label="Engagements" value={item?.engagements} />
                                 <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />

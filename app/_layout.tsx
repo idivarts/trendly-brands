@@ -32,6 +32,7 @@ import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationM
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
+import Toast from "react-native-toast-message";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -71,11 +72,7 @@ export default function RootLayout() {
     <GestureHandlerRootView>
       <UpdateProvider force={true}>
         <AuthContextProvider>
-          <BottomSheetModalProvider>
-            <ConfirmationModalProvider>
-              <RootLayoutStack />
-            </ConfirmationModalProvider>
-          </BottomSheetModalProvider>
+          <RootLayoutStack />
         </AuthContextProvider>
       </UpdateProvider>
     </GestureHandlerRootView>
@@ -121,17 +118,18 @@ const RootLayoutStack = () => {
       <AWSContextProvider>
         <Provider theme={CustomPaperTheme(theme)}>
           <DownloadApp />
-          <Stack
-            screenOptions={{
-              animation: "ios",
-              headerShown: false,
-            }}
-          >
-            {/* <Stack.Screen name="(main)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} /> */}
-            <Stack.Screen name="index" />
-            <Stack.Screen name="+not-found" />
-          </Stack>
+          <ConfirmationModalProvider>
+            <BottomSheetModalProvider>
+              <Stack screenOptions={{
+                animation: "ios",
+                headerShown: false,
+              }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <Toast />
+            </BottomSheetModalProvider>
+          </ConfirmationModalProvider>
         </Provider>
       </AWSContextProvider>
     </ThemeProvider>
