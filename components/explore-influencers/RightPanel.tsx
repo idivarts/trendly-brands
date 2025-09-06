@@ -6,7 +6,7 @@ import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, Divider, List, SegmentedButtons, Surface, Text } from 'react-native-paper'
+import { Badge, Button, Divider, SegmentedButtons, Surface, Text } from 'react-native-paper'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -120,7 +120,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                     <Text variant="bodyMedium" style={styles.muted}>
                         Want more control? Set your preferred audience size, platforms, languages, and budget.
                     </Text>
-
+                    {/* 
                     <List.Section style={styles.listSection}>
                         <List.Item
                             title="Audience size"
@@ -149,7 +149,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                             style={styles.listItem}
                             onPress={() => router.push('/preferences')}
                         />
-                    </List.Section>
+                    </List.Section> */}
 
                     <Button mode="outlined" icon="tune" onPress={() => router.push('/preferences')}>
                         Set preferences
