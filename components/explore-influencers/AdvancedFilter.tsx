@@ -1,3 +1,4 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { FontAwesome } from '@expo/vector-icons'
@@ -10,11 +11,6 @@ import { Badge, Chip, Divider, HelperText, Menu, Button as PaperButton, Segmente
 import Button from '../ui/button'
 import { Block } from './RightPanel'
 
-/**
- * TEMP TOGGLE: Locked vs Unlocked version of Advanced Filter
- * Flip this flag to show the full filter UI.
- */
-const locked = false
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
 const ENGAGEMENT_RATE_OPTIONS = [
@@ -86,6 +82,10 @@ const RangeInputs = ({
 const AdvancedFilter = () => {
     const theme = useTheme()
     const styles = stylesFn(theme)
+
+    const { selectedBrand } = useBrandContext()
+    const locked = !(["pro", "enterprise"].includes(selectedBrand?.billing?.planKey || ""))
+
 
     /** Local state (can be lifted later) */
     const [followerMin, setFollowerMin] = useState('')
