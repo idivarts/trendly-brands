@@ -4,101 +4,390 @@ import { FontAwesome } from '@expo/vector-icons'
 import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { default as React } from 'react'
+import React, { useState } from 'react'
 import { Platform, StyleSheet } from 'react-native'
-import { Badge, Divider, Text } from 'react-native-paper'
+import { Badge, Chip, Divider, HelperText, Menu, Button as PaperButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
 import Button from '../ui/button'
 import { Block } from './RightPanel'
 
+/**
+ * TEMP TOGGLE: Locked vs Unlocked version of Advanced Filter
+ * Flip this flag to show the full filter UI.
+ */
+const locked = false
+
+/** DROPDOWN / TAG DATA (can be wired from props later) */
+const ENGAGEMENT_RATE_OPTIONS = [
+    '>0.5%', '>1%', '>1.5%', '>2%', '>3%', '>5%'
+]
+
+const CREATOR_GENDER_OPTIONS = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'gender-neutral', label: 'Gender‑neutral' },
+]
+
+// Keep these lightweight; replace with server-driven lists later
+const NICHES = [
+    'Fashion/Beauty', 'Comedy', 'Tech & Gadgets', 'Food', 'Fitness', 'Travel', 'Education', 'Lifestyle', 'Parenting', 'Gaming'
+]
+
+const LOCATIONS = [
+    'India', 'USA', 'UK', 'UAE', 'Singapore', 'Canada', 'Australia', 'Germany', 'France', 'Remote'
+]
+
+/** Small inline component for min/max numeric ranges */
+const RangeInputs = ({
+    label,
+    min,
+    max,
+    onChangeMin,
+    onChangeMax,
+    placeholderMin = 'Min',
+    placeholderMax = 'Max',
+    theme,
+}: {
+    label: string
+    min: string
+    max: string
+    onChangeMin: (v: string) => void
+    onChangeMax: (v: string) => void
+    placeholderMin?: string
+    placeholderMax?: string
+    theme: Theme
+}) => {
+    const styles = stylesFn(theme)
+    return (
+        <View style={{ backgroundColor: 'transparent' }}>
+            <Text style={styles.fieldLabel} variant="labelSmall">{label}</Text>
+            <View style={styles.rangeRow}>
+                <TextInput
+                    mode="outlined"
+                    keyboardType="numeric"
+                    value={min}
+                    onChangeText={onChangeMin}
+                    placeholder={placeholderMin}
+                    style={[styles.input, styles.rangeInput]}
+                />
+                <Text style={styles.toDash}>to</Text>
+                <TextInput
+                    mode="outlined"
+                    keyboardType="numeric"
+                    value={max}
+                    onChangeText={onChangeMax}
+                    placeholder={placeholderMax}
+                    style={[styles.input, styles.rangeInput]}
+                />
+            </View>
+        </View>
+    )
+}
 
 const AdvancedFilter = () => {
     const theme = useTheme()
-
     const styles = stylesFn(theme)
 
-    return (
-        <Block style={{ padding: 0, borderWidth: 0 }}>
-            <LinearGradient
-                colors={[Colors(theme).secondary, Colors(theme).primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.comingSoonCard}
-            >
-                <View style={styles.headerRow}>
-                    <View style={[styles.headerIconWrap]}>
-                        <FontAwesome name="search" size={16} color="#fff" />
-                    </View>
-                    <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                        <Text variant="titleSmall" style={styles.soonTitle}>Advanced Filter</Text>
-                        <Text variant="labelSmall" style={styles.soonSubtitle}>Powerful ways to find creators</Text>
-                    </View>
-                    <Badge size={18} style={styles.soonBadge}>Locked</Badge>
-                </View>
-                <Divider style={{ marginVertical: 16 }} />
+    /** Local state (can be lifted later) */
+    const [followerMin, setFollowerMin] = useState('')
+    const [followerMax, setFollowerMax] = useState('')
 
-                <View style={styles.soonList}>
-                    <View style={styles.soonListItem}>
-                        <View style={styles.soonBulletIcon}><FontAwesome name="user" size={14} color="#fff" /></View>
-                        <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                            <Text variant="labelLarge" style={styles.soonListTitle}>Search by creator name</Text>
-                            <Text variant="bodySmall" style={styles.soonListDesc}>Know a creator already? Just type their name.</Text>
-                        </View>
-                    </View>
+    const [contentMin, setContentMin] = useState('')
+    const [contentMax, setContentMax] = useState('')
 
-                    <View style={styles.soonListItem}>
-                        <View style={styles.soonBulletIcon}><FontAwesome name="tag" size={14} color="#fff" /></View>
-                        <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                            <Text variant="labelLarge" style={styles.soonListTitle}>Keyword search</Text>
-                            <Text variant="bodySmall" style={styles.soonListDesc}>Find influencers by content keywords like “fashion” or “GRWM”.</Text>
-                        </View>
-                    </View>
+    const [avgLikesMin, setAvgLikesMin] = useState('')
+    const [avgLikesMax, setAvgLikesMax] = useState('')
 
-                    <View style={styles.soonListItem}>
-                        <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
-                        <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                            <Text variant="labelLarge" style={styles.soonListTitle}>Look‑alike search</Text>
-                            <Text variant="bodySmall" style={styles.soonListDesc}>Paste a creator’s link and our AI finds similar vibes, style, and audience.</Text>
-                        </View>
-                    </View>
-                </View>
+    const [avgCommentsMin, setAvgCommentsMin] = useState('')
+    const [avgCommentsMax, setAvgCommentsMax] = useState('')
 
-                <Button
-                    mode="contained"
-                    buttonColor="#fff"
-                    labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
-                    style={styles.soonCtaBtn}
-                    icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
-                    onPress={() => router.push('/billing')}
+    const [descKeywords, setDescKeywords] = useState('')
+    const [name, setName] = useState('')
+
+    const [isVerified, setIsVerified] = useState(false)
+    const [hasContact, setHasContact] = useState(false)
+
+    const [gender, setGender] = useState('gender-neutral')
+
+    const [erMenuVisible, setErMenuVisible] = useState(false)
+    const [erSelected, setErSelected] = useState<string | null>(null)
+
+    const [selectedNiches, setSelectedNiches] = useState<string[]>([])
+    const [selectedLocations, setSelectedLocations] = useState<string[]>([])
+
+    const toggleTag = (value: string, list: string[], setList: (v: string[]) => void) => {
+        if (list.includes(value)) setList(list.filter(v => v !== value))
+        else setList([...list, value])
+    }
+
+    if (locked) {
+        return (
+            <Block style={{ padding: 0, borderWidth: 0 }}>
+                <LinearGradient
+                    colors={[Colors(theme).secondary, Colors(theme).primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.comingSoonCard}
                 >
-                    Upgrade to Pro
-                </Button>
+                    <View style={styles.headerRow}>
+                        <View style={[styles.headerIconWrap]}>
+                            <FontAwesome name="search" size={16} color="#fff" />
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                            <Text variant="titleSmall" style={styles.soonTitle}>Advanced Filter</Text>
+                            <Text variant="labelSmall" style={styles.soonSubtitle}>Powerful ways to find creators</Text>
+                        </View>
+                        <Badge size={18} style={styles.soonBadge}>Locked</Badge>
+                    </View>
 
-                <Text variant="labelSmall" style={styles.soonFootnote}>
-                    Register on the yearly plan today. When search launches, any price hike won’t affect your current plan.
-                </Text>
-            </LinearGradient>
+                    <Divider style={{ marginVertical: 16 }} />
+
+                    <View style={styles.soonList}>
+                        <View style={styles.soonListItem}>
+                            <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
+                            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                <Text variant="labelLarge" style={styles.soonListTitle}>Laser‑targeted filters</Text>
+                                <Text variant="bodySmall" style={styles.soonListDesc}>Filter by followers, engagement, verification, niche, location and more.</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.soonListItem}>
+                            <View style={styles.soonBulletIcon}><FontAwesome name="tag" size={14} color="#fff" /></View>
+                            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                <Text variant="labelLarge" style={styles.soonListTitle}>Keyword & look‑alike search</Text>
+                                <Text variant="bodySmall" style={styles.soonListDesc}>Match bios by keywords or paste a profile to find similar creators.</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.soonListItem}>
+                            <View style={styles.soonBulletIcon}><FontAwesome name="bolt" size={14} color="#fff" /></View>
+                            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                <Text variant="labelLarge" style={styles.soonListTitle}>Save time, scale faster</Text>
+                                <Text variant="bodySmall" style={styles.soonListDesc}>Skip manual sorting and discover perfect fits instantly.</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <Button
+                        mode="contained"
+                        buttonColor="#fff"
+                        labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
+                        style={styles.soonCtaBtn}
+                        icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
+                        onPress={() => router.push('/billing')}
+                    >
+                        Upgrade to Pro
+                    </Button>
+
+                    <Text variant="labelSmall" style={styles.soonFootnote}>
+                        Lock in today’s yearly price. Future price changes won’t affect your current plan.
+                    </Text>
+                </LinearGradient>
+            </Block>
+        )
+    }
+
+    // Unlocked: full filter UI
+    return (
+        <Block style={{ padding: 0 }}>
+            <View style={[styles.surface, { backgroundColor: Colors(theme).surface }]}>
+                <View style={styles.headerRow}>
+                    <View style={styles.headerIconWrap}>
+                        <FontAwesome name="sliders" size={16} color={Colors(theme).text} />
+                    </View>
+                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                        <Text variant="titleSmall">Advanced Filters</Text>
+                        <Text variant="labelSmall" style={{ color: Colors(theme).textSecondary }}>Quickly narrow down the right creators</Text>
+                    </View>
+                </View>
+
+                <Divider style={{ marginVertical: 8 }} />
+
+                <View style={styles.fieldsWrap}>
+                    {/* follower_count */}
+                    <RangeInputs
+                        label="Follower count"
+                        min={followerMin}
+                        max={followerMax}
+                        onChangeMin={setFollowerMin}
+                        onChangeMax={setFollowerMax}
+                        theme={theme}
+                    />
+
+                    {/* content_count */}
+                    <RangeInputs
+                        label="Content count"
+                        min={contentMin}
+                        max={contentMax}
+                        onChangeMin={setContentMin}
+                        onChangeMax={setContentMax}
+                        theme={theme}
+                    />
+
+                    {/* average_likes */}
+                    <RangeInputs
+                        label="Average likes"
+                        min={avgLikesMin}
+                        max={avgLikesMax}
+                        onChangeMin={setAvgLikesMin}
+                        onChangeMax={setAvgLikesMax}
+                        theme={theme}
+                    />
+
+                    {/* average_comments */}
+                    <RangeInputs
+                        label="Average comments"
+                        min={avgCommentsMin}
+                        max={avgCommentsMax}
+                        onChangeMin={setAvgCommentsMin}
+                        onChangeMax={setAvgCommentsMax}
+                        theme={theme}
+                    />
+
+                    {/* description_keywords */}
+                    <View style={{ backgroundColor: Colors(theme).transparent }}>
+                        <Text style={styles.fieldLabel} variant="labelSmall">Bio keywords</Text>
+                        <TextInput
+                            mode="outlined"
+                            value={descKeywords}
+                            onChangeText={setDescKeywords}
+                            placeholder="fashion, GRWM, skincare"
+                            style={styles.input}
+                        />
+                        <HelperText type="info" visible>
+                            Separate keywords with comma. We’ll match against the bio.
+                        </HelperText>
+                    </View>
+
+                    {/* name */}
+                    <View style={{ backgroundColor: Colors(theme).transparent }}>
+                        <Text style={styles.fieldLabel} variant="labelSmall">Name</Text>
+                        <TextInput
+                            mode="outlined"
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Search by creator name"
+                            style={styles.input}
+                        />
+                    </View>
+
+                    {/* is_verified & has_contact_details */}
+                    <View style={[styles.switchRow, { backgroundColor: Colors(theme).transparent }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, backgroundColor: Colors(theme).transparent }}>
+                            <Switch value={isVerified} onValueChange={setIsVerified} />
+                            <Text variant="bodyMedium">Verified account</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, backgroundColor: Colors(theme).transparent }}>
+                            <Switch value={hasContact} onValueChange={setHasContact} />
+                            <Text variant="bodyMedium">Has contact details</Text>
+                        </View>
+                    </View>
+
+                    {/* engagement_rate */}
+                    <View style={{ backgroundColor: Colors(theme).transparent }}>
+                        <Text style={styles.fieldLabel} variant="labelSmall">Engagement rate</Text>
+                        <Menu
+                            visible={erMenuVisible}
+                            onDismiss={() => setErMenuVisible(false)}
+                            anchor={
+                                <PaperButton
+                                    mode="outlined"
+                                    onPress={() => setErMenuVisible(true)}
+                                    style={styles.input}
+                                >
+                                    {erSelected ?? 'Select a threshold'}
+                                </PaperButton>
+                            }
+                        >
+                            {ENGAGEMENT_RATE_OPTIONS.map(opt => (
+                                <Menu.Item
+                                    key={opt}
+                                    onPress={() => { setErSelected(opt); setErMenuVisible(false) }}
+                                    title={opt}
+                                />
+                            ))}
+                        </Menu>
+                    </View>
+
+                    {/* creator_gender */}
+                    <View style={{ backgroundColor: Colors(theme).transparent }}>
+                        <Text style={styles.fieldLabel} variant="labelSmall">Creator gender</Text>
+                        <SegmentedButtons
+                            style={styles.segmentGroup}
+                            value={gender}
+                            onValueChange={setGender}
+                            buttons={CREATOR_GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+                        />
+                    </View>
+
+                    {/* influencer niche (multi-select tags) */}
+                    <View style={{ backgroundColor: Colors(theme).transparent }}>
+                        <Text style={styles.fieldLabel} variant="labelSmall">Influencer niche</Text>
+                        <View style={styles.chipsWrap}>
+                            {NICHES.map(tag => (
+                                <Chip
+                                    key={tag}
+                                    selected={selectedNiches.includes(tag)}
+                                    onPress={() => toggleTag(tag, selectedNiches, setSelectedNiches)}
+                                    style={styles.chip}
+                                >
+                                    {tag}
+                                </Chip>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* creator_location (multi-select tags) */}
+                    <View style={{ backgroundColor: Colors(theme).transparent }}>
+                        <Text style={styles.fieldLabel} variant="labelSmall">Creator location</Text>
+                        <View style={styles.chipsWrap}>
+                            {LOCATIONS.map(loc => (
+                                <Chip
+                                    key={loc}
+                                    selected={selectedLocations.includes(loc)}
+                                    onPress={() => toggleTag(loc, selectedLocations, setSelectedLocations)}
+                                    style={styles.chip}
+                                >
+                                    {loc}
+                                </Chip>
+                            ))}
+                        </View>
+                    </View>
+                </View>
+
+                <Divider style={{ marginVertical: 8 }} />
+
+                <View style={{ flexDirection: 'row', gap: 8, backgroundColor: 'transparent' }}>
+                    <Button
+                        mode="contained"
+                        onPress={() => {/* Hook this to search */ }}
+                    >Apply Filters</Button>
+                    <Button
+                        mode="outlined"
+                        onPress={() => {
+                            setFollowerMin(''); setFollowerMax('')
+                            setContentMin(''); setContentMax('')
+                            setAvgLikesMin(''); setAvgLikesMax('')
+                            setAvgCommentsMin(''); setAvgCommentsMax('')
+                            setDescKeywords(''); setName('')
+                            setIsVerified(false); setHasContact(false)
+                            setErSelected(null); setGender('gender-neutral')
+                            setSelectedNiches([]); setSelectedLocations([])
+                        }}
+                    >Reset</Button>
+                </View>
+            </View>
         </Block>
-
     )
 }
 
 const stylesFn = (theme: Theme) => StyleSheet.create({
-    scroll: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingVertical: 8,
-    },
-    container: {
-        padding: 12,
-        gap: 10,
-        flex: 1,
-    },
+    scroll: { flex: 1 },
+    scrollContent: { paddingVertical: 8 },
+    container: { padding: 12, gap: 10, flex: 1 },
     surface: {
         borderRadius: 14,
         padding: 12,
         overflow: 'hidden',
-        // Subtle outline for elegance
         borderWidth: Platform.select({ web: 1, default: 0 }),
         borderColor: Colors(theme).border,
     },
@@ -107,7 +396,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
         alignItems: 'center',
         gap: 10,
         marginBottom: 8,
-        backgroundColor: "transparent"
+        backgroundColor: 'transparent'
     },
     headerIconWrap: {
         width: 28,
@@ -127,24 +416,10 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
         backgroundColor: Colors(theme).background,
         color: Colors(theme).textSecondary,
     },
-    soonTitle: {
-        color: Colors(theme).white,
-        fontWeight: '700',
-    },
-    soonSubtitle: {
-        color: Colors(theme).gray200,
-    },
-    soonList: {
-        marginTop: 6,
-        gap: 10,
-        backgroundColor: "transparent"
-    },
-    soonListItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        backgroundColor: "transparent"
-    },
+    soonTitle: { color: Colors(theme).white, fontWeight: '700' },
+    soonSubtitle: { color: Colors(theme).gray200 },
+    soonList: { marginTop: 6, gap: 10, backgroundColor: 'transparent' },
+    soonListItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: 'transparent' },
     soonBulletIcon: {
         width: 26,
         height: 26,
@@ -153,31 +428,24 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: Colors(theme).transparent,
     },
-    soonListTitle: {
-        color: Colors(theme).white,
-        fontWeight: '600',
-    },
-    soonListDesc: {
-        color: Colors(theme).gray200,
-    },
-    soonCtaBtn: {
-        alignSelf: 'flex-start',
-        marginTop: 24,
-    },
-    soonFootnote: {
-        color: Colors(theme).gray200,
-        marginTop: 10,
-    },
-    segmentGroup: {
-        marginTop: 4,
-    },
-    segmentBtn: {
-        // keep it subtle and premium-looking
-    },
-    segmentBtnActive: {
-        backgroundColor: Colors(theme).primary
-    },
-})
+    soonListTitle: { color: Colors(theme).white, fontWeight: '600' },
+    soonListDesc: { color: Colors(theme).gray200 },
+    soonCtaBtn: { alignSelf: 'flex-start', marginTop: 24 },
+    soonFootnote: { color: Colors(theme).gray200, marginTop: 10 },
 
+    segmentGroup: { marginTop: 4 },
+    segmentBtn: {},
+    segmentBtnActive: { backgroundColor: Colors(theme).primary },
+
+    fieldsWrap: { backgroundColor: 'transparent', gap: 12 },
+    fieldLabel: { color: Colors(theme).textSecondary, marginBottom: 6 },
+    input: { backgroundColor: Colors(theme).card, height: 36 },
+    rangeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'transparent' },
+    rangeInput: { flex: 1 },
+    toDash: { color: Colors(theme).textSecondary },
+    switchRow: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: 'transparent' },
+    chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: 'transparent' },
+    chip: {},
+})
 
 export default AdvancedFilter
