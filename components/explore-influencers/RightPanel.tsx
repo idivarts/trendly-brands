@@ -2,7 +2,7 @@ import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { FontAwesome } from '@expo/vector-icons'
-import { useTheme } from '@react-navigation/native'
+import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
@@ -13,6 +13,7 @@ import { Badge, Button, Divider, List, SegmentedButtons, Surface, Text } from 'r
 
 const SectionHeader = ({ icon, title, subtitle }: { icon: keyof typeof FontAwesome.glyphMap, title: string, subtitle?: string }) => {
     const theme = useTheme()
+    const styles = stylesFn(theme)
     return (
         <View style={styles.headerRow}>
             <View style={[styles.headerIconWrap, { backgroundColor: Colors(theme).card + '33' }]}>
@@ -26,9 +27,14 @@ const SectionHeader = ({ icon, title, subtitle }: { icon: keyof typeof FontAweso
     )
 }
 
-const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, style }) => (
-    <Surface elevation={1} style={[styles.surface, style]}> {children} </Surface>
-)
+const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, style }) => {
+    const theme = useTheme()
+    const styles = stylesFn(theme)
+
+    return (
+        <Surface elevation={1} style={[styles.surface, style]}> {children} </Surface>
+    )
+}
 
 interface IProps {
     connectedInfluencers: boolean,
@@ -36,6 +42,7 @@ interface IProps {
 }
 const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInfluencers }) => {
     const theme = useTheme()
+    const styles = stylesFn(theme)
     const router = useMyNavigation()
 
     return (
@@ -93,13 +100,13 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                                 value: 'explore',
                                 label: 'Explore',
                                 icon: 'magnify',
-                                style: styles.segmentBtn,
+                                style: connectedInfluencers ? styles.segmentBtn : styles.segmentBtnActive,
                             },
                             {
                                 value: 'connected',
                                 label: 'Connected',
                                 icon: 'link-variant',
-                                style: styles.segmentBtn,
+                                style: !connectedInfluencers ? styles.segmentBtn : styles.segmentBtnActive,
                             },
                         ]}
                         density="regular"
@@ -217,7 +224,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
     )
 }
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
     scroll: {
         flex: 1,
     },
@@ -363,6 +370,9 @@ const styles = StyleSheet.create({
     },
     segmentBtn: {
         // keep it subtle and premium-looking
+    },
+    segmentBtnActive: {
+        backgroundColor: Colors(theme).primary
     },
 })
 
