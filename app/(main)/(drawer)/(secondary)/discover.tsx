@@ -1,5 +1,5 @@
+import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
 import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
-import ExploreInfluencers from "@/components/explore-influencers";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import { useAuthContext } from "@/contexts";
@@ -26,7 +26,7 @@ const DiscoverInfluencersScreen = () => {
                 <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
                     <View style={{ flex: 1, minWidth: 0 }}>
                         <ScreenHeader title="Discover" hideAction={true} />
-                        <ExploreInfluencers key={connectedInfluencer ? "connected" : "explore"} connectedInfluencers={connectedInfluencer} />
+                        <DiscoverInfluencer />
                     </View>
                     <RightPanelDiscover />
                 </View>
