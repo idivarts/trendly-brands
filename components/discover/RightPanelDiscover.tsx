@@ -48,12 +48,21 @@ const RightPanelDiscover = () => {
 
     return (
         <View style={styles.container}>
+            <View style={{ padding: 16 }}>
+                <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 4 }}>External Database Filters</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary ?? colors.text }}>
+                    Apply filters to find the right creators
+                </Text>
+            </View>
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
                 {/* Platform Selector */}
                 <SegmentedButtons
                     value={platform}
                     onValueChange={setPlatform}
-                    buttons={PLATFORM_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
+                    buttons={PLATFORM_OPTIONS.map((p) => ({
+                        value: p.value, label: p.label,
+                        style: platform == p.value && { backgroundColor: Colors(theme).primary }
+                    }))}
                     style={styles.segment}
                 />
 
@@ -63,7 +72,7 @@ const RightPanelDiscover = () => {
                     dense
                     value={query}
                     onChangeText={setQuery}
-                    placeholder="@creator or email"
+                    placeholder="creator handle or email"
                     left={<TextInput.Icon icon="magnify" />}
                     style={styles.input}
                 />
@@ -91,7 +100,7 @@ const RightPanelDiscover = () => {
                 {/* Performance */}
                 <Section title="Performance" styles={styles}>
                     <RangeInput label="Followers" min={followersMin} max={followersMax} setMin={setFollowersMin} setMax={setFollowersMax} styles={styles} />
-                    <View style={styles.inlineInputs}>
+                    <View style={[styles.inlineInputs, { gap: 18 }]}>
                         <Dropdown label="Followers growth" placeholder="Growth" options={GROWTH_OPTIONS} styles={styles} flex={1} />
                         <Dropdown label="Period" placeholder="Period" options={PERIOD_OPTIONS} styles={styles} flex={1} />
                     </View>
@@ -122,18 +131,18 @@ const RightPanelDiscover = () => {
                     <Dropdown label="Fake followers" placeholder="≤25%" options={FAKE_FOLLOWER_OPTIONS} styles={styles} />
                 </Section>
 
-                <Divider style={styles.divider} />
-
-                {/* Actions */}
+            </ScrollView>
+            {/* Actions */}
+            <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
                 <View style={styles.actions}>
-                    <Button mode="contained" style={styles.actionBtn} icon="filter-variant">Apply</Button>
                     <Button mode="text" style={styles.clearBtn}>Clear all</Button>
+                    <Button mode="contained" style={styles.actionBtn} icon="filter-variant">Apply</Button>
                 </View>
 
                 <HelperText type="info" style={styles.helper}>
                     Tip: You can refine these later. Values are placeholders for now.
                 </HelperText>
-            </ScrollView>
+            </View>
         </View>
     )
 }
@@ -269,6 +278,8 @@ const styleFn = (colors: any) => StyleSheet.create({
     actions: {
         gap: 6,
         paddingTop: 6,
+        flexDirection: "row",
+        justifyContent: "flex-end"
     },
     actionBtn: {
         borderRadius: 10,
@@ -277,7 +288,7 @@ const styleFn = (colors: any) => StyleSheet.create({
         alignSelf: 'center',
     },
     helper: {
-        textAlign: 'center',
+        textAlign: 'right',
         fontSize: 11,
         opacity: 0.6,
         marginTop: 4,

@@ -25,7 +25,7 @@ const DiscoverInfluencersScreen = () => {
             <AppLayout>
                 <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                        <ScreenHeader title="Discover" hideAction={true} />
+                        <ScreenHeader title="Enterprise Discovery" hideAction={true} />
                         <DiscoverInfluencer />
                     </View>
                     <RightPanelDiscover />
