@@ -6,7 +6,8 @@ import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, Divider, SegmentedButtons, Surface, Text } from 'react-native-paper'
+import { Badge, Button, SegmentedButtons, Surface, Text } from 'react-native-paper'
+import AdvancedFilter from './AdvancedFilter'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -27,7 +28,7 @@ const SectionHeader = ({ icon, title, subtitle }: { icon: keyof typeof FontAweso
     )
 }
 
-const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, style }) => {
+export const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, style }) => {
     const theme = useTheme()
     const styles = stylesFn(theme)
 
@@ -87,11 +88,6 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                         title={connectedInfluencers ? 'Connected influencers' : 'Explore influencers'}
                         subtitle={connectedInfluencers ? 'See the creators already in touch with your brand' : 'Browse and discover new creators that match your vibe'}
                     />
-
-                    <Text variant="bodyMedium" style={styles.muted}>
-                        Pick a mode to tailor what you see.
-                    </Text>
-
                     <SegmentedButtons
                         value={connectedInfluencers ? 'connected' : 'explore'}
                         onValueChange={(v) => setConnectedInfluencers(v === 'connected')}
@@ -116,108 +112,15 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
 
                 {/* Influencer Preference */}
                 <Block>
-                    <SectionHeader icon="sliders" title="Influencer preference" subtitle="Advanced filters" />
-                    <Text variant="bodyMedium" style={styles.muted}>
-                        Want more control? Set your preferred audience size, platforms, languages, and budget.
-                    </Text>
-                    {/* 
-                    <List.Section style={styles.listSection}>
-                        <List.Item
-                            title="Audience size"
-                            titleStyle={styles.listTitle}
-                            description="Micro, Mid, Macro"
-                            left={() => <FontAwesome name="users" size={16} color={Colors(theme).text} style={styles.listIcon} />}
-                            right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
-                            style={styles.listItem}
-                            onPress={() => router.push('/preferences')}
-                        />
-                        <List.Item
-                            title="Platforms"
-                            titleStyle={styles.listTitle}
-                            description="Instagram, YouTube, more"
-                            left={() => <FontAwesome name="hashtag" size={16} color={Colors(theme).text} style={styles.listIcon} />}
-                            right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
-                            style={styles.listItem}
-                            onPress={() => router.push('/preferences')}
-                        />
-                        <List.Item
-                            title="Languages & budget"
-                            titleStyle={styles.listTitle}
-                            description="Pick your targets"
-                            left={() => <FontAwesome name="globe" size={16} color={Colors(theme).text} style={styles.listIcon} />}
-                            right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
-                            style={styles.listItem}
-                            onPress={() => router.push('/preferences')}
-                        />
-                    </List.Section> */}
-
+                    <SectionHeader icon="sliders" title="Influencer preference"
+                        subtitle="Want more control? You can set some common preferences in Brand Preferences section." />
                     <Button mode="outlined" icon="tune" onPress={() => router.push('/preferences')}>
                         Set preferences
                     </Button>
                 </Block>
 
                 {/* Search helpers */}
-                <Block style={{ padding: 0, borderWidth: 0 }}>
-                    <LinearGradient
-                        colors={[Colors(theme).secondary, Colors(theme).primary]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.comingSoonCard}
-                    >
-                        <View style={styles.headerRow}>
-                            <View style={[styles.headerIconWrap, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-                                <FontAwesome name="search" size={16} color="#fff" />
-                            </View>
-                            <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                <Text variant="titleSmall" style={styles.soonTitle}>Search (coming soon)</Text>
-                                <Text variant="labelSmall" style={styles.soonSubtitle}>Powerful ways to find creators</Text>
-                            </View>
-                            <Badge size={18} style={styles.soonBadge}>Soon</Badge>
-                        </View>
-                        <Divider style={{ marginVertical: 16 }} />
-
-                        <View style={styles.soonList}>
-                            <View style={styles.soonListItem}>
-                                <View style={styles.soonBulletIcon}><FontAwesome name="user" size={14} color="#fff" /></View>
-                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                    <Text variant="labelLarge" style={styles.soonListTitle}>Search by creator name</Text>
-                                    <Text variant="bodySmall" style={styles.soonListDesc}>Know a creator already? Just type their name.</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.soonListItem}>
-                                <View style={styles.soonBulletIcon}><FontAwesome name="tag" size={14} color="#fff" /></View>
-                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                    <Text variant="labelLarge" style={styles.soonListTitle}>Keyword search</Text>
-                                    <Text variant="bodySmall" style={styles.soonListDesc}>Find influencers by content keywords like “fashion” or “GRWM”.</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.soonListItem}>
-                                <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
-                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                    <Text variant="labelLarge" style={styles.soonListTitle}>Look‑alike search</Text>
-                                    <Text variant="bodySmall" style={styles.soonListDesc}>Paste a creator’s link and our AI finds similar vibes, style, and audience.</Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <Button
-                            mode="contained"
-                            buttonColor="#fff"
-                            labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
-                            style={styles.soonCtaBtn}
-                            icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
-                            onPress={() => router.push('/billing')}
-                        >
-                            Get yearly & lock price
-                        </Button>
-
-                        <Text variant="labelSmall" style={styles.soonFootnote}>
-                            Register on the yearly plan today. When search launches, any price hike won’t affect your current plan.
-                        </Text>
-                    </LinearGradient>
-                </Block>
+                <AdvancedFilter />
 
             </View>
         </ScrollView>
