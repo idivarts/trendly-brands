@@ -3,7 +3,7 @@ import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { FlatList, Image, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
-import { Card, Chip, Divider, IconButton, Menu, Text, useTheme as usePaperTheme } from 'react-native-paper'
+import { Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
 import { InfluencerStatsModal } from './InfluencerStatModal'
 import { MOCK_INFLUENCERS } from './mock/influencers'
 
@@ -67,7 +67,6 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
 
 const DiscoverInfluencer: React.FC = () => {
     const theme = useTheme()
-    const paper = usePaperTheme()
     const colors = Colors(theme)
     const styles = useMemo(() => useStyles(colors), [colors])
 
@@ -102,6 +101,7 @@ const DiscoverInfluencer: React.FC = () => {
 
                         <View style={styles.rightCol}>
                             <Menu
+                                style={{ backgroundColor: Colors(theme).background }}
                                 visible={menuVisibleId === item.userId}
                                 onDismiss={() => setMenuVisibleId(null)}
                                 anchor={
