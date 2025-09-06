@@ -5,6 +5,7 @@ import { Theme, useTheme } from '@react-navigation/native'
 import React from 'react'
 import { Image, Linking, ScrollView, StyleSheet } from 'react-native'
 import { Button, Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
+import Toast from 'react-native-toast-message'
 import { InfluencerItem, StatChip } from './DiscoverInfluencer'
 
 const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
@@ -76,6 +77,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                     </ScrollView>
                 </Card>
             </Modal>
+            <Toast />
         </Portal>
     )
 }
