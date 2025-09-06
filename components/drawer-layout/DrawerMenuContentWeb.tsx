@@ -8,13 +8,15 @@ import {
   faComment,
   faEye,
   faFileLines,
+  faGem,
   faHeart,
-  faStar,
+  faStar
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faChevronRight,
   faComment as faCommentSolid,
   faCreditCard,
+  faGem as faGemSolid,
   faHeart as faHeartSolid,
   faPlus,
   faSliders,
@@ -93,11 +95,11 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     href: "/discover",
     icon: ({ focused }: IconPropFn) =>
       focused ? (
-        <DrawerIcon href="/discover" icon={faStarSolid} />
+        <DrawerIcon href="/discover" icon={faGemSolid} />
       ) : (
-        <DrawerIcon href="/discover" icon={faStar} />
+        <DrawerIcon href="/discover" icon={faGem} />
       ),
-    label: "Premium Discovery",
+    label: "Enterprise Discovery (Preview)",
   },
   {
     href: "/collaborations",
