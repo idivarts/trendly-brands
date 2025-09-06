@@ -90,6 +90,16 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     label: "Explore Influencers",
   },
   {
+    href: "/discover",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/discover" icon={faStarSolid} />
+      ) : (
+        <DrawerIcon href="/discover" icon={faStar} />
+      ),
+    label: "Premium Discovery",
+  },
+  {
     href: "/collaborations",
     icon: ({ focused }: IconPropFn) =>
       focused ? (
