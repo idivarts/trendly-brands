@@ -2,8 +2,8 @@ import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
 import React, { useMemo, useState } from 'react'
-import { ScrollView, StyleSheet } from 'react-native'
-import { Button, Chip, Divider, HelperText, List, SegmentedButtons, Switch, TextInput } from 'react-native-paper'
+import { Pressable, ScrollView, StyleSheet } from 'react-native'
+import { Button, Chip, Divider, HelperText, List, Menu, SegmentedButtons, Switch, TextInput } from 'react-native-paper'
 
 // --------------------
 // Constants (placeholder options; wire real data later)
@@ -160,19 +160,48 @@ const Section = ({ title, children, styles }: any) => (
     </View>
 )
 
-const Dropdown = ({ label, placeholder, options, styles, flex }: any) => (
-    <View style={[styles.field, flex ? { flex } : null]}>
-        <Text style={styles.label}>{label}</Text>
-        <TextInput
-            mode="outlined"
-            dense
-            editable={false}
-            right={<TextInput.Icon icon="menu-down" />}
-            placeholder={placeholder}
-            style={styles.input}
-        />
-    </View>
-)
+const Dropdown = ({ label, placeholder, options, styles, flex, value, onChange }: any) => {
+    const theme = useTheme()
+    const [visible, setVisible] = React.useState(false)
+    const [selected, setSelected] = React.useState<string | undefined>(value)
+
+    const openMenu = () => setVisible(true)
+    const closeMenu = () => setVisible(false)
+
+    const handleSelect = (opt: string) => {
+        setSelected(opt === 'Any' ? undefined : opt)
+        onChange?.(opt === 'Any' ? undefined : opt)
+        closeMenu()
+    }
+
+    return (
+        <View style={[styles.field, flex ? { flex } : null]}>
+            <Text style={styles.label}>{label}</Text>
+            <Menu
+                visible={visible}
+                onDismiss={closeMenu}
+                style={{ backgroundColor: Colors(theme).background }}
+                anchor={
+                    <Pressable onPress={openMenu}>
+                        <TextInput
+                            mode="outlined"
+                            dense
+                            editable={false}
+                            right={<TextInput.Icon icon="menu-down" />}
+                            value={selected}
+                            placeholder={placeholder}
+                            style={styles.input}
+                        />
+                    </Pressable>
+                }
+            >
+                {(options || []).map((opt: string) => (
+                    <Menu.Item key={opt} onPress={() => handleSelect(opt)} title={opt} />
+                ))}
+            </Menu>
+        </View>
+    )
+}
 
 const RangeInput = ({ label, min, max, setMin, setMax, styles }: any) => (
     <View style={styles.field}>
