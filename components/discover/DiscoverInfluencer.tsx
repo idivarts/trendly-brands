@@ -3,7 +3,8 @@ import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useMemo, useState } from 'react'
 import { FlatList, Image, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
-import { Card, Chip, Divider, IconButton, Menu, Modal, Portal, Text, useTheme as usePaperTheme } from 'react-native-paper'
+import { Card, Chip, Divider, IconButton, Menu, Text, useTheme as usePaperTheme } from 'react-native-paper'
+import { InfluencerStatsModal } from './InfluencerStatModal'
 import { MOCK_INFLUENCERS } from './mock/influencers'
 
 // Types
@@ -23,6 +24,7 @@ export interface InfluencerItem {
 // Helpers
 const formatNumber = (n: number | undefined) => {
     if (n == null) return '-'
+    if (n < 100) return String(n.toFixed(2))
     if (n < 1000) return String(n)
     if (n < 1_000_000) return `${Math.round(n / 100) / 10}k`
     if (n < 1_000_000_000) return `${Math.round(n / 100_000) / 10}M`
@@ -53,11 +55,10 @@ const useStyles = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
         gap: 6,
     },
     avatar: { width: 56, height: 56, borderRadius: 10 },
-    modalCard: { margin: 16, borderRadius: 16, overflow: 'hidden' },
     content: { paddingHorizontal: 8, paddingVertical: 8 },
 })
 
-const StatChip = ({ label, value }: { label: string; value?: number }) => (
+export const StatChip = ({ label, value }: { label: string; value?: number }) => (
     <Chip mode="outlined" compact style={{ marginRight: 6, marginBottom: 6 }}>
         <Text style={{ fontWeight: '600' }}>{value != null ? formatNumber(value) : '-'}</Text>
         <Text> {label}</Text>
@@ -94,10 +95,7 @@ const DiscoverInfluencer: React.FC = () => {
                             <View style={styles.statsRow}>
                                 <StatChip label="Followers" value={item.followers} />
                                 <StatChip label="Engagements" value={item.engagements} />
-                                <Chip mode="outlined" compact style={styles.statChip}>
-                                    <Text style={{ fontWeight: '600' }}>{(item.engagementRate * 100).toFixed(2)}%</Text>
-                                    <Text> ER</Text>
-                                </Chip>
+                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
                                 <StatChip label="Reel Plays" value={item.reelPlays} />
                             </View>
                         </View>
@@ -148,37 +146,7 @@ const DiscoverInfluencer: React.FC = () => {
                 getItemLayout={getItemLayout}
             />
 
-            {/* Stats Modal */}
-            <Portal>
-                <Modal visible={!!statsItem} onDismiss={() => setStatsItem(null)}>
-                    <Card style={styles.modalCard}>
-                        <Card.Title title={statsItem?.fullname} subtitle={`@${statsItem?.username}`} />
-                        <Card.Content>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                                {!!statsItem?.picture && (
-                                    <Image source={{ uri: statsItem.picture }} style={{ width: 64, height: 64, borderRadius: 8, marginRight: 12 }} />
-                                )}
-                                <Text onPress={() => statsItem?.url && Linking.openURL(statsItem.url)} style={{ color: paper.colors.primary }}>
-                                    {statsItem?.url}
-                                </Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                <StatChip label="Followers" value={statsItem?.followers} />
-                                <StatChip label="Engagements" value={statsItem?.engagements} />
-                                <Chip mode="outlined" compact style={{ marginRight: 6, marginBottom: 6 }}>
-                                    <Text style={{ fontWeight: '600' }}>{statsItem ? (statsItem.engagementRate * 100).toFixed(2) : '-'}%</Text>
-                                    <Text> ER</Text>
-                                </Chip>
-                                <StatChip label="Reel Plays" value={statsItem?.reelPlays} />
-                            </View>
-                        </Card.Content>
-                        <Card.Actions>
-                            <IconButton icon="open-in-new" onPress={() => statsItem?.url && Linking.openURL(statsItem.url)} />
-                            <IconButton icon="close" onPress={() => setStatsItem(null)} />
-                        </Card.Actions>
-                    </Card>
-                </Modal>
-            </Portal>
+            <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} />
         </View>
     )
 }
