@@ -20,7 +20,8 @@ const DiscoverInfluencersScreen = () => {
     if (!manager && !preferences)
         return <ActivityIndicator />
 
-    if (selectedBrand?.billing?.planKey != "enterprise") {
+    const planKey = selectedBrand?.billing?.planKey
+    if (planKey != "enterprise" && planKey != "pro") {
         return <DiscoverAdPlaceholder />
     }
 
@@ -29,7 +30,7 @@ const DiscoverInfluencersScreen = () => {
             <AppLayout>
                 <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                        <ScreenHeader title="Enterprise Discovery" hideAction={true} />
+                        <ScreenHeader title="Influencer Discovery" hideAction={true} />
                         <DiscoverInfluencer />
                     </View>
                     <RightPanelDiscover />

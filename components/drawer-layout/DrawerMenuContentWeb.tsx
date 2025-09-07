@@ -99,8 +99,8 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
       ) : (
         <DrawerIcon href="/discover" icon={faGem} />
       ),
-    label: "Enterprise Discovery",
-    enterprise: true
+    label: "Discovery",
+    pro: true
   },
   {
     href: "/collaborations",
@@ -212,7 +212,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
               <DrawerMenuItem key={`campaign-${idx}`}
                 tab={tab}
-                enterpriseLock={tab.enterprise && planKey != "enterprise"}
+                proLock={tab.pro && (planKey != "pro" && planKey != "enterprise")}
               />
             ))}
           </View>

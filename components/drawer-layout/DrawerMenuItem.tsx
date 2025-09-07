@@ -19,15 +19,15 @@ export type Tab = {
   icon: (props: IconPropFn) => JSX.Element;
   label: string;
   showUnreadCount?: boolean;
-  enterprise?: boolean;
+  pro?: boolean;
 };
 
 type DrawerMenuItemProps = {
   tab: Tab;
-  enterpriseLock?: boolean
+  proLock?: boolean
 };
 
-const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, enterpriseLock }) => {
+const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
@@ -78,7 +78,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, enterpriseLock }) 
         >
           {tab.label}
         </Text>
-        {enterpriseLock && (
+        {proLock && (
           <View
             style={{
               flexDirection: 'row',
@@ -92,7 +92,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, enterpriseLock }) 
           >
             <FontAwesomeIcon icon={faLock} size={10} color={colorSet.text} style={{ marginRight: 4 }} />
             <Text style={{ color: colorSet.text, fontSize: 11, fontWeight: '500' }}>
-              Enterprise
+              Upgrade to Pro
             </Text>
           </View>
         )}

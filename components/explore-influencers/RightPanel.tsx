@@ -1,3 +1,4 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
@@ -6,8 +7,7 @@ import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, SegmentedButtons, Surface, Text } from 'react-native-paper'
-import AdvancedFilter from './AdvancedFilter'
+import { Badge, Button, Divider, SegmentedButtons, Surface, Text } from 'react-native-paper'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -45,6 +45,10 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
     const theme = useTheme()
     const styles = stylesFn(theme)
     const router = useMyNavigation()
+
+    const { selectedBrand } = useBrandContext()
+    const planKey = selectedBrand?.billing?.planKey
+    const isLocked = planKey != "pro" && planKey != "enterprise"
 
     return (
         <ScrollView
@@ -120,7 +124,88 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                 </Block>
 
                 {/* Search helpers */}
-                <AdvancedFilter />
+                <Block style={{ padding: 0, borderWidth: 0 }}>
+                    <LinearGradient
+                        colors={[Colors(theme).secondary, Colors(theme).primary]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.comingSoonCard}
+                    >
+                        <View style={styles.headerRow}>
+                            <View style={[styles.headerIconWrap, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+                                <FontAwesome name="search" size={16} color="#fff" />
+                            </View>
+                            <View style={{ flex: 1, backgroundColor: "transparent" }}>
+                                <Text variant="titleSmall" style={styles.soonTitle}>Advanced Discovery</Text>
+                                <Text variant="labelSmall" style={styles.soonSubtitle}>Powerful ways to find creators</Text>
+                            </View>
+                            {isLocked &&
+                                <Badge size={18} style={styles.soonBadge}>Locked</Badge>}
+                        </View>
+                        <Divider style={{ marginVertical: 16 }} />
+
+                        <View style={styles.soonList}>
+                            <View style={styles.soonListItem}>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Laser‑targeted filters</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Filter by followers, engagement, verification, niche, location and more.</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.soonListItem}>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="tag" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Keyword & look‑alike search</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Match bios by keywords or paste a profile to find similar creators.</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.soonListItem}>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="bolt" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Save time, scale faster</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Skip manual sorting and discover perfect fits instantly.</Text>
+                                </View>
+                            </View>
+                        </View>
+
+
+                        {isLocked && <>
+                            <Button
+                                mode="contained"
+                                buttonColor="#fff"
+                                labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
+                                style={styles.soonCtaBtn}
+                                icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
+                                onPress={() => router.push('/billing')}
+                            >
+                                Updrage to Pro
+                            </Button>
+
+                            <Text variant="labelSmall" style={styles.soonFootnote}>
+                                Register on the yearly plan today. When search launches, any price hike won’t affect your current plan.
+                            </Text>
+                        </>}
+                        {!isLocked && <>
+                            <Button
+                                mode="contained"
+                                buttonColor="#fff"
+                                labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
+                                style={styles.soonCtaBtn}
+                                icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
+                                onPress={() => router.push('/discover')}
+                            >
+                                Go to Discovery Page
+                            </Button>
+
+                            <Text variant="labelSmall" style={styles.soonFootnote}>
+                                Access a pool of over 30k internal influencer database and a pool of over 250+ million influencers to search from
+                            </Text>
+                        </>}
+
+                    </LinearGradient>
+                </Block>
 
             </View>
         </ScrollView>
