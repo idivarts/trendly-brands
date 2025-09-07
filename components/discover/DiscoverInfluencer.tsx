@@ -65,7 +65,11 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
     </Chip>
 )
 
-const DiscoverInfluencer: React.FC = () => {
+interface IProps {
+    selectedDb: string,
+}
+
+const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     const theme = useTheme()
     const colors = Colors(theme)
     const styles = useMemo(() => useStyles(colors), [colors])

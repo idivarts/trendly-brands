@@ -11,7 +11,12 @@ import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 // --------------------
 // Component
 // --------------------
-const RightPanelDiscover = () => {
+interface IProps {
+    selectedDb: string,
+    setSelectedDb: Function
+}
+
+const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb }) => {
     const theme = useTheme()
     const colors = Colors(theme)
 
@@ -20,7 +25,6 @@ const RightPanelDiscover = () => {
 
     const styles = useMemo(() => styleFn(colors), [colors])
 
-    const [selectedDb, setSelectedDb] = useState<'trendly' | 'phyllo' | 'modash'>('trendly')
     const [showFilters, setShowFilters] = useState(false)
 
     // Friendly label for current selection
