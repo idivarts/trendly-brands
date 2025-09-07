@@ -1,12 +1,20 @@
-import { useBrandContext } from '@/contexts/brand-context.provider'
-import { View } from '@/shared-uis/components/theme/Themed'
-import Colors from '@/shared-uis/constants/Colors'
-import { Theme, useTheme } from '@react-navigation/native'
-import React, { useEffect, useState } from 'react'
-import { Pressable, StyleSheet } from 'react-native'
-import { Chip, HelperText, Menu, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
-import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer'
-import { MOCK_INFLUENCERS } from '../mock/influencers'
+import Select from "@/components/ui/select";
+import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
+import { useBrandContext } from '@/contexts/brand-context.provider';
+import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
+import { CITIES, POPULAR_CITIES } from '@/shared-constants/preferences/locations';
+import { MultiSelectExtendable } from '@/shared-uis/components/multiselect-extendable';
+import { View } from '@/shared-uis/components/theme/Themed';
+import Colors from '@/shared-uis/constants/Colors';
+import { includeSelectedItems } from '@/shared-uis/utils/items-list';
+import { faLocation } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { Theme, useTheme } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
+import { HelperText, Menu, Switch, Text, TextInput } from 'react-native-paper';
+import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer';
+import { MOCK_INFLUENCERS } from '../mock/influencers';
 
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
@@ -113,7 +121,7 @@ const TrendlyAdvancedFilter = () => {
     const [isVerified, setIsVerified] = useState(false)
     const [hasContact, setHasContact] = useState(false)
 
-    const [gender, setGender] = useState('gender-neutral')
+    const [genders, setGenders] = useState<string[]>([])
 
     const [erMenuVisible, setErMenuVisible] = useState(false)
     const [erSelected, setErSelected] = useState<string | null>(null)
@@ -145,7 +153,64 @@ const TrendlyAdvancedFilter = () => {
         <View style={[styles.surface]}>
             <View style={styles.fieldsWrap}>
 
-                <Text style={{ fontWeight: 600 }}>Basic Metrics</Text>
+                <Text style={{ fontWeight: 600 }}>Demography and Niche</Text>
+                {/* creator_gender */}
+                <View style={{ backgroundColor: Colors(theme).transparent }}>
+                    <Text style={styles.fieldLabel} variant="labelSmall">Creator gender</Text>
+                    <Select
+                        items={GENDER_SELECT}
+                        multiselect
+                        onSelect={(item) => {
+                            setGenders(item.map((value) => value.value));
+                        }}
+                        selectItemIcon
+                        value={genders.map((value) => ({ label: value, value }))}
+                    />
+                </View>
+
+                {/* influencer niche (multi-select tags) */}
+                <View style={{ backgroundColor: Colors(theme).transparent }}>
+                    <Text style={styles.fieldLabel} variant="labelSmall">Influencer niche</Text>
+                    <Select
+                        items={INFLUENCER_CATEGORIES.map(v => ({ label: v, value: v }))}
+                        multiselect
+                        onSelect={(item) => {
+                            setSelectedNiches(item.map((value) => value.value));
+                        }}
+                        selectItemIcon
+                        value={selectedNiches.map((value) => ({ label: value, value }))}
+                    />
+                </View>
+
+                {/* creator_location (multi-select tags) */}
+                <View style={{ backgroundColor: Colors(theme).transparent }}>
+                    <Text style={styles.fieldLabel} variant="labelSmall">Creator location</Text>
+                    <MultiSelectExtendable
+                        buttonIcon={
+                            <FontAwesomeIcon
+                                icon={faLocation}
+                                color={Colors(theme).primary}
+                                size={14}
+                            />
+                        }
+                        buttonLabel="See Other Options"
+                        initialItemsList={includeSelectedItems(
+                            CITIES,
+                            selectedLocations
+                        )}
+                        initialMultiselectItemsList={includeSelectedItems(
+                            POPULAR_CITIES,
+                            selectedLocations
+                        )}
+                        onSelectedItemsChange={(values) => {
+                            setSelectedLocations(values.map(v => v));
+                        }}
+                        selectedItems={selectedLocations}
+                        theme={theme}
+                    />
+                </View>
+
+                <Text style={{ fontWeight: 600, marginTop: 16 }}>Basic Metrics</Text>
                 {/* follower_count */}
                 <RangeInputs
                     label="Follower count"
@@ -287,52 +352,6 @@ const TrendlyAdvancedFilter = () => {
                     <HelperText type="info" visible>
                         Separate keywords with comma. We’ll match against the bio.
                     </HelperText>
-                </View>
-
-                <Text style={{ fontWeight: 600, marginTop: 16 }}>Demography and Niche</Text>
-                {/* creator_gender */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Creator gender</Text>
-                    <SegmentedButtons
-                        style={styles.segmentGroup}
-                        value={gender}
-                        onValueChange={setGender}
-                        buttons={CREATOR_GENDER_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
-                    />
-                </View>
-
-                {/* influencer niche (multi-select tags) */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Influencer niche</Text>
-                    <View style={styles.chipsWrap}>
-                        {NICHES.map(tag => (
-                            <Chip
-                                key={tag}
-                                selected={selectedNiches.includes(tag)}
-                                onPress={() => toggleTag(tag, selectedNiches, setSelectedNiches)}
-                                style={styles.chip}
-                            >
-                                {tag}
-                            </Chip>
-                        ))}
-                    </View>
-                </View>
-
-                {/* creator_location (multi-select tags) */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Creator location</Text>
-                    <View style={styles.chipsWrap}>
-                        {LOCATIONS.map(loc => (
-                            <Chip
-                                key={loc}
-                                selected={selectedLocations.includes(loc)}
-                                onPress={() => toggleTag(loc, selectedLocations, setSelectedLocations)}
-                                style={styles.chip}
-                            >
-                                {loc}
-                            </Chip>
-                        ))}
-                    </View>
                 </View>
 
                 <Text style={{ fontWeight: 600, marginTop: 16 }}>Other Filters</Text>
