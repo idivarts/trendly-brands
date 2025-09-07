@@ -19,7 +19,7 @@ interface IProps {
     setSelectedDb: Function
 }
 
-export const OpenCurrentSelectedDatabase = new Subject();
+export const OpenCurrentSelectedDatabase = new Subject<DB_TYPE>();
 
 const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper }) => {
     const theme = useTheme()
@@ -40,10 +40,10 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
         }
     }
     useEffect(() => {
-        OpenCurrentSelectedDatabase.subscribe(() => {
-            if (selectedDb != "") {
-                setShowFilters(true)
-            }
+        OpenCurrentSelectedDatabase.subscribe((selectedDb) => {
+            // if (selectedDb != "") {
+            setShowFilters(true)
+            // }
         })
     }, [])
 

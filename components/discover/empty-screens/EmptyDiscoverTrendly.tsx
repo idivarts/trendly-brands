@@ -31,7 +31,7 @@ export default function EmptyTrendlyInternalSelected() {
                     {["pro", "enterprise"].includes(selectedBrand?.billing?.planKey || "") ?
                         <Button mode="contained" style={styles.button} buttonColor="#3778f4"
                             onPress={() => {
-                                OpenCurrentSelectedDatabase.next(null)
+                                OpenCurrentSelectedDatabase.next("trendly")
                             }}
                         >Open Trendly's Database</Button> :
                         <Button mode="contained" style={styles.button} buttonColor="#3778f4"

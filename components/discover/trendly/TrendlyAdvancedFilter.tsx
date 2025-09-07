@@ -121,6 +121,12 @@ const TrendlyAdvancedFilter = () => {
             loading: false,
             data: MOCK_INFLUENCERS
         })
+        return () => {
+            DiscoverCommuninicationChannel.next({
+                loading: false,
+                data: []
+            })
+        }
     }, [])
 
     // Unlocked: full filter UI
