@@ -11,7 +11,7 @@ import { MOCK_INFLUENCERS } from '../mock/influencers'
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
 const ENGAGEMENT_RATE_OPTIONS = [
-    '>0.5%', '>1%', '>1.5%', '>2%', '>3%', '>5%'
+    'No restriction', '>0.5%', '>1%', '>1.5%', '>2%', '>3%', '>5%'
 ]
 
 const CREATOR_GENDER_OPTIONS = [
@@ -97,6 +97,9 @@ const TrendlyAdvancedFilter = () => {
     const [avgCommentsMin, setAvgCommentsMin] = useState('')
     const [avgCommentsMax, setAvgCommentsMax] = useState('')
 
+    const [qualityMin, setQualityMin] = useState('')
+    const [qualityMax, setQualityMax] = useState('')
+
     const [descKeywords, setDescKeywords] = useState('')
     const [name, setName] = useState('')
 
@@ -174,6 +177,19 @@ const TrendlyAdvancedFilter = () => {
                     theme={theme}
                 />
 
+                {/* influencer aesthetics / quality*/}
+                <RangeInputs
+                    label="Influencer aesthetics / quality (0-100)"
+                    min={qualityMin}
+                    max={qualityMax}
+                    onChangeMin={setQualityMin}
+                    onChangeMax={setQualityMax}
+                    placeholderMin='Min (0)'
+                    placeholderMax='Max (100)'
+                    theme={theme}
+                />
+
+
                 {/* description_keywords */}
                 <View style={{ backgroundColor: Colors(theme).transparent }}>
                     <Text style={styles.fieldLabel} variant="labelSmall">Bio keywords</Text>
@@ -217,6 +233,7 @@ const TrendlyAdvancedFilter = () => {
                 <View style={{ backgroundColor: Colors(theme).transparent }}>
                     <Text style={styles.fieldLabel} variant="labelSmall">Engagement rate</Text>
                     <Menu
+                        style={{ backgroundColor: Colors(theme).background }}
                         visible={erMenuVisible}
                         onDismiss={() => setErMenuVisible(false)}
                         anchor={
