@@ -49,7 +49,7 @@ const RightPanelDiscover = () => {
                                     styles.planBadge,
                                     selectedDb === 'trendly' ? styles.planBadgePro : styles.planBadgeEnterprise,
                                 ]}
-                                contentStyle={styles.chipContent}
+                                // contentStyle={styles.chipContent}
                                 textStyle={styles.planBadgeText}
                             >
                                 {selectedDb === 'trendly' ? 'PRO' : 'ENTERPRISE'}
@@ -182,7 +182,7 @@ const DatabaseCard = ({
                 <Chip
                     compact
                     style={[s.planBadge, planTone === 'pro' ? s.planBadgePro : s.planBadgeEnterprise]}
-                    contentStyle={s.chipContent}
+                    // contentStyle={s.chipContent}
                     textStyle={s.planBadgeText}
                 >
                     {badge}
@@ -209,7 +209,7 @@ export const Section = ({ title, children, styles }: any) => (
                 compact
                 mode="outlined"
                 style={styles.sectionChip}
-                contentStyle={styles.chipContent}
+                // contentStyle={styles.chipContent}
                 textStyle={{ fontSize: 10 }}
             >
                 Clear
