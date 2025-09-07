@@ -1,6 +1,7 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
+import { maskHandle } from '@/shared-uis/utils/masks'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Image, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
@@ -10,6 +11,7 @@ import ScreenHeader from '../ui/screen-header'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
 import { InfluencerStatsModal } from './InfluencerStatModal'
 import { DB_TYPE } from './RightPanelDiscover'
+import { PremiumActionTag } from './components/PremiumActionTag'
 
 // Types
 export interface InfluencerItem {
@@ -69,6 +71,7 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
     </Chip>
 )
 
+
 interface IProps {
     selectedDb: DB_TYPE,
 }
@@ -114,7 +117,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                         </View>
                         <View style={styles.body}>
                             <Text style={styles.title} numberOfLines={1}>{item.fullname}</Text>
-                            <Text style={styles.subtitle} numberOfLines={1}>@{item.username}</Text>
+                            <Text style={styles.subtitle} numberOfLines={1}>@{maskHandle(item.username)}</Text>
 
                             <View style={styles.statsRow}>
                                 <StatChip label="Followers" value={item.followers} />
@@ -155,6 +158,9 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
         []
     )
 
+    const discoverCoinsLeft = Number((selectedBrand as any)?.balances?.discoverCoins ?? 0)
+    const connectionCreditsLeft = Number((selectedBrand as any)?.balances?.connectionCredits ?? 0)
+
     if (data.length == 0) {
         return <DiscoverPlaceholder selectedDb={selectedDb} />
     }
@@ -164,7 +170,33 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
             <ScreenHeader title={
                 selectedDb == "trendly" ? "Trendly Internal Discovery" :
                     (selectedDb == "phyllo" ? "Phyllo Discovery" : "Modash Discovery")
-            } hideAction={true} />
+            } hideAction={true}
+                rightAction={true}
+                rightActionButton={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
+                        <PremiumActionTag
+                            label="Discover Influencer"
+                            tooltip="Open deep statistics for any influencer. Uses 1 coin each time you open a profile."
+                            icon="star-four-points"
+                            variant="gold"
+                            count={discoverCoinsLeft}
+                            onPress={() => {
+                                // Placeholder: You can navigate to a paywall or show coin balance here
+                                // For now, we simply no-op.
+                            }}
+                        />
+                        <PremiumActionTag
+                            label="Request Connection"
+                            tooltip="We reach out to the influencer on your behalf and connect you directly."
+                            icon="account-arrow-right"
+                            variant="purple"
+                            count={connectionCreditsLeft}
+                            onPress={() => {
+                                // Placeholder: Open your request flow here
+                            }}
+                        />
+                    </View>
+                } />
             <View style={{ flex: 1 }}>
                 <FlatList
                     data={data}
