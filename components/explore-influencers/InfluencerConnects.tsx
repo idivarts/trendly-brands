@@ -1,4 +1,5 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { IS_MONETIZATION_DONE } from '@/shared-constants/app'
 import { View } from '@/shared-uis/components/theme/Themed'
 import React from 'react'
 import { PremiumActionTag } from '../discover/components/PremiumActionTag'
@@ -12,6 +13,7 @@ const InfluencerConnects: React.FC<IProps> = ({ all }) => {
     const planKey = selectedBrand?.billing?.planKey || "";
     const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
     const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
+    const influencerCredits = selectedBrand?.credits?.influencer || (IS_MONETIZATION_DONE ? 0 : 1000)
 
     return (
 
@@ -21,7 +23,7 @@ const InfluencerConnects: React.FC<IProps> = ({ all }) => {
                 tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}
                 icon="star-four-points"
                 variant="gold"
-                count={selectedBrand?.credits?.influencer || 0}
+                count={influencerCredits}
             />
             {all && ["pro", "enterprise"].includes(planKey) && <>
                 <PremiumActionTag

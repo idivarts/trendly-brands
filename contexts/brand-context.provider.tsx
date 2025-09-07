@@ -1,3 +1,4 @@
+import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
 import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
@@ -160,7 +161,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         if (!selectedBrand)
           return
         const uCredit = selectedBrand?.credits?.influencer || 0
-        if (uCredit <= 0) {
+        if (uCredit <= 0 && IS_MONETIZATION_DONE) {
           Toaster.error("Your Profile has no unlock Credits")
           return
         }
@@ -171,7 +172,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
           unlockedInfluencers: [...influencerSet],
           credits: {
             ...selectedBrand.credits,
-            influencer: uCredit - 1
+            influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
           }
         })
         setSelectedBrand({
@@ -179,20 +180,21 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
           unlockedInfluencers: [...influencerSet],
           credits: {
             ...selectedBrand.credits,
-            influencer: uCredit - 1
+            influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
           }
         })
         Console.log("Unlocked Influencer", [...influencerSet]);
 
-        HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/unlock`, {
-          method: "POST",
-          body: JSON.stringify({
-            brandId: selectedBrand?.id
-          }),
-          headers: {
-            "content-type": "application/json"
-          }
-        })
+        IS_MONETIZATION_DONE &&
+          HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/unlock`, {
+            method: "POST",
+            body: JSON.stringify({
+              brandId: selectedBrand?.id
+            }),
+            headers: {
+              "content-type": "application/json"
+            }
+          })
       } finally {
         callback(true)
       }
@@ -201,19 +203,20 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     const subscription2 = ProfileModalSendMessage.subscribe(async ({ influencerId, callback }) => {
       try {
 
-        await HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/message`, {
-          method: "POST",
-          body: JSON.stringify({
-            brandId: selectedBrand?.id
-          }),
-          headers: {
-            "content-type": "application/json"
-          }
-        }).then(r => {
-          Toaster.success("Message thread is created")
-          router.push("/messages")
-          callback(true)
-        })
+        IS_MONETIZATION_DONE &&
+          await HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/message`, {
+            method: "POST",
+            body: JSON.stringify({
+              brandId: selectedBrand?.id
+            }),
+            headers: {
+              "content-type": "application/json"
+            }
+          }).then(r => {
+            Toaster.success("Message thread is created")
+            router.push("/messages")
+            callback(true)
+          })
       } catch (e) {
         callback(false)
       }

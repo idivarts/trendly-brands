@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { Avatar, Button, Card } from 'react-native-paper';
 
 const MODASH_BRAND = {
@@ -42,7 +42,8 @@ export default function EmptyModashSelected() {
                     <Text style={styles.footnote}>* Based on Modash public pricing of $299/mo vs ₹10,000/mo via Trendly. Actual savings vary with currency and usage. Sources cited in UI copy.</Text>
 
                     <Text style={styles.note}>Enterprise required. Request onboarding to access.</Text>
-                    <Button mode="contained" buttonColor={MODASH_BRAND.primary} style={styles.button}>Unlock Modash Access with Enterprise</Button>
+                    <Button mode="contained" buttonColor={MODASH_BRAND.primary} style={styles.button}
+                        onPress={() => Linking.openURL("mailto:support@trendly.now")}>Unlock Modash Access with Enterprise</Button>
                 </Card.Content>
             </Card>
         </View>

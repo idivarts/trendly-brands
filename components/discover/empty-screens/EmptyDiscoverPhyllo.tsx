@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { Avatar, Button, Card } from 'react-native-paper';
 
 const PHYLLO_BRAND = {
@@ -40,7 +40,9 @@ export default function EmptyPhylloSelected() {
                     </View>
                     <Text style={styles.footnote}>* Phyllo lists custom pricing only; public sources indicate enterprise-grade quotes. Trendly’s bundled access is designed to be materially cheaper for startups. Sources cited in UI copy.</Text>
                     <Text style={styles.note}>Requires Enterprise plan. Contact sales for demo.</Text>
-                    <Button mode="contained" style={styles.button} buttonColor={PHYLLO_BRAND.primary}>Upgrade to Enterprise & Expand Your Reach</Button>
+                    <Button mode="contained" style={styles.button} buttonColor={PHYLLO_BRAND.primary}
+                        onPress={() => Linking.openURL("mailto:support@trendly.now")}
+                    >Upgrade to Enterprise & Expand Your Reach</Button>
                 </Card.Content>
             </Card>
         </View>
