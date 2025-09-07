@@ -81,8 +81,6 @@ const TrendlyAdvancedFilter = () => {
     const styles = stylesFn(theme)
 
     const { selectedBrand } = useBrandContext()
-    const locked = !(["pro", "enterprise"].includes(selectedBrand?.billing?.planKey || ""))
-
 
     /** Local state (can be lifted later) */
     const [followerMin, setFollowerMin] = useState('')
