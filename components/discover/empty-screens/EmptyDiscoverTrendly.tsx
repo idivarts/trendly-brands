@@ -57,5 +57,5 @@ const styles = StyleSheet.create({
     detail: { fontSize: 15, marginVertical: 2, textAlign: 'center', lineHeight: 22 },
     testimonial: { fontStyle: 'italic', color: '#606772', marginVertical: 16, textAlign: 'center' },
     avatar: { backgroundColor: '#ffd600', alignSelf: 'center', marginBottom: 12 },
-    button: { marginTop: 14 },
+    button: { marginTop: 14, maxWidth: 400, alignSelf: "center" },
 });

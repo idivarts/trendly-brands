@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     detail: { fontSize: 15, marginVertical: 2, textAlign: 'center', lineHeight: 22 },
     note: { fontStyle: 'italic', color: '#9c7b5f', marginVertical: 16, textAlign: 'center' },
     avatar: { backgroundColor: '#EEF0FF', alignSelf: 'center', marginBottom: 12 },
-    button: { marginTop: 14 },
+    button: { marginTop: 14, maxWidth: 400, alignSelf: "center" },
 
     compareRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
     compareCard: { flex: 1, borderWidth: 1, borderColor: '#ffe4cc', borderRadius: 12, padding: 12, backgroundColor: '#fff7ed' },

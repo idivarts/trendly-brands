@@ -59,10 +59,10 @@ const styles = StyleSheet.create({
     detail: { fontSize: 15, marginVertical: 2, textAlign: 'center', lineHeight: 22 },
     note: { fontStyle: 'italic', color: '#6f7b8f', marginVertical: 16, textAlign: 'center' },
     avatar: { backgroundColor: '#E6F0FF', alignSelf: 'center', marginBottom: 12 },
-    button: { marginTop: 14 },
+    button: { marginTop: 14, maxWidth: 400, alignSelf: "center" },
 
     compareRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
-    compareCard: { flex: 1, borderWidth: 1, borderColor: '#dbe7ff', borderRadius: 12, padding: 12, backgroundColor: '#f7fbff' },
+    compareCard: { flex: 1, borderWidth: 1, borderColor: '#dbe7ff', borderRadius: 12, padding: 12, backgroundColor: 'transparent' },
     compareCardHighlight: { flex: 1, borderWidth: 1, borderColor: '#bfd7ff', borderRadius: 12, padding: 12, backgroundColor: '#eef5ff' },
     compareHeading: { fontSize: 13, fontWeight: '700', textAlign: 'center', color: '#205391' },
     comparePrice: { fontSize: 16, fontWeight: '800', textAlign: 'center', marginTop: 4 },
