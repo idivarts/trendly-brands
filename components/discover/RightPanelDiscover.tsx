@@ -1,9 +1,11 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
 import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet } from 'react-native'
 import { Button, Chip, HelperText, Menu, TextInput } from 'react-native-paper'
+import ModashFilter from './modash/ModashFilter'
 import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 
 // --------------------
@@ -12,6 +14,9 @@ import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 const RightPanelDiscover = () => {
     const theme = useTheme()
     const colors = Colors(theme)
+
+    const { selectedBrand } = useBrandContext()
+    const planKey = selectedBrand?.billing?.planKey
 
     const styles = useMemo(() => styleFn(colors), [colors])
 
@@ -44,6 +49,7 @@ const RightPanelDiscover = () => {
                                     styles.planBadge,
                                     selectedDb === 'trendly' ? styles.planBadgePro : styles.planBadgeEnterprise,
                                 ]}
+                                contentStyle={styles.chipContent}
                                 textStyle={styles.planBadgeText}
                             >
                                 {selectedDb === 'trendly' ? 'PRO' : 'ENTERPRISE'}
@@ -108,8 +114,9 @@ const RightPanelDiscover = () => {
                 <>
                     <ScrollView>
                         {/* Pass the selected DB downstream when you wire logic later */}
-                        <TrendlyAdvancedFilter /* dbSource={selectedDb} */ />
-                        {/* <ModashFilter /> */}
+                        {selectedDb == "trendly" && <TrendlyAdvancedFilter />}
+                        {selectedDb == "modash" && <ModashFilter />}
+                        {selectedDb == "phyllo" && <ModashFilter />}
                     </ScrollView>
                     {/* Actions */}
                     <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
@@ -129,11 +136,14 @@ const RightPanelDiscover = () => {
                     <View style={styles.actions}>
                         <Button mode="contained" style={styles.actionBtn} icon="database"
                             onPress={() => setShowFilters(true)}
+                            disabled={(planKey != "enterprise" && (selectedDb == "phyllo" || selectedDb == "modash"))
+                                || (planKey != "enterprise" && planKey != "pro")
+                            }
                         >Select Database</Button>
                     </View>
 
                     <HelperText type="info" style={styles.helper}>
-                        Tip: If you are a startup, Trendly database should be sufficient for you.
+                        Tip: If you are a startup, Trendly database should be sufficient.
                     </HelperText>
                 </View>
             </>}
@@ -169,7 +179,12 @@ const DatabaseCard = ({
         <Pressable onPress={onPress} style={[s.dbCard, selected ? s.dbCardSelected : null]}>
             <View style={s.dbCardTop}>
                 <Text style={s.dbCardEmoji}>{emoji ?? '🔎'}</Text>
-                <Chip compact style={[s.planBadge, planTone === 'pro' ? s.planBadgePro : s.planBadgeEnterprise]} textStyle={s.planBadgeText}>
+                <Chip
+                    compact
+                    style={[s.planBadge, planTone === 'pro' ? s.planBadgePro : s.planBadgeEnterprise]}
+                    contentStyle={s.chipContent}
+                    textStyle={s.planBadgeText}
+                >
                     {badge}
                 </Chip>
             </View>
@@ -190,7 +205,15 @@ export const Section = ({ title, children, styles }: any) => (
     <View style={styles.section}>
         <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{title}</Text>
-            <Chip compact mode="outlined" style={styles.sectionChip} textStyle={{ fontSize: 10 }}>Clear</Chip>
+            <Chip
+                compact
+                mode="outlined"
+                style={styles.sectionChip}
+                contentStyle={styles.chipContent}
+                textStyle={{ fontSize: 10 }}
+            >
+                Clear
+            </Chip>
         </View>
         {children}
     </View>
@@ -374,17 +397,19 @@ const styleFn = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
     },
     planBadge: {
         borderRadius: 8,
-        height: 22,
+        // Remove fixed height which caused uneven vertical padding
+        // height: 22,
         justifyContent: 'center',
+        borderWidth: 0, // border colors set in plan variations
     },
     planBadgePro: {
-        backgroundColor: 'rgba(255, 215, 0, 0.16)',//colors.successSoft ??
+        backgroundColor: 'rgba(255, 215, 0, 0.16)',
         borderColor: colors.success ?? 'gold',
         borderWidth: 1,
     },
     planBadgeEnterprise: {
-        backgroundColor: 'rgba(147, 112, 219, 0.16)',//colors.warningSoft ?? 
-        borderColor: 'purple',//colors.warning ??
+        backgroundColor: 'rgba(147, 112, 219, 0.16)',
+        borderColor: 'purple',
         borderWidth: 1,
     },
     planBadgeText: {
@@ -392,6 +417,17 @@ const styleFn = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.3,
         color: colors.text
+    },
+    chipContent: {
+        // Ensure even vertical rhythm and avoid clipping
+        minHeight: 24,
+        paddingVertical: 2,
+        paddingHorizontal: 8,
+        alignItems: 'center',
+    },
+    sectionChip: {
+        borderColor: colors.border,
+        borderRadius: 8,
     },
     selectionHint: {
         marginTop: 2,
