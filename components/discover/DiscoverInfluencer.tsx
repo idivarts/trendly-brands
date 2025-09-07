@@ -175,9 +175,9 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                 rightActionButton={
                     <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
                         <PremiumActionTag
-                            label="Discover Influencer"
+                            label="Discovery remaining"
                             tooltip="Open deep statistics for any influencer. Uses 1 coin each time you open a profile."
-                            icon="star-four-points"
+                            icon="diamond-stone"
                             variant="gold"
                             count={discoverCoinsLeft}
                             onPress={() => {
@@ -186,9 +186,9 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                             }}
                         />
                         <PremiumActionTag
-                            label="Request Connection"
+                            label="Connections remaining"
                             tooltip="We reach out to the influencer on your behalf and connect you directly."
-                            icon="account-arrow-right"
+                            icon="lightning-bolt"
                             variant="purple"
                             count={connectionCreditsLeft}
                             onPress={() => {

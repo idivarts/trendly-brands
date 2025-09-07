@@ -1,45 +1,55 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
-import { useBreakpoints } from '@/hooks'
-import { useMyNavigation } from '@/shared-libs/utils/router'
-import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
 import { View } from '@/shared-uis/components/theme/Themed'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
 import React from 'react'
-import { Chip } from 'react-native-paper'
+import { PremiumActionTag } from '../discover/components/PremiumActionTag'
 
-
-const InfluencerConnects: React.FC = () => {
+interface IProps {
+    all?: boolean
+}
+const InfluencerConnects: React.FC<IProps> = ({ all }) => {
     const { selectedBrand } = useBrandContext()
-    const { xl } = useBreakpoints()
-    const { openModal } = useConfirmationModel()
-    const router = useMyNavigation()
+
+    const planKey = selectedBrand?.billing?.planKey || "";
+    const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
+    const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
+
     return (
-        <View style={{ padding: 8 }}>
-            <Chip
-                style={{
-                    backgroundColor: '#FFD700', // Golden color
-                    borderRadius: 20,
-                }}
-                textStyle={{
-                    fontWeight: 'bold',
-                    color: '#000',
-                }}
-                icon={() => (
-                    <MaterialCommunityIcons name="account-multiple" size={18} color="#000" />
-                )}
+
+        <View style={{ padding: 8, flexDirection: "row" }}>
+            <PremiumActionTag
+                label="Influencers remaining"
+                tooltip="Use this coin to unlock infleuncers who are registered on Trendly"
+                icon="star-four-points"
+                variant="gold"
+                count={selectedBrand?.credits?.influencer || 0}
                 onPress={() => {
-                    openModal({
-                        title: "Upgrade for more connects",
-                        description: "Influencer Connects let you unlock influencer profiles even if they haven’t applied to your campaign. This allows you to reach out directly, even if they haven’t shown interest yet.",
-                        confirmText: "Upgrade Now",
-                        confirmAction: () => {
-                            router.push("/billing")
-                        }
-                    })
+                    // Placeholder: You can navigate to a paywall or show coin balance here
+                    // For now, we simply no-op.
                 }}
-            >
-                {selectedBrand?.credits?.influencer || 0} {xl && "Connects"}
-            </Chip>
+            />
+            {all && ["pro", "enterprise"].includes(planKey) && <>
+                <PremiumActionTag
+                    label="Discovery remaining"
+                    tooltip="Open deep statistics for any influencer. Uses 1 coin each time you open a profile."
+                    icon="diamond-stone"
+                    variant="gold"
+                    count={discoverCoinsLeft}
+                    onPress={() => {
+                        // Placeholder: You can navigate to a paywall or show coin balance here
+                        // For now, we simply no-op.
+                    }}
+                />
+                <PremiumActionTag
+                    label="Connections remaining"
+                    tooltip="We reach out to the influencer on your behalf and connect you directly."
+                    icon="lightning-bolt"
+                    variant="purple"
+                    count={connectionCreditsLeft}
+                    onPress={() => {
+                        // Placeholder: Open your request flow here
+                    }}
+                />
+            </>}
         </View>
     )
 }

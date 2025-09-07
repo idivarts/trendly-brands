@@ -140,7 +140,6 @@ const TabLayout = () => {
               justifyContent: "space-between",
             }}
           >
-            <InfluencerConnects />
             <NotificationIcon />
           </View>,
         }}
@@ -163,7 +162,6 @@ const TabLayout = () => {
               justifyContent: "space-between",
             }}
           >
-            <InfluencerConnects />
             <NotificationIcon />
           </View>,
         }}
@@ -186,7 +184,6 @@ const TabLayout = () => {
               justifyContent: "space-between",
             }}
           >
-            <InfluencerConnects />
             <NotificationIcon />
           </View>,
         }}
@@ -197,6 +194,7 @@ const TabLayout = () => {
           title: "My Brand",
           tabBarIcon: () => <ProfileIcon />,
           headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center" }}>
+            <InfluencerConnects all={true} />
             <Pressable
               style={{ paddingHorizontal: 16 }}
               onPress={() => {

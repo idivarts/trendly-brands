@@ -1,3 +1,6 @@
+import { useBreakpoints } from '@/hooks'
+import { useMyNavigation } from '@/shared-libs/utils/router'
+import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
 import { View } from '@/shared-uis/components/theme/Themed'
 import { useTheme } from '@react-navigation/native'
 import React from 'react'
@@ -12,6 +15,10 @@ export const PremiumActionTag: React.FC<{
     onPress?: () => void
 }> = ({ label, tooltip, icon = 'star-circle', variant = 'gold', count = 0, onPress }) => {
     const theme = useTheme()
+    const { xl } = useBreakpoints()
+    const { openModal } = useConfirmationModel()
+    const router = useMyNavigation()
+
     const palette = variant === 'gold'
         ? { bg: '#FFF6D1', border: '#E6B800', text: '#6B4E00' }
         : { bg: '#EEE8FF', border: '#8A63D2', text: '#3D2C7A' }
@@ -40,7 +47,7 @@ export const PremiumActionTag: React.FC<{
                 }}
             >
                 <Text style={{ fontWeight: '800', marginRight: 4 }}>{count}</Text>
-                {label}
+                {xl && label}
             </Chip>
         </View>
     )
