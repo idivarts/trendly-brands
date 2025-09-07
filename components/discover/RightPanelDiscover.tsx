@@ -2,9 +2,10 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet } from 'react-native'
 import { Button, Chip, HelperText, Menu, TextInput } from 'react-native-paper'
+import { Subject } from 'rxjs'
 import ModashFilter from './modash/ModashFilter'
 import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 
@@ -17,6 +18,8 @@ interface IProps {
     selectedDb: DB_TYPE,
     setSelectedDb: Function
 }
+
+export const OpenCurrentSelectedDatabase = new Subject();
 
 const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper }) => {
     const theme = useTheme()
@@ -36,6 +39,13 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
             dbWrapper(type)
         }
     }
+    useEffect(() => {
+        OpenCurrentSelectedDatabase.subscribe(() => {
+            if (selectedDb != "") {
+                setShowFilters(true)
+            }
+        })
+    }, [])
 
     // Friendly label for current selection
     const selectedDbLabel = selectedDb === 'trendly' ? 'Trendly Internal' : selectedDb === 'phyllo' ? 'Phyllo' : 'Modash'

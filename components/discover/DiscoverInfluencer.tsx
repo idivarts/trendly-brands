@@ -73,7 +73,7 @@ interface IProps {
     selectedDb: DB_TYPE,
 }
 
-const DiscoverCommuninicationChannel = new Subject<{
+export const DiscoverCommuninicationChannel = new Subject<{
     loading?: boolean
     data: InfluencerItem[]
 }>()
@@ -87,18 +87,14 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     const [statsItem, setStatsItem] = useState<InfluencerItem | null>(null)
 
     const [loading, setLoading] = useState(false)
-    const [data, setdata] = useState<InfluencerItem[]>([])
+    const [data, setData] = useState<InfluencerItem[]>([])
 
     const { selectedBrand } = useBrandContext()
-
-    if (data.length == 0) {
-        return <DiscoverPlaceholder selectedDb={selectedDb} />
-    }
 
     useEffect(() => {
         DiscoverCommuninicationChannel.subscribe(({ loading, data }) => {
             setLoading(loading || false)
-            setdata(data)
+            setData(data)
         })
     }, [])
 
@@ -159,9 +155,16 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
         []
     )
 
+    if (data.length == 0) {
+        return <DiscoverPlaceholder selectedDb={selectedDb} />
+    }
+
     return (
         <>
-            <ScreenHeader title="Trendly Internal Discovery" hideAction={true} />
+            <ScreenHeader title={
+                selectedDb == "trendly" ? "Trendly Internal Discovery" :
+                    (selectedDb == "phyllo" ? "Phyllo Discovery" : "Modash Discovery")
+            } hideAction={true} />
             <View style={{ flex: 1 }}>
                 <FlatList
                     data={data}

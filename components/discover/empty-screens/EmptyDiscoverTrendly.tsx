@@ -1,9 +1,15 @@
+import { useBrandContext } from '@/contexts/brand-context.provider';
+import { useMyNavigation } from '@/shared-libs/utils/router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, Button, Card } from 'react-native-paper';
+import { OpenCurrentSelectedDatabase } from '../RightPanelDiscover';
 
 export default function EmptyTrendlyInternalSelected() {
+    const router = useMyNavigation()
+    const { selectedBrand } = useBrandContext()
+
     return (
         <View style={styles.container}>
             <LinearGradient colors={["#e6fffb", "#f0f9ff"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
@@ -22,7 +28,18 @@ export default function EmptyTrendlyInternalSelected() {
                     <Text style={styles.detail}>• Built‑in lead capture, shortlists, and campaign boards</Text>
                     <Text style={styles.detail}>• Priority support for founders: fast onboarding, faster results</Text>
                     <Text style={styles.testimonial}>“We found our first 100 true fans with Trendly Pro.”</Text>
-                    <Button mode="contained" style={styles.button} buttonColor="#3778f4">Unlock All Micro‑Influencers with Pro</Button>
+                    {["pro", "enterprise"].includes(selectedBrand?.billing?.planKey || "") ?
+                        <Button mode="contained" style={styles.button} buttonColor="#3778f4"
+                            onPress={() => {
+                                OpenCurrentSelectedDatabase.next(null)
+                            }}
+                        >Open Trendly's Database</Button> :
+                        <Button mode="contained" style={styles.button} buttonColor="#3778f4"
+                            onPress={() => {
+                                router.push("/billing")
+                            }}
+                        >Unlock All Micro‑Influencers with Pro</Button>}
+
                 </Card.Content>
             </Card>
         </View>

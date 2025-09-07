@@ -2,9 +2,11 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { Theme, useTheme } from '@react-navigation/native'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Chip, HelperText, Menu, Button as PaperButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
+import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer'
+import { MOCK_INFLUENCERS } from '../mock/influencers'
 
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
@@ -113,6 +115,13 @@ const TrendlyAdvancedFilter = () => {
         if (list.includes(value)) setList(list.filter(v => v !== value))
         else setList([...list, value])
     }
+
+    useEffect(() => {
+        DiscoverCommuninicationChannel.next({
+            loading: false,
+            data: MOCK_INFLUENCERS
+        })
+    }, [])
 
     // Unlocked: full filter UI
     return (
