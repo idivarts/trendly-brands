@@ -1,76 +1,80 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import AppLayout from '@/layouts/app-layout'
-import { Text, View } from '@/shared-uis/components/theme/Themed'
+import { View } from '@/shared-uis/components/theme/Themed'
 import React from 'react'
+import { Chip } from 'react-native-paper'
+import ScreenHeader from '../ui/screen-header'
+import { DB_TYPE } from './RightPanelDiscover'
 
-const DiscoverAdPlaceholder = () => {
-    // Use Themed.Text if available, otherwise fallback to Text from react-native
-    // try {
-    //     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    //     ThemedText = require('@/shared-uis/components/theme/Themed').Text
-    // } catch {
-    //     ThemedText = require('react-native').Text
-    // }
+interface IProps {
+    selectedDb: DB_TYPE,
+}
+const DiscoverAdPlaceholder: React.FC<IProps> = ({ selectedDb }) => {
+    const { selectedBrand } = useBrandContext()
+    const planKey = selectedBrand?.billing?.planKey
+
+    if (selectedDb == "modash") {
+        return (
+            <AppLayout>
+                <ScreenHeader title="Modash Creators Discovery" hideAction={true}
+                    rightAction={planKey != "enterprise"}
+                    rightActionButton={
+                        <Chip
+                            compact
+                            mode="outlined"
+                            textStyle={{ fontSize: 10 }}
+                        >
+                            Upgrade to Enterprise
+                        </Chip>
+                    } />
+                <View
+                    style={{}}
+                >
+
+                </View>
+            </AppLayout>
+        )
+    }
+    if (selectedDb == "phyllo") {
+        return (
+            <AppLayout>
+                <ScreenHeader title="Phyllo Creators Discovery" hideAction={true}
+                    rightAction={planKey != "enterprise"}
+                    rightActionButton={
+                        <Chip
+                            compact
+                            mode="outlined"
+                            textStyle={{ fontSize: 10 }}
+                        >
+                            Upgrade to Enterprise
+                        </Chip>
+                    } />
+                <View
+                    style={{}}
+                >
+
+                </View>
+            </AppLayout>
+        )
+    }
     return (
         <AppLayout>
+            <ScreenHeader title="Trendly Internal Discovery" hideAction={true}
+                rightAction={planKey != "pro" && planKey != "enterprise"}
+                rightActionButton={
+                    <Chip
+                        compact
+                        mode="outlined"
+                        textStyle={{ fontSize: 10 }}
+                    >
+                        Upgrade to Pro
+                    </Chip>
+                } />
             <View
                 style={{
-                    padding: 24,
-                    borderRadius: 16,
-                    backgroundColor: '#fff',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    elevation: 2,
-                    margin: 24,
                 }}
             >
-                <Text
-                    style={{
-                        fontSize: 22,
-                        fontWeight: 'bold',
-                        marginBottom: 8,
-                        textAlign: 'center',
-                    }}
-                >
-                    Unlock Premium Access
-                </Text>
-                <Text
-                    style={{
-                        fontSize: 16,
-                        color: '#444',
-                        marginBottom: 16,
-                        textAlign: 'center',
-                    }}
-                >
-                    Pay Rs. 8000 to instantly access our database of 2.5M+ influencers.
-                </Text>
-                <Text
-                    style={{
-                        fontSize: 15,
-                        color: '#666',
-                        marginBottom: 20,
-                        textAlign: 'center',
-                    }}
-                >
-                    Upgrade now and supercharge your influencer discovery.
-                </Text>
-                <View
-                    style={{
-                        height: 300,
-                        width: '100%',
-                        backgroundColor: '#e5e5e5',
-                        borderRadius: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <Text style={{ color: '#888', fontSize: 16 }}>
-                        YouTube Video Placeholder
-                    </Text>
-                </View>
+
             </View>
         </AppLayout>
     )

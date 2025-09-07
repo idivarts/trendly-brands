@@ -11,8 +11,10 @@ import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 // --------------------
 // Component
 // --------------------
+
+export type DB_TYPE = 'trendly' | 'phyllo' | 'modash'
 interface IProps {
-    selectedDb: string,
+    selectedDb: DB_TYPE,
     setSelectedDb: Function
 }
 

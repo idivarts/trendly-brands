@@ -1,11 +1,15 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Image, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
 import { Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
+import { Subject } from 'rxjs'
+import ScreenHeader from '../ui/screen-header'
+import DiscoverPlaceholder from './DiscoverAdPlaceholder'
 import { InfluencerStatsModal } from './InfluencerStatModal'
-import { MOCK_INFLUENCERS } from './mock/influencers'
+import { DB_TYPE } from './RightPanelDiscover'
 
 // Types
 export interface InfluencerItem {
@@ -66,8 +70,13 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
 )
 
 interface IProps {
-    selectedDb: string,
+    selectedDb: DB_TYPE,
 }
+
+const DiscoverCommuninicationChannel = new Subject<{
+    loading?: boolean
+    data: InfluencerItem[]
+}>()
 
 const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     const theme = useTheme()
@@ -77,7 +86,23 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null)
     const [statsItem, setStatsItem] = useState<InfluencerItem | null>(null)
 
-    const data = MOCK_INFLUENCERS
+    const [loading, setLoading] = useState(false)
+    const [data, setdata] = useState<InfluencerItem[]>([])
+
+    const { selectedBrand } = useBrandContext()
+
+    if (data.length == 0) {
+        return <DiscoverPlaceholder selectedDb={selectedDb} />
+    }
+
+    useEffect(() => {
+        DiscoverCommuninicationChannel.subscribe(({ loading, data }) => {
+            setLoading(loading || false)
+            setdata(data)
+        })
+    }, [])
+
+    // const data = MOCK_INFLUENCERS
 
     const onOpenProfile = useCallback((url: string) => {
         Linking.openURL(url)
@@ -135,23 +160,26 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     )
 
     return (
-        <View style={{ flex: 1 }}>
-            <FlatList
-                data={data}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                contentContainerStyle={{ paddingVertical: 8 }}
-                style={styles.list}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={7}
-                removeClippedSubviews
-                // @ts-ignore
-                getItemLayout={getItemLayout}
-            />
+        <>
+            <ScreenHeader title="Trendly Internal Discovery" hideAction={true} />
+            <View style={{ flex: 1 }}>
+                <FlatList
+                    data={data}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    contentContainerStyle={{ paddingVertical: 8 }}
+                    style={styles.list}
+                    initialNumToRender={8}
+                    maxToRenderPerBatch={8}
+                    windowSize={7}
+                    removeClippedSubviews
+                    // @ts-ignore
+                    getItemLayout={getItemLayout}
+                />
 
-            <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} />
-        </View>
+                <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} />
+            </View>
+        </>
     )
 }
 
