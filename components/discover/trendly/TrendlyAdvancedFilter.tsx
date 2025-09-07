@@ -145,7 +145,7 @@ const TrendlyAdvancedFilter = () => {
         <View style={[styles.surface]}>
             <View style={styles.fieldsWrap}>
 
-                <Text style={{ fontWeight: 600 }}>Basic Details</Text>
+                <Text style={{ fontWeight: 600 }}>Basic Metrics</Text>
                 {/* follower_count */}
                 <RangeInputs
                     label="Follower count"
