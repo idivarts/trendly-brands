@@ -15,7 +15,7 @@ export default function EmptyTrendlyInternalSelected() {
                 <Card.Content>
                     <Avatar.Icon icon="star" size={36} style={styles.avatar} />
                     <Text style={styles.title}>Micro‑Influencer Discovery for Startups</Text>
-                    <Text style={styles.stat}>30,000+ active Indian micro‑influencers (under 50k followers)</Text>
+                    <Text style={styles.stat}>30,000+ active Indian micro‑influencers (under 100k followers)</Text>
                     <Text style={styles.detail}>• Only <Text style={{ fontWeight: 'bold' }}>₹1,500/month</Text> – designed for early‑stage brands</Text>
                     <Text style={styles.detail}>• Barter and paid collaborations supported</Text>
                     <Text style={styles.detail}>• Clean, India‑first results. Zero global noise</Text>

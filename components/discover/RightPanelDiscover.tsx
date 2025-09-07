@@ -18,7 +18,7 @@ interface IProps {
     setSelectedDb: Function
 }
 
-const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb }) => {
+const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper }) => {
     const theme = useTheme()
     const colors = Colors(theme)
 
@@ -28,6 +28,14 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb }) => 
     const styles = useMemo(() => styleFn(colors), [colors])
 
     const [showFilters, setShowFilters] = useState(false)
+
+    const setSelectedDb = (type: string) => {
+        if (type == selectedDb) {
+            dbWrapper("")
+        } else {
+            dbWrapper(type)
+        }
+    }
 
     // Friendly label for current selection
     const selectedDbLabel = selectedDb === 'trendly' ? 'Trendly Internal' : selectedDb === 'phyllo' ? 'Phyllo' : 'Modash'
@@ -84,7 +92,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb }) => 
                         badge="PRO"
                         planTone="pro"
                         emoji="🟡"
-                        description="Perfect for startup brands. 30k+ Instagram creators under 50k followers. Included in Pro."
+                        description="Perfect for startup brands. 30k+ Instagram creators under 100k followers. Included in Pro."
                         selected={selectedDb === 'trendly'}
                         onPress={() => setSelectedDb('trendly')}
                     />
@@ -144,6 +152,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb }) => 
                             onPress={() => setShowFilters(true)}
                             disabled={(planKey != "enterprise" && (selectedDb == "phyllo" || selectedDb == "modash"))
                                 || (planKey != "enterprise" && planKey != "pro")
+                                || selectedDb == ""
                             }
                         >Select Database</Button>
                     </View>
