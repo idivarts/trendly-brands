@@ -2,6 +2,7 @@ import { router, Tabs } from "expo-router";
 import React from "react";
 
 import Header from "@/components/explore-influencers/header";
+import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
@@ -96,6 +97,7 @@ const TabLayout = () => {
                 justifyContent: "space-between",
               }}
             >
+              <InfluencerConnects />
               <NotificationIcon />
             </View>
           ),
@@ -131,7 +133,15 @@ const TabLayout = () => {
           ),
           title: "Messages",
           headerTitleAlign: "left",
-          headerRight: () => <NotificationIcon />,
+          headerRight: () => <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <NotificationIcon />
+          </View>,
         }}
       />
       <Tabs.Screen
@@ -145,7 +155,15 @@ const TabLayout = () => {
               size={22}
             />
           ),
-          headerRight: () => <NotificationIcon />,
+          headerRight: () => <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <NotificationIcon />
+          </View>,
         }}
       />
       <Tabs.Screen
@@ -159,7 +177,15 @@ const TabLayout = () => {
               size={22}
             />
           ),
-          headerRight: () => <NotificationIcon />,
+          headerRight: () => <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <NotificationIcon />
+          </View>,
         }}
       />
       <Tabs.Screen
@@ -168,6 +194,7 @@ const TabLayout = () => {
           title: "My Brand",
           tabBarIcon: () => <ProfileIcon />,
           headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center" }}>
+            <InfluencerConnects all={true} />
             <Pressable
               style={{ paddingHorizontal: 16 }}
               onPress={() => {

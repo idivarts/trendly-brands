@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
 import { Platform } from "react-native";
-import Toast from "react-native-toast-message";
 
 import BrandProfile from "@/components/brand-profile";
 import Button from "@/components/ui/button";
@@ -120,7 +119,6 @@ const BrandProfileScreen = () => {
           setBrandWebImage={setBrandWebImage}
         />
       </AppLayout>
-      <Toast />
     </AppLayout>
   );
 };

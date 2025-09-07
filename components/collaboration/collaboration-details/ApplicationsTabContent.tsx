@@ -98,7 +98,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     statusFilter: props.filter
   });
 
-  const { brands, isOnFreeTrial } = useBrandContext();
+  const { brands, isOnFreeTrial, isProfileLocked } = useBrandContext();
 
   useEffect(() => {
     fetchApplications();
@@ -199,6 +199,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
           closeModal={() => setOpenProfileModal(false)}
           isPhoneMasked={false}
           isOnFreePlan={isOnFreeTrial}
+          lockProfile={false}
           actionCard={
             <View
               style={{

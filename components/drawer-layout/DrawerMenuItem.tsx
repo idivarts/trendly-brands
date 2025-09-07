@@ -1,6 +1,7 @@
 import Colors from "@/constants/Colors";
 import { useChatContext } from "@/contexts";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
+import { faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Href, usePathname, useRouter } from "expo-router";
@@ -18,13 +19,15 @@ export type Tab = {
   icon: (props: IconPropFn) => JSX.Element;
   label: string;
   showUnreadCount?: boolean;
+  pro?: boolean;
 };
 
 type DrawerMenuItemProps = {
   tab: Tab;
+  proLock?: boolean
 };
 
-const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
+const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
@@ -75,6 +78,24 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab }) => {
         >
           {tab.label}
         </Text>
+        {proLock && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colorSet.border,
+              borderRadius: 6,
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              marginLeft: 6,
+            }}
+          >
+            <FontAwesomeIcon icon={faLock} size={10} color={colorSet.text} style={{ marginRight: 4 }} />
+            <Text style={{ color: colorSet.text, fontSize: 11, fontWeight: '500' }}>
+              Upgrade to Pro
+            </Text>
+          </View>
+        )}
         {tab.showUnreadCount && unreadCount > 0 && (
           <Badge
             visible={true}

@@ -1,18 +1,20 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { FontAwesome } from '@expo/vector-icons'
-import { useTheme } from '@react-navigation/native'
+import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, Divider, List, Surface, Text } from 'react-native-paper'
+import { Badge, Button, Divider, SegmentedButtons, Surface, Text } from 'react-native-paper'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
 
 const SectionHeader = ({ icon, title, subtitle }: { icon: keyof typeof FontAwesome.glyphMap, title: string, subtitle?: string }) => {
     const theme = useTheme()
+    const styles = stylesFn(theme)
     return (
         <View style={styles.headerRow}>
             <View style={[styles.headerIconWrap, { backgroundColor: Colors(theme).card + '33' }]}>
@@ -26,13 +28,27 @@ const SectionHeader = ({ icon, title, subtitle }: { icon: keyof typeof FontAweso
     )
 }
 
-const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, style }) => (
-    <Surface elevation={1} style={[styles.surface, style]}> {children} </Surface>
-)
-
-const RightPanel = () => {
+export const Block: React.FC<React.PropsWithChildren<{ style?: any }>> = ({ children, style }) => {
     const theme = useTheme()
+    const styles = stylesFn(theme)
+
+    return (
+        <Surface elevation={1} style={[styles.surface, style]}> {children} </Surface>
+    )
+}
+
+interface IProps {
+    connectedInfluencers: boolean,
+    setConnectedInfluencers: Function
+}
+const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInfluencers }) => {
+    const theme = useTheme()
+    const styles = stylesFn(theme)
     const router = useMyNavigation()
+
+    const { selectedBrand } = useBrandContext()
+    const planKey = selectedBrand?.billing?.planKey
+    const isLocked = planKey != "pro" && planKey != "enterprise"
 
     return (
         <ScrollView
@@ -69,43 +85,39 @@ const RightPanel = () => {
                     </Button>
                 </Block>
 
+                {/* Explore vs Connected switch */}
+                <Block>
+                    <SectionHeader
+                        icon={connectedInfluencers ? 'link' : 'compass'}
+                        title={connectedInfluencers ? 'Connected influencers' : 'Explore influencers'}
+                        subtitle={connectedInfluencers ? 'See the creators already in touch with your brand' : 'Browse and discover new creators that match your vibe'}
+                    />
+                    <SegmentedButtons
+                        value={connectedInfluencers ? 'connected' : 'explore'}
+                        onValueChange={(v) => setConnectedInfluencers(v === 'connected')}
+                        buttons={[
+                            {
+                                value: 'explore',
+                                label: 'Explore',
+                                icon: 'magnify',
+                                style: connectedInfluencers ? styles.segmentBtn : styles.segmentBtnActive,
+                            },
+                            {
+                                value: 'connected',
+                                label: 'Connected',
+                                icon: 'link-variant',
+                                style: !connectedInfluencers ? styles.segmentBtn : styles.segmentBtnActive,
+                            },
+                        ]}
+                        density="regular"
+                        style={styles.segmentGroup}
+                    />
+                </Block>
+
                 {/* Influencer Preference */}
                 <Block>
-                    <SectionHeader icon="sliders" title="Influencer preference" subtitle="Advanced filters" />
-                    <Text variant="bodyMedium" style={styles.muted}>
-                        Want more control? Set your preferred audience size, platforms, languages, and budget.
-                    </Text>
-
-                    <List.Section style={styles.listSection}>
-                        <List.Item
-                            title="Audience size"
-                            titleStyle={styles.listTitle}
-                            description="Micro, Mid, Macro"
-                            left={() => <FontAwesome name="users" size={16} color={Colors(theme).text} style={styles.listIcon} />}
-                            right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
-                            style={styles.listItem}
-                            onPress={() => router.push('/preferences')}
-                        />
-                        <List.Item
-                            title="Platforms"
-                            titleStyle={styles.listTitle}
-                            description="Instagram, YouTube, more"
-                            left={() => <FontAwesome name="hashtag" size={16} color={Colors(theme).text} style={styles.listIcon} />}
-                            right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
-                            style={styles.listItem}
-                            onPress={() => router.push('/preferences')}
-                        />
-                        <List.Item
-                            title="Languages & budget"
-                            titleStyle={styles.listTitle}
-                            description="Pick your targets"
-                            left={() => <FontAwesome name="globe" size={16} color={Colors(theme).text} style={styles.listIcon} />}
-                            right={() => <FontAwesome name="chevron-right" size={14} color={Colors(theme).text + '99'} />}
-                            style={styles.listItem}
-                            onPress={() => router.push('/preferences')}
-                        />
-                    </List.Section>
-
+                    <SectionHeader icon="sliders" title="Influencer preference"
+                        subtitle="Want more control? You can set some common preferences in Brand Preferences section." />
                     <Button mode="outlined" icon="tune" onPress={() => router.push('/preferences')}>
                         Set preferences
                     </Button>
@@ -124,53 +136,74 @@ const RightPanel = () => {
                                 <FontAwesome name="search" size={16} color="#fff" />
                             </View>
                             <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                <Text variant="titleSmall" style={styles.soonTitle}>Search (coming soon)</Text>
+                                <Text variant="titleSmall" style={styles.soonTitle}>Advanced Discovery</Text>
                                 <Text variant="labelSmall" style={styles.soonSubtitle}>Powerful ways to find creators</Text>
                             </View>
-                            <Badge size={18} style={styles.soonBadge}>Soon</Badge>
+                            {isLocked &&
+                                <Badge size={18} style={styles.soonBadge}>Locked</Badge>}
                         </View>
                         <Divider style={{ marginVertical: 16 }} />
 
                         <View style={styles.soonList}>
                             <View style={styles.soonListItem}>
-                                <View style={styles.soonBulletIcon}><FontAwesome name="user" size={14} color="#fff" /></View>
-                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                    <Text variant="labelLarge" style={styles.soonListTitle}>Search by creator name</Text>
-                                    <Text variant="bodySmall" style={styles.soonListDesc}>Know a creator already? Just type their name.</Text>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Laser‑targeted filters</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Filter by followers, engagement, verification, niche, location and more.</Text>
                                 </View>
                             </View>
 
                             <View style={styles.soonListItem}>
                                 <View style={styles.soonBulletIcon}><FontAwesome name="tag" size={14} color="#fff" /></View>
-                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                    <Text variant="labelLarge" style={styles.soonListTitle}>Keyword search</Text>
-                                    <Text variant="bodySmall" style={styles.soonListDesc}>Find influencers by content keywords like “fashion” or “GRWM”.</Text>
+                                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Keyword & look‑alike search</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Match bios by keywords or paste a profile to find similar creators.</Text>
                                 </View>
                             </View>
 
                             <View style={styles.soonListItem}>
-                                <View style={styles.soonBulletIcon}><FontAwesome name="magic" size={14} color="#fff" /></View>
-                                <View style={{ flex: 1, backgroundColor: "transparent" }}>
-                                    <Text variant="labelLarge" style={styles.soonListTitle}>Look‑alike search</Text>
-                                    <Text variant="bodySmall" style={styles.soonListDesc}>Paste a creator’s link and our AI finds similar vibes, style, and audience.</Text>
+                                <View style={styles.soonBulletIcon}><FontAwesome name="bolt" size={14} color="#fff" /></View>
+                                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                    <Text variant="labelLarge" style={styles.soonListTitle}>Save time, scale faster</Text>
+                                    <Text variant="bodySmall" style={styles.soonListDesc}>Skip manual sorting and discover perfect fits instantly.</Text>
                                 </View>
                             </View>
                         </View>
 
-                        <Button
-                            mode="contained"
-                            buttonColor="#fff"
-                            labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
-                            style={styles.soonCtaBtn}
-                            icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
-                            onPress={() => router.push('/billing')}
-                        >
-                            Get yearly & lock price
-                        </Button>
 
-                        <Text variant="labelSmall" style={styles.soonFootnote}>
-                            Register on the yearly plan today. When search launches, any price hike won’t affect your current plan.
-                        </Text>
+                        {isLocked && <>
+                            <Button
+                                mode="contained"
+                                buttonColor="#fff"
+                                labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
+                                style={styles.soonCtaBtn}
+                                icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
+                                onPress={() => router.push('/billing')}
+                            >
+                                Updrage to Pro
+                            </Button>
+
+                            <Text variant="labelSmall" style={styles.soonFootnote}>
+                                Register on the yearly plan today. When search launches, any price hike won’t affect your current plan.
+                            </Text>
+                        </>}
+                        {!isLocked && <>
+                            <Button
+                                mode="contained"
+                                buttonColor="#fff"
+                                labelStyle={{ color: Colors(theme).primary, fontWeight: '600' }}
+                                style={styles.soonCtaBtn}
+                                icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
+                                onPress={() => router.push('/discover')}
+                            >
+                                Go to Discovery Page
+                            </Button>
+
+                            <Text variant="labelSmall" style={styles.soonFootnote}>
+                                Access a pool of over 30k internal influencer database and a pool of over 250+ million influencers to search from
+                            </Text>
+                        </>}
+
                     </LinearGradient>
                 </Block>
 
@@ -179,7 +212,7 @@ const RightPanel = () => {
     )
 }
 
-const styles = StyleSheet.create({
+const stylesFn = (theme: Theme) => StyleSheet.create({
     scroll: {
         flex: 1,
     },
@@ -319,7 +352,16 @@ const styles = StyleSheet.create({
     soonFootnote: {
         color: 'rgba(255,255,255,0.85)',
         marginTop: 10,
-    }
+    },
+    segmentGroup: {
+        marginTop: 4,
+    },
+    segmentBtn: {
+        // keep it subtle and premium-looking
+    },
+    segmentBtnActive: {
+        backgroundColor: Colors(theme).primary
+    },
 })
 
 export default RightPanel

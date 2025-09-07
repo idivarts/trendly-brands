@@ -4,7 +4,7 @@ import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { InfluencerApplication } from "@/types/Collaboration";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
-import { ApplicationActionBar } from "./application-action-card";
+import { ApplicationActionBar } from "../../../shared-uis/components/application-action-card";
 
 interface ApplicationCardProps {
   acceptApplication: () => void;
@@ -26,12 +26,13 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const theme = useTheme();
   const [influencer, setInfluencer] = useState(data.influencer)
   const { xl } = useBreakpoints()
-  const { isOnFreeTrial } = useBrandContext();
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext();
   return (
     <>
       <InfluencerCard
         xl={xl}
         isOnFreePlan={isOnFreeTrial}
+        lockProfile={false}
         influencer={{
           ...influencer, profile: {
             ...influencer.profile,

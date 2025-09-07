@@ -8,7 +8,7 @@ import ScrollMedia from '@/shared-uis/components/carousel/scroll-media';
 import { Application } from '@/types/Collaboration';
 import { processRawAttachment } from '@/utils/attachments';
 import { useTheme } from '@react-navigation/native';
-import { ApplicationActionBar } from '../collaboration-details/application-action-card';
+import { ApplicationActionBar } from '../../../shared-uis/components/application-action-card';
 
 interface ApplicationCardProps {
   data: Application;

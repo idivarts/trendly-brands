@@ -44,7 +44,7 @@ const ContractScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { manager } = useAuthContext()
-  const { isOnFreeTrial } = useBrandContext()
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext()
   const { pageID } = useLocalSearchParams();
   const [contract, setContract] = useState<ICollaborationCard>();
   const [openProfileModal, setOpenProfileModal] = useState(false)
@@ -146,6 +146,7 @@ const ContractScreen = () => {
       >
         <ProfileBottomSheet
           isOnFreePlan={isOnFreeTrial}
+          lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
           influencer={selectedInfluencer as User}
           theme={theme}
           FireStoreDB={FirestoreDB}

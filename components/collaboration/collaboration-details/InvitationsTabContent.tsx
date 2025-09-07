@@ -62,7 +62,7 @@ const InvitationsTabContent = (props: any) => {
     xl,
   } = useBreakpoints();
   const { manager } = useAuthContext()
-  const { isOnFreeTrial } = useBrandContext()
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext()
 
   // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -234,6 +234,7 @@ const InvitationsTabContent = (props: any) => {
         <ProfileBottomSheet
           closeModal={() => setOpenProfileModal(false)}
           isOnFreePlan={isOnFreeTrial}
+          lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
           actionCard={
             <View
               style={{

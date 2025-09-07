@@ -29,10 +29,14 @@ import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SlowLoader from "../../shared-uis/components/SlowLoader";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
+import EmptyState from "../ui/empty-state";
 import InfluencerActionModal from "./InfluencerActionModal";
 import InfluencerInvite from "./InfluencerInvite";
 
-const ExploreInfluencers = () => {
+interface IProps {
+  connectedInfluencers?: boolean
+}
+const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -71,7 +75,7 @@ const ExploreInfluencers = () => {
 
   const { manager } = useAuthContext()
   const theme = useTheme();
-  const { selectedBrand, isOnFreeTrial } = useBrandContext()
+  const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext()
   const preferences = selectedBrand?.preferences || {}
 
   const { xl } = useBreakpoints();
@@ -84,6 +88,10 @@ const ExploreInfluencers = () => {
   );
 
   const loadInfluencers = async () => {
+    if (connectedInfluencers) {
+      setInfluencerIds(selectedBrand?.unlockedInfluencers || [])
+      return
+    }
     const influencerIds = await PersistentStorage.getItemWithExpiry("matchmaking_influencers-" + selectedBrand?.id)
     if (influencerIds) {
       setInfluencerIds(influencerIds as string[])
@@ -103,7 +111,7 @@ const ExploreInfluencers = () => {
       return;
     setInfluencerIds([])
     loadInfluencers()
-  }, [selectedBrand])
+  }, [selectedBrand?.id])
 
   const { loading: isLoading, data, loadMore } = useInfiniteIdScroll<User>(influencerIds, q, 10)
 
@@ -153,6 +161,18 @@ const ExploreInfluencers = () => {
   const [height, setHeight] = useState(Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height))
 
 
+  if (influencers.length == 0 && connectedInfluencers) {
+    return (
+      <AppLayout>
+        <EmptyState
+          image={require("@/assets/images/illustration6.png")}
+          subtitle="You don’t have any influencers connected yet. Switch to Explore Mode from the right panel to start discovering and unlocking influencers."
+          title="No Influencers Connected"
+          hideAction={true}
+        />
+      </AppLayout>
+    );
+  }
   if (isLoading && influencers.length == 0) {
     return (
       <AppLayout>
@@ -187,6 +207,7 @@ const ExploreInfluencers = () => {
                   xl={xl}
                   key={item.id}
                   isOnFreePlan={isOnFreeTrial}
+                  lockProfile={isProfileLocked(item.id)}
                   type="explore"
                   ToggleModal={ToggleModal}
                   influencer={item}
@@ -244,6 +265,7 @@ const ExploreInfluencers = () => {
           influencer={selectedInfluencer as User}
           theme={theme}
           isOnFreePlan={isOnFreeTrial}
+          isPhoneMasked={false}
           actionCard={
             <View
               style={{
@@ -256,6 +278,7 @@ const ExploreInfluencers = () => {
           }
           FireStoreDB={FirestoreDB}
           isBrandsApp={true}
+          lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
           closeModal={() => setOpenProfileModal(false)}
         />
       </BottomSheetScrollContainer>

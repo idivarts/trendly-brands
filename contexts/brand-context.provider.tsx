@@ -1,9 +1,12 @@
+import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
 import { IBrands, IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import { ProfileModalSendMessage, ProfileModalUnlockRequest } from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
 import { usePathname } from "expo-router";
@@ -11,8 +14,10 @@ import { addDoc, collection, collectionGroup, doc, DocumentData, documentId, Doc
 import React, {
   createContext,
   type PropsWithChildren,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { Platform } from "react-native";
@@ -26,6 +31,7 @@ interface BrandContextProps {
   updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
   loading: boolean,
   isOnFreeTrial?: boolean
+  isProfileLocked: (influencerId: string) => boolean
 }
 
 const BrandContext = createContext<BrandContextProps>({
@@ -36,6 +42,7 @@ const BrandContext = createContext<BrandContextProps>({
   updateBrand: () => Promise.resolve(),
   loading: true,
   isOnFreeTrial: true,
+  isProfileLocked: (influencerId: string) => true
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -147,6 +154,99 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     };
   }, [manager?.id]);
 
+  useEffect(() => {
+    const subscription1 = ProfileModalUnlockRequest.subscribe(async ({ influencerId, callback }) => {
+      try {
+        Console.log("Unlocking Influencer on brand", selectedBrand);
+        if (!selectedBrand)
+          return
+        const uCredit = selectedBrand?.credits?.influencer || 0
+        if (uCredit <= 0 && IS_MONETIZATION_DONE) {
+          Toaster.error("Your Profile has no unlock Credits")
+          return
+        }
+        Console.log("Unlocking Influencer", influencerId);
+
+        const influencerSet = new Set([...(selectedBrand.unlockedInfluencers || []), influencerId])
+        await updateBrand(selectedBrand.id, {
+          unlockedInfluencers: [...influencerSet],
+          credits: {
+            ...selectedBrand.credits,
+            influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
+          }
+        })
+        setSelectedBrand({
+          ...selectedBrand,
+          unlockedInfluencers: [...influencerSet],
+          credits: {
+            ...selectedBrand.credits,
+            influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
+          }
+        })
+        Console.log("Unlocked Influencer", [...influencerSet]);
+
+        IS_MONETIZATION_DONE &&
+          HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/unlock`, {
+            method: "POST",
+            body: JSON.stringify({
+              brandId: selectedBrand?.id
+            }),
+            headers: {
+              "content-type": "application/json"
+            }
+          })
+      } finally {
+        callback(true)
+      }
+    })
+
+    const subscription2 = ProfileModalSendMessage.subscribe(async ({ influencerId, callback }) => {
+      try {
+
+        IS_MONETIZATION_DONE &&
+          await HttpWrapper.fetch(`/api/collabs/influencers/${influencerId}/message`, {
+            method: "POST",
+            body: JSON.stringify({
+              brandId: selectedBrand?.id
+            }),
+            headers: {
+              "content-type": "application/json"
+            }
+          }).then(r => {
+            Toaster.success("Message thread is created")
+            router.push("/messages")
+            callback(true)
+          })
+      } catch (e) {
+        callback(false)
+      }
+    })
+    return () => {
+      subscription1.unsubscribe()
+      subscription2.unsubscribe()
+    }
+  }, [selectedBrand])
+
+  const isProfileLocked = useCallback((influencerId: string) => {
+    // TODO: replace this placeholder logic with your real rules.
+    // Example of using state that should trigger recomputation when they change:
+    // - selectedBrand
+    // - loading
+    // - manager
+    // - isOnFreeTrial
+    if (!selectedBrand) return true;
+
+    // Example rule: lock profiles when brand is on free trial or billing not accepted
+    const lockedByBilling = !selectedBrand.isBillingDisabled && selectedBrand.billing?.status !== ModelStatus.Accepted;
+
+    // Example rule: optionally lock specific influencer IDs (extend as needed)
+    // const lockedById = Boolean(influencerId && selectedBrand.lockedInfluencers?.includes?.(influencerId));
+
+    // https://brands.trendly.now/influencer/GB9YIOsx1ESc7SBxuqm4pI9wZP53
+    const unlockedProfiles = selectedBrand.unlockedInfluencers || []
+    return !unlockedProfiles.includes(influencerId);
+  }, [selectedBrand, manager?.id]);
+
   const createBrand = async (
     brand: Partial<IBrands>,
   ) => {
@@ -193,18 +293,29 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
   }, [selectedBrand])
 
   const isOnFreeTrial = selectedBrand && (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted)
+
+  const ctxValue = useMemo(() => ({
+    brands,
+    createBrand,
+    selectedBrand,
+    setSelectedBrand: setSelectedBrandHandler,
+    updateBrand,
+    loading,
+    isOnFreeTrial,
+    isProfileLocked,
+  }), [
+    brands,
+    createBrand,
+    selectedBrand,
+    updateBrand,
+    loading,
+    isOnFreeTrial,
+    isProfileLocked,
+    setSelectedBrandHandler,
+  ]);
+
   return (
-    <BrandContext.Provider
-      value={{
-        brands,
-        createBrand,
-        selectedBrand,
-        setSelectedBrand: setSelectedBrandHandler,
-        updateBrand,
-        loading,
-        isOnFreeTrial
-      }}
-    >
+    <BrandContext.Provider value={ctxValue}>
       {children}
     </BrandContext.Provider>
   );
