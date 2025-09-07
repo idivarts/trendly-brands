@@ -48,16 +48,16 @@ export default function EmptyPhylloSelected() {
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 36, flex: 1, backgroundColor: '#f5f7fa', justifyContent: 'center' },
+    container: { padding: 36, flex: 1, backgroundColor: '#F0F5FF', justifyContent: 'center' },
     banner: { borderRadius: 16, paddingVertical: 18, paddingHorizontal: 16, marginBottom: 12 },
     brandLogo: { height: 20, width: "100%", alignSelf: 'center', marginBottom: 6 },
     bannerTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', color: "white" },
     bannerSubtitle: { textAlign: 'center', marginTop: 4, color: "white" },
     card: { elevation: 4, borderRadius: 12 },
     title: { fontSize: 21, marginVertical: 8, textAlign: 'center' },
-    stat: { fontSize: 17, fontWeight: 'bold', color: '#205391', marginVertical: 8, textAlign: 'center' },
+    stat: { fontSize: 17, fontWeight: 'bold', color: PHYLLO_BRAND.primary, marginVertical: 8, textAlign: 'center' },
     detail: { fontSize: 15, marginVertical: 2, textAlign: 'center', lineHeight: 22 },
-    note: { fontStyle: 'italic', color: '#7b889c', marginVertical: 16, textAlign: 'center' },
+    note: { fontStyle: 'italic', color: '#6f7b8f', marginVertical: 16, textAlign: 'center' },
     avatar: { backgroundColor: '#E6F0FF', alignSelf: 'center', marginBottom: 12 },
     button: { marginTop: 14 },
 
@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
     compareCardHighlight: { flex: 1, borderWidth: 1, borderColor: '#bfd7ff', borderRadius: 12, padding: 12, backgroundColor: '#eef5ff' },
     compareHeading: { fontSize: 13, fontWeight: '700', textAlign: 'center', color: '#205391' },
     comparePrice: { fontSize: 16, fontWeight: '800', textAlign: 'center', marginTop: 4 },
-    compareNote: { fontSize: 12, textAlign: 'center', color: '#6b7280', marginTop: 2 },
+    compareNote: { fontSize: 12, textAlign: 'center', color: '#647085', marginTop: 2 },
     savingsPill: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, backgroundColor: '#dbeafe' },
     savingsText: { fontSize: 12, fontWeight: '700', color: '#1e40af' },
-    footnote: { fontSize: 12, color: '#6b7280', textAlign: 'center', marginTop: 8, lineHeight: 16 },
+    footnote: { fontSize: 12, color: '#647085', textAlign: 'center', marginTop: 8, lineHeight: 16 },
 });
