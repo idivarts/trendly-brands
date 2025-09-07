@@ -16,7 +16,7 @@ const DiscoverInfluencersScreen = () => {
     const { xl } = useBreakpoints()
 
     const planKey = selectedBrand?.billing?.planKey
-    const [selectedDb, setSelectedDb] = useState<DB_TYPE>('')
+    const [selectedDb, setSelectedDb] = useState<DB_TYPE>((planKey != "pro" && planKey != "enterprise") ? '' : (planKey == "pro" ? 'trendly' : "phyllo"))
 
     useEffect(() => {
         setSelectedDb((planKey != "pro" && planKey != "enterprise") ? '' : (planKey == "pro" ? 'trendly' : "phyllo"))

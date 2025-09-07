@@ -45,10 +45,13 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
                 setShowFilters(true)
             }
         })
+        if (selectedDb != "") {
+            setShowFilters(true)
+        }
     }, [])
 
     // Friendly label for current selection
-    const selectedDbLabel = selectedDb === 'trendly' ? 'Trendly Internal' : selectedDb === 'phyllo' ? 'Phyllo' : 'Modash'
+    const selectedDbLabel = selectedDb === 'trendly' ? 'Trendly Internal' : selectedDb === 'phyllo' ? 'Phyllo' : selectedDb === 'modash' ? 'Modash' : ''
 
     return (
         <View style={styles.container}>

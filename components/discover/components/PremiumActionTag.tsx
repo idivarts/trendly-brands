@@ -23,13 +23,23 @@ export const PremiumActionTag: React.FC<{
         ? { bg: '#FFF6D1', border: '#E6B800', text: '#6B4E00' }
         : { bg: '#EEE8FF', border: '#8A63D2', text: '#3D2C7A' }
 
+    const myPress = () => {
+        if (onPress) {
+            onPress()
+        }
+        openModal({
+            title: `${label}`,
+            description: tooltip,
+            confirmText: "Understood",
+        })
+    }
     return (
         <View>
             <Chip
                 mode="outlined"
                 compact
                 onLongPress={() => { }}
-                onPress={onPress}
+                onPress={myPress}
                 icon={icon}
                 style={{
                     marginLeft: 8,
