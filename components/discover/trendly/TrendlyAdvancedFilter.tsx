@@ -3,8 +3,8 @@ import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { Theme, useTheme } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
-import { StyleSheet } from 'react-native'
-import { Chip, HelperText, Menu, Button as PaperButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
+import { Pressable, StyleSheet } from 'react-native'
+import { Chip, HelperText, Menu, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
 import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer'
 import { MOCK_INFLUENCERS } from '../mock/influencers'
 
@@ -89,6 +89,15 @@ const TrendlyAdvancedFilter = () => {
     const [contentMin, setContentMin] = useState('')
     const [contentMax, setContentMax] = useState('')
 
+    const [monthlyViewMin, setMonthlyViewMin] = useState('')
+    const [monthlyViewMax, setMonthlyViewMax] = useState('')
+
+    const [monthlyEngagementMin, setMonthlyEngagementMin] = useState('')
+    const [monthlyEngagementMax, setMonthlyEngagementtMax] = useState('')
+
+    const [avgViewsMin, setAvgViewsMin] = useState('')
+    const [avgViewsMax, setAvgViewsMax] = useState('')
+
     const [avgLikesMin, setAvgLikesMin] = useState('')
     const [avgLikesMax, setAvgLikesMax] = useState('')
 
@@ -135,6 +144,8 @@ const TrendlyAdvancedFilter = () => {
 
         <View style={[styles.surface]}>
             <View style={styles.fieldsWrap}>
+
+                <Text style={{ fontWeight: 600 }}>Basic Details</Text>
                 {/* follower_count */}
                 <RangeInputs
                     label="Follower count"
@@ -152,6 +163,37 @@ const TrendlyAdvancedFilter = () => {
                     max={contentMax}
                     onChangeMin={setContentMin}
                     onChangeMax={setContentMax}
+                    theme={theme}
+                />
+
+                {/* monthly_reach */}
+                <RangeInputs
+                    label="Monthly Views"
+                    min={monthlyViewMin}
+                    max={monthlyViewMax}
+                    onChangeMin={setMonthlyViewMax}
+                    onChangeMax={setMonthlyViewMax}
+                    theme={theme}
+                />
+
+                {/* monthly_views */}
+                <RangeInputs
+                    label="Monthly Engagements"
+                    min={monthlyEngagementMin}
+                    max={monthlyEngagementMax}
+                    onChangeMin={setMonthlyEngagementMin}
+                    onChangeMax={setMonthlyEngagementtMax}
+                    theme={theme}
+                />
+
+                <Text style={{ fontWeight: 600, marginTop: 16 }}>Fine Tuned Metrics</Text>
+                {/* average_views */}
+                <RangeInputs
+                    label="Average Views"
+                    min={avgViewsMin}
+                    max={avgViewsMax}
+                    onChangeMin={setAvgLikesMin}
+                    onChangeMax={setAvgViewsMax}
                     theme={theme}
                 />
 
@@ -187,6 +229,50 @@ const TrendlyAdvancedFilter = () => {
                     theme={theme}
                 />
 
+                {/* engagement_rate */}
+                <View style={{ backgroundColor: Colors(theme).transparent }}>
+                    <Text style={styles.fieldLabel} variant="labelSmall">Engagement rate</Text>
+                    <Menu
+                        style={{ backgroundColor: Colors(theme).background }}
+                        visible={erMenuVisible}
+                        onDismiss={() => setErMenuVisible(false)}
+                        anchor={
+                            <Pressable onPress={() => setErMenuVisible(true)}>
+                                <TextInput
+                                    mode="outlined"
+                                    value={erSelected ?? ''}
+                                    placeholder="Select a threshold"
+                                    style={styles.input}
+                                    editable={false}
+                                    showSoftInputOnFocus={false}
+                                    right={<TextInput.Icon icon="chevron-down" />}
+                                />
+                            </Pressable>
+                        }
+                    >
+                        {ENGAGEMENT_RATE_OPTIONS.map(opt => (
+                            <Menu.Item
+                                key={opt}
+                                onPress={() => { setErSelected(opt); setErMenuVisible(false) }}
+                                title={opt}
+                            />
+                        ))}
+                    </Menu>
+                </View>
+
+
+                <Text style={{ fontWeight: 600, marginTop: 16 }}>Keyword Filters</Text>
+                {/* name */}
+                <View style={{ backgroundColor: Colors(theme).transparent }}>
+                    <Text style={styles.fieldLabel} variant="labelSmall">Name</Text>
+                    <TextInput
+                        mode="outlined"
+                        value={name}
+                        onChangeText={setName}
+                        placeholder="Search by creator name"
+                        style={styles.input}
+                    />
+                </View>
 
                 {/* description_keywords */}
                 <View style={{ backgroundColor: Colors(theme).transparent }}>
@@ -203,57 +289,7 @@ const TrendlyAdvancedFilter = () => {
                     </HelperText>
                 </View>
 
-                {/* name */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Name</Text>
-                    <TextInput
-                        mode="outlined"
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="Search by creator name"
-                        style={styles.input}
-                    />
-                </View>
-
-                {/* is_verified & has_contact_details */}
-                <View style={[styles.switchRow, { backgroundColor: Colors(theme).transparent }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, backgroundColor: Colors(theme).transparent }}>
-                        <Switch value={isVerified} onValueChange={setIsVerified} />
-                        <Text variant="bodyMedium">Verified account</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, backgroundColor: Colors(theme).transparent }}>
-                        <Switch value={hasContact} onValueChange={setHasContact} />
-                        <Text variant="bodyMedium">Has contact details</Text>
-                    </View>
-                </View>
-
-                {/* engagement_rate */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Engagement rate</Text>
-                    <Menu
-                        style={{ backgroundColor: Colors(theme).background }}
-                        visible={erMenuVisible}
-                        onDismiss={() => setErMenuVisible(false)}
-                        anchor={
-                            <PaperButton
-                                mode="outlined"
-                                onPress={() => setErMenuVisible(true)}
-                                style={styles.input}
-                            >
-                                {erSelected ?? 'Select a threshold'}
-                            </PaperButton>
-                        }
-                    >
-                        {ENGAGEMENT_RATE_OPTIONS.map(opt => (
-                            <Menu.Item
-                                key={opt}
-                                onPress={() => { setErSelected(opt); setErMenuVisible(false) }}
-                                title={opt}
-                            />
-                        ))}
-                    </Menu>
-                </View>
-
+                <Text style={{ fontWeight: 600, marginTop: 16 }}>Demography and Niche</Text>
                 {/* creator_gender */}
                 <View style={{ backgroundColor: Colors(theme).transparent }}>
                     <Text style={styles.fieldLabel} variant="labelSmall">Creator gender</Text>
@@ -298,6 +334,20 @@ const TrendlyAdvancedFilter = () => {
                         ))}
                     </View>
                 </View>
+
+                <Text style={{ fontWeight: 600, marginTop: 16 }}>Other Filters</Text>
+                {/* is_verified & has_contact_details */}
+                <View style={[styles.switchRow, { backgroundColor: Colors(theme).transparent }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, backgroundColor: Colors(theme).transparent }}>
+                        <Switch value={isVerified} onValueChange={setIsVerified} />
+                        <Text variant="bodyMedium">Verified account</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, backgroundColor: Colors(theme).transparent }}>
+                        <Switch value={hasContact} onValueChange={setHasContact} />
+                        <Text variant="bodyMedium">Has contact details</Text>
+                    </View>
+                </View>
+
             </View>
         </View>
     )
