@@ -1,11 +1,10 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
-import { FontAwesome } from '@expo/vector-icons'
 import { Theme, useTheme } from '@react-navigation/native'
 import React, { useState } from 'react'
 import { StyleSheet } from 'react-native'
-import { Chip, Divider, HelperText, Menu, Button as PaperButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
+import { Chip, HelperText, Menu, Button as PaperButton, SegmentedButtons, Switch, Text, TextInput } from 'react-native-paper'
 
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
@@ -119,20 +118,6 @@ const TrendlyAdvancedFilter = () => {
     return (
 
         <View style={[styles.surface]}>
-            <View style={styles.headerRow}>
-                <View style={styles.headerIconWrap}>
-                    <FontAwesome name="sliders" size={16} color={Colors(theme).text} />
-                </View>
-                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                    <Text variant="titleSmall">Trendly Internal Database</Text>
-                    <Text variant="labelSmall" style={{ color: Colors(theme).textSecondary }}>
-                        If looking for influncers in less than 50k following, opt for this. We have close to 30,000 influencers in this category
-                    </Text>
-                </View>
-            </View>
-
-            <Divider style={{ marginVertical: 8 }} />
-
             <View style={styles.fieldsWrap}>
                 {/* follower_count */}
                 <RangeInputs
