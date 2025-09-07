@@ -17,7 +17,7 @@ const ENGAGEMENT_RATE_OPTIONS = [
 const CREATOR_GENDER_OPTIONS = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
-    { value: 'gender-neutral', label: 'Gender‑neutral' },
+    { value: 'neutral', label: 'Neutral' },
 ]
 
 // Keep these lightweight; replace with server-driven lists later
