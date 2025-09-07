@@ -159,7 +159,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         Console.log("Unlocking Influencer on brand", selectedBrand);
         if (!selectedBrand)
           return
-        const uCredit = selectedBrand?.unlockCredits || 0
+        const uCredit = selectedBrand?.credits?.influencer || 0
         if (uCredit <= 0) {
           Toaster.error("Your Profile has no unlock Credits")
           return
@@ -169,12 +169,18 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         const influencerSet = new Set([...(selectedBrand.unlockedInfluencers || []), influencerId])
         await updateBrand(selectedBrand.id, {
           unlockedInfluencers: [...influencerSet],
-          unlockCredits: uCredit - 1
+          credits: {
+            ...selectedBrand.credits,
+            influencer: uCredit - 1
+          }
         })
         setSelectedBrand({
           ...selectedBrand,
           unlockedInfluencers: [...influencerSet],
-          unlockCredits: uCredit - 1
+          credits: {
+            ...selectedBrand.credits,
+            influencer: uCredit - 1
+          }
         })
         Console.log("Unlocked Influencer", [...influencerSet]);
 

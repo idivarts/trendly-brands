@@ -158,8 +158,8 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
         []
     )
 
-    const discoverCoinsLeft = Number((selectedBrand as any)?.balances?.discoverCoins ?? 0)
-    const connectionCreditsLeft = Number((selectedBrand as any)?.balances?.connectionCredits ?? 0)
+    const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
+    const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
 
     if (data.length == 0) {
         return <DiscoverPlaceholder selectedDb={selectedDb} />

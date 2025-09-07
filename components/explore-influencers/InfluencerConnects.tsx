@@ -38,7 +38,7 @@ const InfluencerConnects: React.FC = () => {
                     })
                 }}
             >
-                {selectedBrand?.unlockCredits || 0} {xl && "Connects"}
+                {selectedBrand?.credits?.influencer || 0} {xl && "Connects"}
             </Chip>
         </View>
     )
