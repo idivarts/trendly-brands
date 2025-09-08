@@ -55,33 +55,33 @@ export default function EmptyNoDatabaseSelected() {
                 <DataTable.Header>
                     <DataTable.Title>Database</DataTable.Title>
                     <DataTable.Title>Size</DataTable.Title>
-                    <DataTable.Title>Plan</DataTable.Title>
                     <DataTable.Title>Influencers</DataTable.Title>
                     <DataTable.Title>Socials</DataTable.Title>
+                    <DataTable.Title>Plan</DataTable.Title>
                     <DataTable.Title>Best For</DataTable.Title>
                 </DataTable.Header>
                 <DataTable.Row>
                     <DataTable.Cell>Trendly</DataTable.Cell>
                     <DataTable.Cell>30k+</DataTable.Cell>
-                    <DataTable.Cell>Pro</DataTable.Cell>
                     <DataTable.Cell>Upto 100k Fol.</DataTable.Cell>
                     <DataTable.Cell>Instagram</DataTable.Cell>
+                    <DataTable.Cell>Pro</DataTable.Cell>
                     <DataTable.Cell>Startups</DataTable.Cell>
                 </DataTable.Row>
                 <DataTable.Row>
                     <DataTable.Cell>Phyllo</DataTable.Cell>
                     <DataTable.Cell>250M+</DataTable.Cell>
-                    <DataTable.Cell>Enterprise</DataTable.Cell>
                     <DataTable.Cell>All ranges</DataTable.Cell>
                     <DataTable.Cell>All Socials</DataTable.Cell>
+                    <DataTable.Cell>Enterprise</DataTable.Cell>
                     <DataTable.Cell>Global</DataTable.Cell>
                 </DataTable.Row>
                 <DataTable.Row>
                     <DataTable.Cell>Modash</DataTable.Cell>
                     <DataTable.Cell>250M+</DataTable.Cell>
-                    <DataTable.Cell>Enterprise</DataTable.Cell>
-                    <DataTable.Cell>Micro</DataTable.Cell>
+                    <DataTable.Cell>All ranges</DataTable.Cell>
                     <DataTable.Cell>All Socials</DataTable.Cell>
+                    <DataTable.Cell>Enterprise +</DataTable.Cell>
                     <DataTable.Cell>Niche/Scale</DataTable.Cell>
                 </DataTable.Row>
             </DataTable>
