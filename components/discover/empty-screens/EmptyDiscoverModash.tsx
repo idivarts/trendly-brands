@@ -30,12 +30,12 @@ export default function EmptyModashSelected() {
                     <View style={styles.compareRow}>
                         <View style={styles.compareCard}>
                             <Text style={styles.compareHeading}>Direct (Modash)</Text>
-                            <Text style={styles.comparePrice}>from $299 / month</Text>
+                            <Text style={styles.comparePrice}>approx 40,000 / month</Text>
                             <Text style={styles.compareNote}>Platform monthly plan</Text>
                         </View>
                         <View style={styles.compareCardHighlight}>
                             <Text style={styles.compareHeading}>Via Trendly</Text>
-                            <Text style={styles.comparePrice}>₹10,000 / month</Text>
+                            <Text style={styles.comparePrice}>₹15,000 / month</Text>
                             <View style={styles.savingsPill}><Text style={styles.savingsText}>Save ~60%*</Text></View>
                         </View>
                     </View>
