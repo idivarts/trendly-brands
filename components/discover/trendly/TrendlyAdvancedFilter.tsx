@@ -11,8 +11,8 @@ import { faLocation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Theme, useTheme } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import { HelperText, Menu, Switch, Text, TextInput } from 'react-native-paper';
+import { StyleSheet } from 'react-native';
+import { HelperText, Switch, Text, TextInput } from 'react-native-paper';
 import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer';
 import { MOCK_INFLUENCERS } from '../mock/influencers';
 
@@ -115,6 +115,9 @@ const TrendlyAdvancedFilter = () => {
     const [qualityMin, setQualityMin] = useState('')
     const [qualityMax, setQualityMax] = useState('')
 
+    const [erMin, setERMin] = useState('')
+    const [erMax, setERMax] = useState('')
+
     const [descKeywords, setDescKeywords] = useState('')
     const [name, setName] = useState('')
 
@@ -122,9 +125,6 @@ const TrendlyAdvancedFilter = () => {
     const [hasContact, setHasContact] = useState(false)
 
     const [genders, setGenders] = useState<string[]>([])
-
-    const [erMenuVisible, setErMenuVisible] = useState(false)
-    const [erSelected, setErSelected] = useState<string | null>(null)
 
     const [selectedNiches, setSelectedNiches] = useState<string[]>([])
     const [selectedLocations, setSelectedLocations] = useState<string[]>([])
@@ -236,7 +236,7 @@ const TrendlyAdvancedFilter = () => {
                     label="Monthly Views"
                     min={monthlyViewMin}
                     max={monthlyViewMax}
-                    onChangeMin={setMonthlyViewMax}
+                    onChangeMin={setMonthlyViewMin}
                     onChangeMax={setMonthlyViewMax}
                     theme={theme}
                 />
@@ -257,7 +257,7 @@ const TrendlyAdvancedFilter = () => {
                     label="Average Views"
                     min={avgViewsMin}
                     max={avgViewsMax}
-                    onChangeMin={setAvgLikesMin}
+                    onChangeMin={setAvgViewsMin}
                     onChangeMax={setAvgViewsMax}
                     theme={theme}
                 />
@@ -284,6 +284,18 @@ const TrendlyAdvancedFilter = () => {
 
                 {/* influencer aesthetics / quality*/}
                 <RangeInputs
+                    label="Engagement Rate (average 2% - 5%)"
+                    min={erMin}
+                    max={erMax}
+                    onChangeMin={setERMin}
+                    onChangeMax={setERMax}
+                    placeholderMin='Min (0)'
+                    placeholderMax='Max (100)'
+                    theme={theme}
+                />
+
+                {/* influencer aesthetics / quality*/}
+                <RangeInputs
                     label="Influencer aesthetics / quality (0-100)"
                     min={qualityMin}
                     max={qualityMax}
@@ -293,38 +305,6 @@ const TrendlyAdvancedFilter = () => {
                     placeholderMax='Max (100)'
                     theme={theme}
                 />
-
-                {/* engagement_rate */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Engagement rate</Text>
-                    <Menu
-                        style={{ backgroundColor: Colors(theme).background }}
-                        visible={erMenuVisible}
-                        onDismiss={() => setErMenuVisible(false)}
-                        anchor={
-                            <Pressable onPress={() => setErMenuVisible(true)}>
-                                <TextInput
-                                    mode="outlined"
-                                    value={erSelected ?? ''}
-                                    placeholder="Select a threshold"
-                                    style={styles.input}
-                                    editable={false}
-                                    showSoftInputOnFocus={false}
-                                    right={<TextInput.Icon icon="chevron-down" />}
-                                />
-                            </Pressable>
-                        }
-                    >
-                        {ENGAGEMENT_RATE_OPTIONS.map(opt => (
-                            <Menu.Item
-                                key={opt}
-                                onPress={() => { setErSelected(opt); setErMenuVisible(false) }}
-                                title={opt}
-                            />
-                        ))}
-                    </Menu>
-                </View>
-
 
                 <Text style={{ fontWeight: 600, marginTop: 16 }}>Keyword Filters</Text>
                 {/* name */}
