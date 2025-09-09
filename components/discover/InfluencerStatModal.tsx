@@ -58,7 +58,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                                 <StatChip label="Followers" value={item?.followers} />
                                 <StatChip label="Engagements" value={item?.engagements} />
                                 <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
-                                <StatChip label="Reel Plays" value={item?.reelPlays} />
+                                <StatChip label="Reel Plays" value={item?.views} />
                             </View>
                         </Card.Content>
                         <Card.Content>

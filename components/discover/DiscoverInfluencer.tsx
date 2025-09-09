@@ -21,9 +21,9 @@ export interface InfluencerItem {
     url: string
     picture: string
     followers: number
+    views?: number
     engagements: number
     engagementRate: number
-    reelPlays?: number
 }
 
 
@@ -123,7 +123,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                                 <StatChip label="Followers" value={item.followers} />
                                 <StatChip label="Engagements" value={item.engagements} />
                                 <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
-                                <StatChip label="Reel Plays" value={item.reelPlays} />
+                                <StatChip label="Reel Plays" value={item.views} />
                             </View>
                         </View>
 

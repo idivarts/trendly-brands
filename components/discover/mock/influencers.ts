@@ -11,7 +11,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 313560626,
         engagements: 857994,
         engagementRate: 0.0027362938100525414,
-        reelPlays: 12500000,
+        views: 12500000,
     },
     {
         userId: '787132',
@@ -22,7 +22,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 95000000,
         engagements: 2100000,
         engagementRate: 0.022,
-        reelPlays: 9800000,
+        views: 9800000,
     },
     {
         userId: '25025320',
@@ -33,7 +33,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 280000000,
         engagements: 1500000,
         engagementRate: 0.0054,
-        reelPlays: 7200000,
+        views: 7200000,
     },
     {
         userId: '18428658',
@@ -44,7 +44,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 310000000,
         engagements: 1300000,
         engagementRate: 0.004,
-        reelPlays: 6500000,
+        views: 6500000,
     },
     {
         userId: '432256512',
@@ -55,7 +55,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 420000000,
         engagements: 2400000,
         engagementRate: 0.0051,
-        reelPlays: 11000000,
+        views: 11000000,
     },
     {
         userId: '7719696',
@@ -66,7 +66,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 71000000,
         engagements: 1200000,
         engagementRate: 0.017,
-        reelPlays: 5200000,
+        views: 5200000,
     },
     {
         userId: '1067259270',
@@ -77,7 +77,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 40000000,
         engagements: 650000,
         engagementRate: 0.016,
-        reelPlays: 3800000,
+        views: 3800000,
     },
     {
         userId: '184692323',
@@ -88,7 +88,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 16000000,
         engagements: 220000,
         engagementRate: 0.013,
-        reelPlays: 1400000,
+        views: 1400000,
     },
     {
         userId: '173560421',
@@ -99,7 +99,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 650000000,
         engagements: 8200000,
         engagementRate: 0.0126,
-        reelPlays: 25000000,
+        views: 25000000,
     },
     {
         userId: '17841405793187218',
@@ -110,7 +110,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 430000000,
         engagements: 3900000,
         engagementRate: 0.009,
-        reelPlays: 16000000,
+        views: 16000000,
     },
     {
         userId: '254605794',
@@ -121,7 +121,7 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 280000000,
         engagements: 4500000,
         engagementRate: 0.016,
-        reelPlays: 14000000,
+        views: 14000000,
     },
     {
         userId: '17841401477171489',
@@ -132,6 +132,6 @@ export const MOCK_INFLUENCERS: InfluencerItem[] = [
         followers: 130000000,
         engagements: 2100000,
         engagementRate: 0.016,
-        reelPlays: 9000000,
+        views: 9000000,
     },
 ]
