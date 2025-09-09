@@ -20,6 +20,7 @@ interface IProps {
 }
 
 export const OpenCurrentSelectedDatabase = new Subject<DB_TYPE>();
+export const FilterApplySubject = new Subject<{ action: "apply" | "clear" }>();
 
 const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper }) => {
     const theme = useTheme()
@@ -148,8 +149,12 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
                     {/* Actions */}
                     <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
                         <View style={styles.actions}>
-                            <Button mode="text" style={styles.clearBtn}>Clear all</Button>
-                            <Button mode="contained" style={styles.actionBtn} icon="filter-variant">Apply</Button>
+                            <Button mode="text" style={styles.clearBtn} onPress={() => {
+                                FilterApplySubject.next({ action: "clear" })
+                            }}>Clear all</Button>
+                            <Button mode="contained" style={styles.actionBtn} icon="filter-variant" onPress={() => {
+                                FilterApplySubject.next({ action: "apply" })
+                            }}>Apply</Button>
                         </View>
 
                         <HelperText type="info" style={styles.helper}>

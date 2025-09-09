@@ -1,10 +1,11 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import ImageComponent from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { maskHandle } from '@/shared-uis/utils/masks'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { FlatList, Image, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
+import { FlatList, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
 import { Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
 import { Subject } from 'rxjs'
 import ScreenHeader from '../ui/screen-header'
@@ -113,7 +114,8 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                 <Card.Content style={styles.content}>
                     <View style={styles.row}>
                         <View style={styles.avatarCol}>
-                            <Image source={{ uri: item.picture }} style={styles.avatar} />
+                            <ImageComponent url={item.picture} altText={item.fullname} style={styles.avatar} />
+                            {/* <Image source={{ uri: item.picture }} style={styles.avatar} /> */}
                         </View>
                         <View style={styles.body}>
                             <Text style={styles.title} numberOfLines={1}>{item.fullname}</Text>

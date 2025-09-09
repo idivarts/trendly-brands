@@ -3,6 +3,7 @@ import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import { CITIES, POPULAR_CITIES } from '@/shared-constants/preferences/locations';
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { MultiSelectExtendable } from '@/shared-uis/components/multiselect-extendable';
 import { View } from '@/shared-uis/components/theme/Themed';
 import Colors from '@/shared-uis/constants/Colors';
@@ -13,8 +14,8 @@ import { Theme, useTheme } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { HelperText, Switch, Text, TextInput } from 'react-native-paper';
-import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer';
-import { MOCK_INFLUENCERS } from '../mock/influencers';
+import { DiscoverCommuninicationChannel, InfluencerItem } from '../DiscoverInfluencer';
+import { FilterApplySubject } from "../RightPanelDiscover";
 
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
@@ -129,6 +130,13 @@ const TrendlyAdvancedFilter = () => {
     const [selectedNiches, setSelectedNiches] = useState<string[]>([])
     const [selectedLocations, setSelectedLocations] = useState<string[]>([])
 
+    // Sorting & pagination state
+    const [sort, setSort] = useState<'followers' | 'views' | 'engagement' | 'engagement_rate'>('followers')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+    const [offset, setOffset] = useState(0)
+    const [limit, setLimit] = useState(15)
+
+    const [data, setData] = useState<InfluencerItem[]>([])
 
     const getFormData = () => {
         // helpers
@@ -202,11 +210,6 @@ const TrendlyAdvancedFilter = () => {
             selectedNiches: selectedNiches.length ? selectedNiches : undefined,
             selectedLocations: selectedLocations.length ? selectedLocations : undefined,
 
-            // Sorting & pagination (if you later add UI state for these, wire them here)
-            // sort,
-            // sort_direction,
-            // offset,
-            // limit,
         } as const;
 
         // prune empty objects/undefined recursively
@@ -223,14 +226,70 @@ const TrendlyAdvancedFilter = () => {
             return out;
         };
 
-        return prune(payload);
+        return {
+            ...prune(payload),
+
+            // Sorting & pagination
+            sort: sort || undefined,
+            sort_direction: sortDirection || 'desc',
+            offset: offset,
+            limit: limit,
+        };
+    }
+
+    const callApi = async () => {
+        DiscoverCommuninicationChannel.next({
+            loading: true,
+            data: []
+        })
+        try {
+            let body = await HttpWrapper.fetch(`/discovery/brands/${selectedBrand?.id || ""}/influencers`, {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: JSON.stringify(getFormData())
+            }).then(async res => {
+                return res.json()
+            })
+            const d = body.data as InfluencerItem[]
+            const newData = [...data, ...d]
+            setData(newData)
+            DiscoverCommuninicationChannel.next({
+                loading: false,
+                data: newData
+            })
+        } catch (e) {
+            DiscoverCommuninicationChannel.next({
+                loading: false,
+                data: []
+            })
+        } finally {
+
+        }
+    }
+
+    const resetAndCallApi = () => {
+        // Resetting needs to be done and then call api
+        callApi()
     }
 
     useEffect(() => {
-        DiscoverCommuninicationChannel.next({
-            loading: false,
-            data: MOCK_INFLUENCERS
+        callApi()
+
+        FilterApplySubject.subscribe(({ action }) => {
+            DiscoverCommuninicationChannel.next({
+                loading: true,
+                data: []
+            })
+            setData([])
+            if (action == "apply") {
+                callApi()
+            } else {
+                resetAndCallApi()
+            }
         })
+
         return () => {
             DiscoverCommuninicationChannel.next({
                 loading: false,
