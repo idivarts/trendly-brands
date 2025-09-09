@@ -129,9 +129,101 @@ const TrendlyAdvancedFilter = () => {
     const [selectedNiches, setSelectedNiches] = useState<string[]>([])
     const [selectedLocations, setSelectedLocations] = useState<string[]>([])
 
-    const toggleTag = (value: string, list: string[], setList: (v: string[]) => void) => {
-        if (list.includes(value)) setList(list.filter(v => v !== value))
-        else setList([...list, value])
+
+    const getFormData = () => {
+        // helpers
+        const parseNumber = (v: string): number | undefined => {
+            if (v == null) return undefined;
+            const cleaned = v.replace(/,/g, "").trim();
+            if (cleaned === "") return undefined;
+            const n = Number(cleaned);
+            return Number.isNaN(n) ? undefined : n;
+        };
+
+        const toPercentNumber = (v: string): number | undefined => {
+            // Treat input as percentage number (e.g., "1.5" means 1.5%)
+            const n = parseNumber(v);
+            return n === undefined ? undefined : n;
+        };
+
+        const splitKeywords = (s: string): string[] | undefined => {
+            if (!s || !s.trim()) return undefined;
+            const arr = s
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean);
+            return arr.length ? arr : undefined;
+        };
+
+        // build payload
+        const payload = {
+            // Followers range (int64)
+            followerMin: parseNumber(followerMin),
+            followerMax: parseNumber(followerMax),
+
+            // Content/posts count range (int)
+            contentMin: parseNumber(contentMin),
+            contentMax: parseNumber(contentMax),
+
+            // Estimated monthly views range (int64)
+            monthlyViewMin: parseNumber(monthlyViewMin),
+            monthlyViewMax: parseNumber(monthlyViewMax),
+
+            // Estimated monthly engagements range (int64)
+            monthlyEngagementMin: parseNumber(monthlyEngagementMin),
+            monthlyEngagementMax: parseNumber(monthlyEngagementMax),
+
+            // Median/average metrics ranges (int64)
+            avgViewsMin: parseNumber(avgViewsMin),
+            avgViewsMax: parseNumber(avgViewsMax),
+            avgLikesMin: parseNumber(avgLikesMin),
+            avgLikesMax: parseNumber(avgLikesMax),
+            avgCommentsMin: parseNumber(avgCommentsMin),
+            avgCommentsMax: parseNumber(avgCommentsMax),
+
+            // Quality/aesthetics slider (0..100) (int)
+            qualityMin: parseNumber(qualityMin),
+            qualityMax: parseNumber(qualityMax),
+
+            // Engagement rate as percent number (float64)
+            erMin: toPercentNumber(erMin), // e.g., "1.5" -> 1.5
+            erMax: toPercentNumber(erMax),
+
+            // Text filters
+            descKeywords: splitKeywords(descKeywords),
+            name: name?.trim() || undefined,
+
+            // Flags
+            isVerified: isVerified || undefined,
+            hasContact: hasContact || undefined,
+
+            // Multi-selects
+            genders: genders.length ? genders : undefined,
+            selectedNiches: selectedNiches.length ? selectedNiches : undefined,
+            selectedLocations: selectedLocations.length ? selectedLocations : undefined,
+
+            // Sorting & pagination (if you later add UI state for these, wire them here)
+            // sort,
+            // sort_direction,
+            // offset,
+            // limit,
+        } as const;
+
+        // prune empty objects/undefined recursively
+        const prune = (obj: any): any => {
+            if (obj == null || typeof obj !== "object") return obj;
+            if (Array.isArray(obj)) return obj;
+            const out: Record<string, any> = {};
+            for (const [k, v] of Object.entries(obj)) {
+                const pv = prune(v);
+                const isEmptyObject =
+                    pv && typeof pv === "object" && !Array.isArray(pv) && Object.keys(pv).length === 0;
+                if (pv !== undefined && !isEmptyObject) out[k] = pv;
+            }
+            return out;
+        };
+
+        return prune(payload);
     }
 
     useEffect(() => {
