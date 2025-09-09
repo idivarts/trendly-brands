@@ -3,6 +3,7 @@ import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import { CITIES, POPULAR_CITIES } from '@/shared-constants/preferences/locations';
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { MultiSelectExtendable } from '@/shared-uis/components/multiselect-extendable';
 import { View } from '@/shared-uis/components/theme/Themed';
 import Colors from '@/shared-uis/constants/Colors';
@@ -11,10 +12,10 @@ import { faLocation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Theme, useTheme } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import { HelperText, Menu, Switch, Text, TextInput } from 'react-native-paper';
-import { DiscoverCommuninicationChannel } from '../DiscoverInfluencer';
-import { MOCK_INFLUENCERS } from '../mock/influencers';
+import { StyleSheet } from 'react-native';
+import { HelperText, Switch, Text, TextInput } from 'react-native-paper';
+import { DiscoverCommuninicationChannel, InfluencerItem } from '../DiscoverInfluencer';
+import { FilterApplySubject } from "../RightPanelDiscover";
 
 
 /** DROPDOWN / TAG DATA (can be wired from props later) */
@@ -115,6 +116,9 @@ const TrendlyAdvancedFilter = () => {
     const [qualityMin, setQualityMin] = useState('')
     const [qualityMax, setQualityMax] = useState('')
 
+    const [erMin, setERMin] = useState('')
+    const [erMax, setERMax] = useState('')
+
     const [descKeywords, setDescKeywords] = useState('')
     const [name, setName] = useState('')
 
@@ -123,22 +127,169 @@ const TrendlyAdvancedFilter = () => {
 
     const [genders, setGenders] = useState<string[]>([])
 
-    const [erMenuVisible, setErMenuVisible] = useState(false)
-    const [erSelected, setErSelected] = useState<string | null>(null)
-
     const [selectedNiches, setSelectedNiches] = useState<string[]>([])
     const [selectedLocations, setSelectedLocations] = useState<string[]>([])
 
-    const toggleTag = (value: string, list: string[], setList: (v: string[]) => void) => {
-        if (list.includes(value)) setList(list.filter(v => v !== value))
-        else setList([...list, value])
+    // Sorting & pagination state
+    const [sort, setSort] = useState<'followers' | 'views' | 'engagement' | 'engagement_rate'>('followers')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+    const [offset, setOffset] = useState(0)
+    const [limit, setLimit] = useState(15)
+
+    const [data, setData] = useState<InfluencerItem[]>([])
+
+    const getFormData = () => {
+        // helpers
+        const parseNumber = (v: string): number | undefined => {
+            if (v == null) return undefined;
+            const cleaned = v.replace(/,/g, "").trim();
+            if (cleaned === "") return undefined;
+            const n = Number(cleaned);
+            return Number.isNaN(n) ? undefined : n;
+        };
+
+        const toPercentNumber = (v: string): number | undefined => {
+            // Treat input as percentage number (e.g., "1.5" means 1.5%)
+            const n = parseNumber(v);
+            return n === undefined ? undefined : n;
+        };
+
+        const splitKeywords = (s: string): string[] | undefined => {
+            if (!s || !s.trim()) return undefined;
+            const arr = s
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean);
+            return arr.length ? arr : undefined;
+        };
+
+        // build payload
+        const payload = {
+            // Followers range (int64)
+            followerMin: parseNumber(followerMin),
+            followerMax: parseNumber(followerMax),
+
+            // Content/posts count range (int)
+            contentMin: parseNumber(contentMin),
+            contentMax: parseNumber(contentMax),
+
+            // Estimated monthly views range (int64)
+            monthlyViewMin: parseNumber(monthlyViewMin),
+            monthlyViewMax: parseNumber(monthlyViewMax),
+
+            // Estimated monthly engagements range (int64)
+            monthlyEngagementMin: parseNumber(monthlyEngagementMin),
+            monthlyEngagementMax: parseNumber(monthlyEngagementMax),
+
+            // Median/average metrics ranges (int64)
+            avgViewsMin: parseNumber(avgViewsMin),
+            avgViewsMax: parseNumber(avgViewsMax),
+            avgLikesMin: parseNumber(avgLikesMin),
+            avgLikesMax: parseNumber(avgLikesMax),
+            avgCommentsMin: parseNumber(avgCommentsMin),
+            avgCommentsMax: parseNumber(avgCommentsMax),
+
+            // Quality/aesthetics slider (0..100) (int)
+            qualityMin: parseNumber(qualityMin),
+            qualityMax: parseNumber(qualityMax),
+
+            // Engagement rate as percent number (float64)
+            erMin: toPercentNumber(erMin), // e.g., "1.5" -> 1.5
+            erMax: toPercentNumber(erMax),
+
+            // Text filters
+            descKeywords: splitKeywords(descKeywords),
+            name: name?.trim() || undefined,
+
+            // Flags
+            isVerified: isVerified || undefined,
+            hasContact: hasContact || undefined,
+
+            // Multi-selects
+            genders: genders.length ? genders : undefined,
+            selectedNiches: selectedNiches.length ? selectedNiches : undefined,
+            selectedLocations: selectedLocations.length ? selectedLocations : undefined,
+
+        } as const;
+
+        // prune empty objects/undefined recursively
+        const prune = (obj: any): any => {
+            if (obj == null || typeof obj !== "object") return obj;
+            if (Array.isArray(obj)) return obj;
+            const out: Record<string, any> = {};
+            for (const [k, v] of Object.entries(obj)) {
+                const pv = prune(v);
+                const isEmptyObject =
+                    pv && typeof pv === "object" && !Array.isArray(pv) && Object.keys(pv).length === 0;
+                if (pv !== undefined && !isEmptyObject) out[k] = pv;
+            }
+            return out;
+        };
+
+        return {
+            ...prune(payload),
+
+            // Sorting & pagination
+            sort: sort || undefined,
+            sort_direction: sortDirection || 'desc',
+            offset: offset,
+            limit: limit,
+        };
+    }
+
+    const callApi = async () => {
+        DiscoverCommuninicationChannel.next({
+            loading: true,
+            data: []
+        })
+        try {
+            let body = await HttpWrapper.fetch(`/discovery/brands/${selectedBrand?.id || ""}/influencers`, {
+                method: "POST",
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: JSON.stringify(getFormData())
+            }).then(async res => {
+                return res.json()
+            })
+            const d = body.data as InfluencerItem[]
+            const newData = [...data, ...d]
+            setData(newData)
+            DiscoverCommuninicationChannel.next({
+                loading: false,
+                data: newData
+            })
+        } catch (e) {
+            DiscoverCommuninicationChannel.next({
+                loading: false,
+                data: []
+            })
+        } finally {
+
+        }
+    }
+
+    const resetAndCallApi = () => {
+        // Resetting needs to be done and then call api
+        callApi()
     }
 
     useEffect(() => {
-        DiscoverCommuninicationChannel.next({
-            loading: false,
-            data: MOCK_INFLUENCERS
+        callApi()
+
+        FilterApplySubject.subscribe(({ action }) => {
+            DiscoverCommuninicationChannel.next({
+                loading: true,
+                data: []
+            })
+            setData([])
+            if (action == "apply") {
+                callApi()
+            } else {
+                resetAndCallApi()
+            }
         })
+
         return () => {
             DiscoverCommuninicationChannel.next({
                 loading: false,
@@ -236,7 +387,7 @@ const TrendlyAdvancedFilter = () => {
                     label="Monthly Views"
                     min={monthlyViewMin}
                     max={monthlyViewMax}
-                    onChangeMin={setMonthlyViewMax}
+                    onChangeMin={setMonthlyViewMin}
                     onChangeMax={setMonthlyViewMax}
                     theme={theme}
                 />
@@ -257,7 +408,7 @@ const TrendlyAdvancedFilter = () => {
                     label="Average Views"
                     min={avgViewsMin}
                     max={avgViewsMax}
-                    onChangeMin={setAvgLikesMin}
+                    onChangeMin={setAvgViewsMin}
                     onChangeMax={setAvgViewsMax}
                     theme={theme}
                 />
@@ -284,6 +435,18 @@ const TrendlyAdvancedFilter = () => {
 
                 {/* influencer aesthetics / quality*/}
                 <RangeInputs
+                    label="Engagement Rate (average 2% - 5%)"
+                    min={erMin}
+                    max={erMax}
+                    onChangeMin={setERMin}
+                    onChangeMax={setERMax}
+                    placeholderMin='Min (0)'
+                    placeholderMax='Max (100)'
+                    theme={theme}
+                />
+
+                {/* influencer aesthetics / quality*/}
+                <RangeInputs
                     label="Influencer aesthetics / quality (0-100)"
                     min={qualityMin}
                     max={qualityMax}
@@ -293,38 +456,6 @@ const TrendlyAdvancedFilter = () => {
                     placeholderMax='Max (100)'
                     theme={theme}
                 />
-
-                {/* engagement_rate */}
-                <View style={{ backgroundColor: Colors(theme).transparent }}>
-                    <Text style={styles.fieldLabel} variant="labelSmall">Engagement rate</Text>
-                    <Menu
-                        style={{ backgroundColor: Colors(theme).background }}
-                        visible={erMenuVisible}
-                        onDismiss={() => setErMenuVisible(false)}
-                        anchor={
-                            <Pressable onPress={() => setErMenuVisible(true)}>
-                                <TextInput
-                                    mode="outlined"
-                                    value={erSelected ?? ''}
-                                    placeholder="Select a threshold"
-                                    style={styles.input}
-                                    editable={false}
-                                    showSoftInputOnFocus={false}
-                                    right={<TextInput.Icon icon="chevron-down" />}
-                                />
-                            </Pressable>
-                        }
-                    >
-                        {ENGAGEMENT_RATE_OPTIONS.map(opt => (
-                            <Menu.Item
-                                key={opt}
-                                onPress={() => { setErSelected(opt); setErMenuVisible(false) }}
-                                title={opt}
-                            />
-                        ))}
-                    </Menu>
-                </View>
-
 
                 <Text style={{ fontWeight: 600, marginTop: 16 }}>Keyword Filters</Text>
                 {/* name */}

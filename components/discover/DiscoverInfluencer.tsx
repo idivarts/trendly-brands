@@ -1,11 +1,12 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { maskHandle } from '@/shared-uis/utils/masks'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { FlatList, Image, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
-import { Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
+import { FlatList, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
+import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
 import { Subject } from 'rxjs'
 import ScreenHeader from '../ui/screen-header'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
@@ -21,9 +22,9 @@ export interface InfluencerItem {
     url: string
     picture: string
     followers: number
+    views?: number
     engagements: number
     engagementRate: number
-    reelPlays?: number
 }
 
 
@@ -62,6 +63,17 @@ const useStyles = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
     },
     avatar: { width: 56, height: 56, borderRadius: 10 },
     content: { paddingHorizontal: 8, paddingVertical: 8 },
+    fullScreenLoader: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+    },
+    footerLoader: {
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
 })
 
 export const StatChip = ({ label, value }: { label: string; value?: number }) => (
@@ -113,7 +125,8 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                 <Card.Content style={styles.content}>
                     <View style={styles.row}>
                         <View style={styles.avatarCol}>
-                            <Image source={{ uri: item.picture }} style={styles.avatar} />
+                            <FacebookImageComponent url={item.picture} altText={item.fullname} style={styles.avatar} />
+                            {/* <Image source={{ uri: item.picture }} style={styles.avatar} /> */}
                         </View>
                         <View style={styles.body}>
                             <Text style={styles.title} numberOfLines={1}>{item.fullname}</Text>
@@ -123,7 +136,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                                 <StatChip label="Followers" value={item.followers} />
                                 <StatChip label="Engagements" value={item.engagements} />
                                 <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
-                                <StatChip label="Reel Plays" value={item.reelPlays} />
+                                <StatChip label="Reel Plays" value={item.views} />
                             </View>
                         </View>
 
@@ -160,6 +173,16 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
 
     const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
     const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
+
+    if (loading && data.length === 0) {
+        // Full screen loader when we're fetching the first page
+        return (
+            <View style={styles.fullScreenLoader}>
+                <ActivityIndicator />
+                <Text style={{ marginTop: 8, opacity: 0.7 }}>Loading influencers…</Text>
+            </View>
+        )
+    }
 
     if (data.length == 0) {
         return <DiscoverPlaceholder selectedDb={selectedDb} />
@@ -203,6 +226,15 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                     removeClippedSubviews
                     // @ts-ignore
                     getItemLayout={getItemLayout}
+                    ListFooterComponent={
+                        loading && data.length > 0
+                            ? (
+                                <View style={styles.footerLoader}>
+                                    <ActivityIndicator />
+                                </View>
+                            )
+                            : null
+                    }
                 />
 
                 <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} />
