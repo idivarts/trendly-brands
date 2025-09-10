@@ -238,7 +238,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                 />
 
                 {!!statsItem &&
-                    <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} />}
+                    <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} selectedDb={selectedDb} />}
             </View>
         </>
     )

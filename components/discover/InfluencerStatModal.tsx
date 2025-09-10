@@ -6,7 +6,9 @@ import React from 'react'
 import { Image, Linking, ScrollView, StyleSheet } from 'react-native'
 import { Button, Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
 import Toast from 'react-native-toast-message'
-import { InfluencerItem, StatChip } from './DiscoverInfluencer'
+import { InfluencerItem } from './DiscoverInfluencer'
+import { DB_TYPE } from './RightPanelDiscover'
+import TrendlyAnalyticsEmbed from './trendly/TrendlyAnalyticsEmbed'
 
 const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
     container: {
@@ -26,7 +28,7 @@ const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
     chip: { marginRight: 6, marginBottom: 6 },
 })
 
-export const InfluencerStatsModal: React.FC<{ visible: boolean; item: InfluencerItem | null; onClose: () => void }> = ({ visible, item, onClose }) => {
+export const InfluencerStatsModal: React.FC<{ visible: boolean; item: InfluencerItem | null; onClose: () => void, selectedDb: DB_TYPE }> = ({ visible, item, onClose, selectedDb }) => {
     const theme = useTheme()
     const styles = useStatsModalStyles(theme)
 
@@ -52,28 +54,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                     </View>
                     <Divider style={{ marginBottom: 16 }} />
                     <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ flex: 1, marginBottom: 24 }}>
-                        <Card.Content>
-                            <Card.Title title={"Statistics"} />
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 16 }}>
-                                <StatChip label="Followers" value={item?.followers} />
-                                <StatChip label="Engagements" value={item?.engagements} />
-                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
-                                <StatChip label="Reel Plays" value={item?.views} />
-                            </View>
-                        </Card.Content>
-                        <Card.Content>
-                            <Card.Title title={"Growth"} />
-                            <View style={{ height: 200 }}>
-
-                            </View>
-                        </Card.Content>
-
-                        <Card.Content>
-                            <Card.Title title={"Some Other Metrics"} />
-                            <View style={{ height: 400 }}>
-
-                            </View>
-                        </Card.Content>
+                        {(selectedDb == "trendly" && item) && <TrendlyAnalyticsEmbed influencer={item} />}
                     </ScrollView>
                 </Card>
             </Modal>
