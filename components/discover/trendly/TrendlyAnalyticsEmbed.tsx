@@ -176,32 +176,32 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                                 </View>
                             )}
                         />
-                        {social.bio ? (
-                            <Card.Content>
-                                <Text variant="bodyMedium" style={{ marginBottom: 8 }}>{social.bio}</Text>
-                                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                    {!!social.location && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="map-marker">{social.location}</Chip>}
-                                    {!!social.gender && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="gender-male-female">{social.gender}</Chip>}
-                                    {typeof social.quality_score === 'number' && (
-                                        <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="star" >Quality: {social.quality_score}/100</Chip>
-                                    )}
-                                    {social.has_contacts && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="card-account-mail">Has Contacts</Chip>}
-                                    {social.has_follow_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="account-plus">Follow Enabled</Chip>}
-                                    {social.has_message_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="message-text">DM Enabled</Chip>}
-                                </View>
 
-                                {Array.isArray(social.niches) && social.niches.length > 0 && (
-                                    <View style={{ marginTop: 8 }}>
-                                        <Text variant="labelLarge" style={{ marginBottom: 6 }}>Niches</Text>
-                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                            {social.niches.map((n) => (
-                                                <Chip key={n} style={{ marginRight: 8, marginBottom: 8 }}>{n}</Chip>
-                                            ))}
-                                        </View>
-                                    </View>
+                        <Card.Content>
+                            <Text variant="bodyMedium" style={{ marginBottom: 8 }} numberOfLines={2} >{social.bio != "unknown" ? social.bio : ""}</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                                {!!social.location && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="map-marker">{social.location}</Chip>}
+                                {!!social.gender && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="gender-male-female">{social.gender}</Chip>}
+                                {typeof social.quality_score === 'number' && (
+                                    <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="star" >Quality: {social.quality_score}/100</Chip>
                                 )}
-                            </Card.Content>
-                        ) : null}
+                                {social.has_contacts && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="card-account-mail">Has Contacts</Chip>}
+                                {social.has_follow_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="account-plus">Follow Enabled</Chip>}
+                                {social.has_message_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="message-text">DM Enabled</Chip>}
+                            </View>
+
+                            {Array.isArray(social.niches) && social.niches.length > 0 && (
+                                <View style={{ marginTop: 8 }}>
+                                    <Text variant="labelLarge" style={{ marginBottom: 6 }}>Niches</Text>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                                        {social.niches.map((n) => (
+                                            <Chip key={n} style={{ marginRight: 8, marginBottom: 8 }}>{n}</Chip>
+                                        ))}
+                                    </View>
+                                </View>
+                            )}
+                        </Card.Content>
+
                     </Card>
 
                     {/* Totals */}
@@ -289,9 +289,9 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                         <Card.Content>
                             <List.Section>
                                 <List.Item title="ID" description={social.id} left={(p) => <List.Icon {...p} icon="identifier" />} />
-                                <List.Item title="Added By" description={social.added_by || '—'} left={(p) => <List.Icon {...p} icon="account-badge" />} />
-                                <List.Item title="Created" description={formatDate(social.creation_time)} left={(p) => <List.Icon {...p} icon="calendar-plus" />} />
-                                <List.Item title="Last Updated" description={formatDate(social.last_update_time)} left={(p) => <List.Icon {...p} icon="update" />} />
+                                {/* <List.Item title="Added By" description={social.added_by || '—'} left={(p) => <List.Icon {...p} icon="account-badge" />} /> */}
+                                {/* <List.Item title="Created" description={formatDate(social.creation_time)} left={(p) => <List.Icon {...p} icon="calendar-plus" />} /> */}
+                                <List.Item title="Last Updated" description={formatDate(social.last_update_time / 1000000)} left={(p) => <List.Icon {...p} icon="update" />} />
                                 <List.Item title="Platform" description={social.social_type || '—'} left={(p) => <List.Icon {...p} icon="target" />} />
                             </List.Section>
                         </Card.Content>
