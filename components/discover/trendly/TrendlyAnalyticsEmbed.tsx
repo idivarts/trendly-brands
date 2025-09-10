@@ -1,5 +1,7 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
+import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { View } from '@/shared-uis/components/theme/Themed'
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Card } from 'react-native-paper'
 import { InfluencerItem, StatChip } from '../DiscoverInfluencer'
 
@@ -7,6 +9,26 @@ interface IProps {
     influencer: InfluencerItem
 }
 const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer }) => {
+    const { selectedBrand } = useBrandContext()
+
+    const loadInfluencer = async () => {
+        try {
+            let body = await HttpWrapper.fetch(`/discovery/brands/${selectedBrand?.id || ""}/influencers/${influencer.userId}`, {
+                method: "GET",
+                headers: {
+                    "content-type": "application/json"
+                },
+            }).then(async res => {
+                return res.json()
+            })
+        } catch (e) {
+        } finally {
+
+        }
+    }
+    useEffect(() => {
+
+    }, [])
     return (
         <>
             <Card.Content>
