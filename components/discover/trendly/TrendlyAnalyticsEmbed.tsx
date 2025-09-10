@@ -133,15 +133,17 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
 
     return (
         <Card.Content>
-            <Card.Title title={'Statistics'} />
 
-            {/* Top-level metrics from the parent list item (always available) */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 16 }}>
-                <StatChip label="Followers" value={influencer?.followers} />
-                <StatChip label="Engagements" value={influencer?.engagements} />
-                <StatChip label="ER (in %)" value={(influencer?.engagementRate || 0) * 100} />
-                <StatChip label="Reel Plays" value={influencer?.views} />
-            </View>
+            <Card style={{ marginHorizontal: 12, marginBottom: 24 }}>
+                <Card.Title title={'Basic Statistics'} />
+                {/* Top-level metrics from the parent list item (always available) */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 16 }}>
+                    <StatChip label="Followers" value={influencer?.followers} />
+                    <StatChip label="Engagements" value={influencer?.engagements} />
+                    <StatChip label="ER (in %)" value={(influencer?.engagementRate || 0) * 100} />
+                    <StatChip label="Reel Plays" value={influencer?.views} />
+                </View>
+            </Card>
 
             {loading && <ActivityIndicator size={'small'} />}
 
