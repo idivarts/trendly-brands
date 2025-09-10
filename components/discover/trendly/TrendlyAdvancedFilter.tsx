@@ -212,6 +212,8 @@ const TrendlyAdvancedFilter = () => {
 
         } as const;
 
+        console.log("Payload Object", payload, followerMin, followerMax);
+
         // prune empty objects/undefined recursively
         const prune = (obj: any): any => {
             if (obj == null || typeof obj !== "object") return obj;
@@ -237,7 +239,7 @@ const TrendlyAdvancedFilter = () => {
         };
     }
 
-    const callApi = async () => {
+    const callApi = async (reset: boolean = false) => {
         DiscoverCommuninicationChannel.next({
             loading: true,
             data: []
@@ -253,7 +255,7 @@ const TrendlyAdvancedFilter = () => {
                 return res.json()
             })
             const d = body.data as InfluencerItem[]
-            const newData = [...data, ...d]
+            const newData = [...(reset ? [] : data), ...d]
             setData(newData)
             DiscoverCommuninicationChannel.next({
                 loading: false,
@@ -270,9 +272,83 @@ const TrendlyAdvancedFilter = () => {
     }
 
     const resetAndCallApi = () => {
-        // Resetting needs to be done and then call api
-        callApi()
+        // Reset all filters and variables to initial defaults
+        setFollowerMin("")
+        setFollowerMax("")
+
+        setContentMin("")
+        setContentMax("")
+
+        setMonthlyViewMin("")
+        setMonthlyViewMax("")
+
+        setMonthlyEngagementMin("")
+        setMonthlyEngagementtMax("")
+
+        setAvgViewsMin("")
+        setAvgViewsMax("")
+
+        setAvgLikesMin("")
+        setAvgLikesMax("")
+
+        setAvgCommentsMin("")
+        setAvgCommentsMax("")
+
+        setQualityMin("")
+        setQualityMax("")
+
+        setERMin("")
+        setERMax("")
+
+        setDescKeywords("")
+        setName("")
+
+        setIsVerified(false)
+        setHasContact(false)
+
+        setGenders([])
+        setSelectedNiches([])
+        setSelectedLocations([])
+
+        // Sorting & pagination defaults
+        setSort('followers')
+        setSortDirection('desc')
+        setOffset(0)
+        setLimit(15)
+
+        // Clear current data
+        setData([])
+
+        // Defer the API call so new state is applied before building payload
+        setTimeout(() => {
+            callApiRef.current(true)
+        }, 0)
     }
+
+    // add near other hooks
+    const callApiRef = React.useRef(callApi)
+    const resetCallApiRef = React.useRef(resetAndCallApi)
+
+    // keep the ref pointing to the latest callApi whenever inputs change
+    useEffect(() => {
+        callApiRef.current = callApi
+        resetCallApiRef.current = resetAndCallApi
+    }, [
+        followerMin, followerMax,
+        contentMin, contentMax,
+        monthlyViewMin, monthlyViewMax,
+        monthlyEngagementMin, monthlyEngagementMax,
+        avgViewsMin, avgViewsMax,
+        avgLikesMin, avgLikesMax,
+        avgCommentsMin, avgCommentsMax,
+        qualityMin, qualityMax,
+        erMin, erMax,
+        descKeywords, name,
+        isVerified, hasContact,
+        genders, selectedNiches, selectedLocations,
+        sort, sortDirection, offset, limit,
+        selectedBrand?.id,
+    ])
 
     useEffect(() => {
         callApi()
@@ -282,11 +358,10 @@ const TrendlyAdvancedFilter = () => {
                 loading: true,
                 data: []
             })
-            setData([])
             if (action == "apply") {
-                callApi()
+                callApiRef.current(true)
             } else {
-                resetAndCallApi()
+                resetCallApiRef.current()
             }
         })
 
