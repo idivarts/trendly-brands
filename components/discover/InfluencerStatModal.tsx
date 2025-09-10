@@ -1,10 +1,11 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import { Theme, useTheme } from '@react-navigation/native'
 import React from 'react'
-import { Image, Linking, ScrollView, StyleSheet } from 'react-native'
+import { Linking, ScrollView, StyleSheet } from 'react-native'
 import { Button, Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
 import Toast from 'react-native-toast-message'
 import { InfluencerItem } from './DiscoverInfluencer'
@@ -42,7 +43,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                     <View style={{ flexDirection: "row", justifyContent: "space-between", marginLeft: 24, marginTop: 24 }}>
                         <View style={styles.row}>
                             {!!item?.picture && (
-                                <Image source={{ uri: item.picture }} style={styles.avatar} />
+                                <FacebookImageComponent url={item.picture} style={styles.avatar} altText={item.fullname} />
                             )}
                             <Card.Title title={item?.fullname} subtitle={item ? `@${item.username}` : undefined} />
                         </View>
