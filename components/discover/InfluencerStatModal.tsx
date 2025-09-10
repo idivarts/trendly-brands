@@ -1,3 +1,4 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
@@ -31,6 +32,7 @@ const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
 export const InfluencerStatsModal: React.FC<{ visible: boolean; item: InfluencerItem | null; onClose: () => void, selectedDb: DB_TYPE }> = ({ visible, item, onClose, selectedDb }) => {
     const theme = useTheme()
     const styles = useStatsModalStyles(theme)
+    const { selectedBrand } = useBrandContext()
 
     return (
         <Portal>
@@ -54,7 +56,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                     </View>
                     <Divider style={{ marginBottom: 16 }} />
                     <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ flex: 1, marginBottom: 24 }}>
-                        {(selectedDb == "trendly" && item) && <TrendlyAnalyticsEmbed influencer={item} />}
+                        {(selectedDb == "trendly" && item && selectedBrand) && <TrendlyAnalyticsEmbed influencer={item} selectedBrand={selectedBrand} />}
                     </ScrollView>
                 </Card>
             </Modal>
