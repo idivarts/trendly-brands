@@ -133,18 +133,6 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
 
     return (
         <Card.Content>
-
-            <Card style={{ marginHorizontal: 12, marginBottom: 24 }}>
-                <Card.Title title={'Basic Statistics'} />
-                {/* Top-level metrics from the parent list item (always available) */}
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 16 }}>
-                    <StatChip label="Followers" value={influencer?.followers} />
-                    <StatChip label="Engagements" value={influencer?.engagements} />
-                    <StatChip label="ER (in %)" value={(influencer?.engagementRate || 0) * 100} />
-                    <StatChip label="Reel Plays" value={influencer?.views} />
-                </View>
-            </Card>
-
             {loading && <ActivityIndicator size={'small'} />}
 
             {!loading && !social && (
@@ -182,14 +170,14 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                         <Card.Content>
                             <Text variant="bodyMedium" style={{ marginBottom: 8 }} numberOfLines={2} >{social.bio != "unknown" ? social.bio : ""}</Text>
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                {!!social.location && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="map-marker">{social.location}</Chip>}
-                                {!!social.gender && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="gender-male-female">{social.gender}</Chip>}
+                                {!!social.location && social.location != "unknown" && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="map-marker">{social.location}</Chip>}
+                                {!!social.gender && social.gender != "unknown" && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="gender-male-female">{social.gender}</Chip>}
                                 {typeof social.quality_score === 'number' && (
                                     <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="star" >Quality: {social.quality_score}/100</Chip>
                                 )}
-                                {social.has_contacts && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="card-account-mail">Has Contacts</Chip>}
+                                {/* {social.has_contacts && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="card-account-mail">Has Contacts</Chip>}
                                 {social.has_follow_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="account-plus">Follow Enabled</Chip>}
-                                {social.has_message_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="message-text">DM Enabled</Chip>}
+                                {social.has_message_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="message-text">DM Enabled</Chip>} */}
                             </View>
 
                             {Array.isArray(social.niches) && social.niches.length > 0 && (
@@ -216,7 +204,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                                 <StatChip label="Posts" value={social.content_count} />
                                 <StatChip label="Total Views" value={social.views_count} />
                                 <StatChip label="Total Engagements" value={social.engagement_count} />
-                                <StatChip label="Reels Scraped" value={social.reel_scrapped_count} />
+                                {/* <StatChip label="Reels Scraped" value={social.reel_scrapped_count} /> */}
                             </View>
                         </Card.Content>
                     </Card>
@@ -238,7 +226,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                     {/* Reels */}
                     {Array.isArray(social.reels) && social.reels.length > 0 && (
                         <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                            <Card.Title title={`Reels (${formatNumber(social.reels.length)})`} />
+                            <Card.Title title={`Reels`} />
                             <Card.Content>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                     <View style={{ flexDirection: 'row' }}>
