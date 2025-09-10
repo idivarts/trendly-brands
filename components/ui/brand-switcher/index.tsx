@@ -25,9 +25,12 @@ const BrandSwitcher = () => {
   };
 
   useEffect(() => {
-    OpenBrandSwitcher.subscribe(() => {
+    const subs = OpenBrandSwitcher.subscribe(() => {
       setVisible(true)
     })
+    return () => {
+      subs.unsubscribe()
+    }
   }, [])
   return (
     <Menu
