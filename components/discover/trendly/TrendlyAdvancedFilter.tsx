@@ -353,7 +353,7 @@ const TrendlyAdvancedFilter = () => {
     useEffect(() => {
         callApi()
 
-        FilterApplySubject.subscribe(({ action }) => {
+        const subs = FilterApplySubject.subscribe(({ action }) => {
             DiscoverCommuninicationChannel.next({
                 loading: true,
                 data: []
@@ -370,6 +370,7 @@ const TrendlyAdvancedFilter = () => {
                 loading: false,
                 data: []
             })
+            subs.unsubscribe()
         }
     }, [])
 

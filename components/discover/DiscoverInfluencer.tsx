@@ -107,10 +107,13 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     const { selectedBrand } = useBrandContext()
 
     useEffect(() => {
-        DiscoverCommuninicationChannel.subscribe(({ loading, data }) => {
+        const subs = DiscoverCommuninicationChannel.subscribe(({ loading, data }) => {
             setLoading(loading || false)
             setData(data)
         })
+        return () => {
+            subs.unsubscribe()
+        }
     }, [])
 
     // const data = MOCK_INFLUENCERS

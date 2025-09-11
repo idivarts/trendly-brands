@@ -41,13 +41,16 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
         }
     }
     useEffect(() => {
-        OpenCurrentSelectedDatabase.subscribe((selectedDb) => {
+        const subs = OpenCurrentSelectedDatabase.subscribe((selectedDb) => {
             if (selectedDb != "") {
                 setShowFilters(true)
             }
         })
         if (selectedDb != "") {
             setShowFilters(true)
+        }
+        return () => {
+            subs.unsubscribe()
         }
     }, [])
 
