@@ -50,7 +50,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                         <Card.Actions>
                             <Button mode="contained" onPress={() => {
                                 Toaster.success("Our team is notifed", "We are working to bring the influencer in your contact")
-                            }}>Request Connection</Button>
+                            }}>Invite</Button>
                             <IconButton icon="open-in-new" onPress={() => item?.url && Linking.openURL(item.url)} />
                             <IconButton icon="close" onPress={onClose} />
                         </Card.Actions>

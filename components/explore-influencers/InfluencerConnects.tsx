@@ -34,8 +34,8 @@ const InfluencerConnects: React.FC<IProps> = ({ all }) => {
                     count={discoverCoinsLeft}
                 />
                 <PremiumActionTag
-                    label="Connections remaining"
-                    tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you request connection for any influencer.\n\nLimit recharges every month depending on what plan you are on"}
+                    label="Invites remaining"
+                    tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you invite any influencer.\n\nLimit recharges every month depending on what plan you are on"}
                     icon="lightning-bolt"
                     variant="purple"
                     count={connectionCreditsLeft}
