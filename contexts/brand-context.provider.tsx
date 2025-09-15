@@ -277,6 +277,16 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       role: "Manager",
     })
 
+    HttpWrapper.fetch(`/api/v2/brands/create`, {
+      method: "POST",
+      body: JSON.stringify({
+        brandId: brandDoc.id
+      }),
+      headers: {
+        "content-type": "application/json"
+      }
+    })
+
     return brandDoc
   }
 
