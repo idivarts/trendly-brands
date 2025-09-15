@@ -207,7 +207,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
               color: Colors(theme).text,
             }}
           >
-            Campaigns
+            Connect
           </Text>
           <View style={{ gap: 2 }}>
             {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
