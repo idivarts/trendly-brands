@@ -72,6 +72,16 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
     label: "Members",
   },
   {
+    href: "/contracts",
+    icon: () => <DrawerIcon href="/contracts" icon={faFileLines} />,
+    label: "Contracts",
+  },
+  {
+    href: "/applications",
+    icon: () => <DrawerIcon href="/applications" icon={faEye} />,
+    label: "All Applications",
+  },
+  {
     href: "/billing",
     icon: () => <DrawerIcon href="" icon={faCreditCard} />,
     label: "Billing",
@@ -81,16 +91,6 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
 interface DrawerMenuContentProps { }
 
 const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
-  {
-    href: "/explore-influencers",
-    icon: ({ focused }: IconPropFn) =>
-      focused ? (
-        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
-      ) : (
-        <DrawerIcon href="/explore-influencers" icon={faHeart} />
-      ),
-    label: "Explore Influencers",
-  },
   {
     href: "/discover",
     icon: ({ focused }: IconPropFn) =>
@@ -113,6 +113,16 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     label: "Campaigns",
   },
   {
+    href: "/explore-influencers",
+    icon: ({ focused }: IconPropFn) =>
+      focused ? (
+        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
+      ) : (
+        <DrawerIcon href="/explore-influencers" icon={faHeart} />
+      ),
+    label: "Explore Influencers",
+  },
+  {
     href: "/messages",
     icon: ({ focused }: IconPropFn) =>
       focused ? (
@@ -123,16 +133,7 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     label: "Messages",
     showUnreadCount: true,
   },
-  {
-    href: "/contracts",
-    icon: () => <DrawerIcon href="/contracts" icon={faFileLines} />,
-    label: "Contracts",
-  },
-  {
-    href: "/applications",
-    icon: () => <DrawerIcon href="/applications" icon={faEye} />,
-    label: "All Applications",
-  },
+
 ];
 
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
