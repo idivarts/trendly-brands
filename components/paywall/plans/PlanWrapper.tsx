@@ -17,7 +17,7 @@ import {
     View,
 } from "react-native";
 
-export type PlanKey = 'starter' | 'growth' | 'pro'
+export type PlanKey = 'starter' | 'growth' | 'pro' | 'enterprise'
 export type BillingCycle = "yearly" | "monthly";
 
 /* ----------------------- Config ----------------------- */
@@ -50,11 +50,21 @@ const proFeatures = [
     'End to End Hiring Support *',
     'Guaranteed Money Recovery Support *',
 ]
+
+const enterpriseFeatures = [
+    'Everything on Growth Plan',
+    'Unlimited Influencer Connects',
+    'Unlimited Collaboration Postings',
+    'Upto 5 Collaboration Boostings',
+    'Unlimited Hirings (Contracts)',
+    'End to End Hiring Support *',
+    'Guaranteed Money Recovery Support *',
+]
 const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean }[] = [
     {
         key: "starter",
         name: "Starter",
-        monthly: 240,
+        monthly: 0,
         features: starterFeatures,
         preferred: false
     },
@@ -63,13 +73,20 @@ const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], 
         name: "Growth",
         monthly: 750,
         features: growthFeatures,
-        preferred: true, // visually highlight
+        preferred: false, // visually highlight
     },
     {
         key: "pro",
         name: "Pro",
         monthly: 1500,
         features: proFeatures,
+        preferred: true
+    },
+    {
+        key: "enterprise",
+        name: "Enterprise",
+        monthly: 10000,
+        features: enterpriseFeatures,
         preferred: false
     },
 ] as const;
@@ -251,24 +268,34 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                 {/* ({isYearly ? "Yearly" : "Monthly"}) */}
                             </Text>
 
-                            <View style={styles.priceRow}>
-                                <Text style={styles.priceMain}>₹{effectiveMonthly}</Text>
-                                {isYearly && (
-                                    <Text style={styles.priceSlash}>₹{plan.monthly}</Text>
-                                )}
-                                <Text style={styles.pricePer}>/ month</Text>
-                                {/* {isYearly && (
+                            {effectiveMonthly == 0 ?
+                                <>
+                                    <View style={styles.priceRow}>
+                                        <Text style={styles.priceMain}>Free</Text>
+                                    </View>
+                                    <Text style={styles.billingNote}>Free for ever</Text>
+                                </> :
+                                <>
+                                    <View style={styles.priceRow}>
+                                        <Text style={styles.priceMain}>₹{effectiveMonthly}</Text>
+                                        {isYearly && (
+                                            <Text style={styles.priceSlash}>₹{plan.monthly}</Text>
+                                        )}
+                                        <Text style={styles.pricePer}>/ month</Text>
+                                        {/* {isYearly && (
                                     <Text style={styles.pricePer}> when paid yearly</Text>
                                 )} */}
-                            </View>
+                                    </View>
+                                    {isYearly ? (
+                                        <Text style={styles.savingsText}>
+                                            Billed ₹{billedYearly}/year - Save 2 months cost
+                                        </Text>
+                                    ) : (
+                                        <Text style={styles.billingNote}>Billed monthly, cancel anytime</Text>
+                                    )}
+                                </>}
 
-                            {isYearly ? (
-                                <Text style={styles.savingsText}>
-                                    Billed ₹{billedYearly}/year - Save 2 months cost
-                                </Text>
-                            ) : (
-                                <Text style={styles.billingNote}>Billed monthly, cancel anytime</Text>
-                            )}
+
 
                             <View style={styles.divider} />
 
