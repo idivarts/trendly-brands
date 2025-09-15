@@ -144,14 +144,16 @@ const TabLayout = () => {
           </View>,
         }}
       />
+
       <Tabs.Screen
-        name="collaborations"
+        name="discover"
         options={{
-          title: "Campaigns",
+          title: "Discover",
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={focused ? faStarSolid : faStar}
+              icon={focused ? faGemSolid : faGem}
               size={22}
             />
           ),
@@ -167,14 +169,13 @@ const TabLayout = () => {
         }}
       />
       <Tabs.Screen
-        name="discover"
+        name="collaborations"
         options={{
-          title: "Discover",
-          headerShown: false,
+          title: "Campaigns",
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={focused ? faGemSolid : faGem}
+              icon={focused ? faStarSolid : faStar}
               size={22}
             />
           ),

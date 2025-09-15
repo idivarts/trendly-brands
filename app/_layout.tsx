@@ -101,7 +101,7 @@ const RootLayoutStack = () => {
       && (inAuthGroup || pathname === "/")
     ) {
       // On boot up, session exist and user is in auth group or /, redirect to collaborations
-      resetAndNavigate("/explore-influencers");
+      resetAndNavigate("/discover");
     } else if (
       !session
       && (inMainGroup || pathname === "/")

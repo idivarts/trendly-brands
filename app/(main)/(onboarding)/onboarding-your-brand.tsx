@@ -125,7 +125,7 @@ const OnboardingScreen = () => {
           id: brandDoc.id
         } as Brand);
         setSession(AuthApp.currentUser?.uid || "");
-        router.resetAndNavigate("/explore-influencers");
+        router.resetAndNavigate("/discover");
         Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
       }).catch((error) => {
         Toaster.error("Error creating brand");

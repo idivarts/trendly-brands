@@ -11,7 +11,7 @@ const Pricing = () => {
         if (!loading)
             return
         if (!payWall) {
-            router.resetAndNavigate("/explore-influencers")
+            router.resetAndNavigate("/discover")
             return;
         }
     }, [loading, payWall])

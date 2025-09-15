@@ -312,7 +312,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
         router.resetAndNavigate("/pay-wall")
       } else if (pathName == "pay-wall") {
-        router.resetAndNavigate("/explore-influencers")
+        router.resetAndNavigate("/discover")
       }
     }
   }, [selectedBrand])

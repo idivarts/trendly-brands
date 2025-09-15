@@ -121,7 +121,7 @@ export default function PricingPage() {
         if (!myBrand)
             return
         if (myBrand.billing?.status == ModelStatus.Accepted)
-            router.resetAndNavigate("/explore-influencers")
+            router.resetAndNavigate("/discover")
     }
 
     useEffect(() => {
