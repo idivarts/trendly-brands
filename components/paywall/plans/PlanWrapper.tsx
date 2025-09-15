@@ -3,6 +3,8 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
@@ -106,8 +108,24 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error">("loading");
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
+    const { openModal } = useConfirmationModel()
+    const router = useMyNavigation()
+
     const handleSubmit = async (planKey: typeof PLANS[number]["key"]) => {
         try {
+            if (planKey == "enterprise") {
+                openModal({
+                    title: "Upgrade to Enterprise",
+                    description: "Enterprise upgrade is subject to custom pricing as per the requirements from the customers. Contact support for details",
+                    confirmText: "Contact Support",
+                    confirmAction: () => {
+                        Linking.openURL("mailto:support@idiv.in")
+                    }
+                })
+                return;
+            } else if (planKey == "starter") {
+                router.resetAndNavigate("/discover")
+            }
             setModalVisible(true);
             setModalState("loading");
             setPaymentUrl(null);
