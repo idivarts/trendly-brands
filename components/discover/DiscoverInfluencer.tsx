@@ -1,11 +1,14 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { useBreakpoints } from '@/hooks'
 import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { maskHandle } from '@/shared-uis/utils/masks'
+import { faFilter } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { FlatList, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
+import { FlatList, Linking, ListRenderItemInfo, Pressable, StyleSheet } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
 import { Subject } from 'rxjs'
 import ScreenHeader from '../ui/screen-header'
@@ -86,6 +89,8 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
 
 interface IProps {
     selectedDb: DB_TYPE,
+    rightPanel: boolean,
+    setRightPanel: Function
 }
 
 export const DiscoverCommuninicationChannel = new Subject<{
@@ -93,7 +98,7 @@ export const DiscoverCommuninicationChannel = new Subject<{
     data: InfluencerItem[]
 }>()
 
-const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
+const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, rightPanel }) => {
     const theme = useTheme()
     const colors = Colors(theme)
     const styles = useMemo(() => useStyles(colors), [colors])
@@ -106,10 +111,13 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
 
     const { selectedBrand } = useBrandContext()
 
+    const { xl } = useBreakpoints()
+
     useEffect(() => {
         const subs = DiscoverCommuninicationChannel.subscribe(({ loading, data }) => {
             setLoading(loading || false)
             setData(data)
+            setRightPanel(false)
         })
         return () => {
             subs.unsubscribe()
@@ -188,11 +196,18 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
     }
 
     if (data.length == 0) {
-        return <DiscoverPlaceholder selectedDb={selectedDb} />
+        if (xl)
+            return <View style={{ flex: 1, minWidth: 0 }}>
+                <DiscoverPlaceholder selectedDb={selectedDb} />
+            </View>
+        else
+            return null
     }
 
     return (
-        <>
+        <View style={[{ flex: 1, minWidth: 0 }, (!xl && rightPanel) && {
+            display: "none"
+        }]}>
             <ScreenHeader title={
                 selectedDb == "trendly" ? "Trendly Internal Discovery" :
                     (selectedDb == "phyllo" ? "Phyllo Discovery" : "Modash Discovery")
@@ -214,6 +229,12 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                             variant="purple"
                             count={connectionCreditsLeft}
                         />
+                        {!xl &&
+                            <Pressable onPress={() => {
+                                setRightPanel(true)
+                            }} style={{ marginLeft: 12 }}>
+                                <FontAwesomeIcon icon={faFilter} size={24} />
+                            </Pressable>}
                     </View>
                 } />
             <View style={{ flex: 1 }}>
@@ -243,7 +264,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb }) => {
                 {!!statsItem &&
                     <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} selectedDb={selectedDb} />}
             </View>
-        </>
+        </View>
     )
 }
 
