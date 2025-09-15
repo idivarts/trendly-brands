@@ -59,6 +59,9 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
     const collaborationRef = doc(FirestoreDB, "collaborations", id);
 
     await updateDoc(collaborationRef, collaboration);
+    HttpWrapper.fetch(`/api/collabs/collaborations/${id}`, {
+      method: "POST",
+    })
   }
 
   return (
