@@ -6,6 +6,7 @@ import {
 
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { Collaboration } from "@/types/Collaboration";
 import {
   addDoc,
@@ -44,7 +45,11 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
   ): Promise<void> => {
     const collaborationRef = collection(FirestoreDB, "collaborations");
 
-    await addDoc(collaborationRef, collaboration);
+    const collabDoc = await addDoc(collaborationRef, collaboration);
+
+    HttpWrapper.fetch(`/api/collabs/collaborations/${collabDoc.id}`, {
+      method: "POST",
+    })
   }
 
   const updateCollaboration = async (
