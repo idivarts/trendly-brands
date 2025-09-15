@@ -1,14 +1,12 @@
 import Colors from "@/constants/Colors";
 import { MENU_ITEMS } from "@/constants/Menu";
-import { useAuthContext, useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import stylesFn from "@/styles/menu/MenuItem.styles";
 import { truncateText } from "@/utils/text";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import { Image, ScrollView } from "react-native";
 import ProfileItemCard from "../ProfileItemCard";
 import { Text, View } from "../theme/Themed";
@@ -18,18 +16,9 @@ const Menu = () => {
   const theme = useTheme();
   const styles = stylesFn(theme);
   const router = useRouter();
-  const [cancelPlan, setCancelPlan] = useState(false)
 
   const { selectedBrand } = useBrandContext();
 
-  const { signOutManager: signOut, manager } = useAuthContext();
-  const { deregisterTokens } = useChatContext();
-  const { openModal } = useConfirmationModel();
-
-  const handleSignOut = async () => {
-    await deregisterTokens?.();
-    await signOut();
-  };
 
   return (
     <>

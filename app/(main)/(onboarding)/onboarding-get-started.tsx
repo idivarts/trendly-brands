@@ -48,7 +48,7 @@ const GetStartedScreen = () => {
 
   const handleSkip = () => {
     setSession(AuthApp.currentUser?.uid || "");
-    router.replace("/explore-influencers");
+    router.replace("/discover");
     Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
   };
 
@@ -77,7 +77,7 @@ const GetStartedScreen = () => {
           id: brandRef.id,
         });
 
-        router.replace("/explore-influencers");
+        router.replace("/discover");
         Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
       }
     } catch (error) {

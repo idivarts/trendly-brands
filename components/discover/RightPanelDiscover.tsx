@@ -3,7 +3,7 @@ import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
 import React, { useEffect, useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet } from 'react-native'
+import { Pressable, ScrollView, StyleProp, StyleSheet, ViewStyle } from 'react-native'
 import { Button, Chip, HelperText, Menu, TextInput } from 'react-native-paper'
 import { Subject } from 'rxjs'
 import ModashFilter from './modash/ModashFilter'
@@ -16,13 +16,16 @@ import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 export type DB_TYPE = '' | 'trendly' | 'phyllo' | 'modash'
 interface IProps {
     selectedDb: DB_TYPE,
-    setSelectedDb: Function
+    setSelectedDb: Function,
+    style?: StyleProp<ViewStyle>,
+    rightPanel: boolean,
+    setRightPanel: Function
 }
 
 export const OpenCurrentSelectedDatabase = new Subject<DB_TYPE>();
 export const FilterApplySubject = new Subject<{ action: "apply" | "clear" }>();
 
-const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper }) => {
+const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper, style, setRightPanel }) => {
     const theme = useTheme()
     const colors = Colors(theme)
 
@@ -58,7 +61,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
     const selectedDbLabel = selectedDb === 'trendly' ? 'Trendly Internal' : selectedDb === 'phyllo' ? 'Phyllo' : selectedDb === 'modash' ? 'Modash' : ''
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, style]}>
             {!showFilters ? (
                 <View style={styles.headerWrap}>
                     <Text style={styles.headerTitle}>Access Multiple Databases</Text>
@@ -89,7 +92,10 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
                         <Button
                             mode="text"
                             icon="swap-horizontal"
-                            onPress={() => setShowFilters(false)}
+                            onPress={() => {
+                                setShowFilters(false)
+                                setRightPanel(true)
+                            }}
                         >
                             Change database
                         </Button>

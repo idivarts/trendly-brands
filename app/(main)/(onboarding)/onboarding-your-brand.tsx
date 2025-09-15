@@ -1,6 +1,5 @@
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { Portal } from "react-native-paper";
@@ -14,14 +13,13 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/onboarding/brand.styles";
 import { Brand } from "@/types/Brand";
 
 const OnboardingScreen = () => {
-  const [brandData, setBrandData] = useState<Partial<Brand>>({
+  const [brandData, setBrandData] = useState<Partial<IBrands>>({
     name: "",
     image: "",
     paymentMethodVerified: false,
@@ -35,6 +33,8 @@ const OnboardingScreen = () => {
       promotionType: [],
       influencerCategories: [],
     },
+    creationTime: Date.now(),
+    isBillingDisabled: false
   });
   const [role, setRole] = useState("");
   const [brandWebImage, setBrandWebImage] = useState<File | null>(null);
@@ -48,7 +48,7 @@ const OnboardingScreen = () => {
     uploadFileUri,
     uploadFile,
   } = useAWSContext();
-  const { setSelectedBrand } = useBrandContext();
+  const { setSelectedBrand, createBrand } = useBrandContext();
   const { manager: user, setSession } = useAuthContext();
 
   const handleCreateBrand = async () => {
@@ -108,38 +108,24 @@ const OnboardingScreen = () => {
     }
 
     if (user) {
-      const brandRef = collection(FirestoreDB, "brands");
+      // const brandRef = collection(FirestoreDB, "brands");
 
-      let brand: Partial<IBrands> = {
+      let brand: IBrands = {
         ...brandData,
         image: imageUrl,
-        creationTime: Date.now()
-      };
-
-      const docRef = await addDoc(brandRef, brand);
-
-      const managerRef = doc(
-        FirestoreDB,
-        "brands",
-        docRef.id,
-        "members",
-        user.id
-      );
-
-      await setDoc(managerRef, {
-        managerId: user.id,
-        role: "Manager",
-      }).then(() => {
-        // router.replace({
-        //   pathname: "/onboarding-get-started",
-        //   params: {
-        //     brandId: docRef.id,
-        //     firstBrand: firstBrand === "true" ? "true" : "false",
-        //   },
-        // });
-        setSelectedBrand(brandData as Brand);
+        creationTime: Date.now(),
+      } as IBrands;
+      createBrand(brand).then((brandDoc) => {
+        if (!brandDoc) {
+          Toaster.error("Something went wrong!", "Couldn't create your brand")
+          return
+        }
+        setSelectedBrand({
+          ...brand,
+          id: brandDoc.id
+        } as Brand);
         setSession(AuthApp.currentUser?.uid || "");
-        router.resetAndNavigate("/explore-influencers");
+        router.resetAndNavigate("/discover");
         Toaster.success(firstBrand === "true" ? "Signed In Successfully!" : "Brand Created Successfully!");
       }).catch((error) => {
         Toaster.error("Error creating brand");

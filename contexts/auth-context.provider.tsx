@@ -140,7 +140,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     console.log("Came before going to Explore influencer");
 
     // For existing managers, redirect to the main screen.
-    router.replace("/explore-influencers");
+    router.replace("/discover");
     Toaster.success("Signed In Successfully!");
   }
 

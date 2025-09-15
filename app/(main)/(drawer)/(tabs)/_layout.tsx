@@ -15,16 +15,16 @@ import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
   faComment,
-  faFileLines,
+  faGem,
   faHeart,
-  faStar,
+  faStar
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faComment as faCommentSolid,
   faCopy,
-  faFileLines as faFileLinesSolid,
+  faGem as faGemSolid,
   faHeart as faHeartSolid,
-  faStar as faStarSolid,
+  faStar as faStarSolid
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -144,14 +144,16 @@ const TabLayout = () => {
           </View>,
         }}
       />
+
       <Tabs.Screen
-        name="collaborations"
+        name="discover"
         options={{
-          title: "Campaigns",
+          title: "Discover",
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={focused ? faStarSolid : faStar}
+              icon={focused ? faGemSolid : faGem}
               size={22}
             />
           ),
@@ -167,13 +169,13 @@ const TabLayout = () => {
         }}
       />
       <Tabs.Screen
-        name="contracts"
+        name="collaborations"
         options={{
-          title: "Contracts",
+          title: "Campaigns",
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
-              icon={focused ? faFileLinesSolid : faFileLines}
+              icon={focused ? faStarSolid : faStar}
               size={22}
             />
           ),

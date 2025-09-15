@@ -1,6 +1,7 @@
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
+import { useBreakpoints } from "@/hooks";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import { CITIES, POPULAR_CITIES } from '@/shared-constants/preferences/locations';
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -138,6 +139,7 @@ const TrendlyAdvancedFilter = () => {
 
     const [data, setData] = useState<InfluencerItem[]>([])
 
+    const { xl } = useBreakpoints()
     const getFormData = () => {
         // helpers
         const parseNumber = (v: string): number | undefined => {
@@ -366,10 +368,12 @@ const TrendlyAdvancedFilter = () => {
         })
 
         return () => {
-            DiscoverCommuninicationChannel.next({
-                loading: false,
-                data: []
-            })
+            if (xl) {
+                DiscoverCommuninicationChannel.next({
+                    loading: false,
+                    data: []
+                })
+            }
             subs.unsubscribe()
         }
     }, [])

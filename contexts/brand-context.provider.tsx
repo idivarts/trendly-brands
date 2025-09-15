@@ -70,6 +70,21 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       setSelectedBrand(undefined);
     }
   }
+
+  useEffect(() => {
+    if (!selectedBrand?.id)
+      return;
+
+    const sBrandRef = doc(collection(FirestoreDB, "brands"), selectedBrand.id)
+    const unsubscribe = onSnapshot(sBrandRef, (snapshot) => {
+      const bData = snapshot.data() as IBrands
+      setSelectedBrandHandler({ ...bData, id: selectedBrand.id })
+    })
+    return () => {
+      unsubscribe()
+    }
+  }, [selectedBrand?.id])
+
   useEffect(() => {
     if (!manager?.id) return;
 
@@ -88,7 +103,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         if (membersSnapshot.empty) {
           Console.log("No members found for this manager");
           setBrands([]);
-          setSelectedBrand(undefined);
+          setSelectedBrandHandler(undefined);
           return;
         }
 
@@ -109,7 +124,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         if (brandIds.size === 0) {
           Console.log("No brands associated with this manager");
           setBrands([]);
-          setSelectedBrand(undefined);
+          setSelectedBrandHandler(undefined);
           return;
         }
 
@@ -175,7 +190,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
             influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
           }
         })
-        setSelectedBrand({
+        setSelectedBrandHandler({
           ...selectedBrand,
           unlockedInfluencers: [...influencerSet],
           credits: {
@@ -262,6 +277,16 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       role: "Manager",
     })
 
+    HttpWrapper.fetch(`/api/v2/brands/create`, {
+      method: "POST",
+      body: JSON.stringify({
+        brandId: brandDoc.id
+      }),
+      headers: {
+        "content-type": "application/json"
+      }
+    })
+
     return brandDoc
   }
 
@@ -287,7 +312,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
         router.resetAndNavigate("/pay-wall")
       } else if (pathName == "pay-wall") {
-        router.resetAndNavigate("/explore-influencers")
+        router.resetAndNavigate("/discover")
       }
     }
   }, [selectedBrand])

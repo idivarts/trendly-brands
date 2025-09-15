@@ -32,7 +32,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     } else if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      resetAndNavigate("/explore-influencers");
+      resetAndNavigate("/discover");
     }
   };
 

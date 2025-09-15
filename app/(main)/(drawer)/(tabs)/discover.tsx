@@ -12,6 +12,7 @@ const DiscoverInfluencersScreen = () => {
     const { manager } = useAuthContext()
     const { selectedBrand } = useBrandContext()
     const preferences = selectedBrand?.preferences
+    const [rightPanel, setRightPanel] = useState(true)
 
     const { xl } = useBreakpoints()
 
@@ -25,20 +26,18 @@ const DiscoverInfluencersScreen = () => {
     if (!manager || !selectedBrand || !selectedBrand.id)
         return <ActivityIndicator />
 
-    if (xl) {
-        return (
-            <AppLayout>
-                <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                        <DiscoverInfluencer selectedDb={selectedDb} />
-                    </View>
-                    <RightPanelDiscover selectedDb={selectedDb} setSelectedDb={setSelectedDb} />
-                </View>
-            </AppLayout>
-        );
-    }
-
-    return null
+    return (
+        <AppLayout>
+            <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
+                <DiscoverInfluencer selectedDb={selectedDb} setSelectedDb={setSelectedDb} rightPanel={rightPanel} setRightPanel={setRightPanel} />
+                <RightPanelDiscover selectedDb={selectedDb} setSelectedDb={setSelectedDb} style={(!xl) && {
+                    width: "100%",
+                    maxWidth: "auto",
+                    display: rightPanel ? "flex" : "none"
+                }} rightPanel={rightPanel} setRightPanel={setRightPanel} />
+            </View>
+        </AppLayout>
+    );
 };
 
 export default DiscoverInfluencersScreen;

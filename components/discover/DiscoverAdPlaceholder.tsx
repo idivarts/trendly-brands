@@ -8,8 +8,9 @@ import EmptyTrendlyInternalSelected from './empty-screens/EmptyDiscoverTrendly'
 
 interface IProps {
     selectedDb: DB_TYPE,
+    setSelectedDb: Function
 }
-const DiscoverAdPlaceholder: React.FC<IProps> = ({ selectedDb }) => {
+const DiscoverAdPlaceholder: React.FC<IProps> = ({ selectedDb, setSelectedDb }) => {
     const { selectedBrand } = useBrandContext()
     const planKey = selectedBrand?.billing?.planKey
 
@@ -22,7 +23,7 @@ const DiscoverAdPlaceholder: React.FC<IProps> = ({ selectedDb }) => {
     if (selectedDb == "trendly") {
         return <EmptyTrendlyInternalSelected />
     }
-    return <EmptyNoDatabaseSelected />
+    return <EmptyNoDatabaseSelected setSelectedDb={setSelectedDb} />
 }
 
 export default DiscoverAdPlaceholder

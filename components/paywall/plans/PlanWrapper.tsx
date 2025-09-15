@@ -3,6 +3,8 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
@@ -17,44 +19,46 @@ import {
     View,
 } from "react-native";
 
-export type PlanKey = 'starter' | 'growth' | 'pro'
+export type PlanKey = 'starter' | 'growth' | 'pro' | 'enterprise'
 export type BillingCycle = "yearly" | "monthly";
 
 /* ----------------------- Config ----------------------- */
 const starterFeatures = [
-    'Unlimited Influencer Browsing',
-    'Advanced Filtering / Preferences',
-    '20 influencer connects',
-    'Upto 1 Collaboration',
-    'Unlimited Applications / Invitations',
-    'Max One Hiring (Contract)',
-    'No Recovery Support',
+    "Unlimited Influencer Browsing",
+    "Unlimited Invitations / Applications",
+    "5 influencer unlocks",
+    "Upto 1 Campaign",
+    "Max One Hiring (Contract)"
 ]
 
 const growthFeatures = [
-    'Everything from Starter Plan',
-    'Upto 50 influencer connects',
-    '5 Collaboration posting',
-    'One Free Collaboration Boosting',
-    'Upto 8 Hiring (Contracts)',
-    'General Hiring Support',
-    'General Recovery Support',
+    "Basic Influencer Filters",
+    "Upto 50 influencer unlocks",
+    "5 Collaboration posting",
+    "Upto 8 Hiring (Contracts)",
+    "One Free Collaboration Boosting"
 ]
 
 const proFeatures = [
-    'Everything on Growth Plan',
-    'Unlimited Influencer Connects',
-    'Unlimited Collaboration Postings',
-    'Upto 5 Collaboration Boostings',
-    'Unlimited Hirings (Contracts)',
-    'End to End Hiring Support *',
-    'Guaranteed Money Recovery Support *',
+    "Advanced Discovery Tools",
+    "5 Free Collaboration Boosting",
+    "Unlimited Collaboration Postings",
+    "Unlimited Hirings (Contracts)",
+    "Advanced Customer Support"
+]
+
+const enterpriseFeatures = [
+    "Discovery with no Limits",
+    "Access 250 million+ Influencers",
+    "Direct access to Modash / Phyllo",
+    "End to End Hiring Support *",
+    "Guaranteed Recovery Support *"
 ]
 const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean }[] = [
     {
         key: "starter",
         name: "Starter",
-        monthly: 240,
+        monthly: 0,
         features: starterFeatures,
         preferred: false
     },
@@ -63,13 +67,20 @@ const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], 
         name: "Growth",
         monthly: 750,
         features: growthFeatures,
-        preferred: true, // visually highlight
+        preferred: false, // visually highlight
     },
     {
         key: "pro",
         name: "Pro",
         monthly: 1500,
         features: proFeatures,
+        preferred: true
+    },
+    {
+        key: "enterprise",
+        name: "Enterprise",
+        monthly: 10000,
+        features: enterpriseFeatures,
         preferred: false
     },
 ] as const;
@@ -89,8 +100,25 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error">("loading");
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
+    const { openModal } = useConfirmationModel()
+    const router = useMyNavigation()
+
     const handleSubmit = async (planKey: typeof PLANS[number]["key"]) => {
         try {
+            if (planKey == "enterprise") {
+                openModal({
+                    title: "Upgrade to Enterprise",
+                    description: "Enterprise upgrade is subject to custom pricing as per the requirements from the customers. Contact support for details",
+                    confirmText: "Contact Support",
+                    confirmAction: () => {
+                        Linking.openURL("mailto:support@idiv.in")
+                    }
+                })
+                return;
+            } else if (planKey == "starter") {
+                router.resetAndNavigate("/discover")
+                return
+            }
             setModalVisible(true);
             setModalState("loading");
             setPaymentUrl(null);
@@ -251,24 +279,34 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                 {/* ({isYearly ? "Yearly" : "Monthly"}) */}
                             </Text>
 
-                            <View style={styles.priceRow}>
-                                <Text style={styles.priceMain}>₹{effectiveMonthly}</Text>
-                                {isYearly && (
-                                    <Text style={styles.priceSlash}>₹{plan.monthly}</Text>
-                                )}
-                                <Text style={styles.pricePer}>/ month</Text>
-                                {/* {isYearly && (
+                            {effectiveMonthly == 0 ?
+                                <>
+                                    <View style={styles.priceRow}>
+                                        <Text style={styles.priceMain}>Free</Text>
+                                    </View>
+                                    <Text style={styles.billingNote}>Free for ever</Text>
+                                </> :
+                                <>
+                                    <View style={styles.priceRow}>
+                                        <Text style={styles.priceMain}>₹{effectiveMonthly}</Text>
+                                        {isYearly && (
+                                            <Text style={styles.priceSlash}>₹{plan.monthly}</Text>
+                                        )}
+                                        <Text style={styles.pricePer}>/ month</Text>
+                                        {/* {isYearly && (
                                     <Text style={styles.pricePer}> when paid yearly</Text>
                                 )} */}
-                            </View>
+                                    </View>
+                                    {isYearly ? (
+                                        <Text style={styles.savingsText}>
+                                            Billed ₹{billedYearly}/year - Save 2 months cost
+                                        </Text>
+                                    ) : (
+                                        <Text style={styles.billingNote}>Billed monthly, cancel anytime</Text>
+                                    )}
+                                </>}
 
-                            {isYearly ? (
-                                <Text style={styles.savingsText}>
-                                    Billed ₹{billedYearly}/year - Save 2 months cost
-                                </Text>
-                            ) : (
-                                <Text style={styles.billingNote}>Billed monthly, cancel anytime</Text>
-                            )}
+
 
                             <View style={styles.divider} />
 

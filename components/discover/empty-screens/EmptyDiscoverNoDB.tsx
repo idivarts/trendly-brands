@@ -24,7 +24,7 @@ const databases = [
     }
 ];
 
-export default function EmptyNoDatabaseSelected() {
+export default function EmptyNoDatabaseSelected({ setSelectedDb }: { setSelectedDb: Function }) {
     return (
         <View style={styles.container}>
             <LinearGradient colors={["#eef2ff", "#fdf2f8"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
@@ -41,7 +41,7 @@ export default function EmptyNoDatabaseSelected() {
 
             <View style={styles.cardRow}>
                 {databases.map(db => (
-                    <Card style={styles.card} key={db.key}>
+                    <Card style={styles.card} key={db.key} onPress={() => setSelectedDb(db.key)}>
                         <Card.Content>
                             <Avatar.Icon icon={db.icon} size={36} style={styles.avatar} />
                             <Text style={styles.cardTitle}>{db.title}</Text>
