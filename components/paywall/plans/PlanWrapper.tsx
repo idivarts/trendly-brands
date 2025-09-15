@@ -125,6 +125,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                 return;
             } else if (planKey == "starter") {
                 router.resetAndNavigate("/discover")
+                return
             }
             setModalVisible(true);
             setModalState("loading");
