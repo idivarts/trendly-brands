@@ -24,43 +24,35 @@ export type BillingCycle = "yearly" | "monthly";
 
 /* ----------------------- Config ----------------------- */
 const starterFeatures = [
-    'Unlimited Influencer Browsing',
-    'Advanced Filtering / Preferences',
-    '20 influencer connects',
-    'Upto 1 Collaboration',
-    'Unlimited Applications / Invitations',
-    'Max One Hiring (Contract)',
-    'No Recovery Support',
+    "Unlimited Influencer Browsing",
+    "Unlimited Invitations / Applications",
+    "5 influencer unlocks",
+    "Upto 1 Campaign",
+    "Max One Hiring (Contract)"
 ]
 
 const growthFeatures = [
-    'Everything from Starter Plan',
-    'Upto 50 influencer connects',
-    '5 Collaboration posting',
-    'One Free Collaboration Boosting',
-    'Upto 8 Hiring (Contracts)',
-    'General Hiring Support',
-    'General Recovery Support',
+    "Basic Influencer Filters",
+    "Upto 50 influencer unlocks",
+    "5 Collaboration posting",
+    "Upto 8 Hiring (Contracts)",
+    "One Free Collaboration Boosting"
 ]
 
 const proFeatures = [
-    'Everything on Growth Plan',
-    'Unlimited Influencer Connects',
-    'Unlimited Collaboration Postings',
-    'Upto 5 Collaboration Boostings',
-    'Unlimited Hirings (Contracts)',
-    'End to End Hiring Support *',
-    'Guaranteed Money Recovery Support *',
+    "Advanced Discovery Tools",
+    "5 Free Collaboration Boosting",
+    "Unlimited Collaboration Postings",
+    "Unlimited Hirings (Contracts)",
+    "Advanced Customer Support"
 ]
 
 const enterpriseFeatures = [
-    'Everything on Growth Plan',
-    'Unlimited Influencer Connects',
-    'Unlimited Collaboration Postings',
-    'Upto 5 Collaboration Boostings',
-    'Unlimited Hirings (Contracts)',
-    'End to End Hiring Support *',
-    'Guaranteed Money Recovery Support *',
+    "Discovery with no Limits",
+    "Access 250 million+ Influencers",
+    "Direct access to Modash / Phyllo",
+    "End to End Hiring Support *",
+    "Guaranteed Recovery Support *"
 ]
 const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean }[] = [
     {
