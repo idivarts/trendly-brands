@@ -25,7 +25,7 @@ interface IProps {
 export const OpenCurrentSelectedDatabase = new Subject<DB_TYPE>();
 export const FilterApplySubject = new Subject<{ action: "apply" | "clear" }>();
 
-const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper, style }) => {
+const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper, style, setRightPanel }) => {
     const theme = useTheme()
     const colors = Colors(theme)
 
@@ -92,7 +92,10 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
                         <Button
                             mode="text"
                             icon="swap-horizontal"
-                            onPress={() => setShowFilters(false)}
+                            onPress={() => {
+                                setShowFilters(false)
+                                setRightPanel(true)
+                            }}
                         >
                             Change database
                         </Button>
