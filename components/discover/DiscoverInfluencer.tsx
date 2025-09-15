@@ -89,6 +89,7 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
 
 interface IProps {
     selectedDb: DB_TYPE,
+    setSelectedDb: Function,
     rightPanel: boolean,
     setRightPanel: Function
 }
@@ -98,7 +99,7 @@ export const DiscoverCommuninicationChannel = new Subject<{
     data: InfluencerItem[]
 }>()
 
-const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, rightPanel }) => {
+const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, rightPanel, setSelectedDb }) => {
     const theme = useTheme()
     const colors = Colors(theme)
     const styles = useMemo(() => useStyles(colors), [colors])
@@ -198,7 +199,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
     if (data.length == 0) {
         if (xl)
             return <View style={{ flex: 1, minWidth: 0 }}>
-                <DiscoverPlaceholder selectedDb={selectedDb} />
+                <DiscoverPlaceholder selectedDb={selectedDb} setSelectedDb={setSelectedDb} />
             </View>
         else
             return null
