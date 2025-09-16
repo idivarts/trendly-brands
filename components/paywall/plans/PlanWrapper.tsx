@@ -1,10 +1,12 @@
 // import pricingPage from "@/app/(landing)/pricing-page";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
@@ -102,8 +104,13 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
     const { openModal } = useConfirmationModel()
     const router = useMyNavigation()
+    const { manager } = useAuthContext()
 
     const handleSubmit = async (planKey: typeof PLANS[number]["key"]) => {
+        if (manager?.isAdmin) {
+            Toaster.success("Creating Custom link")
+            return
+        }
         try {
             if (planKey == "enterprise") {
                 openModal({
@@ -256,7 +263,8 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         ]}
                     >
                         <Text style={currentPlan ? styles.buyTextCurrent : (plan.preferred ? styles.buyText : styles.buyTextAlt)}>
-                            {currentPlan ? "Current Plan" : `Start ${plan.name} Plan`}
+                            {currentPlan ? "Current Plan" :
+                                (manager?.isAdmin ? `Create Custom Link` : `Start ${plan.name} Plan`)}
                         </Text>
                     </Pressable>)
                     return (
