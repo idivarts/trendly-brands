@@ -18,8 +18,9 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from "react-native";
+import { CreateCustomLinkModal } from "../CustomPlanModal";
 
 export type PlanKey = 'starter' | 'growth' | 'pro' | 'enterprise'
 export type BillingCycle = "yearly" | "monthly";
@@ -101,6 +102,8 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error">("loading");
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+    const [customModalVisible, setCustomModalVisible] = useState(false);
+    const [customPlanKey, setCustomPlanKey] = useState<PlanKey | null>(null);
 
     const { openModal } = useConfirmationModel()
     const router = useMyNavigation()
@@ -108,8 +111,9 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
     const handleSubmit = async (planKey: typeof PLANS[number]["key"]) => {
         if (manager?.isAdmin) {
-            Toaster.success("Creating Custom link")
-            return
+            setCustomPlanKey(planKey as PlanKey);
+            setCustomModalVisible(true);
+            return;
         }
         try {
             if (planKey == "enterprise") {
@@ -252,9 +256,13 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                     const BuyButton = (<Pressable
                         onPress={() => {
                             if (currentPlan) {
-                                window.open(selectedBrand?.billing?.subscriptionUrl, "_blank")
-                            } else
-                                handleSubmit(plan.key)
+                                window.open(selectedBrand?.billing?.subscriptionUrl, "_blank");
+                            } else if (manager?.isAdmin) {
+                                setCustomPlanKey(plan.key as PlanKey);
+                                setCustomModalVisible(true);
+                            } else {
+                                handleSubmit(plan.key);
+                            }
                         }}
                         disabled={currentPlan}
                         style={({ pressed }) => [
@@ -391,6 +399,20 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                     </View>
                 </View>
             </Modal>
+            {/* Custom Link Modal for Admins */}
+            <CreateCustomLinkModal
+                visible={customModalVisible}
+                onClose={() => setCustomModalVisible(false)}
+                planKey={customPlanKey ?? (PLANS[0].key as PlanKey)}
+                planCycle={billing}
+                onSubmit={(payload) => {
+                    // Placeholder submit hook - wire to your API if needed
+                    // Example:
+                    // HttpWrapper.fetch('/razorpay/custom-link/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                    Toaster.success("Custom link configuration ready");
+                    setCustomModalVisible(false);
+                }}
+            />
         </View>
     );
 };
@@ -585,3 +607,4 @@ const stylesFn = (theme: Theme) => {
         pressed: { opacity: 0.9 },
     })
 };
+
