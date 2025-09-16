@@ -18,22 +18,22 @@ import { BillingCycle, PlanKey } from "./plans/PlanWrapper";
 /* ======================= Custom Link Modal ======================= */
 
 type PaymentType = "subscription" | "one-time";
+export type IAdminData = {
+    isOnTrial: boolean;
+    trialDays?: number;
+    email: string;
+    phone?: string;
+    password: string;
+    offerId?: string;
+    oneTimePayment?: number;
+}
 
 interface CreateCustomLinkModalProps {
     visible: boolean;
     onClose: () => void;
     planKey: PlanKey;
     planCycle: BillingCycle;
-    onSubmit: (payload: {
-        isOnTrial: boolean;
-        trialDays?: number;
-        contact: { email: string; phone: string; password: string };
-        paymentType: PaymentType;
-        planKey: PlanKey;
-        planCycle: BillingCycle;
-        offerId?: string;
-        amount?: number;
-    }) => void;
+    onSubmit: (adminData: IAdminData, planKey: PlanKey, planCycle: BillingCycle) => void;
 }
 
 export function CreateCustomLinkModal(props: CreateCustomLinkModalProps) {
@@ -63,13 +63,10 @@ export function CreateCustomLinkModal(props: CreateCustomLinkModalProps) {
         onSubmit({
             isOnTrial,
             trialDays: isOnTrial ? Number(trialDays) : undefined,
-            contact: { email: email.trim(), phone: phone.trim(), password: password.trim() },
-            paymentType,
-            planKey,
-            planCycle,
+            email: email.trim(), phone: phone.trim(), password: password.trim(),
             offerId: paymentType === "subscription" && offerId.trim() ? offerId.trim() : undefined,
-            amount: paymentType === "one-time" ? Number(amount) : undefined,
-        });
+            oneTimePayment: paymentType === "one-time" ? Number(amount) : undefined,
+        }, planKey, planCycle,);
     };
 
     return (
