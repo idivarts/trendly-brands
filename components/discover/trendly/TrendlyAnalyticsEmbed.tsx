@@ -3,7 +3,7 @@ import { View } from '@/shared-uis/components/theme/Themed'
 import { Brand } from '@/types/Brand'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Image, Linking, ScrollView } from 'react-native'
-import { ActivityIndicator, Avatar, Card, Chip, Divider, List, Text } from 'react-native-paper'
+import { ActivityIndicator, Card, Chip, Divider, List, Text } from 'react-native-paper'
 import { InfluencerItem, StatChip } from '../DiscoverInfluencer'
 
 export interface ILink {
@@ -64,7 +64,18 @@ export interface ISocials {
     creation_time: number;
     last_update_time: number;
 }
-
+interface ISocialAnalytics {
+    quality: number;
+    trustablity: number;
+    estimatedBudget: {
+        min: number;
+        max: number;
+    };
+    estimatedReach: {
+        min: number;
+        max: number;
+    };
+}
 interface IProps {
     influencer: InfluencerItem
     selectedBrand: Brand
@@ -73,6 +84,7 @@ interface IProps {
 const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) => {
     const [loading, setLoading] = useState(false)
     const [social, setSocial] = useState<ISocials | null>(null)
+    const [analytics, setAnalytics] = useState<ISocialAnalytics | null>(null)
 
     const loadInfluencer = async () => {
         try {
@@ -85,7 +97,10 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             }).then(async (res) => res.json())
 
             const s = body.social as ISocials | undefined
+            const a = body.analysis as ISocialAnalytics | undefined
+
             if (s) setSocial(s)
+            if (a) setAnalytics(a)
         } catch (e) {
             // no-op; you can hook to your toast/snackbar here
         } finally {
@@ -113,6 +128,15 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
     const formatPercent = (p?: number | null) => {
         if (p === null || p === undefined) return '—'
         return `${(p * 100).toFixed(2)}%`
+    }
+
+    const formatCurrency = (n?: number | null) => {
+        if (n === null || n === undefined) return '—'
+        try {
+            return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'INR', notation: 'compact', maximumFractionDigits: 1 }).format(n)
+        } catch {
+            return `₹${formatNumber(n)}`
+        }
     }
 
     const formatDate = (epoch?: number | null) => {
@@ -144,17 +168,51 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             {!loading && social && (
                 <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
                     {/* Header */}
+                    {analytics && (
+                        <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                                <Card style={{ width: '48%', marginBottom: 12 }}>
+                                    <Card.Content>
+                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Quality</Text>
+                                        <Text variant="displaySmall">{analytics.quality}/100</Text>
+                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Higher = richer, classy, aesthetic creators</Text>
+                                    </Card.Content>
+                                </Card>
+
+                                <Card style={{ width: '48%', marginBottom: 12 }}>
+                                    <Card.Content>
+                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Trustability</Text>
+                                        <Text variant="displaySmall">{analytics.trustablity}/100</Text>
+                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Signals from past collabs, engagement quality</Text>
+                                    </Card.Content>
+                                </Card>
+
+                                <Card style={{ width: '48%', marginBottom: 12 }}>
+                                    <Card.Content>
+                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Estimated Budget</Text>
+                                        <Text variant="headlineLarge">
+                                            {formatCurrency(analytics.estimatedBudget?.min)} — {formatCurrency(analytics.estimatedBudget?.max)}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Typical creator ask for one deliverable</Text>
+                                    </Card.Content>
+                                </Card>
+
+                                <Card style={{ width: '48%', marginBottom: 12 }}>
+                                    <Card.Content>
+                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Estimated Reach</Text>
+                                        <Text variant="headlineLarge">
+                                            {formatNumber(analytics.estimatedReach?.min)} — {formatNumber(analytics.estimatedReach?.max)}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Projected unique views per post</Text>
+                                    </Card.Content>
+                                </Card>
+                            </View>
+                        </View>
+                    )}
                     <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
                         <Card.Title
                             title={social.name || social.username}
                             subtitle={[social.username ? `@${social.username}` : '', social.category].filter(Boolean).join(' · ')}
-                            left={(props) => (
-                                social.profile_pic ? (
-                                    <Avatar.Image {...props} size={44} source={{ uri: social.profile_pic }} />
-                                ) : (
-                                    <Avatar.Icon {...props} size={44} icon="account" />
-                                )
-                            )}
                             right={(props) => (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}>
                                     {social.profile_verified && <Chip compact icon="check-decagram" style={{ marginRight: 6 }}>Verified</Chip>}

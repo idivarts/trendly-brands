@@ -309,10 +309,10 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
 
       console.log("Evaluation Paywall condition", (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted));
 
-      if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) {
+      if (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted
+        && (!selectedBrand.billing?.isOnTrial || (selectedBrand.billing?.isOnTrial && (selectedBrand.billing.trialEnds || 0) < Date.now()))
+      ) {
         router.resetAndNavigate("/pay-wall")
-      } else if (pathName == "pay-wall") {
-        router.resetAndNavigate("/discover")
       }
     }
   }, [selectedBrand])

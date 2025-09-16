@@ -2,7 +2,6 @@ import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import {
@@ -26,8 +25,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
@@ -220,59 +220,20 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
         </View>
 
         {/* Promotional Banner */}
-        {selectedBrand && (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted) &&
-          < LinearGradient
-            colors={['#3b82f6', '#8b5cf6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{
-              borderRadius: 12,
-              padding: 16,
-              marginHorizontal: 8,
-              marginBottom: 12,
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: 14,
-                marginBottom: 4,
-              }}
-            >
-              You’re on the Free Plan
-            </Text>
-            <Text
-              style={{
-                color: 'rgba(255,255,255,0.85)',
-                fontSize: 12,
-                marginBottom: 12,
-              }}
-            >
-              Upgrade now to keep your community access
-            </Text>
-            <Pressable
-              onPress={() => router.push("/billing")}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.4)',
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 20,
-                alignSelf: 'flex-start',
-              })}
-            >
-              <Text
-                style={{
-                  color: 'white',
-                  fontWeight: '600',
-                  fontSize: 13,
-                }}
-              >
-                Upgrade Now
-              </Text>
-            </Pressable>
-          </LinearGradient>}
+        {selectedBrand && (!selectedBrand.isBillingDisabled) &&
+          <>
+            {!selectedBrand.billing && <RenderBanner title="You’re on the Free Plan"
+              description="Upgrade now to keep your community access"
+              buttonText="Upgrade Now" />}
+            {(selectedBrand.billing?.isOnTrial && (selectedBrand.billing?.trialEnds || 0) > Date.now()) && <RenderBanner title={`You’re on ${selectedBrand.billing.planKey} plan's Trial`}
+              description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(((selectedBrand.billing?.trialEnds || 0) - Date.now()) / (1000 * 60 * 60))} hours`}
+              buttonText="Pay Now"
+              customUrl={selectedBrand.billing.subscriptionUrl} />}
+            {(selectedBrand.billing?.isOnTrial && (selectedBrand.billing?.trialEnds || 0) <= Date.now()) && <RenderBanner title={`You’re Trial has Ended`}
+              description={`To keep using the platform, please pay for the subscription plan`}
+              buttonText="Pay Now"
+              customUrl={selectedBrand.billing.subscriptionUrl} />}
+          </>}
 
         {/* Brand Details Section */}
         <View style={{ marginTop: 16, gap: 8 }}>
@@ -330,5 +291,65 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     </View >
   );
 };
+
+const RenderBanner = (props: { title: string, description: string, buttonText: string, customUrl?: string }) => {
+  return < LinearGradient
+    colors={['#3b82f6', '#8b5cf6']}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+    style={{
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 8,
+      marginBottom: 12,
+      justifyContent: 'center',
+    }}
+  >
+    <Text
+      style={{
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 14,
+        marginBottom: 4,
+      }}
+    >
+      {props.title}
+    </Text>
+    <Text
+      style={{
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 12,
+        marginBottom: 12,
+      }}
+    >
+      {props.description}
+    </Text>
+    <Pressable
+      onPress={() => {
+        if (props.customUrl)
+          Linking.openURL(props.customUrl)
+        else
+          router.push("/billing")
+      }}
+      style={({ pressed }) => ({
+        backgroundColor: pressed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.4)',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        alignSelf: 'flex-start',
+      })}
+    >
+      <Text
+        style={{
+          color: 'white',
+          fontWeight: '600',
+          fontSize: 13,
+        }}
+      >
+        {props.buttonText}
+      </Text>
+    </Pressable>
+  </LinearGradient>
+}
 
 export default DrawerMenuContentWeb;

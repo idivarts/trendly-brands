@@ -3,6 +3,7 @@ import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import PlanWrapper from "@/components/paywall/plans/PlanWrapper";
+import BrandSwitcher, { OpenBrandSwitcher } from "@/components/ui/brand-switcher";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
@@ -17,6 +18,7 @@ import { collection, doc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -28,7 +30,7 @@ import { ExplainerDynamic } from "../ExplainerDynamic";
 
 
 export default function PricingPage() {
-    const { selectedBrand, updateBrand } = useBrandContext()
+    const { selectedBrand, updateBrand, brands } = useBrandContext()
     const router = useMyNavigation()
     const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountPercentage } = useMyGrowthBook()
 
@@ -147,20 +149,6 @@ export default function PricingPage() {
         }
     }
 
-    const YEARLY_FEATURES = businessFeatures ? businessFeatures : [
-        "Unlimited collaboration postings",
-        "Guaranteed Influencer Availability",
-        "Fraud Protection & Recovery Assistance",
-        "Fast‑Track Customer Support",
-        "First collaboration handled by us (worth ₹1,500)",
-    ];
-
-    const MONTHLY_FEATURES = growthFeatures ? growthFeatures : [
-        "5 collaborations per month",
-        "Unlimited invites & applications",
-        "Unlimited hiring contracts",
-    ];
-
     const explainerConfig: ExplainerConfig = pricingPage ? pricingPage : {
         kicker: "PRICING & PLANS",
         title: `Chose your {plan} for <BRAND_NAME>`
@@ -174,7 +162,25 @@ export default function PricingPage() {
                 bounces={false}
                 showsVerticalScrollIndicator={false}
             >
-                <LandingHeader />
+                <LandingHeader>
+                    {brands.length > 1 &&
+                        <View style={{ flex: 1, alignItems: "flex-start", justifyContent: "center", marginLeft: 16 }}>
+                            <Pressable
+                                onPress={() => {
+                                    OpenBrandSwitcher.next(undefined);
+                                }}
+                            >
+                                <View style={styles.brandDropdown}>
+                                    <Text style={styles.brandName}>
+                                        {selectedBrand?.name ?? "Brand"}
+                                    </Text>
+                                    {/* Quick switcher (if available on layout) */}
+                                    <BrandSwitcher />
+                                </View>
+                            </Pressable>
+                        </View>}
+                </LandingHeader>
+
 
                 {/* Main Hero - Explainer (left) + Form (right) */}
                 <View style={[styles.hero, isWide ? styles.heroRow : styles.heroCol]}>
@@ -271,46 +277,48 @@ export default function PricingPage() {
                 <LandingFooter />
             </ScrollView>
 
-            {link != undefined && (
-                <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    height: '100%',
-                    width: '100%',
-                    justifyContent: 'center',
-                    backgroundColor: "white",
-                    alignItems: 'center',
-                    zIndex: 1000,
-                    padding: 16,
-                    gap: 16
-                }}>
-                    <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
-                    <ActivityIndicator size={"large"} />
-                    <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
-                        Redirecting you to the payment page. Please wait...
-                    </Text>
+            {
+                link != undefined && (
+                    <View style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        height: '100%',
+                        width: '100%',
+                        justifyContent: 'center',
+                        backgroundColor: "white",
+                        alignItems: 'center',
+                        zIndex: 1000,
+                        padding: 16,
+                        gap: 16
+                    }}>
+                        <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
+                        <ActivityIndicator size={"large"} />
+                        <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
+                            Redirecting you to the payment page. Please wait...
+                        </Text>
 
-                    {!loading && planLinks[link] && (
-                        <View style={{ flexDirection: "row", gap: 12, marginTop: 44 }}>
-                            <Text style={{ fontSize: 16 }}>
-                                If you didn’t redirect automatically
-                            </Text>
-                            <Text
-                                style={{ fontSize: 16, color: 'blue', textDecorationLine: 'underline' }}
-                                onPress={() => {
-                                    if (Platform.OS === 'web') {
-                                        window.open(planLinks[link], '_blank')
-                                    }
-                                }}
-                            >
-                                Click Here
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            )}
-        </AppLayout>
+                        {!loading && planLinks[link] && (
+                            <View style={{ flexDirection: "row", gap: 12, marginTop: 44 }}>
+                                <Text style={{ fontSize: 16 }}>
+                                    If you didn’t redirect automatically
+                                </Text>
+                                <Text
+                                    style={{ fontSize: 16, color: 'blue', textDecorationLine: 'underline' }}
+                                    onPress={() => {
+                                        if (Platform.OS === 'web') {
+                                            window.open(planLinks[link], '_blank')
+                                        }
+                                    }}
+                                >
+                                    Click Here
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )
+            }
+        </AppLayout >
     );
 }
 
@@ -502,5 +510,28 @@ const styles = StyleSheet.create({
 
     /* Compare hint */
     compareHint: { marginTop: 12, color: '#6C7A89', fontSize: 12 },
-});
 
+    brandDropdown: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#E1E6EE',
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        ...Platform.select({ android: { elevation: 2 }, web: { cursor: 'pointer' } }),
+    },
+    brandName: {
+        fontSize: 18,
+        fontWeight: '700',
+        paddingVertical: 6,
+        marginRight: 6,
+        color: TEXT,
+    },
+});
