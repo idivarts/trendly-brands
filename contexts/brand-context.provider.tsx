@@ -78,7 +78,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     const sBrandRef = doc(collection(FirestoreDB, "brands"), selectedBrand.id)
     const unsubscribe = onSnapshot(sBrandRef, (snapshot) => {
       const bData = snapshot.data() as IBrands
-      setSelectedBrandHandler({ ...bData, id: selectedBrand.id })
+      setSelectedBrandHandler({ ...bData, id: selectedBrand.id }, false)
     })
     return () => {
       unsubscribe()
@@ -103,7 +103,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         if (membersSnapshot.empty) {
           Console.log("No members found for this manager");
           setBrands([]);
-          setSelectedBrandHandler(undefined);
+          setSelectedBrandHandler(undefined, false);
           return;
         }
 
@@ -124,7 +124,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
         if (brandIds.size === 0) {
           Console.log("No brands associated with this manager");
           setBrands([]);
-          setSelectedBrandHandler(undefined);
+          setSelectedBrandHandler(undefined, false);
           return;
         }
 
@@ -197,7 +197,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
             ...selectedBrand.credits,
             influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
           }
-        })
+        }, false)
         Console.log("Unlocked Influencer", [...influencerSet]);
 
         IS_MONETIZATION_DONE &&
