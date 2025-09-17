@@ -108,7 +108,8 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null)
     const [statsItem, setStatsItemNative] = useState<InfluencerItem | null>(null)
     const setStatsItem = (data: InfluencerItem | null) => {
-        if ((selectedBrand?.credits?.discovery || 0) <= 0 && data) {
+        if ((selectedBrand?.credits?.discovery || 0) <= 0 && data
+            && !selectedBrand?.discoveredInfluencers?.includes(data.userId)) {
             openModal({
                 title: "No Discovery Credit",
                 description: "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
@@ -119,6 +120,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
             })
             return
         }
+
         setStatsItemNative(data)
     }
 
