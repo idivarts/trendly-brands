@@ -163,7 +163,7 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
                             <View style={styles.statsRow}>
                                 <StatChip label="Followers" value={item.followers} />
                                 <StatChip label="Engagements" value={item.engagements} />
-                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
+                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0))} />
                                 <StatChip label="Reel Plays" value={item.views} />
                             </View>
                         </View>
