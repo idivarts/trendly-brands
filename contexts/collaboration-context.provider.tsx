@@ -7,6 +7,8 @@ import {
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { Collaboration } from "@/types/Collaboration";
 import {
   addDoc,
@@ -15,6 +17,7 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
+import { useBrandContext } from "./brand-context.provider";
 
 interface CollaborationContextProps {
   getCollaborationById: (id: string) => Promise<Collaboration>;
@@ -29,6 +32,11 @@ export const useCollaborationContext = () => useContext(CollaborationContext);
 export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
+
+  const { selectedBrand } = useBrandContext()
+  const { openModal } = useConfirmationModel()
+  const router = useMyNavigation();
+
   const getCollaborationById = async (
     id: string,
   ): Promise<Collaboration> => {
@@ -43,6 +51,17 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
   const createCollaboration = async (
     collaboration: Partial<ICollaboration>,
   ): Promise<void> => {
+    if ((selectedBrand?.credits?.collaboration || 0) <= 0) {
+      openModal({
+        title: "No Collaboration Credit",
+        description: "You seem to have exhausted the collaboration credit. Contact support or upgrade your plan to recharge the credits",
+        confirmText: "Upgrade Plan",
+        confirmAction: () => {
+          router.push("/billing")
+        }
+      })
+      return;
+    }
     const collaborationRef = collection(FirestoreDB, "collaborations");
 
     const collabDoc = await addDoc(collaborationRef, collaboration);
