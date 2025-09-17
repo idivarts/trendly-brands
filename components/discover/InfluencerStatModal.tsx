@@ -1,7 +1,7 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
 import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
-import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import { Theme, useTheme } from '@react-navigation/native'
 import React from 'react'
@@ -34,6 +34,21 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
     const theme = useTheme()
     const styles = useStatsModalStyles(theme)
     const { selectedBrand } = useBrandContext()
+    const { openModal } = useConfirmationModel()
+
+    const sendInvite = () => {
+        if ((selectedBrand?.credits?.connection || 0) <= 0) {
+            openModal({
+                title: "No Connection Credit",
+                description: "You seem to have exhausted the connection credit. Contact support for recharging the credit",
+                confirmText: "Contact Support",
+                confirmAction: () => {
+                    Linking.openURL("mailto:support@idiv.in")
+                }
+            })
+            return
+        }
+    }
 
     return (
         <Portal>
@@ -48,9 +63,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                             <Card.Title title={item?.fullname} subtitle={item ? `@${item.username}` : undefined} />
                         </View>
                         <Card.Actions>
-                            <Button mode="contained" onPress={() => {
-                                Toaster.success("Our team is notifed", "We are working to bring the influencer in your contact")
-                            }}>Invite</Button>
+                            <Button mode="contained" onPress={() => sendInvite()}>Invite</Button>
                             <IconButton icon="open-in-new" onPress={() => item?.url && Linking.openURL(item.url)} />
                             <IconButton icon="close" onPress={onClose} />
                         </Card.Actions>

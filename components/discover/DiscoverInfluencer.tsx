@@ -1,5 +1,6 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
+import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
 import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
@@ -105,12 +106,27 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
     const styles = useMemo(() => useStyles(colors), [colors])
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null)
-    const [statsItem, setStatsItem] = useState<InfluencerItem | null>(null)
+    const [statsItem, setStatsItemNative] = useState<InfluencerItem | null>(null)
+    const setStatsItem = (data: InfluencerItem | null) => {
+        if ((selectedBrand?.credits?.discovery || 0) <= 0 && data) {
+            openModal({
+                title: "No Discovery Credit",
+                description: "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
+                confirmText: "Contact Support",
+                confirmAction: () => {
+                    Linking.openURL("mailto:support@idiv.in")
+                }
+            })
+            return
+        }
+        setStatsItemNative(data)
+    }
 
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState<InfluencerItem[]>([])
 
     const { selectedBrand } = useBrandContext()
+    const { openModal } = useConfirmationModel()
 
     const { xl } = useBreakpoints()
 
@@ -147,8 +163,8 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
                             <View style={styles.statsRow}>
                                 <StatChip label="Followers" value={item.followers} />
                                 <StatChip label="Engagements" value={item.engagements} />
-                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0) * 100)} />
-                                <StatChip label="Reel Plays" value={item.views} />
+                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0))} />
+                                <StatChip label="Views" value={item.views} />
                             </View>
                         </View>
 
