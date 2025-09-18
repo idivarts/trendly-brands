@@ -26,7 +26,7 @@ const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
         backgroundColor: Colors(theme).modalBackground,
     },
     row: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    avatar: { width: 64, height: 64, borderRadius: 8, marginRight: 12 },
+    avatar: { width: 64, height: 64, borderRadius: 8, marginRight: 12, backgroundColor: Colors(theme).primary },
     chip: { marginRight: 6, marginBottom: 6 },
 })
 
