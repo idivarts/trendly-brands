@@ -75,6 +75,7 @@ interface ISocialAnalytics {
         min: number;
         max: number;
     };
+    cpm: number
 }
 interface IProps {
     influencer: InfluencerItem
@@ -171,19 +172,26 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                     {analytics && (
                         <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                                <Card style={{ width: '48%', marginBottom: 12 }}>
+                                <Card style={{ width: '31%', marginBottom: 12 }}>
                                     <Card.Content>
                                         <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Quality</Text>
-                                        <Text variant="displaySmall">{analytics.quality}/100</Text>
+                                        <Text variant="displaySmall">{analytics.quality}</Text>
                                         <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Higher = richer, classy, aesthetic creators</Text>
                                     </Card.Content>
                                 </Card>
 
-                                <Card style={{ width: '48%', marginBottom: 12 }}>
+                                <Card style={{ width: '31%', marginBottom: 12 }}>
                                     <Card.Content>
                                         <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Trustability</Text>
-                                        <Text variant="displaySmall">{analytics.trustablity}/100</Text>
+                                        <Text variant="displaySmall">{analytics.trustablity}</Text>
                                         <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Signals from past collabs, engagement quality</Text>
+                                    </Card.Content>
+                                </Card>
+                                <Card style={{ width: '31%', marginBottom: 12 }}>
+                                    <Card.Content>
+                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>CPM</Text>
+                                        <Text variant="displaySmall">{formatCurrency(analytics.cpm)} </Text>
+                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Cost per Mille (1000 views)</Text>
                                     </Card.Content>
                                 </Card>
 

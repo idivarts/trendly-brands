@@ -5,7 +5,7 @@ import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { Theme, useTheme } from '@react-navigation/native'
 import React from 'react'
-import { Linking, ScrollView, StyleSheet } from 'react-native'
+import { Dimensions, Linking, ScrollView, StyleSheet } from 'react-native'
 import { Button, Card, Divider, IconButton, Modal, Portal } from 'react-native-paper'
 import Toast from 'react-native-toast-message'
 import { InfluencerItem } from './DiscoverInfluencer'
@@ -16,7 +16,7 @@ const useStatsModalStyles = (theme: Theme) => StyleSheet.create({
     container: {
         alignSelf: 'center',
         width: 650,
-        maxHeight: "90%",
+        maxHeight: "95%",
         maxWidth: '92%',
         marginVertical: 16,
     },
@@ -69,7 +69,7 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
                         </Card.Actions>
                     </View>
                     <Divider style={{ marginBottom: 16 }} />
-                    <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ flex: 1, marginBottom: 24 }}>
+                    <ScrollView style={{ maxHeight: Dimensions.get("window").height * 0.8 }} contentContainerStyle={{ flex: 1, marginBottom: 24 }}>
                         {(selectedDb == "trendly" && item && selectedBrand) && <TrendlyAnalyticsEmbed influencer={item} selectedBrand={selectedBrand} />}
                     </ScrollView>
                 </Card>
