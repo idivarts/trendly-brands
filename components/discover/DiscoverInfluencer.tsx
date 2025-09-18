@@ -65,7 +65,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
         justifyContent: 'center',
         gap: 6,
     },
-    avatar: { width: 56, height: 56, borderRadius: 10 },
+    avatar: { width: 56, height: 56, borderRadius: 10, backgroundColor: colors.primary },
     content: { paddingHorizontal: 8, paddingVertical: 8 },
     fullScreenLoader: {
         flex: 1,
