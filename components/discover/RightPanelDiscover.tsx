@@ -49,7 +49,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWra
                 setShowFilters(true)
             }
         })
-        if (selectedDb != "") {
+        if (selectedDb == "trendly") {
             setShowFilters(true)
         }
         return () => {

@@ -5,7 +5,7 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 
 const DiscoverInfluencersScreen = () => {
@@ -16,12 +16,7 @@ const DiscoverInfluencersScreen = () => {
 
     const { xl } = useBreakpoints()
 
-    const planKey = selectedBrand?.billing?.planKey
-    const [selectedDb, setSelectedDb] = useState<DB_TYPE>((planKey != "pro" && planKey != "enterprise") ? '' : (planKey == "pro" ? 'trendly' : "phyllo"))
-
-    useEffect(() => {
-        setSelectedDb((planKey != "pro" && planKey != "enterprise") ? '' : (planKey == "pro" ? 'trendly' : "phyllo"))
-    }, [selectedBrand])
+    const [selectedDb, setSelectedDb] = useState<DB_TYPE>("trendly")
 
     if (!manager || !selectedBrand || !selectedBrand.id)
         return <ActivityIndicator />
