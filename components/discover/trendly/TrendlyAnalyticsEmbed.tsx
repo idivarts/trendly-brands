@@ -275,7 +275,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                                 <StatChip label="Median Views" value={social.average_views} />
                                 <StatChip label="Median Likes" value={social.average_likes} />
                                 <StatChip label="Median Comments" value={social.average_comments} />
-                                <StatChip label="Engagement Rate %" value={(social.engagement_rate || 0) * 100} />
+                                <StatChip label="Engagement Rate %" value={(social.engagement_rate || 0)} />
                                 <StatChip label="Quality Score" value={social.quality_score} />
                             </View>
                         </Card.Content>
