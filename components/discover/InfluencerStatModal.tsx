@@ -48,6 +48,14 @@ export const InfluencerStatsModal: React.FC<{ visible: boolean; item: Influencer
             })
             return
         }
+        openModal({
+            title: "Feature is Underway",
+            description: "We are working on this feature. Please contact support to know more about it and also to get the timeline for this",
+            confirmText: "Contact Support",
+            confirmAction: () => {
+                Linking.openURL("mailto:support@idiv.in")
+            }
+        })
     }
 
     return (
