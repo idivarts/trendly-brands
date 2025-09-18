@@ -175,7 +175,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                                 <Card style={{ width: '31%', marginBottom: 12 }}>
                                     <Card.Content>
                                         <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Quality</Text>
-                                        <Text variant="displaySmall">{analytics.quality}</Text>
+                                        <Text variant="displaySmall">{analytics.quality}<Text variant="labelLarge">%</Text></Text>
                                         <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Higher = richer, classy, aesthetic creators</Text>
                                     </Card.Content>
                                 </Card>
@@ -183,7 +183,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                                 <Card style={{ width: '31%', marginBottom: 12 }}>
                                     <Card.Content>
                                         <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Trustability</Text>
-                                        <Text variant="displaySmall">{analytics.trustablity}</Text>
+                                        <Text variant="displaySmall">{analytics.trustablity}<Text variant="labelLarge">%</Text></Text>
                                         <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Signals from past collabs, engagement quality</Text>
                                     </Card.Content>
                                 </Card>
