@@ -1,12 +1,16 @@
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
 import RightPanelDiscover, { DB_TYPE } from "@/components/discover/RightPanelDiscover";
+import FullScreenIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
+import { Subject } from "rxjs";
+
+export const OpenFilterRightPanel = new Subject()
 
 const DiscoverInfluencersScreen = () => {
     const { manager } = useAuthContext()
@@ -18,8 +22,21 @@ const DiscoverInfluencersScreen = () => {
 
     const [selectedDb, setSelectedDb] = useState<DB_TYPE>("trendly")
 
+    useEffect(() => {
+        const unsubs = OpenFilterRightPanel.subscribe(() => {
+            setRightPanel(true)
+        })
+        return () => unsubs.unsubscribe()
+    }, [])
+
     if (!manager || !selectedBrand || !selectedBrand.id)
         return <ActivityIndicator />
+
+    const b = false;
+
+    if (b)
+        return <FullScreenIllustration />
+
 
     return (
         <AppLayout>

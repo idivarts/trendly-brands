@@ -5,18 +5,14 @@ import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { maskHandle } from '@/shared-uis/utils/masks'
-import { faFilter } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { FlatList, Linking, ListRenderItemInfo, Pressable, StyleSheet } from 'react-native'
+import { FlatList, Linking, ListRenderItemInfo, StyleSheet } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
 import { Subject } from 'rxjs'
-import ScreenHeader from '../ui/screen-header'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
 import { InfluencerStatsModal } from './InfluencerStatModal'
 import { DB_TYPE } from './RightPanelDiscover'
-import { PremiumActionTag } from './components/PremiumActionTag'
 
 // Types
 export interface InfluencerItem {
@@ -201,9 +197,6 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
         []
     )
 
-    const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
-    const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
-
     if (loading && data.length === 0) {
         // Full screen loader when we're fetching the first page
         return (
@@ -227,35 +220,6 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
         <View style={[{ flex: 1, minWidth: 0 }, (!xl && rightPanel) && {
             display: "none"
         }]}>
-            <ScreenHeader title={
-                selectedDb == "trendly" ? "Trendly Internal Discovery" :
-                    (selectedDb == "phyllo" ? "Phyllo Discovery" : "Modash Discovery")
-            } hideAction={true}
-                rightAction={true}
-                rightActionButton={
-                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
-                        <PremiumActionTag
-                            label="Discovery remaining"
-                            tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
-                            icon="diamond-stone"
-                            variant="gold"
-                            count={discoverCoinsLeft}
-                        />
-                        <PremiumActionTag
-                            label="Invites remaining"
-                            tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you invite any influencer.\n\nLimit recharges every month depending on what plan you are on"}
-                            icon="lightning-bolt"
-                            variant="purple"
-                            count={connectionCreditsLeft}
-                        />
-                        {!xl &&
-                            <Pressable onPress={() => {
-                                setRightPanel(true)
-                            }} style={{ marginLeft: 12 }}>
-                                <FontAwesomeIcon icon={faFilter} size={24} />
-                            </Pressable>}
-                    </View>
-                } />
             <View style={{ flex: 1 }}>
                 <FlatList
                     data={data}
