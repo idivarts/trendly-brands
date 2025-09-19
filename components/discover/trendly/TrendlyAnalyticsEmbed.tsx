@@ -1,7 +1,7 @@
 import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { View } from '@/shared-uis/components/theme/Themed'
 import { Brand } from '@/types/Brand'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Image, Linking, ScrollView } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, List, Text } from 'react-native-paper'
 import { InfluencerItem, StatChip } from '../DiscoverInfluencer'
@@ -149,12 +149,12 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
         }
     }
 
-    const primaryLink = useMemo(() => {
-        if (!social?.links?.length) return null
-        // Prefer profile-like links first
-        const profileLike = social.links.find(l => /instagram|tiktok|youtube|facebook|x\.com|twitter/i.test(l.url))
-        return profileLike || social.links[0]
-    }, [social])
+    // const primaryLink = useMemo(() => {
+    //     if (!social?.links?.length) return null
+    //     // Prefer profile-like links first
+    //     const profileLike = social.links.find(l => /instagram|tiktok|youtube|facebook|x\.com|twitter/i.test(l.url))
+    //     return profileLike || social.links[0]
+    // }, [social])
 
     return (
         <Card.Content>
@@ -224,11 +224,6 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
                             right={(props) => (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}>
                                     {social.profile_verified && <Chip compact icon="check-decagram" style={{ marginRight: 6 }}>Verified</Chip>}
-                                    {primaryLink && (
-                                        <Chip compact icon="open-in-new" onPress={() => Linking.openURL(primaryLink.url)}>
-                                            Open Profile
-                                        </Chip>
-                                    )}
                                 </View>
                             )}
                         />
