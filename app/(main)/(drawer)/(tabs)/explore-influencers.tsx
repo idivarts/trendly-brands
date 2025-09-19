@@ -5,7 +5,8 @@ import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import React, { useState } from "react";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 
 const ExploreInfluencersScreen = () => {
@@ -17,8 +18,18 @@ const ExploreInfluencersScreen = () => {
   const { xl } = useBreakpoints()
 
   const [fullIllustration, setFullIllustration] = useState(true)
+  useEffect(() => {
+    if (!selectedBrand)
+      return;
+    (async () => {
+      const x = await PersistentStorage.get(selectedBrand.id + "-explore")
+      setFullIllustration(!x)
+    })()
+  }, [selectedBrand])
+
   if (fullIllustration)
     return <FullInformationalIllustration action={() => {
+      PersistentStorage.set(selectedBrand?.id + "-explore", "true")
       setFullIllustration(false)
     }} config={{
       kicker: "Our Micro Creators",
