@@ -1,5 +1,6 @@
 import ExploreInfluencers from "@/components/explore-influencers";
 import RightPanel from "@/components/explore-influencers/RightPanel";
+import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -14,6 +15,10 @@ const ExploreInfluencersScreen = () => {
   const [connectedInfluencer, setConnectedInfluencer] = useState(false)
 
   const { xl } = useBreakpoints()
+
+  const b = true;
+  if (b)
+    return <FullInformationalIllustration />
 
   if (!manager && !preferences)
     return <ActivityIndicator />

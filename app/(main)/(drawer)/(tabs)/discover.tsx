@@ -1,6 +1,6 @@
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
 import RightPanelDiscover, { DB_TYPE } from "@/components/discover/RightPanelDiscover";
-import FullScreenIllustration from "@/components/FullScreenIllustration";
+import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -15,7 +15,6 @@ export const OpenFilterRightPanel = new Subject()
 const DiscoverInfluencersScreen = () => {
     const { manager } = useAuthContext()
     const { selectedBrand } = useBrandContext()
-    const preferences = selectedBrand?.preferences
     const [rightPanel, setRightPanel] = useState(true)
 
     const { xl } = useBreakpoints()
@@ -29,14 +28,12 @@ const DiscoverInfluencersScreen = () => {
         return () => unsubs.unsubscribe()
     }, [])
 
+    const b = true;
+    if (b)
+        return <FullInformationalIllustration />
+
     if (!manager || !selectedBrand || !selectedBrand.id)
         return <ActivityIndicator />
-
-    const b = false;
-
-    if (b)
-        return <FullScreenIllustration />
-
 
     return (
         <AppLayout>

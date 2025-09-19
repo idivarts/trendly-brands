@@ -28,7 +28,7 @@ const VIDEO_THUMB =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif";
 
 
-export default function FullScreenIllustration() {
+export default function FullInformationalIllustration() {
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
     const { features, discountEndTime } = useMyGrowthBook()

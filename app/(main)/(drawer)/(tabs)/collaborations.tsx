@@ -1,10 +1,10 @@
 import Collaborations from "@/components/collaborations";
-import FullScreenIllustration from "@/components/FullScreenIllustration";
+import FullInformationalIllustration from "@/components/FullScreenIllustration";
 
 const CollaborationsScreen = () => {
   const b = true;
   if (b)
-    return <FullScreenIllustration />
+    return <FullInformationalIllustration />
   return <Collaborations />;
 };
 
