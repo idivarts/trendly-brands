@@ -17,9 +17,7 @@ import {
     View
 } from "react-native";
 
-import OfferCard from "@/components/landing/OfferCard";
-import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
-import { FontAwesome } from "@expo/vector-icons";
+import { ExplainerConfig } from "@/contexts/growthbook-context-provider";
 import { ExplainerDynamic } from "./landing/ExplainerDynamic";
 import VideoPlayer from "./landing/VideoPlayer";
 
@@ -28,12 +26,14 @@ const VIDEO_THUMB =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif";
 
 
-export default function FullInformationalIllustration() {
+interface IIllustration {
+    config: ExplainerConfig
+    videoUrl: string,
+    action: Function
+}
+export default function FullInformationalIllustration(props: IIllustration) {
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
-    const { features, discountEndTime } = useMyGrowthBook()
-    const { features: { getStarted, actionType } } = useMyGrowthBook()
-
 
     const { width } = useWindowDimensions();
     const isWide = width >= 1000;
@@ -59,10 +59,7 @@ export default function FullInformationalIllustration() {
         router.resetAndNavigate("/create-brand");
     }
 
-    const config: ExplainerConfig = getStarted ? getStarted : {
-        title: "Find {Right Influencers} to promote your brand",
-        description: "Connect with the right influencers to increase your brand’s reach and engagement. Save on huge commissions you pay working with agencies and other middlemen!",
-    }
+    const config: ExplainerConfig = props.config
 
     useEffect(() => {
         // page enter animations (staggered)
@@ -107,7 +104,7 @@ export default function FullInformationalIllustration() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Hero */}
-                <View style={[styles.hero, { flex: 1, alignSelf: "center" }, isWide ? styles.heroRow : styles.heroCol]}>
+                <View style={[styles.hero, { flex: 1, alignSelf: "stretch" }, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left copy */}
                     <Animated.View style={[
                         isWide && styles.left,
@@ -117,10 +114,10 @@ export default function FullInformationalIllustration() {
                     >
                         <ExplainerDynamic
                             config={{ ...config, image: undefined }}
-                            viewBelowItems={getStarted?.showOfferCard && <OfferCard />}
+                            viewBelowItems={false}
                             viewAtBottom={<Pressable
                                 onPress={() => {
-
+                                    props.action()
                                 }}
                                 onHoverIn={() => setCtaHovered(true)}
                                 onHoverOut={() => setCtaHovered(false)}
@@ -129,12 +126,8 @@ export default function FullInformationalIllustration() {
                                     (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
                                 ]}
                             >
-                                {actionType != "demo" && (
-                                    <FontAwesome name="google" size={20} color="#fff" style={{ marginRight: 8 }} />
-                                )}
-                                <Text style={styles.ctaText}>{getStarted?.action || "Get Started"}</Text>
-                                {actionType == "demo" &&
-                                    <Text style={styles.ctaArrow}>›</Text>}
+                                <Text style={styles.ctaText}>{config?.action || "Get Started"}</Text>
+                                <Text style={styles.ctaArrow}>›</Text>
                             </Pressable>}
                         />
 
@@ -146,7 +139,7 @@ export default function FullInformationalIllustration() {
                         !isWide && { marginTop: 28 },
                         { opacity: videoOpacity, transform: [{ scale: videoScale }] },
                     ]}>
-                        <VideoPlayer videoLink={features.videoUrl} thumbnail={getStarted?.image || VIDEO_THUMB} />
+                        <VideoPlayer videoLink={props.videoUrl} thumbnail={config?.image || VIDEO_THUMB} />
                     </Animated.View>
 
                 </View>

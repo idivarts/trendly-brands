@@ -28,9 +28,20 @@ const DiscoverInfluencersScreen = () => {
         return () => unsubs.unsubscribe()
     }, [])
 
-    const b = true;
-    if (b)
-        return <FullInformationalIllustration />
+    const [fullIllustration, setFullIllustration] = useState(true)
+    if (fullIllustration)
+        return <FullInformationalIllustration action={() => {
+            setFullIllustration(false)
+        }} config={{
+            title: "{Advanced Filtering} of Public Instagram Profiles",
+            description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
+            action: "Discover Now",
+            items: [
+                "Micro Influencers (under 100k followers)",
+                "Trustablity and Budget Estimation",
+                "Know the estimated views beforehand"
+            ],
+        }} videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO" />
 
     if (!manager || !selectedBrand || !selectedBrand.id)
         return <ActivityIndicator />

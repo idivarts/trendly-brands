@@ -16,9 +16,16 @@ const ExploreInfluencersScreen = () => {
 
   const { xl } = useBreakpoints()
 
-  const b = true;
-  if (b)
-    return <FullInformationalIllustration />
+  const [fullIllustration, setFullIllustration] = useState(true)
+  if (fullIllustration)
+    return <FullInformationalIllustration action={() => {
+      setFullIllustration(false)
+    }} config={{
+      kicker: "Our Micro Creators",
+      title: "Showcasing {Trendly's Verified} Influencers!",
+      description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
+      action: "Explore Now"
+    }} videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO" />
 
   if (!manager && !preferences)
     return <ActivityIndicator />
