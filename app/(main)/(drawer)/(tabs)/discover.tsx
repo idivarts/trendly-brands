@@ -1,5 +1,6 @@
 import DiscoverInfluencer, { InfluencerItem } from "@/components/discover/DiscoverInfluencer";
 import RightPanelDiscover, { DB_TYPE } from "@/components/discover/RightPanelDiscover";
+import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -66,20 +67,21 @@ const DiscoverInfluencersScreen = () => {
         })()
     }, [selectedBrand])
 
-    // if (fullIllustration)
-    //     return <FullInformationalIllustration action={() => {
-    //         PersistentStorage.set(selectedBrand?.id + "-discover", "true")
-    //         setFullIllustration(false)
-    //     }} config={{
-    //         title: "{Advanced Filtering} of Public Instagram Profiles",
-    //         description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
-    //         action: "Discover Now",
-    //         items: [
-    //             "Micro Influencers (under 100k followers)",
-    //             "Trustablity and Budget Estimation",
-    //             "Know the estimated views beforehand"
-    //         ],
-    //     }} videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO" />
+    if (fullIllustration)
+        return <FullInformationalIllustration action={() => {
+            PersistentStorage.set(selectedBrand?.id + "-discover", "true")
+            setFullIllustration(false)
+        }} config={{
+            title: "{Advanced Filtering} for Instagram Profiles",
+            description: "Find the right influencer in seconds with powerful filters. Skip scrolling through hundreds of profiles — save time and connect with creators that truly fit your campaign.",
+            action: "Discover Now",
+            items: [
+                "Target Micro-Influencers (under 100k followers)",
+                "Trustability & Budget Insights",
+                "See Estimated Views Upfront"
+            ],
+            image: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1758395157_images-1758395157102-discovery tool walkthrough thumbnail.jpg"
+        }} videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO" />
 
     if (!manager || !selectedBrand || !selectedBrand.id)
         return <ActivityIndicator />
