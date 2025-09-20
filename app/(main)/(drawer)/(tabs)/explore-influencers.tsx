@@ -1,5 +1,6 @@
 import ExploreInfluencers from "@/components/explore-influencers";
 import RightPanel from "@/components/explore-influencers/RightPanel";
+import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -26,16 +27,17 @@ const ExploreInfluencersScreen = () => {
     })()
   }, [selectedBrand])
 
-  // if (fullIllustration)
-  //   return <FullInformationalIllustration action={() => {
-  //     PersistentStorage.set(selectedBrand?.id + "-explore", "true")
-  //     setFullIllustration(false)
-  //   }} config={{
-  //     kicker: "Our Micro Creators",
-  //     title: "Showcasing {Trendly's Verified} Influencers!",
-  //     description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
-  //     action: "Explore Now"
-  //   }} videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO" />
+  if (fullIllustration)
+    return <FullInformationalIllustration action={() => {
+      PersistentStorage.set(selectedBrand?.id + "-explore", "true")
+      setFullIllustration(false)
+    }} config={{
+      kicker: "Our Micro Creators",
+      title: "Showcasing {Trendly's Verified} Influencers!",
+      description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
+      action: "Explore Now",
+      image: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1758395180_images-1758395179311-influencer spotlight walkthrough.jpg"
+    }} videoUrl="https://www.youtube.com/embed/xwMq0tDKF98?si=8r0V2xKABRfnZlBN" />
 
   if (!manager && !preferences)
     return <ActivityIndicator />
