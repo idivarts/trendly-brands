@@ -117,7 +117,6 @@ const DiscoverInfluencer: React.FC = () => {
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number>(20);
     const [totalResults, setTotalResults] = useState<number>(0);
 
     const [sortMenuVisible, setSortMenuVisible] = useState(false);
@@ -215,14 +214,23 @@ const DiscoverInfluencer: React.FC = () => {
         return pages;
     }, [currentPage, pageCount]);
 
+    const { pageSortCommunication } = useDiscovery()
     const onSelectPage = useCallback((p: number) => {
         if (p < 1 || p > pageCount || p === currentPage) return;
         setCurrentPage(p);
+        pageSortCommunication.current?.({
+            page: p,
+            sort: currentSort
+        })
     }, [currentPage, pageCount]);
 
     const onSelectSort = useCallback((val: string) => {
         setCurrentSort(val);
         setSortMenuVisible(false);
+        pageSortCommunication.current?.({
+            page: currentPage,
+            sort: currentSort
+        })
     }, []);
 
     if (loading && data.length === 0) {
@@ -274,7 +282,7 @@ const DiscoverInfluencer: React.FC = () => {
                 />
                 <Divider />
                 {/* Header Bar: totals • pagination • sort */}
-                <View style={[styles.row, { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }]}>
+                <View style={[styles.row, { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 2, alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
                     {/* Left: Total results */}
                     <View style={[styles.row, { gap: 6 }]}>
                         <Text style={{ fontWeight: '600' }}>Total</Text>
@@ -287,7 +295,9 @@ const DiscoverInfluencer: React.FC = () => {
                             <IconButton icon="chevron-left" onPress={() => onSelectPage(currentPage - 1)} disabled={currentPage <= 1} accessibilityLabel="Previous page" />
                             {pageNumbers[0] > 1 && (
                                 <>
-                                    <Chip compact onPress={() => onSelectPage(1)}>1</Chip>
+                                    <Chip compact
+                                        mode={1 === currentPage ? 'flat' : 'outlined'}
+                                        onPress={() => onSelectPage(1)}>1</Chip>
                                     <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
                                 </>
                             )}
@@ -297,7 +307,6 @@ const DiscoverInfluencer: React.FC = () => {
                                     mode={p === currentPage ? 'flat' : 'outlined'}
                                     compact
                                     onPress={() => onSelectPage(p)}
-                                    style={{ height: 28 }}
                                 >
                                     <Text style={{ fontWeight: p === currentPage ? '700' : '500' }}>{p}</Text>
                                 </Chip>
@@ -305,7 +314,9 @@ const DiscoverInfluencer: React.FC = () => {
                             {pageNumbers[pageNumbers.length - 1] < pageCount && (
                                 <>
                                     <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                    <Chip compact onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
+                                    <Chip compact
+                                        mode={pageCount === currentPage ? 'flat' : 'outlined'}
+                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
                                 </>
                             )}
                             <IconButton icon="chevron-right" onPress={() => onSelectPage(currentPage + 1)} disabled={currentPage >= pageCount} accessibilityLabel="Next page" />
@@ -324,7 +335,7 @@ const DiscoverInfluencer: React.FC = () => {
                                 style={{ marginLeft: 'auto' }}
                             >
                                 <Text numberOfLines={1} style={{ maxWidth: 140 }}>
-                                    Sort: {sortOptions.find(o => o.value === currentSort)?.label || 'Relevance'}
+                                    {sortOptions.find(o => o.value === currentSort)?.label || 'Relevance'}
                                 </Text>
                             </Chip>
                         }
