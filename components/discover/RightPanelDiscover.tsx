@@ -3,10 +3,9 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { Pressable, ScrollView, StyleProp, StyleSheet, ViewStyle } from 'react-native'
 import { Button, Chip, HelperText, Menu, TextInput } from 'react-native-paper'
-import { Subject } from 'rxjs'
 import ModashFilter from './modash/ModashFilter'
 import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 
@@ -19,8 +18,6 @@ interface IProps {
     style?: StyleProp<ViewStyle>,
 }
 
-export const FilterApplySubject = new Subject<{ action: "apply" | "clear" }>();
-
 const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
     const { selectedDb, setSelectedDb: dbWrapper, setRightPanel,
         showFilters, setShowFilters
@@ -28,6 +25,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
 
     const theme = useTheme()
     const colors = Colors(theme)
+    const filterApply = useRef<(action: "apply" | "clear") => {}>()
 
     const { selectedBrand } = useBrandContext()
     const planKey = selectedBrand?.billing?.planKey
@@ -141,7 +139,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
                 <>
                     <ScrollView>
                         {/* Pass the selected DB downstream when you wire logic later */}
-                        {selectedDb == "trendly" && <TrendlyAdvancedFilter />}
+                        {selectedDb == "trendly" && <TrendlyAdvancedFilter FilterApplyRef={filterApply} />}
                         {selectedDb == "modash" && <ModashFilter />}
                         {selectedDb == "phyllo" && <ModashFilter />}
                     </ScrollView>
@@ -149,10 +147,12 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
                     <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
                         <View style={styles.actions}>
                             <Button mode="text" style={styles.clearBtn} onPress={() => {
-                                FilterApplySubject.next({ action: "clear" })
+                                filterApply.current?.("clear")
+                                // FilterApplySubject.next({ action: "clear" })
                             }}>Clear all</Button>
                             <Button mode="contained" style={styles.actionBtn} icon="filter-variant" onPress={() => {
-                                FilterApplySubject.next({ action: "apply" })
+                                filterApply.current?.("apply")
+                                // FilterApplySubject.next({ action: "apply" })
                             }}>Apply</Button>
                         </View>
 

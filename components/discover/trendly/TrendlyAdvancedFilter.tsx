@@ -12,11 +12,10 @@ import { includeSelectedItems } from '@/shared-uis/utils/items-list';
 import { faLocation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Theme, useTheme } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { MutableRefObject, useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { HelperText, Switch, Text, TextInput } from 'react-native-paper';
 import { DiscoverCommuninicationChannel, InfluencerItem } from '../DiscoverInfluencer';
-import { FilterApplySubject } from "../RightPanelDiscover";
 
 
 
@@ -67,7 +66,10 @@ const RangeInputs = ({
     )
 }
 
-const TrendlyAdvancedFilter = () => {
+interface IProps {
+    FilterApplyRef: MutableRefObject<any>
+}
+const TrendlyAdvancedFilter = (props: IProps) => {
     const theme = useTheme()
     const styles = stylesFn(theme)
 
@@ -305,38 +307,22 @@ const TrendlyAdvancedFilter = () => {
         // Defer the API call so new state is applied before building payload
         setTimeout(() => {
             callApiRef.current(true)
-        }, 0)
+        }, 10)
     }
 
     // add near other hooks
-    const callApiRef = React.useRef(callApi)
-    const resetCallApiRef = React.useRef(resetAndCallApi)
+    const callApiRef = useRef(callApi)
+    const resetCallApiRef = useRef(resetAndCallApi)
 
     // keep the ref pointing to the latest callApi whenever inputs change
     useEffect(() => {
         callApiRef.current = callApi
         resetCallApiRef.current = resetAndCallApi
-    }, [
-        followerMin, followerMax,
-        contentMin, contentMax,
-        monthlyViewMin, monthlyViewMax,
-        monthlyEngagementMin, monthlyEngagementMax,
-        avgViewsMin, avgViewsMax,
-        avgLikesMin, avgLikesMax,
-        avgCommentsMin, avgCommentsMax,
-        qualityMin, qualityMax,
-        erMin, erMax,
-        descKeywords, name,
-        isVerified, hasContact,
-        genders, selectedNiches, selectedLocations,
-        sort, sortDirection, offset, limit,
-        selectedBrand?.id,
-    ])
+    })
 
     useEffect(() => {
         callApi()
-
-        const subs = FilterApplySubject.subscribe(({ action }) => {
+        props.FilterApplyRef.current = (action: string) => {
             DiscoverCommuninicationChannel.next({
                 loading: true,
                 data: []
@@ -346,7 +332,7 @@ const TrendlyAdvancedFilter = () => {
             } else {
                 resetCallApiRef.current()
             }
-        })
+        }
 
         return () => {
             if (xl) {
@@ -355,7 +341,6 @@ const TrendlyAdvancedFilter = () => {
                     data: []
                 })
             }
-            subs.unsubscribe()
         }
     }, [])
 
