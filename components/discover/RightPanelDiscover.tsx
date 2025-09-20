@@ -3,7 +3,7 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Pressable, ScrollView, StyleProp, StyleSheet, ViewStyle } from 'react-native'
 import { Button, Chip, HelperText, Menu, TextInput } from 'react-native-paper'
 import { Subject } from 'rxjs'
@@ -19,11 +19,12 @@ interface IProps {
     style?: StyleProp<ViewStyle>,
 }
 
-export const OpenCurrentSelectedDatabase = new Subject<DB_TYPE>();
 export const FilterApplySubject = new Subject<{ action: "apply" | "clear" }>();
 
 const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
-    const { selectedDb, setSelectedDb: dbWrapper, setRightPanel } = useDiscovery()
+    const { selectedDb, setSelectedDb: dbWrapper, setRightPanel,
+        showFilters, setShowFilters
+    } = useDiscovery()
 
     const theme = useTheme()
     const colors = Colors(theme)
@@ -33,8 +34,6 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
 
     const styles = useMemo(() => styleFn(colors), [colors])
 
-    const [showFilters, setShowFilters] = useState(false)
-
     const setSelectedDb = (type: string) => {
         if (type == selectedDb) {
             dbWrapper("")
@@ -43,16 +42,8 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
         }
     }
     useEffect(() => {
-        const subs = OpenCurrentSelectedDatabase.subscribe((selectedDb) => {
-            if (selectedDb != "") {
-                setShowFilters(true)
-            }
-        })
         if (selectedDb == "trendly") {
             setShowFilters(true)
-        }
-        return () => {
-            subs.unsubscribe()
         }
     }, [])
 

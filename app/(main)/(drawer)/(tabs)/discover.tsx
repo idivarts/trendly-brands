@@ -18,6 +18,8 @@ interface DiscoveryProps {
     setSelectedDb: Function
     rightPanel: boolean,
     setRightPanel: Function
+    showFilters: boolean
+    setShowFilters: Function
 }
 const DiscoveryContext = createContext<DiscoveryProps>({} as DiscoveryProps)
 export const useDiscovery = () => useContext(DiscoveryContext)
@@ -26,6 +28,7 @@ const DiscoverInfluencersScreen = () => {
     const { manager } = useAuthContext()
     const { selectedBrand } = useBrandContext()
     const [rightPanel, setRightPanel] = useState(true)
+    const [showFilters, setShowFilters] = useState(false)
 
     const { xl } = useBreakpoints()
 
@@ -71,7 +74,8 @@ const DiscoverInfluencersScreen = () => {
             selectedDb,
             setSelectedDb,
             rightPanel,
-            setRightPanel
+            setRightPanel,
+            showFilters, setShowFilters
         }}>
             <AppLayout>
                 <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
