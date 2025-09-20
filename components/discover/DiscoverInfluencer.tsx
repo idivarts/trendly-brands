@@ -10,7 +10,6 @@ import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Linking, ListRenderItemInfo, ScrollView, StyleSheet } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
-import { Subject } from 'rxjs'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
 import { InfluencerStatsModal } from './InfluencerStatModal'
 
@@ -83,28 +82,7 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
     </Chip>
 )
 
-
-interface IProps {
-}
-
-export const DiscoverCommuninicationChannel = new Subject<{
-    loading?: boolean;
-    data: InfluencerItem[];
-    total?: number;
-    page?: number;
-    pageSize?: number;
-    pageCount?: number;
-    sort?: string;
-    sortOptions?: { label: string; value: string }[];
-}>()
-
-export const DiscoverUIActions = new Subject<{
-    action: 'changePage' | 'changeSort';
-    page?: number;
-    sort?: string;
-}>()
-
-const DiscoverInfluencer: React.FC<IProps> = () => {
+const DiscoverInfluencer: React.FC = () => {
     const { selectedDb, setRightPanel, rightPanel, setSelectedDb } = useDiscovery()
     const theme = useTheme()
     const colors = Colors(theme)
@@ -151,34 +129,15 @@ const DiscoverInfluencer: React.FC<IProps> = () => {
         { label: 'Views (High → Low)', value: 'views_desc' },
     ]);
     const [currentSort, setCurrentSort] = useState<string>('relevance');
+    const { discoverCommunication } = useDiscovery()
 
     useEffect(() => {
-        const subs = DiscoverCommuninicationChannel.subscribe(({ loading, data, ...meta }: any) => {
+        discoverCommunication.current = ({ loading, data }) => {
             setLoading(loading || false);
             setData(data || []);
-            // Meta: total, page, pageSize, pageCount, sort, sortOptions
-            if (typeof meta?.total === 'number') setTotalResults(meta.total);
-            else setTotalResults((data || []).length);
-
-            if (typeof meta?.pageSize === 'number') setPageSize(meta.pageSize);
-            if (typeof meta?.pageCount === 'number') setPageCount(meta.pageCount);
-            if (typeof meta?.page === 'number') setCurrentPage(meta.page);
-            else if (meta?.page == null && meta?.pageCount == null) {
-                // derive simple pagination if not provided
-                const derivedCount = Math.max(1, Math.ceil(((data || []).length || 0) / (pageSize || 20)));
-                setPageCount(derivedCount);
-                setCurrentPage(1);
-            }
-
-            if (typeof meta?.sort === 'string') setCurrentSort(meta.sort);
-            if (Array.isArray(meta?.sortOptions) && meta.sortOptions.length) setSortOptions(meta.sortOptions);
-
             setRightPanel(false);
-        });
-        return () => {
-            subs.unsubscribe();
         };
-    }, [pageSize, setRightPanel]);
+    });
 
     // const data = MOCK_INFLUENCERS
 
@@ -259,13 +218,11 @@ const DiscoverInfluencer: React.FC<IProps> = () => {
     const onSelectPage = useCallback((p: number) => {
         if (p < 1 || p > pageCount || p === currentPage) return;
         setCurrentPage(p);
-        DiscoverUIActions.next({ action: 'changePage', page: p });
     }, [currentPage, pageCount]);
 
     const onSelectSort = useCallback((val: string) => {
         setCurrentSort(val);
         setSortMenuVisible(false);
-        DiscoverUIActions.next({ action: 'changeSort', sort: val });
     }, []);
 
     if (loading && data.length === 0) {

@@ -1,3 +1,4 @@
+import { useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
@@ -15,7 +16,7 @@ import { Theme, useTheme } from '@react-navigation/native';
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { HelperText, Switch, Text, TextInput } from 'react-native-paper';
-import { DiscoverCommuninicationChannel, InfluencerItem } from '../DiscoverInfluencer';
+import { InfluencerItem } from '../DiscoverInfluencer';
 
 
 
@@ -122,6 +123,16 @@ const TrendlyAdvancedFilter = (props: IProps) => {
 
     const [data, setData] = useState<InfluencerItem[]>([])
 
+    const { discoverCommunication, pageSortCommunication } = useDiscovery()
+
+    useEffect(() => {
+        pageSortCommunication.current = ({ page, sort }) => {
+            discoverCommunication.current?.({ loading: true, data: [] })
+            // Do the api call for next data
+        }
+    })
+
+
     const { xl } = useBreakpoints()
     const getFormData = () => {
         // helpers
@@ -225,7 +236,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     }
 
     const callApi = async (reset: boolean = false) => {
-        DiscoverCommuninicationChannel.next({
+        discoverCommunication.current?.({
             loading: true,
             data: []
         })
@@ -242,12 +253,12 @@ const TrendlyAdvancedFilter = (props: IProps) => {
             const d = body.data as InfluencerItem[]
             const newData = [...(reset ? [] : data), ...d]
             setData(newData)
-            DiscoverCommuninicationChannel.next({
+            discoverCommunication.current?.({
                 loading: false,
                 data: newData
             })
         } catch (e) {
-            DiscoverCommuninicationChannel.next({
+            discoverCommunication.current?.({
                 loading: false,
                 data: []
             })
@@ -323,7 +334,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     useEffect(() => {
         callApi()
         props.FilterApplyRef.current = (action: string) => {
-            DiscoverCommuninicationChannel.next({
+            discoverCommunication.current?.({
                 loading: true,
                 data: []
             })
@@ -336,7 +347,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
 
         return () => {
             if (xl) {
-                DiscoverCommuninicationChannel.next({
+                discoverCommunication.current?.({
                     loading: false,
                     data: []
                 })

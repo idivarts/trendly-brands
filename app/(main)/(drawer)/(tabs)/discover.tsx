@@ -1,4 +1,4 @@
-import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
+import DiscoverInfluencer, { InfluencerItem } from "@/components/discover/DiscoverInfluencer";
 import RightPanelDiscover, { DB_TYPE } from "@/components/discover/RightPanelDiscover";
 import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
@@ -7,12 +7,24 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, MutableRefObject, useContext, useEffect, useRef, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 import { Subject } from "rxjs";
 
 export const OpenFilterRightPanel = new Subject()
 
+export interface DiscoverCommunication {
+    loading?: boolean;
+    data: InfluencerItem[];
+    total?: number;
+    page?: number;
+    pageCount?: number;
+    sort?: string;
+}
+interface PageSortCommunication {
+    page?: number;
+    sort?: string;
+}
 interface DiscoveryProps {
     selectedDb: DB_TYPE,
     setSelectedDb: Function
@@ -20,6 +32,8 @@ interface DiscoveryProps {
     setRightPanel: Function
     showFilters: boolean
     setShowFilters: Function
+    discoverCommunication: MutableRefObject<((action: DiscoverCommunication) => any) | undefined>
+    pageSortCommunication: MutableRefObject<((action: PageSortCommunication) => any) | undefined>
 }
 const DiscoveryContext = createContext<DiscoveryProps>({} as DiscoveryProps)
 export const useDiscovery = () => useContext(DiscoveryContext)
@@ -29,6 +43,8 @@ const DiscoverInfluencersScreen = () => {
     const { selectedBrand } = useBrandContext()
     const [rightPanel, setRightPanel] = useState(true)
     const [showFilters, setShowFilters] = useState(false)
+    const discoverCommunication = useRef<(action: DiscoverCommunication) => any>()
+    const pageSortCommunication = useRef<(action: PageSortCommunication) => any>()
 
     const { xl } = useBreakpoints()
 
@@ -75,7 +91,9 @@ const DiscoverInfluencersScreen = () => {
             setSelectedDb,
             rightPanel,
             setRightPanel,
-            showFilters, setShowFilters
+            showFilters, setShowFilters,
+            discoverCommunication,
+            pageSortCommunication
         }}>
             <AppLayout>
                 <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
