@@ -157,14 +157,15 @@ const DiscoverInfluencer: React.FC = () => {
                             <Text style={styles.subtitle} numberOfLines={1}>@{maskHandle(item.username)}</Text>
 
                             <View style={styles.statsRow}>
-                                <StatChip label="Followers" value={item.followers} />
-                                <StatChip label="Engagements" value={item.engagements} />
-                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0))} />
-                                <StatChip label="Views" value={item.views} />
+
+                                <StatChip label={xl ? "Followers" : "Fol"} value={item.followers} />
+                                <StatChip label={xl ? "Engagements" : "Eng"} value={item.engagements} />
+                                <StatChip label={xl ? "ER (in %)" : "ER"} value={((item?.engagementRate || 0))} />
+                                <StatChip label={xl ? "Views" : "Views"} value={item.views} />
                             </View>
                         </View>
 
-                        <View style={styles.rightCol}>
+                        {xl && <View style={styles.rightCol}>
                             <Menu
                                 style={{ backgroundColor: Colors(theme).background }}
                                 visible={menuVisibleId === item.userId}
@@ -177,11 +178,11 @@ const DiscoverInfluencer: React.FC = () => {
                                     />
                                 }
                             >
-                                <Menu.Item onPress={() => onOpenProfile(item.url)} title="View Profile" />
-                                <Divider />
-                                <Menu.Item onPress={() => setStatsItem(item)} title="View Stats" />
+                                {/* <Menu.Item onPress={() => onOpenProfile(item.url)} title="View Profile" />
+                                <Divider /> */}
+                                <Menu.Item onPress={() => setStatsItem(item)} title="Open Profile" />
                             </Menu>
-                        </View>
+                        </View>}
                     </View>
                 </Card.Content>
             </Card>
