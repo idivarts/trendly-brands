@@ -120,7 +120,7 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
       ) : (
         <DrawerIcon href="/explore-influencers" icon={faHeart} />
       ),
-    label: "Explore Influencers",
+    label: "Spotlights",
   },
   {
     href: "/messages",

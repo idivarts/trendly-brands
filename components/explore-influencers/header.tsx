@@ -33,7 +33,7 @@ const Header: React.FC = (props) => {
             fontWeight: 600,
           }}
         >
-          {Platform.OS === "web" ? "Explore" : selectedBrand?.name ?? "Brand"}
+          {Platform.OS === "web" ? (xl ? "Influencer Spotlights" : "Spotlights") : selectedBrand?.name ?? "Brand"}
         </Text>
         <Pressable>
           {xl ? null : (
