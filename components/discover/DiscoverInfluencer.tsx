@@ -1,4 +1,4 @@
-import { useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover'
+import { DiscoverCommunication, useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
@@ -130,12 +130,11 @@ const DiscoverInfluencer: React.FC = () => {
     const [currentSort, setCurrentSort] = useState<string>('relevance');
     const { discoverCommunication } = useDiscovery()
 
-    discoverCommunication.current = ({ loading, data }) => {
+    discoverCommunication.current = useCallback(({ loading, data }: DiscoverCommunication) => {
         setLoading(loading || false);
         setData(data || []);
         setRightPanel(false);
-    };
-    // const data = MOCK_INFLUENCERS
+    }, []);
 
     const onOpenProfile = useCallback((url: string) => {
         Linking.openURL(url)

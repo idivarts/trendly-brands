@@ -21,7 +21,7 @@ export interface DiscoverCommunication {
     pageCount?: number;
     sort?: string;
 }
-interface PageSortCommunication {
+export interface PageSortCommunication {
     page?: number;
     sort?: string;
 }

@@ -1,4 +1,4 @@
-import { useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
+import { PageSortCommunication, useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
@@ -125,9 +125,8 @@ const TrendlyAdvancedFilter = (props: IProps) => {
 
     const { discoverCommunication, pageSortCommunication } = useDiscovery()
 
-    pageSortCommunication.current = ({ page, sort }) => {
+    pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
         discoverCommunication.current?.({ loading: true, data: [] })
-        // Do the api call for next data
     }
 
 
