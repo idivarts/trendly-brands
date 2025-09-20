@@ -33,9 +33,9 @@ const ExploreInfluencersScreen = () => {
       setFullIllustration(false)
     }} config={{
       kicker: "Our Micro Creators",
-      title: "Showcasing {Trendly's Verified} Influencers!",
-      description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
-      action: "Explore Now",
+      title: "Spotlighting {Trendly's Verified} Influencers!",
+      description: "Discover influencers already vetted and verified on Trendly. Get instant access to trusted creators ready to collaborate with your brand.",
+      action: "Explore Spotlights",
       image: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1758395180_images-1758395179311-influencer spotlight walkthrough.jpg"
     }} videoUrl="https://www.youtube.com/embed/xwMq0tDKF98?si=8r0V2xKABRfnZlBN" />
 

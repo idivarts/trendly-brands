@@ -24,12 +24,12 @@ const CollaborationsScreen = () => {
       setFullIllustration(false)
       router.push("/create-collaboration")
     }} config={{
-      title: "{Post Campaign} and track closely",
-      description: "This will help you to find influencers that are already registered on trendly and hence verified from our end. This poses the least risk as we have strong control over these influencers",
+      title: "{Post Campaigns.} Track with Ease.",
+      description: "Share your brief once and let thousands of micro-creators apply. Stop chasing influencers — they come to you. Post, review, and collaborate seamlessly.",
       items: [
-        "Receive Applications",
+        "Receive Verified Applications",
         "Invite Unlimited Influencers",
-        "Track Deliverables"
+        "Track Deliverables in Real-Time"
       ],
       action: "Create Campaign",
       image: "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1758395122_images-1758395120937-campaign management thumbnail.jpg"
