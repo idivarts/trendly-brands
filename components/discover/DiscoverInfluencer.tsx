@@ -1,3 +1,4 @@
+import { DiscoverCommunication, useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
@@ -5,18 +6,12 @@ import { FacebookImageComponent } from '@/shared-uis/components/image-component'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { maskHandle } from '@/shared-uis/utils/masks'
-import { faFilter } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { useTheme } from '@react-navigation/native'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { FlatList, Linking, ListRenderItemInfo, Pressable, StyleSheet } from 'react-native'
+import React, { useCallback, useMemo, useState } from 'react'
+import { FlatList, Linking, ListRenderItemInfo, ScrollView, StyleSheet } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
-import { Subject } from 'rxjs'
-import ScreenHeader from '../ui/screen-header'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
 import { InfluencerStatsModal } from './InfluencerStatModal'
-import { DB_TYPE } from './RightPanelDiscover'
-import { PremiumActionTag } from './components/PremiumActionTag'
 
 // Types
 export interface InfluencerItem {
@@ -31,6 +26,12 @@ export interface InfluencerItem {
     engagementRate: number
 }
 
+const sortOptions = [
+    { label: 'Followers (High → Low)', value: 'followers' },
+    { label: 'Engagements (High → Low)', value: 'engagement' },
+    { label: 'ER % (High → Low)', value: 'engagement_rate' },
+    { label: 'Views (High → Low)', value: 'views' },
+];
 
 // Helpers
 const formatNumber = (n: number | undefined) => {
@@ -87,20 +88,8 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
     </Chip>
 )
 
-
-interface IProps {
-    selectedDb: DB_TYPE,
-    setSelectedDb: Function,
-    rightPanel: boolean,
-    setRightPanel: Function
-}
-
-export const DiscoverCommuninicationChannel = new Subject<{
-    loading?: boolean
-    data: InfluencerItem[]
-}>()
-
-const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, rightPanel, setSelectedDb }) => {
+const DiscoverInfluencer: React.FC = () => {
+    const { selectedDb, setRightPanel, rightPanel, setSelectedDb } = useDiscovery()
     const theme = useTheme()
     const colors = Colors(theme)
     const styles = useMemo(() => useStyles(colors), [colors])
@@ -132,18 +121,23 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
 
     const { xl } = useBreakpoints()
 
-    useEffect(() => {
-        const subs = DiscoverCommuninicationChannel.subscribe(({ loading, data }) => {
-            setLoading(loading || false)
-            setData(data)
-            setRightPanel(false)
-        })
-        return () => {
-            subs.unsubscribe()
-        }
-    }, [])
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [pageCount, setPageCount] = useState<number>(20);
+    const [totalResults, setTotalResults] = useState<number>(0);
 
-    // const data = MOCK_INFLUENCERS
+    const [sortMenuVisible, setSortMenuVisible] = useState(false);
+    const [currentSort, setCurrentSort] = useState<string>('followers');
+    const { discoverCommunication } = useDiscovery()
+
+    discoverCommunication.current = useCallback(({ loading, data, page, sort }: DiscoverCommunication) => {
+        setLoading(loading || false);
+        setData(data || []);
+        setRightPanel(false);
+        if (page)
+            setCurrentPage(page)
+        if (sort)
+            setCurrentSort(sort)
+    }, []);
 
     const onOpenProfile = useCallback((url: string) => {
         Linking.openURL(url)
@@ -163,14 +157,15 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
                             <Text style={styles.subtitle} numberOfLines={1}>@{maskHandle(item.username)}</Text>
 
                             <View style={styles.statsRow}>
-                                <StatChip label="Followers" value={item.followers} />
-                                <StatChip label="Engagements" value={item.engagements} />
-                                <StatChip label="ER (in %)" value={((item?.engagementRate || 0))} />
-                                <StatChip label="Views" value={item.views} />
+
+                                <StatChip label={xl ? "Followers" : "Fol"} value={item.followers} />
+                                <StatChip label={xl ? "Engagements" : "Eng"} value={item.engagements} />
+                                <StatChip label={xl ? "ER (in %)" : "ER"} value={((item?.engagementRate || 0))} />
+                                <StatChip label={xl ? "Views" : "Views"} value={item.views} />
                             </View>
                         </View>
 
-                        <View style={styles.rightCol}>
+                        {xl && <View style={styles.rightCol}>
                             <Menu
                                 style={{ backgroundColor: Colors(theme).background }}
                                 visible={menuVisibleId === item.userId}
@@ -183,11 +178,11 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
                                     />
                                 }
                             >
-                                <Menu.Item onPress={() => onOpenProfile(item.url)} title="View Profile" />
-                                <Divider />
-                                <Menu.Item onPress={() => setStatsItem(item)} title="View Stats" />
+                                {/* <Menu.Item onPress={() => onOpenProfile(item.url)} title="View Profile" />
+                                <Divider /> */}
+                                <Menu.Item onPress={() => setStatsItem(item)} title="Open Profile" />
                             </Menu>
-                        </View>
+                        </View>}
                     </View>
                 </Card.Content>
             </Card>
@@ -201,8 +196,42 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
         []
     )
 
-    const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
-    const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
+    const pageNumbers = useMemo(() => {
+        // Windowed pagination: show up to 7 pages around current
+        const maxToShow = 7;
+        const pages: number[] = [];
+        if (pageCount <= maxToShow) {
+            for (let i = 1; i <= pageCount; i++) pages.push(i);
+            return pages;
+        }
+        const half = Math.floor(maxToShow / 2);
+        let start = Math.max(1, currentPage - half);
+        let end = Math.min(pageCount, start + maxToShow - 1);
+        // adjust start if we hit the end
+        start = Math.max(1, Math.min(start, Math.max(1, end - maxToShow + 1)));
+        end = Math.min(pageCount, start + maxToShow - 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        return pages;
+    }, [currentPage, pageCount]);
+
+    const { pageSortCommunication } = useDiscovery()
+    const onSelectPage = useCallback((p: number) => {
+        if (p < 1 || p > pageCount || p === currentPage) return;
+        setCurrentPage(p);
+        pageSortCommunication.current?.({
+            page: p,
+            sort: currentSort
+        })
+    }, [currentPage, pageCount]);
+
+    const onSelectSort = useCallback((val: string) => {
+        setCurrentSort(val);
+        setSortMenuVisible(false);
+        pageSortCommunication.current?.({
+            page: currentPage,
+            sort: val
+        })
+    }, []);
 
     if (loading && data.length === 0) {
         // Full screen loader when we're fetching the first page
@@ -227,46 +256,18 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
         <View style={[{ flex: 1, minWidth: 0 }, (!xl && rightPanel) && {
             display: "none"
         }]}>
-            <ScreenHeader title={
-                selectedDb == "trendly" ? "Trendly Internal Discovery" :
-                    (selectedDb == "phyllo" ? "Phyllo Discovery" : "Modash Discovery")
-            } hideAction={true}
-                rightAction={true}
-                rightActionButton={
-                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
-                        <PremiumActionTag
-                            label="Discovery remaining"
-                            tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
-                            icon="diamond-stone"
-                            variant="gold"
-                            count={discoverCoinsLeft}
-                        />
-                        <PremiumActionTag
-                            label="Invites remaining"
-                            tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you invite any influencer.\n\nLimit recharges every month depending on what plan you are on"}
-                            icon="lightning-bolt"
-                            variant="purple"
-                            count={connectionCreditsLeft}
-                        />
-                        {!xl &&
-                            <Pressable onPress={() => {
-                                setRightPanel(true)
-                            }} style={{ marginLeft: 12 }}>
-                                <FontAwesomeIcon icon={faFilter} size={24} />
-                            </Pressable>}
-                    </View>
-                } />
             <View style={{ flex: 1 }}>
+
                 <FlatList
                     data={data}
                     keyExtractor={keyExtractor}
                     renderItem={renderItem}
                     contentContainerStyle={{ paddingVertical: 8 }}
                     style={styles.list}
-                    initialNumToRender={8}
-                    maxToRenderPerBatch={8}
-                    windowSize={7}
-                    removeClippedSubviews
+                    // initialNumToRender={8}
+                    // maxToRenderPerBatch={8}
+                    // windowSize={7}
+                    // removeClippedSubviews
                     // @ts-ignore
                     getItemLayout={getItemLayout}
                     ListFooterComponent={
@@ -279,7 +280,80 @@ const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, right
                             : null
                     }
                 />
+                <Divider />
+                {/* Header Bar: totals • pagination • sort */}
+                <View style={[styles.row, { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 2, alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
+                    {/* Left: Total results */}
+                    <View style={[styles.row, { gap: 6 }]}>
+                        <Text style={{ fontWeight: '600' }}>Total</Text>
+                        <Text style={{ fontSize: 12, opacity: 0.8 }}>{data.length < 15 ? data.length : "500+"} Results found</Text>
+                    </View>
 
+                    {/* Middle: Pages list */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }} style={{ flexGrow: 1 }}>
+                        <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
+                            <IconButton icon="chevron-left" onPress={() => onSelectPage(currentPage - 1)} disabled={currentPage <= 1} accessibilityLabel="Previous page" />
+                            {/* {pageNumbers[0] > 1 && (
+                                <>
+                                    <Chip compact
+                                        mode={1 === currentPage ? 'flat' : 'outlined'}
+                                        onPress={() => onSelectPage(1)}>1</Chip>
+                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
+                                </>
+                            )} */}
+                            {pageNumbers.map(p => {
+                                return p != currentPage ? null : <Chip
+                                    key={p}
+                                    mode={p === currentPage ? 'flat' : 'outlined'}
+                                    compact
+                                    onPress={() => onSelectPage(p)}
+                                >
+                                    <Text style={{ fontWeight: p === currentPage ? '700' : '500' }}>{p}</Text>
+                                </Chip>
+                            })}
+                            {/* {pageNumbers[pageNumbers.length - 1] < pageCount && (
+                                <>
+                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
+                                    <Chip compact
+                                        mode={pageCount === currentPage ? 'flat' : 'outlined'}
+                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
+                                </>
+                            )} */}
+                            <IconButton icon="chevron-right" onPress={() => onSelectPage(currentPage + 1)}
+                                // disabled={currentPage >= pageCount} 
+                                disabled={data.length != 15}
+                                accessibilityLabel="Next page" />
+                        </View>
+                    </ScrollView>
+
+                    {/* Right: Sort dropdown */}
+                    <Menu
+                        visible={sortMenuVisible}
+                        onDismiss={() => setSortMenuVisible(false)}
+                        anchor={
+                            <Chip
+                                compact
+                                onPress={() => setSortMenuVisible(true)}
+                                icon="sort"
+                                style={{ marginLeft: 'auto' }}
+                            >
+                                <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                                    {sortOptions.find(o => o.value === currentSort)?.label || 'Relevance'}
+                                </Text>
+                            </Chip>
+                        }
+                        style={{ backgroundColor: Colors(theme).background }}
+                    >
+                        {sortOptions.map(opt => (
+                            <Menu.Item
+                                key={opt.value}
+                                onPress={() => onSelectSort(opt.value)}
+                                title={opt.label}
+                            // right={() => (opt.value === currentSort ? <Badge>✓</Badge> : null)}
+                            />
+                        ))}
+                    </Menu>
+                </View>
                 {!!statsItem &&
                     <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} selectedDb={selectedDb} />}
             </View>

@@ -1,3 +1,4 @@
+import { PageSortCommunication, useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
@@ -12,32 +13,12 @@ import { includeSelectedItems } from '@/shared-uis/utils/items-list';
 import { faLocation } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Theme, useTheme } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { MutableRefObject, useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { HelperText, Switch, Text, TextInput } from 'react-native-paper';
-import { DiscoverCommuninicationChannel, InfluencerItem } from '../DiscoverInfluencer';
-import { FilterApplySubject } from "../RightPanelDiscover";
+import { InfluencerItem } from '../DiscoverInfluencer';
 
 
-/** DROPDOWN / TAG DATA (can be wired from props later) */
-const ENGAGEMENT_RATE_OPTIONS = [
-    'No restriction', '>0.5%', '>1%', '>1.5%', '>2%', '>3%', '>5%'
-]
-
-const CREATOR_GENDER_OPTIONS = [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'neutral', label: 'Neutral' },
-]
-
-// Keep these lightweight; replace with server-driven lists later
-const NICHES = [
-    'Fashion/Beauty', 'Comedy', 'Tech & Gadgets', 'Food', 'Fitness', 'Travel', 'Education', 'Lifestyle', 'Parenting', 'Gaming'
-]
-
-const LOCATIONS = [
-    'India', 'USA', 'UK', 'UAE', 'Singapore', 'Canada', 'Australia', 'Germany', 'France', 'Remote'
-]
 
 /** Small inline component for min/max numeric ranges */
 const RangeInputs = ({
@@ -86,7 +67,10 @@ const RangeInputs = ({
     )
 }
 
-const TrendlyAdvancedFilter = () => {
+interface IProps {
+    FilterApplyRef: MutableRefObject<any>
+}
+const TrendlyAdvancedFilter = (props: IProps) => {
     const theme = useTheme()
     const styles = stylesFn(theme)
 
@@ -138,6 +122,18 @@ const TrendlyAdvancedFilter = () => {
     const [limit, setLimit] = useState(15)
 
     const [data, setData] = useState<InfluencerItem[]>([])
+
+    const { discoverCommunication, pageSortCommunication } = useDiscovery()
+
+    pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
+        if (page)
+            setOffset((page - 1) * 15)
+        setSort(sort as any)
+        setTimeout(() => {
+            callApiRef.current(true)
+        }, 20)
+    }
+
 
     const { xl } = useBreakpoints()
     const getFormData = () => {
@@ -242,7 +238,7 @@ const TrendlyAdvancedFilter = () => {
     }
 
     const callApi = async (reset: boolean = false) => {
-        DiscoverCommuninicationChannel.next({
+        discoverCommunication.current?.({
             loading: true,
             data: []
         })
@@ -259,12 +255,14 @@ const TrendlyAdvancedFilter = () => {
             const d = body.data as InfluencerItem[]
             const newData = [...(reset ? [] : data), ...d]
             setData(newData)
-            DiscoverCommuninicationChannel.next({
+            discoverCommunication.current?.({
                 loading: false,
-                data: newData
+                data: newData,
+                page: (offset / 15) + 1,
+                sort: sort
             })
         } catch (e) {
-            DiscoverCommuninicationChannel.next({
+            discoverCommunication.current?.({
                 loading: false,
                 data: []
             })
@@ -324,59 +322,42 @@ const TrendlyAdvancedFilter = () => {
         // Defer the API call so new state is applied before building payload
         setTimeout(() => {
             callApiRef.current(true)
-        }, 0)
+        }, 10)
     }
 
     // add near other hooks
-    const callApiRef = React.useRef(callApi)
-    const resetCallApiRef = React.useRef(resetAndCallApi)
+    const callApiRef = useRef(callApi)
+    const resetCallApiRef = useRef(resetAndCallApi)
 
     // keep the ref pointing to the latest callApi whenever inputs change
     useEffect(() => {
         callApiRef.current = callApi
         resetCallApiRef.current = resetAndCallApi
-    }, [
-        followerMin, followerMax,
-        contentMin, contentMax,
-        monthlyViewMin, monthlyViewMax,
-        monthlyEngagementMin, monthlyEngagementMax,
-        avgViewsMin, avgViewsMax,
-        avgLikesMin, avgLikesMax,
-        avgCommentsMin, avgCommentsMax,
-        qualityMin, qualityMax,
-        erMin, erMax,
-        descKeywords, name,
-        isVerified, hasContact,
-        genders, selectedNiches, selectedLocations,
-        sort, sortDirection, offset, limit,
-        selectedBrand?.id,
-    ])
+    })
 
     useEffect(() => {
         callApi()
-
-        const subs = FilterApplySubject.subscribe(({ action }) => {
-            DiscoverCommuninicationChannel.next({
-                loading: true,
-                data: []
-            })
-            if (action == "apply") {
-                callApiRef.current(true)
-            } else {
-                resetCallApiRef.current()
-            }
-        })
-
         return () => {
             if (xl) {
-                DiscoverCommuninicationChannel.next({
+                discoverCommunication.current?.({
                     loading: false,
                     data: []
                 })
             }
-            subs.unsubscribe()
         }
     }, [])
+
+    props.FilterApplyRef.current = (action: string) => {
+        setOffset(0)
+        if (action == "apply") {
+            setImmediate(() => {
+                callApiRef.current(true)
+            })
+        } else {
+            resetCallApiRef.current()
+        }
+    }
+
 
     // Unlocked: full filter UI
     return (

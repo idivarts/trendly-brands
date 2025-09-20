@@ -1,14 +1,15 @@
+import { useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover';
 import { useBrandContext } from '@/contexts/brand-context.provider';
 import { useMyNavigation } from '@/shared-libs/utils/router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar, Button, Card } from 'react-native-paper';
-import { OpenCurrentSelectedDatabase } from '../RightPanelDiscover';
 
 export default function EmptyTrendlyInternalSelected() {
     const router = useMyNavigation()
     const { selectedBrand } = useBrandContext()
+    const { selectedDb, setShowFilters } = useDiscovery()
 
     return (
         <View style={styles.container}>
@@ -31,7 +32,9 @@ export default function EmptyTrendlyInternalSelected() {
                     {["pro", "enterprise"].includes(selectedBrand?.billing?.planKey || "") ?
                         <Button mode="contained" style={styles.button} buttonColor="#3778f4"
                             onPress={() => {
-                                OpenCurrentSelectedDatabase.next("trendly")
+                                if (selectedDb != "") {
+                                    setShowFilters(true)
+                                }
                             }}
                         >Open Trendly's Database</Button> :
                         <Button mode="contained" style={styles.button} buttonColor="#3778f4"

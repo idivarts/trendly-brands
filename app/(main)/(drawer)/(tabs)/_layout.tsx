@@ -1,6 +1,7 @@
 import { router, Tabs } from "expo-router";
 import React from "react";
 
+import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
 import Header from "@/components/explore-influencers/header";
 import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
@@ -22,6 +23,7 @@ import {
 import {
   faComment as faCommentSolid,
   faCopy,
+  faFilter,
   faGem as faGemSolid,
   faHeart as faHeartSolid,
   faStar as faStarSolid
@@ -30,6 +32,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Pressable } from "react-native";
 import { Badge } from "react-native-paper";
+import { OpenFilterRightPanel } from "./discover";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
@@ -37,6 +40,9 @@ const TabLayout = () => {
   const { unreadCount } = useChatContext()
   const { manager } = useAuthContext();
   const { selectedBrand } = useBrandContext()
+  const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
+  const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
+
 
   return (
     <Tabs
@@ -78,7 +84,7 @@ const TabLayout = () => {
       <Tabs.Screen
         name="explore-influencers"
         options={{
-          title: "Explore",
+          title: xl ? "Influencer Spotlights" : "Spotlights",
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
@@ -148,8 +154,7 @@ const TabLayout = () => {
       <Tabs.Screen
         name="discover"
         options={{
-          title: "Discover",
-          headerShown: false,
+          title: xl ? "Discover Influencers" : "Discover",
           tabBarIcon: ({ color, focused }) => (
             <FontAwesomeIcon
               color={color}
@@ -164,7 +169,28 @@ const TabLayout = () => {
               justifyContent: "space-between",
             }}
           >
-            <NotificationIcon />
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
+              <PremiumActionTag
+                label="Discovery remaining"
+                tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
+                icon="diamond-stone"
+                variant="gold"
+                count={discoverCoinsLeft}
+              />
+              <PremiumActionTag
+                label="Invites remaining"
+                tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you invite any influencer.\n\nLimit recharges every month depending on what plan you are on"}
+                icon="lightning-bolt"
+                variant="purple"
+                count={connectionCreditsLeft}
+              />
+              {!xl &&
+                <Pressable onPress={() => {
+                  OpenFilterRightPanel.next(undefined)
+                }} style={{ marginLeft: 12 }}>
+                  <FontAwesomeIcon icon={faFilter} size={24} />
+                </Pressable>}
+            </View>
           </View>,
         }}
       />

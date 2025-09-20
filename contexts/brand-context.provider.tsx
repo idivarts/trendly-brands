@@ -190,14 +190,6 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
             influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
           }
         })
-        setSelectedBrandHandler({
-          ...selectedBrand,
-          unlockedInfluencers: [...influencerSet],
-          credits: {
-            ...selectedBrand.credits,
-            influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit
-          }
-        }, false)
         Console.log("Unlocked Influencer", [...influencerSet]);
 
         IS_MONETIZATION_DONE &&
