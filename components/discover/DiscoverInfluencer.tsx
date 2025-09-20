@@ -116,7 +116,7 @@ const DiscoverInfluencer: React.FC = () => {
     const { xl } = useBreakpoints()
 
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [pageCount, setPageCount] = useState<number>(1);
+    const [pageCount, setPageCount] = useState<number>(20);
     const [totalResults, setTotalResults] = useState<number>(0);
 
     const [sortMenuVisible, setSortMenuVisible] = useState(false);
@@ -310,9 +310,9 @@ const DiscoverInfluencer: React.FC = () => {
                             {pageNumbers[pageNumbers.length - 1] < pageCount && (
                                 <>
                                     <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                    <Chip compact
+                                    {/* <Chip compact
                                         mode={pageCount === currentPage ? 'flat' : 'outlined'}
-                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
+                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip> */}
                                 </>
                             )}
                             <IconButton icon="chevron-right" onPress={() => onSelectPage(currentPage + 1)} disabled={currentPage >= pageCount} accessibilityLabel="Next page" />

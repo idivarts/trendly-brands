@@ -126,7 +126,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     const { discoverCommunication, pageSortCommunication } = useDiscovery()
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
-        discoverCommunication.current?.({ loading: true, data: [] })
+        // discoverCommunication.current?.({ loading: true, data: [] })
     }
 
 
