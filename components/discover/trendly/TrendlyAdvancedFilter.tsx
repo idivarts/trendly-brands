@@ -125,12 +125,10 @@ const TrendlyAdvancedFilter = (props: IProps) => {
 
     const { discoverCommunication, pageSortCommunication } = useDiscovery()
 
-    useEffect(() => {
-        pageSortCommunication.current = ({ page, sort }) => {
-            discoverCommunication.current?.({ loading: true, data: [] })
-            // Do the api call for next data
-        }
-    })
+    pageSortCommunication.current = ({ page, sort }) => {
+        discoverCommunication.current?.({ loading: true, data: [] })
+        // Do the api call for next data
+    }
 
 
     const { xl } = useBreakpoints()
@@ -333,18 +331,6 @@ const TrendlyAdvancedFilter = (props: IProps) => {
 
     useEffect(() => {
         callApi()
-        props.FilterApplyRef.current = (action: string) => {
-            discoverCommunication.current?.({
-                loading: true,
-                data: []
-            })
-            if (action == "apply") {
-                callApiRef.current(true)
-            } else {
-                resetCallApiRef.current()
-            }
-        }
-
         return () => {
             if (xl) {
                 discoverCommunication.current?.({
@@ -354,6 +340,19 @@ const TrendlyAdvancedFilter = (props: IProps) => {
             }
         }
     }, [])
+
+    props.FilterApplyRef.current = (action: string) => {
+        discoverCommunication.current?.({
+            loading: true,
+            data: []
+        })
+        if (action == "apply") {
+            callApiRef.current(true)
+        } else {
+            resetCallApiRef.current()
+        }
+    }
+
 
     // Unlocked: full filter UI
     return (

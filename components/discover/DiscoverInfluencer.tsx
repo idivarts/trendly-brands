@@ -7,7 +7,7 @@ import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
 import { maskHandle } from '@/shared-uis/utils/masks'
 import { useTheme } from '@react-navigation/native'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { FlatList, Linking, ListRenderItemInfo, ScrollView, StyleSheet } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
@@ -130,14 +130,11 @@ const DiscoverInfluencer: React.FC = () => {
     const [currentSort, setCurrentSort] = useState<string>('relevance');
     const { discoverCommunication } = useDiscovery()
 
-    useEffect(() => {
-        discoverCommunication.current = ({ loading, data }) => {
-            setLoading(loading || false);
-            setData(data || []);
-            setRightPanel(false);
-        };
-    });
-
+    discoverCommunication.current = ({ loading, data }) => {
+        setLoading(loading || false);
+        setData(data || []);
+        setRightPanel(false);
+    };
     // const data = MOCK_INFLUENCERS
 
     const onOpenProfile = useCallback((url: string) => {
