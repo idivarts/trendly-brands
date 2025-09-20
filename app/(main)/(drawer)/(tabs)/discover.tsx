@@ -59,7 +59,7 @@ const DiscoverInfluencersScreen = () => {
 
     return (
         <AppLayout>
-            <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
+            <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
                 <DiscoverInfluencer selectedDb={selectedDb} setSelectedDb={setSelectedDb} rightPanel={rightPanel} setRightPanel={setRightPanel} />
                 <RightPanelDiscover selectedDb={selectedDb} setSelectedDb={setSelectedDb} style={(!xl) && {
                     width: "100%",
