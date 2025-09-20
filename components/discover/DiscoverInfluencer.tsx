@@ -129,10 +129,14 @@ const DiscoverInfluencer: React.FC = () => {
     const [currentSort, setCurrentSort] = useState<string>('followers');
     const { discoverCommunication } = useDiscovery()
 
-    discoverCommunication.current = useCallback(({ loading, data }: DiscoverCommunication) => {
+    discoverCommunication.current = useCallback(({ loading, data, page, sort }: DiscoverCommunication) => {
         setLoading(loading || false);
         setData(data || []);
         setRightPanel(false);
+        if (page)
+            setCurrentPage(page)
+        if (sort)
+            setCurrentSort(sort)
     }, []);
 
     const onOpenProfile = useCallback((url: string) => {
@@ -285,39 +289,41 @@ const DiscoverInfluencer: React.FC = () => {
                     </View>
 
                     {/* Middle: Pages list */}
-                    {false &&
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }} style={{ flexGrow: 1 }}>
-                            <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
-                                <IconButton icon="chevron-left" onPress={() => onSelectPage(currentPage - 1)} disabled={currentPage <= 1} accessibilityLabel="Previous page" />
-                                {pageNumbers[0] > 1 && (
-                                    <>
-                                        <Chip compact
-                                            mode={1 === currentPage ? 'flat' : 'outlined'}
-                                            onPress={() => onSelectPage(1)}>1</Chip>
-                                        <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                    </>
-                                )}
-                                {pageNumbers.map(p => (
-                                    <Chip
-                                        key={p}
-                                        mode={p === currentPage ? 'flat' : 'outlined'}
-                                        compact
-                                        onPress={() => onSelectPage(p)}
-                                    >
-                                        <Text style={{ fontWeight: p === currentPage ? '700' : '500' }}>{p}</Text>
-                                    </Chip>
-                                ))}
-                                {pageNumbers[pageNumbers.length - 1] < pageCount && (
-                                    <>
-                                        <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                        {/* <Chip compact
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }} style={{ flexGrow: 1 }}>
+                        <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
+                            <IconButton icon="chevron-left" onPress={() => onSelectPage(currentPage - 1)} disabled={currentPage <= 1} accessibilityLabel="Previous page" />
+                            {/* {pageNumbers[0] > 1 && (
+                                <>
+                                    <Chip compact
+                                        mode={1 === currentPage ? 'flat' : 'outlined'}
+                                        onPress={() => onSelectPage(1)}>1</Chip>
+                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
+                                </>
+                            )} */}
+                            {pageNumbers.map(p => {
+                                return p != currentPage ? null : <Chip
+                                    key={p}
+                                    mode={p === currentPage ? 'flat' : 'outlined'}
+                                    compact
+                                    onPress={() => onSelectPage(p)}
+                                >
+                                    <Text style={{ fontWeight: p === currentPage ? '700' : '500' }}>{p}</Text>
+                                </Chip>
+                            })}
+                            {/* {pageNumbers[pageNumbers.length - 1] < pageCount && (
+                                <>
+                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
+                                    <Chip compact
                                         mode={pageCount === currentPage ? 'flat' : 'outlined'}
-                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip> */}
-                                    </>
-                                )}
-                                <IconButton icon="chevron-right" onPress={() => onSelectPage(currentPage + 1)} disabled={currentPage >= pageCount} accessibilityLabel="Next page" />
-                            </View>
-                        </ScrollView>}
+                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
+                                </>
+                            )} */}
+                            <IconButton icon="chevron-right" onPress={() => onSelectPage(currentPage + 1)}
+                                // disabled={currentPage >= pageCount} 
+                                disabled={data.length != 15}
+                                accessibilityLabel="Next page" />
+                        </View>
+                    </ScrollView>
 
                     {/* Right: Sort dropdown */}
                     <Menu

@@ -126,6 +126,8 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     const { discoverCommunication, pageSortCommunication } = useDiscovery()
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
+        if (page)
+            setOffset((page - 1) * 15)
         setSort(sort as any)
         setTimeout(() => {
             callApiRef.current(true)
@@ -255,7 +257,9 @@ const TrendlyAdvancedFilter = (props: IProps) => {
             setData(newData)
             discoverCommunication.current?.({
                 loading: false,
-                data: newData
+                data: newData,
+                page: (offset / 15) + 1,
+                sort: sort
             })
         } catch (e) {
             discoverCommunication.current?.({
@@ -344,12 +348,11 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     }, [])
 
     props.FilterApplyRef.current = (action: string) => {
-        discoverCommunication.current?.({
-            loading: true,
-            data: []
-        })
+        setOffset(0)
         if (action == "apply") {
-            callApiRef.current(true)
+            setImmediate(() => {
+                callApiRef.current(true)
+            })
         } else {
             resetCallApiRef.current()
         }
