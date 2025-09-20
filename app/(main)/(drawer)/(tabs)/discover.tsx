@@ -7,11 +7,20 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
-import React, { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 import { Subject } from "rxjs";
 
 export const OpenFilterRightPanel = new Subject()
+
+interface DiscoveryProps {
+    selectedDb: DB_TYPE,
+    setSelectedDb: Function
+    rightPanel: boolean,
+    setRightPanel: Function
+}
+const DiscoveryContext = createContext<DiscoveryProps>({} as DiscoveryProps)
+export const useDiscovery = () => useContext(DiscoveryContext)
 
 const DiscoverInfluencersScreen = () => {
     const { manager } = useAuthContext()
@@ -58,16 +67,23 @@ const DiscoverInfluencersScreen = () => {
         return <ActivityIndicator />
 
     return (
-        <AppLayout>
-            <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
-                <DiscoverInfluencer selectedDb={selectedDb} setSelectedDb={setSelectedDb} rightPanel={rightPanel} setRightPanel={setRightPanel} />
-                <RightPanelDiscover selectedDb={selectedDb} setSelectedDb={setSelectedDb} style={(!xl) && {
-                    width: "100%",
-                    maxWidth: "auto",
-                    display: rightPanel ? "flex" : "none"
-                }} rightPanel={rightPanel} setRightPanel={setRightPanel} />
-            </View>
-        </AppLayout>
+        <DiscoveryContext.Provider value={{
+            selectedDb,
+            setSelectedDb,
+            rightPanel,
+            setRightPanel
+        }}>
+            <AppLayout>
+                <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
+                    <DiscoverInfluencer />
+                    <RightPanelDiscover style={(!xl) && {
+                        width: "100%",
+                        maxWidth: "auto",
+                        display: rightPanel ? "flex" : "none"
+                    }} />
+                </View>
+            </AppLayout>
+        </DiscoveryContext.Provider>
     );
 };
 

@@ -1,3 +1,4 @@
+import { useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
@@ -15,17 +16,15 @@ import TrendlyAdvancedFilter from './trendly/TrendlyAdvancedFilter'
 
 export type DB_TYPE = '' | 'trendly' | 'phyllo' | 'modash'
 interface IProps {
-    selectedDb: DB_TYPE,
-    setSelectedDb: Function,
     style?: StyleProp<ViewStyle>,
-    rightPanel: boolean,
-    setRightPanel: Function
 }
 
 export const OpenCurrentSelectedDatabase = new Subject<DB_TYPE>();
 export const FilterApplySubject = new Subject<{ action: "apply" | "clear" }>();
 
-const RightPanelDiscover: React.FC<IProps> = ({ selectedDb, setSelectedDb: dbWrapper, style, setRightPanel }) => {
+const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
+    const { selectedDb, setSelectedDb: dbWrapper, setRightPanel } = useDiscovery()
+
     const theme = useTheme()
     const colors = Colors(theme)
 

@@ -19,25 +19,6 @@ import { DiscoverCommuninicationChannel, InfluencerItem } from '../DiscoverInflu
 import { FilterApplySubject } from "../RightPanelDiscover";
 
 
-/** DROPDOWN / TAG DATA (can be wired from props later) */
-const ENGAGEMENT_RATE_OPTIONS = [
-    'No restriction', '>0.5%', '>1%', '>1.5%', '>2%', '>3%', '>5%'
-]
-
-const CREATOR_GENDER_OPTIONS = [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'neutral', label: 'Neutral' },
-]
-
-// Keep these lightweight; replace with server-driven lists later
-const NICHES = [
-    'Fashion/Beauty', 'Comedy', 'Tech & Gadgets', 'Food', 'Fitness', 'Travel', 'Education', 'Lifestyle', 'Parenting', 'Gaming'
-]
-
-const LOCATIONS = [
-    'India', 'USA', 'UK', 'UAE', 'Singapore', 'Canada', 'Australia', 'Germany', 'France', 'Remote'
-]
 
 /** Small inline component for min/max numeric ranges */
 const RangeInputs = ({

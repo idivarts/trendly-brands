@@ -1,3 +1,4 @@
+import { useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
@@ -12,7 +13,6 @@ import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from '
 import { Subject } from 'rxjs'
 import DiscoverPlaceholder from './DiscoverAdPlaceholder'
 import { InfluencerStatsModal } from './InfluencerStatModal'
-import { DB_TYPE } from './RightPanelDiscover'
 
 // Types
 export interface InfluencerItem {
@@ -85,10 +85,6 @@ export const StatChip = ({ label, value }: { label: string; value?: number }) =>
 
 
 interface IProps {
-    selectedDb: DB_TYPE,
-    setSelectedDb: Function,
-    rightPanel: boolean,
-    setRightPanel: Function
 }
 
 export const DiscoverCommuninicationChannel = new Subject<{
@@ -108,7 +104,8 @@ export const DiscoverUIActions = new Subject<{
     sort?: string;
 }>()
 
-const DiscoverInfluencer: React.FC<IProps> = ({ selectedDb, setRightPanel, rightPanel, setSelectedDb }) => {
+const DiscoverInfluencer: React.FC<IProps> = () => {
+    const { selectedDb, setRightPanel, rightPanel, setSelectedDb } = useDiscovery()
     const theme = useTheme()
     const colors = Colors(theme)
     const styles = useMemo(() => useStyles(colors), [colors])
