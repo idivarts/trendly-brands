@@ -350,9 +350,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     props.FilterApplyRef.current = (action: string) => {
         setOffset(0)
         if (action == "apply") {
-            setImmediate(() => {
-                callApiRef.current(true)
-            })
+            callApiRef.current(true)
         } else {
             resetCallApiRef.current()
         }
