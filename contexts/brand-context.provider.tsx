@@ -309,7 +309,11 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
     }
   }, [selectedBrand])
 
-  const isOnFreeTrial = selectedBrand && (!selectedBrand.isBillingDisabled && selectedBrand.billing?.status != ModelStatus.Accepted)
+  const isOnFreeTrial = useMemo(() => {
+    if (!selectedBrand)
+      return false
+    return (!selectedBrand.isBillingDisabled && !selectedBrand.billing)
+  }, [selectedBrand])
 
   const ctxValue = useMemo(() => ({
     brands,
