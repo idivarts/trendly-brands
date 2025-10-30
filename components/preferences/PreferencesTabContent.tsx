@@ -1,5 +1,5 @@
 import Select from "@/components/ui/select";
-import { INFLUENCER_CATEGORIES, INITIAL_LANGUAGES, LANGUAGES, PLATFORMS } from "@/constants/ItemsList";
+import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES, INITIAL_LANGUAGES, LANGUAGES, PLATFORMS } from "@/constants/ItemsList";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { COLLABORATION_TYPES } from "@/shared-constants/preferences/collab-type";
 import { CITIES, POPULAR_CITIES } from "@/shared-constants/preferences/locations";
@@ -16,7 +16,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Brand } from "@/types/Brand";
-import { faArrowRight, faLocation } from "@fortawesome/free-solid-svg-icons";
+import { faRightLong } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { FC, useEffect, useState } from "react";
@@ -123,7 +123,33 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
           description="Which content format are you willing to post on your social media account for promotions."
           theme={theme}
         >
-          <Select
+          <MultiSelectExtendable
+            buttonIcon={
+              <FontAwesomeIcon
+                icon={faRightLong}
+                color={Colors(theme).primary}
+                size={14}
+              />
+            }
+            buttonLabel="Others"
+            initialItemsList={includeSelectedItems(
+              INFLUENCER_CATEGORIES,
+              preferences?.influencerCategories || []
+            )}
+            initialMultiselectItemsList={includeSelectedItems(
+              INITIAL_INFLUENCER_CATEGORIES,
+              preferences?.influencerCategories || []
+            )}
+            onSelectedItemsChange={(values) => {
+              setPreferences({
+                ...preferences,
+                influencerCategories: values
+              });
+            }}
+            selectedItems={preferences?.influencerCategories || []}
+            theme={theme}
+          />
+          {/* <Select
             items={INFLUENCER_CATEGORIES.map(v => ({ label: v, value: v }))}
             multiselect
             onSelect={(item) => {
@@ -134,7 +160,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
             }}
             selectItemIcon
             value={preferences?.influencerCategories?.map((value) => ({ label: value, value })) || []}
-          />
+          /> */}
         </ContentWrapper>
         <ContentWrapper
           title="Influencer's Location"
@@ -145,12 +171,12 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
             <MultiSelectExtendable
               buttonIcon={
                 <FontAwesomeIcon
-                  icon={faLocation}
+                  icon={faRightLong}
                   color={Colors(theme).primary}
                   size={14}
                 />
               }
-              buttonLabel="See Other Options"
+              buttonLabel="Others"
               initialItemsList={includeSelectedItems(
                 CITIES,
                 preferences?.locations
@@ -196,12 +222,12 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
             <MultiSelectExtendable
               buttonIcon={
                 <FontAwesomeIcon
-                  icon={faArrowRight}
+                  icon={faRightLong}
                   color={Colors(theme).primary}
                   size={14}
                 />
               }
-              buttonLabel="See All Languages"
+              buttonLabel="Others"
               initialItemsList={includeSelectedItems(
                 LANGUAGES,
                 preferences?.languages || []
