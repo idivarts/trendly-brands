@@ -1,6 +1,6 @@
 import { PageSortCommunication, useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
 import Select from "@/components/ui/select";
-import { INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
+import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
 import { useBreakpoints } from "@/hooks";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
@@ -10,7 +10,7 @@ import { MultiSelectExtendable } from '@/shared-uis/components/multiselect-exten
 import { View } from '@/shared-uis/components/theme/Themed';
 import Colors from '@/shared-uis/constants/Colors';
 import { includeSelectedItems } from '@/shared-uis/utils/items-list';
-import { faLocation } from '@fortawesome/free-solid-svg-icons';
+import { faRightLong } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Theme, useTheme } from '@react-navigation/native';
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react';
@@ -381,7 +381,30 @@ const TrendlyAdvancedFilter = (props: IProps) => {
                 {/* influencer niche (multi-select tags) */}
                 <View style={{ backgroundColor: Colors(theme).transparent }}>
                     <Text style={styles.fieldLabel} variant="labelSmall">Influencer niche</Text>
-                    <Select
+                    <MultiSelectExtendable
+                        buttonIcon={
+                            <FontAwesomeIcon
+                                icon={faRightLong}
+                                color={Colors(theme).primary}
+                                size={14}
+                            />
+                        }
+                        buttonLabel="Others"
+                        initialItemsList={includeSelectedItems(
+                            INFLUENCER_CATEGORIES,
+                            selectedNiches
+                        )}
+                        initialMultiselectItemsList={includeSelectedItems(
+                            INITIAL_INFLUENCER_CATEGORIES,
+                            selectedNiches
+                        )}
+                        onSelectedItemsChange={(values) => {
+                            setSelectedNiches(values.map(v => v));
+                        }}
+                        selectedItems={selectedNiches}
+                        theme={theme}
+                    />
+                    {/* <Select
                         items={INFLUENCER_CATEGORIES.map(v => ({ label: v, value: v }))}
                         multiselect
                         onSelect={(item) => {
@@ -389,7 +412,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
                         }}
                         selectItemIcon
                         value={selectedNiches.map((value) => ({ label: value, value }))}
-                    />
+                    /> */}
                 </View>
 
                 {/* creator_location (multi-select tags) */}
@@ -398,12 +421,12 @@ const TrendlyAdvancedFilter = (props: IProps) => {
                     <MultiSelectExtendable
                         buttonIcon={
                             <FontAwesomeIcon
-                                icon={faLocation}
+                                icon={faRightLong}
                                 color={Colors(theme).primary}
                                 size={14}
                             />
                         }
-                        buttonLabel="See Other Options"
+                        buttonLabel="Others"
                         initialItemsList={includeSelectedItems(
                             CITIES,
                             selectedLocations
