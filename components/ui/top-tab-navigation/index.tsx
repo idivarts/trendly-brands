@@ -52,7 +52,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
       <View
         style={[
           styles.tabContent,
-          xl && { flex: 1, height: "100%" }
+          xl && { flex: 1, height: "100%", }
         ]}
       >
         {content}

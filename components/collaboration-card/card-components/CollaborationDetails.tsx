@@ -67,6 +67,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
           onPress={() => router.push(`/collaboration-details/${collabId}`)}
           style={{
             flex: 1,
+
           }}
         >
           <Text
@@ -76,7 +77,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
               color: Colors(theme).text,
             }}
           >
-            {name}
+            {[name, " Jerry"]}
           </Text>
         </Pressable>
         {onOpenBottomSheet && (
@@ -84,6 +85,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
             onPress={() => {
               onOpenBottomSheet(collabId);
             }}
+
+
           >
             <FontAwesomeIcon
               icon={faEllipsisH}
@@ -100,7 +103,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
             color: Colors(theme).gray100,
           }}
         >
-          {truncateText(collabDescription, 120)}
+          {[truncateText(collabDescription, 120), " Jerry"]}
         </Text>
         <View
           style={{
@@ -112,7 +115,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
         >
           <ChipCard
             chipText={
-              promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
+              promotionType === PromotionType.PAID_COLLAB ? "Paid Jerry" : "Unpaid Jerry"
             }
             chipIcon={faDollarSign}
           />

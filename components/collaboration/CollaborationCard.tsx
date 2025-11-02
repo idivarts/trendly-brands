@@ -60,6 +60,7 @@ const JobCard = (props: CollaborationAdCardProps) => {
                 size={24}
                 color={Colors(theme).text}
               />
+              
             </Pressable>
           </View>
         </View>

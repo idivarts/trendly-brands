@@ -9,7 +9,7 @@ const tabs = (xl: boolean) => [
   ...(xl ? [
     {
       id: "create",
-      title: "Create New ➕",
+      title: "Jerry Create New ➕",
       href: "/create-collaboration" as Href
     }, {
       id: "d1",
@@ -19,12 +19,12 @@ const tabs = (xl: boolean) => [
   ] : []),
   {
     id: "Active",
-    title: "Active",
+    title: "Jerry Active",
     component: <CollaborationList key={"active"} active={true} />,
   },
   {
     id: "Past",
-    title: "Past",
+    title: "Jerry Past",
     component: <CollaborationList key={"inactive"} active={false} />,
   },
 

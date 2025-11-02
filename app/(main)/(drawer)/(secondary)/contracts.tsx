@@ -8,12 +8,12 @@ import AppLayout from "@/layouts/app-layout";
 const tabs = [
   {
     id: "Active",
-    title: "Active",
+    title: "Active Jerry",
     component: <ActiveContracts />,
   },
   {
     id: "Past",
-    title: "Past",
+    title: "Past Jerry",
     component: <PastContracts />,
   },
 ];
@@ -21,7 +21,7 @@ const tabs = [
 const Contracts = () => {
   return (
     <AppLayout>
-      <ScreenHeader title="Contracts" />
+      <ScreenHeader title="Contracts Jerry" />
       <View
         style={{
           flex: 1,

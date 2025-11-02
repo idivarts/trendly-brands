@@ -33,7 +33,7 @@ const ChatMessageTopbar: React.FC<ChatMessageTopbarProps> = ({
               router.push(`/contract-details/${contract.streamChannelId}`)
             }}
           >
-            {"Open Application"}
+            {"Open Application Jerry"}
           </Button>
         </View>
       }

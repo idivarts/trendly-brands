@@ -161,7 +161,7 @@ const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
           subtitle="Start Applying today and get exclusive collabs"
           title="No Contracts yet"
           action={() => router.push("/collaborations")}
-          actionLabel="Explore Collaborations"
+          actionLabel="Explore Collaborations Jerry"
         />
       ) : (
         <View style={{ flex: 1 }}>

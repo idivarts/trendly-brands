@@ -36,7 +36,7 @@ const AddGroup: React.FC<AddGroupProps> = ({
     <AddModal
       action={addGroup}
       actionLabel="Add"
-      title="Add Group"
+      title="Add Group Jerry"
       content={
         <TextInput
           label="Group name"

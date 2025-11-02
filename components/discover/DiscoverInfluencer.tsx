@@ -83,6 +83,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
 
 export const StatChip = ({ label, value }: { label: string; value?: number }) => (
     <Chip mode="outlined" compact style={{ marginRight: 6, marginBottom: 6 }}>
+           <Text>Jerry</Text>
         <Text style={{ fontWeight: '600' }}>{value != null ? formatNumber(value) : '-'}</Text>
         <Text> {label}</Text>
     </Chip>
@@ -149,15 +150,16 @@ const DiscoverInfluencer: React.FC = () => {
                 <Card.Content style={styles.content}>
                     <View style={styles.row}>
                         <View style={styles.avatarCol}>
+                               <Text>Jerry</Text>
                             <FacebookImageComponent url={item.picture} altText={item.fullname} style={styles.avatar} />
                             {/* <Image source={{ uri: item.picture }} style={styles.avatar} /> */}
                         </View>
                         <View style={styles.body}>
+                               <Text>Jerry</Text>
                             <Text style={styles.title} numberOfLines={1}>{item.fullname}</Text>
                             <Text style={styles.subtitle} numberOfLines={1}>@{maskHandle(item.username)}</Text>
 
                             <View style={styles.statsRow}>
-
                                 <StatChip label={xl ? "Followers" : "Fol"} value={item.followers} />
                                 <StatChip label={xl ? "Engagements" : "Eng"} value={item.engagements} />
                                 <StatChip label={xl ? "ER (in %)" : "ER"} value={((item?.engagementRate || 0))} />

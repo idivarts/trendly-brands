@@ -12,7 +12,7 @@ const ApplicationsScreen = () => {
     return (
         <AppLayout withWebPadding={false}>
             <ScreenHeader
-                title="All Applications"
+                title="All Applications Jerry"
             />
             <View style={{
                 flex: 1,

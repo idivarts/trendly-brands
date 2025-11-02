@@ -59,9 +59,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       <View
         style={styles.contentContainer}
       >
+        <Text>Jerry</Text>
         <Text style={styles.title}>
           {title}
         </Text>
+
         <Text style={styles.subtitle}>
           {subtitle}
         </Text>
@@ -73,6 +75,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
             onPress={handleAction}
           >
             {actionLabel}
+            <Text>Jerry</Text>
           </Button>
         )
       }

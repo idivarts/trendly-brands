@@ -112,7 +112,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   const tabs = (xl: boolean) => [
     {
       id: "Overview",
-      title: "Overview",
+      title: "Overview Jerry",
       component: (
         <OverviewTabContent
           collaboration={collaboration as CollaborationDetail}
@@ -126,7 +126,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     }] : []),
     ...(xl ? [{
       id: "Applications-Pending",
-      title: "Pending/New Applications",
+      title: "Pending/New Applications Jerry",
       component: (
         <ApplicationsTabContent
           key={"applications-pending"}
@@ -141,7 +141,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       ),
     }, {
       id: "Applications-Shortlisted",
-      title: "Shortlisted Applications",
+      title: "Shortlisted Applications Jerry",
       component: (
         <ApplicationsTabContent
           key={"applications-shortlisted"}
@@ -156,7 +156,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       ),
     }, {
       id: "Applications-Accepted",
-      title: "Accepted Applications",
+      title: "Accepted Applications Jerry",
       component: (
         <ApplicationsTabContent
           key={"applications-accepted"}
@@ -171,7 +171,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
       ),
     }, {
       id: "Applications-Rejected",
-      title: "Rejected Applications",
+      title: "Rejected Applications Jerry",
       component: (
         <ApplicationsTabContent
           filter="rejected"
@@ -191,7 +191,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     }] : [
       {
         id: "Applications",
-        title: "Applications",
+        title: "Applications Jerry",
         component: (
           <ApplicationsTabContent
             key={"applications"}
@@ -207,12 +207,12 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     ]),
     {
       id: "Invitations",
-      title: "Send Invitations",
+      title: "Send Invitations Jerry",
       component: <InvitationsTabContent key={"invitations"} pageID={pageID} />,
     },
     ...(xl ? [{
       id: "Invitations-Sent",
-      title: "Invited Members",
+      title: "Invited Members Jerry",
       component: (
         <InvitationsTabContent key={"invitations-sent"} pageID={pageID} />
       ),
@@ -282,7 +282,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             }}
             textColor={Colors(theme).text}
           >
-            Edit Draft
+            Edit Draft Jerry
           </Button>
           <Button
             mode="contained"
@@ -291,7 +291,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
               flex: 1,
             }}
           >
-            Publish Now
+            Publish Now Jerry
           </Button>
         </View>
       )}

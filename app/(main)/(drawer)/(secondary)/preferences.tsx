@@ -6,7 +6,7 @@ import React from "react";
 const PreferencesScreen = () => {
   return (
     <AppLayout withWebPadding={false}>
-      <ScreenHeader title="Brand Preferences" />
+      <ScreenHeader title="Brand Preferences Jerry" />
       <AppLayout>
         <PreferencesTabContent />
       </AppLayout>

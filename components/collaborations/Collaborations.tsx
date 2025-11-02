@@ -29,7 +29,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  RefreshControl
+  RefreshControl,
 } from "react-native";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
@@ -73,60 +73,67 @@ const CollaborationList = ({ active }: { active: boolean }) => {
       const q = query(
         collaborationCol,
         where("brandId", "==", selectedBrand?.id),
-        (active ? where("status", "in", ["active", "draft"]) : where("status", "in", ["stopped"])),
+        active
+          ? where("status", "in", ["active", "draft"])
+          : where("status", "in", ["stopped"]),
         orderBy("timeStamp", "desc")
       );
 
-      const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        const proposals = await Promise.all(
-          querySnapshot.docs.map(async (doc) => {
-            const data = {
-              ...doc.data(),
-              id: doc.id,
-            };
+      const unsubscribe = onSnapshot(
+        q,
+        async (querySnapshot) => {
+          const proposals = await Promise.all(
+            querySnapshot.docs.map(async (doc) => {
+              const data = {
+                ...doc.data(),
+                id: doc.id,
+              };
 
-            // Fetch applications
-            const applicationCol = collection(
-              FirestoreDB,
-              "collaborations",
-              data.id,
-              "applications"
-            );
-            const applicationSnapshot = await getDocs(applicationCol);
-            const applications = applicationSnapshot.docs.map((appDoc) =>
-              appDoc.data()
-            );
-            const acceptedApplications = applications.filter(
-              (application) => application.status === "accepted"
-            ).length;
+              // Fetch applications
+              const applicationCol = collection(
+                FirestoreDB,
+                "collaborations",
+                data.id,
+                "applications"
+              );
+              const applicationSnapshot = await getDocs(applicationCol);
+              const applications = applicationSnapshot.docs.map((appDoc) =>
+                appDoc.data()
+              );
+              const acceptedApplications = applications.filter(
+                (application) => application.status === "accepted"
+              ).length;
 
-            // Fetch invitations
-            const invitationCol = collection(
-              FirestoreDB,
-              "collaborations",
-              data.id,
-              "invitations"
-            );
-            const invitationSnapshot = await getDocs(invitationCol);
-            const invitations = invitationSnapshot.docs.map((invDoc) =>
-              invDoc.data()
-            );
+              // Fetch invitations
+              const invitationCol = collection(
+                FirestoreDB,
+                "collaborations",
+                data.id,
+                "invitations"
+              );
+              const invitationSnapshot = await getDocs(invitationCol);
+              const invitations = invitationSnapshot.docs.map((invDoc) =>
+                invDoc.data()
+              );
 
-            return {
-              ...data,
-              applications: applications.length,
-              invitations: invitations.length,
-              acceptedApplications,
-            };
-          })
-        );
-        setProposals(proposals);
-        setIsLoading(false);
-      }, (error) => {
-        setIsLoading(false);
-      }, () => {
-        setIsLoading(false);
-      });
+              return {
+                ...data,
+                applications: applications.length,
+                invitations: invitations.length,
+                acceptedApplications,
+              };
+            })
+          );
+          setProposals(proposals);
+          setIsLoading(false);
+        },
+        (error) => {
+          setIsLoading(false);
+        },
+        () => {
+          setIsLoading(false);
+        }
+      );
 
       return () => {
         unsubscribe();
@@ -164,10 +171,10 @@ const CollaborationList = ({ active }: { active: boolean }) => {
       {filteredProposals.length === 0 ? (
         <EmptyState
           image={require("@/assets/images/illustration6.png")}
-          subtitle="You have posted no collaborations yet! Your journey begins here"
-          title="No Collaborations posted"
+          subtitle="You have posted no collaborations yet! Your journey begins here Jerry"
+          title="No Collaborations posted Jerry"
           action={() => router.push("/(modal)/create-collaboration")}
-          actionLabel="Create Collaboration"
+          actionLabel="Create Collaboration Jerry"
         />
       ) : (
         <View style={{ flex: 1 }}>
@@ -184,24 +191,28 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                   gap: 8,
                   borderRadius: 5,
                   overflow: "hidden",
-                }}>
-
+                }}
+              >
                 {item.attachments && item.attachments?.length > 0 && (
                   <ScrollMedia
                     theme={theme}
                     MAX_WIDTH_WEB={MAX_WIDTH_WEB}
-                    media={item.attachments?.map(
-                      //@ts-ignore
-                      (attachment: MediaItem) =>
-                        processRawAttachment(attachment)
-                    ) || []}
+                    media={
+                      item.attachments?.map(
+                        //@ts-ignore
+                        (attachment: MediaItem) =>
+                          processRawAttachment(attachment)
+                      ) || []
+                    }
                     xl={xl}
                   />
                 )}
-                <Pressable onPress={() =>
-                  router.push(`/collaboration-details/${item.id}`)
-                }>
-
+                <Pressable
+                  onPress={() =>
+                    router.push(`/collaboration-details/${item.id}`)
+                  }
+                  style={{ backgroundColor: "red" }}
+                >
                   {item.status === "draft" && (
                     <View
                       style={{
@@ -302,7 +313,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 marginTop: -2,
               }}
             />
-            Create Collaboration
+            Create Collaboration Jerry
           </Button>
         </View>
       )}

@@ -20,7 +20,7 @@ const AddMember: React.FC<AddMemberProps> = ({
   const addMember = async () => {
     // User id should exist on the get stream
     await channel.addMembers([userId]);
-    Toaster.success('Member added successfully');
+    Toaster.success('Member added successfully Jerry');
     setVisible(false);
     setUserId('');
   }
@@ -29,7 +29,7 @@ const AddMember: React.FC<AddMemberProps> = ({
     <AddModal
       action={addMember}
       actionLabel="Add"
-      title="Add Member"
+      title="Add Member Jerry"
       content={
         <>
           <TextInput

@@ -17,8 +17,8 @@ const EmptyMessageState: React.FC = () => {
         action={() => router.push("/collaborations")}
         actionLabel="Explore Collaborations"
         image={require("@/assets/images/illustration3.png")}
-        subtitle="Start applying to collaborations to interact with your dream brands."
-        title="No Messages"
+        subtitle="Start applying to collaborations to interact with your dream brands. Jerry"
+        title="No Messages Jerry"
       />
     </View>
   );

@@ -96,7 +96,7 @@ const Select: React.FC<SelectProps> = ({
                   : Colors(theme).text,
               }}
             >
-              {item.label}
+              {[item.label, " Jerry"]}
             </Text>
             {selectItemIcon &&
               value.find(

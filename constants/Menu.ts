@@ -12,31 +12,31 @@ export const MENU_ITEMS: { id: string, icon: any, title: string, href: Href }[] 
   {
     id: "1",
     icon: faSliders,
-    title: "Brand Preferences",
+    title: "Brand Preferences Jerry",
     href: "/preferences",
   },
   {
     id: "2",
     icon: faUsers,
-    title: "Manage Brand Members",
+    title: "Manage Brand Members Jerry",
     href: "/members",
   },
   {
     id: "5",
     icon: faFileLines,
-    title: "Contracts",
+    title: "Contracts Jerry",
     href: "/contracts",
   },
   ...(Platform.OS == "web" ? [{
     id: "3",
     icon: faCreditCard,
-    title: "Billing",
+    title: "Billing Jerry",
     href: "/billing" as Href,
   }] : []),
   ...(Platform.OS != "web" ? [{
     id: "4",
     icon: faGears,
-    title: "Settings",
+    title: "Settings Jerry",
     href: "/settings" as Href,
   }] : []),
 ];

@@ -62,6 +62,7 @@ const ChannelListNative = () => {
         flex: 1,
       }}
     >
+      
       <View
         style={{
           padding: 16,
@@ -69,6 +70,7 @@ const ChannelListNative = () => {
           flexDirection: "row",
         }}
       >
+   
         <Searchbar
           icon={() => (
             <FontAwesomeIcon

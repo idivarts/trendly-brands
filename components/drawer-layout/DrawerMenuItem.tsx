@@ -76,8 +76,9 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
           ]}
           numberOfLines={1}
         >
-          {tab.label}
+          {[tab.label, " Jerry"]}
         </Text>
+
         {proLock && (
           <View
             style={{

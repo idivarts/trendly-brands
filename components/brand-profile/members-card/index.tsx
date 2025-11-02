@@ -94,6 +94,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
           altText="Image"
         />
         <View>
+               <Text>Jerry</Text>
           <Text style={{ fontSize: 16 }}>{manager.name}</Text>
           <Text style={{ fontSize: 16 }}>{manager.email}</Text>
         </View>

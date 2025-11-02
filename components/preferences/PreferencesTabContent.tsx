@@ -68,7 +68,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
   const notifyUprade = () => {
     openModal({
       title: "Upgrade to Paid Plan!",
-      description: "Setting Brand Preferencese is just member only functionality. Please upgrade the plan now to not lose any data",
+      description: "Setting e is just member only functionality. Please upgrade the plan now to not lose any data",
       confirmAction: () => {
         router.push("/billing")
       },
@@ -119,7 +119,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         }}
       >
         <ContentWrapper
-          title="Influencer's Content Niche"
+          title="Influencer's Content Niche Jerry"
           description="Which content format are you willing to post on your social media account for promotions."
           theme={theme}
         >
@@ -163,7 +163,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
           /> */}
         </ContentWrapper>
         <ContentWrapper
-          title="Influencer's Location"
+          title="Influencer's Location Jerry"
           description="From which location do you want your influencer to be. If you have no preference, leave this blank."
           theme={theme}
         >
@@ -196,7 +196,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
             />}
         </ContentWrapper>
         <ContentWrapper
-          title="Preferrable Promotion Type"
+          title="Preferrable Promotion Type Jerry"
           description="What type of promotion are you looking for?"
           theme={theme}
         >
@@ -214,7 +214,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
           />
         </ContentWrapper>
         <ContentWrapper
-          title="Influencer's Content Language"
+          title="Influencer's Content Language Jerry"
           description="Please tell us in what language do you want influencers to create content in?"
           theme={theme}
         >
@@ -249,7 +249,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         </ContentWrapper>
 
         <ContentWrapper
-          title="Social Media Platforms"
+          title="Social Media Platforms Jerry"
           description="Which all social media platform do you wish to promote your brand?"
           theme={theme}
         >
@@ -268,7 +268,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         </ContentWrapper>
 
         <ContentWrapper
-          title="Influencer's Time Commitment"
+          title="Influencer's Time Commitment Jerry"
           description="Match with influencer with your seriousness level"
           theme={theme}
         >
@@ -287,7 +287,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         </ContentWrapper>
 
         <ContentWrapper
-          title="Collaboration Post Types"
+          title="Collaboration Post Types Jerry"
           description="What type of posts do you want your influencers to post when they are a part of your campaign?"
           theme={theme}
         >
@@ -306,7 +306,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         </ContentWrapper>
 
         <ContentWrapper
-          title="Video Types"
+          title="Video Types Jerry"
           description="Do you want the shooted video to be integrated video or dedicated video?"
           theme={theme}
         >
@@ -336,7 +336,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = (props) => {
         alignItems: "stretch",
         backgroundColor: Colors(theme).background
       }}>
-        <Button style={{ flex: 1, paddingVertical: 4 }} onPress={() => updatePreference()} loading={loading}>Save</Button>
+        <Button style={{ flex: 1, paddingVertical: 4 }} onPress={() => updatePreference()} loading={loading}>Save Jerry</Button>
       </View>
     </>
   );

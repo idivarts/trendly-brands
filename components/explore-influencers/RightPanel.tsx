@@ -116,7 +116,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
 
                 {/* Influencer Preference */}
                 <Block>
-                    <SectionHeader icon="sliders" title="Influencer preference"
+                    <SectionHeader icon="sliders" title="Influencer preference Jerry"
                         subtitle="Want more control? You can set some common preferences in Brand Preferences section." />
                     <Button mode="outlined" icon="tune" onPress={() => router.push('/preferences')}>
                         Set preferences
