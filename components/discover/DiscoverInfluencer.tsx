@@ -10,7 +10,7 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { maskHandle } from "@/shared-uis/utils/masks";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   FlatList,
   Linking,
@@ -29,6 +29,9 @@ import {
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import { Text } from "react-native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
@@ -77,7 +80,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       overflow: "hidden",
       backgroundColor: colors.aliceBlue,
       minWidth: 340,
-      maxWidth: "48%",
+
       alignSelf: "stretch",
       minHeight: 216,
     },
@@ -134,6 +137,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       flexDirection: "column",
       backgroundColor: colors.aliceBlue,
       flex: 1,
+      maxWidth: "40%",
     },
     DetailsContainer: {
       justifyContent: "center",
@@ -142,33 +146,33 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     },
   });
 
-// export const StatChip = ({
-//   label,
-//   value,
-// }: {
-//   label: string;
-//   value?: number;
-// }) => (
-//   <Chip
-//     mode="flat"
-//     compact
-//     style={{
-//       marginRight: 6,
-//       marginBottom: 6,
-//       shadowColor: "#000",
-//       shadowOffset: { width: 0, height: 1 },
-//       shadowOpacity: 0.2,
-//       shadowRadius: 1,
-//       elevation: 2,
-//       flexDirection: "column",
-//     }}
-//   >
-//     <Text style={{ fontWeight: "600" }}>
-//       {value != null ? formatNumber(value) : "-"}
-//     </Text>
-//     <Text> {label}</Text>
-//   </Chip>
-// );
+export const StatChip = ({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) => (
+  <Chip
+    mode="flat"
+    compact
+    style={{
+      marginRight: 6,
+      marginBottom: 6,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 1,
+      elevation: 2,
+      flexDirection: "column",
+    }}
+  >
+    <Text style={{ fontWeight: "600" }}>
+      {value != null ? formatNumber(value) : "-"}
+    </Text>
+    <Text> {label}</Text>
+  </Chip>
+);
 
 const DiscoverInfluencer: React.FC = () => {
   const { selectedDb, setRightPanel, rightPanel, setSelectedDb } =
@@ -202,11 +206,74 @@ const DiscoverInfluencer: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<InfluencerItem[]>([]);
+  const [collaborations, setCollaborations] = useState<
+    {
+      id: string;
+      name: string;
+      description: string;
+      mediaUrl?: string;
+      isVideo?: boolean;
+      active?: boolean;
+    }[]
+  >([]);
 
   const { selectedBrand } = useBrandContext();
   const { openModal } = useConfirmationModel();
 
   const { xl } = useBreakpoints();
+
+  // Fetch active collaborations for the selected brand to show in Invite modal
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchActiveCollaborations = async () => {
+      try {
+        if (!selectedBrand) return;
+
+        const coll = collection(FirestoreDB, "collaborations");
+        const q = query(
+          coll,
+          where("brandId", "==", selectedBrand.id),
+          where("status", "==", "active"),
+          orderBy("timeStamp", "desc")
+        );
+
+        const snap = await getDocs(q);
+        const items = snap.docs.map((d) => {
+          const data = d.data() as any;
+          const attachments = data.attachments || [];
+          const first = attachments[0];
+          const processed = processRawAttachment(first);
+          const isVideo = processed?.type?.includes("video") || false;
+          const mediaUrl =
+            processed?.url ||
+            first?.imageUrl ||
+            first?.url ||
+            "https://via.placeholder.com/300x200.png?text=No+Image";
+
+          return {
+            id: d.id,
+            name: data.name || "",
+            description: data.description || "",
+            mediaUrl,
+            isVideo,
+            active: true,
+          };
+        });
+
+        if (mounted) setCollaborations(items);
+      } catch (err) {
+        // swallow for now — don't break Discover UX
+        console.warn("Failed to load active collaborations", err);
+      }
+    };
+
+    fetchActiveCollaborations();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedBrand]);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageCount, setPageCount] = useState<number>(20);
@@ -234,7 +301,10 @@ const DiscoverInfluencer: React.FC = () => {
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<InfluencerItem>) => {
       return (
-        <Card style={styles.card} onPress={() => setStatsItem(item)}>
+        <Card
+          style={[styles.card, { maxWidth: xl ? "40%" : "100%" }]}
+          onPress={() => setStatsItem(item)}
+        >
           <Card.Content style={styles.content}>
             <View style={{ backgroundColor: colors.aliceBlue, paddingTop: 20 }}>
               <View
@@ -254,56 +324,82 @@ const DiscoverInfluencer: React.FC = () => {
                 </View>
 
                 <View style={styles.NameAndUserNameCol}>
-                  <Text style={styles.title} numberOfLines={1}>
-                    {item.fullname}
+                  <Text
+                    style={styles.title}
+                    ellipsizeMode="tail"
+                    numberOfLines={1}
+                  >
+                    {[item.fullname]}
                   </Text>
                   <Text style={styles.subtitle} numberOfLines={1}>
                     @{maskHandle(item.username)}
                   </Text>
-                  <View style={{alignItems:"flex-start", backgroundColor: colors.aliceBlue, marginTop: 8}}>
+                  <View
+                    style={{
+                      alignItems: "flex-start",
+                      backgroundColor: colors.aliceBlue,
+                      marginTop: 8,
+                    }}
+                  >
                     <InviteToCampaignButton
                       label="Invite"
                       openModal={openModal}
                       selectedBrand={selectedBrand}
+                      collaborations={collaborations} // active ones
                       textstyle={{ fontSize: 18 }}
-                      style={{ paddingHorizontal: 48,}}
                     />
                   </View>
                 </View>
               </View>
               <View
-                style={{ paddingTop: 20, backgroundColor: colors.aliceBlue }}
+                style={{
+                  paddingTop: 20,
+                  backgroundColor: Colors(theme).aliceBlue,
+                }}
               >
-                <View style={styles.statsRow}>
-                  <View style={styles.DetailsContainer}>
-                    <View>
-                      <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                        {formatNumber(item.followers)}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: "#737373" }}>
-                        {xl ? "Followers" : "Fol"}
-                      </Text>
-                    </View>
+                <View
+                  style={[
+                    styles.statsRow,
+                    { backgroundColor: Colors(theme).InfluencerStatCard },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.DetailsContainer,
+                      { backgroundColor: Colors(theme).InfluencerStatCard },
+                    ]}
+                  >
+                    <Text style={{ fontWeight: "600", fontSize: 16 }}>
+                      {formatNumber(item.followers)}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: Colors(theme).text }}>
+                      {"Followers"}
+                    </Text>
                   </View>
                   <View
                     style={{
-                      backgroundColor: "#ccc",
+                      backgroundColor: Colors(theme).text,
                       height: "80%",
                       padding: 0.5,
                       alignSelf: "center",
                     }}
                   />
-                  <View style={styles.DetailsContainer}>
+                  <View
+                    style={[
+                      styles.DetailsContainer,
+                      { backgroundColor: Colors(theme).InfluencerStatCard },
+                    ]}
+                  >
                     <Text style={{ fontWeight: "600", fontSize: 16 }}>
                       {formatNumber(item.engagements)}
                     </Text>
-                    <Text style={{ fontSize: 10, color: "#737373" }}>
-                      {xl ? "Engagements" : "Eng"}
+                    <Text style={{ fontSize: 10, color: Colors(theme).text }}>
+                      {"Engagements"}
                     </Text>
                   </View>
                   <View
                     style={{
-                      backgroundColor: "#ccc",
+                      backgroundColor: Colors(theme).text,
                       height: "80%",
                       padding: 0.5,
                       alignSelf: "center",
@@ -325,11 +421,16 @@ const DiscoverInfluencer: React.FC = () => {
                       alignSelf: "center",
                     }} */}
 
-                  <View style={styles.DetailsContainer}>
+                  <View
+                    style={[
+                      styles.DetailsContainer,
+                      { backgroundColor: Colors(theme).InfluencerStatCard },
+                    ]}
+                  >
                     <Text style={{ fontWeight: "600", fontSize: 16 }}>
                       {formatNumber(item.views)}
                     </Text>
-                    <Text style={{ fontSize: 10, color: "#737373" }}>
+                    <Text style={{ fontSize: 10, color: Colors(theme).text }}>
                       {xl ? "Views" : "Views"}
                     </Text>
                   </View>

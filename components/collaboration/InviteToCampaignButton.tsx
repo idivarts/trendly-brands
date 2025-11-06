@@ -1,36 +1,43 @@
-import React, { useCallback } from "react";
-import { Linking, TouchableOpacity, Text } from "react-native";
-import { Theme, useTheme } from '@react-navigation/native'
+import React, { useState } from "react";
+import { Linking, StyleProp, ViewStyle, TextStyle } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import { Button } from "react-native-paper";
 import Colors from "@/constants/Colors";
-
-
-interface InviteButtonProps {
-  label?: string;
-  disabled?: boolean;
-  style?: any;
-}
+import InviteToCampaignModal from "./InviteToCampaignModal";
 
 interface InviteButtonProps {
   label?: string;
   disabled?: boolean;
-  style?: any;
-  openModal: (args: any) => void;
+  style?: StyleProp<ViewStyle>;
+  textstyle?: StyleProp<TextStyle>;
   selectedBrand: any;
-  textstyle?: any;
+  openModal: (args: any) => void;
+  collaborations?: {
+    id: string;
+    name: string;
+    description: string;
+    mediaUrl?: string;
+    isVideo?: boolean;
+    active?: boolean;
+  }[];
 }
 
 const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
   label = "Invite",
   disabled,
   style,
-  openModal,
-  selectedBrand,
   textstyle,
+  selectedBrand,
+  openModal,
+  collaborations = [],
 }) => {
-        const theme = useTheme()
-  const handleInvite = () => {
-    console.log("Invite button pressed ✅");
-    if ((selectedBrand?.credits?.connection || 0) <= 0) {
+  const theme = useTheme();
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleInvitePress = () => {
+    const credits = selectedBrand?.credits?.connection || 0;
+
+    if (credits > 0) {
       openModal({
         title: "No Connection Credit",
         description:
@@ -41,31 +48,52 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
       return;
     }
 
-    openModal({
-      title: "Feature is Underway",
-      description:
-        "We are working on this feature. Please contact support to know more about it and the expected timeline.",
-      confirmText: "Contact Support",
-      confirmAction: () => Linking.openURL("mailto:support@idiv.in"),
-    });
+    // ✅ Show your custom campaign modal now
+    setModalVisible(true);
+  };
+
+  const handleInviteConfirm = (selectedIds: string[]) => {
+    console.log("✅ Inviting influencer to campaigns:", selectedIds);
+    // TODO: call your backend API here
+    setModalVisible(false);
   };
 
   return (
-    <TouchableOpacity
-      onPress={handleInvite}
-      disabled={disabled}
-      style={[
-        {
-          backgroundColor: disabled ? "#ccc" : Colors(theme).primary,
-          paddingVertical: 4,
-          borderRadius: 12,
-          alignItems: "center",
-        },
-        style,
-      ]}
-    >
-      <Text style={[{ color: "#fff", fontWeight: "600" }, textstyle]}>{label}</Text>
-    </TouchableOpacity>
+    <>
+      <Button
+        mode="contained"
+        onPress={handleInvitePress}
+        disabled={disabled}
+        style={[
+          {
+            backgroundColor: disabled
+              ? Colors(theme).card
+              : Colors(theme).primary,
+            borderRadius: 12,
+          },
+          style,
+        ]}
+        labelStyle={[
+          {
+            color: Colors(theme).white,
+            fontWeight: "600",
+            textTransform: "none",
+          },
+          textstyle,
+        ]}
+      >
+        {label}
+      </Button>
+
+      {/* ✅ Custom campaign invite modal */}
+      <InviteToCampaignModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        collaborations={collaborations.filter((c) => c.active)}
+        onInvite={handleInviteConfirm}
+      />
+    </>
   );
 };
+
 export default InviteToCampaignButton;
