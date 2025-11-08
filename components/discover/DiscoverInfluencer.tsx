@@ -80,7 +80,6 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       overflow: "hidden",
       backgroundColor: colors.aliceBlue,
       minWidth: 340,
-
       alignSelf: "stretch",
       minHeight: 216,
     },
@@ -528,6 +527,70 @@ const DiscoverInfluencer: React.FC = () => {
           },
       ]}
     >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          shadowColor: Colors(theme).primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 1,
+          elevation: 2,
+          borderBottomEndRadius: 12,
+          borderBottomStartRadius: 12,
+          zIndex: 999,
+        }}
+      >
+        {/* Left: Total results */}
+        <View style={[styles.row, { gap: 6 }]}>
+          <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
+            Total
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              opacity: 0.8,
+              color: Colors(theme).primary,
+              fontWeight: "500",
+            }}
+          >
+            {data.length < 15 ? data.length : "500+"} Results found
+          </Text>
+        </View>
+
+        {/* Right: Sort dropdown */}
+        <Menu
+          visible={sortMenuVisible}
+          onDismiss={() => setSortMenuVisible(false)}
+          anchor={
+            <Chip
+              compact
+              onPress={() => setSortMenuVisible(true)}
+              icon="sort"
+              style={{ marginLeft: "auto" }}
+            >
+              <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                {sortOptions.find((o) => o.value === currentSort)?.label ||
+                  "Relevance"}
+              </Text>
+            </Chip>
+          }
+          style={{ backgroundColor: Colors(theme).background }}
+        >
+          {sortOptions.map((opt) => (
+            <Menu.Item
+              key={opt.value}
+              onPress={() => onSelectSort(opt.value)}
+              title={opt.label}
+              // right={() => (opt.value === currentSort ? <Badge>✓</Badge> : null)}
+            />
+          ))}
+        </Menu>
+      </View>
+
       <View style={{ flex: 1 }}>
         <FlatList
           data={data}
@@ -543,121 +606,58 @@ const DiscoverInfluencer: React.FC = () => {
           getItemLayout={getItemLayout}
           numColumns={xl ? 2 : 1}
           ListFooterComponent={
-            loading && data.length > 0 ? (
-              <View style={styles.footerLoader}>
-                <ActivityIndicator />
+            <>
+              {loading && data.length > 0 && (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator />
+                </View>
+              )}
+              <Divider />
+              {/* Pagination */}
+              <View
+                style={{
+                  paddingVertical: 2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
+                  <IconButton
+                    icon="chevron-left"
+                    onPress={() => onSelectPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    accessibilityLabel="Previous page"
+                  />
+                  {pageNumbers.map((p) => {
+                    return p != currentPage ? null : (
+                      <Chip
+                        key={p}
+                        mode={p === currentPage ? "flat" : "outlined"}
+                        compact
+                        onPress={() => onSelectPage(p)}
+                      >
+                        <Text
+                          style={{
+                            fontWeight: p === currentPage ? "700" : "500",
+                          }}
+                        >
+                          {p}
+                        </Text>
+                      </Chip>
+                    );
+                  })}
+                  <IconButton
+                    icon="chevron-right"
+                    onPress={() => onSelectPage(currentPage + 1)}
+                    disabled={data.length != 15}
+                    accessibilityLabel="Next page"
+                  />
+                </View>
               </View>
-            ) : null
+            </>
           }
         />
-        <Divider />
-        {/* Header Bar: totals • pagination • sort */}
-        <View
-          style={[
-            styles.row,
-            {
-              paddingHorizontal: 10,
-              paddingTop: 6,
-              paddingBottom: 2,
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-            },
-          ]}
-        >
-          {/* Left: Total results */}
-          <View style={[styles.row, { gap: 6 }]}>
-            <Text style={{ fontWeight: "600" }}>Total</Text>
-            <Text style={{ fontSize: 12, opacity: 0.8 }}>
-              {data.length < 15 ? data.length : "500+"} Results found
-            </Text>
-          </View>
 
-          {/* Middle: Pages list */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ alignItems: "center" }}
-            style={{ flexGrow: 1 }}
-          >
-            <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
-              <IconButton
-                icon="chevron-left"
-                onPress={() => onSelectPage(currentPage - 1)}
-                disabled={currentPage <= 1}
-                accessibilityLabel="Previous page"
-              />
-              {/* {pageNumbers[0] > 1 && (
-                                <>
-                                    <Chip compact
-                                        mode={1 === currentPage ? 'flat' : 'outlined'}
-                                        onPress={() => onSelectPage(1)}>1</Chip>
-                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                </>
-                            )} */}
-              {pageNumbers.map((p) => {
-                return p != currentPage ? null : (
-                  <Chip
-                    key={p}
-                    mode={p === currentPage ? "flat" : "outlined"}
-                    compact
-                    onPress={() => onSelectPage(p)}
-                  >
-                    <Text
-                      style={{ fontWeight: p === currentPage ? "700" : "500" }}
-                    >
-                      {p}
-                    </Text>
-                  </Chip>
-                );
-              })}
-              {/* {pageNumbers[pageNumbers.length - 1] < pageCount && (
-                                <>
-                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                    <Chip compact
-                                        mode={pageCount === currentPage ? 'flat' : 'outlined'}
-                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
-                                </>
-                            )} */}
-              <IconButton
-                icon="chevron-right"
-                onPress={() => onSelectPage(currentPage + 1)}
-                // disabled={currentPage >= pageCount}
-                disabled={data.length != 15}
-                accessibilityLabel="Next page"
-              />
-            </View>
-          </ScrollView>
-
-          {/* Right: Sort dropdown */}
-          <Menu
-            visible={sortMenuVisible}
-            onDismiss={() => setSortMenuVisible(false)}
-            anchor={
-              <Chip
-                compact
-                onPress={() => setSortMenuVisible(true)}
-                icon="sort"
-                style={{ marginLeft: "auto" }}
-              >
-                <Text numberOfLines={1} style={{ maxWidth: 140 }}>
-                  {sortOptions.find((o) => o.value === currentSort)?.label ||
-                    "Relevance"}
-                </Text>
-              </Chip>
-            }
-            style={{ backgroundColor: Colors(theme).background }}
-          >
-            {sortOptions.map((opt) => (
-              <Menu.Item
-                key={opt.value}
-                onPress={() => onSelectSort(opt.value)}
-                title={opt.label}
-                // right={() => (opt.value === currentSort ? <Badge>✓</Badge> : null)}
-              />
-            ))}
-          </Menu>
-        </View>
         {!!statsItem && (
           <InfluencerStatsModal
             visible={!!statsItem}
