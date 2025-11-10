@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import Button from "../../ui/button";
+import { View } from "react-native";
 
 interface InvitationCardProps {
   bottomSheetAction?: () => void;
@@ -30,8 +31,8 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
     checkIfAlreadyInvited,
     influencerId: data.id,
   });
-  const { isOnFreeTrial, isProfileLocked } = useBrandContext()
-  const { xl } = useBreakpoints()
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext();
+  const { xl } = useBreakpoints();
 
   return (
     <>
@@ -43,26 +44,28 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         fullHeight={true}
         isOnFreePlan={isOnFreeTrial}
         lockProfile={isProfileLocked(data.id)}
-        cardActionNode={<Button
-          mode="outlined"
-          disabled={isAlreadyInvited ? true : false}
-          onPress={() => {
-            if (!isAlreadyInvited) {
-              inviteInfluencer();
-            }
-          }}
-        >
-          <FontAwesomeIcon
-            color={Colors(theme).primary}
-            icon={isAlreadyInvited ? faCheck : faPlus}
-            size={12}
-            style={{
-              marginRight: 6,
-              marginTop: -1,
+        cardActionNode={
+          <Button
+            mode="outlined"
+            disabled={isAlreadyInvited ? true : false}
+            onPress={() => {
+              if (!isAlreadyInvited) {
+                inviteInfluencer();
+              }
             }}
-          />
-          {isAlreadyInvited ? "Already Invited" : "Invite Influencer"}
-        </Button>}
+          >
+            <FontAwesomeIcon
+              color={Colors(theme).primary}
+              icon={isAlreadyInvited ? faCheck : faPlus}
+              size={12}
+              style={{
+                marginRight: 6,
+                marginTop: -1,
+              }}
+            />
+            {isAlreadyInvited ? "Already Invited" : "Invite Influencer"}
+          </Button>
+        }
         openProfile={profileModalAction}
       />
     </>

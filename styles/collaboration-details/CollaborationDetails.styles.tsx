@@ -72,13 +72,13 @@ export const stylesFn = (theme: Theme) =>
       padding: 20,
       borderRadius: 10,
       alignItems: "center",
-      maxWidth: 600
+      maxWidth: 600,
     },
     modalTitle: {
       fontSize: 18,
       fontWeight: "bold",
       marginBottom: 10,
-      alignSelf: "flex-start"
+      alignSelf: "flex-start",
     },
     messageInput: {
       width: "100%",
@@ -94,6 +94,17 @@ export const stylesFn = (theme: Theme) =>
       flexDirection: "row",
       justifyContent: "flex-end",
       width: "100%",
-      gap: 16
+      gap: 16,
+    },
+    gridContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingBottom: 20,
+    },
+    cardWrapper: {
+      width: "48%",
+      marginBottom: 12,
     },
   });

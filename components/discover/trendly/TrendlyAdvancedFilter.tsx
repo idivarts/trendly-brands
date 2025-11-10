@@ -592,6 +592,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     surface: {
         borderRadius: 14,
         padding: 12,
+
     },
     headerRow: {
         flexDirection: 'row',
