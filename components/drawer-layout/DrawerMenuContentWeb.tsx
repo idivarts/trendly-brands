@@ -10,7 +10,7 @@ import {
   faFileLines,
   faGem,
   faHeart,
-  faStar
+  faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faChevronRight,
@@ -21,19 +21,30 @@ import {
   faPlus,
   faSliders,
   faStar as faStarSolid,
-  faUsers
+  faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Linking, Platform, Pressable, ScrollView, StyleSheet } from "react-native";
+import {
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
+import { faUserShield } from "@fortawesome/free-solid-svg-icons";
 // import BrandActionItem from "./BrandActionItem";
 // Bottom menu items factory
-const BOTTOM_MENU_ITEMS = (theme: Theme, name?: string, profileImage?: string): Tab[] => [
+const BOTTOM_MENU_ITEMS = (
+  theme: Theme,
+  name?: string,
+  profileImage?: string
+): Tab[] => [
   {
     href: "/onboarding-your-brand",
     icon: () => <DrawerIcon href="/onboarding-your-brand" icon={faPlus} />,
@@ -88,7 +99,7 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
   },
 ];
 
-interface DrawerMenuContentProps { }
+interface DrawerMenuContentProps {}
 
 const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
   {
@@ -100,7 +111,7 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
         <DrawerIcon href="/discover" icon={faGem} />
       ),
     label: "Discovery",
-    pro: true
+    pro: true,
   },
   {
     href: "/collaborations",
@@ -133,7 +144,14 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     label: "Messages",
     showUnreadCount: true,
   },
+];
 
+const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
+  {
+    href: "/admin-invites",
+    icon: () => <DrawerIcon href="/kanban-board" icon={faUserShield} />,
+    label: "Connection Invites",
+  },
 ];
 
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
@@ -143,7 +161,16 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
   const { selectedBrand } = useBrandContext();
   const { manager } = useAuthContext();
 
-  const planKey = selectedBrand?.billing?.planKey || ""
+  // const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  // React.useEffect(() => {
+  //   if (manager) {
+  //     setIsAdmin(!!manager.isAdmin);
+  //     console.log("🛡️ isAdmin flag:", manager.isAdmin);
+  //     console.log("👤 Manager object:", manager);
+  //   }
+  // }, [manager]);
+
+  const planKey = selectedBrand?.billing?.planKey || "";
 
   const [isHovered, setIsHovered] = useState(false);
 
@@ -211,40 +238,74 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
           </Text>
           <View style={{ gap: 2 }}>
             {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-              <DrawerMenuItem key={`campaign-${idx}`}
+              <DrawerMenuItem
+                key={`campaign-${idx}`}
                 tab={tab}
-                proLock={tab.pro && (planKey != "pro" && planKey != "enterprise")}
+                proLock={tab.pro && planKey != "pro" && planKey != "enterprise"}
               />
             ))}
           </View>
         </View>
 
         {/* Promotional Banner */}
-        {selectedBrand && (!selectedBrand.isBillingDisabled) &&
+        {selectedBrand && !selectedBrand.isBillingDisabled && (
           <>
-            {!selectedBrand.billing && <RenderBanner title="You’re on the Free Plan"
-              description="Upgrade now to keep your community access"
-              buttonText="Upgrade Now" />}
-            {(selectedBrand.billing?.isOnTrial && (selectedBrand.billing?.trialEnds || 0) > Date.now()) && <RenderBanner title={`You’re on ${selectedBrand.billing.planKey} plan's Trial`}
-              description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(((selectedBrand.billing?.trialEnds || 0) - Date.now()) / (1000 * 60 * 60))} hours`}
-              buttonText="Pay Now"
-              customUrl={selectedBrand.billing.subscriptionUrl} />}
-            {(selectedBrand.billing?.isOnTrial && (selectedBrand.billing?.trialEnds || 0) <= Date.now()) && <RenderBanner title={`You’re Trial has Ended`}
-              description={`To keep using the platform, please pay for the subscription plan`}
-              buttonText="Pay Now"
-              customUrl={selectedBrand.billing.subscriptionUrl} />}
-          </>}
+            {!selectedBrand.billing && (
+              <RenderBanner
+                title="You’re on the Free Plan"
+                description="Upgrade now to keep your community access"
+                buttonText="Upgrade Now"
+              />
+            )}
+            {selectedBrand.billing?.isOnTrial &&
+              (selectedBrand.billing?.trialEnds || 0) > Date.now() && (
+                <RenderBanner
+                  title={`You’re on ${selectedBrand.billing.planKey} plan's Trial`}
+                  description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
+                    ((selectedBrand.billing?.trialEnds || 0) - Date.now()) /
+                      (1000 * 60 * 60)
+                  )} hours`}
+                  buttonText="Pay Now"
+                  customUrl={selectedBrand.billing.subscriptionUrl}
+                />
+              )}
+            {selectedBrand.billing?.isOnTrial &&
+              (selectedBrand.billing?.trialEnds || 0) <= Date.now() && (
+                <RenderBanner
+                  title={`You’re Trial has Ended`}
+                  description={`To keep using the platform, please pay for the subscription plan`}
+                  buttonText="Pay Now"
+                  customUrl={selectedBrand.billing.subscriptionUrl}
+                />
+              )}
+          </>
+        )}
 
         {/* Brand Details Section */}
         <View style={{ marginTop: 16, gap: 8 }}>
           <Pressable
             onPress={() => {
-              router.push("/menu")
+              router.push("/menu");
             }}
             onHoverIn={() => setIsHovered(true)}
             onHoverOut={() => setIsHovered(false)}
           >
-            <View style={[{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: -10, paddingHorizontal: 8, paddingVertical: 12 }, isHovered && { borderWidth: StyleSheet.hairlineWidth, borderColor: Colors(theme).border }]}>
+            <View
+              style={[
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: -10,
+                  paddingHorizontal: 8,
+                  paddingVertical: 12,
+                },
+                isHovered && {
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: Colors(theme).border,
+                },
+              ]}
+            >
               <Text
                 style={{
                   fontSize: 12,
@@ -271,6 +332,59 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             ))}
           </View>
         </View>
+        {/* Admin Section */}
+        {manager?.isAdmin && (
+          <View style={{ marginTop: 16, gap: 8 }}>
+            <Pressable
+              onPress={() => {
+                console.log("🛡️ Admin Portal clicked");
+              }}
+              onHoverIn={() => setIsHovered(true)}
+              onHoverOut={() => setIsHovered(false)}
+            >
+              <View
+                style={[
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: -10,
+                    paddingHorizontal: 8,
+                    paddingVertical: 12,
+                  },
+                  isHovered && {
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: Colors(theme).border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "600",
+                    opacity: 0.7,
+                    color: Colors(theme).text,
+                  }}
+                >
+                  Admin Portal
+                </Text>
+                <DrawerIcon icon={faChevronRight} size={12} />
+              </View>
+            </Pressable>
+
+            <View
+              style={{
+                borderTopColor: Colors(theme).border,
+                borderTopWidth: StyleSheet.hairlineWidth,
+              }}
+            />
+            <View style={{ gap: 0 }}>
+              {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
+                <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Bottom Actions */}
@@ -284,72 +398,81 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
           gap: 4,
         }}
       >
-        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map((tab, idx) => (
-          <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
-        ))}
+        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map(
+          (tab, idx) => (
+            <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
+          )
+        )}
       </View>
-    </View >
+    </View>
   );
 };
 
-const RenderBanner = (props: { title: string, description: string, buttonText: string, customUrl?: string }) => {
-  return < LinearGradient
-    colors={['#3b82f6', '#8b5cf6']}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={{
-      borderRadius: 12,
-      padding: 16,
-      marginHorizontal: 8,
-      marginBottom: 12,
-      justifyContent: 'center',
-    }}
-  >
-    <Text
+const RenderBanner = (props: {
+  title: string;
+  description: string;
+  buttonText: string;
+  customUrl?: string;
+}) => {
+  return (
+    <LinearGradient
+      colors={["#3b82f6", "#8b5cf6"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
       style={{
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 14,
-        marginBottom: 4,
-      }}
-    >
-      {props.title}
-    </Text>
-    <Text
-      style={{
-        color: 'rgba(255,255,255,0.85)',
-        fontSize: 12,
+        borderRadius: 12,
+        padding: 16,
+        marginHorizontal: 8,
         marginBottom: 12,
+        justifyContent: "center",
       }}
-    >
-      {props.description}
-    </Text>
-    <Pressable
-      onPress={() => {
-        if (props.customUrl)
-          Linking.openURL(props.customUrl)
-        else
-          router.push("/billing")
-      }}
-      style={({ pressed }) => ({
-        backgroundColor: pressed ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.4)',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        alignSelf: 'flex-start',
-      })}
     >
       <Text
         style={{
-          color: 'white',
-          fontWeight: '600',
-          fontSize: 13,
+          color: "white",
+          fontWeight: "bold",
+          fontSize: 14,
+          marginBottom: 4,
         }}
       >
-        {props.buttonText}
+        {props.title}
       </Text>
-    </Pressable>
-  </LinearGradient>
-}
+      <Text
+        style={{
+          color: "rgba(255,255,255,0.85)",
+          fontSize: 12,
+          marginBottom: 12,
+        }}
+      >
+        {props.description}
+      </Text>
+      <Pressable
+        onPress={() => {
+          if (props.customUrl) Linking.openURL(props.customUrl);
+          else router.push("/billing");
+        }}
+        style={({ pressed }) => ({
+          backgroundColor: pressed
+            ? "rgba(255,255,255,0.3)"
+            : "rgba(255,255,255,0.4)",
+          paddingVertical: 8,
+          paddingHorizontal: 16,
+          borderRadius: 20,
+          alignSelf: "flex-start",
+        })}
+      >
+        <Text
+          style={{
+            color: "white",
+            fontWeight: "600",
+            fontSize: 13,
+          }}
+        >
+          {props.buttonText}
+        </Text>
+      </Pressable>
+    </LinearGradient>
+  );
+};
 
 export default DrawerMenuContentWeb;
