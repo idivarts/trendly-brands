@@ -5,22 +5,18 @@ import {
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
-import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
-import { maskHandle } from "@/shared-uis/utils/masks";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   FlatList,
   Linking,
   ListRenderItemInfo,
-  ScrollView,
   StyleSheet,
 } from "react-native";
 import {
   ActivityIndicator,
-  Card,
   Chip,
   Divider,
   IconButton,
@@ -28,7 +24,6 @@ import {
 } from "react-native-paper";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
-import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
