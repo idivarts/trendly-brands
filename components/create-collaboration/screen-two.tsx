@@ -16,6 +16,7 @@ import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-exten
 import { Selector } from "@/shared-uis/components/select/selector";
 import { View } from "../theme/Themed";
 import Button from "../ui/button";
+import TextInput from "../ui/text-input";
 import Colors from "@/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
@@ -152,41 +153,35 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
             fontSize: 16,
           }}
         >
-          <MultiRangeSlider
-            minValue={1}
-            maxValue={11}
-            onValuesChange={(values) => {
+          <TextInput
+            label="Number of Influencers"
+            placeholder="Minimum 1 influencer"
+            keyboardType="number-pad"
+            mode="outlined"
+            onChangeText={(text) => {
+              // Allow empty text so placeholder can show
+              if (text === "") {
+                setCollaboration({
+                  ...collaboration,
+                  numberOfInfluencersNeeded: undefined,
+                });
+                return;
+              }
+
+              const value = parseInt(text);
               setCollaboration({
                 ...collaboration,
-                numberOfInfluencersNeeded: values[0],
+                numberOfInfluencersNeeded: value,
               });
             }}
-            sliderLength={Platform.OS === "web" ? dimensions.width - 40 : 368}
-            isMarkersSeparated
-            allowOverlap
-            customMarkerLeft={
-              (e) => <View
-                style={{
-                  backgroundColor: Colors(theme).primary,
-                  borderRadius: 12,
-                  height: 20,
-                  width: 20,
-                }}
-              />
+            value={
+              collaboration.numberOfInfluencersNeeded !== undefined
+                ? collaboration.numberOfInfluencersNeeded.toString()
+                : ""
             }
-            customMarkerRight={
-              (e) => <View
-                style={{
-                  backgroundColor: 'transparent',
-                  borderRadius: 0,
-                  height: 0,
-                  width: 0,
-                }}
-              />
-            }
-            values={[collaboration.numberOfInfluencersNeeded || 1, 11]}
-            step={1}
-            theme={theme}
+            style={{
+              width: "100%",
+            }}
           />
         </ContentWrapper>
         <ContentWrapper

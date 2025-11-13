@@ -32,12 +32,18 @@ import { useTheme } from "@react-navigation/native";
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignButton";
 import { collection, doc, setDoc } from "firebase/firestore";
-import React, { useState } from "react";
-import { Dimensions, Modal, ScrollView } from "react-native";
+import React, { useState, useRef } from "react";
+import {
+  Dimensions,
+  Modal,
+  ScrollView,
+  Animated,
+  TouchableOpacity,
+} from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
-
+import Discover from "../../../app/(main)/(drawer)/(tabs)/discover"; // 👈 Add this import at the top
+import { router } from "expo-router";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -134,8 +140,11 @@ const InvitationsTabContent = (props: any) => {
   // view mode: 'discover' shows the brand-matched influencer grid
   // 'invitations' shows the existing carousel of invitation candidates
   const [viewMode, setViewMode] = useState<"discover" | "invitations">(
-    "invitations"
+    "discover"
   );
+
+  const toggleAnim = useRef(new Animated.Value(0)).current;
+  const screenWidth = Dimensions.get("window").width;
 
   // Small helper to render name/username similar to DiscoverInfluencer styles
   const UserNameTitle = ({ item }: { item: User }) => (
@@ -181,68 +190,110 @@ const InvitationsTabContent = (props: any) => {
 
   return (
     <View style={{ alignSelf: "stretch", height: "100%" }}>
-      {/* Toggle between Discover list and Invitations carousel */}
+      {/* Toggle Bar */}
       <View
         style={{
-          flexDirection: "row",
-          gap: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          alignItems: "center",
-          alignSelf:"center",
-          
+          width: "92%",
+          alignSelf: "center",
+          marginTop: 8,
+          marginBottom: 12,
         }}
       >
-        <Button
-          mode={viewMode === "discover" ? "contained" : "outlined"}
-          onPress={() => setViewMode("discover")}
+        {/* Advance Filter Button (above toggle bar, right-aligned) */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            marginBottom: 8,
+          }}
         >
-          Discover
-        </Button>
-        <Button
-          mode={viewMode === "invitations" ? "contained" : "outlined"}
-          onPress={() => setViewMode("invitations")}
+          <Button mode="outlined" onPress={() => router.push("/discover")}>
+            Advance Filter
+          </Button>
+        </View>
+
+        {/* Long Toggle Bar */}
+        <View
+          style={{
+            height: 40,
+            backgroundColor: Colors(theme).border,
+            borderRadius: 12,
+            flexDirection: "row",
+            overflow: "hidden",
+            position: "relative",
+            shadowColor: Colors(theme).black,
+            shadowOffset: { height: 4, width: 4 },
+            shadowOpacity: 0.4,
+          }}
         >
-          Invitations
-        </Button>
+          <Animated.View
+            style={{
+              position: "absolute",
+              height: "100%",
+              width: "50%",
+              backgroundColor: Colors(theme).primary,
+              transform: [{ translateX: toggleAnim }],
+              borderRadius: 12,
+            }}
+          />
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              borderRadius: 12,
+            }}
+            onPress={() => {
+              setViewMode("discover");
+              Animated.timing(toggleAnim, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+              }).start();
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  viewMode === "discover"
+                    ? Colors(theme).white
+                    : Colors(theme).text,
+                fontWeight: "600",
+              }}
+            >
+              Suggested Spotlight
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+            onPress={() => {
+              setViewMode("invitations");
+              Animated.timing(toggleAnim, {
+                toValue: width - 100,
+                duration: 250,
+                useNativeDriver: true,
+              }).start();
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  viewMode === "invitations"
+                    ? Colors(theme).white
+                    : Colors(theme).text,
+                fontWeight: "600",
+              }}
+            >
+              Spotlight Influencer
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {viewMode === "discover" ? (
-        // Grid/list view similar to DiscoverInfluencer
-        <View style={{ flex: 1 }}>
-          {/* simple grid using native list so we reuse same influencer data */}
-          {/* @ts-ignore */}
-          <React.Fragment>
-            <View style={{ flex: 1 }}>
-              {/* render as FlatList-like grid by mapping to rows */}
-              <ScrollView contentContainerStyle={styles.gridContainer}>
-                {influencers.map((inf) => (
-                  <View key={inf.id} style={styles.cardWrapper}>
-                    <InfluencerCard
-                      item={{
-                        userId: inf.id,
-                        fullname: inf.name || "Unknown",
-                        username:
-                          inf.profile?.content?.socialMediaHighlight || "",
-                        picture: inf.profileImage || "",
-                        followers: (inf as any)?.profile?.stats?.followers || 0,
-                        engagements:
-                          (inf as any)?.profile?.stats?.engagements || 0,
-                        views: (inf as any)?.profile?.stats?.views || 0,
-                      }}
-                      openModal={() => {
-                        setSelectedInfluencer(inf as any);
-                        setIsInvitationModalVisible(true);
-                      }}
-                      selectedBrand={null}
-                      collaborations={[]}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          </React.Fragment>
-        </View>
+        <ScrollView>
+          <Discover showRightPanel={false} />
+        </ScrollView>
       ) : (
         <CarouselInViewProvider>
           <CarouselScroller

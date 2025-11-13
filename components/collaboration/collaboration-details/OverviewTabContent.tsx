@@ -63,6 +63,12 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   const { getContractsByCollaborationId } = useContractContext();
 
   const fetchManagerDetails = async () => {
+    if (!props.collaboration.managerId) {
+      return;
+    }
+    if (!props.collaboration.brandId) {
+      return;
+    }
     const managerRef = doc(
       FirestoreDB,
       "managers",
@@ -92,6 +98,9 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
   };
 
   const fetchCollaboration = async () => {
+    if (!props.collaboration.id) {
+      return;
+    }
     const fetchedContracts = await getContractsByCollaborationId(
       props.collaboration.id
     );

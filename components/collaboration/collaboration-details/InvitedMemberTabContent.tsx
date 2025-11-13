@@ -68,9 +68,7 @@ const InvitedMemberTabContent = (props: any) => {
   }
 
   const width = Math.min(MAX_WIDTH_WEB, Dimensions.get("window").width);
-  const cardWidth = isCollapsed
-    ? Math.floor(width / 3) + 168
-    : Math.floor(width / 2) + 120;
+  const cardWidth = isCollapsed ? width + 12 : Math.floor(width / 2) + 120;
 
   return (
     <ScrollView
@@ -78,7 +76,7 @@ const InvitedMemberTabContent = (props: any) => {
       contentContainerStyle={{
         flexDirection: "row",
         flexWrap: "wrap",
-        justifyContent: "flex-start",
+        justifyContent: isCollapsed ? "flex-start" : "flex-start",
         paddingHorizontal: 12,
         paddingTop: 12,
         paddingBottom: 24,

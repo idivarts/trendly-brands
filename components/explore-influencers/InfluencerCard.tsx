@@ -145,7 +145,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       borderRadius: 48,
       borderWidth: 3,
     },
-    nameCol: { flexDirection: "column", flex: 1, maxWidth: "40%" },
+    nameCol: { flexDirection: "column", flex: 1, maxWidth: "36%" },
     title: { fontSize: 20, fontWeight: "600", lineHeight: 18 },
     subtitle: { fontSize: 14, opacity: 0.7 },
     statsRow: {

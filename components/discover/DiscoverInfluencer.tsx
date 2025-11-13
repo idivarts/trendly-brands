@@ -70,6 +70,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       overflow: "hidden",
       backgroundColor: colors.aliceBlue,
       minWidth: 340,
+      flex: 1,
       alignSelf: "stretch",
       minHeight: 216,
     },
@@ -290,25 +291,47 @@ const DiscoverInfluencer: React.FC = () => {
   const [Col, setCol] = useState(2);
   const [key, setKey] = useState(0);
   useEffect(() => {
-    const col = xl ? (isCollapsed ? 3 : 2) : 1;
-    console.log("Number of Cols: ", col);
-    setCol(col);
+    if (!xl) {
+      setCol(1);
+    } else if (isCollapsed) {
+      setCol(2); // still 2 columns when collapsed
+    } else {
+      setCol(2); // smaller 3-column grid when panel open
+    }
     setKey((prev) => prev + 1);
   }, [xl, isCollapsed]);
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<InfluencerItem>) => {
       return (
-        <InfluencerCard
-          item={item}
-          onPress={() => setStatsItem(item)}
-          openModal={openModal}
-          selectedBrand={selectedBrand}
-          collaborations={collaborations}
-        />
+        <View
+          style={{
+            flex: 1 / Col,
+            paddingHorizontal: isCollapsed ? 20 : 10,
+            maxWidth: `${100 / Col}%`, // dynamically set width
+          }}
+        >
+          <InfluencerCard
+            item={item}
+            onPress={() => setStatsItem(item)}
+            openModal={openModal}
+            selectedBrand={selectedBrand}
+            collaborations={collaborations}
+          />
+        </View>
       );
     },
-    [menuVisibleId, onOpenProfile, styles]
+    [
+      menuVisibleId,
+      onOpenProfile,
+      styles,
+      Col,
+      isCollapsed,
+      openModal,
+      selectedBrand,
+      collaborations,
+      setStatsItem,
+    ]
   );
 
   const keyExtractor = useCallback((i: InfluencerItem) => i.userId, []);
@@ -407,6 +430,7 @@ const DiscoverInfluencer: React.FC = () => {
           borderBottomEndRadius: 12,
           borderBottomStartRadius: 12,
           zIndex: 999,
+          width: isCollapsed ? "100%" : undefined,
         }}
       >
         {/* Left: Total results */}

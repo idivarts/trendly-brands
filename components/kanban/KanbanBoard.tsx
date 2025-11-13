@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   DndContext,
   useSensor,
@@ -25,7 +25,10 @@ import {
   Keyboard,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
+  ScrollView,
 } from "react-native";
+import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 
 export type KanbanCardT = {
   id: string;
@@ -48,6 +51,9 @@ export default function KanbanBoard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingColumnTitle, setEditingColumnTitle] = useState<string>("");
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => useStyles(colors), [colors]);
 
   useEffect(() => {
     (async () => {
@@ -212,24 +218,30 @@ export default function KanbanBoard() {
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <View style={styles.row}>
-          {columns.map((col) => (
-            <DroppableColumn
-              key={col.id}
-              column={col}
-              onAddCard={() => addCard(col.id)}
-              onDeleteColumn={() => deleteColumn(col.id)}
-              onDeleteCard={deleteCard}
-              onUpdateCard={updateCardField}
-              editingColumnId={editingColumnId}
-              editingColumnTitle={editingColumnTitle}
-              onStartEditingColumn={() => startEditingColumn(col.id, col.title)}
-              onChangeEditingColumnTitle={setEditingColumnTitle}
-              onFinishEditingColumn={finishEditingColumn}
-              onColumnTitleKeyPress={handleColumnTitleKeyPress}
-            />
-          ))}
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
+          <View style={styles.row}>
+            {columns.map((col) => (
+              <DroppableColumn
+                key={col.id}
+                column={col}
+                onAddCard={() => addCard(col.id)}
+                onDeleteColumn={() => deleteColumn(col.id)}
+                onDeleteCard={deleteCard}
+                onUpdateCard={updateCardField}
+                editingColumnId={editingColumnId}
+                editingColumnTitle={editingColumnTitle}
+                onStartEditingColumn={() => startEditingColumn(col.id, col.title)}
+                onChangeEditingColumnTitle={setEditingColumnTitle}
+                onFinishEditingColumn={finishEditingColumn}
+                onColumnTitleKeyPress={handleColumnTitleKeyPress}
+              />
+            ))}
+          </View>
+        </ScrollView>
       </DndContext>
     </View>
   );
@@ -263,10 +275,15 @@ const DroppableColumn = ({
   onStartEditingColumn: () => void;
   onChangeEditingColumnTitle: (text: string) => void;
   onFinishEditingColumn: () => void;
-  onColumnTitleKeyPress: (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => void;
+  onColumnTitleKeyPress: (
+    e: NativeSyntheticEvent<TextInputKeyPressEventData>
+  ) => void;
 }) => {
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => useStyles(colors), [colors]);
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
-  const bgColor = isOver ? "#E0E7FF" : "#FFF";
+  const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
 
   return (
     <View
@@ -274,10 +291,24 @@ const DroppableColumn = ({
       style={[styles.column, { backgroundColor: bgColor }]}
     >
       <View style={styles.columnHeader}>
-        <View style={{ flexDirection: "row", flexShrink: 1, flexWrap: "nowrap", alignItems: "center" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            flexShrink: 1,
+            flexWrap: "nowrap",
+            alignItems: "center",
+          }}
+        >
           {editingColumnId === column.id ? (
             <TextInput
-              style={[styles.columnTitle, { flex: 1, maxWidth: "60%", borderBottomWidth: 1, borderColor: "#2563EB" }]}
+              style={[
+                styles.columnTitle,
+                {
+                  flex: 1,
+                  maxWidth: "60%",
+                  borderBottomWidth: 1,
+                },
+              ]}
               value={editingColumnTitle}
               onChangeText={onChangeEditingColumnTitle}
               onBlur={onFinishEditingColumn}
@@ -286,11 +317,17 @@ const DroppableColumn = ({
               returnKeyType="done"
             />
           ) : (
-            <Text style={[styles.columnTitle, { maxWidth: "60%" }]} numberOfLines={1} ellipsizeMode="tail">{column.title}</Text>
+            <Text
+              style={[styles.columnTitle, { maxWidth: "60%" }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {column.title}
+            </Text>
           )}
           {!editingColumnId && (
             <Pressable onPress={onStartEditingColumn} style={{ marginLeft: 8 }}>
-              <Text style={{ color: "#2563EB" }}>Edit</Text>
+              <Text style={{ color: colors.Editblue }}>Edit</Text>
             </Pressable>
           )}
           <View style={{ flexDirection: "row", gap: 8, marginLeft: 8 }}>
@@ -298,7 +335,7 @@ const DroppableColumn = ({
               <Text>+ Card</Text>
             </Pressable>
             <Pressable onPress={onDeleteColumn}>
-              <Text style={{ color: "#C33" }}>Delete</Text>
+              <Text style={{ color: colors.red }}>Delete</Text>
             </Pressable>
           </View>
         </View>
@@ -315,7 +352,9 @@ const DroppableColumn = ({
             card={card}
             colId={column.id}
             onDelete={() => onDeleteCard(column.id, card.id)}
-            onUpdate={(field, value) => onUpdateCard(column.id, card.id, field, value)}
+            onUpdate={(field, value) =>
+              onUpdateCard(column.id, card.id, field, value)
+            }
           />
         ))}
       </SortableContext>
@@ -348,6 +387,9 @@ const SortableCard = ({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => useStyles(colors), [colors]);
 
   return (
     <View
@@ -373,7 +415,15 @@ const SortableCard = ({
         blurOnSubmit={true}
       />
       <TextInput
-        style={[styles.cardDesc, { minHeight: 30, maxHeight: 120, textAlignVertical: "top", padding: 0 }]}
+        style={[
+          styles.cardDesc,
+          {
+            minHeight: 30,
+            maxHeight: 120,
+            textAlignVertical: "top",
+            padding: 0,
+          },
+        ]}
         value={card.description}
         onChangeText={(text) => onUpdate("description", text)}
         placeholder="Description"
@@ -384,69 +434,70 @@ const SortableCard = ({
       />
       <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
         <Pressable onPress={onDelete}>
-          <Text style={{ color: "#C33" }}>Delete</Text>
+          <Text style={{ color: colors.red }}>Delete</Text>
         </Pressable>
       </View>
     </View>
   );
 };
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#F9FAFB" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  title: { fontSize: 22, fontWeight: "700" },
-  addBtn: {
-    backgroundColor: "#2563EB",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addBtnText: { color: "#FFF", fontWeight: "700" },
-  row: {
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "flex-start",
-    flexWrap: "nowrap",
-    // overflowX: "auto",
-  },
-  column: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 12,
-    width: 280,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  columnHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingBottom: 8,
-    marginBottom: 8,
-  },
-  columnTitle: { fontSize: 16, fontWeight: "700" },
-  card: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontWeight: "600",
-    borderBottomWidth: 1,
-    borderColor: "#D1D5DB",
-    paddingBottom: 4,
-    marginBottom: 4,
-  },
-  cardDesc: {
-    marginTop: 0,
-    color: "#4B5563",
-  },
-});
+
+const useStyles = (colors: ReturnType<typeof Colors>) =>
+  StyleSheet.create({
+    container: { flex: 1, padding: 20, backgroundColor: colors.white },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    title: { fontSize: 22, fontWeight: "700" },
+    addBtn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    addBtnText: { color: colors.white, fontWeight: "700" },
+    row: {
+      flexDirection: "row",
+      gap: 16,
+      alignItems: "flex-start",
+      flexWrap: "nowrap",
+      // overflowX: "auto",
+    },
+    column: {
+      borderRadius: 12,
+      padding: 12,
+      width: 280,
+      shadowColor: colors.black,
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+    },
+    columnHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      paddingBottom: 8,
+      marginBottom: 8,
+    },
+    columnTitle: { fontSize: 16, fontWeight: "700" },
+    card: {
+      backgroundColor: colors.white,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 8,
+    },
+    cardTitle: {
+      fontWeight: "600",
+      // borderBottomWidth: 1
+      // borderColor: "#D1D5DB",
+      paddingBottom: 4,
+      marginBottom: 4,
+    },
+    cardDesc: {
+      marginTop: 0,
+      color: colors.text,
+    },
+  });

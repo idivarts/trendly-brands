@@ -1,4 +1,4 @@
-import * as Location from 'expo-location';
+import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 
@@ -9,17 +9,18 @@ import Colors from "@/constants/Colors";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
-import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment';
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { Console } from '@/shared-libs/utils/console';
+import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
-import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal';
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
 import ScreenThree from "./screen-three";
+import PreviewCollaboration from "./PreviewCollaboration";
 
 const CreateCollaboration = () => {
   const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
@@ -83,23 +84,17 @@ const CreateCollaboration = () => {
   } = useProcess();
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-  const {
-    selectedBrand,
-    isOnFreeTrial
-  } = useBrandContext();
-  const {
-    getCollaborationById,
-    createCollaboration,
-    updateCollaboration,
-  } = useCollaborationContext();
+  const { selectedBrand, isOnFreeTrial } = useBrandContext();
+  const { getCollaborationById, createCollaboration, updateCollaboration } =
+    useCollaborationContext();
 
-  const { openModal } = useConfirmationModel()
+  const { openModal } = useConfirmationModel();
 
   useEffect(() => {
     async function getCurrentLocation() {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permission to access location was denied');
+      if (status !== "granted") {
+        alert("Permission to access location was denied");
         return;
       }
 
@@ -114,9 +109,7 @@ const CreateCollaboration = () => {
     getCurrentLocation();
   }, []);
 
-  const fetchCollaboration = async (
-    id: string,
-  ) => {
+  const fetchCollaboration = async (id: string) => {
     const collaboration = await getCollaborationById(id);
     setCollaboration(collaboration);
 
@@ -130,21 +123,20 @@ const CreateCollaboration = () => {
         longitudeDelta: 0.0421,
       });
     }
-  }
+  };
 
   useEffect(() => {
     if (params.id && typeof params.id === "string") {
       setIsLoading(true);
-      fetchCollaboration(params.id)
-        .finally(() => {
-          setIsLoading(false);
-        })
+      fetchCollaboration(params.id).finally(() => {
+        setIsLoading(false);
+      });
     }
   }, []);
 
   const onLocationChange = (
     latlong: { lat: number; long: number },
-    address: string,
+    address: string
   ) => {
     setCollaboration({
       ...collaboration,
@@ -155,46 +147,49 @@ const CreateCollaboration = () => {
         latlong,
       },
     });
-  }
+  };
 
   const handleCollaboration = async (
-    data: Partial<ICollaboration>,
+    data: Partial<ICollaboration>
   ): Promise<void> => {
     if (params.id && typeof params.id === "string") {
       await updateCollaboration(params.id, data);
     } else {
-      await createCollaboration(data)
+      await createCollaboration(data);
     }
-  }
+  };
 
   const notifyUprade = () => {
     openModal({
       title: "Free Trial!",
-      description: "You need to upgrade your plan to be able to post a collaboration",
+      description:
+        "You need to upgrade your plan to be able to post a collaboration",
       confirmAction: () => {
-        router.push("/billing")
+        router.push("/billing");
       },
-      confirmText: "Upgrade Now"
-    })
-  }
-  const saveCollaboration = async (
-    myStatus: "draft" | "active",
-  ) => {
+      confirmText: "Upgrade Now",
+    });
+  };
+  const saveCollaboration = async (myStatus: "draft" | "active") => {
     try {
       if (!AuthApp.currentUser || !selectedBrand) {
         Console.error("User or brand not selected");
         return;
       }
 
-      let status = myStatus
+      let status = myStatus;
       if (isOnFreeTrial && status == "active") {
-        notifyUprade()
-        status = "draft"
+        notifyUprade();
+        status = "draft";
       }
 
       let locationAddress = collaboration?.location;
 
-      if (collaboration?.location?.type === "On-Site" && mapRegion.latitude && mapRegion.longitude) {
+      if (
+        collaboration?.location?.type === "On-Site" &&
+        mapRegion.latitude &&
+        mapRegion.longitude
+      ) {
         locationAddress = {
           ...collaboration.location,
           type: collaboration.location.type || "Remote",
@@ -206,7 +201,7 @@ const CreateCollaboration = () => {
       }
 
       setIsProcessing(true);
-      setProcessMessage('Saving collaboration attachments...');
+      setProcessMessage("Saving collaboration attachments...");
       setProcessPercentage(40);
 
       // Upload assets to S3
@@ -216,10 +211,10 @@ const CreateCollaboration = () => {
       //   webAssets,
       // );
 
-      setProcessMessage('Saved collaboration attachments...');
+      setProcessMessage("Saved collaboration attachments...");
       setProcessPercentage(70);
 
-      setProcessMessage('Saving collaboration...');
+      setProcessMessage("Saving collaboration...");
       setProcessPercentage(100);
 
       await handleCollaboration({
@@ -234,25 +229,19 @@ const CreateCollaboration = () => {
         location: locationAddress,
         status,
         timeStamp: type === "Add" ? Date.now() : collaboration.timeStamp,
-      }).then(() => {
-        setScreen(4);
-        setTimeout(() => {
-          router.dismiss(1);
-          router.push({
-            pathname: "/collaborations",
-          });
-        }, 3000);
-      }).catch((error) => {
-        Console.error(error);
-        Toaster.error("Failed to save collaboration");
-      }).finally(() => {
-        setProcessPercentage(0);
-        setProcessMessage('');
-        setIsProcessing(false);
-        if (myStatus == "draft") {
-          notifyUprade()
-        }
-      });
+      })
+        .catch((error) => {
+          Console.error(error);
+          Toaster.error("Failed to save collaboration");
+        })
+        .finally(() => {
+          setProcessPercentage(0);
+          setProcessMessage("");
+          setIsProcessing(false);
+          if (myStatus == "draft") {
+            notifyUprade();
+          }
+        });
     } catch (error) {
       Console.error(error);
     }
@@ -264,7 +253,7 @@ const CreateCollaboration = () => {
 
   const saveAsDraft = async () => {
     await saveCollaboration("draft");
-  }
+  };
 
   if (isLoading) {
     return (
@@ -275,10 +264,7 @@ const CreateCollaboration = () => {
           alignItems: "center",
         }}
       >
-        <ActivityIndicator
-          size="large"
-          color={Colors(theme).primary}
-        />
+        <ActivityIndicator size="large" color={Colors(theme).primary} />
       </View>
     );
   }
@@ -339,8 +325,21 @@ const CreateCollaboration = () => {
 
   if (screen === 4) {
     return (
-      <ScreenFour
-        type={type}
+      <PreviewCollaboration
+        collaboration={
+          {
+            ...collaboration,
+            brandName: selectedBrand?.name ?? "",
+            brandDescription: selectedBrand?.profile?.about ?? "",
+            brandCategory: selectedBrand?.profile?.industries ?? [],
+            logo: selectedBrand?.image ?? "",
+            paymentVerified: selectedBrand?.paymentMethodVerified ?? false,
+            brandWebsite: selectedBrand?.profile?.website ?? "",
+          } as any
+        }
+        onEdit={() => setScreen(3)}
+        onSaveDraft={saveAsDraft}
+        onPublish={submitCollaboration}
       />
     );
   }
