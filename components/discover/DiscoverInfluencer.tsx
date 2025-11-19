@@ -5,22 +5,18 @@ import {
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
-import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
-import { maskHandle } from "@/shared-uis/utils/masks";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   FlatList,
   Linking,
   ListRenderItemInfo,
-  ScrollView,
   StyleSheet,
 } from "react-native";
 import {
   ActivityIndicator,
-  Card,
   Chip,
   Divider,
   IconButton,
@@ -28,17 +24,11 @@ import {
 } from "react-native-paper";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
-import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import { Text } from "react-native";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import {
-  faArrowUpWideShort,
-  faChartLine,
-  faPeopleRoof,
-} from "@fortawesome/free-solid-svg-icons";
+import InfluencerCard from "../explore-influencers/InfluencerCard";
 
 // Types
 export interface InfluencerItem {
@@ -80,6 +70,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       overflow: "hidden",
       backgroundColor: colors.aliceBlue,
       minWidth: 340,
+      flex: 1,
       alignSelf: "stretch",
       minHeight: 216,
     },
@@ -174,7 +165,7 @@ export const StatChip = ({
 );
 
 const DiscoverInfluencer: React.FC = () => {
-  const { selectedDb, setRightPanel, rightPanel, setSelectedDb } =
+  const { selectedDb, setRightPanel, rightPanel, setSelectedDb, isCollapsed } =
     useDiscovery();
   const theme = useTheme();
   const colors = Colors(theme);
@@ -297,150 +288,50 @@ const DiscoverInfluencer: React.FC = () => {
     Linking.openURL(url);
   }, []);
 
+  const [Col, setCol] = useState(2);
+  const [key, setKey] = useState(0);
+  useEffect(() => {
+    if (!xl) {
+      setCol(1);
+    } else if (isCollapsed) {
+      setCol(2); // still 2 columns when collapsed
+    } else {
+      setCol(2); // smaller 3-column grid when panel open
+    }
+    setKey((prev) => prev + 1);
+  }, [xl, isCollapsed]);
+
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<InfluencerItem>) => {
       return (
-        <Card
-          style={[styles.card, { maxWidth: xl ? "40%" : "100%" }]}
-          onPress={() => setStatsItem(item)}
+        <View
+          style={{
+            flex: 1 / Col,
+            paddingHorizontal: isCollapsed ? 20 : 10,
+            maxWidth: `${100 / Col}%`, // dynamically set width
+          }}
         >
-          <Card.Content style={styles.content}>
-            <View style={{ backgroundColor: colors.aliceBlue, paddingTop: 20 }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: colors.aliceBlue,
-                  columnGap: 4,
-                }}
-              >
-                <View style={styles.avatarCol}>
-                  <FacebookImageComponent
-                    url={item.picture}
-                    altText={item.fullname}
-                    style={styles.avatar}
-                  />
-                </View>
-
-                <View style={styles.NameAndUserNameCol}>
-                  <Text
-                    style={styles.title}
-                    ellipsizeMode="tail"
-                    numberOfLines={1}
-                  >
-                    {[item.fullname]}
-                  </Text>
-                  <Text style={styles.subtitle} numberOfLines={1}>
-                    @{maskHandle(item.username)}
-                  </Text>
-                  <View
-                    style={{
-                      alignItems: "flex-start",
-                      backgroundColor: colors.aliceBlue,
-                      marginTop: 8,
-                    }}
-                  >
-                    <InviteToCampaignButton
-                      label="Invite"
-                      openModal={openModal}
-                      selectedBrand={selectedBrand}
-                      collaborations={collaborations} // active ones
-                      textstyle={{ fontSize: 18 }}
-                    />
-                  </View>
-                </View>
-              </View>
-              <View
-                style={{
-                  paddingTop: 20,
-                  backgroundColor: Colors(theme).aliceBlue,
-                }}
-              >
-                <View
-                  style={[
-                    styles.statsRow,
-                    { backgroundColor: Colors(theme).InfluencerStatCard },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.DetailsContainer,
-                      { backgroundColor: Colors(theme).InfluencerStatCard },
-                    ]}
-                  >
-                    <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                      {formatNumber(item.followers)}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: Colors(theme).text }}>
-                      {"Followers"}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      backgroundColor: Colors(theme).text,
-                      height: "80%",
-                      padding: 0.5,
-                      alignSelf: "center",
-                    }}
-                  />
-                  <View
-                    style={[
-                      styles.DetailsContainer,
-                      { backgroundColor: Colors(theme).InfluencerStatCard },
-                    ]}
-                  >
-                    <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                      {formatNumber(item.engagements)}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: Colors(theme).text }}>
-                      {"Engagements"}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      backgroundColor: Colors(theme).text,
-                      height: "80%",
-                      padding: 0.5,
-                      alignSelf: "center",
-                    }}
-                  />
-                  {/* <View style={styles.DetailsContainer}>
-                    <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                      {formatNumber(item.engagementRate)}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: "#737373" }}>
-                      {xl ? "ER (in %)" : "ER"}
-                    </Text>
-                  </View> */}
-                  {/* <View
-                    style={{
-                      backgroundColor: "#ccc",
-                      height: "80%",
-                      padding: 0.5,
-                      alignSelf: "center",
-                    }} */}
-
-                  <View
-                    style={[
-                      styles.DetailsContainer,
-                      { backgroundColor: Colors(theme).InfluencerStatCard },
-                    ]}
-                  >
-                    <Text style={{ fontWeight: "600", fontSize: 16 }}>
-                      {formatNumber(item.views)}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: Colors(theme).text }}>
-                      {xl ? "Views" : "Views"}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
+          <InfluencerCard
+            item={item}
+            onPress={() => setStatsItem(item)}
+            openModal={openModal}
+            selectedBrand={selectedBrand}
+            collaborations={collaborations}
+          />
+        </View>
       );
     },
-    [menuVisibleId, onOpenProfile, styles]
+    [
+      menuVisibleId,
+      onOpenProfile,
+      styles,
+      Col,
+      isCollapsed,
+      openModal,
+      selectedBrand,
+      collaborations,
+      setStatsItem,
+    ]
   );
 
   const keyExtractor = useCallback((i: InfluencerItem) => i.userId, []);
@@ -521,10 +412,7 @@ const DiscoverInfluencer: React.FC = () => {
     <View
       style={[
         { flex: 1, minWidth: 0 },
-        !xl &&
-          rightPanel && {
-            display: "none",
-          },
+        !xl && rightPanel && { display: "none" },
       ]}
     >
       <View
@@ -542,6 +430,7 @@ const DiscoverInfluencer: React.FC = () => {
           borderBottomEndRadius: 12,
           borderBottomStartRadius: 12,
           zIndex: 999,
+          width: isCollapsed ? "100%" : undefined,
         }}
       >
         {/* Left: Total results */}
@@ -604,7 +493,8 @@ const DiscoverInfluencer: React.FC = () => {
           // removeClippedSubviews
           // @ts-ignore
           getItemLayout={getItemLayout}
-          numColumns={xl ? 2 : 1}
+          numColumns={Col}
+          key={`cols-${Col}-${key}`} // Use both Col and key to force re-render
           ListFooterComponent={
             <>
               {loading && data.length > 0 && (

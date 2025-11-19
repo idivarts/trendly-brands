@@ -20,6 +20,9 @@ import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import OverviewTabContent from "./OverviewTabContent";
+import { DiscoveryProvider } from "@/app/(main)/(drawer)/(tabs)/discover";
+import InvitedMemberTabContent from "./InvitedMemberTabContent";
+import { CollapseProvider } from "@/contexts/CollapseContext";
 
 export interface CollaborationDetail extends ICollaboration {
   id: string;
@@ -43,10 +46,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   >(undefined);
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
-  const { xl } = useBreakpoints()
-  const { isOnFreeTrial } = useBrandContext()
-  const { openModal } = useConfirmationModel()
-  const router = useMyNavigation()
+  const { xl } = useBreakpoints();
+  const { isOnFreeTrial } = useBrandContext();
+  const { openModal } = useConfirmationModel();
+  const router = useMyNavigation();
 
   const publishCollaboration = async () => {
     if (!pageID) return;
@@ -58,7 +61,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         confirmAction: () => {
           router.push("/billing");
         },
-      })
+      });
       return;
     }
 
@@ -119,104 +122,146 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         />
       ),
     },
-    ...(xl ? [{
-      id: "d2",
-      title: "---",
-      href: "/" as Href
-    }] : []),
-    ...(xl ? [{
-      id: "Applications-Pending",
-      title: "Pending/New Applications",
-      component: (
-        <ApplicationsTabContent
-          key={"applications-pending"}
-          pageID={pageID}
-          filter="pending"
-          collaboration={{
-            id: pageID,
-            name: collaboration?.name || "",
-            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
-          }}
-        />
-      ),
-    }, {
-      id: "Applications-Shortlisted",
-      title: "Shortlisted Applications",
-      component: (
-        <ApplicationsTabContent
-          key={"applications-shortlisted"}
-          pageID={pageID}
-          filter="shortlisted"
-          collaboration={{
-            id: pageID,
-            name: collaboration?.name || "",
-            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
-          }}
-        />
-      ),
-    }, {
-      id: "Applications-Accepted",
-      title: "Accepted Applications",
-      component: (
-        <ApplicationsTabContent
-          key={"applications-accepted"}
-          filter="accepted"
-          pageID={pageID}
-          collaboration={{
-            id: pageID,
-            name: collaboration?.name || "",
-            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
-          }}
-        />
-      ),
-    }, {
-      id: "Applications-Rejected",
-      title: "Rejected Applications",
-      component: (
-        <ApplicationsTabContent
-          filter="rejected"
-          key={"applications-rejected"}
-          pageID={pageID}
-          collaboration={{
-            id: pageID,
-            name: collaboration?.name || "",
-            questionsToInfluencers: collaboration?.questionsToInfluencers || [],
-          }}
-        />
-      ),
-    }, {
-      id: "d1",
-      title: "---",
-      href: "/" as Href
-    }] : [
-      {
-        id: "Applications",
-        title: "Applications",
-        component: (
-          <ApplicationsTabContent
-            key={"applications"}
-            pageID={pageID}
-            collaboration={{
-              id: pageID,
-              name: collaboration?.name || "",
-              questionsToInfluencers: collaboration?.questionsToInfluencers || [],
-            }}
-          />
-        ),
-      }
-    ]),
+    ...(xl
+      ? [
+          {
+            id: "d2",
+            title: "---",
+            href: "/" as Href,
+          },
+        ]
+      : []),
+    ...(xl
+      ? [
+          {
+            id: "Applications-Pending",
+            title: "Pending/New Applications",
+            component: (
+              <ApplicationsTabContent
+                key={"applications-pending"}
+                pageID={pageID}
+                filter="pending"
+                collaboration={{
+                  id: pageID,
+                  name: collaboration?.name || "",
+                  questionsToInfluencers:
+                    collaboration?.questionsToInfluencers || [],
+                }}
+              />
+            ),
+          },
+          {
+            id: "Applications-Shortlisted",
+            title: "Shortlisted Applications",
+            component: (
+              <ApplicationsTabContent
+                key={"applications-shortlisted"}
+                pageID={pageID}
+                filter="shortlisted"
+                collaboration={{
+                  id: pageID,
+                  name: collaboration?.name || "",
+                  questionsToInfluencers:
+                    collaboration?.questionsToInfluencers || [],
+                }}
+              />
+            ),
+          },
+          {
+            id: "Applications-Accepted",
+            title: "Accepted Applications",
+            component: (
+              <ApplicationsTabContent
+                key={"applications-accepted"}
+                filter="accepted"
+                pageID={pageID}
+                collaboration={{
+                  id: pageID,
+                  name: collaboration?.name || "",
+                  questionsToInfluencers:
+                    collaboration?.questionsToInfluencers || [],
+                }}
+              />
+            ),
+          },
+          {
+            id: "Applications-Rejected",
+            title: "Rejected Applications",
+            component: (
+              <ApplicationsTabContent
+                filter="rejected"
+                key={"applications-rejected"}
+                pageID={pageID}
+                collaboration={{
+                  id: pageID,
+                  name: collaboration?.name || "",
+                  questionsToInfluencers:
+                    collaboration?.questionsToInfluencers || [],
+                }}
+              />
+            ),
+          },
+          {
+            id: "d1",
+            title: "---",
+            href: "/" as Href,
+          },
+        ]
+      : [
+          {
+            id: "Applications",
+            title: "Applications",
+            component: (
+              <ApplicationsTabContent
+                key={"applications"}
+                pageID={pageID}
+                collaboration={{
+                  id: pageID,
+                  name: collaboration?.name || "",
+                  questionsToInfluencers:
+                    collaboration?.questionsToInfluencers || [],
+                }}
+              />
+            ),
+          },
+        ]),
     {
       id: "Invitations",
       title: "Send Invitations",
-      component: <InvitationsTabContent key={"invitations"} pageID={pageID} />,
-    },
-    ...(xl ? [{
-      id: "Invitations-Sent",
-      title: "Invited Members",
       component: (
-        <InvitationsTabContent key={"invitations-sent"} pageID={pageID} />
+        <DiscoveryProvider
+          value={{
+            selectedDb: "trendly",
+            setSelectedDb: () => {},
+            rightPanel: false,
+            setRightPanel: () => {},
+            showFilters: false,
+            setShowFilters: () => {},
+            isCollapsed: false,
+            setIsCollapsed: () => {},
+            discoverCommunication: { current: undefined },
+            pageSortCommunication: { current: undefined },
+          }}
+        >
+          <InvitationsTabContent key={"invitations"} pageID={pageID} />
+        </DiscoveryProvider>
       ),
-    }] : []),
+    },
+
+    ...(xl
+      ? [
+          {
+            id: "Invitations-Sent",
+            title: "Invited Members",
+            component: (
+              <InvitedMemberTabContent
+                key={"invited-members"}
+                pageID={pageID}
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   useEffect(() => {
@@ -299,7 +344,14 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         <OverviewTabContent collaboration={collaboration} />
       )}
       {collaboration.status === "active" && (
-        <TopTabNavigation tabs={tabs(xl)} size="compact" mobileFullWidth={true} splitTwoColumns={true} />
+        <CollapseProvider>
+          <TopTabNavigation
+            tabs={tabs(xl)}
+            size="compact"
+            mobileFullWidth={true}
+            splitTwoColumns={true}
+          />
+        </CollapseProvider>
       )}
     </View>
   );
