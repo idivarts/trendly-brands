@@ -3,7 +3,12 @@ import { Keyboard, Pressable, ScrollView } from "react-native";
 import { HelperText, Modal, ProgressBar } from "react-native-paper";
 import { useTheme } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { faCircle, faClose, faLink, faPlus } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCircle,
+  faClose,
+  faLink,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 
 import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
@@ -23,7 +28,9 @@ interface ScreenThreeProps {
   processMessage: string;
   processPercentage: number;
   saveAsDraft: () => Promise<void>;
-  setCollaboration: React.Dispatch<React.SetStateAction<Partial<Collaboration>>>;
+  setCollaboration: React.Dispatch<
+    React.SetStateAction<Partial<Collaboration>>
+  >;
   setScreen: React.Dispatch<React.SetStateAction<number>>;
   submitCollaboration: () => void;
   type: "Add" | "Edit";
@@ -43,14 +50,17 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
 }) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
-  const [isExternalLinkModalVisible, setIsExternalLinkModalVisible] = useState(false);
+  const [isExternalLinkModalVisible, setIsExternalLinkModalVisible] =
+    useState(false);
   const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
   const [externalLink, setExternalLink] = useState({
     name: "",
     link: "",
   });
   const newQuestions = collaboration.questionsToInfluencers || [""];
-  const [questions, setQuestions] = useState(newQuestions.length === 0 ? [""] : newQuestions);
+  const [questions, setQuestions] = useState(
+    newQuestions.length === 0 ? [""] : newQuestions
+  );
 
   const handleAddExternalLink = () => {
     if (!externalLink.name || !externalLink.link) {
@@ -61,7 +71,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     setCollaboration({
       ...collaboration,
       externalLinks: [
-        ...collaboration.externalLinks || [],
+        ...(collaboration.externalLinks || []),
         {
           name: externalLink.name,
           link: externalLink.link,
@@ -73,25 +83,24 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
       name: "",
       link: "",
     });
-  }
+  };
 
   const handleRemoveExternalLink = (index: number) => {
     setCollaboration({
       ...collaboration,
-      externalLinks: collaboration.externalLinks?.filter((link, i) => i !== index),
+      externalLinks: collaboration.externalLinks?.filter(
+        (link, i) => i !== index
+      ),
     });
-  }
+  };
 
   const handleAddQuestions = () => {
-    setQuestions([
-      ...questions,
-      "",
-    ]);
-  }
+    setQuestions([...questions, ""]);
+  };
 
   const handleRemoveQuestion = (index: number) => {
     setQuestions(questions.filter((question, i) => i !== index));
-  }
+  };
 
   const submitNewQuestions = () => {
     const newQuestions = questions.filter((question) => question !== "");
@@ -107,7 +116,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     } else {
       setQuestions(newQuestions);
     }
-  }
+  };
 
   return (
     <>
@@ -163,45 +172,47 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 gap: 8,
               }}
             >
-              {
-                collaboration.externalLinks?.map((link) => (
-                  <View
-                    key={link.link}
+              {collaboration.externalLinks?.map((link) => (
+                <View
+                  key={link.link}
+                  style={{
+                    alignItems: "center",
+                    flexDirection: "row",
+                    gap: 12,
+                    padding: 8,
+                    borderColor: Colors(theme).text,
+                    borderWidth: 1,
+                    borderRadius: 10,
+                  }}
+                >
+                  <FontAwesomeIcon
+                    color={Colors(theme).text}
+                    icon={faLink}
+                    size={16}
+                  />
+                  <Text
                     style={{
-                      alignItems: "center",
-                      flexDirection: "row",
-                      gap: 12,
-                      padding: 8,
-                      borderColor: Colors(theme).text,
-                      borderWidth: 1,
-                      borderRadius: 10,
+                      textDecorationLine: "underline",
+                      flex: 1,
                     }}
+                  >
+                    {link.name}
+                  </Text>
+                  <Pressable
+                    onPress={() =>
+                      handleRemoveExternalLink(
+                        collaboration.externalLinks?.indexOf(link) || 0
+                      )
+                    }
                   >
                     <FontAwesomeIcon
                       color={Colors(theme).text}
-                      icon={faLink}
+                      icon={faTrashCan}
                       size={16}
                     />
-                    <Text
-                      style={{
-                        textDecorationLine: "underline",
-                        flex: 1,
-                      }}
-                    >
-                      {link.name}
-                    </Text>
-                    <Pressable
-                      onPress={() => handleRemoveExternalLink(collaboration.externalLinks?.indexOf(link) || 0)}
-                    >
-                      <FontAwesomeIcon
-                        color={Colors(theme).text}
-                        icon={faTrashCan}
-                        size={16}
-                      />
-                    </Pressable>
-                  </View>
-                ))
-              }
+                  </Pressable>
+                </View>
+              ))}
             </View>
           </View>
           <View
@@ -242,27 +253,23 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 gap: 8,
               }}
             >
-              {
-                collaboration.questionsToInfluencers?.map((question) => (
-                  <View
-                    key={question}
-                    style={{
-                      alignItems: "center",
-                      flexDirection: "row",
-                      gap: 8,
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      color={Colors(theme).text}
-                      icon={faCircle}
-                      size={6}
-                    />
-                    <Text>
-                      {question}
-                    </Text>
-                  </View>
-                ))
-              }
+              {collaboration.questionsToInfluencers?.map((question) => (
+                <View
+                  key={question}
+                  style={{
+                    alignItems: "center",
+                    flexDirection: "row",
+                    gap: 8,
+                  }}
+                >
+                  <FontAwesomeIcon
+                    color={Colors(theme).text}
+                    icon={faCircle}
+                    size={6}
+                  />
+                  <Text>{question}</Text>
+                </View>
+              ))}
             </View>
           </View>
         </View>
@@ -271,25 +278,23 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
             gap: 16,
           }}
         >
-          {
-            processMessage && (
-              <HelperText
-                type="info"
-                style={{
-                  color: Colors(theme).primary,
-                  textAlign: "center",
-                }}
-              >
-                {processMessage} - {processPercentage}% done
-              </HelperText>
-            )
-          }
+          {processMessage && (
+            <HelperText
+              type="info"
+              style={{
+                color: Colors(theme).primary,
+                textAlign: "center",
+              }}
+            >
+              {processMessage} - {processPercentage}% done
+            </HelperText>
+          )}
 
           <ProgressBar
             progress={processPercentage / 100}
             color={Colors(theme).primary}
             style={{
-              backgroundColor: Colors(theme).transparent
+              backgroundColor: Colors(theme).transparent,
             }}
           />
         </View>
@@ -297,9 +302,9 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         <Button
           loading={isSubmitting}
           mode="contained"
-          onPress={submitCollaboration}
+          onPress={() => setScreen(4)}
         >
-          {type === "Add" ? `${isSubmitting ? "Posting" : "Post"}` : `${isSubmitting ? "Updating" : "Update"}`}
+          Preview
         </Button>
       </ScreenLayout>
 
@@ -425,6 +430,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
             </Pressable>
           </Pressable>
           <ScrollView
+          showsVerticalScrollIndicator = {false}
             style={{
               maxHeight: 180,
             }}
@@ -432,51 +438,44 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
               gap: 8,
             }}
           >
-            {
-              questions.map((question, index) => (
-                <View
-                  key={index}
+            {questions.map((question, index) => (
+              <View
+                key={index}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 16,
+                }}
+              >
+                <TextInput
+                  label="Question"
+                  mode="outlined"
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 16,
+                    flex: 1,
                   }}
-                >
-                  <TextInput
-                    label="Question"
-                    mode="outlined"
-                    style={{
-                      flex: 1,
-                    }}
-                    value={questions[index]}
-                    onChangeText={(text) => {
-                      const newQuestions = [...questions];
-                      newQuestions[index] = text;
+                  value={questions[index]}
+                  onChangeText={(text) => {
+                    const newQuestions = [...questions];
+                    newQuestions[index] = text;
 
-                      setQuestions(newQuestions);
+                    setQuestions(newQuestions);
+                  }}
+                />
+                <Pressable onPress={() => handleRemoveQuestion(index)}>
+                  <FontAwesomeIcon
+                    icon={faTrashCan}
+                    size={20}
+                    color={Colors(theme).primary}
+                    style={{
+                      marginTop: 4,
                     }}
                   />
-                  <Pressable
-                    onPress={() => handleRemoveQuestion(index)}
-                  >
-                    <FontAwesomeIcon
-                      icon={faTrashCan}
-                      size={20}
-                      color={Colors(theme).primary}
-                      style={{
-                        marginTop: 4,
-                      }}
-                    />
-                  </Pressable>
-                </View>
-              ))
-            }
+                </Pressable>
+              </View>
+            ))}
           </ScrollView>
         </View>
-        <Button
-          mode="outlined"
-          onPress={handleAddQuestions}
-        >
+        <Button mode="outlined" onPress={handleAddQuestions}>
           <FontAwesomeIcon
             icon={faPlus}
             size={12}
@@ -488,11 +487,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
           />
           Add Question
         </Button>
-        <Button
-          onPress={submitNewQuestions}
-        >
-          Done
-        </Button>
+        <Button onPress={submitNewQuestions}>Done</Button>
       </Modal>
     </>
   );

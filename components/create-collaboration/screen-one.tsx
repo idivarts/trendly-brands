@@ -183,10 +183,6 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                   label="Min (Rs)"
                   mode="outlined"
                   onChangeText={(text) => {
-                    if (collaboration.budget?.max && (parseInt(text) > collaboration.budget?.max)) {
-                      Toaster.error("Min budget can't be greater than max");
-                    }
-
                     setCollaboration({
                       ...collaboration,
                       budget: {
@@ -205,10 +201,6 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                   label="Max (Rs)"
                   mode="outlined"
                   onChangeText={(text) => {
-                    if (collaboration.budget?.min && (parseInt(text) < collaboration.budget?.min)) {
-                      Toaster.error("Max budget can't be less than min");
-                    }
-
                     setCollaboration({
                       ...collaboration,
                       budget: {

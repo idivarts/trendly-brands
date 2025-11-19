@@ -21,6 +21,8 @@ import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import OverviewTabContent from "./OverviewTabContent";
 import { DiscoveryProvider } from "@/app/(main)/(drawer)/(tabs)/discover";
+import InvitedMemberTabContent from "./InvitedMemberTabContent";
+import { CollapseProvider } from "@/contexts/CollapseContext";
 
 export interface CollaborationDetail extends ICollaboration {
   id: string;
@@ -252,25 +254,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             id: "Invitations-Sent",
             title: "Invited Members",
             component: (
-              <DiscoveryProvider
-                value={{
-                  selectedDb: "trendly",
-                  setSelectedDb: () => {},
-                  rightPanel: false,
-                  setRightPanel: () => {},
-                  showFilters: false,
-                  setShowFilters: () => {},
-                  isCollapsed: false,
-                  setIsCollapsed: () => {},
-                  discoverCommunication: { current: undefined },
-                  pageSortCommunication: { current: undefined },
-                }}
-              >
-                <InvitationsTabContent
-                  key={"invitations-sent"}
-                  pageID={pageID}
-                />
-              </DiscoveryProvider>
+              <InvitedMemberTabContent
+                key={"invited-members"}
+                pageID={pageID}
+              />
             ),
           },
         ]
@@ -357,12 +344,14 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         <OverviewTabContent collaboration={collaboration} />
       )}
       {collaboration.status === "active" && (
-        <TopTabNavigation
-          tabs={tabs(xl)}
-          size="compact"
-          mobileFullWidth={true}
-          splitTwoColumns={true}
-        />
+        <CollapseProvider>
+          <TopTabNavigation
+            tabs={tabs(xl)}
+            size="compact"
+            mobileFullWidth={true}
+            splitTwoColumns={true}
+          />
+        </CollapseProvider>
       )}
     </View>
   );

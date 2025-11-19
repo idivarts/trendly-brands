@@ -2,12 +2,11 @@ import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Card } from "react-native-paper";
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
-import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignButton";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { maskHandle } from "@/shared-uis/utils/masks";
 
-export interface InfluencerCardProps {
+export interface InvitationStatusCardProps {
   item: {
     userId: string;
     fullname: string;
@@ -17,10 +16,10 @@ export interface InfluencerCardProps {
     views?: number;
     engagements: number;
   };
+  status: "Accepted" | "Denied" | "Waiting";
+  timeAgo: string;
+  flag?: string;
   onPress?: () => void;
-  openModal?: any;
-  selectedBrand?: any;
-  collaborations?: any[];
 }
 
 const formatNumber = (n: number | undefined) => {
@@ -32,16 +31,28 @@ const formatNumber = (n: number | undefined) => {
   return `${Math.round(n / 100_000_000) / 10}B`;
 };
 
-const InfluencerCard: React.FC<InfluencerCardProps> = ({
+const InvitationStatusCard: React.FC<InvitationStatusCardProps> = ({
   item,
+  status,
+  timeAgo,
+  flag = "Flag",
   onPress,
-  openModal,
-  selectedBrand,
-  collaborations,
 }) => {
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
+
+  const getStatusColor = () => {
+    switch (status) {
+      case "Accepted":
+        return "#4CAF50"; // green
+      case "Denied":
+        return "#E53935"; // red
+      case "Waiting":
+      default:
+        return "#FFA726"; // orange
+    }
+  };
 
   return (
     <Card
@@ -49,6 +60,9 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
       onPress={onPress}
     >
       <Card.Content style={styles.content}>
+        {/* Top-right time */}
+        <Text style={styles.timeAgo}>{[timeAgo]}</Text>
+
         <View style={{ backgroundColor: colors.aliceBlue, paddingTop: 20 }}>
           <View style={styles.row}>
             {/* Avatar */}
@@ -56,14 +70,11 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
               <FacebookImageComponent
                 url={item.picture}
                 altText={item.fullname}
-                style={[
-                  styles.avatar,
-                  { borderColor: Colors(theme).primary },
-                ]}
+                style={[styles.avatar, { borderColor: Colors(theme).primary }]}
               />
             </View>
 
-            {/* Name, Username, and Invite */}
+            {/* Name, Username, and Status */}
             <View style={styles.nameCol}>
               <Text style={styles.title} numberOfLines={1}>
                 {item.fullname}
@@ -72,14 +83,14 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
                 @{maskHandle(item.username)}
               </Text>
 
-              <View style={{ alignItems: "flex-start", marginTop: 8 }}>
-                <InviteToCampaignButton
-                  label="Invite"
-                  openModal={openModal}
-                  selectedBrand={selectedBrand}
-                  collaborations={collaborations}
-                  textstyle={{ fontSize: 18 }}
-                />
+              {/* Status Button */}
+              <View
+                style={[
+                  styles.statusButton,
+                  { backgroundColor: getStatusColor() },
+                ]}
+              >
+                <Text style={styles.statusText}>{status}</Text>
               </View>
             </View>
           </View>
@@ -91,6 +102,21 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
             <Stat label="Engagements" value={item.engagements} />
             <DividerLine />
             <Stat label="Views" value={item.views} />
+          </View>
+
+          {/* Bottom-left flag */}
+          <View
+            style={{
+              alignSelf: "flex-end",
+              paddingHorizontal: 20,
+              position: "absolute",
+              right: -8,
+              bottom: -8,
+              borderTopLeftRadius: 8,
+              backgroundColor: colors.white,
+            }}
+          >
+            <Text style={styles.flagText}>{flag}</Text>
           </View>
         </View>
       </Card.Content>
@@ -114,10 +140,6 @@ const Stat = ({ label, value }: { label: string; value?: number }) => {
 };
 
 const DividerLine = () => {
-  const theme = useTheme();
-  const colors = Colors(theme);
-  const styles = useMemo(() => useStyles(colors), [colors]);
-
   return <View style={{ width: 1, height: "80%", backgroundColor: "#999" }} />;
 };
 
@@ -128,10 +150,16 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       marginVertical: 6,
       borderRadius: 12,
       overflow: "hidden",
-      minWidth: 340,
+      width: "100%",
       minHeight: 216,
     },
-    content: { paddingHorizontal: 8, paddingVertical: 8 },
+    content: { paddingHorizontal: 8, paddingVertical: 8, position: "relative" },
+    timeAgo: {
+      fontSize: 12,
+      opacity: 1,
+      color: "#00",
+      alignSelf: "flex-end",
+    },
     row: { flexDirection: "row", alignItems: "center", columnGap: 4 },
     avatarCol: {
       paddingHorizontal: 12,
@@ -145,9 +173,21 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       borderRadius: 48,
       borderWidth: 3,
     },
-    nameCol: { flexDirection: "column", flex: 1, maxWidth: "36%" },
+    nameCol: { flexDirection: "column", flex: 1, maxWidth: "40%" },
     title: { fontSize: 20, fontWeight: "600", lineHeight: 18 },
     subtitle: { fontSize: 14, opacity: 0.7 },
+    statusButton: {
+      marginTop: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      alignSelf: "flex-start",
+    },
+    statusText: {
+      color: "white",
+      fontSize: 16,
+      fontWeight: "600",
+    },
     statsRow: {
       flexDirection: "row",
       justifyContent: "space-evenly",
@@ -155,6 +195,10 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       marginTop: 12,
     },
     stat: { alignItems: "center" },
+    flagText: {
+      fontSize: 12,
+      fontWeight: "400",
+    },
   });
 
-export default InfluencerCard;
+export default InvitationStatusCard;

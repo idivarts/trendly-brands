@@ -5,6 +5,7 @@ import { stylesFn } from "@/styles/top-tab-navigation/TopTabNavigation.styles";
 import { useTheme } from "@react-navigation/native";
 import { Href } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { useCollapseContext } from "@/contexts/CollapseContext";
 import {
   Animated,
   Dimensions,
@@ -37,6 +38,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   defaultSelection = 0,
 }) => {
   const router = useMyNavigation();
+  const { isCollapsed, setIsCollapsed } = useCollapseContext();
   const [activeTab, setActiveTab] = useState(tabs[defaultSelection]);
   const [tabLayout, setTabLayout] = useState<any>({});
   const prevTabIndex = useRef(0);
@@ -44,7 +46,6 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   const theme = useTheme();
   const styles = stylesFn(theme);
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const collapseAnim = useRef(new Animated.Value(1)).current;
   const autoCollapseTimer = useRef<NodeJS.Timeout>();
 

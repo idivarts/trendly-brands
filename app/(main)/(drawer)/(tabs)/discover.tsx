@@ -36,6 +36,7 @@ export interface PageSortCommunication {
   page?: number;
   sort?: string;
 }
+
 interface DiscoveryProps {
   selectedDb: DB_TYPE;
   setSelectedDb: Function;
@@ -44,6 +45,7 @@ interface DiscoveryProps {
   showFilters: boolean;
   setShowFilters: Function;
   isCollapsed: boolean;
+  showRightPanel?: boolean;
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   discoverCommunication: MutableRefObject<
     ((action: DiscoverCommunication) => any) | undefined
@@ -56,7 +58,7 @@ const DiscoveryContext = createContext<DiscoveryProps>({} as DiscoveryProps);
 export const useDiscovery = () => useContext(DiscoveryContext);
 export const DiscoveryProvider = DiscoveryContext.Provider;
 
-const DiscoverInfluencersScreen = () => {
+const DiscoverInfluencersScreen = ({ showRightPanel = true }) => {
   const { manager } = useAuthContext();
   const { selectedBrand } = useBrandContext();
   const [rightPanel, setRightPanel] = useState(true);
@@ -133,10 +135,10 @@ const DiscoverInfluencersScreen = () => {
           <DiscoverInfluencer />
           <RightPanelDiscover
             style={[
+              !showRightPanel && { display: "none" },
               !xl && {
                 width: "100%",
                 maxWidth: "auto",
-                display: rightPanel ? "flex" : "none",
                 position: "absolute",
                 right: 0,
                 top: 0,

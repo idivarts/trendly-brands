@@ -82,8 +82,9 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
       tension: 65,
       friction: 10,
     }).start();
+
     setIsCollapsed(!isCollapsed);
-    setRightPanel(!isCollapsed);
+    setRightPanel(isCollapsed); // ✅ correct direction
   };
 
   const translateX = slideAnim.interpolate({
@@ -121,10 +122,18 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
         style,
         {
           transform: [{ translateX: translateX }],
+          maxWidth: isCollapsed ? 0 : 400,
+          width: isCollapsed ? 0 : "100%",
         },
       ]}
     >
-      <Pressable style={styles.collapseButton} onPress={toggleCollapse}>
+      <Pressable
+        style={[
+          styles.collapseButton,
+          isCollapsed ? { right: 392, left: undefined } : { left: -20, right: undefined }
+        ]}
+        onPress={toggleCollapse}
+      >
         <MaterialCommunityIcons
           name={isCollapsed ? "chevron-left" : "chevron-right"}
           size={24}
@@ -481,7 +490,6 @@ const styleFn = (colors: ReturnType<typeof Colors>) =>
     },
     collapseButton: {
       position: "absolute",
-      left: -20,
       top: "50%",
       transform: [{ translateY: -20 }],
       width: 40,
@@ -491,14 +499,11 @@ const styleFn = (colors: ReturnType<typeof Colors>) =>
       justifyContent: "center",
       alignItems: "center",
       shadowColor: colors.text,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
+      shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.25,
       shadowRadius: 3.84,
       elevation: 5,
-      zIndex: 1000,
+      zIndex: 2000,
     },
     collapsedPanel: {
       transform: [{ translateX: 400 }],
