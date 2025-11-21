@@ -157,7 +157,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     timeAgo: {
       fontSize: 12,
       opacity: 1,
-      color: "#00",
+      color: colors.gray300,
       alignSelf: "flex-end",
     },
     row: { flexDirection: "row", alignItems: "center", columnGap: 4 },

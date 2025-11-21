@@ -89,7 +89,6 @@
     "react-native": "0.74.5",
     "react-native-autocomplete-dropdown": "^3.0.2",
     "react-native-autocomplete-input": "^5.4.0",
-    "react-native-drax": "^0.10.3",
     "react-native-exception-handler": "^2.10.10",
     "react-native-gesture-handler": "~2.16.1",
     "react-native-get-random-values": "~1.11.0",

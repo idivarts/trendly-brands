@@ -1,9 +1,10 @@
-import { useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
+import { useDiscovery } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Text, View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Pressable,
@@ -12,7 +13,6 @@ import {
   StyleSheet,
   ViewStyle,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Button, Chip, HelperText, Menu, TextInput } from "react-native-paper";
 import ModashFilter from "./modash/ModashFilter";
 import TrendlyAdvancedFilter from "./trendly/TrendlyAdvancedFilter";
@@ -75,7 +75,8 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
   const styles = useMemo(() => styleFn(colors), [colors]);
 
   const toggleCollapse = () => {
-    const toValue = isCollapsed ? 0 : 1;
+    const nextCollapsed = !isCollapsed;
+    const toValue = nextCollapsed ? 1 : 0;
     Animated.spring(slideAnim, {
       toValue,
       useNativeDriver: true,
@@ -83,8 +84,8 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
       friction: 10,
     }).start();
 
-    setIsCollapsed(!isCollapsed);
-    setRightPanel(isCollapsed); // ✅ correct direction
+    setIsCollapsed(nextCollapsed);
+    setRightPanel(!nextCollapsed);
   };
 
   const translateX = slideAnim.interpolate({
@@ -130,7 +131,9 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
       <Pressable
         style={[
           styles.collapseButton,
-          isCollapsed ? { right: 392, left: undefined } : { left: -20, right: undefined }
+          isCollapsed
+            ? { right: 392, left: undefined }
+            : { left: -20, right: undefined },
         ]}
         onPress={toggleCollapse}
       >

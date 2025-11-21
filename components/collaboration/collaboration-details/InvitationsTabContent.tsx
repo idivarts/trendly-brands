@@ -1,5 +1,6 @@
 import InvitationCard from "@/components/card/collaboration-details/invitation-card";
 import { InvitationCard as ProfileInvitationCard } from "@/components/card/profile-modal/invitation-card";
+import Discover from "@/components/discover/Discover";
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { Text, View } from "@/components/theme/Themed";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
@@ -29,21 +30,11 @@ import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.st
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
-import { FacebookImageComponent } from "@/shared-uis/components/image-component";
-import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignButton";
 import { collection, doc, setDoc } from "firebase/firestore";
-import React, { useState, useRef } from "react";
-import {
-  Dimensions,
-  Modal,
-  ScrollView,
-  Animated,
-  TouchableOpacity,
-} from "react-native";
+import React, { useState } from "react";
+import { Dimensions, Modal, ScrollView } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Discover from "../../../app/(main)/(drawer)/(tabs)/discover"; // 👈 Add this import at the top
-import { router } from "expo-router";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -142,23 +133,15 @@ const InvitationsTabContent = (props: any) => {
   const [viewMode, setViewMode] = useState<"discover" | "invitations">(
     "discover"
   );
+  const [statusFilter, setStatusFilter] = useState<string>("pending");
 
-  const toggleAnim = useRef(new Animated.Value(0)).current;
-  const screenWidth = Dimensions.get("window").width;
+  const handleStatusChange = (status: string) => {
+    setStatusFilter(status);
+    // You can add logic here to filter the influencers list based on status
+    // For example, call an API or filter the rawInfluencers array
+  };
 
-  // Small helper to render name/username similar to DiscoverInfluencer styles
-  const UserNameTitle = ({ item }: { item: User }) => (
-    <View>
-      <Text style={{ fontSize: 18, fontWeight: "600" }} numberOfLines={1}>
-        {item.name ||
-          (item.profile && item.profile.content?.about) ||
-          "Unknown"}
-      </Text>
-      <Text style={{ opacity: 0.8 }} numberOfLines={1}>
-        {item.profile?.content?.socialMediaHighlight || ""}
-      </Text>
-    </View>
-  );
+  
 
   if (influencers.length === 0 && isLoading) {
     return (
@@ -191,15 +174,17 @@ const InvitationsTabContent = (props: any) => {
   return (
     <View style={{ alignSelf: "stretch", height: "100%" }}>
       {/* Toggle Bar */}
-      <View
+      {/* <View
         style={{
-          width: "92%",
+          paddingHorizontal: 16,
+          maxWidth: 800,
+          width: "100%",
           alignSelf: "center",
           marginTop: 8,
           marginBottom: 12,
         }}
       >
-        {/* Advance Filter Button (above toggle bar, right-aligned) */}
+        
         <View
           style={{
             flexDirection: "row",
@@ -212,87 +197,27 @@ const InvitationsTabContent = (props: any) => {
           </Button>
         </View>
 
-        {/* Long Toggle Bar */}
-        <View
+        <ToggleBar
+          options={[
+            { key: "discover", label: "Suggested Spotlight" },
+            { key: "invitations", label: "Spotlight Influencer" },
+          ]}
+          value={viewMode}
+          onChange={(k) => setViewMode(k as "discover" | "invitations")}
           style={{
             height: 40,
             backgroundColor: Colors(theme).border,
             borderRadius: 12,
-            flexDirection: "row",
             overflow: "hidden",
-            position: "relative",
-            shadowColor: Colors(theme).black,
-            shadowOffset: { height: 4, width: 4 },
-            shadowOpacity: 0.4,
+            shadowColor: Colors(theme).modalBackground,
+            shadowOpacity: 0.2,
           }}
-        >
-          <Animated.View
-            style={{
-              position: "absolute",
-              height: "100%",
-              width: "50%",
-              backgroundColor: Colors(theme).primary,
-              transform: [{ translateX: toggleAnim }],
-              borderRadius: 12,
-            }}
-          />
-          <TouchableOpacity
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              borderRadius: 12,
-            }}
-            onPress={() => {
-              setViewMode("discover");
-              Animated.timing(toggleAnim, {
-                toValue: 0,
-                duration: 250,
-                useNativeDriver: true,
-              }).start();
-            }}
-          >
-            <Text
-              style={{
-                color:
-                  viewMode === "discover"
-                    ? Colors(theme).white
-                    : Colors(theme).text,
-                fontWeight: "600",
-              }}
-            >
-              Suggested Spotlight
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-            onPress={() => {
-              setViewMode("invitations");
-              Animated.timing(toggleAnim, {
-                toValue: width - 100,
-                duration: 250,
-                useNativeDriver: true,
-              }).start();
-            }}
-          >
-            <Text
-              style={{
-                color:
-                  viewMode === "invitations"
-                    ? Colors(theme).white
-                    : Colors(theme).text,
-                fontWeight: "600",
-              }}
-            >
-              Spotlight Influencer
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        />
+      </View> */}
 
       {viewMode === "discover" ? (
-        <ScrollView>
-          <Discover showRightPanel={false} />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <Discover showRightPanel={false} showTopPanel={true} advanceFilter={true} onStatusChange={handleStatusChange} StatusCard={false} />
         </ScrollView>
       ) : (
         <CarouselInViewProvider>

@@ -9,7 +9,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import Button from "../../ui/button";
-import { View } from "react-native";
 
 interface InvitationCardProps {
   bottomSheetAction?: () => void;

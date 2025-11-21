@@ -1,16 +1,16 @@
-import React, { useState } from "react";
-import { View, ScrollView, Dimensions } from "react-native";
-import { useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
-import EmptyState from "@/components/ui/empty-state";
-import SlowLoader from "@/shared-uis/components/SlowLoader";
-import { useInfluencers } from "@/hooks/request";
-import { useBreakpoints } from "@/hooks";
-import { useTheme } from "@react-navigation/native";
-import Colors from "@/constants/Colors";
-import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import InvitationStatusCard from "@/components/explore-influencers/InvitationStatusCard";
-import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import EmptyState from "@/components/ui/empty-state";
+import Colors from "@/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
+import { useBreakpoints } from "@/hooks";
+import { useInfluencers } from "@/hooks/request";
+import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
+import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
+import { useTheme } from "@react-navigation/native";
+import React from "react";
+import { Dimensions, ScrollView, View } from "react-native";
+import Discover from "@/components/discover/Discover";
 
 const InvitedMemberTabContent = (props: any) => {
   const theme = useTheme();
@@ -80,48 +80,17 @@ const InvitedMemberTabContent = (props: any) => {
         paddingHorizontal: 12,
         paddingTop: 12,
         paddingBottom: 24,
-        gap: 8,
+        gap: isCollapsed ? 20 : 8,
       }}
       showsVerticalScrollIndicator={true}
     >
-      {influencers.map((inf, index) => (
-        <View
-          key={inf.id || index}
-          style={{
-            width: cardWidth,
-            padding: 12,
-          }}
-        >
-          <InvitationStatusCard
-            item={{
-              userId: inf.id,
-              fullname: inf.name || "Unknown",
-              username: inf.profile?.content?.socialMediaHighlight || "",
-              picture: inf.profileImage || "",
-              followers: (inf as any)?.profile?.stats?.followers || 0,
-              engagements: (inf as any)?.profile?.stats?.engagements || 0,
-              views: (inf as any)?.profile?.stats?.views || 0,
-            }}
-            status={getRandomStatus()}
-            timeAgo={getRandomTime()}
-            flag="By Discovery"
-          />
-          <InvitationStatusCard
-            item={{
-              userId: inf.id,
-              fullname: inf.name || "Unknown",
-              username: inf.profile?.content?.socialMediaHighlight || "",
-              picture: inf.profileImage || "",
-              followers: (inf as any)?.profile?.stats?.followers || 0,
-              engagements: (inf as any)?.profile?.stats?.engagements || 0,
-              views: (inf as any)?.profile?.stats?.views || 0,
-            }}
-            status={getRandomStatus()}
-            timeAgo={getRandomTime()}
-            flag="By Spotlight"
-          />
-        </View>
-      ))}
+      <Discover
+        showRightPanel={false}
+        showTopPanel={true}
+        advanceFilter={false}
+        statusFilter={true}
+        StatusCard={true}
+      />
     </ScrollView>
   );
 };

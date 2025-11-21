@@ -6,9 +6,10 @@ import { useTheme } from "@react-navigation/native";
 import OverviewTabContent from "../collaboration/collaboration-details/OverviewTabContent";
 import { Collaboration } from "@/types/Collaboration";
 import { router } from "expo-router";
+import { CollaborationDetail } from "../collaboration/collaboration-details";
 
 interface PreviewProps {
-  collaboration: Partial<Collaboration>;
+  collaboration: Partial<CollaborationDetail>;
   onEdit: () => void;
   onPublish: () => void;
   onSaveDraft: () => void;
@@ -18,7 +19,7 @@ const PreviewCollaboration: React.FC<PreviewProps> = ({
   collaboration,
   onEdit,
   onPublish,
-  onSaveDraft
+  onSaveDraft,
 }) => {
   const theme = useTheme();
 
@@ -45,24 +46,11 @@ const PreviewCollaboration: React.FC<PreviewProps> = ({
           Edit
         </Button>
 
-        <Button
-          mode="contained"
-          style={{ flex: 1 }}
-          onPress={onSaveDraft}
-        >
+        <Button mode="contained" style={{ flex: 1 }} onPress={onSaveDraft}>
           Save as Draft
         </Button>
 
-        <Button
-          mode="contained"
-          style={{ flex: 1 }}
-          onPress={async () => {
-            await onPublish();
-            if (collaboration?.id) {
-              router.push(`/collaboration-details/${collaboration.id}`);
-            }
-          }}
-        >
+        <Button mode="contained" style={{ flex: 1 }} onPress={onPublish}>
           Publish
         </Button>
       </View>

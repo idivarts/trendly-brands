@@ -1,17 +1,21 @@
-import React, { useState, useMemo } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  Image,
-  FlatList,
-  StyleSheet,
-  Pressable,
-} from "react-native";
-import { Video } from "expo-av";
-import { useTheme } from "@react-navigation/native";
-import { Checkbox } from "react-native-paper";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { processRawAttachment } from "@/shared-libs/utils/attachments";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
+import { Video } from "expo-av";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Checkbox } from "react-native-paper";
 
 type Collaboration = {
   id: string;
@@ -23,22 +27,70 @@ type Collaboration = {
 };
 
 type Props = {
-  visible: boolean;
   onClose: () => void;
-  collaborations: Collaboration[];
   onInvite: (selectedIds: string[]) => void;
 };
 
-const InviteToCampaignModal: React.FC<Props> = ({
-  visible,
-  onClose,
-  collaborations,
-  onInvite,
-}) => {
+const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
   const [selected, setSelected] = useState<string[]>([]);
+  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
+  const { selectedBrand } = useBrandContext();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchActiveCollaborations = async () => {
+      try {
+        if (!selectedBrand) return;
+
+        const coll = collection(FirestoreDB, "collaborations");
+        const q = query(
+          coll,
+          where("brandId", "==", selectedBrand.id),
+          where("status", "==", "active"),
+          orderBy("timeStamp", "desc")
+        );
+
+        const snap = await getDocs(q);
+        const items = snap.docs.map((d) => {
+          const data = d.data() as any;
+          const attachments = Array.isArray(data.attachments)
+            ? data.attachments
+            : [];
+          const first = attachments[0];
+          const processed = first ? processRawAttachment(first) : undefined;
+          const isVideo = processed?.type?.includes("video") || false;
+          const mediaUrl =
+            processed?.url ||
+            first?.imageUrl ||
+            first?.url ||
+            "https://via.placeholder.com/300x200.png?text=No+Image";
+
+          return {
+            id: d.id,
+            name: data.name || "",
+            description: data.description || "",
+            mediaUrl,
+            isVideo,
+            active: true,
+          };
+        });
+
+        if (mounted) setCollaborations(items);
+      } catch (err) {
+        console.warn("Failed to load active collaborations", err);
+      }
+    };
+
+    fetchActiveCollaborations();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedBrand]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) =>
@@ -48,6 +100,12 @@ const InviteToCampaignModal: React.FC<Props> = ({
 
   const handleInvite = () => {
     onInvite(selected);
+    setSelected([]);
+    onClose();
+  };
+
+  const handleClose = () => {
+    setSelected([]);
     onClose();
   };
 
@@ -74,7 +132,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
           />
         ) : (
           <Image
-            source={{ uri: item.mediaUrl }}
+            source={{ uri: item.mediaUrl ?? "https://via.placeholder.com/150" }}
             style={styles.media}
             resizeMode="cover"
           />
@@ -102,7 +160,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={true} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: colors.aliceBlue }]}>
           <Text style={styles.header}>Invite to Campaign</Text>
@@ -115,7 +173,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
           />
 
           <View style={styles.footer}>
-            <Pressable onPress={onClose} style={styles.cancelBtn}>
+            <Pressable onPress={handleClose} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
             <Pressable

@@ -21,7 +21,7 @@ import { useBrandContext } from "./brand-context.provider";
 
 interface CollaborationContextProps {
   getCollaborationById: (id: string) => Promise<Collaboration>;
-  createCollaboration: (collaboration: Partial<ICollaboration>) => Promise<void>;
+  createCollaboration: (collaboration: Partial<ICollaboration>) => Promise<string>;
   updateCollaboration: (id: string, collaboration: Partial<ICollaboration>) => Promise<void>;
 }
 
@@ -50,7 +50,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
 
   const createCollaboration = async (
     collaboration: Partial<ICollaboration>,
-  ): Promise<void> => {
+  ): Promise<string> => {
     if ((selectedBrand?.credits?.collaboration || 0) <= 0) {
       openModal({
         title: "No Collaboration Credit",
@@ -60,7 +60,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
           router.push("/billing")
         }
       })
-      return;
+      return "";
     }
     const collaborationRef = collection(FirestoreDB, "collaborations");
 
@@ -69,6 +69,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
     HttpWrapper.fetch(`/api/collabs/collaborations/${collabDoc.id}`, {
       method: "POST",
     })
+    return collabDoc.id;
   }
 
   const updateCollaboration = async (

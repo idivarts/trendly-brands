@@ -1,4 +1,4 @@
-import { PageSortCommunication, useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
+import { PageSortCommunication, useDiscovery } from "@/components/discover/Discover";
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';

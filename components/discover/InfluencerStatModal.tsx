@@ -122,7 +122,7 @@ export const InfluencerStatsModal: React.FC<{
                     maxWidth: Dimensions.get("window").width * 0.2,
                   }}
                 >
-                  {[item?.fullname, "vashhvbflahjvbalhvblasfihvblashfbvlaishbliawhfbvliashfb lkaishrbvliahfbvliahsfb"]}
+                  {item?.fullname}
                 </Text>
                 <Text
                   numberOfLines={1}

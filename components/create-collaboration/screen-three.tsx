@@ -172,7 +172,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 gap: 8,
               }}
             >
-              {collaboration.externalLinks?.map((link) => (
+              {collaboration.externalLinks?.map((link, index) => (
                 <View
                   key={link.link}
                   style={{
@@ -198,13 +198,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                   >
                     {link.name}
                   </Text>
-                  <Pressable
-                    onPress={() =>
-                      handleRemoveExternalLink(
-                        collaboration.externalLinks?.indexOf(link) || 0
-                      )
-                    }
-                  >
+                  <Pressable onPress={() => handleRemoveExternalLink(index)}>
                     <FontAwesomeIcon
                       color={Colors(theme).text}
                       icon={faTrashCan}
@@ -430,7 +424,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
             </Pressable>
           </Pressable>
           <ScrollView
-          showsVerticalScrollIndicator = {false}
+            showsVerticalScrollIndicator={false}
             style={{
               maxHeight: 180,
             }}
