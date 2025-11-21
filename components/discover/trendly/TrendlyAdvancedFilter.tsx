@@ -5,6 +5,7 @@ import { useBrandContext } from '@/contexts/brand-context.provider';
 import { useBreakpoints } from "@/hooks";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import { CITIES, POPULAR_CITIES } from '@/shared-constants/preferences/locations';
+import { ICollabPreferences } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { MultiSelectExtendable } from '@/shared-uis/components/multiselect-extendable';
 import { View } from '@/shared-uis/components/theme/Themed';
@@ -162,7 +163,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
         };
 
         // build payload
-        const payload = {
+        const payload: ICollabPreferences = {
             // Followers range (int64)
             followerMin: parseNumber(followerMin),
             followerMax: parseNumber(followerMax),
