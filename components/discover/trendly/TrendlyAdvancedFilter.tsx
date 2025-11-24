@@ -1,4 +1,4 @@
-import { PageSortCommunication, useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
+import { PageSortCommunication, useDiscovery } from "@/components/discover/Discover";
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
@@ -120,7 +120,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     const [sort, setSort] = useState<'followers' | 'views' | 'engagement' | 'engagement_rate'>('followers')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
     const [offset, setOffset] = useState(0)
-    const [limit, setLimit] = useState(15)
+    const [limit, setLimit] = useState(16)
 
     const [data, setData] = useState<InfluencerItem[]>([])
 
@@ -593,6 +593,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     surface: {
         borderRadius: 14,
         padding: 12,
+
     },
     headerRow: {
         flexDirection: 'row',

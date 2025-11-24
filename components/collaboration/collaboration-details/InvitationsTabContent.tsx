@@ -1,7 +1,6 @@
 import InvitationCard from "@/components/card/collaboration-details/invitation-card";
-import {
-  InvitationCard as ProfileInvitationCard
-} from "@/components/card/profile-modal/invitation-card";
+import { InvitationCard as ProfileInvitationCard } from "@/components/card/profile-modal/invitation-card";
+import Discover from "@/components/discover/Discover";
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { Text, View } from "@/components/theme/Themed";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
@@ -18,7 +17,10 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { APPROX_CARD_HEIGHT, MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import {
+  APPROX_CARD_HEIGHT,
+  MAX_WIDTH_WEB,
+} from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
@@ -30,19 +32,21 @@ import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
-import {
-  Dimensions,
-  Modal
-} from "react-native";
+import { Dimensions, Modal, ScrollView } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCollapseContext } from "@/contexts/CollapseContext";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const { isCollapsed, setIsCollapsed } = useCollapseContext();
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
-  const [selectedInfluencer, setSelectedInfluencer] = useState<(User & { documentId: string }) | null>(null);
-  const [isInvitationModalVisible, setIsInvitationModalVisible] = useState(false);
+  const [selectedInfluencer, setSelectedInfluencer] = useState<
+    (User & { documentId: string }) | null
+  >(null);
+  const [isInvitationModalVisible, setIsInvitationModalVisible] =
+    useState(false);
   const [message, setMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
 
@@ -53,20 +57,18 @@ const InvitationsTabContent = (props: any) => {
     influencers: rawInfluencers,
     isLoading,
     loadMore,
-    onScrollEvent
+    onScrollEvent,
   } = useInfluencers({
     collaborationId,
   });
 
-  const {
-    xl,
-  } = useBreakpoints();
-  const { manager } = useAuthContext()
-  const { isOnFreeTrial, isProfileLocked } = useBrandContext()
+  const { xl } = useBreakpoints();
+  const { manager } = useAuthContext();
+  const { isOnFreeTrial, isProfileLocked } = useBrandContext();
 
   // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
-  const [openProfileModal, setOpenProfileModal] = useState(false)
+  const [openProfileModal, setOpenProfileModal] = useState(false);
 
   const insets = useSafeAreaInsets();
   const containerOffset = useSharedValue({
@@ -78,7 +80,7 @@ const InvitationsTabContent = (props: any) => {
 
   const toggleActionModal = () => {
     setIsActionModalVisible(!isActionModalVisible);
-  }
+  };
 
   const handleCollaborationInvite = async () => {
     try {
@@ -102,14 +104,19 @@ const InvitationsTabContent = (props: any) => {
 
       // Invitation Id as influencer id
       const invitationDocRef = doc(invitationColRef, selectedInfluencer.id);
-      await setDoc(invitationDocRef, invitationPayload).then(() => {
-        setIsInvitationModalVisible(false);
-        Toaster.success("Invitation sent successfully");
-      }).then(() => {
-        HttpWrapper.fetch(`/api/collabs/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`, {
-          method: "POST",
+      await setDoc(invitationDocRef, invitationPayload)
+        .then(() => {
+          setIsInvitationModalVisible(false);
+          Toaster.success("Invitation sent successfully");
         })
-      });
+        .then(() => {
+          HttpWrapper.fetch(
+            `/api/collabs/collaborations/${collaborationId}/invitations/${selectedInfluencer.id}`,
+            {
+              method: "POST",
+            }
+          );
+        });
     } catch (error) {
       Console.error(error);
       Toaster.error("Failed to send invitation");
@@ -119,26 +126,39 @@ const InvitationsTabContent = (props: any) => {
     }
   };
 
-  const influencers = rawInfluencers.filter(i => {
-    return !(manager?.moderations?.blockedInfluencers || []).includes(i.id)
-  })
+  const influencers = rawInfluencers.filter((i) => {
+    return !(manager?.moderations?.blockedInfluencers || []).includes(i.id);
+  });
 
-  if (influencers.length === 0 && isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 40,
-        }}
-      >
-        <SlowLoader />
-      </View>
-    );
-  }
+  // view mode: 'discover' shows the brand-matched influencer grid
+  // 'invitations' shows the existing carousel of invitation candidates
+  const [viewMode, setViewMode] = useState<"discover" | "invitations">(
+    "discover"
+  );
+  const [statusFilter, setStatusFilter] = useState<string>("pending");
 
-  if (influencers.length === 0) {
+  const handleStatusChange = (status: string) => {
+    setStatusFilter(status);
+    // You can add logic here to filter the influencers list based on status
+    // For example, call an API or filter the rawInfluencers array
+  };
+
+  // if (influencers.length === 0 && isLoading) {
+  //   return (
+  //     <View
+  //       style={{
+  //         flex: 1,
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         gap: 40,
+  //       }}
+  //     >
+  //       <SlowLoader />
+  //     </View>
+  //   );
+  // }
+
+  if (influencers.length === 0 && !isLoading) {
     return (
       <EmptyState
         subtitle="No invitations yet. Check back later."
@@ -146,45 +166,112 @@ const InvitationsTabContent = (props: any) => {
         hideAction
       />
     );
-  };
+  }
 
-  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
-  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
+  const width = Math.min(MAX_WIDTH_WEB, Dimensions.get("window").width);
+  const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get("window").height);
 
   return (
     <View style={{ alignSelf: "stretch", height: "100%" }}>
-      <CarouselInViewProvider>
-        <CarouselScroller
-          data={influencers}
-          height={height}
-          width={width}
-          vertical={true}
-          onLoadMore={() => loadMore()}
-          renderItem={({ item }) => (
-            <InvitationCard
-              checkIfAlreadyInvited={checkIfAlreadyInvited}
-              // @ts-ignore
-              data={item}
-              profileModalAction={() => {
-                // @ts-ignore
-                setSelectedInfluencer(item);
-                setOpenProfileModal(true)
-              }}
-              bottomSheetAction={() => {
-                // @ts-ignore
-                setSelectedInfluencer(item);
-                setIsActionModalVisible(true);
-              }}
-              inviteInfluencer={() => {
-                // @ts-ignore
-                setSelectedInfluencer(item);
-                setIsInvitationModalVisible(true);
-              }}
-            />
-          )}
-          objectKey="id"
+      {/* Toggle Bar */}
+      {/* <View
+        style={{
+          paddingHorizontal: 16,
+          maxWidth: 800,
+          width: "100%",
+          alignSelf: "center",
+          marginTop: 8,
+          marginBottom: 12,
+        }}
+      >
+        
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            marginBottom: 8,
+          }}
+        >
+          <Button mode="outlined" onPress={() => router.push("/discover")}>
+            Advance Filter
+          </Button>
+        </View>
+
+        <ToggleBar
+          options={[
+            { key: "discover", label: "Suggested Spotlight" },
+            { key: "invitations", label: "Spotlight Influencer" },
+          ]}
+          value={viewMode}
+          onChange={(k) => setViewMode(k as "discover" | "invitations")}
+          style={{
+            height: 40,
+            backgroundColor: Colors(theme).border,
+            borderRadius: 12,
+            overflow: "hidden",
+            shadowColor: Colors(theme).modalBackground,
+            shadowOpacity: 0.2,
+          }}
         />
-      </CarouselInViewProvider>
+      </View> */}
+
+      {viewMode === "discover" ? (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: isCollapsed ? "flex-start" : "flex-start",
+            paddingTop: 12,
+            paddingBottom: 24,
+            gap: isCollapsed ? 20 : 8,
+            paddingRight: isCollapsed ? 120 : 16,
+            paddingLeft: isCollapsed ? 120 : 4,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Discover
+            showRightPanel={false}
+            showTopPanel={true}
+            advanceFilter={true}
+            onStatusChange={handleStatusChange}
+            isStatusCard={false}
+          />
+        </ScrollView>
+      ) : (
+        <CarouselInViewProvider>
+          <CarouselScroller
+            data={influencers}
+            height={height}
+            width={width}
+            vertical={true}
+            onLoadMore={() => loadMore()}
+            renderItem={({ item }) => (
+              <InvitationCard
+                checkIfAlreadyInvited={checkIfAlreadyInvited}
+                // @ts-ignore
+                data={item}
+                profileModalAction={() => {
+                  // @ts-ignore
+                  setSelectedInfluencer(item);
+                  setOpenProfileModal(true);
+                }}
+                bottomSheetAction={() => {
+                  // @ts-ignore
+                  setSelectedInfluencer(item);
+                  setIsActionModalVisible(true);
+                }}
+                inviteInfluencer={() => {
+                  // @ts-ignore
+                  setSelectedInfluencer(item);
+                  setIsInvitationModalVisible(true);
+                }}
+              />
+            )}
+            objectKey="id"
+          />
+        </CarouselInViewProvider>
+      )}
 
       <Modal
         visible={isInvitationModalVisible}
@@ -204,7 +291,6 @@ const InvitationsTabContent = (props: any) => {
               multiline
             />
             <View style={styles.buttonContainer}>
-
               <Button
                 mode="outlined"
                 onPress={() => setIsInvitationModalVisible(false)}
@@ -225,11 +311,18 @@ const InvitationsTabContent = (props: any) => {
         </View>
       </Modal>
 
-      <InfluencerActionModal influencerId={selectedInfluencer?.id} isModalVisible={isActionModalVisible} openProfile={() => setOpenProfileModal(true)} toggleModal={toggleActionModal} />
+      <InfluencerActionModal
+        influencerId={selectedInfluencer?.id}
+        isModalVisible={isActionModalVisible}
+        openProfile={() => setOpenProfileModal(true)}
+        toggleModal={toggleActionModal}
+      />
       <BottomSheetScrollContainer
         isVisible={openProfileModal}
         snapPointsRange={["90%", "90%"]}
-        onClose={() => { setOpenProfileModal(false) }}
+        onClose={() => {
+          setOpenProfileModal(false);
+        }}
       >
         <ProfileBottomSheet
           closeModal={() => setOpenProfileModal(false)}
@@ -247,13 +340,15 @@ const InvitationsTabContent = (props: any) => {
                 influencerId={selectedInfluencer?.id}
                 onInvite={() => {
                   if (!selectedInfluencer) return;
-                  setOpenProfileModal(false)
+                  setOpenProfileModal(false);
                   setIsInvitationModalVisible(true);
                 }}
               />
             </View>
           }
-          carouselMedia={selectedInfluencer?.profile?.attachments?.map((attachment: Attachment) => processRawAttachment(attachment))}
+          carouselMedia={selectedInfluencer?.profile?.attachments?.map(
+            (attachment: Attachment) => processRawAttachment(attachment)
+          )}
           FireStoreDB={FirestoreDB}
           influencer={selectedInfluencer as User}
           isBrandsApp={true}
