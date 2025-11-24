@@ -35,10 +35,12 @@ import React, { useState } from "react";
 import { Dimensions, Modal, ScrollView } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCollapseContext } from "@/contexts/CollapseContext";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
+  const { isCollapsed, setIsCollapsed } = useCollapseContext();
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
   const [selectedInfluencer, setSelectedInfluencer] = useState<
     (User & { documentId: string }) | null
@@ -141,24 +143,22 @@ const InvitationsTabContent = (props: any) => {
     // For example, call an API or filter the rawInfluencers array
   };
 
-  
+  // if (influencers.length === 0 && isLoading) {
+  //   return (
+  //     <View
+  //       style={{
+  //         flex: 1,
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         gap: 40,
+  //       }}
+  //     >
+  //       <SlowLoader />
+  //     </View>
+  //   );
+  // }
 
-  if (influencers.length === 0 && isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 40,
-        }}
-      >
-        <SlowLoader />
-      </View>
-    );
-  }
-
-  if (influencers.length === 0) {
+  if (influencers.length === 0 && !isLoading) {
     return (
       <EmptyState
         subtitle="No invitations yet. Check back later."
@@ -216,8 +216,27 @@ const InvitationsTabContent = (props: any) => {
       </View> */}
 
       {viewMode === "discover" ? (
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <Discover showRightPanel={false} showTopPanel={true} advanceFilter={true} onStatusChange={handleStatusChange} StatusCard={false} />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: isCollapsed ? "flex-start" : "flex-start",
+            paddingTop: 12,
+            paddingBottom: 24,
+            gap: isCollapsed ? 20 : 8,
+            paddingRight: isCollapsed ? 120 : 16,
+            paddingLeft: isCollapsed ? 120 : 4,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Discover
+            showRightPanel={false}
+            showTopPanel={true}
+            advanceFilter={true}
+            onStatusChange={handleStatusChange}
+            StatusCard={false}
+          />
         </ScrollView>
       ) : (
         <CarouselInViewProvider>

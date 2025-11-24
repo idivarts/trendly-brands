@@ -42,22 +42,22 @@ const InvitedMemberTabContent = (props: any) => {
 
   const influencers = rawInfluencers || [];
 
-  if (influencers.length === 0 && isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 40,
-        }}
-      >
-        <SlowLoader />
-      </View>
-    );
-  }
+  // if (influencers.length === 0 && isLoading) {
+  //   return (
+  //     <View
+  //       style={{
+  //         flex: 1,
+  //         justifyContent: "center",
+  //         alignItems: "center",
+  //         gap: 40,
+  //       }}
+  //     >
+  //       <SlowLoader />
+  //     </View>
+  //   );
+  // }
 
-  if (influencers.length === 0) {
+  if (influencers.length === 0 && !isLoading) {
     return (
       <EmptyState
         subtitle="No invited members found."
@@ -68,7 +68,6 @@ const InvitedMemberTabContent = (props: any) => {
   }
 
   const width = Math.min(MAX_WIDTH_WEB, Dimensions.get("window").width);
-  const cardWidth = isCollapsed ? width + 12 : Math.floor(width / 2) + 120;
 
   return (
     <ScrollView
@@ -77,12 +76,13 @@ const InvitedMemberTabContent = (props: any) => {
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: isCollapsed ? "flex-start" : "flex-start",
-        paddingHorizontal: 12,
         paddingTop: 12,
         paddingBottom: 24,
         gap: isCollapsed ? 20 : 8,
+        paddingRight: isCollapsed ? 120 : 16,
+        paddingLeft: isCollapsed ? 120 : 4,
       }}
-      showsVerticalScrollIndicator={true}
+      showsVerticalScrollIndicator={false}
     >
       <Discover
         showRightPanel={false}

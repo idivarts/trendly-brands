@@ -45,10 +45,10 @@ export interface InfluencerItem {
 }
 
 const sortOptions = [
-  { label: "Followers (High → Low)", value: "followers" },
-  { label: "Engagements (High → Low)", value: "engagement" },
-  { label: "ER % (High → Low)", value: "engagement_rate" },
-  { label: "Views (High → Low)", value: "views" },
+  { label: "Followers", value: "followers" },
+  { label: "Engagements", value: "engagement" },
+  { label: "ER %", value: "engagement_rate" },
+  { label: "Views", value: "views" },
 ];
 
 // Helpers
@@ -379,15 +379,15 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             justifyContent: "space-between",
             paddingHorizontal: 10,
             paddingVertical: 6,
-            shadowColor: Colors(theme).primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 1,
-            elevation: 2,
+            // shadowColor: Colors(theme).primary,
+            // shadowOffset: { width: 0, height: 2 },
+            // shadowOpacity: 0.2,
+            // shadowRadius: 1,
+            // elevation: 2,
             borderBottomEndRadius: 12,
             borderBottomStartRadius: 12,
             zIndex: 999,
-            width: isCollapsed ? "100%" : undefined,
+            width: isCollapsed ? "90%" : undefined,
           }}
         >
           <View style={{ width: 80 }} />
@@ -476,7 +476,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                   </Text>
                 </Chip>
               }
-              style={{ backgroundColor: Colors(theme).background }}
+              style={{ backgroundColor: Colors(theme).background, }}
             >
               {sortOptions.map((opt) => (
                 <Menu.Item
@@ -569,13 +569,14 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               right: 0,
               alignItems: "center",
               zIndex: 9999,
+              backgroundColor: "transparent"
             }}
           >
             <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: "rgba(255,255,255,0.8)",
+                backgroundColor: "rgba(255,255,255,0.5)",
                 paddingHorizontal: 16,
                 paddingVertical: 8,
                 borderRadius: 40,
@@ -594,7 +595,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               </Text>
 
               {/* Invite Button */}
-              <View style={{ top: 0 }}>
+              <View style={{ top: 0, borderRadius:50 }}>
                 <InviteToCampaignButton
                   label="Invite Now"
                   openModal={() => {}}

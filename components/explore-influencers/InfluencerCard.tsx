@@ -368,6 +368,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     CategoryTag: {
       backgroundColor: colors.primary,
       borderTopLeftRadius: 8,
+      borderBottomRightRadius: 8,
       paddingVertical: 6,
       position: "absolute",
       right: 0,

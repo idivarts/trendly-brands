@@ -119,7 +119,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     const [sort, setSort] = useState<'followers' | 'views' | 'engagement' | 'engagement_rate'>('followers')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
     const [offset, setOffset] = useState(0)
-    const [limit, setLimit] = useState(15)
+    const [limit, setLimit] = useState(16)
 
     const [data, setData] = useState<InfluencerItem[]>([])
 
