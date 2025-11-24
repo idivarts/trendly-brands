@@ -106,5 +106,6 @@ export const stylesFn = (theme: Theme) =>
     cardWrapper: {
       width: "48%",
       marginBottom: 12,
+      
     },
   });

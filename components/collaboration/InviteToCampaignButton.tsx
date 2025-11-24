@@ -1,43 +1,32 @@
-import React, { useState } from "react";
-import { Linking, StyleProp, ViewStyle, TextStyle } from "react-native";
-import { useTheme } from "@react-navigation/native";
-import { Button } from "react-native-paper";
 import Colors from "@/constants/Colors";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useTheme } from "@react-navigation/native";
+import React, { useState } from "react";
+import { Linking } from "react-native";
+import { Button } from "react-native-paper";
 import InviteToCampaignModal from "./InviteToCampaignModal";
 
 interface InviteButtonProps {
   label?: string;
   disabled?: boolean;
-  style?: StyleProp<ViewStyle>;
-  textstyle?: StyleProp<TextStyle>;
-  selectedBrand: any;
   openModal: (args: any) => void;
-  collaborations?: {
-    id: string;
-    name: string;
-    description: string;
-    mediaUrl?: string;
-    isVideo?: boolean;
-    active?: boolean;
-  }[];
 }
 
 const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
   label = "Invite",
   disabled,
-  style,
-  textstyle,
-  selectedBrand,
   openModal,
-  collaborations = [],
 }) => {
   const theme = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
 
+  // ✅ Get selectedBrand directly from context
+  const { selectedBrand } = useBrandContext();
+
   const handleInvitePress = () => {
     const credits = selectedBrand?.credits?.connection || 0;
 
-    if (credits > 0) {
+    if (credits <= 0) {
       openModal({
         title: "No Connection Credit",
         description:
@@ -48,13 +37,12 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
       return;
     }
 
-    // ✅ Show your custom campaign modal now
     setModalVisible(true);
   };
 
   const handleInviteConfirm = (selectedIds: string[]) => {
     console.log("✅ Inviting influencer to campaigns:", selectedIds);
-    // TODO: call your backend API here
+    // TODO: backend integration
     setModalVisible(false);
   };
 
@@ -69,29 +57,29 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
             backgroundColor: disabled
               ? Colors(theme).card
               : Colors(theme).primary,
-            borderRadius: 12,
+            borderRadius: 50,
+            paddingHorizontal: 4,
+            paddingVertical: 0,
+            minHeight: 32,
+            alignSelf: "flex-start",
           },
-          style,
         ]}
-        labelStyle={[
-          {
-            color: Colors(theme).white,
-            fontWeight: "600",
-            textTransform: "none",
-          },
-          textstyle,
-        ]}
+        labelStyle={{
+          color: Colors(theme).white,
+          fontWeight: "400",
+          textTransform: "none",
+          fontSize: 14,
+        }}
       >
         {label}
       </Button>
 
-      {/* ✅ Custom campaign invite modal */}
-      <InviteToCampaignModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        collaborations={collaborations.filter((c) => c.active)}
-        onInvite={handleInviteConfirm}
-      />
+      {modalVisible && (
+        <InviteToCampaignModal
+          onClose={() => setModalVisible(false)}
+          onInvite={handleInviteConfirm}
+        />
+      )}
     </>
   );
 };

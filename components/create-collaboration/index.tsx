@@ -21,6 +21,7 @@ import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
 import ScreenThree from "./screen-three";
 import PreviewCollaboration from "./PreviewCollaboration";
+import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 
 const CreateCollaboration = () => {
   const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
@@ -48,12 +49,7 @@ const CreateCollaboration = () => {
     },
     externalLinks: [],
     questionsToInfluencers: [],
-    preferences: {
-      timeCommitment: "Full Time",
-      influencerNiche: [],
-      influencerRelation: "Long Term",
-      preferredVideoType: "Integrated Video",
-    },
+    preferences: {},
     status: "",
     timeStamp: 0,
     viewsLastHour: 0,
@@ -73,6 +69,7 @@ const CreateCollaboration = () => {
   const theme = useTheme();
   const params = useLocalSearchParams();
   const type = params.id ? "Edit" : "Add";
+  const { publish } = usePublishCollaboration();
 
   const {
     isProcessing,
@@ -177,10 +174,11 @@ const CreateCollaboration = () => {
         return;
       }
 
-      let status = myStatus;
-      if (isOnFreeTrial && status == "active") {
+      let wantedStatus = myStatus;
+      if (isOnFreeTrial && wantedStatus === "active") {
+        // if on free trial, show modal and fallback to draft
         notifyUprade();
-        status = "draft";
+        wantedStatus = "draft";
       }
 
       let locationAddress = collaboration?.location;
@@ -204,12 +202,8 @@ const CreateCollaboration = () => {
       setProcessMessage("Saving collaboration attachments...");
       setProcessPercentage(40);
 
-      // Upload assets to S3
-      // const uploadedAssets = await uploadNewAssets(
-      //   attachments,
-      //   nativeAssets,
-      //   webAssets,
-      // );
+      // Upload assets to S3 (if you do)
+      // const uploadedAssets = await uploadNewAssets(...)
 
       setProcessMessage("Saved collaboration attachments...");
       setProcessPercentage(70);
@@ -217,33 +211,88 @@ const CreateCollaboration = () => {
       setProcessMessage("Saving collaboration...");
       setProcessPercentage(100);
 
-      await handleCollaboration({
-        ...collaboration,
-        attachments: attachments,
-        brandId: selectedBrand ? selectedBrand?.id : "",
-        budget: {
-          min: collaboration.budget?.min || 0,
-          max: collaboration.budget?.max || 0,
-        },
-        managerId: AuthApp.currentUser?.uid as string,
-        location: locationAddress,
-        status,
-        timeStamp: type === "Add" ? Date.now() : collaboration.timeStamp,
-      })
-        .catch((error) => {
+      // Call create or update. IMPORTANT: we assume createCollaboration returns the new doc id
+      if (params.id && typeof params.id === "string") {
+        // editing existing collab
+        await updateCollaboration(params.id, {
+          ...collaboration,
+          attachments: attachments,
+          brandId: selectedBrand ? selectedBrand?.id : "",
+          budget: {
+            min: collaboration.budget?.min || 0,
+            max: collaboration.budget?.max || 0,
+          },
+          managerId: AuthApp.currentUser?.uid as string,
+          location: locationAddress,
+          status: wantedStatus,
+          timeStamp: collaboration.timeStamp || Date.now(),
+        }).catch((error) => {
           Console.error(error);
-          Toaster.error("Failed to save collaboration");
-        })
-        .finally(() => {
-          setProcessPercentage(0);
-          setProcessMessage("");
-          setIsProcessing(false);
-          if (myStatus == "draft") {
-            notifyUprade();
-          }
+          Toaster.error("Failed to update collaboration");
         });
+        // If user wanted publish and we set wantedStatus active then call publish
+        if (wantedStatus === "active") {
+          // params.id exists so we can publish by id
+          await publish(params.id);
+        }
+      } else {
+        // creating new collaboration
+        // IMPORTANT: your createCollaboration should return the newly created doc id.
+        let created: string | null = null;
+
+        try {
+          created = await createCollaboration({
+            ...collaboration,
+            attachments,
+            brandId: selectedBrand ? selectedBrand.id : "",
+            budget: {
+              min: collaboration.budget?.min || 0,
+              max: collaboration.budget?.max || 0,
+            },
+            managerId: AuthApp.currentUser?.uid as string,
+            location: locationAddress,
+            status: wantedStatus,
+            timeStamp: Date.now(),
+          });
+        } catch (error) {
+          Console.error(error);
+          Toaster.error("Failed to create collaboration");
+          created = null;
+        }
+
+        // ASSUMPTION: createCollaboration returns the created doc id
+        // If it returns an object, adjust accordingly (e.g. created.id)
+        let newId: string | null = null;
+        if (typeof created === "string") {
+          newId = created;
+        } else if (created && (created as any).id) {
+          newId = (created as any).id;
+        }
+
+        if (!newId) {
+          // fallback: if createCollaboration didn't return id, log and stop.
+          Console.error(
+            "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
+          );
+        } else {
+          // If wantedStatus is 'active', then call publish using shared hook
+          if (wantedStatus === "active") {
+            await publish(newId);
+            router.push("/collaborations");
+          } else {
+            // optionally navigate to edit or details
+          }
+        }
+      }
     } catch (error) {
       Console.error(error);
+    } finally {
+      setProcessPercentage(0);
+      setProcessMessage("");
+      setIsProcessing(false);
+      if (myStatus === "draft") {
+        notifyUprade();
+      }
     }
   };
 
@@ -324,6 +373,11 @@ const CreateCollaboration = () => {
   }
 
   if (screen === 4) {
+     if (!selectedBrand) {
+      Console.error("Cannot preview collaboration without selected brand");
+      // Optionally show error UI or navigate back
+      return null;
+    }
     return (
       <PreviewCollaboration
         collaboration={

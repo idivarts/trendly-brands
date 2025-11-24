@@ -123,16 +123,16 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
       ),
     label: "Campaigns",
   },
-  {
-    href: "/explore-influencers",
-    icon: ({ focused }: IconPropFn) =>
-      focused ? (
-        <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
-      ) : (
-        <DrawerIcon href="/explore-influencers" icon={faHeart} />
-      ),
-    label: "Spotlights",
-  },
+  // {
+  //   href: "/explore-influencers",
+  //   icon: ({ focused }: IconPropFn) =>
+  //     focused ? (
+  //       <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
+  //     ) : (
+  //       <DrawerIcon href="/explore-influencers" icon={faHeart} />
+  //     ),
+  //   label: "Spotlights",
+  // },
   {
     href: "/messages",
     icon: ({ focused }: IconPropFn) =>
@@ -172,7 +172,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
 
   const planKey = selectedBrand?.billing?.planKey || "";
 
-  const [isHovered, setIsHovered] = useState(false);
+  const [isBrandHovered, setIsBrandHovered] = useState(false);
+  const [isAdminHovered, setIsAdminHovered] = useState(false);
 
   return (
     <View
@@ -287,8 +288,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             onPress={() => {
               router.push("/menu");
             }}
-            onHoverIn={() => setIsHovered(true)}
-            onHoverOut={() => setIsHovered(false)}
+            onHoverIn={() => setIsBrandHovered(true)}
+            onHoverOut={() => setIsBrandHovered(false)}
           >
             <View
               style={[
@@ -300,7 +301,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                   paddingHorizontal: 8,
                   paddingVertical: 12,
                 },
-                isHovered && {
+                isBrandHovered && {
                   borderWidth: StyleSheet.hairlineWidth,
                   borderColor: Colors(theme).border,
                 },
@@ -339,8 +340,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
               onPress={() => {
                 console.log("🛡️ Admin Portal clicked");
               }}
-              onHoverIn={() => setIsHovered(true)}
-              onHoverOut={() => setIsHovered(false)}
+              onHoverIn={() => setIsAdminHovered(true)}
+              onHoverOut={() => setIsAdminHovered(false)}
             >
               <View
                 style={[
@@ -352,7 +353,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     paddingHorizontal: 8,
                     paddingVertical: 12,
                   },
-                  isHovered && {
+                  isAdminHovered && {
                     borderWidth: StyleSheet.hairlineWidth,
                     borderColor: Colors(theme).border,
                   },

@@ -122,7 +122,7 @@ export const InfluencerStatsModal: React.FC<{
                     maxWidth: Dimensions.get("window").width * 0.2,
                   }}
                 >
-                  {[item?.fullname, "vashhvbflahjvbalhvblasfihvblashfbvlaishbliawhfbvliashfb lkaishrbvliahfbvliahsfb"]}
+                  {item?.fullname}
                 </Text>
                 <Text
                   numberOfLines={1}
@@ -135,10 +135,7 @@ export const InfluencerStatsModal: React.FC<{
             </View>
             <Card.Actions>
               {/* <Button mode="contained" onPress={() => sendInvite()}>Invite</Button> */}
-              <InviteToCampaignButton
-                openModal={openModal}
-                selectedBrand={selectedBrand}
-              />
+              <InviteToCampaignButton openModal={openModal} />
 
               <IconButton
                 icon="open-in-new"

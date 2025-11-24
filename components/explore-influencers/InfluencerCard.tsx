@@ -1,26 +1,22 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { Card } from "react-native-paper";
-import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignButton";
+import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 import { maskHandle } from "@/shared-uis/utils/masks";
+import { useTheme } from "@react-navigation/native";
+import React, { useMemo, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Card, Checkbox } from "react-native-paper";
+import { InfluencerItem } from "../discover/DiscoverInfluencer";
 
 export interface InfluencerCardProps {
-  item: {
-    userId: string;
-    fullname: string;
-    username: string;
-    picture: string;
-    followers: number;
-    views?: number;
-    engagements: number;
-  };
+  item: InfluencerItem;
   onPress?: () => void;
   openModal?: any;
-  selectedBrand?: any;
+  isCollapsed?: boolean;
   collaborations?: any[];
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  isStatusCard?: boolean;
 }
 
 const formatNumber = (n: number | undefined) => {
@@ -32,129 +28,355 @@ const formatNumber = (n: number | undefined) => {
   return `${Math.round(n / 100_000_000) / 10}B`;
 };
 
-const InfluencerCard: React.FC<InfluencerCardProps> = ({
+const Avatar = ({
   item,
-  onPress,
-  openModal,
-  selectedBrand,
-  collaborations,
+  parentWidth,
+  isCollapsed,
+}: {
+  item: InfluencerItem;
+  parentWidth: number;
+  isCollapsed?: boolean;
 }) => {
   const theme = useTheme();
   const colors = Colors(theme);
-  const styles = useMemo(() => useStyles(colors), [colors]);
+
+  const baseAvatarScale = 0.3;
+  const avatarSize = parentWidth * baseAvatarScale * (isCollapsed ? 1.1 : 1);
 
   return (
-    <Card
-      style={[styles.card, { backgroundColor: colors.aliceBlue }]}
-      onPress={onPress}
+    <View
+      style={{
+        width: avatarSize,
+        height: avatarSize,
+        borderRadius: avatarSize / 2,
+        borderWidth: isCollapsed ? 4 : 3,
+        borderColor: colors.primary,
+        overflow: "hidden",
+        backgroundColor: colors.aliceBlue,
+      }}
     >
-      <Card.Content style={styles.content}>
-        <View style={{ backgroundColor: colors.aliceBlue, paddingTop: 20 }}>
-          <View style={styles.row}>
-            {/* Avatar */}
-            <View style={styles.avatarCol}>
-              <FacebookImageComponent
-                url={item.picture}
-                altText={item.fullname}
-                style={[
-                  styles.avatar,
-                  { borderColor: Colors(theme).primary },
-                ]}
-              />
-            </View>
-
-            {/* Name, Username, and Invite */}
-            <View style={styles.nameCol}>
-              <Text style={styles.title} numberOfLines={1}>
-                {item.fullname}
-              </Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
-                @{maskHandle(item.username)}
-              </Text>
-
-              <View style={{ alignItems: "flex-start", marginTop: 8 }}>
-                <InviteToCampaignButton
-                  label="Invite"
-                  openModal={openModal}
-                  selectedBrand={selectedBrand}
-                  collaborations={collaborations}
-                  textstyle={{ fontSize: 18 }}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <Stat label="Followers" value={item.followers} />
-            <DividerLine />
-            <Stat label="Engagements" value={item.engagements} />
-            <DividerLine />
-            <Stat label="Views" value={item.views} />
-          </View>
-        </View>
-      </Card.Content>
-    </Card>
-  );
-};
-
-const Stat = ({ label, value }: { label: string; value?: number }) => {
-  const theme = useTheme();
-  const colors = Colors(theme);
-  const styles = useMemo(() => useStyles(colors), [colors]);
-
-  return (
-    <View style={styles.stat}>
-      <Text style={{ fontWeight: "600", fontSize: 16 }}>
-        {formatNumber(value)}
-      </Text>
-      <Text style={{ fontSize: 10, opacity: 0.8 }}>{label}</Text>
+      <FacebookImageComponent
+        url={item.picture}
+        altText="Issue Loading image"
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: avatarSize / 2,
+        }}
+      />
     </View>
   );
 };
 
-const DividerLine = () => {
+const SelectCheckbox = ({
+  checked,
+  onToggle,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+}) => {
+  return (
+    <Checkbox.Android
+      status={checked ? "checked" : "unchecked"}
+      onPress={onToggle}
+      color="#1D425D"
+    />
+  );
+};
+
+const NameSection = ({
+  item,
+  isCollapsed,
+  isStatusCard,
+}: {
+  item: InfluencerItem;
+  isCollapsed?: boolean;
+  isStatusCard?: boolean;
+}) => {
+  const theme = useTheme();
+  const colors = Colors(theme);
+
+  return (
+    <View style={{ marginTop: isCollapsed ? 14 : 10, maxWidth: "60%" }}>
+      <Text
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        style={{
+          fontSize: isCollapsed ? 22 : 18,
+          fontWeight: "700" as const,
+          color: colors.text,
+        }}
+      >
+        {item.fullname}
+      </Text>
+
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: isCollapsed ? 16 : 14,
+          opacity: 0.7,
+          marginTop: 2,
+          fontWeight: "300" as const,
+        }}
+      >
+        @{maskHandle(item.username)}
+      </Text>
+
+      <View style={{ marginTop: isCollapsed ? 14 : 10 }}>
+        {isStatusCard ? (
+          // show status badge when StatusCard is enabled
+          <View
+            style={{
+              backgroundColor:
+                item.status === "accepted"
+                  ? "#D1F7DC"
+                  : item.status === "denied"
+                  ? "#F7D7D7"
+                  : "#F2E6B5",
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 12,
+              alignSelf: "flex-start",
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  item.status === "accepted"
+                    ? "#0B7A2A"
+                    : item.status === "denied"
+                    ? "#A92C2C"
+                    : "#333",
+                fontWeight: "500",
+              }}
+            >
+              {item.status
+                ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
+                : "Pending"}
+            </Text>
+          </View>
+        ) : (
+          <InviteToCampaignButton label="Invite Now" openModal={() => {}} />
+        )}
+      </View>
+    </View>
+  );
+};
+
+const StatsSection = ({
+  item,
+  isCollapsed,
+}: {
+  item: InfluencerItem;
+  isCollapsed?: boolean;
+}) => {
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const scale = isCollapsed ? 1.08 : 1;
+
+  const labelStyle = {
+    fontSize: isCollapsed ? 11 : 10,
+    opacity: 0.7,
+  };
+
+  const valueStyle = {
+    fontSize: isCollapsed ? 18 : 16,
+    fontWeight: "600" as const,
+  };
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-evenly",
+        alignItems: "center",
+        marginTop: isCollapsed ? 20 : 16,
+        transform: [{ scale }],
+      }}
+    >
+      <View style={{ alignItems: "center", flex: 1 }}>
+        <Text style={valueStyle}>{formatNumber(item.followers)}</Text>
+        <Text style={labelStyle}>Followers</Text>
+      </View>
+
+      <View style={{ width: 1, height: "70%", backgroundColor: "#CCC" }} />
+
+      <View style={{ alignItems: "center", flex: 1 }}>
+        <Text style={valueStyle}>{formatNumber(item.engagements)}</Text>
+        <Text style={labelStyle}>Engagements</Text>
+      </View>
+
+      <View style={{ width: 1, height: "70%", backgroundColor: "#CCC" }} />
+
+      <View style={{ alignItems: "center", flex: 1 }}>
+        <Text style={valueStyle}>{formatNumber(item.views)}</Text>
+        <Text style={labelStyle}>Views</Text>
+      </View>
+    </View>
+  );
+};
+
+const InfluencerCard: React.FC<InfluencerCardProps> = ({
+  item,
+  onPress,
+  isCollapsed,
+  isSelected,
+  onToggleSelect,
+  isStatusCard,
+}) => {
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
+  const [parentWidth, setParentWidth] = useState(0);
 
-  return <View style={{ width: 1, height: "80%", backgroundColor: "#999" }} />;
+  const getRandomTime = () => {
+    const times = ["1 hour ago", "2 days ago", "1 week ago", "3 months ago"];
+    return times[Math.floor(Math.random() * times.length)];
+  };
+
+  const TimeAgo = getRandomTime();
+
+  return (
+    <View
+      style={[
+        styles.CardLayoutWrapper,
+        { alignSelf: isCollapsed ? "center" : "auto" },
+      ]}
+      onLayout={(e) => {
+        const layoutWidth = e.nativeEvent.layout.width;
+        if (layoutWidth > 0 && layoutWidth !== parentWidth) {
+          setParentWidth(layoutWidth);
+        }
+      }}
+    >
+      <Card
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.aliceBlue,
+            width: parentWidth,
+            minHeight: isCollapsed ? 296 : 252,
+            height: "auto",
+          },
+        ]}
+        onPress={onPress}
+      >
+        <Card.Content style={{ paddingRight: 0 }}>
+          {/* Checkbox and ER */}
+          <View style={styles.CheckoutAndBookMarkContainer}>
+            {isStatusCard ? (
+              <View>
+                <Text>{TimeAgo}</Text>
+              </View>
+            ) : (
+              <View>
+                <SelectCheckbox
+                  checked={isSelected ?? false}
+                  onToggle={onToggleSelect ?? (() => {})}
+                />
+              </View>
+            )}
+            <View>
+              <View
+                style={{
+                  backgroundColor: colors.primary,
+                  padding: 8,
+                  width: 108,
+                  alignItems: "flex-end",
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: Colors(theme).aliceBlue,
+                    height: 24,
+                    width: 24,
+                    position: "absolute",
+                    transform: [{ rotate: "45deg" }],
+                    left: -12,
+                    top: 5,
+                  }}
+                />
+                <Text
+                  style={{
+                    color: Colors(theme).white,
+                    fontSize: 14,
+                    fontWeight: "300",
+                  }}
+                >
+                  {`ER - ${item.engagementRate?.toFixed(2)}%`}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Avatar and Details */}
+          <View
+            style={{
+              flexDirection: "row",
+              columnGap: isCollapsed ? 24 : 20,
+              alignItems: "center",
+            }}
+          >
+            <Avatar
+              item={item}
+              parentWidth={parentWidth}
+              isCollapsed={isCollapsed}
+            />
+            <NameSection
+              item={item}
+              isCollapsed={isCollapsed}
+              isStatusCard={isStatusCard}
+            />
+          </View>
+
+          <StatsSection item={item} isCollapsed={isCollapsed} />
+        </Card.Content>
+      </Card>
+      <View style={[styles.CategoryTag]}>
+        <Text style={styles.CategoryText}>By Discovery</Text>
+      </View>
+    </View>
+  );
 };
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
   StyleSheet.create({
+    CardLayoutWrapper: {
+      width: "100%",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 8,
+      borderRadius: 16,
+    },
     card: {
-      marginHorizontal: 8,
-      marginVertical: 6,
-      borderRadius: 12,
+      borderRadius: 16,
       overflow: "hidden",
-      minWidth: 340,
-      minHeight: 216,
-    },
-    content: { paddingHorizontal: 8, paddingVertical: 8 },
-    row: { flexDirection: "row", alignItems: "center", columnGap: 4 },
-    avatarCol: {
-      paddingHorizontal: 12,
-      justifyContent: "center",
-      alignItems: "center",
-      flexDirection: "row",
-    },
-    avatar: {
-      width: 100,
-      height: 100,
-      borderRadius: 48,
-      borderWidth: 3,
-    },
-    nameCol: { flexDirection: "column", flex: 1, maxWidth: "36%" },
-    title: { fontSize: 20, fontWeight: "600", lineHeight: 18 },
-    subtitle: { fontSize: 14, opacity: 0.7 },
-    statsRow: {
-      flexDirection: "row",
-      justifyContent: "space-evenly",
-      paddingVertical: 12,
-      marginTop: 12,
     },
     stat: { alignItems: "center" },
+    CheckoutAndBookMarkContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    CategoryTag: {
+      backgroundColor: colors.primary,
+      borderTopLeftRadius: 8,
+      borderBottomRightRadius: 8,
+      paddingVertical: 6,
+      position: "absolute",
+      right: 0,
+      paddingRight: 12,
+      paddingLeft: 8,
+      bottom: 0,
+    },
+    CategoryText: {
+      fontSize: 10,
+      fontWeight: "200",
+      color: colors.white,
+      letterSpacing: 1.2,
+    },
   });
 
 export default InfluencerCard;

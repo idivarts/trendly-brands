@@ -47,10 +47,11 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
   const styles = stylesFn(theme);
 
   const collapseAnim = useRef(new Animated.Value(1)).current;
-  const autoCollapseTimer = useRef<NodeJS.Timeout>();
+  const autoCollapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-collapse after 2 seconds of inactivity
   const startAutoCollapseTimer = () => {
+    if (!xl) return;
     if (autoCollapseTimer.current) {
       clearTimeout(autoCollapseTimer.current);
     }
@@ -81,7 +82,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
 
   useEffect(() => {
     setActiveTab(tabs[defaultSelection]);
-  }, [tabs]);
+  }, [tabs, defaultSelection]);
 
   const renderTabContent = () => {
     let content;
@@ -147,6 +148,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
             }
           }}
           onTouchEnd={() => {
+            if (!xl) return;
             startAutoCollapseTimer();
           }}
         >
@@ -165,8 +167,8 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
             ]}
           >
             {tabs.map((tab, index) =>
-              tab.title == "---" ? (
-                <Divider />
+              tab.title === "---" ? (
+                <Divider key={tab.id} />
               ) : (
                 <Pressable
                   key={tab.id}

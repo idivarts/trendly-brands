@@ -1,28 +1,28 @@
+import { DiscoveryProvider } from "@/components/discover/Discover";
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
+import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import { Href } from "expo-router";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
 import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
-import OverviewTabContent from "./OverviewTabContent";
-import { DiscoveryProvider } from "@/app/(main)/(drawer)/(tabs)/discover";
 import InvitedMemberTabContent from "./InvitedMemberTabContent";
-import { CollapseProvider } from "@/contexts/CollapseContext";
+import OverviewTabContent from "./OverviewTabContent";
 
 export interface CollaborationDetail extends ICollaboration {
   id: string;
@@ -51,31 +51,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
   const { openModal } = useConfirmationModel();
   const router = useMyNavigation();
 
-  const publishCollaboration = async () => {
-    if (!pageID) return;
-    if (isOnFreeTrial) {
-      openModal({
-        title: "Upgrade to Publish",
-        description: "You need to upgrade your plan to publish collaborations.",
-        confirmText: "Upgrade Now",
-        confirmAction: () => {
-          router.push("/billing");
-        },
-      });
-      return;
-    }
-
-    try {
-      const collabRef = doc(FirestoreDB, "collaborations", pageID);
-      await updateDoc(collabRef, {
-        status: "active",
-      });
-      Toaster.success("Collaboration is published successfully");
-      fetchCollaboration();
-    } catch (e) {
-      Console.error(e);
-    }
-  };
+  const { publish } = usePublishCollaboration();
 
   const fetchCollaboration = async () => {
     if (!pageID) return;
@@ -331,7 +307,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
           </Button>
           <Button
             mode="contained"
-            onPress={() => publishCollaboration()}
+            onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
             style={{
               flex: 1,
             }}
