@@ -1,4 +1,3 @@
-import InvitationStatusCard from "@/components/explore-influencers/InvitationStatusCard";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
@@ -89,7 +88,7 @@ const InvitedMemberTabContent = (props: any) => {
         showTopPanel={true}
         advanceFilter={false}
         statusFilter={true}
-        StatusCard={true}
+        isStatusCard={true}
       />
     </ScrollView>
   );

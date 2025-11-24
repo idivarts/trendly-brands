@@ -38,12 +38,13 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
   const { selectedBrand } = useBrandContext();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-
     const fetchActiveCollaborations = async () => {
       try {
+        setLoading(true);
+
         if (!selectedBrand) return;
 
         const coll = collection(FirestoreDB, "collaborations");
@@ -55,6 +56,7 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
         );
 
         const snap = await getDocs(q);
+
         const items = snap.docs.map((d) => {
           const data = d.data() as any;
           const attachments = Array.isArray(data.attachments)
@@ -62,34 +64,30 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
             : [];
           const first = attachments[0];
           const processed = first ? processRawAttachment(first) : undefined;
-          const isVideo = processed?.type?.includes("video") || false;
-          const mediaUrl =
-            processed?.url ||
-            first?.imageUrl ||
-            first?.url ||
-            "https://via.placeholder.com/300x200.png?text=No+Image";
 
           return {
             id: d.id,
             name: data.name || "",
             description: data.description || "",
-            mediaUrl,
-            isVideo,
+            mediaUrl:
+              processed?.url ||
+              first?.imageUrl ||
+              first?.url ||
+              "https://via.placeholder.com/300x200.png?text=No+Image",
+            isVideo: processed?.type?.includes("video") || false,
             active: true,
           };
         });
 
-        if (mounted) setCollaborations(items);
+        setCollaborations(items);
       } catch (err) {
         console.warn("Failed to load active collaborations", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchActiveCollaborations();
-
-    return () => {
-      mounted = false;
-    };
   }, [selectedBrand]);
 
   const toggleSelect = (id: string) => {
@@ -165,13 +163,22 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
         <View style={[styles.container, { backgroundColor: colors.aliceBlue }]}>
           <Text style={styles.header}>Invite to Campaign</Text>
 
-          <FlatList
-            data={collaborations}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-          />
-
+          {loading ? (
+            <Text style={{ textAlign: "center", marginVertical: 20 }}>
+              Loading...
+            </Text>
+          ) : collaborations.length === 0 ? (
+            <Text style={{ textAlign: "center", marginVertical: 20 }}>
+              No collaborations found
+            </Text>
+          ) : (
+            <FlatList
+              data={collaborations}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.listContent}
+            />
+          )}
           <View style={styles.footer}>
             <Pressable onPress={handleClose} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
@@ -202,10 +209,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
       alignItems: "center",
     },
     container: {
-      width: "85%",
+      minWidth: 640,
       maxHeight: "80%",
       borderRadius: 12,
       padding: 16,
+      maxWidth: 700,
     },
     header: {
       fontSize: 18,

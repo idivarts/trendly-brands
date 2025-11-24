@@ -65,7 +65,7 @@ const DiscoverComponent = ({
   showTopPanel,
   advanceFilter = false,
   statusFilter = false,
-  StatusCard = false,
+  isStatusCard = false,
   onStatusChange,
 }: {
   showRightPanel?: boolean;
@@ -73,7 +73,7 @@ const DiscoverComponent = ({
   showTopPanel?: boolean;
   advanceFilter?: boolean;
   statusFilter?: boolean;
-  StatusCard?: boolean;
+  isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
 }) => {
   const { manager } = useAuthContext();
@@ -155,7 +155,7 @@ const DiscoverComponent = ({
             advanceFilter={advanceFilter}
             statusFilter={statusFilter}
             onStatusChange={onStatusChange}
-            StatusCard={StatusCard}
+            isStatusCard={isStatusCard}
           />
           <RightPanelDiscover
             style={[

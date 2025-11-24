@@ -161,14 +161,14 @@ export const StatChip = ({
 interface DiscoverInfluencerProps {
   advanceFilter?: boolean;
   statusFilter?: boolean;
-  StatusCard?: boolean;
+  isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   advanceFilter = false,
   statusFilter = false,
-  StatusCard = false,
+  isStatusCard = false,
   onStatusChange,
 }) => {
   const {
@@ -273,7 +273,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             openModal={openModal}
             isSelected={selectedIds.includes(item.userId)}
             onToggleSelect={() => toggleSelect(item.userId)}
-            StatusCard={StatusCard}
+            isStatusCard={isStatusCard}
           />
         </View>
       );

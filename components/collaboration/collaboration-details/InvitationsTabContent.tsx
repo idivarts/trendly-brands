@@ -235,7 +235,7 @@ const InvitationsTabContent = (props: any) => {
             showTopPanel={true}
             advanceFilter={true}
             onStatusChange={handleStatusChange}
-            StatusCard={false}
+            isStatusCard={false}
           />
         </ScrollView>
       ) : (

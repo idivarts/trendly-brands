@@ -327,7 +327,7 @@ const DroppableColumn = ({
           )}
           {!editingColumnId && (
             <Pressable onPress={onStartEditingColumn} style={{ marginLeft: 8 }}>
-              <Text style={{ color: colors.Editblue }}>Edit</Text>
+              <Text style={{ color: colors.editBlue }}>Edit</Text>
             </Pressable>
           )}
           <View style={{ flexDirection: "row", gap: 8, marginLeft: 8 }}>

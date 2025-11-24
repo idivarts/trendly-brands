@@ -16,7 +16,7 @@ export interface InfluencerCardProps {
   collaborations?: any[];
   isSelected?: boolean;
   onToggleSelect?: () => void;
-  StatusCard?: boolean;
+  isStatusCard?: boolean;
 }
 
 const formatNumber = (n: number | undefined) => {
@@ -27,9 +27,6 @@ const formatNumber = (n: number | undefined) => {
   if (n < 1_000_000_000) return `${Math.round(n / 100_000) / 10}M`;
   return `${Math.round(n / 100_000_000) / 10}B`;
 };
-
-const CARD_ASPECT_RATIO = 456 / 332; // ≈ 1.447
-const COLLAPSED_SCALE = 511 / 456; // ≈ 1.12
 
 const Avatar = ({
   item,
@@ -90,11 +87,11 @@ const SelectCheckbox = ({
 const NameSection = ({
   item,
   isCollapsed,
-  StatusCard,
+  isStatusCard,
 }: {
   item: InfluencerItem;
   isCollapsed?: boolean;
-  StatusCard?: boolean;
+  isStatusCard?: boolean;
 }) => {
   const theme = useTheme();
   const colors = Colors(theme);
@@ -126,7 +123,7 @@ const NameSection = ({
       </Text>
 
       <View style={{ marginTop: isCollapsed ? 14 : 10 }}>
-        {StatusCard ? (
+        {isStatusCard ? (
           // show status badge when StatusCard is enabled
           <View
             style={{
@@ -222,12 +219,10 @@ const StatsSection = ({
 const InfluencerCard: React.FC<InfluencerCardProps> = ({
   item,
   onPress,
-  openModal,
-  collaborations,
   isCollapsed,
   isSelected,
   onToggleSelect,
-  StatusCard,
+  isStatusCard,
 }) => {
   const theme = useTheme();
   const colors = Colors(theme);
@@ -269,7 +264,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
         <Card.Content style={{ paddingRight: 0 }}>
           {/* Checkbox and ER */}
           <View style={styles.CheckoutAndBookMarkContainer}>
-            {StatusCard ? (
+            {isStatusCard ? (
               <View>
                 <Text>{TimeAgo}</Text>
               </View>
@@ -330,7 +325,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
             <NameSection
               item={item}
               isCollapsed={isCollapsed}
-              StatusCard={StatusCard}
+              isStatusCard={isStatusCard}
             />
           </View>
 
