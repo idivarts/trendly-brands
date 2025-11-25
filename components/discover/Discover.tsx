@@ -10,6 +10,7 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import React, {
   createContext,
@@ -21,7 +22,6 @@ import React, {
 } from "react";
 import { ActivityIndicator } from "react-native-paper";
 import { Subject } from "rxjs";
-
 export const OpenFilterRightPanel = new Subject();
 
 export interface DiscoverCommunication {
@@ -67,6 +67,7 @@ const DiscoverComponent = ({
   statusFilter = false,
   isStatusCard = false,
   onStatusChange,
+  defaultAdvanceFilters,
 }: {
   showRightPanel?: boolean;
   topPanel?: boolean;
@@ -75,6 +76,7 @@ const DiscoverComponent = ({
   statusFilter?: boolean;
   isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
+  defaultAdvanceFilters?: IAdvanceFilters;
 }) => {
   const { manager } = useAuthContext();
   const { selectedBrand } = useBrandContext();
@@ -156,8 +158,10 @@ const DiscoverComponent = ({
             statusFilter={statusFilter}
             onStatusChange={onStatusChange}
             isStatusCard={isStatusCard}
+            defaultAdvanceFilters={defaultAdvanceFilters}
           />
           <RightPanelDiscover
+            defaultAdvanceFilters={defaultAdvanceFilters}
             style={[
               !showRightPanel && { display: "none" },
               !xl && {

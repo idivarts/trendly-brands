@@ -10,6 +10,7 @@ import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
@@ -24,18 +25,18 @@ import {
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
-import SlowLoader from "@/shared-uis/components/SlowLoader";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dimensions, Modal, ScrollView } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useCollapseContext } from "@/contexts/CollapseContext";
+import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -49,8 +50,11 @@ const InvitationsTabContent = (props: any) => {
     useState(false);
   const [message, setMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
-
+  const { getCollaborationById } = useCollaborationContext();
   const collaborationId = props.pageID;
+  const [collaboration, setCollaboration] = useState<ICollaboration | null>(
+    null
+  );
 
   const {
     checkIfAlreadyInvited,
@@ -77,6 +81,14 @@ const InvitationsTabContent = (props: any) => {
     left: insets.left,
     right: insets.right,
   });
+
+  useEffect(() => {
+    async function load() {
+      const result = await getCollaborationById(collaborationId);
+      setCollaboration(result);
+    }
+    load();
+  }, [collaborationId]);
 
   const toggleActionModal = () => {
     setIsActionModalVisible(!isActionModalVisible);
@@ -236,6 +248,7 @@ const InvitationsTabContent = (props: any) => {
             advanceFilter={true}
             onStatusChange={handleStatusChange}
             isStatusCard={false}
+            defaultAdvanceFilters={collaboration?.preferences}
           />
         </ScrollView>
       ) : (

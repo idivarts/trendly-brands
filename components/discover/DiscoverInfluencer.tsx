@@ -9,7 +9,7 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   FlatList,
   Linking,
@@ -29,6 +29,7 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 // Types
 export interface InfluencerItem {
@@ -163,6 +164,7 @@ interface DiscoverInfluencerProps {
   statusFilter?: boolean;
   isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
+  defaultAdvanceFilters?: IAdvanceFilters;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -170,6 +172,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   statusFilter = false,
   isStatusCard = false,
   onStatusChange,
+  defaultAdvanceFilters,
 }) => {
   const {
     selectedDb,
@@ -209,6 +212,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<InfluencerItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
+    null
+  );
   const { selectedBrand } = useBrandContext();
   const { openModal } = useConfirmationModel();
 
@@ -242,6 +248,25 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     },
     []
   );
+
+  useEffect(() => {
+    if (defaultAdvanceFilters && !appliedFilters) {
+      console.log("🔥 Default Filters Applied:", defaultAdvanceFilters);
+      setAppliedFilters(defaultAdvanceFilters);
+
+      discoverCommunication.current?.({
+        loading: true,
+        data: [],
+        page: 1,
+        sort: "followers",
+      });
+
+      pageSortCommunication.current?.({
+        page: 1,
+        sort: "followers",
+      });
+    }
+  }, [defaultAdvanceFilters]);
 
   const onOpenProfile = useCallback((url: string) => {
     Linking.openURL(url);
@@ -476,7 +501,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                   </Text>
                 </Chip>
               }
-              style={{ backgroundColor: Colors(theme).background, }}
+              style={{ backgroundColor: Colors(theme).background }}
             >
               {sortOptions.map((opt) => (
                 <Menu.Item
@@ -569,7 +594,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               right: 0,
               alignItems: "center",
               zIndex: 9999,
-              backgroundColor: "transparent"
+              backgroundColor: "transparent",
             }}
           >
             <View
@@ -595,7 +620,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               </Text>
 
               {/* Invite Button */}
-              <View style={{ top: 0, borderRadius:50 }}>
+              <View style={{ top: 0, borderRadius: 50 }}>
                 <InviteToCampaignButton
                   label="Invite Now"
                   openModal={() => {}}

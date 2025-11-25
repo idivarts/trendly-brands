@@ -70,8 +70,9 @@ const RangeInputs = ({
 
 interface IProps {
     FilterApplyRef: MutableRefObject<any>
+    defaultAdvanceFilters?: IAdvanceFilters;
 }
-const TrendlyAdvancedFilter = (props: IProps) => {
+const TrendlyAdvancedFilter = ({ FilterApplyRef, defaultAdvanceFilters }: IProps) => {
     const theme = useTheme()
     const styles = stylesFn(theme)
 
@@ -126,6 +127,47 @@ const TrendlyAdvancedFilter = (props: IProps) => {
 
     const { discoverCommunication, pageSortCommunication } = useDiscovery()
 
+    useEffect(() => {
+        if (!defaultAdvanceFilters) return;
+
+        setFollowerMin(defaultAdvanceFilters.followerMin?.toString() || "");
+        setFollowerMax(defaultAdvanceFilters.followerMax?.toString() || "");
+
+        setContentMin(defaultAdvanceFilters.contentMin?.toString() || "");
+        setContentMax(defaultAdvanceFilters.contentMax?.toString() || "");
+
+        setMonthlyViewMin(defaultAdvanceFilters.monthlyViewMin?.toString() || "");
+        setMonthlyViewMax(defaultAdvanceFilters.monthlyViewMax?.toString() || "");
+
+        setMonthlyEngagementMin(defaultAdvanceFilters.monthlyEngagementMin?.toString() || "");
+        setMonthlyEngagementtMax(defaultAdvanceFilters.monthlyEngagementMax?.toString() || "");
+
+        setAvgViewsMin(defaultAdvanceFilters.avgViewsMin?.toString() || "");
+        setAvgViewsMax(defaultAdvanceFilters.avgViewsMax?.toString() || "");
+
+        setAvgLikesMin(defaultAdvanceFilters.avgLikesMin?.toString() || "");
+        setAvgLikesMax(defaultAdvanceFilters.avgLikesMax?.toString() || "");
+
+        setAvgCommentsMin(defaultAdvanceFilters.avgCommentsMin?.toString() || "");
+        setAvgCommentsMax(defaultAdvanceFilters.avgCommentsMax?.toString() || "");
+
+        setQualityMin(defaultAdvanceFilters.qualityMin?.toString() || "");
+        setQualityMax(defaultAdvanceFilters.qualityMax?.toString() || "");
+
+        setERMin(defaultAdvanceFilters.erMin?.toString() || "");
+        setERMax(defaultAdvanceFilters.erMax?.toString() || "");
+
+        setDescKeywords(defaultAdvanceFilters.descKeywords?.join(", ") || "");
+        setName(defaultAdvanceFilters.name || "");
+
+        setIsVerified(defaultAdvanceFilters.isVerified || false);
+        setHasContact(defaultAdvanceFilters.hasContact || false);
+
+        setGenders(defaultAdvanceFilters.genders || []);
+        setSelectedNiches(defaultAdvanceFilters.selectedNiches || []);
+        setSelectedLocations(defaultAdvanceFilters.selectedLocations || []);
+    }, []);
+
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
         if (page)
             setOffset((page - 1) * 15)
@@ -162,52 +204,63 @@ const TrendlyAdvancedFilter = (props: IProps) => {
             return arr.length ? arr : undefined;
         };
 
+        // fallback helpers
+        const safeNum = (val: string, fb?: number) =>
+            val && val.trim() !== "" ? parseNumber(val) : fb;
+
+        const safeArr = (arr: string[], fb?: string[]) =>
+            arr && arr.length > 0 ? arr : fb;
+
         // build payload
         const payload: IAdvanceFilters = {
             // Followers range (int64)
-            followerMin: parseNumber(followerMin),
-            followerMax: parseNumber(followerMax),
+            followerMin: safeNum(followerMin, defaultAdvanceFilters?.followerMin),
+            followerMax: safeNum(followerMax, defaultAdvanceFilters?.followerMax),
 
             // Content/posts count range (int)
-            contentMin: parseNumber(contentMin),
-            contentMax: parseNumber(contentMax),
+            contentMin: safeNum(contentMin, defaultAdvanceFilters?.contentMin),
+            contentMax: safeNum(contentMax, defaultAdvanceFilters?.contentMax),
 
             // Estimated monthly views range (int64)
-            monthlyViewMin: parseNumber(monthlyViewMin),
-            monthlyViewMax: parseNumber(monthlyViewMax),
+            monthlyViewMin: safeNum(monthlyViewMin, defaultAdvanceFilters?.monthlyViewMin),
+            monthlyViewMax: safeNum(monthlyViewMax, defaultAdvanceFilters?.monthlyViewMax),
 
             // Estimated monthly engagements range (int64)
-            monthlyEngagementMin: parseNumber(monthlyEngagementMin),
-            monthlyEngagementMax: parseNumber(monthlyEngagementMax),
+            monthlyEngagementMin: safeNum(monthlyEngagementMin, defaultAdvanceFilters?.monthlyEngagementMin),
+            monthlyEngagementMax: safeNum(monthlyEngagementMax, defaultAdvanceFilters?.monthlyEngagementMax),
 
             // Median/average metrics ranges (int64)
-            avgViewsMin: parseNumber(avgViewsMin),
-            avgViewsMax: parseNumber(avgViewsMax),
-            avgLikesMin: parseNumber(avgLikesMin),
-            avgLikesMax: parseNumber(avgLikesMax),
-            avgCommentsMin: parseNumber(avgCommentsMin),
-            avgCommentsMax: parseNumber(avgCommentsMax),
+            avgViewsMin: safeNum(avgViewsMin, defaultAdvanceFilters?.avgViewsMin),
+            avgViewsMax: safeNum(avgViewsMax, defaultAdvanceFilters?.avgViewsMax),
+            avgLikesMin: safeNum(avgLikesMin, defaultAdvanceFilters?.avgLikesMin),
+            avgLikesMax: safeNum(avgLikesMax, defaultAdvanceFilters?.avgLikesMax),
+            avgCommentsMin: safeNum(avgCommentsMin, defaultAdvanceFilters?.avgCommentsMin),
+            avgCommentsMax: safeNum(avgCommentsMax, defaultAdvanceFilters?.avgCommentsMax),
 
             // Quality/aesthetics slider (0..100) (int)
-            qualityMin: parseNumber(qualityMin),
-            qualityMax: parseNumber(qualityMax),
+            qualityMin: safeNum(qualityMin, defaultAdvanceFilters?.qualityMin),
+            qualityMax: safeNum(qualityMax, defaultAdvanceFilters?.qualityMax),
 
             // Engagement rate as percent number (float64)
-            erMin: toPercentNumber(erMin), // e.g., "1.5" -> 1.5
-            erMax: toPercentNumber(erMax),
+            erMin: erMin && erMin.trim() !== ""
+                ? toPercentNumber(erMin)
+                : defaultAdvanceFilters?.erMin,
+            erMax: erMax && erMax.trim() !== ""
+                ? toPercentNumber(erMax)
+                : defaultAdvanceFilters?.erMax,
 
             // Text filters
-            descKeywords: splitKeywords(descKeywords),
-            name: name?.trim() || undefined,
+            descKeywords: splitKeywords(descKeywords) ?? defaultAdvanceFilters?.descKeywords,
+            name: name?.trim() || defaultAdvanceFilters?.name,
 
             // Flags
-            isVerified: isVerified || undefined,
-            hasContact: hasContact || undefined,
+            isVerified: isVerified ? true : defaultAdvanceFilters?.isVerified,
+            hasContact: hasContact ? true : defaultAdvanceFilters?.hasContact,
 
             // Multi-selects
-            genders: genders.length ? genders : undefined,
-            selectedNiches: selectedNiches.length ? selectedNiches : undefined,
-            selectedLocations: selectedLocations.length ? selectedLocations : undefined,
+            genders: safeArr(genders, defaultAdvanceFilters?.genders),
+            selectedNiches: safeArr(selectedNiches, defaultAdvanceFilters?.selectedNiches),
+            selectedLocations: safeArr(selectedLocations, defaultAdvanceFilters?.selectedLocations),
 
         } as const;
 
@@ -254,7 +307,9 @@ const TrendlyAdvancedFilter = (props: IProps) => {
                 return res.json()
             })
             const d = body.data as InfluencerItem[]
+            console.log("🔥 Filtered influencers count:", d.length);
             const newData = [...(reset ? [] : data), ...d]
+            console.log("🔥 Total accumulated influencers:", newData.length);
             setData(newData)
             discoverCommunication.current?.({
                 loading: false,
@@ -348,7 +403,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
         }
     }, [])
 
-    props.FilterApplyRef.current = (action: string) => {
+    FilterApplyRef.current = (action: string) => {
         setOffset(0)
         if (action == "apply") {
             callApiRef.current(true)

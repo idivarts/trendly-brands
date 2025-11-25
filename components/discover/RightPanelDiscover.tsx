@@ -16,6 +16,7 @@ import {
 import { Button, Chip, HelperText, Menu, TextInput } from "react-native-paper";
 import ModashFilter from "./modash/ModashFilter";
 import TrendlyAdvancedFilter from "./trendly/TrendlyAdvancedFilter";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 // --------------------
 // Component
@@ -25,6 +26,7 @@ export type DB_TYPE = "" | "trendly" | "phyllo" | "modash";
 
 interface IProps {
   style?: StyleProp<ViewStyle>;
+  defaultAdvanceFilters?: IAdvanceFilters;
 }
 
 interface SectionProps {
@@ -52,7 +54,7 @@ interface RangeInputProps {
   styles: any;
 }
 
-const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
+const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters }) => {
   const {
     selectedDb,
     setSelectedDb: dbWrapper,
@@ -246,7 +248,10 @@ const RightPanelDiscover: React.FC<IProps> = ({ style }) => {
           <ScrollView>
             {/* Pass the selected DB downstream when you wire logic later */}
             {selectedDb == "trendly" && (
-              <TrendlyAdvancedFilter FilterApplyRef={filterApply} />
+              <TrendlyAdvancedFilter
+                FilterApplyRef={filterApply}
+                defaultAdvanceFilters={defaultAdvanceFilters}
+              />
             )}
             {selectedDb == "modash" && <ModashFilter />}
             {selectedDb == "phyllo" && <ModashFilter />}
