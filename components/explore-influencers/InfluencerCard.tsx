@@ -56,7 +56,7 @@ const Avatar = ({
       }}
     >
       <FacebookImageComponent
-        url={item.picture}
+        url={item.profile_pic}
         altText="Issue Loading image"
         style={{
           width: "100%",
@@ -107,7 +107,7 @@ const NameSection = ({
           color: colors.text,
         }}
       >
-        {item.fullname}
+        {item.name}
       </Text>
 
       <Text
@@ -131,8 +131,8 @@ const NameSection = ({
                 item.status === "accepted"
                   ? "#D1F7DC"
                   : item.status === "denied"
-                  ? "#F7D7D7"
-                  : "#F2E6B5",
+                    ? "#F7D7D7"
+                    : "#F2E6B5",
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 12,
@@ -145,8 +145,8 @@ const NameSection = ({
                   item.status === "accepted"
                     ? "#0B7A2A"
                     : item.status === "denied"
-                    ? "#A92C2C"
-                    : "#333",
+                      ? "#A92C2C"
+                      : "#333",
                 fontWeight: "500",
               }}
             >
@@ -156,7 +156,7 @@ const NameSection = ({
             </Text>
           </View>
         ) : (
-          <InviteToCampaignButton label="Invite Now" openModal={() => {}} />
+          <InviteToCampaignButton label="Invite Now" openModal={() => { }} />
         )}
       </View>
     </View>
@@ -195,21 +195,21 @@ const StatsSection = ({
       }}
     >
       <View style={{ alignItems: "center", flex: 1 }}>
-        <Text style={valueStyle}>{formatNumber(item.followers)}</Text>
+        <Text style={valueStyle}>{formatNumber(item.follower_count)}</Text>
         <Text style={labelStyle}>Followers</Text>
       </View>
 
       <View style={{ width: 1, height: "70%", backgroundColor: "#CCC" }} />
 
       <View style={{ alignItems: "center", flex: 1 }}>
-        <Text style={valueStyle}>{formatNumber(item.engagements)}</Text>
+        <Text style={valueStyle}>{formatNumber(item.engagement_count)}</Text>
         <Text style={labelStyle}>Engagements</Text>
       </View>
 
       <View style={{ width: 1, height: "70%", backgroundColor: "#CCC" }} />
 
       <View style={{ alignItems: "center", flex: 1 }}>
-        <Text style={valueStyle}>{formatNumber(item.views)}</Text>
+        <Text style={valueStyle}>{formatNumber(item.views_count)}</Text>
         <Text style={labelStyle}>Views</Text>
       </View>
     </View>
@@ -272,7 +272,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
               <View>
                 <SelectCheckbox
                   checked={isSelected ?? false}
-                  onToggle={onToggleSelect ?? (() => {})}
+                  onToggle={onToggleSelect ?? (() => { })}
                 />
               </View>
             )}
@@ -303,7 +303,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
                     fontWeight: "300",
                   }}
                 >
-                  {`ER - ${item.engagementRate?.toFixed(2)}%`}
+                  {`ER - ${item.engagement_rate?.toFixed(2)}%`}
                 </Text>
               </View>
             </View>

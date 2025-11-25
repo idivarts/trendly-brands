@@ -5,21 +5,19 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React from "react";
-import { Dimensions, Linking, ScrollView, StyleSheet } from "react-native";
+import { Dimensions, Linking, ScrollView, StyleSheet, Text } from "react-native";
 import {
-  Button,
   Card,
   Divider,
   IconButton,
   Modal,
-  Portal,
+  Portal
 } from "react-native-paper";
 import Toast from "react-native-toast-message";
+import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import { InfluencerItem } from "./DiscoverInfluencer";
 import { DB_TYPE } from "./RightPanelDiscover";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
-import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
-import { Text } from "react-native";
 
 const useStatsModalStyles = (theme: Theme) =>
   StyleSheet.create({
@@ -98,11 +96,11 @@ export const InfluencerStatsModal: React.FC<{
             }}
           >
             <View style={styles.row}>
-              {!!item?.picture && (
+              {!!item?.profile_pic && (
                 <FacebookImageComponent
-                  url={item.picture}
+                  url={item.profile_pic}
                   style={styles.avatar}
-                  altText={item.fullname}
+                  altText={item.name}
                 />
               )}
               <View
@@ -122,7 +120,7 @@ export const InfluencerStatsModal: React.FC<{
                     maxWidth: Dimensions.get("window").width * 0.2,
                   }}
                 >
-                  {item?.fullname}
+                  {item?.name}
                 </Text>
                 <Text
                   numberOfLines={1}
@@ -139,7 +137,10 @@ export const InfluencerStatsModal: React.FC<{
 
               <IconButton
                 icon="open-in-new"
-                onPress={() => item?.url && Linking.openURL(item.url)}
+                onPress={() => {
+                  if (item?.username && item.social_type == "instagram")
+                    Linking.openURL(`https://www.instagram.com/${item.username}`)
+                }}
               />
               <IconButton icon="close" onPress={onClose} />
             </Card.Actions>

@@ -90,7 +90,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
     const loadInfluencer = async () => {
         try {
             setLoading(true)
-            const body = await HttpWrapper.fetch(`/discovery/brands/${selectedBrand?.id || ''}/influencers/${influencer.userId}`, {
+            const body = await HttpWrapper.fetch(`/discovery/brands/${selectedBrand?.id || ''}/influencers/${influencer.id}`, {
                 method: 'GET',
                 headers: {
                     'content-type': 'application/json',

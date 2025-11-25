@@ -68,6 +68,12 @@ const DiscoverComponent = ({
   isStatusCard = false,
   onStatusChange,
   defaultAdvanceFilters,
+  /**
+   * If false -> ignore the brand-saved persisted filters and only honour defaultAdvanceFilters.
+   * Useful when Discover is used inside another screen (e.g., InvitationsTabContent) and you want
+   * to show the collaboration's preferences only.
+   */
+  useStoredFilters = true,
 }: {
   showRightPanel?: boolean;
   topPanel?: boolean;
@@ -77,6 +83,7 @@ const DiscoverComponent = ({
   isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
   defaultAdvanceFilters?: IAdvanceFilters;
+  useStoredFilters?: boolean;
 }) => {
   const { manager } = useAuthContext();
   const { selectedBrand } = useBrandContext();
@@ -87,6 +94,34 @@ const DiscoverComponent = ({
   const pageSortCommunication =
     useRef<(action: PageSortCommunication) => any>();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!selectedBrand) return;
+    if (!useStoredFilters) {
+      // Clear and do not load persisted filters when disabled by parent
+      setStoredFilters(null);
+      return;
+    }
+
+    (async () => {
+      const key = `defaultFilter-${selectedBrand.id}`;
+      const saved = await PersistentStorage.get(key);
+
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          console.log(" Loaded last-applied filter from storage:", parsed);
+          setStoredFilters(parsed);
+        } catch (e) {
+          console.log(" Failed to parse saved filter:", saved);
+        }
+      }
+    })();
+  }, [selectedBrand, useStoredFilters]);
+
   const { xl } = useBreakpoints();
 
   const [selectedDb, setSelectedDb] = useState<DB_TYPE>("trendly");
@@ -106,6 +141,24 @@ const DiscoverComponent = ({
       setFullIllustration(!x);
     })();
   }, [selectedBrand]);
+
+  // Determine which filter source to use:
+  // If collaboration passed defaultAdvanceFilters → use only that.
+  // Else → use stored persistent filters.
+  const hasMeaningfulDefaults =
+    defaultAdvanceFilters &&
+    Object.values(defaultAdvanceFilters).some(
+      (v) =>
+        v !== undefined &&
+        v !== null &&
+        v !== "" &&
+        !(Array.isArray(v) && v.length === 0)
+    );
+  const filtersToUse = hasMeaningfulDefaults
+    ? defaultAdvanceFilters
+    : useStoredFilters
+    ? storedFilters || undefined
+    : undefined;
 
   if (fullIllustration)
     return (
@@ -158,10 +211,10 @@ const DiscoverComponent = ({
             statusFilter={statusFilter}
             onStatusChange={onStatusChange}
             isStatusCard={isStatusCard}
-            defaultAdvanceFilters={defaultAdvanceFilters}
+            defaultAdvanceFilters={filtersToUse}
           />
           <RightPanelDiscover
-            defaultAdvanceFilters={defaultAdvanceFilters}
+            defaultAdvanceFilters={filtersToUse}
             style={[
               !showRightPanel && { display: "none" },
               !xl && {
