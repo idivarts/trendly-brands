@@ -1,364 +1,661 @@
-import { DiscoverCommunication, useDiscovery } from '@/app/(main)/(drawer)/(tabs)/discover'
-import { useBrandContext } from '@/contexts/brand-context.provider'
-import { useBreakpoints } from '@/hooks'
-import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
-import { FacebookImageComponent } from '@/shared-uis/components/image-component'
-import { View } from '@/shared-uis/components/theme/Themed'
-import Colors from '@/shared-uis/constants/Colors'
-import { maskHandle } from '@/shared-uis/utils/masks'
-import { useTheme } from '@react-navigation/native'
-import React, { useCallback, useMemo, useState } from 'react'
-import { FlatList, Linking, ListRenderItemInfo, ScrollView, StyleSheet } from 'react-native'
-import { ActivityIndicator, Card, Chip, Divider, IconButton, Menu, Text } from 'react-native-paper'
-import DiscoverPlaceholder from './DiscoverAdPlaceholder'
-import { InfluencerStatsModal } from './InfluencerStatModal'
+import {
+  DiscoverCommunication,
+  useDiscovery,
+} from "@/components/discover/Discover";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import { View } from "@/shared-uis/components/theme/Themed";
+import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  FlatList,
+  Linking,
+  ListRenderItemInfo,
+  StyleSheet,
+  Text,
+} from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  Chip,
+  Divider,
+  IconButton,
+  Menu,
+} from "react-native-paper";
+import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
+import InfluencerCard from "../explore-influencers/InfluencerCard";
+import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
+import { InfluencerStatsModal } from "./InfluencerStatModal";
 
+
+// type SocialsBreif struct {
+// 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
+// 	Name     string `db:"name" bigquery:"name" json:"name" firestore:"name"`
+// 	Username string `db:"username" bigquery:"username" json:"username" firestore:"username"`
+
+// 	ProfilePic      string  `db:"profile_pic" bigquery:"profile_pic" json:"profile_pic" firestore:"profile_pic"`
+// 	FollowerCount   int64   `db:"follower_count" bigquery:"follower_count" json:"follower_count" firestore:"follower_count"`
+// 	ViewsCount      int64   `db:"views_count" bigquery:"views_count" json:"views_count" firestore:"views_count"`                      //views
+// 	EnagamentsCount int64   `db:"engagement_count" bigquery:"engagements_count" json:"engagement_count" firestore:"engagement_count"` //engagement
+// 	EngagementRate  float32 `db:"engagement_rate" bigquery:"engagement_rate" json:"engagement_rate" firestore:"engagement_rate"`
+
+// 	SocialType string `db:"social_type" bigquery:"social_type" json:"social_type" firestore:"social_type"`
+
+// 	Location string `db:"location" bigquery:"location" json:"location" firestore:"location"`
+
+// 	Bio string `db:"bio" bigquery:"bio" json:"bio" firestore:"bio"`
+
+// 	ProfileVerified bool `db:"profile_verified" bigquery:"profile_verified" json:"profile_verified" firestore:"profile_verified"`
+
+// 	CreationTime   int64 `db:"creation_time" bigquery:"creation_time" json:"creation_time" firestore:"creation_time"`
+// 	LastUpdateTime int64 `db:"last_update_time" bigquery:"last_update_time" json:"last_update_time" firestore:"last_update_time"`
+// }
 // Types
 export interface InfluencerItem {
-    userId: string
-    fullname: string
-    username: string
-    url: string
-    picture: string
-    followers: number
-    views?: number
-    engagements: number
-    engagementRate: number
+  id: string;
+  name: string;
+  username: string;
+  profile_pic: string;
+  follower_count: number;
+  views_count?: number;
+  engagement_count: number;
+  engagement_rate: number;
+  social_type?: string;
+  location?: string;
+  bio?: string;
+  profile_verified?: boolean;
+  creation_time?: number;
+  last_update_time?: number;
+
+  isDiscover?: boolean;
+
+  // For invitation card
+  invitedAt?: number; // timestamp in milliseconds
+  status?: string;
 }
 
 const sortOptions = [
-    { label: 'Followers (High → Low)', value: 'followers' },
-    { label: 'Engagements (High → Low)', value: 'engagement' },
-    { label: 'ER % (High → Low)', value: 'engagement_rate' },
-    { label: 'Views (High → Low)', value: 'views' },
+  { label: "Followers", value: "followers" },
+  { label: "Engagements", value: "engagement" },
+  { label: "ER %", value: "engagement_rate" },
+  { label: "Views", value: "views" },
 ];
 
 // Helpers
 const formatNumber = (n: number | undefined) => {
-    if (n == null) return '-'
-    if (n < 100) return String(n.toFixed(2))
-    if (n < 1000) return String(n)
-    if (n < 1_000_000) return `${Math.round(n / 100) / 10}k`
-    if (n < 1_000_000_000) return `${Math.round(n / 100_000) / 10}M`
-    return `${Math.round(n / 100_000_000) / 10}B`
-}
+  if (n == null) return "-";
+  if (n < 100) return String(n.toFixed(2));
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${Math.round(n / 100) / 10}k`;
+  if (n < 1_000_000_000) return `${Math.round(n / 100_000) / 10}M`;
+  return `${Math.round(n / 100_000_000) / 10}B`;
+};
 
-const useStyles = (colors: ReturnType<typeof Colors>) => StyleSheet.create({
-    list: { flex: 1 },
-    card: {
-        marginHorizontal: 10,
-        marginVertical: 6,
-        borderRadius: 12,
-        overflow: 'hidden',
-        backgroundColor: colors.card,
+const useStyles = (colors: ReturnType<typeof Colors>) =>
+  StyleSheet.create({
+    list: {
+      flexGrow: 1,
+      alignSelf: "center",
+      width: "100%", // optional, you can even remove it
     },
-    row: { flexDirection: 'row', alignItems: 'center' },
-    avatarCol: { padding: 6, justifyContent: 'center', alignItems: 'center' },
-    body: { flex: 1, padding: 8, paddingRight: 6 },
-    title: { fontSize: 14, fontWeight: '600' as const, lineHeight: 18, marginBottom: 0 },
-    subtitle: { fontSize: 12, opacity: 0.7, marginBottom: 6 },
-    statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    statChip: { marginRight: 4, marginBottom: 4, height: 26, borderRadius: 14, paddingHorizontal: 6 },
-    rightCol: {
-        width: 72,
-        padding: 6,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
+    row: { flexDirection: "row", alignItems: "center" },
+    avatarCol: {
+      paddingHorizontal: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      flexDirection: "row",
+      backgroundColor: colors.aliceBlue,
     },
-    avatar: { width: 56, height: 56, borderRadius: 10, backgroundColor: colors.primary },
+    title: {
+      fontSize: 20,
+      fontWeight: "600" as const,
+      lineHeight: 18,
+      marginBottom: 0,
+      backgroundColor: colors.aliceBlue,
+    },
+    subtitle: {
+      fontSize: 14,
+      opacity: 0.7,
+      marginBottom: 6,
+      backgroundColor: colors.aliceBlue,
+    },
+    statsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-evenly",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    avatar: {
+      width: 100,
+      height: 100,
+      borderRadius: 48,
+      backgroundColor: colors.aliceBlue,
+      borderWidth: 3,
+      borderColor: colors.primary,
+    },
     content: { paddingHorizontal: 8, paddingVertical: 8 },
     fullScreenLoader: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
     },
     footerLoader: {
-        paddingVertical: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
+      paddingVertical: 16,
+      alignItems: "center",
+      justifyContent: "center",
     },
-})
+    NameAndUserNameCol: {
+      flexDirection: "column",
+      backgroundColor: colors.aliceBlue,
+      flex: 1,
+      maxWidth: "40%",
+    },
+    DetailsContainer: {
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+    },
+  });
 
-export const StatChip = ({ label, value }: { label: string; value?: number }) => (
-    <Chip mode="outlined" compact style={{ marginRight: 6, marginBottom: 6 }}>
-        <Text style={{ fontWeight: '600' }}>{value != null ? formatNumber(value) : '-'}</Text>
-        <Text> {label}</Text>
-    </Chip>
-)
+export const StatChip = ({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) => (
+  <Chip
+    mode="flat"
+    compact
+    style={{
+      marginRight: 6,
+      marginBottom: 6,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 1,
+      elevation: 2,
+      flexDirection: "column",
+    }}
+  >
+    <Text style={{ fontWeight: "600" }}>
+      {value != null ? formatNumber(value) : "-"}
+    </Text>
+    <Text> {label}</Text>
+  </Chip>
+);
 
-const DiscoverInfluencer: React.FC = () => {
-    const { selectedDb, setRightPanel, rightPanel, setSelectedDb } = useDiscovery()
-    const theme = useTheme()
-    const colors = Colors(theme)
-    const styles = useMemo(() => useStyles(colors), [colors])
-
-    const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null)
-    const [statsItem, setStatsItemNative] = useState<InfluencerItem | null>(null)
-    const setStatsItem = (data: InfluencerItem | null) => {
-        if ((selectedBrand?.credits?.discovery || 0) <= 0 && data
-            && !selectedBrand?.discoveredInfluencers?.includes(data.userId)) {
-            openModal({
-                title: "No Discovery Credit",
-                description: "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
-                confirmText: "Contact Support",
-                confirmAction: () => {
-                    Linking.openURL("mailto:support@idiv.in")
-                }
-            })
-            return
-        }
-
-        setStatsItemNative(data)
-    }
-
-    const [loading, setLoading] = useState(false)
-    const [data, setData] = useState<InfluencerItem[]>([])
-
-    const { selectedBrand } = useBrandContext()
-    const { openModal } = useConfirmationModel()
-
-    const { xl } = useBreakpoints()
-
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [pageCount, setPageCount] = useState<number>(20);
-    const [totalResults, setTotalResults] = useState<number>(0);
-
-    const [sortMenuVisible, setSortMenuVisible] = useState(false);
-    const [currentSort, setCurrentSort] = useState<string>('followers');
-    const { discoverCommunication } = useDiscovery()
-
-    discoverCommunication.current = useCallback(({ loading, data, page, sort }: DiscoverCommunication) => {
-        setLoading(loading || false);
-        setData(data || []);
-        setRightPanel(false);
-        if (page)
-            setCurrentPage(page)
-        if (sort)
-            setCurrentSort(sort)
-    }, []);
-
-    const onOpenProfile = useCallback((url: string) => {
-        Linking.openURL(url)
-    }, [])
-
-    const renderItem = useCallback(({ item }: ListRenderItemInfo<InfluencerItem>) => {
-        return (
-            <Card style={styles.card} onPress={() => setStatsItem(item)}>
-                <Card.Content style={styles.content}>
-                    <View style={styles.row}>
-                        <View style={styles.avatarCol}>
-                            <FacebookImageComponent url={item.picture} altText={item.fullname} style={styles.avatar} />
-                            {/* <Image source={{ uri: item.picture }} style={styles.avatar} /> */}
-                        </View>
-                        <View style={styles.body}>
-                            <Text style={styles.title} numberOfLines={1}>{item.fullname}</Text>
-                            <Text style={styles.subtitle} numberOfLines={1}>@{maskHandle(item.username)}</Text>
-
-                            <View style={styles.statsRow}>
-
-                                <StatChip label={xl ? "Followers" : "Fol"} value={item.followers} />
-                                <StatChip label={xl ? "Engagements" : "Eng"} value={item.engagements} />
-                                <StatChip label={xl ? "ER (in %)" : "ER"} value={((item?.engagementRate || 0))} />
-                                <StatChip label={xl ? "Views" : "Views"} value={item.views} />
-                            </View>
-                        </View>
-
-                        {xl && <View style={styles.rightCol}>
-                            <Menu
-                                style={{ backgroundColor: Colors(theme).background }}
-                                visible={menuVisibleId === item.userId}
-                                onDismiss={() => setMenuVisibleId(null)}
-                                anchor={
-                                    <IconButton
-                                        icon="dots-vertical"
-                                        onPress={() => setMenuVisibleId(item.userId)}
-                                        accessibilityLabel="More options"
-                                    />
-                                }
-                            >
-                                {/* <Menu.Item onPress={() => onOpenProfile(item.url)} title="View Profile" />
-                                <Divider /> */}
-                                <Menu.Item onPress={() => setStatsItem(item)} title="Open Profile" />
-                            </Menu>
-                        </View>}
-                    </View>
-                </Card.Content>
-            </Card>
-        )
-    }, [menuVisibleId, onOpenProfile, styles])
-
-    const keyExtractor = useCallback((i: InfluencerItem) => i.userId, [])
-
-    const getItemLayout = useCallback(
-        (_: InfluencerItem[] | null | undefined, index: number) => ({ length: 96, offset: 96 * index, index }),
-        []
-    )
-
-    const pageNumbers = useMemo(() => {
-        // Windowed pagination: show up to 7 pages around current
-        const maxToShow = 7;
-        const pages: number[] = [];
-        if (pageCount <= maxToShow) {
-            for (let i = 1; i <= pageCount; i++) pages.push(i);
-            return pages;
-        }
-        const half = Math.floor(maxToShow / 2);
-        let start = Math.max(1, currentPage - half);
-        let end = Math.min(pageCount, start + maxToShow - 1);
-        // adjust start if we hit the end
-        start = Math.max(1, Math.min(start, Math.max(1, end - maxToShow + 1)));
-        end = Math.min(pageCount, start + maxToShow - 1);
-        for (let i = start; i <= end; i++) pages.push(i);
-        return pages;
-    }, [currentPage, pageCount]);
-
-    const { pageSortCommunication } = useDiscovery()
-    const onSelectPage = useCallback((p: number) => {
-        if (p < 1 || p > pageCount || p === currentPage) return;
-        setCurrentPage(p);
-        pageSortCommunication.current?.({
-            page: p,
-            sort: currentSort
-        })
-    }, [currentPage, pageCount]);
-
-    const onSelectSort = useCallback((val: string) => {
-        setCurrentSort(val);
-        setSortMenuVisible(false);
-        pageSortCommunication.current?.({
-            page: currentPage,
-            sort: val
-        })
-    }, []);
-
-    if (loading && data.length === 0) {
-        // Full screen loader when we're fetching the first page
-        return (
-            <View style={styles.fullScreenLoader}>
-                <ActivityIndicator />
-                <Text style={{ marginTop: 8, opacity: 0.7 }}>Loading influencers…</Text>
-            </View>
-        )
-    }
-
-    if (data.length == 0) {
-        if (xl)
-            return <View style={{ flex: 1, minWidth: 0 }}>
-                <DiscoverPlaceholder selectedDb={selectedDb} setSelectedDb={setSelectedDb} />
-            </View>
-        else
-            return null
-    }
-
-    return (
-        <View style={[{ flex: 1, minWidth: 0 }, (!xl && rightPanel) && {
-            display: "none"
-        }]}>
-            <View style={{ flex: 1 }}>
-
-                <FlatList
-                    data={data}
-                    keyExtractor={keyExtractor}
-                    renderItem={renderItem}
-                    contentContainerStyle={{ paddingVertical: 8 }}
-                    style={styles.list}
-                    // initialNumToRender={8}
-                    // maxToRenderPerBatch={8}
-                    // windowSize={7}
-                    // removeClippedSubviews
-                    // @ts-ignore
-                    getItemLayout={getItemLayout}
-                    ListFooterComponent={
-                        loading && data.length > 0
-                            ? (
-                                <View style={styles.footerLoader}>
-                                    <ActivityIndicator />
-                                </View>
-                            )
-                            : null
-                    }
-                />
-                <Divider />
-                {/* Header Bar: totals • pagination • sort */}
-                <View style={[styles.row, { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 2, alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
-                    {/* Left: Total results */}
-                    <View style={[styles.row, { gap: 6 }]}>
-                        <Text style={{ fontWeight: '600' }}>Total</Text>
-                        <Text style={{ fontSize: 12, opacity: 0.8 }}>{data.length < 15 ? data.length : "500+"} Results found</Text>
-                    </View>
-
-                    {/* Middle: Pages list */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center' }} style={{ flexGrow: 1 }}>
-                        <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
-                            <IconButton icon="chevron-left" onPress={() => onSelectPage(currentPage - 1)} disabled={currentPage <= 1} accessibilityLabel="Previous page" />
-                            {/* {pageNumbers[0] > 1 && (
-                                <>
-                                    <Chip compact
-                                        mode={1 === currentPage ? 'flat' : 'outlined'}
-                                        onPress={() => onSelectPage(1)}>1</Chip>
-                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                </>
-                            )} */}
-                            {pageNumbers.map(p => {
-                                return p != currentPage ? null : <Chip
-                                    key={p}
-                                    mode={p === currentPage ? 'flat' : 'outlined'}
-                                    compact
-                                    onPress={() => onSelectPage(p)}
-                                >
-                                    <Text style={{ fontWeight: p === currentPage ? '700' : '500' }}>{p}</Text>
-                                </Chip>
-                            })}
-                            {/* {pageNumbers[pageNumbers.length - 1] < pageCount && (
-                                <>
-                                    <Text style={{ opacity: 0.5, marginHorizontal: 2 }}>…</Text>
-                                    <Chip compact
-                                        mode={pageCount === currentPage ? 'flat' : 'outlined'}
-                                        onPress={() => onSelectPage(pageCount)}>{pageCount}</Chip>
-                                </>
-                            )} */}
-                            <IconButton icon="chevron-right" onPress={() => onSelectPage(currentPage + 1)}
-                                // disabled={currentPage >= pageCount} 
-                                disabled={data.length != 15}
-                                accessibilityLabel="Next page" />
-                        </View>
-                    </ScrollView>
-
-                    {/* Right: Sort dropdown */}
-                    <Menu
-                        visible={sortMenuVisible}
-                        onDismiss={() => setSortMenuVisible(false)}
-                        anchor={
-                            <Chip
-                                compact
-                                onPress={() => setSortMenuVisible(true)}
-                                icon="sort"
-                                style={{ marginLeft: 'auto' }}
-                            >
-                                <Text numberOfLines={1} style={{ maxWidth: 140 }}>
-                                    {sortOptions.find(o => o.value === currentSort)?.label || 'Relevance'}
-                                </Text>
-                            </Chip>
-                        }
-                        style={{ backgroundColor: Colors(theme).background }}
-                    >
-                        {sortOptions.map(opt => (
-                            <Menu.Item
-                                key={opt.value}
-                                onPress={() => onSelectSort(opt.value)}
-                                title={opt.label}
-                            // right={() => (opt.value === currentSort ? <Badge>✓</Badge> : null)}
-                            />
-                        ))}
-                    </Menu>
-                </View>
-                {!!statsItem &&
-                    <InfluencerStatsModal visible={!!statsItem} item={statsItem} onClose={() => setStatsItem(null)} selectedDb={selectedDb} />}
-            </View>
-        </View>
-    )
+interface DiscoverInfluencerProps {
+  advanceFilter?: boolean;
+  statusFilter?: boolean;
+  isStatusCard?: boolean;
+  onStatusChange?: (status: string) => void;
 }
 
-export default DiscoverInfluencer
+const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
+  advanceFilter = false,
+  statusFilter = false,
+  isStatusCard = false,
+  onStatusChange,
+}) => {
+  const {
+    selectedDb,
+    setRightPanel,
+    rightPanel,
+    setSelectedDb,
+    isCollapsed,
+    showTopPanel,
+  } = useDiscovery();
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => useStyles(colors), [colors]);
+
+  const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
+  const [statsItem, setStatsItemNative] = useState<InfluencerItem | null>(null);
+  const setStatsItem = (data: InfluencerItem | null) => {
+    if (
+      (selectedBrand?.credits?.discovery || 0) <= 0 &&
+      data &&
+      !selectedBrand?.discoveredInfluencers?.includes(data.id)
+    ) {
+      openModal({
+        title: "No Discovery Credit",
+        description:
+          "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
+        confirmText: "Contact Support",
+        confirmAction: () => {
+          Linking.openURL("mailto:support@idiv.in");
+        },
+      });
+      return;
+    }
+
+    setStatsItemNative(data);
+  };
+
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<InfluencerItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectedBrand } = useBrandContext();
+  const { openModal } = useConfirmationModel();
+
+  const { xl } = useBreakpoints();
+
+  // collaborations are fetched inside InviteToCampaignModal when it mounts
+
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageCount, setPageCount] = useState<number>(20);
+  const [totalResults, setTotalResults] = useState<number>(0);
+
+  const [sortMenuVisible, setSortMenuVisible] = useState(false);
+  const [currentSort, setCurrentSort] = useState<string>("followers");
+  const [statusMenuVisible, setStatusMenuVisible] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<string>("pending");
+  const { discoverCommunication } = useDiscovery();
+
+  const statusOptions = [
+    { label: "Pending", value: "pending" },
+    { label: "Accepted", value: "accepted" },
+    { label: "Denied", value: "denied" },
+  ];
+
+  discoverCommunication.current = useCallback(
+    ({ loading, data, page, sort }: DiscoverCommunication) => {
+      setLoading(loading || false);
+      setData(data || []);
+      setRightPanel(false);
+      if (page) setCurrentPage(page);
+      if (sort) setCurrentSort(sort);
+    },
+    []
+  );
+
+  const onOpenProfile = useCallback((url: string) => {
+    Linking.openURL(url);
+  }, []);
+
+  const Col = 2;
+  const [key, setKey] = useState(0);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<InfluencerItem>) => {
+      return (
+        <View
+          style={{
+            width: "50%", // always 2 columns
+            paddingHorizontal: isCollapsed ? 12 : 8,
+            paddingVertical: isCollapsed ? 12 : 8,
+          }}
+        >
+          <InfluencerCard
+            item={item}
+            isCollapsed={isCollapsed}
+            onPress={() => setStatsItem(item)}
+            openModal={openModal}
+            isSelected={selectedIds.includes(item.id)}
+            onToggleSelect={() => toggleSelect(item.id)}
+            isStatusCard={isStatusCard}
+          />
+        </View>
+      );
+    },
+    [isCollapsed, openModal, setStatsItem]
+  );
+
+  const keyExtractor = useCallback((i: InfluencerItem) => i.id, []);
+
+  const getItemLayout = useCallback(
+    (_: InfluencerItem[] | null | undefined, index: number) => ({
+      length: 96,
+      offset: 96 * index,
+      index,
+    }),
+    []
+  );
+
+  const pageNumbers = useMemo(() => {
+    // Windowed pagination: show up to 7 pages around current
+    const maxToShow = 7;
+    const pages: number[] = [];
+    if (pageCount <= maxToShow) {
+      for (let i = 1; i <= pageCount; i++) pages.push(i);
+      return pages;
+    }
+    const half = Math.floor(maxToShow / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(pageCount, start + maxToShow - 1);
+    // adjust start if we hit the end
+    start = Math.max(1, Math.min(start, Math.max(1, end - maxToShow + 1)));
+    end = Math.min(pageCount, start + maxToShow - 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }, [currentPage, pageCount]);
+
+  const { pageSortCommunication } = useDiscovery();
+  const onSelectPage = useCallback(
+    (p: number) => {
+      if (p < 1 || p > pageCount || p === currentPage) return;
+      setCurrentPage(p);
+      pageSortCommunication.current?.({
+        page: p,
+        sort: currentSort,
+      });
+    },
+    [currentPage, pageCount]
+  );
+
+  const onSelectSort = useCallback((val: string) => {
+    setCurrentSort(val);
+    setSortMenuVisible(false);
+    pageSortCommunication.current?.({
+      page: currentPage,
+      sort: val,
+    });
+  }, []);
+
+  const onSelectStatus = useCallback(
+    (val: string) => {
+      setCurrentStatus(val);
+      setStatusMenuVisible(false);
+      onStatusChange?.(val);
+    },
+    [onStatusChange]
+  );
+
+  if (loading && data.length === 0) {
+    // Full screen loader when we're fetching the first page
+    return (
+      <View style={styles.fullScreenLoader}>
+        <ActivityIndicator />
+        <Text style={{ marginTop: 8, opacity: 0.7 }}>Loading influencers…</Text>
+      </View>
+    );
+  }
+
+  if (data.length == 0) {
+    if (xl)
+      return (
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <DiscoverPlaceholder
+            selectedDb={selectedDb}
+            setSelectedDb={setSelectedDb}
+          />
+        </View>
+      );
+    else return null;
+  }
+
+  return (
+    <View
+      style={[
+        { flex: 1, minWidth: 0 },
+        !xl && rightPanel && { display: "none" },
+      ]}
+    >
+      {showTopPanel !== false && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            // shadowColor: Colors(theme).primary,
+            // shadowOffset: { width: 0, height: 2 },
+            // shadowOpacity: 0.2,
+            // shadowRadius: 1,
+            // elevation: 2,
+            borderBottomEndRadius: 12,
+            borderBottomStartRadius: 12,
+            zIndex: 999,
+            width: isCollapsed ? "90%" : undefined,
+          }}
+        >
+          <View style={{ width: 80 }} />
+          {/* Left: Total results */}
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              alignItems: "center",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
+                Total
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  opacity: 0.8,
+                  color: Colors(theme).primary,
+                  fontWeight: "500",
+                  marginLeft: 4,
+                }}
+              >
+                {data.length < 15 ? data.length : "500+"} Results found
+              </Text>
+            </View>
+          </View>
+
+          {/* Right: Sort dropdown or Status Filter or Advance Filter Button */}
+          {advanceFilter ? (
+            <Button
+              mode="contained"
+              onPress={() => router.push("/discover")}
+              style={{
+                marginLeft: "auto",
+                backgroundColor: Colors(theme).aliceBlue,
+              }}
+              textColor={Colors(theme).black}
+              icon={"filter"}
+            >
+              Advanced Filters
+            </Button>
+          ) : statusFilter ? (
+            <Menu
+              visible={statusMenuVisible}
+              onDismiss={() => setStatusMenuVisible(false)}
+              anchor={
+                <Chip
+                  compact
+                  onPress={() => setStatusMenuVisible(true)}
+                  icon="filter"
+                  style={{ marginLeft: "auto" }}
+                >
+                  <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                    {statusOptions.find((o) => o.value === currentStatus)
+                      ?.label || "Status"}
+                  </Text>
+                </Chip>
+              }
+              style={{ backgroundColor: Colors(theme).background }}
+            >
+              {statusOptions.map((opt) => (
+                <Menu.Item
+                  key={opt.value}
+                  onPress={() => onSelectStatus(opt.value)}
+                  title={opt.label}
+                />
+              ))}
+            </Menu>
+          ) : (
+            <Menu
+              visible={sortMenuVisible}
+              onDismiss={() => setSortMenuVisible(false)}
+              anchor={
+                <Chip
+                  compact
+                  onPress={() => setSortMenuVisible(true)}
+                  icon="sort"
+                  style={{ marginLeft: "auto" }}
+                >
+                  <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                    {sortOptions.find((o) => o.value === currentSort)?.label ||
+                      "Relevance"}
+                  </Text>
+                </Chip>
+              }
+              style={{ backgroundColor: Colors(theme).background, }}
+            >
+              {sortOptions.map((opt) => (
+                <Menu.Item
+                  key={opt.value}
+                  onPress={() => onSelectSort(opt.value)}
+                  title={opt.label}
+                />
+              ))}
+            </Menu>
+          )}
+        </View>
+      )}
+
+      <View
+        style={{ flex: 1, alignItems: isCollapsed ? "center" : "flex-start" }}
+      >
+        <FlatList
+          data={data}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingVertical: 8 }}
+          style={[styles.list, { maxWidth: isCollapsed ? 900 : undefined }]}
+          // initialNumToRender={8}
+          // maxToRenderPerBatch={8}
+          // windowSize={7}
+          // removeClippedSubviews
+          // @ts-ignore
+          getItemLayout={getItemLayout}
+          numColumns={2}
+          key={"fixed-2-cols"}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <>
+              {loading && data.length > 0 && (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator />
+                </View>
+              )}
+              <Divider />
+              {/* Pagination */}
+              <View
+                style={{
+                  paddingVertical: 2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <View style={[styles.row, { gap: 6, paddingHorizontal: 6 }]}>
+                  <IconButton
+                    icon="chevron-left"
+                    onPress={() => onSelectPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    accessibilityLabel="Previous page"
+                  />
+                  {pageNumbers.map((p) => {
+                    return p != currentPage ? null : (
+                      <Chip
+                        key={p}
+                        mode={p === currentPage ? "flat" : "outlined"}
+                        compact
+                        onPress={() => onSelectPage(p)}
+                      >
+                        <Text
+                          style={{
+                            fontWeight: p === currentPage ? "700" : "500",
+                          }}
+                        >
+                          {p}
+                        </Text>
+                      </Chip>
+                    );
+                  })}
+                  <IconButton
+                    icon="chevron-right"
+                    onPress={() => onSelectPage(currentPage + 1)}
+                    disabled={currentPage >= pageCount}
+                    accessibilityLabel="Next page"
+                  />
+                </View>
+              </View>
+            </>
+          }
+        />
+        {selectedIds.length > 0 && (
+          <View
+            style={{
+              position: "absolute",
+              bottom: 20,
+              left: 0,
+              right: 0,
+              alignItems: "center",
+              zIndex: 9999,
+              backgroundColor: "transparent"
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "rgba(255,255,255,0.5)",
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 40,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.2,
+                shadowRadius: 6,
+                elevation: 6,
+                width: 320,
+                justifyContent: "space-between",
+              }}
+            >
+              {/* Selected Count */}
+              <Text style={{ fontSize: 14, fontWeight: "500" }}>
+                {selectedIds.length} item selected
+              </Text>
+
+              {/* Invite Button */}
+              <View style={{ top: 0, borderRadius: 50 }}>
+                <InviteToCampaignButton
+                  label="Invite Now"
+                  openModal={() => { }}
+                />
+              </View>
+
+              {/* Clear / Close Button */}
+              <IconButton
+                icon="close"
+                size={22}
+                onPress={() => setSelectedIds([])}
+              />
+            </View>
+          </View>
+        )}
+
+        {!!statsItem && (
+          <InfluencerStatsModal
+            visible={!!statsItem}
+            item={statsItem}
+            onClose={() => setStatsItem(null)}
+            selectedDb={selectedDb}
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+export default DiscoverInfluencer;

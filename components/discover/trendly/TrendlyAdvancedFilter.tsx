@@ -1,10 +1,11 @@
-import { PageSortCommunication, useDiscovery } from "@/app/(main)/(drawer)/(tabs)/discover";
+import { PageSortCommunication, useDiscovery } from "@/components/discover/Discover";
 import Select from "@/components/ui/select";
 import { INFLUENCER_CATEGORIES, INITIAL_INFLUENCER_CATEGORIES } from '@/constants/ItemsList';
 import { useBrandContext } from '@/contexts/brand-context.provider';
 import { useBreakpoints } from "@/hooks";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import { CITIES, POPULAR_CITIES } from '@/shared-constants/preferences/locations';
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { MultiSelectExtendable } from '@/shared-uis/components/multiselect-extendable';
 import { View } from '@/shared-uis/components/theme/Themed';
@@ -119,7 +120,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
     const [sort, setSort] = useState<'followers' | 'views' | 'engagement' | 'engagement_rate'>('followers')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
     const [offset, setOffset] = useState(0)
-    const [limit, setLimit] = useState(15)
+    const [limit, setLimit] = useState(16)
 
     const [data, setData] = useState<InfluencerItem[]>([])
 
@@ -162,7 +163,7 @@ const TrendlyAdvancedFilter = (props: IProps) => {
         };
 
         // build payload
-        const payload = {
+        const payload: IAdvanceFilters = {
             // Followers range (int64)
             followerMin: parseNumber(followerMin),
             followerMax: parseNumber(followerMax),
@@ -592,6 +593,7 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     surface: {
         borderRadius: 14,
         padding: 12,
+
     },
     headerRow: {
         flexDirection: 'row',

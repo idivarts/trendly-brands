@@ -24,7 +24,8 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@expo/vector-icons": "^14.0.2",
     "@fortawesome/fontawesome-svg-core": "^6.7.0",
@@ -36,7 +37,7 @@
     "@growthbook/growthbook-react": "^1.6.1",
     "@likashefqet/react-native-image-zoom": "^4.3.0",
     "@ptomasroos/react-native-multi-slider": "^2.2.2",
-    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/datetimepicker": "8.0.1",
     "@react-native-community/netinfo": "11.3.1",
     "@react-native-firebase/analytics": "^20.5.0",
@@ -90,6 +91,7 @@
     "react-native-autocomplete-input": "^5.4.0",
     "react-native-exception-handler": "^2.10.10",
     "react-native-gesture-handler": "~2.16.1",
+    "react-native-get-random-values": "~1.11.0",
     "react-native-google-places-autocomplete": "^2.5.7",
     "react-native-image-viewing": "^0.2.2",
     "react-native-intersection-observer": "^0.2.0",
@@ -110,7 +112,8 @@
     "react-native-web": "~0.19.10",
     "reanimated-bottom-sheet": "^1.0.0-alpha.22",
     "rxjs": "^7.8.2",
-    "stream-chat-expo": "^5.41.2"
+    "stream-chat-expo": "^5.41.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
