@@ -1,3 +1,4 @@
+import { ISocialAnalytics, ISocials } from '@/shared-libs/firestore/trendly-pro/models/bq-socials'
 import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { View } from '@/shared-uis/components/theme/Themed'
 import { Brand } from '@/types/Brand'
@@ -6,77 +7,6 @@ import { Image, Linking, ScrollView } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, List, Text } from 'react-native-paper'
 import { InfluencerItem, StatChip } from '../DiscoverInfluencer'
 
-export interface ILink {
-    url: string;
-    text: string;
-}
-
-export interface IReel {
-    id: string;
-    thumbnail_url: string;
-    url: string;
-    caption: string;
-    pinned: boolean;
-    views_count: number | null;
-    likes_count: number | null;
-    comments_count: number | null;
-}
-
-export interface ISocials {
-    id: string;
-    social_type: string;
-
-    gender: string;
-    niches: string[];
-    location: string;
-
-    follower_count: number;
-    following_count: number;
-    content_count: number; // posts
-    views_count: number; // views
-    engagement_count: number; // engagement
-
-    reel_scrapped_count: number; // scrapped reels
-
-    average_views: number;
-    average_likes: number;
-    average_comments: number;
-    quality_score: number;
-    engagement_rate: number;
-
-    username: string;
-    name: string;
-    bio: string;
-    category: string;
-    profile_pic: string;
-
-    profile_verified: boolean;
-    has_contacts: boolean;
-
-    reels: IReel[];
-    links: ILink[];
-
-    has_follow_button: boolean;
-    has_message_button: boolean;
-
-    added_by: string;
-
-    creation_time: number;
-    last_update_time: number;
-}
-interface ISocialAnalytics {
-    quality: number;
-    trustablity: number;
-    estimatedBudget: {
-        min: number;
-        max: number;
-    };
-    estimatedReach: {
-        min: number;
-        max: number;
-    };
-    cpm: number
-}
 interface IProps {
     influencer: InfluencerItem
     selectedBrand: Brand

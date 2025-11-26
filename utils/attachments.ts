@@ -20,6 +20,12 @@ export const processRawAttachment = (attachment: any): MediaItem => {
       type: attachment.type,
       url: attachment.imageUrl,
     };
+  } else if (attachment.type.includes("reel")) {
+    return {
+      type: attachment.type,
+      url: attachment.imageUrl,
+      redirectLink: attachment.playUrl,
+    };
   } else {
     return {
       type: "file",
