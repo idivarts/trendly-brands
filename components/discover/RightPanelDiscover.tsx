@@ -27,6 +27,7 @@ export type DB_TYPE = "" | "trendly" | "phyllo" | "modash";
 interface IProps {
   style?: StyleProp<ViewStyle>;
   defaultAdvanceFilters?: IAdvanceFilters;
+  onClearStoredFilters?: () => void;
 }
 
 interface SectionProps {
@@ -54,7 +55,7 @@ interface RangeInputProps {
   styles: any;
 }
 
-const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters }) => {
+const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, onClearStoredFilters }) => {
   const {
     selectedDb,
     setSelectedDb: dbWrapper,
@@ -251,6 +252,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters }) 
               <TrendlyAdvancedFilter
                 FilterApplyRef={filterApply}
                 defaultAdvanceFilters={defaultAdvanceFilters}
+                onClearStoredFilters={onClearStoredFilters}
               />
             )}
             {selectedDb == "modash" && <ModashFilter />}

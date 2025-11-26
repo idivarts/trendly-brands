@@ -81,10 +81,12 @@ const RangeInputs = ({
 interface IProps {
   FilterApplyRef: MutableRefObject<any>;
   defaultAdvanceFilters?: IAdvanceFilters;
+  onClearStoredFilters?: () => void;
 }
 const TrendlyAdvancedFilter = ({
   FilterApplyRef,
   defaultAdvanceFilters,
+  onClearStoredFilters,
 }: IProps) => {
   const theme = useTheme();
   const styles = stylesFn(theme);
@@ -494,6 +496,7 @@ const TrendlyAdvancedFilter = ({
       try {
         await PersistentStorage.clear(key);
         console.log("Cleared saved filter for brand:", key);
+        onClearStoredFilters?.();
       } catch (err) {
         console.warn("Failed to clear saved filter:", err);
       }

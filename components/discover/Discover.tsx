@@ -215,6 +215,7 @@ const DiscoverComponent = ({
           />
           <RightPanelDiscover
             defaultAdvanceFilters={filtersToUse}
+            onClearStoredFilters={() => setStoredFilters(null)}
             style={[
               !showRightPanel && { display: "none" },
               !xl && {
