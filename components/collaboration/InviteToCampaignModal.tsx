@@ -29,9 +29,11 @@ type Collaboration = {
 type Props = {
   onClose: () => void;
   onInvite: (selectedIds: string[]) => void;
+  // optional influencers being invited. If provided, the modal header should reflect it
+  influencers?: { id: string; name?: string }[];
 };
 
-const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
+const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite, influencers }) => {
   const [selected, setSelected] = useState<string[]>([]);
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const theme = useTheme();
@@ -161,7 +163,13 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite }) => {
     <Modal visible={true} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: colors.aliceBlue }]}>
-          <Text style={styles.header}>Invite to Campaign</Text>
+          <Text style={styles.header}>
+            {influencers && influencers?.length > 1
+              ? `Inviting ${influencers.length} influencers`
+              : influencers && influencers?.length === 1
+              ? `Inviting ${influencers[0].name ?? "influencer"}`
+              : "Invite to Campaign"}
+          </Text>
 
           {loading ? (
             <Text style={{ textAlign: "center", marginVertical: 20 }}>

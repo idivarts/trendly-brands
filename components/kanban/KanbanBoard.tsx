@@ -10,30 +10,33 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
   rectSortingStrategy,
   useSortable,
+  arrayMove
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  Keyboard,
-  NativeSyntheticEvent,
-  TextInputKeyPressEventData,
-  ScrollView,
-} from "react-native";
+import { StyleSheet, Text, TextInput, View, ScrollView } from "react-native";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { InfluencerItem } from "../discover/DiscoverInfluencer";
+import { useAuthContext } from "@/contexts/auth-context.provider";
 
 export type KanbanCardT = {
   id: string;
-  title: string;
-  description?: string;
+  status: string;
+  message: string;
+  socialProfile?: InfluencerItem;
+  timeStamp?: number;
+  collaborationId?: string;
 };
 
 export type KanbanColumnT = {
@@ -42,44 +45,136 @@ export type KanbanColumnT = {
   cards: KanbanCardT[];
 };
 
-const STORAGE_KEY = "trendly-kanban-v3";
-const generateId = () =>
-  "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-
 export default function KanbanBoard() {
-  const [columns, setColumns] = useState<KanbanColumnT[]>([]);
+  const [columns, setColumns] = useState<KanbanColumnT[]>([
+    { id: "waiting", title: "Waiting", cards: [] },
+    { id: "accepted", title: "Accepted", cards: [] },
+    { id: "declined", title: "Declined", cards: [] },
+  ]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
-  const [editingColumnTitle, setEditingColumnTitle] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const { manager } = useAuthContext();
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
 
   useEffect(() => {
-    (async () => {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setColumns(JSON.parse(raw));
-      } else {
-        setColumns([
-          { id: "todo", title: "To Do", cards: [] },
-          { id: "doing", title: "In Progress", cards: [] },
-          { id: "done", title: "Done", cards: [] },
-        ]);
-      }
-    })();
-  }, []);
+    const fetchInvites = async () => {
+      setError(null);
+      setLoading(true);
+      try {
+        console.log("[Kanban] Fetching invites. managerId:", manager?.id);
 
-  const persist = async (next: KanbanColumnT[]) => {
-    setColumns(next);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  };
+        const collectionsToTry = ["collaborations-invites"];
+        let snapshot = null;
+        let usedCollection = "";
+        let usedConstraintLabel = "";
+
+        for (const colName of collectionsToTry) {
+          const colRef = collection(FirestoreDB, colName);
+          const candidateQueries = [
+            manager?.id
+              ? {
+                  label: `${colName} isDiscover=true managerId=${manager.id}`,
+                  q: query(
+                    colRef,
+                    where("isDiscover", "==", true),
+                    where("managerId", "==", manager.id)
+                  ),
+                }
+              : null,
+            {
+              label: `${colName} isDiscover=true (no manager filter)`,
+              q: query(colRef, where("isDiscover", "==", true)),
+            },
+          ].filter(Boolean) as { label: string; q: any }[];
+
+          for (const { label, q } of candidateQueries) {
+            console.log("[Kanban] Running query", label);
+            const snap = await getDocs(q);
+            console.log("[Kanban] Query size", snap.size);
+            if (!snap.empty) {
+              snapshot = snap;
+              usedCollection = colName;
+              usedConstraintLabel = label;
+              break;
+            }
+          }
+          if (snapshot) break;
+        }
+
+        if (!snapshot) throw new Error("No invites found in tried collections");
+        console.log("[Kanban] Using collection", usedCollection, "query", usedConstraintLabel);
+
+        const invites: KanbanCardT[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as any;
+          console.log("[Kanban] Doc", docSnap.id, data);
+          invites.push({
+            id: docSnap.id,
+            status: data.status || "waiting",
+            message: data.message || "",
+            socialProfile: data.socialProfile,
+            timeStamp: data.timeStamp,
+            collaborationId: data.collaborationId,
+          });
+        });
+        console.log("[Kanban] Total invites", invites.length);
+
+        const grouped: Record<string, KanbanCardT[]> = {
+          waiting: [],
+          accepted: [],
+          declined: [],
+        };
+        invites.forEach((inv) => {
+          const bucket = (inv.status || "waiting").toLowerCase();
+          if (bucket === "accepted") grouped.accepted.push(inv);
+          else if (
+            bucket === "declined" ||
+            bucket === "denied" ||
+            bucket === "inactive"
+          )
+            grouped.declined.push(inv);
+          else grouped.waiting.push(inv);
+        });
+        console.log("[Kanban] Grouped counts", {
+          waiting: grouped.waiting.length,
+          accepted: grouped.accepted.length,
+          declined: grouped.declined.length,
+        });
+        setColumns([
+          {
+            id: "waiting",
+            title: `Waiting (${grouped.waiting.length})`,
+            cards: grouped.waiting,
+          },
+          {
+            id: "accepted",
+            title: `Accepted (${grouped.accepted.length})`,
+            cards: grouped.accepted,
+          },
+          {
+            id: "declined",
+            title: `Declined (${grouped.declined.length})`,
+            cards: grouped.declined,
+          },
+        ]);
+      } catch (err: any) {
+        console.warn("Failed to fetch invites", err);
+        setError(err?.message || "Unable to load invites");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvites();
+  }, [manager?.id]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
     const [fromColumnId, fromCardId] = (active.id as string).split(":");
@@ -96,7 +191,7 @@ export default function KanbanBoard() {
           ? { ...c, cards: arrayMove(c.cards, oldIndex, newIndex) }
           : c
       );
-      persist(updated);
+      setColumns(updated);
     } else {
       const from = columns.find((c) => c.id === fromColumnId);
       const to = columns.find((c) => c.id === toColumnId);
@@ -105,13 +200,8 @@ export default function KanbanBoard() {
       if (!card) return;
 
       const fromCards = from.cards.filter((c) => c.id !== fromCardId);
-      const insertAt =
-        toCardId && to.cards.findIndex((c) => c.id === toCardId) + 1;
-      const toCards = [
-        ...to.cards.slice(0, insertAt || to.cards.length),
-        card,
-        ...to.cards.slice(insertAt || to.cards.length),
-      ];
+      const updatedCard = { ...card, status: to.id };
+      const toCards = [...to.cards, updatedCard];
 
       const updated = columns.map((c) =>
         c.id === from.id
@@ -120,98 +210,33 @@ export default function KanbanBoard() {
           ? { ...c, cards: toCards }
           : c
       );
-      persist(updated);
+      setColumns(updated);
+
+      try {
+        // Persist to primary collection name (collaborations-invites)
+        const inviteRef = doc(FirestoreDB, "collaborations-invites", card.id);
+        await updateDoc(inviteRef, { status: to.id });
+      } catch (err) {
+        console.warn("Failed to update invite status", err);
+      }
     }
     setActiveId(null);
-  };
-
-  const addCard = (colId: string) => {
-    const newCard = { id: generateId(), title: "", description: "" };
-    persist(
-      columns.map((c) =>
-        c.id === colId ? { ...c, cards: [...c.cards, newCard] } : c
-      )
-    );
-  };
-
-  const deleteCard = (colId: string, cardId: string) => {
-    persist(
-      columns.map((c) =>
-        c.id === colId
-          ? { ...c, cards: c.cards.filter((x) => x.id !== cardId) }
-          : c
-      )
-    );
-  };
-
-  const addColumn = () => {
-    const newColumn = { id: generateId(), title: "New Column", cards: [] };
-    persist([...columns, newColumn]);
-  };
-
-  const deleteColumn = (colId: string) => {
-    if (!window.confirm("Delete this column?")) return;
-    persist(columns.filter((c) => c.id !== colId));
-  };
-
-  const startEditingColumn = (colId: string, currentTitle: string) => {
-    setEditingColumnId(colId);
-    setEditingColumnTitle(currentTitle);
-  };
-
-  const finishEditingColumn = () => {
-    if (editingColumnId === null) return;
-    const trimmedTitle = editingColumnTitle.trim();
-    if (trimmedTitle.length === 0) {
-      // If title is empty, revert to previous title by not saving
-      setEditingColumnId(null);
-      setEditingColumnTitle("");
-      return;
-    }
-    const updated = columns.map((col) =>
-      col.id === editingColumnId ? { ...col, title: trimmedTitle } : col
-    );
-    persist(updated);
-    setEditingColumnId(null);
-    setEditingColumnTitle("");
-  };
-
-  const handleColumnTitleKeyPress = (
-    e: NativeSyntheticEvent<TextInputKeyPressEventData>
-  ) => {
-    if (e.nativeEvent.key === "Enter") {
-      Keyboard.dismiss();
-      finishEditingColumn();
-    }
-  };
-
-  const updateCardField = (
-    colId: string,
-    cardId: string,
-    field: "title" | "description",
-    value: string
-  ) => {
-    const updated = columns.map((col) =>
-      col.id === colId
-        ? {
-            ...col,
-            cards: col.cards.map((card) =>
-              card.id === cardId ? { ...card, [field]: value } : card
-            ),
-          }
-        : col
-    );
-    persist(updated);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Trendly Admin Invites</Text>
-        <Pressable onPress={addColumn} style={styles.addBtn}>
-          <Text style={styles.addBtnText}>+ Column</Text>
-        </Pressable>
       </View>
+
+      {loading && (
+        <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
+          Loading invites…
+        </Text>
+      )}
+      {error && (
+        <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -225,20 +250,7 @@ export default function KanbanBoard() {
         >
           <View style={styles.row}>
             {columns.map((col) => (
-              <DroppableColumn
-                key={col.id}
-                column={col}
-                onAddCard={() => addCard(col.id)}
-                onDeleteColumn={() => deleteColumn(col.id)}
-                onDeleteCard={deleteCard}
-                onUpdateCard={updateCardField}
-                editingColumnId={editingColumnId}
-                editingColumnTitle={editingColumnTitle}
-                onStartEditingColumn={() => startEditingColumn(col.id, col.title)}
-                onChangeEditingColumnTitle={setEditingColumnTitle}
-                onFinishEditingColumn={finishEditingColumn}
-                onColumnTitleKeyPress={handleColumnTitleKeyPress}
-              />
+              <DroppableColumn key={col.id} column={col} />
             ))}
           </View>
         </ScrollView>
@@ -247,38 +259,7 @@ export default function KanbanBoard() {
   );
 }
 
-const DroppableColumn = ({
-  column,
-  onAddCard,
-  onDeleteColumn,
-  onDeleteCard,
-  onUpdateCard,
-  editingColumnId,
-  editingColumnTitle,
-  onStartEditingColumn,
-  onChangeEditingColumnTitle,
-  onFinishEditingColumn,
-  onColumnTitleKeyPress,
-}: {
-  column: KanbanColumnT;
-  onAddCard: () => void;
-  onDeleteColumn: () => void;
-  onDeleteCard: (colId: string, cardId: string) => void;
-  onUpdateCard: (
-    colId: string,
-    cardId: string,
-    field: "title" | "description",
-    value: string
-  ) => void;
-  editingColumnId: string | null;
-  editingColumnTitle: string;
-  onStartEditingColumn: () => void;
-  onChangeEditingColumnTitle: (text: string) => void;
-  onFinishEditingColumn: () => void;
-  onColumnTitleKeyPress: (
-    e: NativeSyntheticEvent<TextInputKeyPressEventData>
-  ) => void;
-}) => {
+const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
@@ -291,54 +272,13 @@ const DroppableColumn = ({
       style={[styles.column, { backgroundColor: bgColor }]}
     >
       <View style={styles.columnHeader}>
-        <View
-          style={{
-            flexDirection: "row",
-            flexShrink: 1,
-            flexWrap: "nowrap",
-            alignItems: "center",
-          }}
+        <Text
+          style={[styles.columnTitle, { maxWidth: "60%" }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
         >
-          {editingColumnId === column.id ? (
-            <TextInput
-              style={[
-                styles.columnTitle,
-                {
-                  flex: 1,
-                  maxWidth: "60%",
-                  borderBottomWidth: 1,
-                },
-              ]}
-              value={editingColumnTitle}
-              onChangeText={onChangeEditingColumnTitle}
-              onBlur={onFinishEditingColumn}
-              onKeyPress={onColumnTitleKeyPress}
-              autoFocus
-              returnKeyType="done"
-            />
-          ) : (
-            <Text
-              style={[styles.columnTitle, { maxWidth: "60%" }]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {column.title}
-            </Text>
-          )}
-          {!editingColumnId && (
-            <Pressable onPress={onStartEditingColumn} style={{ marginLeft: 8 }}>
-              <Text style={{ color: colors.editBlue }}>Edit</Text>
-            </Pressable>
-          )}
-          <View style={{ flexDirection: "row", gap: 8, marginLeft: 8 }}>
-            <Pressable onPress={onAddCard}>
-              <Text>+ Card</Text>
-            </Pressable>
-            <Pressable onPress={onDeleteColumn}>
-              <Text style={{ color: colors.red }}>Delete</Text>
-            </Pressable>
-          </View>
-        </View>
+          {column.title}
+        </Text>
       </View>
 
       <SortableContext
@@ -351,10 +291,6 @@ const DroppableColumn = ({
             id={`${column.id}:${card.id}`}
             card={card}
             colId={column.id}
-            onDelete={() => onDeleteCard(column.id, card.id)}
-            onUpdate={(field, value) =>
-              onUpdateCard(column.id, card.id, field, value)
-            }
           />
         ))}
       </SortableContext>
@@ -372,14 +308,10 @@ const SortableCard = ({
   id,
   card,
   colId,
-  onDelete,
-  onUpdate,
 }: {
   id: string;
   card: KanbanCardT;
   colId: string;
-  onDelete: () => void;
-  onUpdate: (field: "title" | "description", value: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
@@ -406,37 +338,32 @@ const SortableCard = ({
         },
       ]}
     >
-      <TextInput
-        style={styles.cardTitle}
-        value={card.title}
-        onChangeText={(text) => onUpdate("title", text)}
-        placeholder="Card title"
-        returnKeyType="done"
-        blurOnSubmit={true}
-      />
-      <TextInput
-        style={[
-          styles.cardDesc,
-          {
-            minHeight: 30,
-            maxHeight: 120,
-            textAlignVertical: "top",
-            padding: 0,
-          },
-        ]}
-        value={card.description}
-        onChangeText={(text) => onUpdate("description", text)}
-        placeholder="Description"
-        multiline
-        returnKeyType="done"
-        blurOnSubmit={true}
-        scrollEnabled
-      />
-      <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
-        <Pressable onPress={onDelete}>
-          <Text style={{ color: colors.red }}>Delete</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.cardTitle}>
+        {card.socialProfile?.name || "Unknown"}{" "}
+        <Text style={{ fontWeight: "400", opacity: 0.7 }}>
+          @{card.socialProfile?.username || ""}
+        </Text>
+      </Text>
+      <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
+        Status: {colId.charAt(0).toUpperCase() + colId.slice(1)}
+      </Text>
+      {card.collaborationId && (
+        <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
+          Collaboration: {card.collaborationId}
+        </Text>
+      )}
+      <Text style={styles.cardDesc} numberOfLines={3} ellipsizeMode="tail">
+        {card.message || "No message"}
+      </Text>
+      <Text style={[styles.cardDesc, { marginTop: 6 }]}>
+        Followers: {card.socialProfile?.follower_count ?? "-"} | ER:{" "}
+        {card.socialProfile?.engagement_rate?.toFixed?.(2) ?? "-"}%
+      </Text>
+      {card.timeStamp && (
+        <Text style={[styles.cardDesc, { marginTop: 4, opacity: 0.7 }]}>
+          Invited: {new Date(card.timeStamp).toLocaleDateString()}
+        </Text>
+      )}
     </View>
   );
 };

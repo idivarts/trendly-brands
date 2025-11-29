@@ -10,9 +10,12 @@ import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
+import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -24,18 +27,17 @@ import {
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
-import SlowLoader from "@/shared-uis/components/SlowLoader";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Dimensions, Modal, ScrollView } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useCollapseContext } from "@/contexts/CollapseContext";
+import { ActivityIndicator } from "react-native-paper";
 
 const InvitationsTabContent = (props: any) => {
   const theme = useTheme();
@@ -49,8 +51,11 @@ const InvitationsTabContent = (props: any) => {
     useState(false);
   const [message, setMessage] = useState("");
   const [isInviting, setIsInviting] = useState(false);
-
+  const { getCollaborationById } = useCollaborationContext();
   const collaborationId = props.pageID;
+  const [collaboration, setCollaboration] = useState<ICollaboration | null>(
+    null
+  );
 
   const {
     checkIfAlreadyInvited,
@@ -77,6 +82,14 @@ const InvitationsTabContent = (props: any) => {
     left: insets.left,
     right: insets.right,
   });
+
+  useEffect(() => {
+    async function load() {
+      const result = await getCollaborationById(collaborationId);
+      setCollaboration(result);
+    }
+    load();
+  }, [collaborationId]);
 
   const toggleActionModal = () => {
     setIsActionModalVisible(!isActionModalVisible);
@@ -216,28 +229,43 @@ const InvitationsTabContent = (props: any) => {
       </View> */}
 
       {viewMode === "discover" ? (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            justifyContent: isCollapsed ? "flex-start" : "flex-start",
-            paddingTop: 12,
-            paddingBottom: 24,
-            gap: isCollapsed ? 20 : 8,
-            paddingRight: isCollapsed ? 120 : 16,
-            paddingLeft: isCollapsed ? 120 : 4,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          <Discover
-            showRightPanel={false}
-            showTopPanel={true}
-            advanceFilter={true}
-            onStatusChange={handleStatusChange}
-            isStatusCard={false}
-          />
-        </ScrollView>
+        collaboration ? (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: isCollapsed ? "flex-start" : "flex-start",
+              paddingTop: 12,
+              paddingBottom: 24,
+              gap: isCollapsed ? 20 : 8,
+              paddingRight: isCollapsed ? 120 : 16,
+              paddingLeft: isCollapsed ? 120 : 4,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            <Discover
+              showRightPanel={false}
+              showTopPanel={true}
+              advanceFilter={true}
+              onStatusChange={handleStatusChange}
+              isStatusCard={false}
+              defaultAdvanceFilters={collaboration?.preferences}
+              useStoredFilters={false}
+            />
+          </ScrollView>
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              paddingVertical: 16,
+            }}
+          >
+            <ActivityIndicator />
+          </View>
+        )
       ) : (
         <CarouselInViewProvider>
           <CarouselScroller

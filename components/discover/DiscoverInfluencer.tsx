@@ -4,12 +4,14 @@ import {
 } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Linking,
@@ -29,7 +31,6 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
-
 
 // type SocialsBreif struct {
 // 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
@@ -54,28 +55,17 @@ import { InfluencerStatsModal } from "./InfluencerStatModal";
 // 	LastUpdateTime int64 `db:"last_update_time" bigquery:"last_update_time" json:"last_update_time" firestore:"last_update_time"`
 // }
 // Types
-export interface InfluencerItem {
-  id: string;
-  name: string;
-  username: string;
-  profile_pic: string;
-  follower_count: number;
-  views_count?: number;
-  engagement_count: number;
-  engagement_rate: number;
-  social_type?: string;
-  location?: string;
-  bio?: string;
-  profile_verified?: boolean;
-  creation_time?: number;
-  last_update_time?: number;
 
-  isDiscover?: boolean;
-
+export type InfluencerItem = SocialsBrief & {
   // For invitation card
   invitedAt?: number; // timestamp in milliseconds
   status?: string;
-}
+};
+
+export type InfluencerInviteUnit = InfluencerItem & {
+  invitedAt: number;
+  status: string;
+};
 
 const sortOptions = [
   { label: "Followers", value: "followers" },
@@ -180,7 +170,6 @@ export const StatChip = ({
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.2,
       shadowRadius: 1,
-      elevation: 2,
       flexDirection: "column",
     }}
   >
@@ -196,6 +185,7 @@ interface DiscoverInfluencerProps {
   statusFilter?: boolean;
   isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
+  defaultAdvanceFilters?: IAdvanceFilters;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -203,6 +193,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   statusFilter = false,
   isStatusCard = false,
   onStatusChange,
+  defaultAdvanceFilters,
 }) => {
   const {
     selectedDb,
@@ -242,6 +233,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<InfluencerItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
+    null
+  );
   const { selectedBrand } = useBrandContext();
   const { openModal } = useConfirmationModel();
 
@@ -275,6 +269,25 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     },
     []
   );
+
+  useEffect(() => {
+    if (defaultAdvanceFilters && !appliedFilters) {
+      console.log("🔥 Default Filters Applied:", defaultAdvanceFilters);
+      setAppliedFilters(defaultAdvanceFilters);
+
+      discoverCommunication.current?.({
+        loading: true,
+        data: [],
+        page: 1,
+        sort: "followers",
+      });
+
+      pageSortCommunication.current?.({
+        page: 1,
+        sort: "followers",
+      });
+    }
+  }, [defaultAdvanceFilters]);
 
   const onOpenProfile = useCallback((url: string) => {
     Linking.openURL(url);
@@ -509,7 +522,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                   </Text>
                 </Chip>
               }
-              style={{ backgroundColor: Colors(theme).background, }}
+              style={{ backgroundColor: Colors(theme).background }}
             >
               {sortOptions.map((opt) => (
                 <Menu.Item
@@ -602,7 +615,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               right: 0,
               alignItems: "center",
               zIndex: 9999,
-              backgroundColor: "transparent"
+              backgroundColor: "transparent",
             }}
           >
             <View
@@ -631,7 +644,13 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               <View style={{ top: 0, borderRadius: 50 }}>
                 <InviteToCampaignButton
                   label="Invite Now"
-                  openModal={() => { }}
+                  openModal={openModal}
+                  influencerIds={selectedIds}
+                  influencerName={
+                    selectedIds.length === 1
+                      ? data.find((i) => i.id === selectedIds[0])?.name
+                      : undefined
+                  }
                 />
               </View>
 
