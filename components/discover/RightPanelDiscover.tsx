@@ -1,5 +1,6 @@
 import { useDiscovery } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Text, View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -16,7 +17,6 @@ import {
 import { Button, Chip, HelperText, Menu, TextInput } from "react-native-paper";
 import ModashFilter from "./modash/ModashFilter";
 import TrendlyAdvancedFilter from "./trendly/TrendlyAdvancedFilter";
-import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 // --------------------
 // Component
@@ -29,6 +29,8 @@ interface IProps {
   defaultAdvanceFilters?: IAdvanceFilters;
   onClearStoredFilters?: () => void;
 }
+
+import { useBreakpoints } from "@/hooks";
 
 interface SectionProps {
   title: string;
@@ -64,6 +66,8 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     setShowFilters,
   } = useDiscovery();
 
+  const { xl } = useBreakpoints();
+
   const theme = useTheme();
   const colors = Colors(theme);
   const filterApply = useRef<((action: "apply" | "clear") => void) | undefined>(
@@ -91,6 +95,18 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     setRightPanel(!nextCollapsed);
   };
 
+  const collapsePanel = () => {
+    // animate to collapsed state and update context
+    Animated.spring(slideAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 10,
+    }).start();
+    setIsCollapsed(true);
+    setRightPanel(false);
+  };
+
   const translateX = slideAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 400],
@@ -107,7 +123,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     if (selectedDb == "trendly") {
       setShowFilters(true);
     }
-  }, []);
+  }, [selectedDb]);
 
   // Friendly label for current selection
   const selectedDbLabel =
@@ -131,21 +147,23 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
         },
       ]}
     >
-      <Pressable
-        style={[
-          styles.collapseButton,
-          isCollapsed
-            ? { right: 392, left: undefined }
-            : { left: -20, right: undefined },
-        ]}
-        onPress={toggleCollapse}
-      >
-        <MaterialCommunityIcons
-          name={isCollapsed ? "chevron-left" : "chevron-right"}
-          size={24}
-          color="white"
-        />
-      </Pressable>
+      {xl && (
+        <Pressable
+          style={[
+            styles.collapseButton,
+            isCollapsed
+              ? { right: 392, left: undefined }
+              : { left: -20, right: undefined },
+          ]}
+          onPress={toggleCollapse}
+        >
+          <MaterialCommunityIcons
+            name={isCollapsed ? "chevron-left" : "chevron-right"}
+            size={24}
+            color="white"
+          />
+        </Pressable>
+      )}
       {!showFilters ? (
         <View style={styles.headerWrap}>
           <Text style={styles.headerTitle}>Access Multiple Databases</Text>
@@ -277,6 +295,8 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
                 icon="filter-variant"
                 onPress={() => {
                   filterApply.current?.("apply");
+                  // Close/collapse panel after applying filters on both mobile and web
+                  collapsePanel();
                   // FilterApplySubject.next({ action: "apply" })
                 }}
               >

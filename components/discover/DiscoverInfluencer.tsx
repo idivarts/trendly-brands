@@ -4,8 +4,8 @@ import {
 } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
@@ -293,7 +293,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     Linking.openURL(url);
   }, []);
 
-  const Col = 2;
+  const columns = xl ? 2 : 1;
   const [key, setKey] = useState(0);
 
   const toggleSelect = (id: string) => {
@@ -307,7 +307,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
       return (
         <View
           style={{
-            width: "50%", // always 2 columns
+            width: columns === 2 ? "50%" : "100%",
             paddingHorizontal: isCollapsed ? 12 : 8,
             paddingVertical: isCollapsed ? 12 : 8,
           }}
@@ -425,119 +425,192 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             justifyContent: "space-between",
             paddingHorizontal: 10,
             paddingVertical: 6,
-            // shadowColor: Colors(theme).primary,
-            // shadowOffset: { width: 0, height: 2 },
-            // shadowOpacity: 0.2,
-            // shadowRadius: 1,
-            // elevation: 2,
             borderBottomEndRadius: 12,
             borderBottomStartRadius: 12,
             zIndex: 999,
             width: isCollapsed ? "90%" : undefined,
           }}
         >
-          <View style={{ width: 80 }} />
-          {/* Left: Total results */}
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              alignItems: "center",
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
-                Total
-              </Text>
-              <Text
+          {xl ? (
+            <>
+              <View style={{ width: 80 }} />
+              {/* Centered Total on desktop */}
+              <View
                 style={{
-                  fontSize: 12,
-                  opacity: 0.8,
-                  color: Colors(theme).primary,
-                  fontWeight: "500",
-                  marginLeft: 4,
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  alignItems: "center",
                 }}
               >
-                {data.length < 15 ? data.length : "500+"} Results found
-              </Text>
-            </View>
-          </View>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
+                    Total
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      opacity: 0.8,
+                      color: Colors(theme).primary,
+                      fontWeight: "500",
+                      marginLeft: 4,
+                    }}
+                  >
+                    {data.length < 15 ? data.length : "500+"} Results found
+                  </Text>
+                </View>
+              </View>
 
-          {/* Right: Sort dropdown or Status Filter or Advance Filter Button */}
-          {advanceFilter ? (
-            <Button
-              mode="contained"
-              onPress={() => router.push("/discover")}
-              style={{
-                marginLeft: "auto",
-                backgroundColor: Colors(theme).aliceBlue,
-              }}
-              textColor={Colors(theme).black}
-              icon={"filter"}
-            >
-              Advanced Filters
-            </Button>
-          ) : statusFilter ? (
-            <Menu
-              visible={statusMenuVisible}
-              onDismiss={() => setStatusMenuVisible(false)}
-              anchor={
-                <Chip
-                  compact
-                  onPress={() => setStatusMenuVisible(true)}
-                  icon="filter"
-                  style={{ marginLeft: "auto" }}
+              {/* Right: keep existing right-side controls */}
+              {advanceFilter ? (
+                <Button
+                  mode="contained"
+                  onPress={() => router.push("/discover")}
+                  style={{
+                    marginLeft: "auto",
+                    backgroundColor: Colors(theme).aliceBlue,
+                  }}
+                  textColor={Colors(theme).black}
+                  icon={"filter"}
                 >
-                  <Text numberOfLines={1} style={{ maxWidth: 140 }}>
-                    {statusOptions.find((o) => o.value === currentStatus)
-                      ?.label || "Status"}
-                  </Text>
-                </Chip>
-              }
-              style={{ backgroundColor: Colors(theme).background }}
-            >
-              {statusOptions.map((opt) => (
-                <Menu.Item
-                  key={opt.value}
-                  onPress={() => onSelectStatus(opt.value)}
-                  title={opt.label}
-                />
-              ))}
-            </Menu>
+                  Advanced Filters
+                </Button>
+              ) : statusFilter ? (
+                <Menu
+                  visible={statusMenuVisible}
+                  onDismiss={() => setStatusMenuVisible(false)}
+                  anchor={
+                    <Chip
+                      compact
+                      onPress={() => setStatusMenuVisible(true)}
+                      icon="filter"
+                      style={{ marginLeft: "auto" }}
+                    >
+                      <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                        {statusOptions.find((o) => o.value === currentStatus)
+                          ?.label || "Status"}
+                      </Text>
+                    </Chip>
+                  }
+                  style={{ backgroundColor: Colors(theme).background }}
+                >
+                  {statusOptions.map((opt) => (
+                    <Menu.Item
+                      key={opt.value}
+                      onPress={() => onSelectStatus(opt.value)}
+                      title={opt.label}
+                    />
+                  ))}
+                </Menu>
+              ) : (
+                <Menu
+                  visible={sortMenuVisible}
+                  onDismiss={() => setSortMenuVisible(false)}
+                  anchor={
+                    <Chip
+                      compact
+                      onPress={() => setSortMenuVisible(true)}
+                      icon="sort"
+                      style={{ marginLeft: "auto" }}
+                    >
+                      <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                        {sortOptions.find((o) => o.value === currentSort)?.label ||
+                          "Relevance"}
+                      </Text>
+                    </Chip>
+                  }
+                  style={{ backgroundColor: Colors(theme).background }}
+                >
+                  {sortOptions.map((opt) => (
+                    <Menu.Item
+                      key={opt.value}
+                      onPress={() => onSelectSort(opt.value)}
+                      title={opt.label}
+                    />
+                  ))}
+                </Menu>
+              )}
+            </>
           ) : (
-            <Menu
-              visible={sortMenuVisible}
-              onDismiss={() => setSortMenuVisible(false)}
-              anchor={
-                <Chip
-                  compact
-                  onPress={() => setSortMenuVisible(true)}
-                  icon="sort"
-                  style={{ marginLeft: "auto" }}
-                >
-                  <Text numberOfLines={1} style={{ maxWidth: 140 }}>
-                    {sortOptions.find((o) => o.value === currentSort)?.label ||
-                      "Relevance"}
+            // Mobile layout: Total on left, sort/filter on right
+            <>
+              <View>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
+                    Total
                   </Text>
-                </Chip>
-              }
-              style={{ backgroundColor: Colors(theme).background }}
-            >
-              {sortOptions.map((opt) => (
-                <Menu.Item
-                  key={opt.value}
-                  onPress={() => onSelectSort(opt.value)}
-                  title={opt.label}
-                />
-              ))}
-            </Menu>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      opacity: 0.8,
+                      color: Colors(theme).primary,
+                      fontWeight: "500",
+                      marginLeft: 6,
+                    }}
+                  >
+                    {data.length < 15 ? data.length : "500+"}
+                  </Text>
+                </View>
+              </View>
+
+              <View>
+                {advanceFilter ? (
+                  <Button
+                    mode="contained"
+                    onPress={() => router.push("/discover")}
+                    style={{ backgroundColor: Colors(theme).aliceBlue }}
+                    textColor={Colors(theme).black}
+                    icon={"filter"}
+                  >
+                    Advanced Filters
+                  </Button>
+                ) : statusFilter ? (
+                  <Menu
+                    visible={statusMenuVisible}
+                    onDismiss={() => setStatusMenuVisible(false)}
+                    anchor={
+                      <Chip compact onPress={() => setStatusMenuVisible(true)} icon="filter">
+                        <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                          {statusOptions.find((o) => o.value === currentStatus)?.label || "Status"}
+                        </Text>
+                      </Chip>
+                    }
+                    style={{ backgroundColor: Colors(theme).background }}
+                  >
+                    {statusOptions.map((opt) => (
+                      <Menu.Item key={opt.value} onPress={() => onSelectStatus(opt.value)} title={opt.label} />
+                    ))}
+                  </Menu>
+                ) : (
+                  <Menu
+                    visible={sortMenuVisible}
+                    onDismiss={() => setSortMenuVisible(false)}
+                    anchor={
+                      <Chip compact onPress={() => setSortMenuVisible(true)} icon="sort">
+                        <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                          {sortOptions.find((o) => o.value === currentSort)?.label || "Relevance"}
+                        </Text>
+                      </Chip>
+                    }
+                    style={{ backgroundColor: Colors(theme).background }}
+                  >
+                    {sortOptions.map((opt) => (
+                      <Menu.Item key={opt.value} onPress={() => onSelectSort(opt.value)} title={opt.label} />
+                    ))}
+                  </Menu>
+                )}
+              </View>
+            </>
           )}
         </View>
       )}
 
       <View
-        style={{ flex: 1, alignItems: isCollapsed ? "center" : "flex-start" }}
+        style={{
+          flex: 1,
+          alignItems: isCollapsed ? "center" : "flex-start",
+          paddingHorizontal: 16,
+        }}
       >
         <FlatList
           data={data}
@@ -551,8 +624,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
           // removeClippedSubviews
           // @ts-ignore
           getItemLayout={getItemLayout}
-          numColumns={2}
-          key={"fixed-2-cols"}
+          numColumns={columns}
+          key={`cols-${columns}`}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={
             <>

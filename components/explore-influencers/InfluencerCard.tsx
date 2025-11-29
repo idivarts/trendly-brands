@@ -40,8 +40,14 @@ const Avatar = ({
   const theme = useTheme();
   const colors = Colors(theme);
 
-  const baseAvatarScale = 0.3;
-  const avatarSize = parentWidth * baseAvatarScale * (isCollapsed ? 1.1 : 1);
+  // Scale avatar relative to measured parent width when available,
+  // otherwise use a sensible fallback so layout doesn't break.
+  const baseAvatarScale = 0.28;
+  const fallbackSize = isCollapsed ? 88 : 64;
+  const avatarSize =
+    parentWidth && parentWidth > 0
+      ? Math.max(40, parentWidth * baseAvatarScale * (isCollapsed ? 1.1 : 1))
+      : fallbackSize;
 
   return (
     <View
@@ -273,7 +279,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
           styles.card,
           {
             backgroundColor: colors.aliceBlue,
-            width: parentWidth,
+            width: "100%",
             minHeight: isCollapsed ? 296 : 252,
             height: "auto",
           },
