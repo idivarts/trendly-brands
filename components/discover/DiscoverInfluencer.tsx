@@ -4,13 +4,14 @@ import {
 } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Linking,
@@ -31,12 +32,40 @@ import InfluencerCard from "../explore-influencers/InfluencerCard";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
 
+// type SocialsBreif struct {
+// 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
+// 	Name     string `db:"name" bigquery:"name" json:"name" firestore:"name"`
+// 	Username string `db:"username" bigquery:"username" json:"username" firestore:"username"`
+
+// 	ProfilePic      string  `db:"profile_pic" bigquery:"profile_pic" json:"profile_pic" firestore:"profile_pic"`
+// 	FollowerCount   int64   `db:"follower_count" bigquery:"follower_count" json:"follower_count" firestore:"follower_count"`
+// 	ViewsCount      int64   `db:"views_count" bigquery:"views_count" json:"views_count" firestore:"views_count"`                      //views
+// 	EnagamentsCount int64   `db:"engagement_count" bigquery:"engagements_count" json:"engagement_count" firestore:"engagement_count"` //engagement
+// 	EngagementRate  float32 `db:"engagement_rate" bigquery:"engagement_rate" json:"engagement_rate" firestore:"engagement_rate"`
+
+// 	SocialType string `db:"social_type" bigquery:"social_type" json:"social_type" firestore:"social_type"`
+
+// 	Location string `db:"location" bigquery:"location" json:"location" firestore:"location"`
+
+// 	Bio string `db:"bio" bigquery:"bio" json:"bio" firestore:"bio"`
+
+// 	ProfileVerified bool `db:"profile_verified" bigquery:"profile_verified" json:"profile_verified" firestore:"profile_verified"`
+
+// 	CreationTime   int64 `db:"creation_time" bigquery:"creation_time" json:"creation_time" firestore:"creation_time"`
+// 	LastUpdateTime int64 `db:"last_update_time" bigquery:"last_update_time" json:"last_update_time" firestore:"last_update_time"`
+// }
+// Types
 
 export type InfluencerItem = SocialsBrief & {
   // For invitation card
   invitedAt?: number; // timestamp in milliseconds
   status?: string;
-}
+};
+
+export type InfluencerInviteUnit = InfluencerItem & {
+  invitedAt: number;
+  status: string;
+};
 
 const sortOptions = [
   { label: "Followers", value: "followers" },
@@ -141,7 +170,6 @@ export const StatChip = ({
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.2,
       shadowRadius: 1,
-      elevation: 2,
       flexDirection: "column",
     }}
   >
@@ -157,6 +185,7 @@ interface DiscoverInfluencerProps {
   statusFilter?: boolean;
   isStatusCard?: boolean;
   onStatusChange?: (status: string) => void;
+  defaultAdvanceFilters?: IAdvanceFilters;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -164,6 +193,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   statusFilter = false,
   isStatusCard = false,
   onStatusChange,
+  defaultAdvanceFilters,
 }) => {
   const {
     selectedDb,
@@ -203,6 +233,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<InfluencerItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
+    null
+  );
   const { selectedBrand } = useBrandContext();
   const { openModal } = useConfirmationModel();
 
@@ -236,6 +269,25 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     },
     []
   );
+
+  useEffect(() => {
+    if (defaultAdvanceFilters && !appliedFilters) {
+      console.log("🔥 Default Filters Applied:", defaultAdvanceFilters);
+      setAppliedFilters(defaultAdvanceFilters);
+
+      discoverCommunication.current?.({
+        loading: true,
+        data: [],
+        page: 1,
+        sort: "followers",
+      });
+
+      pageSortCommunication.current?.({
+        page: 1,
+        sort: "followers",
+      });
+    }
+  }, [defaultAdvanceFilters]);
 
   const onOpenProfile = useCallback((url: string) => {
     Linking.openURL(url);
@@ -470,7 +522,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                   </Text>
                 </Chip>
               }
-              style={{ backgroundColor: Colors(theme).background, }}
+              style={{ backgroundColor: Colors(theme).background }}
             >
               {sortOptions.map((opt) => (
                 <Menu.Item
@@ -563,7 +615,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               right: 0,
               alignItems: "center",
               zIndex: 9999,
-              backgroundColor: "transparent"
+              backgroundColor: "transparent",
             }}
           >
             <View
@@ -592,7 +644,13 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               <View style={{ top: 0, borderRadius: 50 }}>
                 <InviteToCampaignButton
                   label="Invite Now"
-                  openModal={() => { }}
+                  openModal={openModal}
+                  influencerIds={selectedIds}
+                  influencerName={
+                    selectedIds.length === 1
+                      ? data.find((i) => i.id === selectedIds[0])?.name
+                      : undefined
+                  }
                 />
               </View>
 

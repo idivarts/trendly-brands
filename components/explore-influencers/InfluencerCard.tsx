@@ -88,10 +88,12 @@ const NameSection = ({
   item,
   isCollapsed,
   isStatusCard,
+  openModal,
 }: {
   item: InfluencerItem;
   isCollapsed?: boolean;
   isStatusCard?: boolean;
+  openModal?: any;
 }) => {
   const theme = useTheme();
   const colors = Colors(theme);
@@ -156,7 +158,7 @@ const NameSection = ({
             </Text>
           </View>
         ) : (
-          <InviteToCampaignButton label="Invite Now" openModal={() => { }} />
+          <InviteToCampaignButton label="Invite Now" openModal={openModal} influencerIds={[item.id]} influencerName={item.name} />
         )}
       </View>
     </View>
@@ -223,18 +225,35 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
   isSelected,
   onToggleSelect,
   isStatusCard,
+  openModal,
 }) => {
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
   const [parentWidth, setParentWidth] = useState(0);
 
-  const getRandomTime = () => {
-    const times = ["1 hour ago", "2 days ago", "1 week ago", "3 months ago"];
-    return times[Math.floor(Math.random() * times.length)];
+  const formatTimeAgo = (timestampMs?: number) => {
+    if (!timestampMs) {
+      const times = ["1 hour ago", "2 days ago", "1 week ago", "3 months ago"];
+      return times[Math.floor(Math.random() * times.length)];
+    }
+    const seconds = Math.floor((Date.now() - timestampMs) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks}w ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    const years = Math.floor(days / 365);
+    return `${years}y ago`;
   };
 
-  const TimeAgo = getRandomTime();
+  const TimeAgo = formatTimeAgo(item.invitedAt);
 
   return (
     <View
@@ -326,15 +345,18 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
               item={item}
               isCollapsed={isCollapsed}
               isStatusCard={isStatusCard}
+              openModal={openModal}
             />
           </View>
 
           <StatsSection item={item} isCollapsed={isCollapsed} />
         </Card.Content>
       </Card>
-      <View style={[styles.CategoryTag]}>
-        <Text style={styles.CategoryText}>By Discovery</Text>
-      </View>
+      {item.isDiscover && (
+        <View style={[styles.CategoryTag]}>
+          <Text style={styles.CategoryText}>By Discovery</Text>
+        </View>
+      )}
     </View>
   );
 };

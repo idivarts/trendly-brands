@@ -1,15 +1,17 @@
+import { InfluencerInviteUnit } from "@/components/discover/DiscoverInfluencer";
+import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
-import { useInfluencers } from "@/hooks/request";
+import useInvitedInfluencers from "@/hooks/request/use-invited-influencers";
 import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
-import SlowLoader from "@/shared-uis/components/SlowLoader";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
-import { Dimensions, ScrollView, View } from "react-native";
-import Discover from "@/components/discover/Discover";
+import { Dimensions, FlatList, RefreshControl, View } from "react-native";
+import { ActivityIndicator, Chip, Menu } from "react-native-paper";
+// import Discover from "@/components/discover/Discover"; // unused
 
 const InvitedMemberTabContent = (props: any) => {
   const theme = useTheme();
@@ -18,28 +20,18 @@ const InvitedMemberTabContent = (props: any) => {
 
   const { isCollapsed, setIsCollapsed } = useCollapseContext();
   const collaborationId = props.pageID;
-  const { influencers: rawInfluencers, isLoading } = useInfluencers({
+  const { influencers: rawInfluencers, loading: isLoading, refresh, loadMore, nextAvailable, setStatusFilter } = useInvitedInfluencers({
     collaborationId,
   });
 
   const { xl } = useBreakpoints();
 
-  // Mock status and time for demonstration — replace this with actual data later
-  const getRandomStatus = () => {
-    const statuses: ("Accepted" | "Denied" | "Waiting")[] = [
-      "Accepted",
-      "Denied",
-      "Waiting",
-    ];
-    return statuses[Math.floor(Math.random() * statuses.length)];
-  };
 
-  const getRandomTime = () => {
-    const times = ["1 hour ago", "2 days ago", "1 week ago", "3 months ago"];
-    return times[Math.floor(Math.random() * times.length)];
-  };
+  const influencers = (rawInfluencers || []) as InfluencerInviteUnit[];
 
-  const influencers = rawInfluencers || [];
+  // Status menu states must be declared unconditionally (can't be after an early return)
+  const [statusMenuVisible, setStatusMenuVisible] = React.useState(false);
+  const [currentStatus, setCurrentStatus] = React.useState<string | undefined>(undefined);
 
   // if (influencers.length === 0 && isLoading) {
   //   return (
@@ -56,41 +48,91 @@ const InvitedMemberTabContent = (props: any) => {
   //   );
   // }
 
-  if (influencers.length === 0 && !isLoading) {
-    return (
-      <EmptyState
-        subtitle="No invited members found."
-        image={require("@/assets/images/illustration5.png")}
-        hideAction
-      />
-    );
-  }
-
   const width = Math.min(MAX_WIDTH_WEB, Dimensions.get("window").width);
 
-  return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{
-        flexDirection: "row",
-        flexWrap: "wrap",
-        justifyContent: isCollapsed ? "flex-start" : "flex-start",
-        paddingTop: 12,
-        paddingBottom: 24,
-        gap: isCollapsed ? 20 : 8,
-        paddingRight: isCollapsed ? 120 : 16,
-        paddingLeft: isCollapsed ? 120 : 4,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <Discover
-        showRightPanel={false}
-        showTopPanel={true}
-        advanceFilter={false}
-        statusFilter={true}
+
+  const statusOptions = [
+    { label: "All", value: undefined },
+    { label: "Pending", value: "pending" },
+    { label: "Accepted", value: "accepted" },
+    { label: "Denied", value: "denied" },
+  ];
+
+  const onSelectStatus = (val?: string) => {
+    setCurrentStatus(val);
+    setStatusFilter(val as string | undefined);
+  };
+
+  const renderItem = ({ item }: { item: InfluencerInviteUnit }) => (
+    <View style={{ width: "50%", paddingHorizontal: isCollapsed ? 12 : 8, paddingVertical: isCollapsed ? 12 : 8 }}>
+      <InfluencerCard
+        item={item}
+        isCollapsed={isCollapsed}
         isStatusCard={true}
+        onPress={() => {}}
       />
-    </ScrollView>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+        }}
+      >
+        <Menu
+          visible={statusMenuVisible}
+          onDismiss={() => setStatusMenuVisible(false)}
+          anchor={
+            <Chip compact onPress={() => setStatusMenuVisible(true)} icon="filter">
+              {statusOptions.find((o) => o.value === currentStatus)?.label || "Status"}
+            </Chip>
+          }
+        >
+          {statusOptions.map((opt) => (
+            <Menu.Item key={opt.label} onPress={() => { setStatusMenuVisible(false); onSelectStatus(opt.value); }} title={opt.label} />
+          ))}
+        </Menu>
+      </View>
+
+      <FlatList
+        data={influencers}
+        keyExtractor={(i: InfluencerInviteUnit) => i.id}
+        renderItem={renderItem}
+        numColumns={2}
+        onEndReached={() => loadMore()}
+        onEndReachedThreshold={0.5}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
+        contentContainerStyle={{
+          paddingTop: 12,
+          paddingBottom: 24,
+          paddingRight: isCollapsed ? 120 : 16,
+          paddingLeft: isCollapsed ? 120 : 4,
+          flexGrow: influencers.length === 0 ? 1 : undefined,
+        }}
+        ListEmptyComponent={
+          !isLoading ? (
+            <EmptyState
+              subtitle="No invited members found."
+              image={require("@/assets/images/illustration5.png")}
+              hideAction
+            />
+          ) : null
+        }
+        ListFooterComponent={
+          isLoading ? (
+            <View style={{ paddingVertical: 20 }}>
+              <ActivityIndicator />
+            </View>
+          ) : null
+        }
+      />
+    </View>
   );
 };
 

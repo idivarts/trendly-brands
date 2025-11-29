@@ -133,7 +133,7 @@ export const InfluencerStatsModal: React.FC<{
             </View>
             <Card.Actions>
               {/* <Button mode="contained" onPress={() => sendInvite()}>Invite</Button> */}
-              <InviteToCampaignButton openModal={openModal} />
+              <InviteToCampaignButton openModal={openModal} influencerIds={item ? [item.id] : undefined} influencerName={item?.name} />
 
               <IconButton
                 icon="open-in-new"
