@@ -87,7 +87,7 @@ const DiscoverComponent = ({
 }) => {
   const { manager } = useAuthContext();
   const { selectedBrand } = useBrandContext();
-  const [rightPanel, setRightPanel] = useState(true);
+  const [rightPanel, setRightPanel] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const discoverCommunication =
     useRef<(action: DiscoverCommunication) => any>();
@@ -101,7 +101,6 @@ const DiscoverComponent = ({
   useEffect(() => {
     if (!selectedBrand) return;
     if (!useStoredFilters) {
-      // Clear and do not load persisted filters when disabled by parent
       setStoredFilters(null);
       return;
     }
@@ -124,12 +123,21 @@ const DiscoverComponent = ({
 
   const { xl } = useBreakpoints();
 
+  useEffect(() => {
+  
+    setRightPanel(Boolean(xl));
+  }, [xl]);
+
   const [selectedDb, setSelectedDb] = useState<DB_TYPE>("trendly");
 
   useEffect(() => {
     const unsubs = OpenFilterRightPanel.subscribe(() => {
+
       setRightPanel(true);
+      setShowFilters(true);
+      setIsCollapsed(false);
     });
+
     return () => unsubs.unsubscribe();
   }, []);
 
@@ -217,7 +225,7 @@ const DiscoverComponent = ({
             defaultAdvanceFilters={filtersToUse}
             onClearStoredFilters={() => setStoredFilters(null)}
             style={[
-              !showRightPanel && { display: "none" },
+              (!showRightPanel || (!rightPanel && !xl)) && { display: "none" },
               !xl && {
                 width: "100%",
                 maxWidth: "auto",

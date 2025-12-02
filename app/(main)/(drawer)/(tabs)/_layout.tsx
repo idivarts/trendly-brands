@@ -2,6 +2,7 @@ import { router, Tabs } from "expo-router";
 import React from "react";
 
 import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
+import { OpenFilterRightPanel } from "@/components/discover/Discover";
 import Header from "@/components/explore-influencers/header";
 import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
@@ -32,7 +33,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Pressable } from "react-native";
 import { Badge } from "react-native-paper";
-import { OpenFilterRightPanel } from "./discover";
 
 const TabLayout = () => {
   const { xl } = useBreakpoints();
