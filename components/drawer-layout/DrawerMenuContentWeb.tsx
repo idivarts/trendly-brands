@@ -9,19 +9,18 @@ import {
   faEye,
   faFileLines,
   faGem,
-  faHeart,
-  faStar,
+  faStar
 } from "@fortawesome/free-regular-svg-icons";
 import {
   faChevronRight,
   faComment as faCommentSolid,
   faCreditCard,
   faGem as faGemSolid,
-  faHeart as faHeartSolid,
   faPlus,
   faSliders,
   faStar as faStarSolid,
   faUsers,
+  faUserShield
 } from "@fortawesome/free-solid-svg-icons";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -37,7 +36,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
-import { faUserShield } from "@fortawesome/free-solid-svg-icons";
 // import BrandActionItem from "./BrandActionItem";
 // Bottom menu items factory
 const BOTTOM_MENU_ITEMS = (
@@ -67,11 +65,11 @@ const BOTTOM_MENU_ITEMS = (
 ];
 // Brand Details menu items
 const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
-  {
-    href: "/preferences",
-    icon: () => <DrawerIcon href="" icon={faSliders} />,
-    label: "Influencer Preferences",
-  },
+  // {
+  //   href: "/preferences",
+  //   icon: () => <DrawerIcon href="" icon={faSliders} />,
+  //   label: "Influencer Preferences",
+  // },
   {
     href: "/brand-profile",
     icon: () => <DrawerIcon href="" icon={faFileLines} />,
@@ -96,6 +94,20 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
     href: "/billing",
     icon: () => <DrawerIcon href="" icon={faCreditCard} />,
     label: "Billing",
+  },
+];
+
+// Showcase menu items
+const SHOWCASE_MENU_ITEMS = (theme: Theme): Tab[] => [
+  {
+    href: "/preferences",
+    icon: () => <DrawerIcon href="" icon={faSliders} />,
+    label: "Influencer Preferences",
+  },
+  {
+    href: "/explore-influencers",
+    icon: () => <DrawerIcon href="/explore-influencers" icon={faStar} />,
+    label: "Spotlight Preferences",
   },
 ];
 
@@ -333,6 +345,50 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             ))}
           </View>
         </View>
+        {/* Showcase Section */}
+        <View style={{ marginTop: 16, gap: 8 }}>
+          <Pressable
+            onPress={() => {
+              router.push("/menu");
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: -10,
+                paddingHorizontal: 8,
+                paddingVertical: 12,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  opacity: 0.7,
+                  color: Colors(theme).text,
+                }}
+              >
+                Showcase
+              </Text>
+              <DrawerIcon icon={faChevronRight} size={12} />
+            </View>
+          </Pressable>
+
+          <View
+            style={{
+              borderTopColor: Colors(theme).border,
+              borderTopWidth: StyleSheet.hairlineWidth,
+            }}
+          />
+          <View style={{ gap: 0 }}>
+            {SHOWCASE_MENU_ITEMS(theme).map((tab, idx) => (
+              <DrawerMenuItem key={`showcase-${idx}`} tab={tab} />
+            ))}
+          </View>
+        </View>
+
         {/* Admin Section */}
         {manager?.isAdmin && (
           <View style={{ marginTop: 16, gap: 8 }}>

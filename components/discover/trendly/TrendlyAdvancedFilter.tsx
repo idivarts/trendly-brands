@@ -447,7 +447,7 @@ const TrendlyAdvancedFilter = ({
     setSort("followers");
     setSortDirection("desc");
     setOffset(0);
-    setLimit(15);
+    setLimit(16);
 
     // Clear current data
     setData([]);

@@ -86,6 +86,187 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
     //     return profileLike || social.links[0]
     // }, [social])
 
+    const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => (
+        <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                <Card style={{ width: '31%', marginBottom: 12 }}>
+                    <Card.Content>
+                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Quality</Text>
+                        <Text variant="displaySmall">{analytics.quality}<Text variant="labelLarge">%</Text></Text>
+                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Higher = richer, classy, aesthetic creators</Text>
+                    </Card.Content>
+                </Card>
+
+                <Card style={{ width: '31%', marginBottom: 12 }}>
+                    <Card.Content>
+                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Trustability</Text>
+                        <Text variant="displaySmall">{analytics.trustablity}<Text variant="labelLarge">%</Text></Text>
+                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Signals from past collabs, engagement quality</Text>
+                    </Card.Content>
+                </Card>
+                <Card style={{ width: '31%', marginBottom: 12 }}>
+                    <Card.Content>
+                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>CPM</Text>
+                        <Text variant="displaySmall">{formatCurrency(analytics.cpm)} </Text>
+                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Cost per Mille (1000 views)</Text>
+                    </Card.Content>
+                </Card>
+
+                <Card style={{ width: '48%', marginBottom: 12 }}>
+                    <Card.Content>
+                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Estimated Budget</Text>
+                        <Text variant="headlineLarge">
+                            {formatCurrency(analytics.estimatedBudget?.min)} — {formatCurrency(analytics.estimatedBudget?.max)}
+                        </Text>
+                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Typical creator ask for one deliverable</Text>
+                    </Card.Content>
+                </Card>
+
+                <Card style={{ width: '48%', marginBottom: 12 }}>
+                    <Card.Content>
+                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Estimated Reach</Text>
+                        <Text variant="headlineLarge">
+                            {formatNumber(analytics.estimatedReach?.min)} — {formatNumber(analytics.estimatedReach?.max)}
+                        </Text>
+                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Projected unique views per post</Text>
+                    </Card.Content>
+                </Card>
+            </View>
+        </View>
+    )
+
+    const ProfileOverviewCard = ({ social }: { social: ISocials }) => (
+        <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <Card.Title
+                title={social.name || social.username}
+                subtitle={[social.username ? `@${social.username}` : '', social.category].filter(Boolean).join(' · ')}
+                right={(props) => (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}>
+                        {social.profile_verified && <Chip compact icon="check-decagram" style={{ marginRight: 6 }}>Verified</Chip>}
+                    </View>
+                )}
+            />
+
+            <Card.Content>
+                <Text variant="bodyMedium" style={{ marginBottom: 8 }} numberOfLines={2} >{social.bio != "unknown" ? social.bio : ""}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    {!!social.location && social.location != "unknown" && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="map-marker">{social.location}</Chip>}
+                    {!!social.gender && social.gender != "unknown" && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="gender-male-female">{social.gender}</Chip>}
+                    {typeof social.quality_score === 'number' && (
+                        <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="star" >Quality: {social.quality_score}/100</Chip>
+                    )}
+                </View>
+
+                {Array.isArray(social.niches) && social.niches.length > 0 && (
+                    <View style={{ marginTop: 8 }}>
+                        <Text variant="labelLarge" style={{ marginBottom: 6 }}>Niches</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                            {social.niches.map((n) => (
+                                <Chip key={n} style={{ marginRight: 8, marginBottom: 8 }}>{n}</Chip>
+                            ))}
+                        </View>
+                    </View>
+                )}
+            </Card.Content>
+
+        </Card>
+    )
+
+    const TotalsCard = ({ social }: { social: ISocials }) => (
+        <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <Card.Title title="Totals" />
+            <Card.Content>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <StatChip label="Followers" value={social.follower_count} />
+                    <StatChip label="Following" value={social.following_count} />
+                    <StatChip label="Posts" value={social.content_count} />
+                    <StatChip label="Total Views" value={social.views_count} />
+                    <StatChip label="Total Engagements" value={social.engagement_count} />
+                </View>
+            </Card.Content>
+        </Card>
+    )
+
+    const AveragesCard = ({ social }: { social: ISocials }) => (
+        <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <Card.Title title="Averages & Rates" />
+            <Card.Content>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <StatChip label="Median Views" value={social.average_views} />
+                    <StatChip label="Median Likes" value={social.average_likes} />
+                    <StatChip label="Median Comments" value={social.average_comments} />
+                    <StatChip label="Engagement Rate %" value={(social.engagement_rate || 0)} />
+                    <StatChip label="Quality Score" value={social.quality_score} />
+                </View>
+            </Card.Content>
+        </Card>
+    )
+
+    const ReelsCard = ({ social }: { social: ISocials }) => (
+        Array.isArray(social.reels) && social.reels.length > 0 ? (
+            <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+                <Card.Title title={`Reels`} />
+                <Card.Content>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <View style={{ flexDirection: 'row' }}>
+                            {social.reels.map((r) => (
+                                <Card key={r.id} style={{ width: 140, marginRight: 12 }} onPress={() => r.url && Linking.openURL(r.url)}>
+                                    {!!r.thumbnail_url && (
+                                        <Image source={{ uri: r.thumbnail_url }} style={{ width: '100%', height: 180, borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
+                                    )}
+                                    <Card.Content>
+                                        <Text numberOfLines={2} variant="bodySmall" style={{ marginTop: 6 }}>{r.caption || 'Reel'}</Text>
+                                        <Divider style={{ marginVertical: 6 }} />
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                                            <Chip compact style={{ marginRight: 6, marginBottom: 6 }} icon="play-circle">{formatNumber(r.views_count)}</Chip>
+                                            <Chip compact style={{ marginRight: 6, marginBottom: 6 }} icon="heart">{formatNumber(r.likes_count)}</Chip>
+                                            <Chip compact style={{ marginRight: 6, marginBottom: 6 }} icon="comment-text">{formatNumber(r.comments_count)}</Chip>
+                                        </View>
+                                    </Card.Content>
+                                </Card>
+                            ))}
+                        </View>
+                    </ScrollView>
+                </Card.Content>
+            </Card>
+        ) : null
+    )
+
+    const LinksList = ({ social }: { social: ISocials }) => (
+        Array.isArray(social.links) && social.links.length > 0 ? (
+            <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+                <Card.Title title="Links" />
+                <Card.Content>
+                    <List.Section>
+                        {social.links.map((l, idx) => (
+                            <List.Item
+                                key={`${l.url}-${idx}`}
+                                title={l.text || l.url}
+                                description={l.url}
+                                onPress={() => Linking.openURL(l.url)}
+                                left={(props) => <List.Icon {...props} icon="link-variant" />}
+                                right={(props) => <List.Icon {...props} icon="open-in-new" />}
+                            />
+                        ))}
+                    </List.Section>
+                </Card.Content>
+            </Card>
+        ) : null
+    )
+
+    const MetaCard = ({ social }: { social: ISocials }) => (
+        <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <Card.Title title="Meta" />
+            <Card.Content>
+                <List.Section>
+                    <List.Item title="ID" description={social.id} left={(p) => <List.Icon {...p} icon="identifier" />} />
+                    <List.Item title="Last Updated" description={formatDate(social.last_update_time / 1000000)} left={(p) => <List.Icon {...p} icon="update" />} />
+                    <List.Item title="Platform" description={social.social_type || '—'} left={(p) => <List.Icon {...p} icon="target" />} />
+                </List.Section>
+            </Card.Content>
+        </Card>
+    )
+
     return (
         <Card.Content>
             {loading && <ActivityIndicator size={'small'} />}
@@ -98,185 +279,13 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
 
             {!loading && social && (
                 <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
-                    {/* Header */}
-                    {analytics && (
-                        <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                                <Card style={{ width: '31%', marginBottom: 12 }}>
-                                    <Card.Content>
-                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Quality</Text>
-                                        <Text variant="displaySmall">{analytics.quality}<Text variant="labelLarge">%</Text></Text>
-                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Higher = richer, classy, aesthetic creators</Text>
-                                    </Card.Content>
-                                </Card>
-
-                                <Card style={{ width: '31%', marginBottom: 12 }}>
-                                    <Card.Content>
-                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Trustability</Text>
-                                        <Text variant="displaySmall">{analytics.trustablity}<Text variant="labelLarge">%</Text></Text>
-                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Signals from past collabs, engagement quality</Text>
-                                    </Card.Content>
-                                </Card>
-                                <Card style={{ width: '31%', marginBottom: 12 }}>
-                                    <Card.Content>
-                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>CPM</Text>
-                                        <Text variant="displaySmall">{formatCurrency(analytics.cpm)} </Text>
-                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Cost per Mille (1000 views)</Text>
-                                    </Card.Content>
-                                </Card>
-
-                                <Card style={{ width: '48%', marginBottom: 12 }}>
-                                    <Card.Content>
-                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Estimated Budget</Text>
-                                        <Text variant="headlineLarge">
-                                            {formatCurrency(analytics.estimatedBudget?.min)} — {formatCurrency(analytics.estimatedBudget?.max)}
-                                        </Text>
-                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Typical creator ask for one deliverable</Text>
-                                    </Card.Content>
-                                </Card>
-
-                                <Card style={{ width: '48%', marginBottom: 12 }}>
-                                    <Card.Content>
-                                        <Text variant="labelLarge" style={{ opacity: 0.7, marginBottom: 6 }}>Estimated Reach</Text>
-                                        <Text variant="headlineLarge">
-                                            {formatNumber(analytics.estimatedReach?.min)} — {formatNumber(analytics.estimatedReach?.max)}
-                                        </Text>
-                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>Projected unique views per post</Text>
-                                    </Card.Content>
-                                </Card>
-                            </View>
-                        </View>
-                    )}
-                    <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                        <Card.Title
-                            title={social.name || social.username}
-                            subtitle={[social.username ? `@${social.username}` : '', social.category].filter(Boolean).join(' · ')}
-                            right={(props) => (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }}>
-                                    {social.profile_verified && <Chip compact icon="check-decagram" style={{ marginRight: 6 }}>Verified</Chip>}
-                                </View>
-                            )}
-                        />
-
-                        <Card.Content>
-                            <Text variant="bodyMedium" style={{ marginBottom: 8 }} numberOfLines={2} >{social.bio != "unknown" ? social.bio : ""}</Text>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                {!!social.location && social.location != "unknown" && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="map-marker">{social.location}</Chip>}
-                                {!!social.gender && social.gender != "unknown" && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="gender-male-female">{social.gender}</Chip>}
-                                {typeof social.quality_score === 'number' && (
-                                    <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="star" >Quality: {social.quality_score}/100</Chip>
-                                )}
-                                {/* {social.has_contacts && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="card-account-mail">Has Contacts</Chip>}
-                                {social.has_follow_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="account-plus">Follow Enabled</Chip>}
-                                {social.has_message_button && <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="message-text">DM Enabled</Chip>} */}
-                            </View>
-
-                            {Array.isArray(social.niches) && social.niches.length > 0 && (
-                                <View style={{ marginTop: 8 }}>
-                                    <Text variant="labelLarge" style={{ marginBottom: 6 }}>Niches</Text>
-                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                        {social.niches.map((n) => (
-                                            <Chip key={n} style={{ marginRight: 8, marginBottom: 8 }}>{n}</Chip>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
-                        </Card.Content>
-
-                    </Card>
-
-                    {/* Totals */}
-                    <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                        <Card.Title title="Totals" />
-                        <Card.Content>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                <StatChip label="Followers" value={social.follower_count} />
-                                <StatChip label="Following" value={social.following_count} />
-                                <StatChip label="Posts" value={social.content_count} />
-                                <StatChip label="Total Views" value={social.views_count} />
-                                <StatChip label="Total Engagements" value={social.engagement_count} />
-                                {/* <StatChip label="Reels Scraped" value={social.reel_scrapped_count} /> */}
-                            </View>
-                        </Card.Content>
-                    </Card>
-
-                    {/* Averages & Rates */}
-                    <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                        <Card.Title title="Averages & Rates" />
-                        <Card.Content>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                <StatChip label="Median Views" value={social.average_views} />
-                                <StatChip label="Median Likes" value={social.average_likes} />
-                                <StatChip label="Median Comments" value={social.average_comments} />
-                                <StatChip label="Engagement Rate %" value={(social.engagement_rate || 0)} />
-                                <StatChip label="Quality Score" value={social.quality_score} />
-                            </View>
-                        </Card.Content>
-                    </Card>
-
-                    {/* Reels */}
-                    {Array.isArray(social.reels) && social.reels.length > 0 && (
-                        <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                            <Card.Title title={`Reels`} />
-                            <Card.Content>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                    <View style={{ flexDirection: 'row' }}>
-                                        {social.reels.map((r) => (
-                                            <Card key={r.id} style={{ width: 140, marginRight: 12 }} onPress={() => r.url && Linking.openURL(r.url)}>
-                                                {!!r.thumbnail_url && (
-                                                    <Image source={{ uri: r.thumbnail_url }} style={{ width: '100%', height: 180, borderTopLeftRadius: 12, borderTopRightRadius: 12 }} />
-                                                )}
-                                                <Card.Content>
-                                                    <Text numberOfLines={2} variant="bodySmall" style={{ marginTop: 6 }}>{r.caption || 'Reel'}</Text>
-                                                    <Divider style={{ marginVertical: 6 }} />
-                                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                                                        <Chip compact style={{ marginRight: 6, marginBottom: 6 }} icon="play-circle">{formatNumber(r.views_count)}</Chip>
-                                                        <Chip compact style={{ marginRight: 6, marginBottom: 6 }} icon="heart">{formatNumber(r.likes_count)}</Chip>
-                                                        <Chip compact style={{ marginRight: 6, marginBottom: 6 }} icon="comment-text">{formatNumber(r.comments_count)}</Chip>
-                                                    </View>
-                                                </Card.Content>
-                                            </Card>
-                                        ))}
-                                    </View>
-                                </ScrollView>
-                            </Card.Content>
-                        </Card>
-                    )}
-
-                    {/* Links */}
-                    {Array.isArray(social.links) && social.links.length > 0 && (
-                        <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                            <Card.Title title="Links" />
-                            <Card.Content>
-                                <List.Section>
-                                    {social.links.map((l, idx) => (
-                                        <List.Item
-                                            key={`${l.url}-${idx}`}
-                                            title={l.text || l.url}
-                                            description={l.url}
-                                            onPress={() => Linking.openURL(l.url)}
-                                            left={(props) => <List.Icon {...props} icon="link-variant" />}
-                                            right={(props) => <List.Icon {...props} icon="open-in-new" />}
-                                        />
-                                    ))}
-                                </List.Section>
-                            </Card.Content>
-                        </Card>
-                    )}
-
-                    {/* Meta */}
-                    <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                        <Card.Title title="Meta" />
-                        <Card.Content>
-                            <List.Section>
-                                <List.Item title="ID" description={social.id} left={(p) => <List.Icon {...p} icon="identifier" />} />
-                                {/* <List.Item title="Added By" description={social.added_by || '—'} left={(p) => <List.Icon {...p} icon="account-badge" />} /> */}
-                                {/* <List.Item title="Created" description={formatDate(social.creation_time)} left={(p) => <List.Icon {...p} icon="calendar-plus" />} /> */}
-                                <List.Item title="Last Updated" description={formatDate(social.last_update_time / 1000000)} left={(p) => <List.Icon {...p} icon="update" />} />
-                                <List.Item title="Platform" description={social.social_type || '—'} left={(p) => <List.Icon {...p} icon="target" />} />
-                            </List.Section>
-                        </Card.Content>
-                    </Card>
+                    {analytics && <HeaderCards analytics={analytics} />}
+                    <ProfileOverviewCard social={social} />
+                    <TotalsCard social={social} />
+                    <AveragesCard social={social} />
+                    <ReelsCard social={social} />
+                    <LinksList social={social} />
+                    <MetaCard social={social} />
                 </ScrollView>
             )}
         </Card.Content>
