@@ -1050,6 +1050,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               isPhoneMasked={false}
               trendlySocial={trendlySocial}
               trendlyAnalytics={trendlyAnalytics}
+              isDiscoverView={true}
               actionCard={
                 <View
                   style={{

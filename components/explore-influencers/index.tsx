@@ -379,7 +379,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
               )}
               objectKey='id'
               vertical={true}
-              width={width} // Default width if not provided
+              width={width} 
               height={height}
               onLoadMore={() => loadMore()}
               onPressView={(item, ind) => {
