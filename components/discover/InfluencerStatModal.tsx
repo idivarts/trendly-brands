@@ -2,16 +2,17 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import { View } from "@/shared-uis/components/theme/Themed";
+import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React from "react";
 import { Dimensions, Linking, ScrollView, StyleSheet, Text } from "react-native";
 import {
-  Card,
-  Divider,
-  IconButton,
-  Modal,
-  Portal
+    Card,
+    Divider,
+    IconButton,
+    Modal,
+    Portal
 } from "react-native-paper";
 import Toast from "react-native-toast-message";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
@@ -159,7 +160,7 @@ export const InfluencerStatsModal: React.FC<{
           </ScrollView>
         </Card>
       </Modal>
-      <Toast />
+      <Toast config={toastConfig} />
     </Portal>
   );
 };

@@ -3,6 +3,7 @@ import { ISocialAnalytics, ISocials } from '@/shared-libs/firestore/trendly-pro/
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { View } from '@/shared-uis/components/theme/Themed'
+import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { Brand } from '@/types/Brand'
 import { collection, doc, updateDoc } from 'firebase/firestore'
 import React, { useEffect, useState } from 'react'
@@ -64,10 +65,12 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             setSocial(updatedSocial)
             setIsEditModalVisible(false)
             setEditedSocial({})
+            Toaster.success("Success", "Social metrics updated successfully")
         } catch (e: any) {
             console.error('Error saving social data:', e)
             const errorMessage = e?.message || 'Failed to save changes. Please try again.'
             setSaveError(errorMessage)
+            Toaster.error("Error", errorMessage)
         } finally {
             setIsSaving(false)
         }
