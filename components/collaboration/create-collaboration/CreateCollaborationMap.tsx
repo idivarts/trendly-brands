@@ -5,8 +5,8 @@ import MapView, { Marker, Region } from "react-native-maps";
 import Map from "@/components/map";
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
-import { useTheme } from "@react-navigation/native";
 import { fetchMapRegionAddress } from "@/utils/map";
+import { useTheme } from "@react-navigation/native";
 
 interface CreateCollaborationMapProps {
   mapRegion: any;

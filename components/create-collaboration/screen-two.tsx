@@ -17,9 +17,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import React, { useMemo } from "react";
 import { Platform, useWindowDimensions } from "react-native";
-import { APIProvider } from "@vis.gl/react-google-maps";
 import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import { View } from "../theme/Themed";
