@@ -6,9 +6,13 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials, SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
+import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -24,22 +28,19 @@ import {
 import {
   ActivityIndicator,
   Button,
+  Card,
   Chip,
   Divider,
   IconButton,
   Menu,
-  Portal,
-  Card,
   Text as PaperText,
+  Portal,
 } from "react-native-paper";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
-import { User } from "@/types/User";
-import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
+import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
+import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
 // 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
@@ -1042,7 +1043,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
           snapPointsRange={["90%", "90%"]}
           onClose={closeProfileModal}
         >
-          {selectedInfluencer && (
+          {selectedInfluencer && selectedBrand && (
             <ProfileBottomSheet
               influencer={selectedInfluencer as unknown as User}
               theme={theme}
@@ -1052,42 +1053,10 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               trendlyAnalytics={trendlyAnalytics}
               isDiscoverView={true}
               actionCard={
-                <View
-                  style={{
-                    backgroundColor: Colors(theme).transparent,
-                    marginHorizontal: 16,
-                  }}
-                >
-                  <View style={{ marginTop: 12 }}>
-                    {isAnalyticsLoading && (
-                      <View
-                        style={{ alignItems: "center", paddingVertical: 12 }}
-                      >
-                        <ActivityIndicator animating size="small" />
-                      </View>
-                    )}
-                    {!isAnalyticsLoading &&
-                      !trendlyAnalytics &&
-                      !trendlySocial && (
-                        <PaperText
-                          variant="bodySmall"
-                          style={{
-                            opacity: 0.7,
-                            marginHorizontal: 12,
-                            marginBottom: 12,
-                          }}
-                        >
-                          Detailed analytics are not available for this creator
-                          yet.
-                        </PaperText>
-                      )}
-                    {trendlyAnalytics && (
-                      <HeaderCards analytics={trendlyAnalytics} />
-                    )}
-                    {trendlySocial && <AveragesCard social={trendlySocial} />}
-                    {trendlySocial && <ReelsCard social={trendlySocial} />}
-                  </View>
-                </View>
+                <TrendlyAnalyticsEmbed
+                  influencer={selectedInfluencer}
+                  selectedBrand={selectedBrand}
+                />
               }
               FireStoreDB={FirestoreDB}
               isBrandsApp={true}

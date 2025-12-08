@@ -1,10 +1,13 @@
+import { useAuthContext } from '@/contexts/auth-context.provider'
 import { ISocialAnalytics, ISocials } from '@/shared-libs/firestore/trendly-pro/models/bq-socials'
+import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { View } from '@/shared-uis/components/theme/Themed'
 import { Brand } from '@/types/Brand'
+import { collection, doc, updateDoc } from 'firebase/firestore'
 import React, { useEffect, useState } from 'react'
-import { Image, Linking, ScrollView } from 'react-native'
-import { ActivityIndicator, Card, Chip, Divider, List, Text } from 'react-native-paper'
+import { Image, Linking, Modal, ScrollView } from 'react-native'
+import { ActivityIndicator, Button, Card, Chip, Divider, List, Text, TextInput } from 'react-native-paper'
 import { InfluencerItem, StatChip } from '../DiscoverInfluencer'
 
 interface IProps {
@@ -13,9 +16,16 @@ interface IProps {
 }
 
 const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) => {
+    const { manager } = useAuthContext()
     const [loading, setLoading] = useState(false)
     const [social, setSocial] = useState<ISocials | null>(null)
     const [analytics, setAnalytics] = useState<ISocialAnalytics | null>(null)
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
+    const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({})
+    const isAdmin = manager?.isAdmin === true
+    const hasChanges = Object.keys(editedSocial).length > 0
 
     const loadInfluencer = async () => {
         try {
@@ -36,6 +46,38 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             // no-op; you can hook to your toast/snackbar here
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleSaveChanges = async () => {
+        if (!social?.id || !hasChanges) return
+        
+        try {
+            setIsSaving(true)
+            setSaveError(null)
+            const updatedSocial = { ...social, ...editedSocial }
+            const col = collection(FirestoreDB, "scrapped-socials")
+            const docRef = doc(col, social.id)
+            
+            await updateDoc(docRef, updatedSocial)
+            
+            setSocial(updatedSocial)
+            setIsEditModalVisible(false)
+            setEditedSocial({})
+        } catch (e: any) {
+            console.error('Error saving social data:', e)
+            const errorMessage = e?.message || 'Failed to save changes. Please try again.'
+            setSaveError(errorMessage)
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleEditClick = () => {
+        if (social) {
+            setEditedSocial({})
+            setSaveError(null)
+            setIsEditModalVisible(true)
         }
     }
 
@@ -78,13 +120,6 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             return `${epoch}`
         }
     }
-
-    // const primaryLink = useMemo(() => {
-    //     if (!social?.links?.length) return null
-    //     // Prefer profile-like links first
-    //     const profileLike = social.links.find(l => /instagram|tiktok|youtube|facebook|x\.com|twitter/i.test(l.url))
-    //     return profileLike || social.links[0]
-    // }, [social])
 
     const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => (
         <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
@@ -268,27 +303,197 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
     )
 
     return (
-        <Card.Content>
-            {loading && <ActivityIndicator size={'small'} />}
+        <>
+            <Card.Content>
+                {loading && <ActivityIndicator size={'small'} />}
 
-            {!loading && !social && (
-                <Text variant="bodyMedium" style={{ opacity: 0.7, paddingHorizontal: 16, marginBottom: 12 }}>
-                    Detailed analytics are not available for this creator yet.
-                </Text>
-            )}
+                {!loading && !social && (
+                    <Text variant="bodyMedium" style={{ opacity: 0.7, paddingHorizontal: 16, marginBottom: 12 }}>
+                        Detailed analytics are not available for this creator yet.
+                    </Text>
+                )}
 
-            {!loading && social && (
-                <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
-                    {analytics && <HeaderCards analytics={analytics} />}
-                    <ProfileOverviewCard social={social} />
-                    <TotalsCard social={social} />
-                    <AveragesCard social={social} />
-                    <ReelsCard social={social} />
-                    <LinksList social={social} />
-                    <MetaCard social={social} />
-                </ScrollView>
-            )}
-        </Card.Content>
+                {!loading && social && (
+                    <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
+                        {isAdmin && (
+                            <Button
+                                mode="contained"
+                                onPress={handleEditClick}
+                                style={{ marginHorizontal: 12, marginBottom: 12 }}
+                                icon="pencil"
+                            >
+                                Edit Metrics
+                            </Button>
+                        )}
+                        {analytics && <HeaderCards analytics={analytics} />}
+                        <ProfileOverviewCard social={social} />
+                        <TotalsCard social={social} />
+                        <AveragesCard social={social} />
+                        <ReelsCard social={social} />
+                        <LinksList social={social} />
+                        <MetaCard social={social} />
+                    </ScrollView>
+                )}
+            </Card.Content>
+
+            <Modal
+                visible={isEditModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setIsEditModalVisible(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', padding: 16 }}>
+                    <View style={{ backgroundColor: 'white', borderRadius: 16, maxHeight: '85%', paddingVertical: 20, paddingHorizontal: 0 }}>
+                        <View style={{ paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+                            <Text variant="headlineSmall">Edit Social Metrics</Text>
+                        </View>
+                        
+                        {saveError && (
+                            <View style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#ffebee', borderBottomWidth: 1, borderBottomColor: '#ffcdd2' }}>
+                                <Text style={{ color: '#c62828', fontSize: 14 }}>
+                                    {saveError}
+                                </Text>
+                            </View>
+                        )}
+                        
+                        <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
+                            <Text variant="labelLarge" style={{ marginTop: 16, marginBottom: 6 }}>Name</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Name"
+                                value={editedSocial.name ?? social?.name ?? ''}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, name: text })}
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Bio</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Bio"
+                                value={editedSocial.bio ?? social?.bio ?? ''}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, bio: text })}
+                                multiline
+                                numberOfLines={3}
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Category</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Category"
+                                value={editedSocial.category ?? social?.category ?? ''}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, category: text })}
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Location</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Location"
+                                value={editedSocial.location ?? social?.location ?? ''}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, location: text })}
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Gender</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Gender"
+                                value={editedSocial.gender ?? social?.gender ?? ''}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, gender: text })}
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Niches (comma-separated)</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Niches"
+                                value={editedSocial.niches ? editedSocial.niches.join(', ') : (social?.niches?.join(', ') ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, niches: text.split(',').map(n => n.trim()).filter(Boolean) })}
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Follower Count</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Followers"
+                                value={String(editedSocial.follower_count ?? social?.follower_count ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, follower_count: parseInt(text) || 0 })}
+                                keyboardType="numeric"
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Following Count</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Following"
+                                value={String(editedSocial.following_count ?? social?.following_count ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, following_count: parseInt(text) || 0 })}
+                                keyboardType="numeric"
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Content Count</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Posts"
+                                value={String(editedSocial.content_count ?? social?.content_count ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, content_count: parseInt(text) || 0 })}
+                                keyboardType="numeric"
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Views Count</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Total Views"
+                                value={String(editedSocial.views_count ?? social?.views_count ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, views_count: parseInt(text) || 0 })}
+                                keyboardType="numeric"
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Engagement Count</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Total Engagements"
+                                value={String(editedSocial.engagement_count ?? social?.engagement_count ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, engagement_count: parseInt(text) || 0 })}
+                                keyboardType="numeric"
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Quality Score</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Quality Score (0-100)"
+                                value={String(editedSocial.quality_score ?? social?.quality_score ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, quality_score: parseInt(text) || 0 })}
+                                keyboardType="numeric"
+                                style={{ marginBottom: 12 }}
+                            />
+
+                            <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Engagement Rate (%)</Text>
+                            <TextInput
+                                mode="outlined"
+                                label="Engagement Rate"
+                                value={String(editedSocial.engagement_rate ?? social?.engagement_rate ?? '')}
+                                onChangeText={(text) => setEditedSocial({ ...editedSocial, engagement_rate: parseFloat(text) || 0 })}
+                                keyboardType="decimal-pad"
+                                style={{ marginBottom: 20 }}
+                            />
+                        </ScrollView>
+
+                        <View style={{ paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#e0e0e0', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                            <Button onPress={() => setIsEditModalVisible(false)}>Cancel</Button>
+                            <Button mode="contained" onPress={handleSaveChanges} loading={isSaving} disabled={isSaving || !hasChanges}>
+                                Save
+                            </Button>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </>
     )
 }
 
