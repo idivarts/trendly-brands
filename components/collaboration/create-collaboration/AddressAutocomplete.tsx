@@ -1,12 +1,12 @@
-import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
 import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
-import {
-  GooglePlacesAutocomplete as GooglePlacesAutocompleteNative,
-  GooglePlacesAutocompleteRef as GooglePlacesAutocompleteRefNative,
-} from "react-native-google-places-autocomplete";
+import { useEffect, useRef } from "react";
 import GooglePlacesAutocomplete from 'react-google-autocomplete';
+import { Platform } from "react-native";
+import {
+    GooglePlacesAutocomplete as GooglePlacesAutocompleteNative,
+    GooglePlacesAutocompleteRef as GooglePlacesAutocompleteRefNative,
+} from "react-native-google-places-autocomplete";
 
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { calculateDelta, fetchLatLngFromPlaceId } from "@/utils/map";

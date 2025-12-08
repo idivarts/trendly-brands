@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
-import { APIProvider } from "@vis.gl/react-google-maps";
 
 import Map from "@/components/map";
 import { View } from "@/components/theme/Themed";
@@ -83,14 +82,10 @@ const CreateCollaborationMap: React.FC<CreateCollaborationMapProps> = ({
 
   if (Platform.OS === 'web') {
     return (
-      <APIProvider
-        apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY!}
-      >
-        <Map
-          location={webMapRegion}
-          onLocationChange={onWebLocationChange}
-        />
-      </APIProvider>
+      <Map
+        location={webMapRegion}
+        onLocationChange={onWebLocationChange}
+      />
     );
   };
 

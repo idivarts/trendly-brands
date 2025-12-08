@@ -18,7 +18,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { useWindowDimensions } from "react-native";
+import { Platform, useWindowDimensions } from "react-native";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import { View } from "../theme/Themed";
@@ -234,21 +235,38 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
           />
         </ContentWrapper>
         {collaboration.location?.type === "On-Site" && (
-          <View
-            style={{
-              gap: 16,
-            }}
-          >
-            <AddressAutocomplete
-              collaboration={collaboration}
-              mapRegion={mapRegion}
-              setCollaboration={setCollaboration}
-            />
-            <CreateCollaborationMap
-              mapRegion={mapRegion.state}
-              onLocationChange={onLocationChange}
-            />
-          </View>
+          Platform.OS === "web" ? (
+            <APIProvider
+              apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY!}
+            >
+              <View
+                style={{
+                  gap: 16,
+                }}
+              >
+                <CreateCollaborationMap
+                  mapRegion={mapRegion.state}
+                  onLocationChange={onLocationChange}
+                />
+              </View>
+            </APIProvider>
+          ) : (
+            <View
+              style={{
+                gap: 16,
+              }}
+            >
+              <AddressAutocomplete
+                collaboration={collaboration}
+                mapRegion={mapRegion}
+                setCollaboration={setCollaboration}
+              />
+              <CreateCollaborationMap
+                mapRegion={mapRegion.state}
+                onLocationChange={onLocationChange}
+              />
+            </View>
+          )
         )}
 
         <Button
