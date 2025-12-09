@@ -43,26 +43,26 @@ const BOTTOM_MENU_ITEMS = (
   name?: string,
   profileImage?: string
 ): Tab[] => [
-  {
-    href: "/onboarding-your-brand",
-    icon: () => <DrawerIcon href="/onboarding-your-brand" icon={faPlus} />,
-    label: "Create New Brand",
-  },
-  {
-    href: "/profile",
-    icon: () => (
-      <ImageComponent
-        url={profileImage || ""}
-        initials={name}
-        shape="circle"
-        size="small"
-        altText="Image"
-        style={{ width: 24, height: 24 }}
-      />
-    ),
-    label: name || "Profile",
-  },
-];
+    {
+      href: "/onboarding-your-brand",
+      icon: () => <DrawerIcon href="/onboarding-your-brand" icon={faPlus} />,
+      label: "Create New Brand",
+    },
+    {
+      href: "/profile",
+      icon: () => (
+        <ImageComponent
+          url={profileImage || ""}
+          initials={name}
+          shape="circle"
+          size="small"
+          altText="Image"
+          style={{ width: 24, height: 24 }}
+        />
+      ),
+      label: name || "Profile",
+    },
+  ];
 // Brand Details menu items
 const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
   // {
@@ -100,18 +100,18 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
 // Showcase menu items
 const SHOWCASE_MENU_ITEMS = (theme: Theme): Tab[] => [
   {
-    href: "/preferences",
-    icon: () => <DrawerIcon href="" icon={faSliders} />,
-    label: "Influencer Preferences",
-  },
-  {
     href: "/explore-influencers",
     icon: () => <DrawerIcon href="/explore-influencers" icon={faStar} />,
-    label: "Spotlight Preferences",
+    label: "Influencer Spotlights",
+  },
+  {
+    href: "/preferences",
+    icon: () => <DrawerIcon href="" icon={faSliders} />,
+    label: "Preferences",
   },
 ];
 
-interface DrawerMenuContentProps {}
+interface DrawerMenuContentProps { }
 
 const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
   {
@@ -276,7 +276,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                   title={`You’re on ${selectedBrand.billing.planKey} plan's Trial`}
                   description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
                     ((selectedBrand.billing?.trialEnds || 0) - Date.now()) /
-                      (1000 * 60 * 60)
+                    (1000 * 60 * 60)
                   )} hours`}
                   buttonText="Pay Now"
                   customUrl={selectedBrand.billing.subscriptionUrl}
@@ -370,11 +370,11 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                   color: Colors(theme).text,
                 }}
               >
-                Showcase
-              </Text>
+                Showcase (Already Joined)
+              </Text >
               <DrawerIcon icon={faChevronRight} size={12} />
-            </View>
-          </Pressable>
+            </View >
+          </Pressable >
 
           <View
             style={{
@@ -387,65 +387,67 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
               <DrawerMenuItem key={`showcase-${idx}`} tab={tab} />
             ))}
           </View>
-        </View>
+        </View >
 
         {/* Admin Section */}
-        {manager?.isAdmin && (
-          <View style={{ marginTop: 16, gap: 8 }}>
-            <Pressable
-              onPress={() => {
-                console.log("🛡️ Admin Portal clicked");
-              }}
-              onHoverIn={() => setIsAdminHovered(true)}
-              onHoverOut={() => setIsAdminHovered(false)}
-            >
-              <View
-                style={[
-                  {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: -10,
-                    paddingHorizontal: 8,
-                    paddingVertical: 12,
-                  },
-                  isAdminHovered && {
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: Colors(theme).border,
-                  },
-                ]}
+        {
+          manager?.isAdmin && (
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <Pressable
+                onPress={() => {
+                  console.log("🛡️ Admin Portal clicked");
+                }}
+                onHoverIn={() => setIsAdminHovered(true)}
+                onHoverOut={() => setIsAdminHovered(false)}
               >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    opacity: 0.7,
-                    color: Colors(theme).text,
-                  }}
+                <View
+                  style={[
+                    {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: -10,
+                      paddingHorizontal: 8,
+                      paddingVertical: 12,
+                    },
+                    isAdminHovered && {
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: Colors(theme).border,
+                    },
+                  ]}
                 >
-                  Admin Portal
-                </Text>
-                <DrawerIcon icon={faChevronRight} size={12} />
-              </View>
-            </Pressable>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "600",
+                      opacity: 0.7,
+                      color: Colors(theme).text,
+                    }}
+                  >
+                    Admin Portal
+                  </Text>
+                  <DrawerIcon icon={faChevronRight} size={12} />
+                </View>
+              </Pressable>
 
-            <View
-              style={{
-                borderTopColor: Colors(theme).border,
-                borderTopWidth: StyleSheet.hairlineWidth,
-              }}
-            />
-            <View style={{ gap: 0 }}>
-              {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
-                <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
-              ))}
+              <View
+                style={{
+                  borderTopColor: Colors(theme).border,
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                }}
+              />
+              <View style={{ gap: 0 }}>
+                {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
+                  <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
+                ))}
+              </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )
+        }
+      </ScrollView >
 
       {/* Bottom Actions */}
-      <View
+      < View
         style={{
           paddingHorizontal: 8,
           paddingTop: 4,
@@ -455,13 +457,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
           gap: 4,
         }}
       >
-        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map(
-          (tab, idx) => (
-            <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
+        {
+          BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map(
+            (tab, idx) => (
+              <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
+            )
           )
-        )}
-      </View>
-    </View>
+        }
+      </View >
+    </View >
   );
 };
 
