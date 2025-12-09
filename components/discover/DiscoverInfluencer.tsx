@@ -4,7 +4,7 @@ import {
 } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
+import { ISocialAnalytics, ISocials, SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { View } from "@/shared-uis/components/theme/Themed";
@@ -14,8 +14,10 @@ import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  Image,
   Linking,
   ListRenderItemInfo,
+  ScrollView,
   StyleSheet,
   Text,
 } from "react-native";
@@ -26,11 +28,18 @@ import {
   Divider,
   IconButton,
   Menu,
+  Portal,
+  Card,
+  Text as PaperText,
 } from "react-native-paper";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
+import { User } from "@/types/User";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
-import { InfluencerStatsModal } from "./InfluencerStatModal";
+import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 
 // type SocialsBreif struct {
 // 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
@@ -203,13 +212,31 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     isCollapsed,
     showTopPanel,
   } = useDiscovery();
+  const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
   const theme = useTheme();
   const colors = Colors(theme);
   const styles = useMemo(() => useStyles(colors), [colors]);
 
   const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
-  const [statsItem, setStatsItemNative] = useState<InfluencerItem | null>(null);
-  const setStatsItem = (data: InfluencerItem | null) => {
+  const [selectedInfluencer, setSelectedInfluencer] =
+    useState<InfluencerItem | null>(null);
+  const [openProfileModal, setOpenProfileModal] = useState(false);
+  const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
+  const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<InfluencerItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
+    null
+  );
+  const { openModal } = useConfirmationModel();
+
+  const { xl } = useBreakpoints();
+
+  // collaborations are fetched inside InviteToCampaignModal when it mounts
+  const openProfile = (data: InfluencerItem | null) => {
     if (
       (selectedBrand?.credits?.discovery || 0) <= 0 &&
       data &&
@@ -227,21 +254,17 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
       return;
     }
 
-    setStatsItemNative(data);
+    setSelectedInfluencer(data);
+    setOpenProfileModal(!!data);
   };
 
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<InfluencerItem[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
-    null
-  );
-  const { selectedBrand } = useBrandContext();
-  const { openModal } = useConfirmationModel();
-
-  const { xl } = useBreakpoints();
-
-  // collaborations are fetched inside InviteToCampaignModal when it mounts
+  const closeProfileModal = () => {
+    setOpenProfileModal(false);
+    setSelectedInfluencer(null);
+    setTrendlyAnalytics(null);
+    setTrendlySocial(null);
+    setIsAnalyticsLoading(false);
+  };
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageCount, setPageCount] = useState<number>(20);
@@ -289,9 +312,59 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     }
   }, [defaultAdvanceFilters]);
 
-  const onOpenProfile = useCallback((url: string) => {
-    Linking.openURL(url);
-  }, []);
+  useEffect(() => {
+    if (
+      !openProfileModal ||
+      !selectedInfluencer?.id ||
+      !selectedBrand?.id ||
+      selectedDb !== "trendly"
+    ) {
+      setTrendlyAnalytics(null);
+      setTrendlySocial(null);
+      setIsAnalyticsLoading(false);
+      return;
+    }
+
+    let isActive = true;
+    setIsAnalyticsLoading(true);
+    setTrendlyAnalytics(null);
+    setTrendlySocial(null);
+
+    HttpWrapper.fetch(
+      `/discovery/brands/${selectedBrand.id}/influencers/${selectedInfluencer.id}`,
+      {
+        method: "GET",
+        headers: {
+          "content-type": "application/json",
+        },
+      }
+    )
+      .then(async (res) => {
+        const body = await res.json();
+        if (!isActive) return;
+        const analytics = body?.analysis as ISocialAnalytics | undefined;
+        const social = body?.social as ISocials | undefined;
+        setTrendlyAnalytics(analytics || null);
+        setTrendlySocial(social || null);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setTrendlyAnalytics(null);
+        setTrendlySocial(null);
+      })
+      .finally(() => {
+        if (isActive) setIsAnalyticsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    openProfileModal,
+    selectedBrand?.id,
+    selectedDb,
+    selectedInfluencer?.id,
+  ]);
 
   const columns = xl ? 2 : 1;
   const [key, setKey] = useState(0);
@@ -315,7 +388,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
           <InfluencerCard
             item={item}
             isCollapsed={isCollapsed}
-            onPress={() => setStatsItem(item)}
+            onPress={() => openProfile(item)}
             openModal={openModal}
             isSelected={selectedIds.includes(item.id)}
             onToggleSelect={() => toggleSelect(item.id)}
@@ -324,7 +397,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         </View>
       );
     },
-    [isCollapsed, openModal, setStatsItem]
+    [isCollapsed, openModal, openProfile, selectedIds]
   );
 
   const keyExtractor = useCallback((i: InfluencerItem) => i.id, []);
@@ -355,6 +428,230 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     for (let i = start; i <= end; i++) pages.push(i);
     return pages;
   }, [currentPage, pageCount]);
+
+  const formatAnalyticsNumber = (n?: number | null) => {
+    if (n === null || n === undefined) return "—";
+    try {
+      return new Intl.NumberFormat(undefined, {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(n);
+    } catch {
+      return `${n}`;
+    }
+  };
+
+  const formatCurrency = (n?: number | null) => {
+    if (n === null || n === undefined) return "—";
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: "INR",
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(n);
+    } catch {
+      return `₹${formatAnalyticsNumber(n)}`;
+    }
+  };
+
+  const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => (
+    <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+        }}
+      >
+        <Card style={{ width: "31%", marginBottom: 12 }}>
+          <Card.Content>
+            <PaperText
+              variant="labelLarge"
+              style={{ opacity: 0.7, marginBottom: 6 }}
+            >
+              Quality
+            </PaperText>
+            <PaperText variant="displaySmall">
+              {analytics.quality}
+              <PaperText variant="labelLarge">%</PaperText>
+            </PaperText>
+            <PaperText
+              variant="bodySmall"
+              style={{ opacity: 0.7, marginTop: 6 }}
+            >
+              Higher = richer, classy, aesthetic creators
+            </PaperText>
+          </Card.Content>
+        </Card>
+
+        <Card style={{ width: "31%", marginBottom: 12 }}>
+          <Card.Content>
+            <PaperText
+              variant="labelLarge"
+              style={{ opacity: 0.7, marginBottom: 6 }}
+            >
+              Trustability
+            </PaperText>
+            <PaperText variant="displaySmall">
+              {analytics.trustablity}
+              <PaperText variant="labelLarge">%</PaperText>
+            </PaperText>
+            <PaperText
+              variant="bodySmall"
+              style={{ opacity: 0.7, marginTop: 6 }}
+            >
+              Signals from past collabs, engagement quality
+            </PaperText>
+          </Card.Content>
+        </Card>
+        <Card style={{ width: "31%", marginBottom: 12 }}>
+          <Card.Content>
+            <PaperText
+              variant="labelLarge"
+              style={{ opacity: 0.7, marginBottom: 6 }}
+            >
+              CPM
+            </PaperText>
+            <PaperText variant="displaySmall">
+              {formatCurrency(analytics.cpm)}{" "}
+            </PaperText>
+            <PaperText
+              variant="bodySmall"
+              style={{ opacity: 0.7, marginTop: 6 }}
+            >
+              Cost per Mille (1000 views)
+            </PaperText>
+          </Card.Content>
+        </Card>
+
+        <Card style={{ width: "48%", marginBottom: 12 }}>
+          <Card.Content>
+            <PaperText
+              variant="labelLarge"
+              style={{ opacity: 0.7, marginBottom: 6 }}
+            >
+              Estimated Budget
+            </PaperText>
+            <PaperText variant="headlineLarge">
+              {formatCurrency(analytics.estimatedBudget?.min)} —{" "}
+              {formatCurrency(analytics.estimatedBudget?.max)}
+            </PaperText>
+            <PaperText
+              variant="bodySmall"
+              style={{ opacity: 0.7, marginTop: 6 }}
+            >
+              Typical creator ask for one deliverable
+            </PaperText>
+          </Card.Content>
+        </Card>
+
+        <Card style={{ width: "48%", marginBottom: 12 }}>
+          <Card.Content>
+            <PaperText
+              variant="labelLarge"
+              style={{ opacity: 0.7, marginBottom: 6 }}
+            >
+              Estimated Reach
+            </PaperText>
+            <PaperText variant="headlineLarge">
+              {formatAnalyticsNumber(analytics.estimatedReach?.min)} —{" "}
+              {formatAnalyticsNumber(analytics.estimatedReach?.max)}
+            </PaperText>
+            <PaperText
+              variant="bodySmall"
+              style={{ opacity: 0.7, marginTop: 6 }}
+            >
+              Projected unique views per post
+            </PaperText>
+          </Card.Content>
+        </Card>
+      </View>
+    </View>
+  );
+
+  const AveragesCard = ({ social }: { social: ISocials }) => (
+    <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+      <Card.Title title="Averages & Rates" />
+      <Card.Content>
+        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+          <StatChip label="Median Views" value={social.average_views} />
+          <StatChip label="Median Likes" value={social.average_likes} />
+          <StatChip label="Median Comments" value={social.average_comments} />
+          <StatChip
+            label="Engagement Rate %"
+            value={social.engagement_rate || 0}
+          />
+          <StatChip label="Quality Score" value={social.quality_score} />
+        </View>
+      </Card.Content>
+    </Card>
+  );
+
+  const ReelsCard = ({ social }: { social: ISocials }) =>
+    Array.isArray(social.reels) && social.reels.length > 0 ? (
+      <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+        <Card.Title title={`Reels`} />
+        <Card.Content>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: "row" }}>
+              {social.reels.map((r) => (
+                <Card
+                  key={r.id}
+                  style={{ width: 140, marginRight: 12 }}
+                  onPress={() => r.url && Linking.openURL(r.url)}
+                >
+                  {!!r.thumbnail_url && (
+                    <Image
+                      source={{ uri: r.thumbnail_url }}
+                      style={{
+                        width: "100%",
+                        height: 180,
+                        borderTopLeftRadius: 12,
+                        borderTopRightRadius: 12,
+                      }}
+                    />
+                  )}
+                  <Card.Content>
+                    <PaperText
+                      numberOfLines={2}
+                      variant="bodySmall"
+                      style={{ marginTop: 6 }}
+                    >
+                      {r.caption || "Reel"}
+                    </PaperText>
+                    <Divider style={{ marginVertical: 6 }} />
+                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                      <Chip
+                        compact
+                        style={{ marginRight: 6, marginBottom: 6 }}
+                        icon="play-circle"
+                      >
+                        {formatAnalyticsNumber(r.views_count)}
+                      </Chip>
+                      <Chip
+                        compact
+                        style={{ marginRight: 6, marginBottom: 6 }}
+                        icon="heart"
+                      >
+                        {formatAnalyticsNumber(r.likes_count)}
+                      </Chip>
+                      <Chip
+                        compact
+                        style={{ marginRight: 6, marginBottom: 6 }}
+                        icon="comment-text"
+                      >
+                        {formatAnalyticsNumber(r.comments_count)}
+                      </Chip>
+                    </View>
+                  </Card.Content>
+                </Card>
+              ))}
+            </View>
+          </ScrollView>
+        </Card.Content>
+      </Card>
+    ) : null;
 
   const { pageSortCommunication } = useDiscovery();
   const onSelectPage = useCallback(
@@ -680,17 +977,18 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
           }
         />
         {selectedIds.length > 0 && (
-          <View
-            style={{
-              position: "absolute",
-              bottom: 20,
-              left: 0,
-              right: 0,
-              alignItems: "center",
-              zIndex: 9999,
-              backgroundColor: "transparent",
-            }}
-          >
+          <Portal>
+            <View
+              style={{
+                position: "absolute",
+                bottom: 20,
+                left: 0,
+                right: 0,
+                alignItems: "center",
+                zIndex: 9999,
+                backgroundColor: "transparent",
+              }}
+            >
             <View
               style={{
                 flexDirection: "row",
@@ -706,11 +1004,12 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 elevation: 6,
                 width: 320,
                 justifyContent: "space-between",
+                
               }}
             >
               {/* Selected Count */}
               <Text style={{ fontSize: 14, fontWeight: "500" }}>
-                {selectedIds.length} item selected
+                {selectedIds.length} {selectedIds.length === 1 ? "item" : "items"} selected
               </Text>
 
               {/* Invite Button */}
@@ -734,17 +1033,69 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 onPress={() => setSelectedIds([])}
               />
             </View>
-          </View>
+            </View>
+          </Portal>
         )}
 
-        {!!statsItem && (
-          <InfluencerStatsModal
-            visible={!!statsItem}
-            item={statsItem}
-            onClose={() => setStatsItem(null)}
-            selectedDb={selectedDb}
-          />
-        )}
+        <BottomSheetScrollContainer
+          isVisible={openProfileModal}
+          snapPointsRange={["90%", "90%"]}
+          onClose={closeProfileModal}
+        >
+          {selectedInfluencer && (
+            <ProfileBottomSheet
+              influencer={selectedInfluencer as unknown as User}
+              theme={theme}
+              isOnFreePlan={isOnFreeTrial}
+              isPhoneMasked={false}
+              trendlySocial={trendlySocial}
+              trendlyAnalytics={trendlyAnalytics}
+              isDiscoverView={true}
+              actionCard={
+                <View
+                  style={{
+                    backgroundColor: Colors(theme).transparent,
+                    marginHorizontal: 16,
+                  }}
+                >
+                  <View style={{ marginTop: 12 }}>
+                    {isAnalyticsLoading && (
+                      <View
+                        style={{ alignItems: "center", paddingVertical: 12 }}
+                      >
+                        <ActivityIndicator animating size="small" />
+                      </View>
+                    )}
+                    {!isAnalyticsLoading &&
+                      !trendlyAnalytics &&
+                      !trendlySocial && (
+                        <PaperText
+                          variant="bodySmall"
+                          style={{
+                            opacity: 0.7,
+                            marginHorizontal: 12,
+                            marginBottom: 12,
+                          }}
+                        >
+                          Detailed analytics are not available for this creator
+                          yet.
+                        </PaperText>
+                      )}
+                    {trendlyAnalytics && (
+                      <HeaderCards analytics={trendlyAnalytics} />
+                    )}
+                    {trendlySocial && <AveragesCard social={trendlySocial} />}
+                    {trendlySocial && <ReelsCard social={trendlySocial} />}
+                  </View>
+                </View>
+              }
+              FireStoreDB={FirestoreDB}
+              isBrandsApp={true}
+              lockProfile={isProfileLocked(selectedInfluencer.id)}
+              closeModal={closeProfileModal}
+            />
+          )}
+        </BottomSheetScrollContainer>
       </View>
     </View>
   );
