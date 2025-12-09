@@ -5,6 +5,14 @@ provider:
   name: aws
   architecture: arm64
   runtime: provided.al2
+  stage: ${opt:stage, 'dev'}
+
+custom:
+  domains:
+    dev:
+      - dev.brands.trendly.now
+    prod:
+      - brands.trendly.now
 
 plugins:
   # - serverless-domain-manager
@@ -15,11 +23,9 @@ constructs:
   trendlyBrands:
     type: single-page-app
     path: dist
-    domain:
-      - brands.trendly.now
-      - brands.trendly.pro
-    redirectToMainDomain: true
-    certificate: arn:aws:acm:us-east-1:730335628944:certificate/63d77810-e7c5-4413-8a22-875b44a0f75d
+    domain: ${self:custom.domains.${sls:stage}}
+    # redirectToMainDomain: true
+    certificate: arn:aws:acm:us-east-1:730335628944:certificate/a9492504-8dff-4ad4-a672-926102597dd0
 
 # Create certificate from AWS dashboard
 # custom:
@@ -44,8 +50,26 @@ constructs:
 
 
 resources:
+  Conditions:
+    IsDev:
+      Fn::Equals: ["${sls:stage}", "dev"]
+    IsProd:
+      Fn::Equals: ["${sls:stage}", "prod"]
+
   Resources:
-    Route53NowRecord:
+    Route53DevRecord:
+      Condition: IsDev
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneId: Z02250033690XMWB8LXL7 # Your HostedZoneId
+        Name: dev.brands.trendly.now
+        Type: A
+        AliasTarget:
+          HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Route53 HostedZoneId. This does not change.
+          DNSName: ${construct:trendlyBrands.cname}
+
+    Route53ProdRecord:
+      Condition: IsProd
       Type: AWS::Route53::RecordSet
       Properties:
         HostedZoneId: Z02250033690XMWB8LXL7 # Your HostedZoneId
@@ -54,13 +78,3 @@ resources:
         AliasTarget:
           HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Route53 HostedZoneId. This does not change.
           DNSName: ${construct:trendlyBrands.cname}
-    Route53Record:
-      Type: AWS::Route53::RecordSet
-      Properties:
-        HostedZoneId: Z041635312HLFEY0WZ4F3 # Your HostedZoneId
-        Name: brands.trendly.pro
-        Type: A
-        AliasTarget:
-          HostedZoneId: Z2FDTNDATAQYW2 # Cloudfront Route53 HostedZoneId. This does not change.
-          DNSName: ${construct:trendlyBrands.cname}
-
