@@ -225,6 +225,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
   const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+  const trendlyAnalyticsRef = React.useRef<any>(null);
 
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<InfluencerItem[]>([]);
@@ -1054,9 +1055,21 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
               isDiscoverView={true}
               actionCard={
                 <TrendlyAnalyticsEmbed
+                  ref={trendlyAnalyticsRef}
                   influencer={selectedInfluencer}
                   selectedBrand={selectedBrand}
                 />
+              }
+              editMetricsButton={
+                trendlyAnalyticsRef.current?.isAdmin ? (
+                  <Button 
+                    mode="contained" 
+                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
+                    icon="pencil"
+                  >
+                    Edit Metrics
+                  </Button>
+                ) : undefined
               }
               FireStoreDB={FirestoreDB}
               isBrandsApp={true}

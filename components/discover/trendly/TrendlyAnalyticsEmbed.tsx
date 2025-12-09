@@ -15,7 +15,7 @@ interface IProps {
     selectedBrand: Brand
 }
 
-const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) => {
+const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(({ influencer, selectedBrand }, ref) => {
     const { manager } = useAuthContext()
     const [loading, setLoading] = useState(false)
     const [social, setSocial] = useState<ISocials | null>(null)
@@ -80,6 +80,12 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             setIsEditModalVisible(true)
         }
     }
+
+    React.useImperativeHandle(ref, () => ({
+        handleEditClick,
+        isAdmin,
+        openEditModal: handleEditClick
+    }), [handleEditClick, isAdmin])
 
     useEffect(() => {
         if (!selectedBrand?.id)
@@ -315,16 +321,6 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
 
                 {!loading && social && (
                     <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
-                        {isAdmin && (
-                            <Button
-                                mode="contained"
-                                onPress={handleEditClick}
-                                style={{ marginHorizontal: 12, marginBottom: 12 }}
-                                icon="pencil"
-                            >
-                                Edit Metrics
-                            </Button>
-                        )}
                         {analytics && <HeaderCards analytics={analytics} />}
                         <ProfileOverviewCard social={social} />
                         <TotalsCard social={social} />
@@ -495,6 +491,7 @@ const TrendlyAnalyticsEmbed: React.FC<IProps> = ({ influencer, selectedBrand }) 
             </Modal>
         </>
     )
-}
+})
 
+TrendlyAnalyticsEmbed.displayName = 'TrendlyAnalyticsEmbed'
 export default TrendlyAnalyticsEmbed
