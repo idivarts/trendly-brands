@@ -1,17 +1,17 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-  useTheme,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
+    useTheme,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import {
-  Stack,
-  useLocalSearchParams,
-  usePathname,
-  useRouter,
-  useSegments,
+    Stack,
+    useLocalSearchParams,
+    usePathname,
+    useRouter,
+    useSegments,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -23,20 +23,21 @@ import DownloadApp from "@/components/download";
 import { useColorScheme } from "@/components/theme/useColorScheme";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
-  AuthContextProvider,
-  AWSContextProvider,
-  useAuthContext
+    AuthContextProvider,
+    AWSContextProvider,
+    useAuthContext
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
+import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
 import Toast from "react-native-toast-message";
 
 export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary
+    // Catch any errors thrown by the Layout component.
+    ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
@@ -127,7 +128,7 @@ const RootLayoutStack = () => {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="+not-found" />
               </Stack>
-              <Toast />
+              <Toast config={toastConfig} />
             </BottomSheetModalProvider>
           </ConfirmationModalProvider>
         </Provider>

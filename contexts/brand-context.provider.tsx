@@ -63,7 +63,7 @@ export const BrandContextProvider: React.FC<PropsWithChildren & { restrictForPay
       Console.log("Setting Brand ID to storage:", brand.id);
       await PersistentStorage.set("selectedBrandId", brand.id)
       if (triggerToast) {
-        Toaster.info("Brand changed to " + brand.name);
+        Toaster.success("Brand changed to " + brand.name);
       }
       setSelectedBrand(brand);
     } else {
