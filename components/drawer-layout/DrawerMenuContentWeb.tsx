@@ -371,10 +371,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                 }}
               >
                 Showcase (Already Joined)
-              </Text >
+              </Text>
               <DrawerIcon icon={faChevronRight} size={12} />
-            </View >
-          </Pressable >
+            </View>
+          </Pressable>
 
           <View
             style={{
@@ -387,67 +387,65 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
               <DrawerMenuItem key={`showcase-${idx}`} tab={tab} />
             ))}
           </View>
-        </View >
+        </View>
 
         {/* Admin Section */}
-        {
-          manager?.isAdmin && (
-            <View style={{ marginTop: 16, gap: 8 }}>
-              <Pressable
-                onPress={() => {
-                  console.log("🛡️ Admin Portal clicked");
-                }}
-                onHoverIn={() => setIsAdminHovered(true)}
-                onHoverOut={() => setIsAdminHovered(false)}
-              >
-                <View
-                  style={[
-                    {
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: -10,
-                      paddingHorizontal: 8,
-                      paddingVertical: 12,
-                    },
-                    isAdminHovered && {
-                      borderWidth: StyleSheet.hairlineWidth,
-                      borderColor: Colors(theme).border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "600",
-                      opacity: 0.7,
-                      color: Colors(theme).text,
-                    }}
-                  >
-                    Admin Portal
-                  </Text>
-                  <DrawerIcon icon={faChevronRight} size={12} />
-                </View>
-              </Pressable>
-
+        {manager?.isAdmin && (
+          <View style={{ marginTop: 16, gap: 8 }}>
+            <Pressable
+              onPress={() => {
+                console.log("🛡️ Admin Portal clicked");
+              }}
+              onHoverIn={() => setIsAdminHovered(true)}
+              onHoverOut={() => setIsAdminHovered(false)}
+            >
               <View
-                style={{
-                  borderTopColor: Colors(theme).border,
-                  borderTopWidth: StyleSheet.hairlineWidth,
-                }}
-              />
-              <View style={{ gap: 0 }}>
-                {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
-                  <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
-                ))}
+                style={[
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: -10,
+                    paddingHorizontal: 8,
+                    paddingVertical: 12,
+                  },
+                  isAdminHovered && {
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: Colors(theme).border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "600",
+                    opacity: 0.7,
+                    color: Colors(theme).text,
+                  }}
+                >
+                  Admin Portal
+                </Text>
+                <DrawerIcon icon={faChevronRight} size={12} />
               </View>
+            </Pressable>
+
+            <View
+              style={{
+                borderTopColor: Colors(theme).border,
+                borderTopWidth: StyleSheet.hairlineWidth,
+              }}
+            />
+            <View style={{ gap: 0 }}>
+              {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
+                <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
+              ))}
             </View>
-          )
-        }
-      </ScrollView >
+          </View>
+        )}
+      </ScrollView>
 
       {/* Bottom Actions */}
-      < View
+      <View
         style={{
           paddingHorizontal: 8,
           paddingTop: 4,
@@ -457,15 +455,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
           gap: 4,
         }}
       >
-        {
-          BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map(
-            (tab, idx) => (
-              <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
-            )
+        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map(
+          (tab, idx) => (
+            <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
           )
-        }
-      </View >
-    </View >
+        )}
+      </View>
+    </View>
   );
 };
 
