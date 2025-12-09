@@ -12,13 +12,13 @@ import { Brand } from "@/types/Brand";
 import { usePathname } from "expo-router";
 import { addDoc, collection, collectionGroup, doc, DocumentData, documentId, DocumentReference, getDocs, onSnapshot, query, setDoc, updateDoc, where } from "firebase/firestore";
 import React, {
-  createContext,
-  type PropsWithChildren,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
+    createContext,
+    type PropsWithChildren,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
 } from "react";
 import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
