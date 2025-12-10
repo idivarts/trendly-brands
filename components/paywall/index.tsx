@@ -11,7 +11,7 @@ import { ScrollView } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import CancelPlanModal from "./CancelPlanModal";
 import PlanWrapper from "./plans/PlanWrapper";
-import RazorpayWebCheckout from "./RazorpayWebCheckout";
+import RazorpayWebCheckout from "../../shared-uis/RazorpayWebCheckout";
 
 const PayWallComponent = () => {
   const theme = useTheme();
@@ -24,14 +24,14 @@ const PayWallComponent = () => {
   const [cancelPlan, setCancelPlan] = useState(false);
 
   const [showRazorpay, setShowRazorpay] = useState(false);
-  const TEST_KEY = "rzp_test_RpYchJZdrqPw36";
+   const RAZORPAY_KEY = process.env.EXPO_PUBLIC_RAZORPAY_KEY || "";
 
   const openTestPayment = () => {
     setShowRazorpay(true);
   };
 
   const razorpayOptions = {
-    key: TEST_KEY,
+    key: RAZORPAY_KEY,
     amount: 5000,
     currency: "INR",
     name: "Trendly Test Payment",
