@@ -113,7 +113,8 @@
     "reanimated-bottom-sheet": "^1.0.0-alpha.22",
     "rxjs": "^7.8.2",
     "stream-chat-expo": "^5.41.2",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "react-native-webview": "^13.8.6"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

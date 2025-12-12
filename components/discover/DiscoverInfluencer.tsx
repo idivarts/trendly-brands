@@ -7,8 +7,10 @@ import { useBreakpoints } from "@/hooks";
 import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
+import RazorpayWebCheckout from "@/shared-uis/RazorpayWebCheckout";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -18,6 +20,7 @@ import {
   ListRenderItemInfo,
   StyleSheet,
   Text,
+  TouchableOpacity,
 } from "react-native";
 import {
   ActivityIndicator,
@@ -26,6 +29,7 @@ import {
   Divider,
   IconButton,
   Menu,
+  Text as PaperText,
 } from "react-native-paper";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
@@ -247,6 +251,26 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
   const [pageCount, setPageCount] = useState<number>(20);
   const [totalResults, setTotalResults] = useState<number>(0);
 
+  const [showRazorpay, setShowRazorpay] = useState(false);
+  const RAZORPAY_KEY = process.env.EXPO_PUBLIC_RAZORPAY_KEY || "";
+
+  const openTestPayment = () => {
+    setShowRazorpay(true);
+  };
+
+  const razorpayOptions = {
+    key: RAZORPAY_KEY,
+    amount: 5000,
+    currency: "INR",
+    name: "Trendly Test Payment",
+    description: "POC Transaction",
+    prefill: {
+      name: "Test User",
+      email: "test@trendly.now",
+      contact: "9999999999",
+    },
+  };
+
   const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const [currentSort, setCurrentSort] = useState<string>("followers");
   const [statusMenuVisible, setStatusMenuVisible] = useState(false);
@@ -417,6 +441,33 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         !xl && rightPanel && { display: "none" },
       ]}
     >
+      <View
+        style={{
+          alignItems: "center",
+          paddingHorizontal: 16,
+          paddingTop: 12,
+        }}
+      >
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={openTestPayment}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+        >
+          <PaperText
+            variant="titleLarge"
+            style={{
+              backgroundColor: theme.colors.primary,
+              color: "white",
+              paddingVertical: 12,
+              paddingHorizontal: 24,
+              borderRadius: 8,
+            }}
+          >
+            Test Payment (POC)
+          </PaperText>
+        </TouchableOpacity>
+      </View>
       {showTopPanel !== false && (
         <View
           style={{
@@ -746,6 +797,20 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
           />
         )}
       </View>
+
+      <RazorpayWebCheckout
+        visible={showRazorpay}
+        options={razorpayOptions}
+        onClose={(res: any) => {
+          setShowRazorpay(false);
+          if (res) {
+            console.log("Payment SUCCESS", res);
+            Toaster.success("Payment Success!", "Transaction completed");
+          } else {
+            Toaster.error("Payment Cancelled");
+          }
+        }}
+      />
     </View>
   );
 };
