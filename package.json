@@ -5,7 +5,7 @@
   "scripts": {
     "start": "expo start --port 8082",
     "android": "expo run:android",
-    "ios": "expo run:ios --port 8082",
+    "ios": "expo run:ios",
     "ios-device": "expo run:ios --device --port 8082",
     "web": "expo start --web",
     "eas-build-pre-install": "./eas-prebuild.sh",

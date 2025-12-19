@@ -76,14 +76,6 @@
     "plugins": [
       "expo-router",
       "expo-apple-authentication",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ],
       "@react-native-google-signin/google-signin",
       [
         "expo-camera",
@@ -122,7 +114,8 @@
       "expo-tracking-transparency"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
       "router": {
