@@ -41,7 +41,12 @@
       "ios": {
         "appleId": "rahul.sinha1908@gmail.com"
       },
-      "android": {}
+      "android": {
+        "serviceAccountKeyPath": "./play-console-service-account.json",
+        "track": "internal",
+        "releaseStatus": "completed",
+        "changesNotSentForReview": true
+      }
     }
   }
 }
