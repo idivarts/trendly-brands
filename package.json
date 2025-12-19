@@ -19,7 +19,7 @@
     "build-android-apk": "export $(cat .env.local | xargs) && eas build --platform android --profile production-apk --local --output build/Trendly.apk",
     "submit-ios": "eas submit -p ios --path build/Trendly.ipa",
     "submit-android": "aws s3 cp build/Trendly.apk s3://trendly-assets/trendly-brand.apk --acl public-read",
-    "postinstall": "npm install --prefix shared-libs && npm install --prefix shared-uis && npm install --prefix shared-constants && node react-native-web-fix.js"
+    "postinstall": "node react-native-web-fix.js"
   },
   "jest": {
     "preset": "jest-expo"
