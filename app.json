@@ -76,6 +76,15 @@
     "plugins": [
       "expo-router",
       "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "buildReactNativeFromSource": true
+          }
+        }
+      ],
       "@react-native-google-signin/google-signin",
       [
         "expo-camera",
