@@ -1,12 +1,14 @@
 import { useStreamTheme } from "@/hooks";
 import { useTheme } from "@react-navigation/native";
 
-import {
+import React, {
     FC,
     PropsWithChildren,
     useEffect,
     useState
 } from 'react';
+import { Chat, OverlayProvider } from "stream-chat-expo";
+import { streamClient } from "./streamClient";
 
 
 const StreamWrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -20,12 +22,11 @@ const StreamWrapper: FC<PropsWithChildren> = ({ children }) => {
     }, [theme]);
 
     return (
-        // <OverlayProvider value={{ style: streamChatTheme }}>
-        //     <Chat client={streamClient}>
-        //         {children}
-        //     </Chat>
-        // </OverlayProvider>
-        children
+        <OverlayProvider value={{ style: streamChatTheme }}>
+            <Chat client={streamClient}>
+                {children}
+            </Chat>
+        </OverlayProvider>
     )
 }
 
