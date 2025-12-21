@@ -44,7 +44,7 @@
       "android": {
         "serviceAccountKeyPath": "./play-console-service-account.json",
         "track": "internal",
-        "releaseStatus": "completed",
+        "releaseStatus": "draft",
         "changesNotSentForReview": true
       }
     }
