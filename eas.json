@@ -23,7 +23,14 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "node": "20.11.1"
+    },
+    "production-apk": {
+      "node": "20.11.1",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
@@ -31,7 +38,12 @@
       "ios": {
         "appleId": "rahul.sinha1908@gmail.com"
       },
-      "android": {}
+      "android": {
+        "serviceAccountKeyPath": "./play-console-service-account.json",
+        "track": "internal",
+        "releaseStatus": "completed",
+        "changesNotSentForReview": true
+      }
     }
   }
 }
