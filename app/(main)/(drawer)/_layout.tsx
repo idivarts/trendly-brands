@@ -18,7 +18,6 @@ const DrawerLayout = () => {
       <CustomDrawerWrapper DrawerContent={<DrawerMenuContent />} isFixed={xl}>
         <Stack
           screenOptions={{
-            animation: "ios",
             headerShown: false,
           }}
         >

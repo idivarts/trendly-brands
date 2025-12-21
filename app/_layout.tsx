@@ -37,7 +37,7 @@ import Toast from "react-native-toast-message";
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
@@ -117,7 +117,6 @@ const RootLayoutStack = () => {
             <BottomSheetModalProvider>
               <Stack
                 screenOptions={{
-                  animation: "ios",
                   headerShown: false,
                 }}
               >

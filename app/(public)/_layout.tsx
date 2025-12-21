@@ -14,7 +14,6 @@ const PublicLayout = () => {
                 >
                     <Stack
                         screenOptions={{
-                            animation: "ios",
                             headerShown: false,
                         }}
                     >
