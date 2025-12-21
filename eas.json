@@ -26,7 +26,7 @@
       "autoIncrement": true,
       "node": "20.11.1",
       "android": {
-        "buildType": "aab"
+        "buildType": "app-bundle"
       }
     },
     "production-apk": {
