@@ -1,0 +1,79 @@
+name: Android Build & Play Store Deploy
+
+on:
+  push:
+    branches:
+      - android
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    env:
+      # Decide env/stage based on branch
+      STAGE: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          ssh-key: ${{ secrets.GIT_SSH_KEY }}
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm install
+
+      - name: Load Config JS
+        env:
+          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
+          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
+        run: |
+          echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
+          echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
+
+      - run: npx expo prebuild --platform ios --clean
+
+      # 4️⃣ Setup Java
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 5️⃣ Decode keystore
+      - name: Setup Android keystore
+        run: |
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > android/app/release.keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      # 6️⃣ Create keystore properties
+      - name: Create keystore.properties
+        run: |
+          cat <<EOF > android/keystore.properties
+          storeFile=release.keystore
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      # 7️⃣ Build Android AAB
+      - name: Build Android App Bundle
+        run: |
+          cd android
+          ./gradlew clean bundleRelease
+
+      # 8️⃣ Upload to Google Play
+      - name: Upload to Google Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.yourcompany.trendly
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
