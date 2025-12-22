@@ -39,7 +39,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "rahul.sinha1908@gmail.com"
+        "appleId": "rahul.sinha1908@gmail.com",
+        "ascAppId": "6736949941"
       },
       "android": {
         "serviceAccountKeyPath": "./play-console-service-account.json",
