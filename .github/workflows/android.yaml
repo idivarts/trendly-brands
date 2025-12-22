@@ -3,7 +3,8 @@ name: Android Build & Play Store Deploy
 on:
   push:
     branches:
-      - android
+      - master
+      - dev
 
 jobs:
   android-release:
@@ -43,10 +44,11 @@ jobs:
           echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
           echo $PLAY_CONSOLE_SA_BASE64 | base64 -d > play-console-service-account.json
           echo $ANDROID_FIREBASE_CONFIG_BASE64 | base64 -d > google-services.json
-          
+
       - name: EAS Build Android (local)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_APP_STAGE: ${{ env.STAGE }}
         run: npm run build-android
 
       - name: Submit to Play Store
