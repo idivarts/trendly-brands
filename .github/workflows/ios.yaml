@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+        
       - run: npm install
 
       - name: Load Config JS
@@ -37,66 +40,12 @@ jobs:
           echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
           echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
 
-      - run: npx expo prebuild --platform ios --clean
-
-      # 4️⃣ Install CocoaPods
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          pod install
-
-      # 5️⃣ Setup Xcode
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
-
-      # 6️⃣ Create App Store Connect API Key
-      - name: Create ASC API Key
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "${ASC_PRIVATE_KEY}" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+      - name: EAS Build iOS (local)
         env:
-          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npm run build-ios
 
-      # 7️⃣ Archive app
-      - name: Archive iOS app
-        run: |
-          cd ios
-          xcodebuild archive \
-            -workspace TrendlyBrands.xcworkspace \
-            -scheme TrendlyBrands \
-            -configuration Release \
-            -archivePath build/TrendlyBrands.xcarchive \
-            -allowProvisioningUpdates
-
-      # 8️⃣ Export IPA
-      - name: Export IPA
-        run: |
-          cd ios
-          cat <<EOF > ExportOptions.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-           "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>uploadSymbols</key>
-            <true/>
-          </dict>
-          </plist>
-          EOF
-
-          xcodebuild -exportArchive \
-            -archivePath build/TrendlyBrands.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist ExportOptions.plist
-
-      # 9️⃣ Upload to TestFlight
-      - name: Upload to TestFlight
-        run: |
-          xcrun iTMSTransporter \
-            -m upload \
-            -assetFile ios/build/ipa/TrendlyBrands.ipa \
-            -apiKey ${{ secrets.ASC_KEY_ID }} \
-            -apiIssuer ${{ secrets.ASC_ISSUER_ID }}
+      - name: Submit to App Store
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npm run submit-ios
