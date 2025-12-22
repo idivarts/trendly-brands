@@ -26,7 +26,6 @@ const MainLayout = () => {
                         <ScrollProvider>
                           <Stack
                             screenOptions={{
-                              animation: "ios",
                               headerShown: false,
                             }}
                           >

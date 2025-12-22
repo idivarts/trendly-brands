@@ -1,6 +1,6 @@
-import { View } from "react-native";
 import AppLayout from "@/layouts/app-layout";
 import { Stack } from "expo-router";
+import { View } from "react-native";
 
 const AuthLayout = () => {
   return (
@@ -12,7 +12,6 @@ const AuthLayout = () => {
       >
         <Stack
           screenOptions={{
-            animation: "ios",
             headerShown: false,
           }}
         >
