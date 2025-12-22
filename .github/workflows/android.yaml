@@ -36,9 +36,11 @@ jobs:
         env:
           FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
           ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
+          PLAY_CONSOLE_SA_BASE64: ${{ secrets.PLAY_CONSOLE_SA }}
         run: |
           echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
           echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
+          echo $PLAY_CONSOLE_SA_BASE64 | base64 -d > play-console-service-account.json
 
       - name: EAS Build Android (local)
         env:
