@@ -37,11 +37,13 @@ jobs:
           FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
           ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
           PLAY_CONSOLE_SA_BASE64: ${{ secrets.PLAY_CONSOLE_SA }}
+          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
         run: |
           echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
           echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
           echo $PLAY_CONSOLE_SA_BASE64 | base64 -d > play-console-service-account.json
-
+          echo $ANDROID_FIREBASE_CONFIG_BASE64 | base64 -d > google-services.json
+          
       - name: EAS Build Android (local)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
