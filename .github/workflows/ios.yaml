@@ -29,16 +29,18 @@ jobs:
 
       - name: Install EAS CLI
         run: npm install -g eas-cli
-        
+
       - run: npm install
 
       - name: Load Config JS
         env:
           FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
           ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
+          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
         run: |
           echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
           echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
+          echo $IOS_FIREBASE_CONFIG_BASE64 | base64 -d > GoogleService-Info.plist
 
       - name: EAS Build iOS (local)
         env:
