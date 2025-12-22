@@ -14,10 +14,10 @@
     "preview": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile preview --local --output build/Trendly.tar.gz && tar -xzf build/Trendly.tar.gz -C build && xcrun simctl install booted build/TrendlyBrands.app",
     "simulator": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile simulator --local --output build/Trendly.tar.gz && tar -xzf build/Trendly.tar.gz -C build && xcrun simctl install booted build/TrendlyBrands.app",
     "emulator": "export $(cat .env.local | xargs) &&  eas build --platform android --profile simulator --local --output build/Trendly.apk && adb install build/Trendly.apk",
-    "build-ios": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile production --local --output build/Trendly.ipa",
+    "build-ios": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile production --local --output build/Trendly.ipa --non-interactive",
     "build-android": "export $(cat .env.local | xargs) && eas build --platform android --profile production --local --output build/Trendly.aab --non-interactive",
     "build-android-apk": "export $(cat .env.local | xargs) && eas build --platform android --profile production-apk --local --output build/Trendly.apk",
-    "submit-ios": "eas submit -p ios --path build/Trendly.ipa",
+    "submit-ios": "eas submit -p ios --path build/Trendly.ipa --non-interactive",
     "submit-android": "eas submit -p android --path build/Trendly.aab --non-interactive",
     "postinstall": "node react-native-web-fix.js"
   },
