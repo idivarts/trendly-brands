@@ -25,10 +25,11 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
   AuthContextProvider,
   AWSContextProvider,
-  useAuthContext
+  useAuthContext,
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
+import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
@@ -96,16 +97,10 @@ const RootLayoutStack = () => {
 
     if (isLoading) return;
 
-    if (
-      session
-      && (inAuthGroup || pathname === "/")
-    ) {
+    if (session && (inAuthGroup || pathname === "/")) {
       // On boot up, session exist and user is in auth group or /, redirect to collaborations
       resetAndNavigate("/discover");
-    } else if (
-      !session
-      && (inMainGroup || pathname === "/")
-    ) {
+    } else if (!session && (inMainGroup || pathname === "/")) {
       // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
       // resetAndNavigate("/pre-signin");
       resetAndNavigate("/lets-start");
@@ -120,14 +115,15 @@ const RootLayoutStack = () => {
           <DownloadApp />
           <ConfirmationModalProvider>
             <BottomSheetModalProvider>
-              <Stack screenOptions={{
-                animation: "ios",
-                headerShown: false,
-              }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              >
                 <Stack.Screen name="index" />
                 <Stack.Screen name="+not-found" />
               </Stack>
-              <Toast />
+              <Toast config={toastConfig} />
             </BottomSheetModalProvider>
           </ConfirmationModalProvider>
         </Provider>
