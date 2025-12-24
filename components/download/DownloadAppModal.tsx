@@ -14,136 +14,136 @@ import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 
 interface DownloadAppModalProps {
-  collaborationId?: string;
+    collaborationId?: string;
 }
 
 const DownloadAppModal: React.FC<DownloadAppModalProps> = ({
-  collaborationId,
+    collaborationId,
 }) => {
-  const snapPoints = useMemo(() => ["25%", "25%"], []);
+    const snapPoints = useMemo(() => ["25%", "25%"], []);
 
-  const theme = useTheme();
-  const styles = stylesFn(theme);
-  const [isVisible, setIsVisible] = useState(false);
-  const pathname = usePathname()
-  const [isAppInstalled, setIsAppInstalled] = useState(false)
+    const theme = useTheme();
+    const styles = stylesFn(theme);
+    const [isVisible, setIsVisible] = useState(false);
+    const pathname = usePathname()
+    const [isAppInstalled, setIsAppInstalled] = useState(false)
 
-  const openUrl = async () => {
-    const url = `trendly-brands:/${pathname}`
-    Console.log("Opening URL", url)
-    const canOpen = await Linking.canOpenURL(url)
-    Console.log("Can Open URL ", canOpen)
-    if (canOpen) {
-      const mWindow = window.open(url, "_parent");
-      if (mWindow) {
-        // setIsAppInstalled(true)
-        // setTimeout(() => {
-        //   if (mWindow && !mWindow.closed) {
-        //     mWindow.close();
-        //   }
-        // }, 5000);
-      }
+    const openUrl = async () => {
+        const url = `trendly-brands:/${pathname}`
+        Console.log("Opening URL", url)
+        const canOpen = await Linking.canOpenURL(url)
+        Console.log("Can Open URL ", canOpen)
+        if (canOpen) {
+            const mWindow = window.open(url, "_parent");
+            if (mWindow) {
+                // setIsAppInstalled(true)
+                // setTimeout(() => {
+                //   if (mWindow && !mWindow.closed) {
+                //     mWindow.close();
+                //   }
+                // }, 5000);
+            }
+        }
     }
-  }
-  useEffect(() => {
-    setTimeout(() => {
-      setIsVisible(true);
-    }, 5000);
-    openUrl()
-  }, [])
+    useEffect(() => {
+        setTimeout(() => {
+            setIsVisible(true);
+        }, 5000);
+        openUrl()
+    }, [])
 
-  const {
-    lg,
-  } = useBreakpoints();
+    const {
+        lg,
+    } = useBreakpoints();
 
-  const handleClose = () => {
-    setIsVisible(false)
-  }
+    const handleClose = () => {
+        setIsVisible(false)
+    }
 
-  return (
-    <BottomSheetContainer
-      snapPoints={snapPoints}
-      isVisible={isVisible}
-      onClose={handleClose}>
-      <View
-        style={styles.container}
-      >
-        <View
-          style={styles.header}
-        >
-          <Image source={require('@/assets/images/icon2.png')} style={{ width: 80, height: 80, borderColor: ColorsStatic.primary, borderWidth: 2, borderRadius: 20 }} />
-          <View style={{ flex: 1, alignItems: "flex-start", marginLeft: 16, gap: 8 }}>
-            <Text style={styles.headerTitle}>
-              Available on AppStore
-            </Text>
-            <Text style={styles.headerText}>
-              Donwload the app now for best user experience
-            </Text>
-          </View>
+    return (
+        <BottomSheetContainer
+            snapPoints={snapPoints}
+            isVisible={isVisible}
+            onClose={handleClose}>
+            <View
+                style={styles.container}
+            >
+                <View
+                    style={styles.header}
+                >
+                    <Image source={require('@/assets/images/icon2.png')} style={{ width: 80, height: 80, borderColor: ColorsStatic.primary, borderWidth: 2, borderRadius: 20 }} />
+                    <View style={{ flex: 1, alignItems: "flex-start", marginLeft: 16, gap: 8 }}>
+                        <Text style={styles.headerTitle}>
+                            Available on AppStore
+                        </Text>
+                        <Text style={styles.headerText}>
+                            Donwload the app now for best user experience
+                        </Text>
+                    </View>
 
-          <Pressable
-            onPress={handleClose}
-            style={{
-              zIndex: 10,
-            }}
-          >
-            <FontAwesomeIcon
-              color={Colors(theme).primary}
-              icon={faClose}
-              size={24}
-            />
-          </Pressable>
-        </View>
-        <Button
-          style={{
-            marginTop: 12
-          }}
-          theme={{
-            colors: {
-              primary: Colors(theme).primary,
-            },
-          }}
-          onPress={() => {
-            if (isAppInstalled)
-              openUrl()
-            else
-              handleDeepLink(undefined, lg);
-          }}
-        >
-          {isAppInstalled ? "Open App" : "Download App Now"}
-        </Button>
-      </View>
-    </BottomSheetContainer>
-  );
+                    <Pressable
+                        onPress={handleClose}
+                        style={{
+                            zIndex: 10,
+                        }}
+                    >
+                        <FontAwesomeIcon
+                            color={Colors(theme).primary}
+                            icon={faClose}
+                            size={24}
+                        />
+                    </Pressable>
+                </View>
+                <Button
+                    style={{
+                        marginTop: 12
+                    }}
+                    theme={{
+                        colors: {
+                            primary: Colors(theme).primary,
+                        },
+                    }}
+                    onPress={() => {
+                        if (isAppInstalled)
+                            openUrl()
+                        else
+                            handleDeepLink(undefined, lg);
+                    }}
+                >
+                    {isAppInstalled ? "Open App" : "Download App Now"}
+                </Button>
+            </View>
+        </BottomSheetContainer>
+    );
 };
 
 export default DownloadAppModal;
 
 const stylesFn = (theme: Theme) => StyleSheet.create({
-  bottomSheetScrollViewContentContainer: {
-    flex: 1,
-    marginTop: 10,
-    marginBottom: 50,
-  },
-  container: {
-    justifyContent: "space-between",
-    marginHorizontal: 16,
-    flex: 1,
-  },
-  header: {
-    alignItems: "flex-start",
-    backgroundColor: Colors(theme).transparent,
-    flexDirection: "row",
-  },
-  headerTitle: {
-    fontSize: 18,
-    color: Colors(theme).text,
-    fontWeight: "600",
-    textAlign: "left",
-  },
-  headerText: {
-    fontSize: 16,
-    color: Colors(theme).text,
-    textAlign: "left",
-  },
+    bottomSheetScrollViewContentContainer: {
+        flex: 1,
+        marginTop: 10,
+        marginBottom: 50,
+    },
+    container: {
+        justifyContent: "space-between",
+        marginHorizontal: 16,
+        flex: 1,
+    },
+    header: {
+        alignItems: "flex-start",
+        backgroundColor: Colors(theme).transparent,
+        flexDirection: "row",
+    },
+    headerTitle: {
+        fontSize: 18,
+        color: Colors(theme).text,
+        fontWeight: "600",
+        textAlign: "left",
+    },
+    headerText: {
+        fontSize: 16,
+        color: Colors(theme).text,
+        textAlign: "left",
+    },
 });

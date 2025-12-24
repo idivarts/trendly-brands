@@ -1,4 +1,4 @@
-// import pricingPage from "@/app/(landing)/pricing-page";
+//  import pricingPage from "@/app/(landing)/pricing-page";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";

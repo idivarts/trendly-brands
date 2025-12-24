@@ -11,64 +11,64 @@ import React from "react";
 import Button from "../../ui/button";
 
 interface InvitationCardProps {
-  bottomSheetAction?: () => void;
-  checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
-  data: User;
-  inviteInfluencer: () => void;
-  profileModalAction?: () => void;
+    bottomSheetAction?: () => void;
+    checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
+    data: User;
+    inviteInfluencer: () => void;
+    profileModalAction?: () => void;
 }
 
 const InvitationCard: React.FC<InvitationCardProps> = ({
-  bottomSheetAction,
-  checkIfAlreadyInvited,
-  data,
-  inviteInfluencer,
-  profileModalAction,
-}) => {
-  const theme = useTheme();
-  const { isAlreadyInvited } = useInvitation({
+    bottomSheetAction,
     checkIfAlreadyInvited,
-    influencerId: data.id,
-  });
-  const { isOnFreeTrial, isProfileLocked } = useBrandContext();
-  const { xl } = useBreakpoints();
+    data,
+    inviteInfluencer,
+    profileModalAction,
+}) => {
+    const theme = useTheme();
+    const { isAlreadyInvited } = useInvitation({
+        checkIfAlreadyInvited,
+        influencerId: data.id,
+    });
+    const { isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { xl } = useBreakpoints();
 
-  return (
-    <>
-      <InfluencerCard
-        xl={xl}
-        influencer={data}
-        type="invitation"
-        ToggleModal={bottomSheetAction}
-        fullHeight={true}
-        isOnFreePlan={isOnFreeTrial}
-        lockProfile={isProfileLocked(data.id)}
-        cardActionNode={
-          <Button
-            mode="outlined"
-            disabled={isAlreadyInvited ? true : false}
-            onPress={() => {
-              if (!isAlreadyInvited) {
-                inviteInfluencer();
-              }
-            }}
-          >
-            <FontAwesomeIcon
-              color={Colors(theme).primary}
-              icon={isAlreadyInvited ? faCheck : faPlus}
-              size={12}
-              style={{
-                marginRight: 6,
-                marginTop: -1,
-              }}
+    return (
+        <>
+            <InfluencerCard
+                xl={xl}
+                influencer={data}
+                type="invitation"
+                ToggleModal={bottomSheetAction}
+                fullHeight={true}
+                isOnFreePlan={isOnFreeTrial}
+                lockProfile={isProfileLocked(data.id)}
+                cardActionNode={
+                    <Button
+                        mode="outlined"
+                        disabled={isAlreadyInvited ? true : false}
+                        onPress={() => {
+                            if (!isAlreadyInvited) {
+                                inviteInfluencer();
+                            }
+                        }}
+                    >
+                        <FontAwesomeIcon
+                            color={Colors(theme).primary}
+                            icon={isAlreadyInvited ? faCheck : faPlus}
+                            size={12}
+                            style={{
+                                marginRight: 6,
+                                marginTop: -1,
+                            }}
+                        />
+                        {isAlreadyInvited ? "Already Invited" : "Invite Influencer"}
+                    </Button>
+                }
+                openProfile={profileModalAction}
             />
-            {isAlreadyInvited ? "Already Invited" : "Invite Influencer"}
-          </Button>
-        }
-        openProfile={profileModalAction}
-      />
-    </>
-  );
+        </>
+    );
 };
 
 export default InvitationCard;

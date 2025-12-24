@@ -10,44 +10,44 @@ import { View } from "../theme/Themed";
 import EmptyMessageState from "./empty-message-state";
 
 const ChannelListWeb = () => {
-  const [loading, setLoading] = useState(true)
-  const [token, setToken] = useState("")
-  const theme = useTheme()
-  const { manager } = useAuthContext()
-  const { connectUser } = useChatContext()
+    const [loading, setLoading] = useState(true)
+    const [token, setToken] = useState("")
+    const theme = useTheme()
+    const { manager } = useAuthContext()
+    const { connectUser } = useChatContext()
 
-  const fetchToken = async () => {
-    setLoading(true)
-    const token = await connectUser()
-    if (token) {
-      setToken(token)
+    const fetchToken = async () => {
+        setLoading(true)
+        const token = await connectUser()
+        if (token) {
+            setToken(token)
+        }
+        setLoading(false)
     }
-    setLoading(false)
-  }
 
 
-  useEffect(() => {
-    if (manager)
-      fetchToken()
-  }, [manager])
+    useEffect(() => {
+        if (manager)
+            fetchToken()
+    }, [manager])
 
-  if (loading) {
-    return <AppLayout>
-      <View style={{ flex: 1, alignItems: "center", padding: 24 }}>
-        <ActivityIndicator color={Colors(theme).primary} />
-      </View>
-    </AppLayout>
-  }
-  if (!token) {
-    return <EmptyMessageState />
-  }
-  return (
-    <WebMessageWrapper
-      isInfluencer={false}
-      influencerManagerid={manager?.id || ""}
-      streamToken={token}
-    />
-  );
+    if (loading) {
+        return <AppLayout>
+            <View style={{ flex: 1, alignItems: "center", padding: 24 }}>
+                <ActivityIndicator color={Colors(theme).primary} />
+            </View>
+        </AppLayout>
+    }
+    if (!token) {
+        return <EmptyMessageState />
+    }
+    return (
+        <WebMessageWrapper
+            isInfluencer={false}
+            influencerManagerid={manager?.id || ""}
+            streamToken={token}
+        />
+    );
 };
 
 export default ChannelListWeb;

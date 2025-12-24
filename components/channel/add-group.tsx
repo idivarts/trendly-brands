@@ -5,50 +5,50 @@ import { useChatContext } from "stream-chat-expo";
 import AddModal from "./add-modal";
 
 interface AddGroupProps {
-  setVisible: (visible: boolean) => void;
-  visible: boolean;
+    setVisible: (visible: boolean) => void;
+    visible: boolean;
 }
 
 const AddGroup: React.FC<AddGroupProps> = ({
-  setVisible,
-  visible,
+    setVisible,
+    visible,
 }) => {
-  const [groupName, setGroupName] = useState('');
+    const [groupName, setGroupName] = useState('');
 
-  const { client } = useChatContext();
+    const { client } = useChatContext();
 
-  const addGroup = async () => {
-    const channel = client.channel('messaging', groupName.toLowerCase().replace(/\s+/g, '-'), {
-      name: groupName,
-      members: [client.user?.id as string],
-    });
+    const addGroup = async () => {
+        const channel = client.channel('messaging', groupName.toLowerCase().replace(/\s+/g, '-'), {
+            name: groupName,
+            members: [client.user?.id as string],
+        });
 
-    await channel.create();
-    await channel.watch();
+        await channel.create();
+        await channel.watch();
 
-    Toaster.success('Group added successfully');
+        Toaster.success('Group added successfully');
 
-    setVisible(false);
-    setGroupName('');
-  }
+        setVisible(false);
+        setGroupName('');
+    }
 
-  return (
-    <AddModal
-      action={addGroup}
-      actionLabel="Add"
-      title="Add Group"
-      content={
-        <TextInput
-          label="Group name"
-          mode="flat"
-          onChangeText={setGroupName}
-          value={groupName}
+    return (
+        <AddModal
+            action={addGroup}
+            actionLabel="Add"
+            title="Add Group"
+            content={
+                <TextInput
+                    label="Group name"
+                    mode="flat"
+                    onChangeText={setGroupName}
+                    value={groupName}
+                />
+            }
+            visible={visible}
+            setVisible={setVisible}
         />
-      }
-      visible={visible}
-      setVisible={setVisible}
-    />
-  );
+    );
 };
 
 export default AddGroup;

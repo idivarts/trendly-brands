@@ -3,11 +3,11 @@ import AppLayout from "@/layouts/app-layout";
 import { useLocalSearchParams } from "expo-router";
 
 const CollaborationDetailsScreen = () => {
-  const pageID = useLocalSearchParams().pageID;
+    const pageID = useLocalSearchParams().pageID;
 
-  return (
-    <AppLayout withWebPadding={false}>
-      {/* <ScreenHeader
+    return (
+        <AppLayout withWebPadding={false}>
+            {/* <ScreenHeader
         title="Collaboration Details"
         rightAction
         rightActionButton={
@@ -20,9 +20,9 @@ const CollaborationDetailsScreen = () => {
           </Pressable>
         }
       /> */}
-      <CollaborationDetails pageID={pageID as string} />
-    </AppLayout>
-  );
+            <CollaborationDetails pageID={pageID as string} />
+        </AppLayout>
+    );
 };
 
 export default CollaborationDetailsScreen;

@@ -1,27 +1,27 @@
 import { useEffect, useState } from "react";
 
 interface UseInvitationProps {
-  checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
-  influencerId: string | undefined;
+    checkIfAlreadyInvited: (influencerId: string) => Promise<boolean>;
+    influencerId: string | undefined;
 }
 
 const useInvitation = ({
-  checkIfAlreadyInvited,
-  influencerId,
+    checkIfAlreadyInvited,
+    influencerId,
 }: UseInvitationProps) => {
-  const [isAlreadyInvited, setIsAlreadyInvited] = useState(false);
+    const [isAlreadyInvited, setIsAlreadyInvited] = useState(false);
 
-  useEffect(() => {
-    if (checkIfAlreadyInvited && influencerId) {
-      checkIfAlreadyInvited(influencerId).then((invited) => {
-        setIsAlreadyInvited(invited);
-      });
-    }
-  }, []);
+    useEffect(() => {
+        if (checkIfAlreadyInvited && influencerId) {
+            checkIfAlreadyInvited(influencerId).then((invited) => {
+                setIsAlreadyInvited(invited);
+            });
+        }
+    }, []);
 
-  return {
-    isAlreadyInvited,
-  };
+    return {
+        isAlreadyInvited,
+    };
 };
 
 export default useInvitation;

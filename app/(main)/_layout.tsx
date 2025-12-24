@@ -10,26 +10,26 @@ import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-d
 
 
 const MainLayout = () => {
-  const { manager, updateManager } = useAuthContext()
-  return (
-    // <AWSContextProvider>
-    <TrackingProvider>
-      <ConfirmationModalProvider>
-        <FirebaseStorageContextProvider>
-          <NotificationContextProvider>
-            <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
-              <BrandContextProvider>
-                <CollaborationContextProvider>
-                  <ContractContextProvider>
-                    <AutocompleteDropdownContextProvider>
-                      <ChatContextProvider>
-                        <ScrollProvider>
-                          <Stack
-                            screenOptions={{
-                              headerShown: false,
-                            }}
-                          >
-                            {/* <Stack.Screen
+    const { manager, updateManager } = useAuthContext()
+    return (
+        // <AWSContextProvider>
+        <TrackingProvider>
+            <ConfirmationModalProvider>
+                <FirebaseStorageContextProvider>
+                    <NotificationContextProvider>
+                        <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
+                            <BrandContextProvider>
+                                <CollaborationContextProvider>
+                                    <ContractContextProvider>
+                                        <AutocompleteDropdownContextProvider>
+                                            <ChatContextProvider>
+                                                <ScrollProvider>
+                                                    <Stack
+                                                        screenOptions={{
+                                                            headerShown: false,
+                                                        }}
+                                                    >
+                                                        {/* <Stack.Screen
                               name="(drawer)"
                               options={{
                                 headerShown: false,
@@ -41,20 +41,20 @@ const MainLayout = () => {
                                 headerShown: false,
                               }}
                             /> */}
-                          </Stack>
-                        </ScrollProvider>
-                      </ChatContextProvider>
-                    </AutocompleteDropdownContextProvider>
-                  </ContractContextProvider>
-                </CollaborationContextProvider>
-              </BrandContextProvider>
-            </CloudMessagingContextProvider>
-          </NotificationContextProvider>
-        </FirebaseStorageContextProvider>
-      </ConfirmationModalProvider>
-    </TrackingProvider>
-    // </AWSContextProvider>
-  );
+                                                    </Stack>
+                                                </ScrollProvider>
+                                            </ChatContextProvider>
+                                        </AutocompleteDropdownContextProvider>
+                                    </ContractContextProvider>
+                                </CollaborationContextProvider>
+                            </BrandContextProvider>
+                        </CloudMessagingContextProvider>
+                    </NotificationContextProvider>
+                </FirebaseStorageContextProvider>
+            </ConfirmationModalProvider>
+        </TrackingProvider>
+        // </AWSContextProvider>
+    );
 };
 
 export default MainLayout;

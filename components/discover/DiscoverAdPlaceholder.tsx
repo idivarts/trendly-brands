@@ -7,33 +7,33 @@ import EmptyPhylloSelected from "./empty-screens/EmptyDiscoverPhyllo";
 import EmptyTrendlyInternalSelected from "./empty-screens/EmptyDiscoverTrendly";
 
 interface IProps {
-  selectedDb: DB_TYPE;
-  setSelectedDb: Function;
-  showPlaceholder?: boolean;
+    selectedDb: DB_TYPE;
+    setSelectedDb: Function;
+    showPlaceholder?: boolean;
 }
 
 const DiscoverAdPlaceholder: React.FC<IProps> = ({
-  selectedDb,
-  setSelectedDb,
-  showPlaceholder,
+    selectedDb,
+    setSelectedDb,
+    showPlaceholder,
 }) => {
-  const { selectedBrand } = useBrandContext();
-  const planKey = selectedBrand?.billing?.planKey;
+    const { selectedBrand } = useBrandContext();
+    const planKey = selectedBrand?.billing?.planKey;
 
-  if (!showPlaceholder) {
-    return null;
-  }
+    if (!showPlaceholder) {
+        return null;
+    }
 
-  if (selectedDb == "modash") {
-    return <EmptyModashSelected />;
-  }
-  if (selectedDb == "phyllo") {
-    return <EmptyPhylloSelected />;
-  }
-  if (selectedDb == "trendly") {
-    return <EmptyTrendlyInternalSelected />;
-  }
-  return <EmptyNoDatabaseSelected setSelectedDb={setSelectedDb} />;
+    if (selectedDb == "modash") {
+        return <EmptyModashSelected />;
+    }
+    if (selectedDb == "phyllo") {
+        return <EmptyPhylloSelected />;
+    }
+    if (selectedDb == "trendly") {
+        return <EmptyTrendlyInternalSelected />;
+    }
+    return <EmptyNoDatabaseSelected setSelectedDb={setSelectedDb} />;
 };
 
 export default DiscoverAdPlaceholder;

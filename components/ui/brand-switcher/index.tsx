@@ -12,74 +12,74 @@ import { Subject } from 'rxjs';
 export const OpenBrandSwitcher = new Subject()
 
 const BrandSwitcher = () => {
-  const [visible, setVisible] = useState(false);
-  const theme = useTheme();
+    const [visible, setVisible] = useState(false);
+    const theme = useTheme();
 
-  const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
+    const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
 
-  const openMenu = () => setVisible(true);
+    const openMenu = () => setVisible(true);
 
-  const handleBrandChange = (brand: Brand) => {
-    setSelectedBrand(brand);
-    setVisible(false);
-  };
+    const handleBrandChange = (brand: Brand) => {
+        setSelectedBrand(brand);
+        setVisible(false);
+    };
 
-  useEffect(() => {
-    const subs = OpenBrandSwitcher.subscribe(() => {
-      setVisible(true)
-    })
-    return () => {
-      subs.unsubscribe()
-    }
-  }, [])
-  return (
-    <Menu
-      visible={visible}
-      anchorPosition="top"
-      onDismiss={() => setVisible(false)}
-      contentStyle={{
-        paddingVertical: 0,
-        borderRadius: 4,
-        overflow: "hidden",
-      }}
-      anchor={
-        <Pressable onPress={openMenu}>
-          <FontAwesomeIcon
-            color={Colors(theme).text}
-            icon={faChevronDown}
-            size={16}
-            style={{
-              marginLeft: 14,
-              color: Colors(theme).text,
-              marginBottom: -2,
+    useEffect(() => {
+        const subs = OpenBrandSwitcher.subscribe(() => {
+            setVisible(true)
+        })
+        return () => {
+            subs.unsubscribe()
+        }
+    }, [])
+    return (
+        <Menu
+            visible={visible}
+            anchorPosition="top"
+            onDismiss={() => setVisible(false)}
+            contentStyle={{
+                paddingVertical: 0,
+                borderRadius: 4,
+                overflow: "hidden",
             }}
-          />
-        </Pressable>
-      }
-    >
-      {brands.map((brand) => (
-        <Menu.Item
-          key={brand.id}
-          style={{
-            backgroundColor:
-              brand.id === selectedBrand?.id
-                ? Colors(theme).primary
-                : Colors(theme).background,
-            margin: 0,
-          }}
-          titleStyle={{
-            color:
-              brand.id === selectedBrand?.id
-                ? Colors(theme).white
-                : Colors(theme).text,
-            fontSize: 16,
-          }}
-          onPress={() => handleBrandChange(brand)}
-          title={brand.name}
-        />
-      ))}
-    </Menu>
-  );
+            anchor={
+                <Pressable onPress={openMenu}>
+                    <FontAwesomeIcon
+                        color={Colors(theme).text}
+                        icon={faChevronDown}
+                        size={16}
+                        style={{
+                            marginLeft: 14,
+                            color: Colors(theme).text,
+                            marginBottom: -2,
+                        }}
+                    />
+                </Pressable>
+            }
+        >
+            {brands.map((brand) => (
+                <Menu.Item
+                    key={brand.id}
+                    style={{
+                        backgroundColor:
+                            brand.id === selectedBrand?.id
+                                ? Colors(theme).primary
+                                : Colors(theme).background,
+                        margin: 0,
+                    }}
+                    titleStyle={{
+                        color:
+                            brand.id === selectedBrand?.id
+                                ? Colors(theme).white
+                                : Colors(theme).text,
+                        fontSize: 16,
+                    }}
+                    onPress={() => handleBrandChange(brand)}
+                    title={brand.name}
+                />
+            ))}
+        </Menu>
+    );
 };
 
 export default BrandSwitcher;
