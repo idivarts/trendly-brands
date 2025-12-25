@@ -46,7 +46,7 @@ jobs:
       - name: EAS Build iOS (local)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_APP_STAGE: ${{ env.STAGE }}
+          EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
         run: npm run build-ios
 
       - name: Submit to App Store
