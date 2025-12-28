@@ -28,7 +28,7 @@ import {
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { InfluencerItem } from "../discover/DiscoverInfluencer";
+import type { InfluencerItem } from "../discover/discover-types";
 
 export type KanbanCardT = {
     id: string;

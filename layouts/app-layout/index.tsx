@@ -1,6 +1,7 @@
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import React, { PropsWithChildren, useMemo } from "react";
-import { Platform, SafeAreaView, StatusBar, StyleSheet } from "react-native";
+import { Platform, StatusBar, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";

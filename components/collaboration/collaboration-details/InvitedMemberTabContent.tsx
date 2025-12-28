@@ -1,4 +1,4 @@
-import { InfluencerInviteUnit } from "@/components/discover/DiscoverInfluencer";
+import type { InfluencerInviteUnit } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import EmptyState from "@/components/ui/empty-state";
 import Colors from "@/constants/Colors";

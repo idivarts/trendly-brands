@@ -1,4 +1,4 @@
-import { DiscoveryProvider } from "@/components/discover/Discover";
+import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";

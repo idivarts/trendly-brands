@@ -5,7 +5,8 @@ import { Brand } from '@/types/Brand'
 import React, { useEffect, useState } from 'react'
 import { Image, Linking, ScrollView } from 'react-native'
 import { ActivityIndicator, Card, Chip, Divider, List, Text } from 'react-native-paper'
-import { InfluencerItem, StatChip } from '../DiscoverInfluencer'
+import { StatChip } from "../StatChip";
+import type { InfluencerItem } from "../discover-types";
 
 interface IProps {
     influencer: InfluencerItem

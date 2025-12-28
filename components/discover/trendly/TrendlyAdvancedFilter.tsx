@@ -1,7 +1,7 @@
 import {
     PageSortCommunication,
     useDiscovery,
-} from "@/components/discover/Discover";
+} from "@/components/discover/discovery-context";
 import Select from "@/components/ui/select";
 import {
     INFLUENCER_CATEGORIES,
@@ -27,7 +27,7 @@ import { Theme, useTheme } from "@react-navigation/native";
 import React, { MutableRefObject, useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { HelperText, Switch, Text, TextInput } from "react-native-paper";
-import { InfluencerItem } from "../DiscoverInfluencer";
+import type { InfluencerItem } from "../discover-types";
 
 /** Small inline component for min/max numeric ranges */
 const RangeInputs = ({

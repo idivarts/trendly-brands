@@ -6,7 +6,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Card, Checkbox } from "react-native-paper";
-import { InfluencerItem } from "../discover/DiscoverInfluencer";
+import type { InfluencerItem } from "../discover/discover-types";
 
 export interface InfluencerCardProps {
     item: InfluencerItem;

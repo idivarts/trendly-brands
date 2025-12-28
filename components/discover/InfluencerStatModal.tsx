@@ -15,8 +15,7 @@ import {
 } from "react-native-paper";
 import Toast from "react-native-toast-message";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
-import { InfluencerItem } from "./DiscoverInfluencer";
-import { DB_TYPE } from "./RightPanelDiscover";
+import type { DB_TYPE, InfluencerItem } from "./discover-types";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 const useStatsModalStyles = (theme: Theme) =>

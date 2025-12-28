@@ -1,10 +1,9 @@
 import {
     DiscoverCommunication,
     useDiscovery,
-} from "@/components/discover/Discover";
+} from "@/components/discover/discovery-context";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { View } from "@/shared-uis/components/theme/Themed";
@@ -31,6 +30,7 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import { InfluencerStatsModal } from "./InfluencerStatModal";
+import type { InfluencerItem } from "./discover-types";
 
 // type SocialsBreif struct {
 // 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
@@ -56,33 +56,12 @@ import { InfluencerStatsModal } from "./InfluencerStatModal";
 // }
 // Types
 
-export type InfluencerItem = SocialsBrief & {
-    // For invitation card
-    invitedAt?: number; // timestamp in milliseconds
-    status?: string;
-};
-
-export type InfluencerInviteUnit = InfluencerItem & {
-    invitedAt: number;
-    status: string;
-};
-
 const sortOptions = [
     { label: "Followers", value: "followers" },
     { label: "Engagements", value: "engagement" },
     { label: "ER %", value: "engagement_rate" },
     { label: "Views", value: "views" },
 ];
-
-// Helpers
-const formatNumber = (n: number | undefined) => {
-    if (n == null) return "-";
-    if (n < 100) return String(n.toFixed(2));
-    if (n < 1000) return String(n);
-    if (n < 1_000_000) return `${Math.round(n / 100) / 10}k`;
-    if (n < 1_000_000_000) return `${Math.round(n / 100_000) / 10}M`;
-    return `${Math.round(n / 100_000_000) / 10}B`;
-};
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
@@ -152,33 +131,6 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingHorizontal: 4,
         },
     });
-
-export const StatChip = ({
-    label,
-    value,
-}: {
-    label: string;
-    value?: number;
-}) => (
-    <Chip
-        mode="flat"
-        compact
-        style={{
-            marginRight: 6,
-            marginBottom: 6,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.2,
-            shadowRadius: 1,
-            flexDirection: "column",
-        }}
-    >
-        <Text style={{ fontWeight: "600" }}>
-            {value != null ? formatNumber(value) : "-"}
-        </Text>
-        <Text> {label}</Text>
-    </Chip>
-);
 
 interface DiscoverInfluencerProps {
     advanceFilter?: boolean;

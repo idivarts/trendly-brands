@@ -4,7 +4,7 @@ import { useTheme } from '@react-navigation/native'
 import React, { useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Divider, List, SegmentedButtons, Switch, TextInput } from 'react-native-paper'
-import { Dropdown, RangeInput, Section } from '../RightPanelDiscover'
+import { Dropdown, RangeInput, Section } from "../filter-components";
 
 // --------------------
 // Constants (placeholder options; wire real data later)
