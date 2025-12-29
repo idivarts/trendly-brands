@@ -48,7 +48,7 @@ jobs:
       - name: EAS Build Android (local)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_APP_STAGE: ${{ env.STAGE }}
+          EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
         run: npm run build-android
 
       - name: Submit to Play Store

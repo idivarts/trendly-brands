@@ -39,7 +39,10 @@ jobs:
         echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
         echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
 
-    - run: npm run build
+    - name: Build Web
+      env:
+        EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
+      run: npm run build
 
     - name: Deploy with Serverless
       uses: serverless/github-action@v3.2
