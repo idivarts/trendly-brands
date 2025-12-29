@@ -4,11 +4,17 @@ import {
 } from "@/components/discover/Discover";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
+import { ISocialAnalytics, ISocials, SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
+import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,7 +23,7 @@ import {
     Linking,
     ListRenderItemInfo,
     StyleSheet,
-    Text,
+    Text
 } from "react-native";
 import {
     ActivityIndicator,
@@ -26,11 +32,13 @@ import {
     Divider,
     IconButton,
     Menu,
+    Portal
 } from "react-native-paper";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
+import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
-import { InfluencerStatsModal } from "./InfluencerStatModal";
+import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
 // 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
@@ -203,13 +211,34 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         isCollapsed,
         showTopPanel,
     } = useDiscovery();
+    const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
-    const [statsItem, setStatsItemNative] = useState<InfluencerItem | null>(null);
-    const setStatsItem = (data: InfluencerItem | null) => {
+    const [selectedInfluencer, setSelectedInfluencer] =
+        useState<InfluencerItem | null>(null);
+    const [openProfileModal, setOpenProfileModal] = useState(false);
+    const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
+    const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
+    const [shadowUser, setShadowUser] = useState<IUsers | null>(null);
+    const [shadowSocial, setShadowSocial] = useState<IShadowSocial | null>(null);
+    const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+    const trendlyAnalyticsRef = React.useRef<any>(null);
+
+    const [loading, setLoading] = useState(false);
+    const [data, setData] = useState<InfluencerItem[]>([]);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
+        null
+    );
+    const { openModal } = useConfirmationModel();
+
+    const { xl } = useBreakpoints();
+
+    // collaborations are fetched inside InviteToCampaignModal when it mounts
+    const openProfile = (data: InfluencerItem | null) => {
         if (
             (selectedBrand?.credits?.discovery || 0) <= 0 &&
             data &&
@@ -227,21 +256,18 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             return;
         }
 
-        setStatsItemNative(data);
+        setSelectedInfluencer(data);
+        setOpenProfileModal(!!data);
     };
 
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<InfluencerItem[]>([]);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
-        null
-    );
-    const { selectedBrand } = useBrandContext();
-    const { openModal } = useConfirmationModel();
-
-    const { xl } = useBreakpoints();
-
-    // collaborations are fetched inside InviteToCampaignModal when it mounts
+    const closeProfileModal = () => {
+        setOpenProfileModal(false);
+        setSelectedInfluencer(null);
+        setTrendlyAnalytics(null);
+        setTrendlySocial(null);
+        setShadowSocial(null);
+        setIsAnalyticsLoading(false);
+    };
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(20);
@@ -289,9 +315,65 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         }
     }, [defaultAdvanceFilters]);
 
-    const onOpenProfile = useCallback((url: string) => {
-        Linking.openURL(url);
-    }, []);
+    useEffect(() => {
+        if (
+            !openProfileModal ||
+            !selectedInfluencer?.id ||
+            !selectedBrand?.id ||
+            selectedDb !== "trendly"
+        ) {
+            setTrendlyAnalytics(null);
+            setTrendlySocial(null);
+            setShadowSocial(null);
+            setIsAnalyticsLoading(false);
+            return;
+        }
+
+        let isActive = true;
+        setIsAnalyticsLoading(true);
+        setTrendlyAnalytics(null);
+        setTrendlySocial(null);
+        setShadowSocial(null);
+
+        HttpWrapper.fetch(
+            `/discovery/brands/${selectedBrand.id}/influencers/${selectedInfluencer.id}`,
+            {
+                method: "GET",
+                headers: {
+                    "content-type": "application/json",
+                },
+            }
+        )
+            .then(async (res) => {
+                const body = await res.json();
+                if (!isActive) return;
+                const analytics = body?.analysis as ISocialAnalytics | undefined;
+                const social = body?.social as ISocials | undefined;
+                const shadowSocial = body?.influencer.social as IShadowSocial | undefined;
+                const shadowUser = body?.influencer.user as IUsers | undefined;
+                setTrendlyAnalytics(analytics || null);
+                setTrendlySocial(social || null);
+                setShadowUser(shadowUser || null);
+                setShadowSocial(shadowSocial || null);
+            })
+            .catch(() => {
+                if (!isActive) return;
+                setTrendlyAnalytics(null);
+                setTrendlySocial(null);
+            })
+            .finally(() => {
+                if (isActive) setIsAnalyticsLoading(false);
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [
+        openProfileModal,
+        selectedBrand?.id,
+        selectedDb,
+        selectedInfluencer?.id,
+    ]);
 
     const columns = xl ? 2 : 1;
     const [key, setKey] = useState(0);
@@ -315,7 +397,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     <InfluencerCard
                         item={item}
                         isCollapsed={isCollapsed}
-                        onPress={() => setStatsItem(item)}
+                        onPress={() => openProfile(item)}
                         openModal={openModal}
                         isSelected={selectedIds.includes(item.id)}
                         onToggleSelect={() => toggleSelect(item.id)}
@@ -324,7 +406,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 </View>
             );
         },
-        [isCollapsed, openModal, setStatsItem]
+        [isCollapsed, openModal, openProfile, selectedIds]
     );
 
     const keyExtractor = useCallback((i: InfluencerItem) => i.id, []);
@@ -680,71 +762,135 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     }
                 />
                 {selectedIds.length > 0 && (
-                    <View
-                        style={{
-                            position: "absolute",
-                            bottom: 20,
-                            left: 0,
-                            right: 0,
-                            alignItems: "center",
-                            zIndex: 9999,
-                            backgroundColor: "transparent",
-                        }}
-                    >
+                    <Portal>
                         <View
                             style={{
-                                flexDirection: "row",
+                                position: "absolute",
+                                bottom: 20,
+                                left: 0,
+                                right: 0,
                                 alignItems: "center",
-                                backgroundColor: "rgba(255,255,255,0.5)",
-                                paddingHorizontal: 16,
-                                paddingVertical: 8,
-                                borderRadius: 40,
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 3 },
-                                shadowOpacity: 0.2,
-                                shadowRadius: 6,
-                                elevation: 6,
-                                width: 320,
-                                justifyContent: "space-between",
+                                zIndex: 9999,
+                                backgroundColor: "transparent",
                             }}
                         >
-                            {/* Selected Count */}
-                            <Text style={{ fontSize: 14, fontWeight: "500" }}>
-                                {selectedIds.length} item selected
-                            </Text>
+                            <View
+                                style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    backgroundColor: "rgba(255,255,255,0.5)",
+                                    paddingHorizontal: 16,
+                                    paddingVertical: 8,
+                                    borderRadius: 40,
+                                    shadowColor: "#000",
+                                    shadowOffset: { width: 0, height: 3 },
+                                    shadowOpacity: 0.2,
+                                    shadowRadius: 6,
+                                    elevation: 6,
+                                    width: 320,
+                                    justifyContent: "space-between",
 
-                            {/* Invite Button */}
-                            <View style={{ top: 0, borderRadius: 50 }}>
-                                <InviteToCampaignButton
-                                    label="Invite Now"
-                                    openModal={openModal}
-                                    influencerIds={selectedIds}
-                                    influencerName={
-                                        selectedIds.length === 1
-                                            ? data.find((i) => i.id === selectedIds[0])?.name
-                                            : undefined
-                                    }
+                                }}
+                            >
+                                {/* Selected Count */}
+                                <Text style={{ fontSize: 14, fontWeight: "500" }}>
+                                    {selectedIds.length} {selectedIds.length === 1 ? "item" : "items"} selected
+                                </Text>
+
+                                {/* Invite Button */}
+                                <View style={{ top: 0, borderRadius: 50 }}>
+                                    <InviteToCampaignButton
+                                        label="Invite Now"
+                                        openModal={openModal}
+                                        influencerIds={selectedIds}
+                                        influencerName={
+                                            selectedIds.length === 1
+                                                ? data.find((i) => i.id === selectedIds[0])?.name
+                                                : undefined
+                                        }
+                                    />
+                                </View>
+
+                                {/* Clear / Close Button */}
+                                <IconButton
+                                    icon="close"
+                                    size={22}
+                                    onPress={() => setSelectedIds([])}
                                 />
                             </View>
-
-                            {/* Clear / Close Button */}
-                            <IconButton
-                                icon="close"
-                                size={22}
-                                onPress={() => setSelectedIds([])}
-                            />
                         </View>
-                    </View>
+                    </Portal>
                 )}
 
-                {!!statsItem && (
-                    <InfluencerStatsModal
-                        visible={!!statsItem}
-                        item={statsItem}
-                        onClose={() => setStatsItem(null)}
-                        selectedDb={selectedDb}
-                    />
-                )}
+                <BottomSheetScrollContainer
+                    isVisible={openProfileModal}
+                    snapPointsRange={["90%", "90%"]}
+                    onClose={closeProfileModal}
+                >
+                    {selectedInfluencer && selectedBrand && (
+                        <ProfileBottomSheet
+                            influencer={{
+                                ...shadowUser,
+                                id: selectedInfluencer.id,
+                            } as User}
+                            theme={theme}
+                            isOnFreePlan={isOnFreeTrial}
+                            isPhoneMasked={false}
+                            social={{
+                                ...(shadowSocial as IShadowSocial),
+                                gender: trendlySocial?.gender,
+                                quality: trendlySocial?.quality_score,
+                                isVerified: trendlySocial?.profile_verified
+                            }}
+                            actionCard={
+                                <>
+                                    <TrendlyAnalyticsEmbed
+                                        ref={trendlyAnalyticsRef}
+                                        influencer={selectedInfluencer}
+                                        selectedBrand={selectedBrand}
+                                    />
+                                    <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+                                        {/* TODO Need to get the Profile Meta rendered correctly */}
+                                        {/* <Title style={[styles.cardColor, { marginBottom: 8 }]}>
+                                            Profile Meta
+                                        </Title>
+                                        <View style={{ gap: 6 }}>
+                                            <Text style={styles.subTextHeading}>
+                                                ID: {trendlySocial.id}
+                                            </Text>
+                                            <Text style={styles.subTextHeading}>
+                                                Platform: {trendlySocial.social_type || "—"}
+                                            </Text>
+                                            <Text style={styles.subTextHeading}>
+                                                Last Updated:{" "}
+                                                {formatDate(
+                                                    trendlySocial.last_update_time
+                                                        ? trendlySocial.last_update_time / 1000000
+                                                        : undefined
+                                                )}
+                                            </Text>
+                                        </View> */}
+                                    </View>
+                                </>
+                            }
+                            actionButton={
+                                trendlyAnalyticsRef.current?.isAdmin ? (
+                                    <Button
+                                        mode="contained"
+                                        onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
+                                        icon="pencil"
+                                    >
+                                        Edit Metrics
+                                    </Button>
+                                ) : undefined
+                            }
+                            FireStoreDB={FirestoreDB}
+                            isBrandsApp={true}
+                            lockProfile={isProfileLocked(selectedInfluencer.id)}
+                            closeModal={closeProfileModal}
+                        />
+                    )}
+                </BottomSheetScrollContainer>
             </View>
         </View>
     );
