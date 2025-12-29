@@ -6,6 +6,8 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials, SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
@@ -34,12 +36,13 @@ import {
     IconButton,
     Menu,
     Text as PaperText,
-    Portal,
+    Portal
 } from "react-native-paper";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
+import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
 // 	ID       string `db:"id" bigquery:"id" json:"id" firestore:"id"`
@@ -222,8 +225,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         useState<InfluencerItem | null>(null);
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
-    const [social, setSocial] = useState<ISocials | null>(null);
+    const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
+    const [shadowUser, setShadowUser] = useState<IUsers | null>(null);
+    const [shadowSocial, setShadowSocial] = useState<IShadowSocial | null>(null);
     const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
+    const trendlyAnalyticsRef = React.useRef<any>(null);
 
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<InfluencerItem[]>([]);
@@ -262,7 +268,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setOpenProfileModal(false);
         setSelectedInfluencer(null);
         setTrendlyAnalytics(null);
-        setSocial(null);
+        setTrendlySocial(null);
+        setShadowSocial(null);
         setIsAnalyticsLoading(false);
     };
 
@@ -320,7 +327,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             selectedDb !== "trendly"
         ) {
             setTrendlyAnalytics(null);
-            setSocial(null);
+            setTrendlySocial(null);
+            setShadowSocial(null);
             setIsAnalyticsLoading(false);
             return;
         }
@@ -328,7 +336,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         let isActive = true;
         setIsAnalyticsLoading(true);
         setTrendlyAnalytics(null);
-        setSocial(null);
+        setTrendlySocial(null);
+        setShadowSocial(null);
 
         HttpWrapper.fetch(
             `/discovery/brands/${selectedBrand.id}/influencers/${selectedInfluencer.id}`,
@@ -343,14 +352,18 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 const body = await res.json();
                 if (!isActive) return;
                 const analytics = body?.analysis as ISocialAnalytics | undefined;
-                const socialData = body?.social as ISocials | undefined;
+                const social = body?.social as ISocials | undefined;
+                const shadowSocial = body?.influencer.social as IShadowSocial | undefined;
+                const shadowUser = body?.influencer.user as IUsers | undefined;
                 setTrendlyAnalytics(analytics || null);
-                setSocial(socialData || null);
+                setTrendlySocial(social || null);
+                setShadowUser(shadowUser || null);
+                setShadowSocial(shadowSocial || null);
             })
             .catch(() => {
                 if (!isActive) return;
                 setTrendlyAnalytics(null);
-                setSocial(null);
+                setTrendlySocial(null);
             })
             .finally(() => {
                 if (isActive) setIsAnalyticsLoading(false);
@@ -1042,52 +1055,62 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     snapPointsRange={["90%", "90%"]}
                     onClose={closeProfileModal}
                 >
-                    {selectedInfluencer && (
+                    {selectedInfluencer && selectedBrand && (
                         <ProfileBottomSheet
-                            influencer={selectedInfluencer as unknown as User}
+                            influencer={{
+                                ...shadowUser,
+                                id: selectedInfluencer.id,
+                            } as User}
                             theme={theme}
                             isOnFreePlan={isOnFreeTrial}
                             isPhoneMasked={false}
-                            trendlySocial={social}
-                            trendlyAnalytics={trendlyAnalytics}
-                            isDiscoverView={true}
+                            social={{
+                                ...(shadowSocial as IShadowSocial),
+                                gender: trendlySocial?.gender,
+                                quality: trendlySocial?.quality_score,
+                                isVerified: trendlySocial?.profile_verified
+                            }}
                             actionCard={
-                                <View
-                                    style={{
-                                        backgroundColor: Colors(theme).transparent,
-                                        marginHorizontal: 16,
-                                    }}
-                                >
-                                    <View style={{ marginTop: 12 }}>
-                                        {isAnalyticsLoading && (
-                                            <View
-                                                style={{ alignItems: "center", paddingVertical: 12 }}
-                                            >
-                                                <ActivityIndicator animating size="small" />
-                                            </View>
-                                        )}
-                                        {!isAnalyticsLoading &&
-                                            !trendlyAnalytics &&
-                                            !social && (
-                                                <PaperText
-                                                    variant="bodySmall"
-                                                    style={{
-                                                        opacity: 0.7,
-                                                        marginHorizontal: 12,
-                                                        marginBottom: 12,
-                                                    }}
-                                                >
-                                                    Detailed analytics are not available for this creator
-                                                    yet.
-                                                </PaperText>
-                                            )}
-                                        {trendlyAnalytics && (
-                                            <HeaderCards analytics={trendlyAnalytics} />
-                                        )}
-                                        {social && <AveragesCard social={social} />}
-                                        {social && <ReelsCard social={social} />}
+                                <>
+                                    <TrendlyAnalyticsEmbed
+                                        ref={trendlyAnalyticsRef}
+                                        influencer={selectedInfluencer}
+                                        selectedBrand={selectedBrand}
+                                    />
+                                    <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+                                        {/* TODO Need to get the Profile Meta rendered correctly */}
+                                        {/* <Title style={[styles.cardColor, { marginBottom: 8 }]}>
+                                            Profile Meta
+                                        </Title>
+                                        <View style={{ gap: 6 }}>
+                                            <Text style={styles.subTextHeading}>
+                                                ID: {trendlySocial.id}
+                                            </Text>
+                                            <Text style={styles.subTextHeading}>
+                                                Platform: {trendlySocial.social_type || "—"}
+                                            </Text>
+                                            <Text style={styles.subTextHeading}>
+                                                Last Updated:{" "}
+                                                {formatDate(
+                                                    trendlySocial.last_update_time
+                                                        ? trendlySocial.last_update_time / 1000000
+                                                        : undefined
+                                                )}
+                                            </Text>
+                                        </View> */}
                                     </View>
-                                </View>
+                                </>
+                            }
+                            actionButton={
+                                trendlyAnalyticsRef.current?.isAdmin ? (
+                                    <Button
+                                        mode="contained"
+                                        onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
+                                        icon="pencil"
+                                    >
+                                        Edit Metrics
+                                    </Button>
+                                ) : undefined
                             }
                             FireStoreDB={FirestoreDB}
                             isBrandsApp={true}
