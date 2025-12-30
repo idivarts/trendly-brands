@@ -14,6 +14,8 @@ interface InviteButtonProps {
     openModal: (args: any) => void;
     influencerIds?: string[];
     influencerName?: string;
+    brandId?: string;
+    connectionCredits?: number;
 }
 
 const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
@@ -22,6 +24,8 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     openModal,
     influencerIds,
     influencerName,
+    brandId,
+    connectionCredits,
 }) => {
     const theme = useTheme();
     const [modalVisible, setModalVisible] = useState(false);
@@ -29,11 +33,12 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
 
     // ✅ Get selectedBrand directly from context
     const { selectedBrand } = useBrandContext();
+    const effectiveBrandId = brandId ?? selectedBrand?.id;
+    const effectiveCredits =
+        connectionCredits ?? selectedBrand?.credits?.connection ?? 0;
 
     const handleInvitePress = () => {
-        const credits = selectedBrand?.credits?.connection || 0;
-
-        if (credits <= 0) {
+        if (effectiveCredits <= 0) {
             openModal({
                 title: "No Connection Credit",
                 description:
@@ -50,9 +55,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     const handleInviteConfirm = async (selectedIds: string[]) => {
         console.log("Inviting influencer to campaigns:", selectedIds);
 
-        const brandId = selectedBrand?.id;
-
-        if (!brandId) {
+        if (!effectiveBrandId) {
             openModal({
                 title: "No Brand Selected",
                 description: "Please select a brand to invite influencers.",
@@ -83,7 +86,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
 
         try {
             await HttpWrapper.fetch(
-                `/discovery/brands/${brandId}/influencers/invite`,
+                `/discovery/brands/${effectiveBrandId}/influencers/invite`,
                 {
                     method: "POST",
                     body: JSON.stringify(payload),
@@ -170,6 +173,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                 <InviteToCampaignModal
                     onClose={() => setModalVisible(false)}
                     onInvite={handleInviteConfirm}
+                    brandId={effectiveBrandId}
                     influencers={
                         influencerIds
                             ? influencerIds.map((id) => ({

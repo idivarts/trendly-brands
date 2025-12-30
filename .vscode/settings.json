@@ -8,4 +8,7 @@
         "source.organizeImports": "explicit",
         "source.removeUnusedImports": "explicit"
     },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
 }

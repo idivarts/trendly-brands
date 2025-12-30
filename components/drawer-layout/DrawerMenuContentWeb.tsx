@@ -202,6 +202,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     paddingBottom: 12,
                     borderBottomColor: Colors(theme).border,
                     borderBottomWidth: StyleSheet.hairlineWidth,
+
                 }}
             >
                 <Pressable
@@ -231,13 +232,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             <ScrollView
                 contentContainerStyle={{
                     paddingVertical: 12,
-                    paddingHorizontal: 8,
+                    paddingHorizontal: 8, //MarkerBYJ
                     gap: 8,
+
                 }}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Campaigns Section */}
-                <View style={{ gap: 8 }}>
+                <View style={{ gap: 8, }}>
                     <Text
                         style={{
                             fontSize: 12,
@@ -245,11 +247,12 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             opacity: 0.7,
                             paddingHorizontal: 8,
                             color: Colors(theme).text,
+
                         }}
                     >
                         Connect
                     </Text>
-                    <View style={{ gap: 2 }}>
+                    <View style={{ rowGap: 2 }}>
                         {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
                             <DrawerMenuItem
                                 key={`campaign-${idx}`}

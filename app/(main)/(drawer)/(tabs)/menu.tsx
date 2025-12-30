@@ -4,7 +4,7 @@ import React from "react";
 
 const MenuScreen = () => {
     return (
-        <AppLayout withWebPadding={true} safeAreaEdges={["left", "right", "bottom"]}>
+        <AppLayout withWebPadding={true} safeAreaEdges={["left", "right"]}>
             <Menu />
         </AppLayout>
     );

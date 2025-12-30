@@ -239,6 +239,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                     }}
                     selectedItems={brandData.profile?.industries || []}
                     theme={theme}
+                    closeOnSelect
                 />
             </Surface>
 

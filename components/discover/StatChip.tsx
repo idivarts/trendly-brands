@@ -2,8 +2,10 @@ import React from "react";
 import { Text } from "react-native";
 import { Chip } from "react-native-paper";
 
-const formatNumber = (n: number | undefined) => {
+const formatNumber = (n: number | string | undefined) => {
     if (n == null) return "-";
+    if (typeof n === "string") return n;
+    if (Number.isNaN(n)) return "-";
     if (n < 100) return String(n.toFixed(2));
     if (n < 1000) return String(n);
     if (n < 1_000_000) return `${Math.round(n / 100) / 10}k`;
@@ -16,7 +18,7 @@ export const StatChip = ({
     value,
 }: {
     label: string;
-    value?: number;
+    value?: number | string;
 }) => (
     <Chip
         mode="flat"
@@ -32,7 +34,7 @@ export const StatChip = ({
         }}
     >
         <Text style={{ fontWeight: "600" }}>
-            {value != null ? formatNumber(value) : "-"}
+            {formatNumber(value)}
         </Text>
         <Text> {label}</Text>
     </Chip>

@@ -10,10 +10,13 @@ import {
     FlatList,
     Image,
     Modal,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
+    type ViewStyle,
 } from "react-native";
 import { Checkbox } from "react-native-paper";
 
@@ -31,28 +34,45 @@ type Props = {
     onInvite: (selectedIds: string[]) => void;
     // optional influencers being invited. If provided, the modal header should reflect it
     influencers?: { id: string; name?: string }[];
+    brandId?: string;
 };
 
-const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite, influencers }) => {
+const InviteToCampaignModal: React.FC<Props> = ({
+    onClose,
+    onInvite,
+    influencers,
+    brandId,
+}) => {
     const [selected, setSelected] = useState<string[]>([]);
     const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
     const { selectedBrand } = useBrandContext();
+    const effectiveBrandId = brandId ?? selectedBrand?.id;
     const [loading, setLoading] = useState(true);
+    const { width, height } = useWindowDimensions();
+    const isWeb = Platform.OS === "web";
+    const horizontalInset = isWeb ? 0 : 16;
+    const maxModalWidth = 700;
+    const containerStyle: ViewStyle = {
+        width: isWeb ? Math.min(maxModalWidth, width * 0.9) : Math.max(0, width - horizontalInset * 2),
+        maxWidth: maxModalWidth,
+        ...(isWeb ? { minWidth: 640 } : {}),
+        maxHeight: isWeb ? "80%" : Math.min(height * 0.85, height - 64),
+    };
 
     useEffect(() => {
         const fetchActiveCollaborations = async () => {
             try {
                 setLoading(true);
 
-                if (!selectedBrand) return;
+                if (!effectiveBrandId) return;
 
                 const coll = collection(FirestoreDB, "collaborations");
                 const q = query(
                     coll,
-                    where("brandId", "==", selectedBrand.id),
+                    where("brandId", "==", effectiveBrandId),
                     where("status", "==", "active"),
                     orderBy("timeStamp", "desc")
                 );
@@ -90,7 +110,7 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite, influencers
         };
 
         fetchActiveCollaborations();
-    }, [selectedBrand]);
+    }, [effectiveBrandId]);
 
     const toggleSelect = (id: string) => {
         setSelected((prev) =>
@@ -162,7 +182,7 @@ const InviteToCampaignModal: React.FC<Props> = ({ onClose, onInvite, influencers
     return (
         <Modal visible={true} transparent animationType="fade">
             <View style={styles.overlay}>
-                <View style={[styles.container, { backgroundColor: colors.aliceBlue }]}>
+                <View style={[styles.container, containerStyle, { backgroundColor: colors.aliceBlue }]}>
                     <Text style={styles.header}>
                         {influencers && influencers?.length > 1
                             ? `Inviting ${influencers.length} influencers`

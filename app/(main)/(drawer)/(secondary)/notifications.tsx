@@ -36,6 +36,7 @@ const NotificationsScreen = () => {
 
     return (
         <AppLayout withWebPadding={false}>
+
             <ScreenHeader
                 title="Notifications"
                 rightAction

@@ -97,7 +97,7 @@ export default function FullInformationalIllustration(props: IIllustration) {
 
 
     return (
-        <AppLayout safeAreaEdges={["left", "right", "bottom"]}>
+        <AppLayout safeAreaEdges={["left", "right"]}>
             <ScrollView
                 contentContainerStyle={[styles.page, { flexGrow: 1 }]}
                 // bounces={false}

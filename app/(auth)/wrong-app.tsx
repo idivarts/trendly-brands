@@ -24,7 +24,7 @@ const TrendlyScreen = () => {
         : "Download on App Store";
 
     return (
-        <AppLayout withWebPadding={true}>
+        <AppLayout withWebPadding={true} safeAreaEdges={["left", "right", "bottom"]}>
             <View
                 style={{
                     flex: 1,
@@ -98,10 +98,8 @@ const styles = StyleSheet.create({
         marginBottom: 40
     },
     backButton: {
-        position: "absolute",
-        top: 12,
-        left: 12,
-        zIndex: 10,
+        justifyContent: "flex-start",
+        alignItems: "flex-start",
     },
     noAccountText: {
         textAlign: "center",

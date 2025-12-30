@@ -367,13 +367,20 @@ const TrendlyAdvancedFilter = ({
     };
 
     const callApi = async (reset: boolean = false) => {
+        if (!selectedBrand?.id) {
+            discoverCommunication.current?.({
+                loading: false,
+                data: [],
+            });
+            return;
+        }
         discoverCommunication.current?.({
             loading: true,
             data: [],
         });
         try {
             let body = await HttpWrapper.fetch(
-                `/discovery/brands/${selectedBrand?.id || ""}/influencers`,
+                `/discovery/brands/${selectedBrand.id}/influencers`,
                 {
                     method: "POST",
                     headers: {
@@ -469,6 +476,7 @@ const TrendlyAdvancedFilter = ({
     });
 
     useEffect(() => {
+        if (!selectedBrand?.id) return;
         callApi();
         return () => {
             if (xl) {
@@ -478,7 +486,7 @@ const TrendlyAdvancedFilter = ({
                 });
             }
         };
-    }, []);
+    }, [selectedBrand?.id]);
 
     FilterApplyRef.current = async (action: string) => {
         setOffset(0);
