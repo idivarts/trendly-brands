@@ -8,7 +8,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
 import { Brand } from "@/types/Brand";
 import { collection, doc, updateDoc } from "firebase/firestore"
-import { convertToKUnits } from "@/shared-uis/utils/conversion";
+import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
 import {
@@ -26,10 +26,13 @@ import EditSocialMetricsModal from "./EditSocialMetricsModal";
 interface IProps {
     influencer: InfluencerItem;
     selectedBrand: Brand;
+    initialSocial?: ISocials | null;
+    initialAnalytics?: ISocialAnalytics | null;
+    onLoadingChange?: (loading: boolean) => void;
 }
 
 const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
-    ({ influencer, selectedBrand }, ref) => {
+    ({ influencer, selectedBrand, initialSocial, initialAnalytics, onLoadingChange }, ref) => {
         const { manager } = useAuthContext();
         const { width } = useWindowDimensions();
         const [loading, setLoading] = useState(false);
@@ -44,6 +47,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const loadInfluencer = async () => {
             try {
+                onLoadingChange?.(true);
                 setLoading(true);
                 const body = await HttpWrapper.fetch(
                     `/discovery/brands/${selectedBrand?.id || ""}/influencers/${influencer.id
@@ -65,8 +69,20 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                 // no-op; you can hook to your toast/snackbar here
             } finally {
                 setLoading(false);
+                onLoadingChange?.(false);
             }
         };
+
+        useEffect(() => {
+            if (initialSocial || initialAnalytics) {
+                setSocial(initialSocial ?? null);
+                setAnalytics(initialAnalytics ?? null);
+                setEditedSocial({});
+                setSaveError(null);
+                setLoading(false);
+                onLoadingChange?.(false);
+            }
+        }, [initialSocial, initialAnalytics, onLoadingChange]);
 
         const handleSaveChanges = async () => {
             if (!social?.id || !hasChanges) return;
@@ -112,11 +128,16 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         );
 
         useEffect(() => {
-            if (!selectedBrand?.id) return;
+            if (!selectedBrand?.id) {
+                onLoadingChange?.(false);
+                return;
+            }
+
+            if (initialSocial || initialAnalytics) return;
 
             loadInfluencer();
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [selectedBrand]);
+        }, [selectedBrand, influencer.id, initialSocial, initialAnalytics, onLoadingChange]);
 
         const formatCompactNumber = (n: number) => {
             const abs = Math.abs(n);
@@ -375,7 +396,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         <StatChip label="Followers" value={social.follower_count} />
                         <StatChip label="Following" value={social.following_count} />
                         <StatChip label="Posts" value={social.content_count} />
-                        <StatChip label="Total Views" value={convertToKUnits(social.views_count)} />
+                        <StatChip label="Total Views" value={convertToMUnits(social.views_count)} />
                         <StatChip
                             label="Total Engagements"
                             value={social.engagement_count}
@@ -405,7 +426,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const ReelsCard = ({ social }: { social: ISocials }) =>
             Array.isArray(social.reels) && social.reels.length > 0 ? (
-                <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+                <Card style={{ marginHorizontal: 12, marginBottom: 12}}>
                     <Card.Title title={`Reels`} />
                     <Card.Content>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
