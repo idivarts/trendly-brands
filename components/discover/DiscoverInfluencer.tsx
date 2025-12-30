@@ -380,7 +380,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                         borderBottomEndRadius: 12,
                         borderBottomStartRadius: 12,
                         zIndex: 999,
-                        width: isCollapsed ? "90%" : undefined,
+                        width: isCollapsed ? "90%" : undefined,     
                     }}
                 >
                     {xl ? (

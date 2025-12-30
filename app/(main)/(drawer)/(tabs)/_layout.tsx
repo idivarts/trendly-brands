@@ -2,7 +2,7 @@ import { router, Tabs } from "expo-router";
 import React from "react";
 
 import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
-import { OpenFilterRightPanel } from "@/components/discover/Discover";
+// import { OpenFilterRightPanel } from "@/components/discover/Discover";
 import Header from "@/components/explore-influencers/header";
 import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
@@ -169,7 +169,7 @@ const TabLayout = () => {
                             justifyContent: "space-between",
                         }}
                     >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8, }}>
                             <PremiumActionTag
                                 label="Discovery remaining"
                                 tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
@@ -186,7 +186,7 @@ const TabLayout = () => {
                             />
                             {!xl &&
                                 <Pressable onPress={() => {
-                                    OpenFilterRightPanel.next(undefined)
+                                    // OpenFilterRightPanel.next(undefined)
                                 }} style={{ marginLeft: 12 }}>
                                     <FontAwesomeIcon icon={faFilter} size={24} />
                                 </Pressable>}
@@ -221,10 +221,10 @@ const TabLayout = () => {
                 options={{
                     title: "My Brand",
                     tabBarIcon: () => <ProfileIcon />,
-                    headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <InfluencerConnects all={true} />
+                    headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center", }}>
+                        <InfluencerConnects all={true}/>
                         <Pressable
-                            style={{ paddingHorizontal: 16 }}
+                            style={{ paddingHorizontal: 16, }}
                             onPress={() => {
                                 if (selectedBrand?.id) {
                                     navigator.clipboard.writeText(selectedBrand.id);

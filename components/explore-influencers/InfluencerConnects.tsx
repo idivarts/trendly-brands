@@ -17,7 +17,7 @@ const InfluencerConnects: React.FC<IProps> = ({ all }) => {
 
     return (
 
-        <View style={{ padding: 8, flexDirection: "row" }}>
+        <View style={{ padding: 8, flexDirection: "row"}}>
             <PremiumActionTag
                 label="Influencers remaining"
                 tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}

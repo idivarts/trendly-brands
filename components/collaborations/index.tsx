@@ -33,7 +33,7 @@ const tabs = (xl: boolean) => [
 const Collaborations = () => {
     const { xl } = useBreakpoints()
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["left", "right", "bottom"]}>
             <View
                 style={{
                     flex: 1,

@@ -171,7 +171,7 @@ const DiscoverComponent = ({
                 setIsCollapsed,
             }}
         >
-            <AppLayout>
+            <AppLayout safeAreaEdges={["left", "right", "bottom"]}>
                 <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
                     <DiscoverInfluencer
                         advanceFilter={advanceFilter}
