@@ -121,7 +121,9 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-audio",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

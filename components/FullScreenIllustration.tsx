@@ -97,14 +97,14 @@ export default function FullInformationalIllustration(props: IIllustration) {
 
 
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["left", "right"]}>
             <ScrollView
-                contentContainerStyle={[styles.page, { flex: 1, height: "100%" }]}
-                bounces={false}
+                contentContainerStyle={[styles.page, { flexGrow: 1 }]}
+                // bounces={false}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Hero */}
-                <View style={[styles.hero, { flex: 1, alignSelf: "stretch" }, isWide ? styles.heroRow : styles.heroCol]}>
+                <View style={[styles.hero, { alignSelf: "stretch" }, isWide ? styles.heroRow : styles.heroCol]}>
                     {/* Left copy */}
                     <Animated.View style={[
                         isWide && styles.left,

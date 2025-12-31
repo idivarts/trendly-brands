@@ -9,12 +9,12 @@ import { Href } from "expo-router";
 import { Platform } from "react-native";
 
 export const MENU_ITEMS: { id: string, icon: any, title: string, href: Href }[] = [
-    {
-        id: "1",
-        icon: faSliders,
-        title: "Brand Preferences",
-        href: "/preferences",
-    },
+    // {
+    //     id: "1",
+    //     icon: faSliders,
+    //     title: "Brand Preferences",
+    //     href: "/preferences",
+    // },
     {
         id: "2",
         icon: faUsers,

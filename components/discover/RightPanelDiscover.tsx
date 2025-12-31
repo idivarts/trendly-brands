@@ -1,4 +1,4 @@
-import { useDiscovery } from "@/components/discover/Discover";
+import { useDiscovery } from "@/components/discover/discovery-context";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Text, View } from "@/shared-uis/components/theme/Themed";
@@ -14,15 +14,15 @@ import {
     StyleSheet,
     ViewStyle,
 } from "react-native";
-import { Button, Chip, HelperText, Menu, TextInput } from "react-native-paper";
+import { Button, Chip, HelperText } from "react-native-paper";
 import ModashFilter from "./modash/ModashFilter";
 import TrendlyAdvancedFilter from "./trendly/TrendlyAdvancedFilter";
+import { Dropdown, RangeInput, Section } from "./filter-components";
+import type { DB_TYPE } from "./discover-types";
 
 // --------------------
 // Component
 // --------------------
-
-export type DB_TYPE = "" | "trendly" | "phyllo" | "modash";
 
 interface IProps {
     style?: StyleProp<ViewStyle>;
@@ -31,31 +31,6 @@ interface IProps {
 }
 
 import { useBreakpoints } from "@/hooks";
-
-interface SectionProps {
-    title: string;
-    children: React.ReactNode;
-    styles: any;
-}
-
-interface DropdownProps {
-    label: string;
-    placeholder?: string;
-    options: string[];
-    styles: any;
-    flex?: number;
-    value?: string;
-    onChange?: (value: string | undefined) => void;
-}
-
-interface RangeInputProps {
-    label: string;
-    min?: string;
-    max?: string;
-    setMin: (value: string) => void;
-    setMax: (value: string) => void;
-    styles: any;
-}
 
 const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, onClearStoredFilters }) => {
     const {
@@ -395,115 +370,6 @@ const DatabaseCard = ({
         </Pressable>
     );
 };
-
-// --------------------
-// Reusable bits
-// --------------------
-export const Section: React.FC<SectionProps> = ({
-    title,
-    children,
-    styles,
-}) => (
-    <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            <Chip
-                compact
-                mode="outlined"
-                style={styles.sectionChip}
-                textStyle={{ fontSize: 10 }}
-            >
-                Clear
-            </Chip>
-        </View>
-        {children}
-    </View>
-);
-
-export const Dropdown: React.FC<DropdownProps> = ({
-    label,
-    placeholder,
-    options,
-    styles,
-    flex,
-    value,
-    onChange,
-}) => {
-    const theme = useTheme();
-    const [visible, setVisible] = React.useState(false);
-    const [selected, setSelected] = React.useState<string | undefined>(value);
-
-    const openMenu = () => setVisible(true);
-    const closeMenu = () => setVisible(false);
-
-    const handleSelect = (opt: string) => {
-        setSelected(opt === "Any" ? undefined : opt);
-        onChange?.(opt === "Any" ? undefined : opt);
-        closeMenu();
-    };
-
-    return (
-        <View style={[styles.field, flex ? { flex } : null]}>
-            <Text style={styles.label}>{label}</Text>
-            <Menu
-                visible={visible}
-                onDismiss={closeMenu}
-                style={{ backgroundColor: Colors(theme).background }}
-                anchor={
-                    <Pressable onPress={openMenu}>
-                        <TextInput
-                            mode="outlined"
-                            dense
-                            editable={false}
-                            right={<TextInput.Icon icon="menu-down" />}
-                            value={selected}
-                            placeholder={placeholder}
-                            style={styles.input}
-                        />
-                    </Pressable>
-                }
-            >
-                {(options || []).map((opt: string) => (
-                    <Menu.Item key={opt} onPress={() => handleSelect(opt)} title={opt} />
-                ))}
-            </Menu>
-        </View>
-    );
-};
-
-export const RangeInput: React.FC<RangeInputProps> = ({
-    label,
-    min,
-    max,
-    setMin,
-    setMax,
-    styles,
-}) => (
-    <View style={styles.field}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={styles.inlineInputs}>
-            <TextInput
-                mode="outlined"
-                dense
-                keyboardType="numeric"
-                value={min}
-                onChangeText={setMin}
-                placeholder="From"
-                style={[styles.input, styles.inputInline]}
-            />
-            <Text style={styles.hyphen}>-</Text>
-            <TextInput
-                mode="outlined"
-                dense
-                keyboardType="numeric"
-                value={max}
-                onChangeText={setMax}
-                placeholder="To"
-                style={[styles.input, styles.inputInline]}
-            />
-        </View>
-    </View>
-);
 
 // --------------------
 // Styles

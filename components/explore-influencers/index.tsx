@@ -163,7 +163,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
 
     if (influencers.length == 0 && connectedInfluencers) {
         return (
-            <AppLayout>
+            <AppLayout safeAreaEdges={["left", "right"]}>
                 <EmptyState
                     image={require("@/assets/images/illustration6.png")}
                     subtitle="You don’t have any influencers connected yet. Switch to Explore Mode from the right panel to start discovering and unlocking influencers."
@@ -175,7 +175,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
     }
     if (isLoading && influencers.length == 0) {
         return (
-            <AppLayout>
+            <AppLayout safeAreaEdges={["left", "right"]}>
                 <View
                     style={{
                         flex: 1,
@@ -189,7 +189,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
         );
     }
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["left", "right"]}>
             <View
                 style={{
                     flex: 1,

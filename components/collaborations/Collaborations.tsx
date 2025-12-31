@@ -166,7 +166,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                     image={require("@/assets/images/illustration6.png")}
                     subtitle="You have posted no collaborations yet! Your journey begins here"
                     title="No Collaborations posted"
-                    action={() => router.push("/(modal)/create-collaboration")}
+                    action={() => router.push("/create-collaboration")}
                     actionLabel="Create Collaboration"
                 />
             ) : (
@@ -289,19 +289,17 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                     <Button
                         onPress={() => {
                             router.push({
-                                pathname: "/(modal)/create-collaboration",
+                                pathname: "/create-collaboration",
                             });
                         }}
+                        icon={({ size, color }) => (
+                            <FontAwesomeIcon
+                                icon={faPlus}
+                                color={color}
+                                size={size ?? 16}
+                            />
+                        )}
                     >
-                        <FontAwesomeIcon
-                            icon={faPlus}
-                            color="white"
-                            size={14}
-                            style={{
-                                marginRight: 8,
-                                marginTop: -2,
-                            }}
-                        />
                         Create Collaboration
                     </Button>
                 </View>

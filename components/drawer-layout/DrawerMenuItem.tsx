@@ -59,8 +59,8 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                     borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
                     borderColor: isActive ? colorSet.primary : colorSet.border,
                     // Active accent on the left
-                    borderLeftWidth: isActive ? 3 : 0,
-                    borderLeftColor: isActive ? colorSet.white : "transparent",
+                    // borderLeftWidth: isActive ? 3 : 0,
+                    // borderLeftColor: isActive ? colorSet.white : "transparent",
                 },
             ]}
             accessibilityRole="button"
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        backgroundColor: "transparent",
+        backgroundColor: "transparent"
     },
     label: {
         fontSize: 14,

@@ -1,9 +1,12 @@
-import DiscoverInfluencer, {
-    InfluencerItem,
-} from "@/components/discover/DiscoverInfluencer";
-import RightPanelDiscover, {
-    DB_TYPE,
-} from "@/components/discover/RightPanelDiscover";
+import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
+import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
+import {
+    DiscoveryProvider,
+    OpenFilterRightPanel,
+    type DiscoverCommunication,
+    type PageSortCommunication,
+} from "@/components/discover/discovery-context";
+import type { DB_TYPE, InfluencerItem } from "@/components/discover/discover-types";
 import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
@@ -12,52 +15,8 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
-import React, {
-    createContext,
-    MutableRefObject,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator } from "react-native-paper";
-import { Subject } from "rxjs";
-export const OpenFilterRightPanel = new Subject();
-
-export interface DiscoverCommunication {
-    loading?: boolean;
-    data: InfluencerItem[];
-    total?: number;
-    page?: number;
-    pageCount?: number;
-    sort?: string;
-}
-export interface PageSortCommunication {
-    page?: number;
-    sort?: string;
-}
-
-interface DiscoveryProps {
-    selectedDb: DB_TYPE;
-    setSelectedDb: Function;
-    rightPanel: boolean;
-    setRightPanel: Function;
-    showFilters: boolean;
-    setShowFilters: Function;
-    isCollapsed: boolean;
-    showRightPanel?: boolean;
-    showTopPanel?: boolean;
-    setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
-    discoverCommunication: MutableRefObject<
-        ((action: DiscoverCommunication) => any) | undefined
-    >;
-    pageSortCommunication: MutableRefObject<
-        ((action: PageSortCommunication) => any) | undefined
-    >;
-}
-const DiscoveryContext = createContext<DiscoveryProps>({} as DiscoveryProps);
-export const useDiscovery = () => useContext(DiscoveryContext);
-export const DiscoveryProvider = DiscoveryContext.Provider;
 
 const DiscoverComponent = ({
     showRightPanel = true,
@@ -196,7 +155,7 @@ const DiscoverComponent = ({
         return <ActivityIndicator />;
 
     return (
-        <DiscoveryContext.Provider
+        <DiscoveryProvider
             value={{
                 selectedDb,
                 setSelectedDb,
@@ -212,7 +171,7 @@ const DiscoverComponent = ({
                 setIsCollapsed,
             }}
         >
-            <AppLayout>
+            <AppLayout safeAreaEdges={["left", "right"]}>
                 <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
                     <DiscoverInfluencer
                         advanceFilter={advanceFilter}
@@ -239,7 +198,7 @@ const DiscoverComponent = ({
                     />
                 </View>
             </AppLayout>
-        </DiscoveryContext.Provider>
+        </DiscoveryProvider>
     );
 };
 

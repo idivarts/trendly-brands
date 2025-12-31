@@ -20,7 +20,7 @@ const Notifications: React.FC<NotificationsProps> = ({
     const styles = stylesFn(theme);
 
     return (
-        <AppLayout>
+        <AppLayout withWebPadding={false} safeAreaEdges={["left", "right", "bottom"]}>
             {
                 notifications.length === 0 ? (
                     <View style={styles.container}>

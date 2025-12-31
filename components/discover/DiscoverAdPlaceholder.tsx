@@ -1,6 +1,6 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import React from "react";
-import { DB_TYPE } from "./RightPanelDiscover";
+import type { DB_TYPE } from "./discover-types";
 import EmptyModashSelected from "./empty-screens/EmptyDiscoverModash";
 import EmptyNoDatabaseSelected from "./empty-screens/EmptyDiscoverNoDB";
 import EmptyPhylloSelected from "./empty-screens/EmptyDiscoverPhyllo";

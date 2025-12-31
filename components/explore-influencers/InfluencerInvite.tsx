@@ -28,7 +28,7 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
         const q = query(
             collaborationCol,
             where("brandId", "==", selectedBrand?.id),
-            where("status", "!=", "inactive"),
+            where("status", "==", "active"),
             orderBy("timeStamp", "desc")
         );
         const docSnap = await getDocs(q)
@@ -91,8 +91,9 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
         }
     };
 
-    if (collaborations.length == 0)
-        return []
+    if (collaborations.length == 0) {
+        return null
+    }
     return (
         <Card style={{ margin: 8, paddingVertical: 16 }}>
             <Card.Title title="You can invite this influencer to any of the below listed active campaign" />

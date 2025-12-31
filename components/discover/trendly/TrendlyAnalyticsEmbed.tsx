@@ -7,9 +7,10 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
 import { Brand } from "@/types/Brand";
-import { collection, doc, updateDoc } from "firebase/firestore";
+import { collection, doc, updateDoc } from "firebase/firestore"
+import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import React, { useEffect, useState } from "react";
-import { Image, Linking, ScrollView } from "react-native";
+import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
 import {
     ActivityIndicator,
     Card,
@@ -18,17 +19,22 @@ import {
     List,
     Text,
 } from "react-native-paper";
-import { InfluencerItem, StatChip } from "../DiscoverInfluencer";
+import { StatChip } from "../StatChip";
+import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
 
 interface IProps {
     influencer: InfluencerItem;
     selectedBrand: Brand;
+    initialSocial?: ISocials | null;
+    initialAnalytics?: ISocialAnalytics | null;
+    onLoadingChange?: (loading: boolean) => void;
 }
 
 const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
-    ({ influencer, selectedBrand }, ref) => {
+    ({ influencer, selectedBrand, initialSocial, initialAnalytics, onLoadingChange }, ref) => {
         const { manager } = useAuthContext();
+        const { width } = useWindowDimensions();
         const [loading, setLoading] = useState(false);
         const [social, setSocial] = useState<ISocials | null>(null);
         const [analytics, setAnalytics] = useState<ISocialAnalytics | null>(null);
@@ -41,6 +47,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const loadInfluencer = async () => {
             try {
+                onLoadingChange?.(true);
                 setLoading(true);
                 const body = await HttpWrapper.fetch(
                     `/discovery/brands/${selectedBrand?.id || ""}/influencers/${influencer.id
@@ -62,8 +69,20 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                 // no-op; you can hook to your toast/snackbar here
             } finally {
                 setLoading(false);
+                onLoadingChange?.(false);
             }
         };
+
+        useEffect(() => {
+            if (initialSocial || initialAnalytics) {
+                setSocial(initialSocial ?? null);
+                setAnalytics(initialAnalytics ?? null);
+                setEditedSocial({});
+                setSaveError(null);
+                setLoading(false);
+                onLoadingChange?.(false);
+            }
+        }, [initialSocial, initialAnalytics, onLoadingChange]);
 
         const handleSaveChanges = async () => {
             if (!social?.id || !hasChanges) return;
@@ -109,21 +128,43 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         );
 
         useEffect(() => {
-            if (!selectedBrand?.id) return;
+            if (!selectedBrand?.id) {
+                onLoadingChange?.(false);
+                return;
+            }
+
+            if (initialSocial || initialAnalytics) return;
 
             loadInfluencer();
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [selectedBrand]);
+        }, [selectedBrand, influencer.id, initialSocial, initialAnalytics, onLoadingChange]);
+
+        const formatCompactNumber = (n: number) => {
+            const abs = Math.abs(n);
+            const formatWith1Decimal = (value: number) => {
+                const rounded = value.toFixed(1);
+                return rounded.endsWith(".0") ? rounded.slice(0, -2) : rounded;
+            };
+            if (abs < 1_000) return formatWith1Decimal(n);
+            if (abs < 1_000_000) return `${formatWith1Decimal(n / 1_000)}K`;
+            if (abs < 1_000_000_000) return `${formatWith1Decimal(n / 1_000_000)}M`;
+            return `${formatWith1Decimal(n / 1_000_000_000)}B`;
+        };
 
         const formatNumber = (n?: number | null) => {
             if (n === null || n === undefined) return "—";
+            if (Platform.OS !== "web") return formatCompactNumber(n);
             try {
-                return new Intl.NumberFormat(undefined, {
+                const formatted = new Intl.NumberFormat(undefined, {
                     notation: "compact",
                     maximumFractionDigits: 1,
                 }).format(n);
+                if (Math.abs(n) >= 1_000 && !/[kKmMbB]/.test(formatted)) {
+                    return formatCompactNumber(n);
+                }
+                return formatted;
             } catch {
-                return `${n}`;
+                return formatCompactNumber(n);
             }
         };
 
@@ -134,15 +175,20 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const formatCurrency = (n?: number | null) => {
             if (n === null || n === undefined) return "—";
+            if (Platform.OS !== "web") return `₹${formatCompactNumber(n)}`;
             try {
-                return new Intl.NumberFormat(undefined, {
+                const formatted = new Intl.NumberFormat(undefined, {
                     style: "currency",
                     currency: "INR",
                     notation: "compact",
                     maximumFractionDigits: 1,
                 }).format(n);
+                if (Math.abs(n) >= 1_000 && !/[kKmMbB]/.test(formatted)) {
+                    return `₹${formatCompactNumber(n)}`;
+                }
+                return formatted;
             } catch {
-                return `₹${formatNumber(n)}`;
+                return `₹${formatCompactNumber(n)}`;
             }
         };
 
@@ -155,6 +201,16 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             }
         };
 
+        const isNarrow = width < 520;
+        const isTiny = width < 360;
+        const smallCardWidth = isNarrow ? "48%" : "31%";
+        const wideCardWidth = isNarrow ? "100%" : "48%";
+        const labelVariant = isTiny ? "labelSmall" : isNarrow ? "labelMedium" : "labelLarge";
+        const valueVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "displaySmall";
+        const rangeVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "headlineLarge";
+        const contentPadding = isNarrow ? 12 : 16;
+        const cardSpacing = isNarrow ? 10 : 12;
+
         const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => (
             <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
                 <View
@@ -164,17 +220,17 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         justifyContent: "space-between",
                     }}
                 >
-                    <Card style={{ width: "31%", marginBottom: 12 }}>
-                        <Card.Content>
+                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                        <Card.Content style={{ padding: contentPadding }}>
                             <Text
-                                variant="labelLarge"
+                                variant={labelVariant}
                                 style={{ opacity: 0.7, marginBottom: 6 }}
                             >
                                 Quality
                             </Text>
-                            <Text variant="displaySmall">
+                            <Text variant={valueVariant}>
                                 {analytics.quality}
-                                <Text variant="labelLarge">%</Text>
+                                <Text variant={labelVariant}>%</Text>
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Higher = richer, classy, aesthetic creators
@@ -182,32 +238,32 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         </Card.Content>
                     </Card>
 
-                    <Card style={{ width: "31%", marginBottom: 12 }}>
-                        <Card.Content>
+                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                        <Card.Content style={{ padding: contentPadding }}>
                             <Text
-                                variant="labelLarge"
+                                variant={labelVariant}
                                 style={{ opacity: 0.7, marginBottom: 6 }}
                             >
                                 Trustability
                             </Text>
-                            <Text variant="displaySmall">
+                            <Text variant={valueVariant}>
                                 {analytics.trustablity}
-                                <Text variant="labelLarge">%</Text>
+                                <Text variant={labelVariant}>%</Text>
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Signals from past collabs, engagement quality
                             </Text>
                         </Card.Content>
                     </Card>
-                    <Card style={{ width: "31%", marginBottom: 12 }}>
-                        <Card.Content>
+                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                        <Card.Content style={{ padding: contentPadding }}>
                             <Text
-                                variant="labelLarge"
+                                variant={labelVariant}
                                 style={{ opacity: 0.7, marginBottom: 6 }}
                             >
                                 CPM
                             </Text>
-                            <Text variant="displaySmall">
+                            <Text variant={valueVariant}>
                                 {formatCurrency(analytics.cpm)}{" "}
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
@@ -216,15 +272,15 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         </Card.Content>
                     </Card>
 
-                    <Card style={{ width: "48%", marginBottom: 12 }}>
-                        <Card.Content>
+                    <Card style={{ width: wideCardWidth, marginBottom: cardSpacing }}>
+                        <Card.Content style={{ padding: contentPadding }}>
                             <Text
-                                variant="labelLarge"
+                                variant={labelVariant}
                                 style={{ opacity: 0.7, marginBottom: 6 }}
                             >
                                 Estimated Budget
                             </Text>
-                            <Text variant="headlineLarge">
+                            <Text variant={rangeVariant}>
                                 {formatCurrency(analytics.estimatedBudget?.min)} —{" "}
                                 {formatCurrency(analytics.estimatedBudget?.max)}
                             </Text>
@@ -234,15 +290,15 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         </Card.Content>
                     </Card>
 
-                    <Card style={{ width: "48%", marginBottom: 12 }}>
-                        <Card.Content>
+                    <Card style={{ width: wideCardWidth, marginBottom: cardSpacing }}>
+                        <Card.Content style={{ padding: contentPadding }}>
                             <Text
-                                variant="labelLarge"
+                                variant={labelVariant}
                                 style={{ opacity: 0.7, marginBottom: 6 }}
                             >
                                 Estimated Reach
                             </Text>
-                            <Text variant="headlineLarge">
+                            <Text variant={rangeVariant}>
                                 {formatNumber(analytics.estimatedReach?.min)} —{" "}
                                 {formatNumber(analytics.estimatedReach?.max)}
                             </Text>
@@ -308,7 +364,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             </Chip>
                         )}
                         {typeof social.quality_score === "number" && (
-                            <Chip style={{ marginRight: 8, marginBottom: 8 }} icon="star">
+                            <Chip style={{ marginRight: 8, marginBottom: 0 }} icon="star">
                                 Quality: {social.quality_score}/100
                             </Chip>
                         )}
@@ -340,7 +396,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         <StatChip label="Followers" value={social.follower_count} />
                         <StatChip label="Following" value={social.following_count} />
                         <StatChip label="Posts" value={social.content_count} />
-                        <StatChip label="Total Views" value={social.views_count} />
+                        <StatChip label="Total Views" value={convertToMUnits(social.views_count)} />
                         <StatChip
                             label="Total Engagements"
                             value={social.engagement_count}
@@ -370,7 +426,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const ReelsCard = ({ social }: { social: ISocials }) =>
             Array.isArray(social.reels) && social.reels.length > 0 ? (
-                <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+                <Card style={{ marginHorizontal: 12, marginBottom: 12}}>
                     <Card.Title title={`Reels`} />
                     <Card.Content>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
