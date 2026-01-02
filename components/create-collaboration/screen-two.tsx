@@ -17,8 +17,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import * as Location from "expo-location";
 import React, { useMemo } from "react";
-import { useWindowDimensions } from "react-native";
+import { Alert, useWindowDimensions } from "react-native";
 import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import { View } from "../theme/Themed";
@@ -82,6 +83,42 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
 
         return `${collaboration.numberOfInfluencersNeeded || 1}`;
     }, [collaboration.numberOfInfluencersNeeded]);
+
+    const handleLocationSelect = async (value: string) => {
+        if (value === "On-Site") {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== "granted") {
+                    Alert.alert(
+                        "Location Services Disabled",
+                        "Precise location is required to facilitate secure on-site collaborations. Please enable Location Services in your System Settings to continue.",
+                    );
+                    return;
+                }
+
+                const location = await Location.getCurrentPositionAsync({});
+                mapRegion.setState((prev) => ({
+                    ...prev,
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                }));
+            } catch {
+                Alert.alert(
+                    "Location Services Disabled",
+                    "Precise location is required to facilitate secure on-site collaborations. Please enable Location Services in your System Settings to continue.",
+                );
+                return;
+            }
+        }
+
+        setCollaboration({
+            ...collaboration,
+            location: {
+                ...collaboration.location,
+                type: value,
+            },
+        });
+    };
 
     return (
         <>
@@ -220,15 +257,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 value: "On-Site",
                             },
                         ]}
-                        onSelect={(value) => {
-                            setCollaboration({
-                                ...collaboration,
-                                location: {
-                                    ...collaboration.location,
-                                    type: value,
-                                },
-                            });
-                        }}
+                        onSelect={handleLocationSelect}
                         selectedValue={collaboration.location?.type || "Remote"}
                         theme={theme}
                     />

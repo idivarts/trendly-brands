@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 
@@ -85,25 +84,6 @@ const CreateCollaboration = () => {
         useCollaborationContext();
 
     const { openModal } = useConfirmationModel();
-
-    useEffect(() => {
-        async function getCurrentLocation() {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== "granted") {
-                alert("Permission to access location was denied");
-                return;
-            }
-
-            let location = await Location.getCurrentPositionAsync({});
-            setMapRegion({
-                ...mapRegion,
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-            });
-        }
-
-        getCurrentLocation();
-    }, []);
 
     const fetchCollaboration = async (id: string) => {
         const collaboration = await getCollaborationById(id);
