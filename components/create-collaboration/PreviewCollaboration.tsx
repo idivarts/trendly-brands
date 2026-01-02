@@ -8,6 +8,7 @@ import OverviewTabContent from "../collaboration/collaboration-details/OverviewT
 
 interface PreviewProps {
     collaboration: Partial<CollaborationDetail>;
+    isSubmitting: boolean;
     onEdit: () => void;
     onPublish: () => void;
     onSaveDraft: () => void;
@@ -15,6 +16,7 @@ interface PreviewProps {
 
 const PreviewCollaboration: React.FC<PreviewProps> = ({
     collaboration,
+    isSubmitting,
     onEdit,
     onPublish,
     onSaveDraft,
@@ -40,15 +42,28 @@ const PreviewCollaboration: React.FC<PreviewProps> = ({
                     style={{ flex: 1 }}
                     textColor={Colors(theme).text}
                     onPress={onEdit}
+                    disabled={isSubmitting}
                 >
                     Edit
                 </Button>
 
-                <Button mode="contained" style={{ flex: 1 }} onPress={onSaveDraft}>
+                <Button
+                    mode="contained"
+                    style={{ flex: 1 }}
+                    onPress={onSaveDraft}
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
+                >
                     Save as Draft
                 </Button>
 
-                <Button mode="contained" style={{ flex: 1 }} onPress={onPublish}>
+                <Button
+                    mode="contained"
+                    style={{ flex: 1 }}
+                    onPress={onPublish}
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
+                >
                     Publish
                 </Button>
             </View>

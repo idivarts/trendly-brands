@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
@@ -68,6 +68,7 @@ const CreateCollaboration = () => {
     const params = useLocalSearchParams();
     const type = params.id ? "Edit" : "Add";
     const { publish } = usePublishCollaboration();
+    const isSavingRef = useRef(false);
 
     const {
         isProcessing,
@@ -148,6 +149,10 @@ const CreateCollaboration = () => {
     };
     const saveCollaboration = async (myStatus: "draft" | "active") => {
         try {
+            if (isSavingRef.current) {
+                return;
+            }
+            isSavingRef.current = true;
             if (!AuthApp.currentUser || !selectedBrand) {
                 Console.error("User or brand not selected");
                 return;
@@ -269,6 +274,7 @@ const CreateCollaboration = () => {
             setProcessPercentage(0);
             setProcessMessage("");
             setIsProcessing(false);
+            isSavingRef.current = false;
             if (myStatus === "draft") {
                 notifyUprade();
             }
@@ -370,6 +376,7 @@ const CreateCollaboration = () => {
                         brandWebsite: selectedBrand?.profile?.website ?? "",
                     } as any
                 }
+                isSubmitting={isProcessing}
                 onEdit={() => setScreen(3)}
                 onSaveDraft={saveAsDraft}
                 onPublish={submitCollaboration}
