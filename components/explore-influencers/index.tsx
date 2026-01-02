@@ -188,6 +188,18 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
             </AppLayout>
         );
     }
+    if (filteredInfluencers.length === 0) {
+        return (
+            <AppLayout safeAreaEdges={["left", "right"]}>
+                <EmptyState
+                    image={require("@/assets/images/illustration6.png")}
+                    title="No Influencers Found"
+                    subtitle="No influencers match your current filters. Try adjusting your search or filters."
+                    hideAction={true}
+                />
+            </AppLayout>
+        );
+    }
     return (
         <AppLayout safeAreaEdges={["left", "right"]}>
             <View

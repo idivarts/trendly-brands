@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
 import React, { FC, useEffect, useState } from "react";
-import { FlatList, Pressable } from "react-native";
+import { Pressable } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import MembersCard from "../brand-profile/members-card";
 import { Text, View } from "../theme/Themed";
@@ -98,11 +98,11 @@ const MemberContainer: FC<MemberContainerProps> = ({
                     <FontAwesomeIcon icon={faPlus} size={20} color={Colors(theme).text} />
                 </Pressable>
             </View>
-            {loading ? <ActivityIndicator /> :
-                <FlatList
-                    data={members}
-                    renderItem={({ item }) => (
+            {loading ? <ActivityIndicator /> : (
+                <View style={{ gap: 10 }}>
+                    {members.map((item) => (
                         <MembersCard
+                            key={item.managerId}
                             manager={item}
                             cardType="contract"
                             removeAction={async () => {
@@ -112,11 +112,9 @@ const MemberContainer: FC<MemberContainerProps> = ({
                                 );
                             }}
                         />
-                    )}
-                    contentContainerStyle={{
-                        gap: 10,
-                    }}
-                />}
+                    ))}
+                </View>
+            )}
         </View>
     );
 };
