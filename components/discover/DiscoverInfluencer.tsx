@@ -241,6 +241,16 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [currentStatus, setCurrentStatus] = useState<string>("pending");
     const { discoverCommunication } = useDiscovery();
 
+    const dedupeById = useCallback((items: InfluencerItem[]) => {
+        const seen = new Set<string>();
+        return items.filter((item) => {
+            if (!item?.id) return true;
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+        });
+    }, []);
+
     const statusOptions = [
         { label: "Pending", value: "pending" },
         { label: "Accepted", value: "accepted" },
@@ -250,12 +260,13 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     discoverCommunication.current = useCallback(
         ({ loading, data, page, sort }: DiscoverCommunication) => {
             setLoading(loading || false);
-            setData(data || []);
+            const nextData = Array.isArray(data) ? data : [];
+            setData(dedupeById(nextData));
             setRightPanel(false);
             if (page) setCurrentPage(page);
             if (sort) setCurrentSort(sort);
         },
-        []
+        [dedupeById]
     );
 
     useEffect(() => {
