@@ -13,6 +13,7 @@ import Colors from "@/constants/Colors";
 import { useAuthContext, useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
@@ -42,7 +43,7 @@ const TabLayout = () => {
     const { selectedBrand } = useBrandContext()
     const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
     const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
-
+    const influencerCredits = selectedBrand?.credits?.influencer || (IS_MONETIZATION_DONE ? 0 : 1000)
 
     return (
         <Tabs
@@ -100,10 +101,17 @@ const TabLayout = () => {
                             style={{
                                 flexDirection: "row",
                                 alignItems: "center",
+                                gap: 8,
                                 justifyContent: "space-between",
                             }}
                         >
-                            <InfluencerConnects />
+                            <PremiumActionTag
+                                label="Influencers remaining"
+                                tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}
+                                icon="star-four-points"
+                                variant="gold"
+                                count={influencerCredits}
+                            />
                             <NotificationIcon />
                         </View>
                     ),
@@ -222,7 +230,7 @@ const TabLayout = () => {
                     title: "My Brand",
                     tabBarIcon: () => <ProfileIcon />,
                     headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center", }}>
-                        <InfluencerConnects all={true}/>
+                        {xl && <InfluencerConnects />}
                         <Pressable
                             style={{ paddingHorizontal: 16, }}
                             onPress={() => {
