@@ -11,6 +11,8 @@ import { Button, Text, TextInput } from 'react-native-paper'
 
 import { ISocials } from '@/shared-libs/firestore/trendly-pro/models/bq-socials'
 import { View } from '@/shared-uis/components/theme/Themed'
+import Colors from '@/constants/Colors'
+import { useTheme } from '@react-navigation/native'
 
 interface EditSocialMetricsModalProps {
     visible: boolean
@@ -42,6 +44,8 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
     const modalWidth = Math.min(maxWidth, Math.max(0, width - horizontalInset * 2))
     const maxHeight = Math.max(0, height - insets.top - insets.bottom - 32)
     const modalHeight = Math.min(maxHeight, Math.max(320, height * 0.85))
+    const theme = useTheme();
+    const colors = Colors(theme);
 
     return (
         <Modal
@@ -57,6 +61,7 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
                     paddingTop: insets.top + 16,
                     paddingBottom: insets.bottom + 16,
                     paddingHorizontal: horizontalInset,
+
                 }}
             >
                 <KeyboardAvoidingView
@@ -65,7 +70,7 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
                 >
                     <View
                         style={{
-                            backgroundColor: 'white',
+                            backgroundColor: Colors(theme).card,
                             borderRadius: 16,
                             height: modalHeight,
                             maxHeight,
@@ -75,7 +80,7 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
                             paddingHorizontal: 0,
                         }}
                     >
-                        <View style={{ paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+                        <View style={{ paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: Colors(theme).card }}>
                             <Text variant="headlineSmall">Edit Social Metrics</Text>
                         </View>
 
@@ -219,7 +224,7 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
                             />
                         </ScrollView>
 
-                        <View style={{ paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#e0e0e0', flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
+                        <View style={{ paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: Colors(theme).white, flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8, backgroundColor: Colors(theme).card }}>
                             <Button onPress={onClose}>Cancel</Button>
                             <Button mode="contained" onPress={onSave} loading={isSaving} disabled={isSaving || !hasChanges}>
                                 Save

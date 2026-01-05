@@ -300,11 +300,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         name: {
             fontSize: 16,
             fontWeight: "600",
-            color: colors.text,
+            color: colors.black,
         },
         description: {
             fontSize: 13,
-            color: colors.text,
+            color: colors.black,
         },
         footer: {
             flexDirection: "row",

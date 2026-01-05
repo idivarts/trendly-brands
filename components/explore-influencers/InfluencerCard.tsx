@@ -112,7 +112,7 @@ const NameSection = ({
                 style={{
                     fontSize: isCollapsed ? 22 : 18,
                     fontWeight: "700" as const,
-                    color: colors.text,
+                  color: colors.black,
                 }}
             >
                 {item.name}
@@ -125,6 +125,7 @@ const NameSection = ({
                     opacity: 0.7,
                     marginTop: 2,
                     fontWeight: "300" as const,
+                    color: colors.black,
                 }}
             >
                 @{maskHandle(item.username)}

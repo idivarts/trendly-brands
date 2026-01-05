@@ -1,5 +1,5 @@
 import React from "react";
-import { Text } from "react-native";
+import { ColorValue, Text } from "react-native";
 import { Chip } from "react-native-paper";
 
 const formatNumber = (n: number | string | undefined) => {
@@ -16,26 +16,32 @@ const formatNumber = (n: number | string | undefined) => {
 export const StatChip = ({
     label,
     value,
+    textColor,
 }: {
     label: string;
     value?: number | string;
-}) => (
-    <Chip
-        mode="flat"
-        compact
-        style={{
-            marginRight: 6,
-            marginBottom: 6,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.2,
-            shadowRadius: 1,
-            flexDirection: "column",
-        }}
-    >
-        <Text style={{ fontWeight: "600" }}>
-            {formatNumber(value)}
-        </Text>
-        <Text> {label}</Text>
-    </Chip>
-);
+    textColor?: ColorValue | null;
+}) => {
+    const resolvedTextColor: ColorValue | undefined = textColor ?? undefined;
+
+    return (
+        <Chip
+            mode="flat"
+            compact
+            style={{
+                marginRight: 6,
+                marginBottom: 6,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.2,
+                shadowRadius: 1,
+                flexDirection: "column",
+            }}
+        >
+            <Text style={{ fontWeight: "600", color: resolvedTextColor }}>
+                {formatNumber(value)}
+            </Text>
+            <Text style={{ color: resolvedTextColor }}> {label}</Text>
+        </Chip>
+    );
+};

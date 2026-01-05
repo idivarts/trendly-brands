@@ -2,7 +2,7 @@ import { router, Tabs } from "expo-router";
 import React from "react";
 
 import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
-// import { OpenFilterRightPanel } from "@/components/discover/Discover";
+import { OpenFilterRightPanel } from "@/components/discover/discovery-context";
 import Header from "@/components/explore-influencers/header";
 import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
@@ -194,9 +194,9 @@ const TabLayout = () => {
                             />
                             {!xl &&
                                 <Pressable onPress={() => {
-                                    // OpenFilterRightPanel.next(undefined)
+                                    OpenFilterRightPanel.next();
                                 }} style={{ marginLeft: 12 }}>
-                                    <FontAwesomeIcon icon={faFilter} size={24} />
+                                    <FontAwesomeIcon color={Colors(theme).text} icon={faFilter} size={24} />
                                 </Pressable>}
                         </View>
                     </View>,
