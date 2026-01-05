@@ -196,7 +196,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                                     padding: 16,
                                 }}
                             >
-                                <PaperText style={{ fontWeight: "800", fontSize: 15, color: colors.text }}>
+                                <PaperText style={{ fontWeight: "800", fontSize: 15, color: selected ? colors.primary : colors.text }}>
                                     {opt.title}
                                 </PaperText>
                                 <PaperText style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>

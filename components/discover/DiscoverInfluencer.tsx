@@ -375,7 +375,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                         width: columns === 2 ? "50%" : "100%",
                         paddingHorizontal: isCollapsed ? 12 : 8,
                         paddingVertical: isCollapsed ? 12 : 8,
-                        
+
                     }}
                 >
                     <InfluencerCard
@@ -494,7 +494,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                         borderBottomEndRadius: 12,
                         borderBottomStartRadius: 12,
                         zIndex: 999,
-                        width: isCollapsed ? "90%" : undefined,     
+                        width: isCollapsed ? "90%" : undefined,
                     }}
                 >
                     {xl ? (
@@ -552,7 +552,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             icon="filter"
                                             style={{ marginLeft: "auto" }}
                                         >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                                            <Text numberOfLines={1} style={{ maxWidth: 140,color: colors.black }}>
                                                 {statusOptions.find((o) => o.value === currentStatus)
                                                     ?.label || "Status"}
                                             </Text>
@@ -579,7 +579,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             icon="sort"
                                             style={{ marginLeft: "auto" }}
                                         >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                                            <Text numberOfLines={1} style={{ maxWidth: 140,color: colors.black }}>
                                                 {sortOptions.find((o) => o.value === currentSort)?.label ||
                                                     "Relevance"}
                                             </Text>
@@ -636,7 +636,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         onDismiss={() => setStatusMenuVisible(false)}
                                         anchor={
                                             <Chip compact onPress={() => setStatusMenuVisible(true)} icon="filter">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                                                <Text numberOfLines={1} style={{ maxWidth: 140,color: colors.black}}>
                                                     {statusOptions.find((o) => o.value === currentStatus)?.label || "Status"}
                                                 </Text>
                                             </Chip>
@@ -653,7 +653,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         onDismiss={() => setSortMenuVisible(false)}
                                         anchor={
                                             <Chip compact onPress={() => setSortMenuVisible(true)} icon="sort">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140 }}>
+                                                <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
                                                     {sortOptions.find((o) => o.value === currentSort)?.label || "Relevance"}
                                                 </Text>
                                             </Chip>
@@ -676,7 +676,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
                     paddingHorizontal: 16,
-              
+
                 }}
             >
                 <FlatList
@@ -763,7 +763,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 style={{
                                     flexDirection: "row",
                                     alignItems: "center",
-                                    backgroundColor: "rgba(255,255,255,0.5)",
+                                    backgroundColor: "rgba(255, 255, 255, 0.8)",
                                     paddingHorizontal: 16,
                                     paddingVertical: 8,
                                     borderRadius: 40,

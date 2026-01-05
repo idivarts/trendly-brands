@@ -22,6 +22,8 @@ import {
 import { StatChip } from "../StatChip";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
+import Colors from "@/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 
 interface IProps {
     influencer: InfluencerItem;
@@ -44,6 +46,8 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({});
         const isAdmin = manager?.isAdmin === true;
         const hasChanges = Object.keys(editedSocial).length > 0;
+        const theme = useTheme();
+        const colors = Colors(theme);
 
         const loadInfluencer = async () => {
             try {
@@ -389,17 +393,19 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         );
 
         const TotalsCard = ({ social }: { social: ISocials }) => (
+
             <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
                 <Card.Title title="Totals" />
                 <Card.Content>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                        <StatChip label="Followers" value={social.follower_count} />
-                        <StatChip label="Following" value={social.following_count} />
-                        <StatChip label="Posts" value={social.content_count} />
-                        <StatChip label="Total Views" value={convertToMUnits(social.views_count)} />
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
+                        <StatChip label="Followers" value={social.follower_count} textColor={Colors(theme).black} />
+                        <StatChip label="Following" value={social.following_count} textColor={Colors(theme).black} />
+                        <StatChip label="Posts" value={social.content_count} textColor={Colors(theme).black} />
+                        <StatChip label="Total Views" value={convertToMUnits(social.views_count)} textColor={Colors(theme).black} />
                         <StatChip
                             label="Total Engagements"
                             value={social.engagement_count}
+                            textColor={Colors(theme).black}
                         />
                     </View>
                 </Card.Content>
@@ -407,18 +413,19 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         );
 
         const AveragesCard = ({ social }: { social: ISocials }) => (
-            <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <Card style={{ marginHorizontal: 12, marginBottom: 12, }}>
                 <Card.Title title="Averages & Rates" />
                 <Card.Content>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                        <StatChip label="Median Views" value={social.average_views} />
-                        <StatChip label="Median Likes" value={social.average_likes} />
-                        <StatChip label="Median Comments" value={social.average_comments} />
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
+                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Likes" value={social.average_likes} textColor={Colors(theme).black} />
+                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black}/>
                         <StatChip
                             label="Engagement Rate %"
                             value={social.engagement_rate || 0}
+                            textColor={Colors(theme).black}
                         />
-                        <StatChip label="Quality Score" value={social.quality_score} />
+                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black}/>
                     </View>
                 </Card.Content>
             </Card>
@@ -426,15 +433,15 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const ReelsCard = ({ social }: { social: ISocials }) =>
             Array.isArray(social.reels) && social.reels.length > 0 ? (
-                <Card style={{ marginHorizontal: 12, marginBottom: 12}}>
+                <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
                     <Card.Title title={`Reels`} />
                     <Card.Content>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            <View style={{ flexDirection: "row" }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} >
+                            <View style={{ flexDirection: "row", backgroundColor: "transparent" }}>
                                 {social.reels.map((r) => (
                                     <Card
                                         key={r.id}
-                                        style={{ width: 140, marginRight: 12 }}
+                                        style={{ width: 140, marginRight: 12, borderWidth:1,borderColor:colors.border }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
                                         {!!r.thumbnail_url && (
@@ -457,11 +464,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                 {r.caption || "Reel"}
                                             </Text>
                                             <Divider style={{ marginVertical: 6 }} />
-                                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                                            <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
                                                 <Chip
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="play-circle"
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.views_count)}
                                                 </Chip>
@@ -469,6 +477,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="heart"
+                                                     textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.likes_count)}
                                                 </Chip>
@@ -476,6 +485,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="comment-text"
+                                                     textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.comments_count)}
                                                 </Chip>

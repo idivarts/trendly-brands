@@ -7,7 +7,7 @@ const PreferencesScreen = () => {
     return (
         <AppLayout withWebPadding={false}>
             <ScreenHeader title="Members" />
-            <AppLayout>
+            <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <Members />
             </AppLayout>
         </AppLayout>
