@@ -91,7 +91,7 @@ const Settings = () => {
                     </Pressable>
                 }
             />
-            <AppLayout>
+            <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <View style={styles.settingsContainer}>
                     <ContentWrapper
                         theme={theme}
