@@ -1,7 +1,7 @@
+import { useColorScheme } from "@/components/theme/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useAuthContext, useThemeOverride } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
-import { useColorScheme } from "@/components/theme/useColorScheme";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import SelectGroup from "@/shared-uis/components/select/select-group";
 import stylesFn from "@/styles/settings/Settings.styles";
