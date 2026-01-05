@@ -24,6 +24,7 @@ export const stylesFn = (theme: Theme) =>
             alignItems: "center",
             width: "100%",
             gap: 16,
+            paddingBottom:20
         },
         name: {
             fontWeight: "bold",

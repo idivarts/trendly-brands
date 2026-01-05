@@ -76,7 +76,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
                 padding: 16,
                 borderWidth: 0.3,
                 borderColor: Colors(theme).gray300,
-                borderRadius: 10,
+
             }}
         >
             <View
@@ -84,6 +84,7 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 10,
+
                 }}
             >
                 <ImageComponent
@@ -93,12 +94,12 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
                     url={manager.profileImage || ""}
                     altText="Image"
                 />
-                <View>
+                <View >
                     <Text style={{ fontSize: 16 }}>{manager.name}</Text>
                     <Text style={{ fontSize: 16 }}>{manager.email}</Text>
                 </View>
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "transparent", }}>
                 {manager.status === 0 && (
                     <Text style={{ color: Colors(theme).orange }}>Invite Sent</Text>
                 )}
