@@ -48,6 +48,7 @@ const UserResponse: FC<UserResponseProps> = ({
                 borderRadius: 5,
                 width: "100%",
                 gap: 16,
+                backgroundColor: "transparent",
             }}
         >
             <View
@@ -55,6 +56,7 @@ const UserResponse: FC<UserResponseProps> = ({
                     flexDirection: "row",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    backgroundColor: "transparent",
                 }}
             >
                 <Text
@@ -70,6 +72,7 @@ const UserResponse: FC<UserResponseProps> = ({
                 style={{
                     width: "100%",
                     gap: 16,
+                    backgroundColor: "transparent",
                 }}
             >
                 <ScrollView horizontal style={{}}>
@@ -90,6 +93,7 @@ const UserResponse: FC<UserResponseProps> = ({
                         flexDirection: "row",
                         gap: 16,
                         justifyContent: "space-between",
+                        backgroundColor: "transparent",
                     }}
                 >
                     <Text style={{ fontSize: 16 }}>
@@ -130,6 +134,7 @@ const UserResponse: FC<UserResponseProps> = ({
                     style={{
                         flexDirection: "column",
                         gap: 16,
+                        backgroundColor: "transparent",
                     }}
                 >
                     {application?.answersFromInfluencer &&
@@ -137,9 +142,11 @@ const UserResponse: FC<UserResponseProps> = ({
                         application?.answersFromInfluencer.map((answer, index) => {
                             return (
                                 <View
+                                    key={`${answer.question}-${index}`}
                                     style={{
                                         flexDirection: "column",
                                         gap: 10,
+                                        backgroundColor: "transparent",
                                     }}
                                 >
                                     <Text

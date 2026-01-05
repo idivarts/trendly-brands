@@ -77,6 +77,7 @@ const MemberContainer: FC<MemberContainerProps> = ({
                 flex: 1,
                 flexDirection: "column",
                 gap: 16,
+                backgroundColor: "transparent",
             }}
         >
             <View
@@ -84,6 +85,7 @@ const MemberContainer: FC<MemberContainerProps> = ({
                     flexDirection: "row",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    backgroundColor: "transparent",
                 }}
             >
                 <Text
@@ -99,7 +101,7 @@ const MemberContainer: FC<MemberContainerProps> = ({
                 </Pressable>
             </View>
             {loading ? <ActivityIndicator /> : (
-                <View style={{ gap: 10 }}>
+                <View style={{ gap: 10, backgroundColor: "transparent" }}>
                     {members.map((item) => (
                         <MembersCard
                             key={item.managerId}

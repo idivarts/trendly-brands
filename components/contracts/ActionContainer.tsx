@@ -104,6 +104,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 width: "100%",
                 flexDirection: "column",
                 gap: 16,
+                backgroundColor: "transparent",
             }}
         >
             {contract.status < 2 && (
@@ -112,6 +113,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         flexDirection: "row",
                         justifyContent: "space-between",
                         gap: 16,
+                        backgroundColor: "transparent",
                     }}
                 >
                     {contract.status === 0 && (

@@ -165,6 +165,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                                 justifyContent: "space-between",
                                 width: "100%",
                                 alignItems: "center",
+
                             }}
                         >
                             <Text

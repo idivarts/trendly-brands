@@ -2,13 +2,14 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
+import ImageComponent from "@/shared-uis/components/image-component";
 import { useTheme } from "@react-navigation/native";
 import { Video } from "expo-av";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
-    Image,
     Modal,
     Platform,
     Pressable,
@@ -31,7 +32,7 @@ type Collaboration = {
 
 type Props = {
     onClose: () => void;
-    onInvite: (selectedIds: string[]) => void;
+    onInvite: (selectedIds: string[]) => Promise<boolean>;
     // optional influencers being invited. If provided, the modal header should reflect it
     influencers?: { id: string; name?: string }[];
     brandId?: string;
@@ -51,6 +52,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
     const { selectedBrand } = useBrandContext();
     const effectiveBrandId = brandId ?? selectedBrand?.id;
     const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { width, height } = useWindowDimensions();
     const isWeb = Platform.OS === "web";
     const horizontalInset = isWeb ? 0 : 16;
@@ -118,10 +120,19 @@ const InviteToCampaignModal: React.FC<Props> = ({
         );
     };
 
-    const handleInvite = () => {
-        onInvite(selected);
-        setSelected([]);
-        onClose();
+    const handleInvite = async () => {
+        if (selected.length === 0 || isSubmitting) return;
+        setIsSubmitting(true);
+
+        try {
+            const isSuccess = await onInvite(selected);
+            if (isSuccess) {
+                setSelected([]);
+                onClose();
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleClose = () => {
@@ -139,11 +150,11 @@ const InviteToCampaignModal: React.FC<Props> = ({
                 style={[
                     styles.card,
                     isSelected && styles.cardSelected,
-                    { backgroundColor: Colors(theme).InfluencerStatCard },
+                    { backgroundColor: Colors(theme).aliceBlue },
                 ]}
             >
                 {/* Media */}
-                {item.isVideo ? (
+                {/* {item.isVideo ? (
                     <Video
                         source={{ uri: item.mediaUrl ?? "https://via.placeholder.com/150" }}
                         style={styles.media}
@@ -151,12 +162,13 @@ const InviteToCampaignModal: React.FC<Props> = ({
                         isMuted
                     />
                 ) : (
-                    <Image
-                        source={{ uri: item.mediaUrl ?? "https://via.placeholder.com/150" }}
+                    <ImageComponent
+                        url={item.mediaUrl ?? ""}
+                        altText={item.name}
                         style={styles.media}
                         resizeMode="cover"
                     />
-                )}
+                )} */}
 
                 {/* Info */}
                 <View style={styles.info}>
@@ -182,7 +194,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
     return (
         <Modal visible={true} transparent animationType="fade">
             <View style={styles.overlay}>
-                <View style={[styles.container, containerStyle, { backgroundColor: colors.aliceBlue }]}>
+                <View style={[styles.container, containerStyle, { backgroundColor: colors.white }]}>
                     <Text style={styles.header}>
                         {influencers && influencers?.length > 1
                             ? `Inviting ${influencers.length} influencers`
@@ -215,11 +227,25 @@ const InviteToCampaignModal: React.FC<Props> = ({
                             onPress={handleInvite}
                             style={[
                                 styles.inviteBtn,
-                                selected.length === 0 && { opacity: 0.6 },
+                                (selected.length === 0 || isSubmitting) && {
+                                    opacity: 0.6,
+                                },
                             ]}
-                            disabled={selected.length === 0}
+                            disabled={selected.length === 0 || isSubmitting}
                         >
-                            <Text style={styles.inviteText}>Invite Now</Text>
+                            {isSubmitting ? (
+                                <View style={styles.inviteContent}>
+                                    <ActivityIndicator
+                                        size="small"
+                                        color={colors.white}
+                                    />
+                                    <Text style={styles.inviteText}>
+                                        Inviting...
+                                    </Text>
+                                </View>
+                            ) : (
+                                <Text style={styles.inviteText}>Invite Now</Text>
+                            )}
                         </Pressable>
                     </View>
                 </View>
@@ -237,11 +263,8 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             alignItems: "center",
         },
         container: {
-            minWidth: 640,
-            maxHeight: "80%",
             borderRadius: 12,
             padding: 16,
-            maxWidth: 700,
         },
         header: {
             fontSize: 18,
@@ -304,6 +327,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         inviteText: {
             color: colors.white,
             fontWeight: "600",
+        },
+        inviteContent: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
         },
     });
 

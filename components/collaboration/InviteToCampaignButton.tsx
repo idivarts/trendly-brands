@@ -1,11 +1,11 @@
 import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { Linking } from "react-native";
 import { Button } from "react-native-paper";
-import Toast from "react-native-toast-message";
 import InviteToCampaignModal from "./InviteToCampaignModal";
 
 interface InviteButtonProps {
@@ -52,7 +52,9 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
         setModalVisible(true);
     };
 
-    const handleInviteConfirm = async (selectedIds: string[]) => {
+    const handleInviteConfirm = async (
+        selectedIds: string[]
+    ): Promise<boolean> => {
         console.log("Inviting influencer to campaigns:", selectedIds);
 
         if (!effectiveBrandId) {
@@ -61,7 +63,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                 description: "Please select a brand to invite influencers.",
                 confirmText: "Ok",
             });
-            return;
+            return false;
         }
 
         const influencers = influencerIds || [];
@@ -72,7 +74,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                 description: "Please select atleast one influencer to invite.",
                 confirmText: "Ok",
             });
-            return;
+            return false;
         }
 
         const payload = {
@@ -81,7 +83,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
         };
         console.log("Invite payload:", payload);
 
-        if (loadingInvite) return; // avoid duplicates
+        if (loadingInvite) return false; // avoid duplicates
         setLoadingInvite(true);
 
         try {
@@ -93,48 +95,12 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                     headers: { "Content-Type": "application/json" },
                 }
             );
-            // Close modal and show success
-            setModalVisible(false);
-            if (openModal) {
-                openModal({
-                    title: "Invite Sent",
-                    description: `Invite sent to ${influencers.length > 1 ? `${influencers.length} influencers` : influencerName || "influencer"
-                        }`,
-                    confirmText: "Ok",
-                });
-            } else {
-                Toast.show({ type: "success", text1: "Invite sent" });
-            }
+            Toaster.success("Invite sent");
+            return true;
         } catch (err: any) {
-
-            setLoadingInvite(false);
             console.warn("Failed to send invite", err);
-            let message = "Failed to send invites. Please try again.";
-            try {
-
-                const contentType = err?.headers?.get?.("content-type") || "";
-                if (contentType.includes("application/json")) {
-                    const body = await err.json();
-                    message = body?.message || JSON.stringify(body) || message;
-                } else {
-                    // Try to read text content
-                    const text = await err.text();
-                    if (text) message = text;
-                }
-            } catch (e) {
-                // ignore
-            }
-
-            setModalVisible(false);
-            if (openModal) {
-                openModal({
-                    title: "Failed to Invite",
-                    description: message,
-                    confirmText: "Ok",
-                });
-            } else {
-                Toast.show({ type: "error", text1: "Failed to invite", text2: message });
-            }
+            Toaster.error("Something went wrong!");
+            return false;
         }
         finally {
             setLoadingInvite(false);

@@ -1,39 +1,75 @@
+import { useColorScheme } from "@/components/theme/useColorScheme";
 import Colors from "@/constants/Colors";
-import { useAuthContext } from "@/contexts";
+import { useAuthContext, useThemeOverride } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import SelectGroup from "@/shared-uis/components/select/select-group";
 import stylesFn from "@/styles/settings/Settings.styles";
-import { useTheme } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useTheme } from "@react-navigation/native";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 import ScreenHeader from "../ui/screen-header";
 
+type ThemeMode = "light" | "dark";
+
 const Settings = () => {
-    const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("light");
     const { manager, updateManager } = useAuthContext();
+    const { setThemeOverride } = useThemeOverride();
+    const colorScheme = useColorScheme();
     const theme = useTheme();
     const styles = stylesFn(theme);
+    const persistedTheme = (manager?.settings?.theme ?? colorScheme) as ThemeMode;
+
+    const [selectedTheme, setSelectedTheme] = useState<ThemeMode>(persistedTheme);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [savePending, setSavePending] = useState(false);
 
     const themeChange = async () => {
         if (!manager) {
             return;
         }
 
-        updateManager(manager?.id, {
-            settings: {
-                theme: selectedTheme,
-            },
-        });
+        setSavePending(true);
+        setThemeOverride(selectedTheme);
+
+        try {
+            await updateManager(manager.id, {
+                settings: {
+                    theme: selectedTheme,
+                },
+            });
+        } catch (error) {
+            setSavePending(false);
+        }
     };
 
     useEffect(() => {
-        if (manager?.settings?.theme) {
-            setSelectedTheme(manager.settings.theme);
+        if (!hasUnsavedChanges && !savePending) {
+            setSelectedTheme(persistedTheme);
         }
-    }, [manager]);
+    }, [hasUnsavedChanges, persistedTheme, savePending]);
+
+    useEffect(() => {
+        if (savePending && manager?.settings?.theme === selectedTheme) {
+            setSavePending(false);
+            setHasUnsavedChanges(false);
+            setThemeOverride(null);
+        }
+    }, [manager?.settings?.theme, savePending, selectedTheme, setThemeOverride]);
+
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                if (hasUnsavedChanges && !savePending) {
+                    setThemeOverride(null);
+                    setSelectedTheme(persistedTheme);
+                    setHasUnsavedChanges(false);
+                }
+            };
+        }, [hasUnsavedChanges, persistedTheme, savePending, setThemeOverride])
+    );
 
     return (
         //@ts-ignore
@@ -68,11 +104,24 @@ const Settings = () => {
                                 { label: "Dark", value: "dark" },
                             ]}
                             selectedItem={{
-                                label: selectedTheme,
+                                label:
+                                    selectedTheme === "light"
+                                        ? "Light"
+                                        : "Dark",
                                 value: selectedTheme,
                             }}
                             onValueChange={(item) => {
-                                setSelectedTheme(item.value as "light" | "dark");
+                                const nextTheme = item.value as ThemeMode;
+                                setSelectedTheme(nextTheme);
+
+                                if (nextTheme === persistedTheme) {
+                                    setHasUnsavedChanges(false);
+                                    setThemeOverride(null);
+                                    return;
+                                }
+
+                                setHasUnsavedChanges(true);
+                                setThemeOverride(nextTheme);
                             }}
                             theme={theme}
                         />
