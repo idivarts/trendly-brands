@@ -103,7 +103,7 @@ const BrandProfileScreen = () => {
             //   </Pressable>
             // }
             />
-            <AppLayout>
+            <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <BrandProfile
                     action={
                         <Button
