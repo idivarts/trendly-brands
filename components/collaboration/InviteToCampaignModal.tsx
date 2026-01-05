@@ -237,11 +237,8 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             alignItems: "center",
         },
         container: {
-            minWidth: 640,
-            maxHeight: "80%",
             borderRadius: 12,
             padding: 16,
-            maxWidth: 700,
         },
         header: {
             fontSize: 18,

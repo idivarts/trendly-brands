@@ -21,6 +21,10 @@ import {
     NotificationContextProvider,
     useNotificationContext,
 } from "./notification-context.provider";
+import {
+    ThemeOverrideProvider,
+    useThemeOverride,
+} from "./theme-override-context.provider";
 
 export {
     AuthContextProvider,
@@ -31,6 +35,7 @@ export {
     ContractContextProvider,
     FirebaseStorageContextProvider,
     NotificationContextProvider,
+    ThemeOverrideProvider,
     useAuthContext,
     useAWSContext,
     useChatContext,
@@ -38,6 +43,6 @@ export {
     useCollaborationContext,
     useContractContext,
     useFirebaseStorageContext,
-    useNotificationContext
+    useNotificationContext,
+    useThemeOverride
 };
-

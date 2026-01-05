@@ -3,7 +3,6 @@ import {
     DarkTheme,
     DefaultTheme,
     ThemeProvider,
-    useTheme,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import {
@@ -25,7 +24,9 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
     AWSContextProvider,
+    ThemeOverrideProvider,
     useAuthContext,
+    useThemeOverride,
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
@@ -73,7 +74,9 @@ export default function RootLayout() {
         <GestureHandlerRootView>
             <UpdateProvider force={true}>
                 <AuthContextProvider>
-                    <RootLayoutStack />
+                    <ThemeOverrideProvider>
+                        <RootLayoutStack />
+                    </ThemeOverrideProvider>
                 </AuthContextProvider>
             </UpdateProvider>
         </GestureHandlerRootView>
@@ -82,14 +85,21 @@ export default function RootLayout() {
 
 const RootLayoutStack = () => {
     const colorScheme = useColorScheme();
-    const theme = useTheme();
     const router = useRouter();
     const pathname = usePathname();
     const params = useLocalSearchParams();
     const segments = useSegments();
     const { isLoading, session, manager } = useAuthContext();
+    const { themeOverride, setThemeOverride } = useThemeOverride();
 
-    const appTheme = manager?.settings?.theme || colorScheme;
+    const appTheme = themeOverride ?? manager?.settings?.theme ?? colorScheme;
+    const navigationTheme = appTheme === "dark" ? DarkTheme : DefaultTheme;
+
+    useEffect(() => {
+        if (themeOverride && manager?.settings?.theme === themeOverride) {
+            setThemeOverride(null);
+        }
+    }, [themeOverride, manager?.settings?.theme, setThemeOverride]);
 
     useEffect(() => {
         const inAuthGroup = segments[0] === "(auth)";
@@ -109,9 +119,9 @@ const RootLayoutStack = () => {
     }, [session, isLoading]);
 
     return (
-        <ThemeProvider value={appTheme === "dark" ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={navigationTheme}>
             <AWSContextProvider>
-                <Provider theme={CustomPaperTheme(theme)}>
+                <Provider theme={CustomPaperTheme(navigationTheme)}>
                     <DownloadApp />
                     <ConfirmationModalProvider>
                         <BottomSheetModalProvider>
