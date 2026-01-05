@@ -112,7 +112,7 @@ const NameSection = ({
                 style={{
                     fontSize: isCollapsed ? 22 : 18,
                     fontWeight: "700" as const,
-                  color: colors.black,
+                    color: colors.black,
                 }}
             >
                 {item.name}
