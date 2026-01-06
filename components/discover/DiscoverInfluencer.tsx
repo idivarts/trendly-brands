@@ -552,7 +552,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             icon="filter"
                                             style={{ marginLeft: "auto" }}
                                         >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140,color: colors.black }}>
+                                            <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
                                                 {statusOptions.find((o) => o.value === currentStatus)
                                                     ?.label || "Status"}
                                             </Text>
@@ -579,7 +579,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             icon="sort"
                                             style={{ marginLeft: "auto" }}
                                         >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140,color: colors.black }}>
+                                            <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
                                                 {sortOptions.find((o) => o.value === currentSort)?.label ||
                                                     "Relevance"}
                                             </Text>
@@ -636,7 +636,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         onDismiss={() => setStatusMenuVisible(false)}
                                         anchor={
                                             <Chip compact onPress={() => setStatusMenuVisible(true)} icon="filter">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140,color: colors.black}}>
+                                                <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
                                                     {statusOptions.find((o) => o.value === currentStatus)?.label || "Status"}
                                                 </Text>
                                             </Chip>
@@ -728,6 +728,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                                 <Text
                                                     style={{
                                                         fontWeight: p === currentPage ? "700" : "500",
+                                                        color: colors.black,
                                                     }}
                                                 >
                                                     {p}
@@ -759,31 +760,45 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 backgroundColor: "transparent",
                             }}
                         >
+
                             <View
                                 style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
                                     backgroundColor: "rgba(255, 255, 255, 0.8)",
                                     paddingHorizontal: 16,
-                                    paddingVertical: 8,
-                                    borderRadius: 40,
+                                    paddingVertical: 12,
+                                    borderRadius: 24,
                                     shadowColor: "#000",
                                     shadowOffset: { width: 0, height: 3 },
                                     shadowOpacity: 0.2,
                                     shadowRadius: 6,
                                     elevation: 6,
-                                    width: 320,
-                                    justifyContent: "space-between",
-
+                                    width: "90%",
+                                    maxWidth: 420,
+                                    alignItems: "center",
                                 }}
                             >
-                                {/* Selected Count */}
-                                <Text style={{ fontSize: 14, fontWeight: "500" }}>
-                                    {selectedIds.length} {selectedIds.length === 1 ? "item" : "items"} selected
-                                </Text>
-
-                                {/* Invite Button */}
-                                <View style={{ top: 0, borderRadius: 50 }}>
+                                <View
+                                    style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        width: "100%",
+                                        backgroundColor: "transparent"
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.black }}>
+                                        {selectedIds.length} {selectedIds.length === 1 ? "account" : "accounts"} selected
+                                    </Text>
+                                    <IconButton
+                                        icon="close"
+                                        iconColor={colors.black}
+                                        size={20}
+                                        style={{ margin: 0, }}
+                                        onPress={() => setSelectedIds([])}
+                                        
+                                    />
+                                </View>
+                                <View style={{ marginTop: 8, alignItems: "center", backgroundColor: "transparent", alignSelf: "center" }}>
                                     <InviteToCampaignButton
                                         label="Invite Now"
                                         openModal={openModal}
@@ -795,15 +810,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         }
                                         brandId={selectedBrand?.id}
                                         connectionCredits={selectedBrand?.credits?.connection}
+
                                     />
                                 </View>
-
-                                {/* Clear / Close Button */}
-                                <IconButton
-                                    icon="close"
-                                    size={22}
-                                    onPress={() => setSelectedIds([])}
-                                />
                             </View>
                         </View>
                     </Portal>

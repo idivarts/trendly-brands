@@ -153,6 +153,7 @@ const CreateCollaboration = () => {
                 return;
             }
             isSavingRef.current = true;
+            let shouldNavigateToCollaborations = false;
             if (!AuthApp.currentUser || !selectedBrand) {
                 Console.error("User or brand not selected");
                 return;
@@ -198,22 +199,27 @@ const CreateCollaboration = () => {
             // Call create or update. IMPORTANT: we assume createCollaboration returns the new doc id
             if (params.id && typeof params.id === "string") {
                 // editing existing collab
-                await updateCollaboration(params.id, {
-                    ...collaboration,
-                    attachments: attachments,
-                    brandId: selectedBrand ? selectedBrand?.id : "",
-                    budget: {
-                        min: collaboration.budget?.min || 0,
-                        max: collaboration.budget?.max || 0,
-                    },
-                    managerId: AuthApp.currentUser?.uid as string,
-                    location: locationAddress,
-                    status: wantedStatus,
-                    timeStamp: collaboration.timeStamp || Date.now(),
-                }).catch((error) => {
+                try {
+                    await updateCollaboration(params.id, {
+                        ...collaboration,
+                        attachments: attachments,
+                        brandId: selectedBrand ? selectedBrand?.id : "",
+                        budget: {
+                            min: collaboration.budget?.min || 0,
+                            max: collaboration.budget?.max || 0,
+                        },
+                        managerId: AuthApp.currentUser?.uid as string,
+                        location: locationAddress,
+                        status: wantedStatus,
+                        timeStamp: collaboration.timeStamp || Date.now(),
+                    });
+                    if (wantedStatus === "draft") {
+                        shouldNavigateToCollaborations = true;
+                    }
+                } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to update collaboration");
-                });
+                }
                 // If user wanted publish and we set wantedStatus active then call publish
                 if (wantedStatus === "active") {
                     // params.id exists so we can publish by id
@@ -244,6 +250,10 @@ const CreateCollaboration = () => {
                     created = null;
                 }
 
+                if (!created) {
+                    return;
+                }
+
                 // ASSUMPTION: createCollaboration returns the created doc id
                 // If it returns an object, adjust accordingly (e.g. created.id)
                 let newId: string | null = null;
@@ -264,9 +274,12 @@ const CreateCollaboration = () => {
                         await publish(newId);
                         router.push("/collaborations");
                     } else {
-                        // optionally navigate to edit or details
+                        shouldNavigateToCollaborations = true;
                     }
                 }
+            }
+            if (shouldNavigateToCollaborations) {
+                router.push("/collaborations");
             }
         } catch (error) {
             Console.error(error);
@@ -275,9 +288,6 @@ const CreateCollaboration = () => {
             setProcessMessage("");
             setIsProcessing(false);
             isSavingRef.current = false;
-            if (myStatus === "draft") {
-                notifyUprade();
-            }
         }
     };
 

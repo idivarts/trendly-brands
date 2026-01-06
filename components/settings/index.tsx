@@ -77,19 +77,19 @@ const Settings = () => {
             <ScreenHeader
                 title="Settings"
                 rightAction
-                rightActionButton={
-                    <Pressable onPress={() => themeChange()}>
-                        <Text
-                            style={{
-                                color: Colors(theme).text,
-                                fontSize: 16,
-                                marginRight: 16,
-                            }}
-                        >
-                            Save
-                        </Text>
-                    </Pressable>
-                }
+                // rightActionButton={
+                //     <Pressable onPress={() => themeChange()}>
+                //         <Text
+                //             style={{
+                //                 color: Colors(theme).text,
+                //                 fontSize: 16,
+                //                 marginRight: 16,
+                //             }}
+                //         >
+                //             Save
+                //         </Text>
+                //     </Pressable>
+                // }
             />
             <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <View style={styles.settingsContainer}>

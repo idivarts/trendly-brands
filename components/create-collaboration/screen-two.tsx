@@ -147,6 +147,8 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             />
                         }
                         buttonLabel="Others"
+                        closeOnSelect
+
                         initialMultiselectItemsList={INITIAL_CONTENT_FORMATS}
                         initialItemsList={includeSelectedItems(
                             CONTENT_FORMATS,
@@ -179,6 +181,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             />
                         }
                         buttonLabel="Others"
+                        closeOnSelect
                         initialMultiselectItemsList={INITIAL_PLATFORMS}
                         initialItemsList={includeSelectedItems(
                             PLATFORMS,

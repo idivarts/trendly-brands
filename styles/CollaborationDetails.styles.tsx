@@ -13,6 +13,7 @@ export const stylesFn = (theme: Theme) =>
             borderRadius: 10,
             gap: 16,
             shadowColor: Colors(theme).transparent,
+            paddingTop:20
         },
         profileImage: {
             height: 160,

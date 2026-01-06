@@ -21,7 +21,7 @@ import { useBrandContext } from "./brand-context.provider";
 
 interface CollaborationContextProps {
     getCollaborationById: (id: string) => Promise<Collaboration>;
-    createCollaboration: (collaboration: Partial<ICollaboration>) => Promise<string>;
+    createCollaboration: (collaboration: Partial<ICollaboration>) => Promise<string | null>;
     updateCollaboration: (id: string, collaboration: Partial<ICollaboration>) => Promise<void>;
 }
 
@@ -50,8 +50,9 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
 
     const createCollaboration = async (
         collaboration: Partial<ICollaboration>,
-    ): Promise<string> => {
-        if ((selectedBrand?.credits?.collaboration || 0) <= 0) {
+    ): Promise<string | null> => {
+        const collaborationCredits = Number(selectedBrand?.credits?.collaboration);
+        if (Number.isFinite(collaborationCredits) && collaborationCredits <= 0) {
             openModal({
                 title: "No Collaboration Credit",
                 description: "You seem to have exhausted the collaboration credit. Contact support or upgrade your plan to recharge the credits",
@@ -60,7 +61,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
                     router.push("/billing")
                 }
             })
-            return "";
+            return null;
         }
         const collaborationRef = collection(FirestoreDB, "collaborations");
 

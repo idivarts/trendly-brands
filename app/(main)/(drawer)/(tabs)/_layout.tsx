@@ -32,7 +32,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { Pressable } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { Platform, Pressable } from "react-native";
 import { Badge } from "react-native-paper";
 
 const TabLayout = () => {
@@ -44,6 +45,27 @@ const TabLayout = () => {
     const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
     const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
     const influencerCredits = selectedBrand?.credits?.influencer || (IS_MONETIZATION_DONE ? 0 : 1000)
+
+    const copyBrandId = async () => {
+        if (!selectedBrand?.id) {
+            return;
+        }
+
+        try {
+            if (Platform.OS === "web") {
+                if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(selectedBrand.id);
+                } else {
+                    await Clipboard.setStringAsync(selectedBrand.id);
+                }
+            } else {
+                await Clipboard.setStringAsync(selectedBrand.id);
+            }
+            Toaster.success("Brand ID copied!", "Share this with customer support if asked for");
+        } catch {
+            Toaster.error("Failed to copy Brand ID");
+        }
+    };
 
     return (
         <Tabs
@@ -234,10 +256,7 @@ const TabLayout = () => {
                         <Pressable
                             style={{ paddingHorizontal: 16, }}
                             onPress={() => {
-                                if (selectedBrand?.id) {
-                                    navigator.clipboard.writeText(selectedBrand.id);
-                                    Toaster.success("Brand ID copied!", "Share this with customer support if asked for")
-                                }
+                                copyBrandId();
                             }}
                         >
                             <FontAwesomeIcon icon={faCopy} size={20} color={Colors(theme).text} />

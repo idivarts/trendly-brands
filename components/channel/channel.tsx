@@ -110,7 +110,7 @@ const ChannelNative = () => {
     }
 
     const channelName = channel?.data?.name || '';
-    const influencerName = influencer?.name ? ` w ${influencer.name}` : '';
+    const influencerName = influencer?.name ? ` ${influencer.name}` : '';
     const title = channelName + influencerName || 'Chat';
 
     return (
