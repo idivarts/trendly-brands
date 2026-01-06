@@ -150,7 +150,7 @@ const Profile = () => {
                     title="Profile"
                 />
             </View>
-            <AppLayout>
+            <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <ScrollView
                     contentContainerStyle={{
                         flexGrow: 1,
