@@ -223,21 +223,16 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 </DiscoveryProvider>
             ),
         },
-
-        ...(xl
-            ? [
-                {
-                    id: "Invitations-Sent",
-                    title: "Invited Members",
-                    component: (
-                        <InvitedMemberTabContent
-                            key={"invited-members"}
-                            pageID={pageID}
-                        />
-                    ),
-                },
-            ]
-            : []),
+        {
+            id: "Invitations-Sent",
+            title: "Invited Members",
+            component: (
+                <InvitedMemberTabContent
+                    key={"invited-members"}
+                    pageID={pageID}
+                />
+            ),
+        },
     ];
 
     useEffect(() => {

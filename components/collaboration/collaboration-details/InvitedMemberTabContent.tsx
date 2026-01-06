@@ -64,7 +64,7 @@ const InvitedMemberTabContent = (props: any) => {
     };
 
     const renderItem = ({ item }: { item: InfluencerInviteUnit }) => (
-        <View style={{ width: "50%", paddingHorizontal: isCollapsed ? 12 : 8, paddingVertical: isCollapsed ? 12 : 8 }}>
+        <View style={{ paddingHorizontal: isCollapsed ? 12 : 8, paddingVertical: isCollapsed ? 12 : 8, flex: 1, maxWidth: xl ? "50%" : "100%" }}>
             <InfluencerCard
                 item={item}
                 isCollapsed={isCollapsed}
@@ -104,7 +104,7 @@ const InvitedMemberTabContent = (props: any) => {
                 data={influencers}
                 keyExtractor={(i: InfluencerInviteUnit) => i.id}
                 renderItem={renderItem}
-                numColumns={2}
+                numColumns={xl ? 2 : 1}
                 onEndReached={() => loadMore()}
                 onEndReachedThreshold={0.5}
                 refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
