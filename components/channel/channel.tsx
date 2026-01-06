@@ -65,7 +65,9 @@ const ChannelNative = () => {
         const channels = await client.queryChannels({ cid });
         setChannel(channels[0]);
 
+        // @ts-ignore
         if (channels[0]?.data?.contractId) {
+            // @ts-ignore
             await fetchContract(channels[0]?.data?.contractId as string);
         }
     };
@@ -109,8 +111,9 @@ const ChannelNative = () => {
         );
     }
 
+    // @ts-ignore
     const channelName = channel?.data?.name || '';
-    const influencerName = influencer?.name ? ` w ${influencer.name}` : '';
+    const influencerName = influencer?.name ? ` ${influencer.name}` : '';
     const title = channelName + influencerName || 'Chat';
 
     return (
@@ -148,6 +151,7 @@ const ChannelNative = () => {
                 <ChatMessageTopbar
                     contract={{
                         ...contract,
+                        // @ts-ignore
                         id: channel?.data?.contractId as string,
                     }}
                 />

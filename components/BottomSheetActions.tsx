@@ -1,3 +1,4 @@
+import Colors from "@/constants/Colors";
 import { useChatContext } from "@/contexts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -5,6 +6,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { useTheme } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
@@ -41,6 +43,8 @@ const BottomSheetActions = ({
         React.useState(false);
     const router = useRouter();
     const { openModal } = useConfirmationModel()
+    const theme = useTheme();
+    const actionTextStyle = { color: Colors(theme).black };
 
     const { connectUser } = useChatContext();
 
@@ -194,18 +198,21 @@ const BottomSheetActions = ({
                     <List.Section style={{ paddingBottom: 28 }}>
                         <List.Item
                             title="View Profile"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Send Message"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Block Influencer"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                             }}
@@ -218,18 +225,21 @@ const BottomSheetActions = ({
                     <List.Section style={{ paddingBottom: 28 }}>
                         <List.Item
                             title="Send Message"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Accept Application"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleAcceptApplication();
                             }}
                         />
                         <List.Item
                             title="Reject Application"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleRejectApplication();
                             }}
@@ -242,18 +252,21 @@ const BottomSheetActions = ({
                     <List.Section style={{ paddingBottom: 28 }}>
                         <List.Item
                             title="View Profile"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Send Message"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Invite to Collaboration"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 setIsMessageModalVisible(true);
                             }}
@@ -265,6 +278,7 @@ const BottomSheetActions = ({
                     <List.Section style={{ paddingBottom: 28 }}>
                         <List.Item
                             title="View Collaboration"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                                 router.push(`/collaboration-details/${cardId}`);
@@ -272,6 +286,7 @@ const BottomSheetActions = ({
                         />
                         <List.Item
                             title="Edit Collaboration"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                                 router.push({
@@ -284,6 +299,7 @@ const BottomSheetActions = ({
                         />
                         <List.Item
                             title="Copy Link"
+                            titleStyle={actionTextStyle}
                             onPress={async () => {
                                 await copyToClipboard();
                                 Toaster.success("Link copied to clipboard");
@@ -291,12 +307,14 @@ const BottomSheetActions = ({
                         />
                         <List.Item
                             title="Delete Collaboration"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 deleteCollaboration();
                             }}
                         />
                         <List.Item
                             title="Stop Collaboration"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 stopCollaboration();
                             }}
@@ -308,6 +326,7 @@ const BottomSheetActions = ({
                     <List.Section style={{ paddingBottom: 28 }}>
                         <List.Item
                             title="View Collaboration"
+                            titleStyle={actionTextStyle}
                             onPress={() => {
                                 handleClose();
                                 router.push(`/collaboration-details/${cardId}`);

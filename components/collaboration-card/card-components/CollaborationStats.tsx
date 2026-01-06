@@ -1,7 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
 import { CURRENCY } from "@/constants/Unit";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { stylesFn } from "@/styles/CollaborationCardStats.styles";
+import { convertToKUnits } from "@/utils/conversion";
 import { useTheme } from "@react-navigation/native";
 import { collection, getDocs } from "firebase/firestore";
 import { FC, useEffect, useState } from "react";
@@ -22,6 +24,14 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
     const [invitedCount, setInvitedCount] = useState<number>(0);
     const theme = useTheme();
     const styles = stylesFn(theme);
+
+    const formatBudgetValue = (value: number) => {
+        const millionValue = convertToMUnits(value);
+        if (typeof millionValue === "number") {
+            return convertToKUnits(millionValue);
+        }
+        return millionValue;
+    };
 
     const fetchAppliedCount = async () => {
         const appliedRef = collection(
@@ -62,8 +72,8 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
                 <Text style={styles.infoText}>
                     Budget:{" "}
                     {props.budget.min === props.budget.max
-                        ? `${CURRENCY}. ${props.budget.min}`
-                        : `${CURRENCY}. ${props.budget.min} - ${CURRENCY}. ${props.budget.max}`}
+                        ? `${CURRENCY}. ${formatBudgetValue(props.budget.min)}`
+                        : `${CURRENCY}. ${formatBudgetValue(props.budget.min)} - ${CURRENCY}. ${formatBudgetValue(props.budget.max)}`}
                 </Text>
             </View>
             <View style={styles.infoRow}>

@@ -235,6 +235,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                                 preferredContentLanguage: value,
                             });
                         }}
+                        closeOnSelect
                         selectedItems={collaboration.preferredContentLanguage || []}
                         theme={theme}
                     />

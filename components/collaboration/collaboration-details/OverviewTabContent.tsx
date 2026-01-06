@@ -13,11 +13,13 @@ import Carousel from "@/shared-uis/components/carousel/carousel";
 import ImageComponent from "@/shared-uis/components/image-component";
 import RatingSection from "@/shared-uis/components/rating-section";
 import ReadMore from "@/shared-uis/components/ReadMore";
+import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { Contract } from "@/types/Contract";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
 import { truncateText } from "@/utils/text";
+import { convertToKUnits } from "@/utils/conversion";
 import {
     faFacebook,
     faInstagram,
@@ -61,6 +63,16 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const { xl } = useBreakpoints();
 
     const { getContractsByCollaborationId } = useContractContext();
+    const formatBudgetValue = (value?: number) => {
+        if (value == null) {
+            return "-";
+        }
+        const millionValue = convertToMUnits(value);
+        if (typeof millionValue === "number") {
+            return convertToKUnits(millionValue);
+        }
+        return millionValue;
+    };
 
     const fetchManagerDetails = async () => {
         if (!props.collaboration.managerId) {
@@ -232,9 +244,9 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     >
                         <Card.Content>
                             <RatingSection feedbacks={getFeedbacks(contracts)} />
-                            <Pressable
+                            <View
                                 style={{ flex: 1, flexDirection: "column", gap: 16 }}
-                                onPress={() => setBrandModalVisible(true)}
+                                // onPress={() => setBrandModalVisible(true)}
                             >
                                 <View
                                     style={{
@@ -242,6 +254,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                         alignItems: "center",
                                         gap: 8,
                                         flexGrow: 1,
+                                     
                                     }}
                                 >
                                     <ImageComponent
@@ -280,7 +293,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                         </Text>
                                     </View>
                                 </View>
-                            </Pressable>
+                            </View>
                         </Card.Content>
                     </View>
 
@@ -361,8 +374,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                 >
                                     Budget: {props.collaboration?.budget?.min ===
                                         props.collaboration?.budget?.max
-                                        ? `${CURRENCY}. ${props.collaboration?.budget?.min}`
-                                        : `${CURRENCY}. ${props.collaboration?.budget?.min} - ${CURRENCY}. ${props.collaboration?.budget?.max}`}
+                                        ? `${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.min)}`
+                                        : `${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.min)} - ${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.max)}`}
                                 </Text>
                             )}
                     </View>
@@ -507,7 +520,9 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         >
                             Posted by
                         </Text>
-                        <Pressable onPress={() => setManagerModalVisible(true)}>
+                        <View
+                        // onPress={() => setManagerModalVisible(true)}
+                            >
                             <View
                                 style={{
                                     display: "flex",
@@ -555,7 +570,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                     </Text>
                                 </View>
                             </View>
-                        </Pressable>
+                        </View>
                     </View>
                 </Card.Content>
             </View>

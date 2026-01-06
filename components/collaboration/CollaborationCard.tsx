@@ -27,7 +27,6 @@ export interface CollaborationAdCardProps extends ICollaboration {
 const JobCard = (props: CollaborationAdCardProps) => {
     const theme = useTheme();
     const styles = stylesFn(theme);
-    const datePosted = new Date(props.timeStamp);
 
     return (
         <Card
@@ -67,7 +66,7 @@ const JobCard = (props: CollaborationAdCardProps) => {
                 {/* Posted Date and Cost */}
                 <View style={styles.infoRow}>
                     <Text style={styles.infoText}>
-                        Posted: {formatTimeToNow(datePosted)}
+                        Posted: {formatTimeToNow(props.timeStamp)}
                     </Text>
                 </View>
 

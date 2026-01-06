@@ -34,7 +34,7 @@ import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import { Dimensions, Modal, ScrollView } from "react-native";
+import { Dimensions, Modal } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -230,9 +230,9 @@ const InvitationsTabContent = (props: any) => {
 
             {viewMode === "discover" ? (
                 collaboration ? (
-                    <ScrollView
-                        style={{ flex: 1 }}
-                        contentContainerStyle={{
+                    <View
+                        style={{
+                            flex: 1,
                             flexDirection: "row",
                             flexWrap: "wrap",
                             justifyContent: isCollapsed ? "flex-start" : "flex-start",
@@ -242,7 +242,6 @@ const InvitationsTabContent = (props: any) => {
                             paddingRight: isCollapsed ? 120 : 16,
                             paddingLeft: isCollapsed ? 120 : 4,
                         }}
-                        showsVerticalScrollIndicator={false}
                     >
                         <Discover
                             showRightPanel={false}
@@ -253,7 +252,7 @@ const InvitationsTabContent = (props: any) => {
                             defaultAdvanceFilters={collaboration?.preferences}
                             useStoredFilters={false}
                         />
-                    </ScrollView>
+                    </View>
                 ) : (
                     <View
                         style={{
