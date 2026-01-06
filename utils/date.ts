@@ -19,11 +19,15 @@ const normalizeDateArg = (date: DateArg<Date> | TimestampLike) => {
         return new Date(ms);
     }
 
+    // @ts-ignore
     if (date && typeof date.toDate === "function") {
+        // @ts-ignore
         return date.toDate();
     }
 
+    // @ts-ignore
     if (date && typeof date.seconds === "number") {
+        // @ts-ignore
         const ms = date.seconds * 1000 + Math.floor((date.nanoseconds ?? 0) / 1_000_000);
         return new Date(ms);
     }
