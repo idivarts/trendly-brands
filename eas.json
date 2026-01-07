@@ -1,53 +1,63 @@
 {
-  "cli": {
-    "version": ">= 16.6.2",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
+    "cli": {
+        "version": ">= 16.6.2",
+        "appVersionSource": "remote"
     },
-    "preview": {
-      "ios": {
-        "simulator": true
-      }
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal"
+        },
+        "preview": {
+            "ios": {
+                "simulator": true
+            }
+        },
+        "simulator": {
+            "ios": {
+                "simulator": true,
+                "buildConfiguration": "Debug"
+            },
+            "android": {
+                "buildType": "apk"
+            }
+        },
+        "production": {
+            "autoIncrement": true,
+            "node": "20.11.1",
+            "android": {
+                "buildType": "app-bundle"
+            }
+        },
+        "production-apk": {
+            "node": "20.11.1",
+            "android": {
+                "buildType": "apk"
+            }
+        }
     },
-    "simulator": {
-      "ios": {
-        "simulator": true,
-        "buildConfiguration": "Debug"
-      },
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "autoIncrement": true,
-      "node": "20.11.1",
-      "android": {
-        "buildType": "app-bundle"
-      }
-    },
-    "production-apk": {
-      "node": "20.11.1",
-      "android": {
-        "buildType": "apk"
-      }
+    "submit": {
+        "production": {
+            "ios": {
+                "appleId": "rahul.sinha1908@gmail.com",
+                "ascAppId": "6736949941"
+            },
+            "android": {
+                "serviceAccountKeyPath": "./play-console-service-account.json",
+                "track": "production",
+                "releaseStatus": "draft",
+                "changesNotSentForReview": true
+            }
+        },
+        "development": {
+            "ios": {
+                "appleId": "rahul.sinha1908@gmail.com",
+                "ascAppId": "6736949941"
+            },
+            "android": {
+                "serviceAccountKeyPath": "./play-console-service-account.json",
+                "track": "internal"
+            }
+        }
     }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "rahul.sinha1908@gmail.com",
-        "ascAppId": "6736949941"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./play-console-service-account.json",
-        "track": "internal",
-        "releaseStatus": "draft",
-        "changesNotSentForReview": true
-      }
-    }
-  }
 }
