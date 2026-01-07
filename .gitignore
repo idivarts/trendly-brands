@@ -47,3 +47,4 @@ google-services.json
 GoogleService-Info.plist
 firebase-config.js
 build/*
+play-console-service-account.json

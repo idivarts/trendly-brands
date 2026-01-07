@@ -14,130 +14,131 @@ import { Pressable } from "react-native";
 import { ActivityIndicator, Menu } from "react-native-paper";
 
 interface MembersCardProps {
-  manager: ManagerCard;
-  cardType: string;
-  removeAction: () => void;
+    manager: ManagerCard;
+    cardType: string;
+    removeAction: () => void;
 }
 
 const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) => {
-  const theme = useTheme();
-  const [menuVisible, setMenuVisible] = useState(false); // State to handle menu visibility
+    const theme = useTheme();
+    const [menuVisible, setMenuVisible] = useState(false); // State to handle menu visibility
 
-  const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(false)
 
-  const openMenu = () => setMenuVisible(true);
-  const closeMenu = () => setMenuVisible(false);
-  const { selectedBrand } = useBrandContext()
+    const openMenu = () => setMenuVisible(true);
+    const closeMenu = () => setMenuVisible(false);
+    const { selectedBrand } = useBrandContext()
 
-  const deleteAction = async () => {
-    try {
-      setLoading(true)
-      await removeAction()
-    } finally {
-      setLoading(false)
+    const deleteAction = async () => {
+        try {
+            setLoading(true)
+            await removeAction()
+        } finally {
+            setLoading(false)
+        }
     }
-  }
 
-  const resendInvite = async () => {
-    if (!selectedBrand)
-      return;
+    const resendInvite = async () => {
+        if (!selectedBrand)
+            return;
 
-    setLoading(true)
-    await HttpWrapper.fetch("/api/v2/brands/members", {
-      method: "POST",
-      body: JSON.stringify({
-        brandId: selectedBrand.id,
-        email: manager.email,
-      }),
-      headers: {
-        "content-type": "application/json"
-      }
-    }).then(async (res) => {
-      const data = await res.json()
-      Toaster.success("User ReInvited Successfully");
-    }).catch((e) => {
-      Toaster.error("Something wrong happened");
-      Console.error(e);
-    }).finally(() => {
-      setLoading(false)
-    })
-  }
+        setLoading(true)
+        await HttpWrapper.fetch("/api/v2/brands/members", {
+            method: "POST",
+            body: JSON.stringify({
+                brandId: selectedBrand.id,
+                email: manager.email,
+            }),
+            headers: {
+                "content-type": "application/json"
+            }
+        }).then(async (res) => {
+            const data = await res.json()
+            Toaster.success("User ReInvited Successfully");
+        }).catch((e) => {
+            Toaster.error("Something wrong happened");
+            Console.error(e);
+        }).finally(() => {
+            setLoading(false)
+        })
+    }
 
-  if (!manager) {
-    return null;
-  }
+    if (!manager) {
+        return null;
+    }
 
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: 16,
-        borderWidth: 0.3,
-        borderColor: Colors(theme).gray300,
-        borderRadius: 10,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <ImageComponent
-          size="small"
-          shape="circle"
-          initials={manager.name}
-          url={manager.profileImage || ""}
-          altText="Image"
-        />
-        <View>
-          <Text style={{ fontSize: 16 }}>{manager.name}</Text>
-          <Text style={{ fontSize: 16 }}>{manager.email}</Text>
-        </View>
-      </View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        {manager.status === 0 && (
-          <Text style={{ color: Colors(theme).orange }}>Invite Sent</Text>
-        )}
-        {loading && <ActivityIndicator size="small" />}
-        <Menu
-          visible={menuVisible}
-          onDismiss={closeMenu}
-          anchor={
-            <Pressable onPress={openMenu}>
-              <FontAwesomeIcon icon={faEllipsis} />
-            </Pressable>
-          }
-          style={{
-            backgroundColor: Colors(theme).background,
-            borderWidth: 0.3,
-            borderColor: Colors(theme).gray300,
-          }}
-        >
-          {manager.status === 0 &&
-            <Menu.Item
-              onPress={() => {
-                resendInvite();
-                closeMenu();
-              }}
-              title="Resend Invite"
-              titleStyle={{ color: Colors(theme).text }}
-            />}
-          <Menu.Item
-            onPress={() => {
-              deleteAction();
-              closeMenu();
+    return (
+        <View
+            style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: 16,
+                borderWidth: 0.3,
+                borderColor: Colors(theme).gray300,
+
             }}
-            title="Delete"
-            titleStyle={{ color: Colors(theme).text }}
-          />
-        </Menu>
-      </View>
-    </View>
-  );
+        >
+            <View
+                style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+
+                }}
+            >
+                <ImageComponent
+                    size="small"
+                    shape="circle"
+                    initials={manager.name}
+                    url={manager.profileImage || ""}
+                    altText="Image"
+                />
+                <View >
+                    <Text style={{ fontSize: 16 }}>{manager.name}</Text>
+                    <Text style={{ fontSize: 16 }}>{manager.email}</Text>
+                </View>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "transparent", }}>
+                {manager.status === 0 && (
+                    <Text style={{ color: Colors(theme).orange }}>Invite Sent</Text>
+                )}
+                {loading && <ActivityIndicator size="small" />}
+                <Menu
+                    visible={menuVisible}
+                    onDismiss={closeMenu}
+                    anchor={
+                        <Pressable onPress={openMenu}>
+                            <FontAwesomeIcon icon={faEllipsis} />
+                        </Pressable>
+                    }
+                    style={{
+                        backgroundColor: Colors(theme).background,
+                        borderWidth: 0.3,
+                        borderColor: Colors(theme).gray300,
+                    }}
+                >
+                    {manager.status === 0 &&
+                        <Menu.Item
+                            onPress={() => {
+                                resendInvite();
+                                closeMenu();
+                            }}
+                            title="Resend Invite"
+                            titleStyle={{ color: Colors(theme).text }}
+                        />}
+                    <Menu.Item
+                        onPress={() => {
+                            deleteAction();
+                            closeMenu();
+                        }}
+                        title="Delete"
+                        titleStyle={{ color: Colors(theme).text }}
+                    />
+                </Menu>
+            </View>
+        </View>
+    );
 };
 
 export default MembersCard;

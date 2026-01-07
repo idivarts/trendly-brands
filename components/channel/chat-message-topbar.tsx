@@ -7,41 +7,41 @@ import { useState } from "react";
 import Button from "../ui/button";
 
 interface ChatMessageTopbarProps {
-  contract: Contract;
+    contract: Contract;
 }
 
 const ChatMessageTopbar: React.FC<ChatMessageTopbarProps> = ({
-  contract,
+    contract,
 }) => {
-  const [status, setStatus] = useState(contract.status);
-  const router = useRouter();
+    const [status, setStatus] = useState(contract.status);
+    const router = useRouter();
 
-  if (status === 0) {
-    return <MessageTopbar
-      actions={
-        <View
-          style={{
-            flexDirection: 'row-reverse',
-            gap: 16,
-            justifyContent: 'space-between',
-          }}
-        >
-          <Button
-            size="small"
-            mode="text"
-            onPress={() => {
-              router.push(`/contract-details/${contract.streamChannelId}`)
-            }}
-          >
-            {"Open Application"}
-          </Button>
-        </View>
-      }
-      description={CHAT_MESSAGE_TOPBAR_DESCRIPTION.first}
-    />
-  } else {
-    return null;
-  }
+    if (status === 0) {
+        return <MessageTopbar
+            actions={
+                <View
+                    style={{
+                        flexDirection: 'row-reverse',
+                        gap: 16,
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <Button
+                        size="small"
+                        mode="text"
+                        onPress={() => {
+                            router.push(`/contract-details/${contract.streamChannelId}`)
+                        }}
+                    >
+                        {"Open Application"}
+                    </Button>
+                </View>
+            }
+            description={CHAT_MESSAGE_TOPBAR_DESCRIPTION.first}
+        />
+    } else {
+        return null;
+    }
 }
 
 export default ChatMessageTopbar;

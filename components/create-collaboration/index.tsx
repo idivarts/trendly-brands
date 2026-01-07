@@ -1,14 +1,13 @@
-import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-import ScreenFour from "@/components/create-collaboration/screen-four";
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
 import Colors from "@/constants/Colors";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
+import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -19,384 +18,381 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
-import ScreenThree from "./screen-three";
 import PreviewCollaboration from "./PreviewCollaboration";
-import usePublishCollaboration from "@/hooks/usePublishCollaboration";
+import ScreenThree from "./screen-three";
 
 const CreateCollaboration = () => {
-  const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
-    name: "",
-    brandId: "",
-    managerId: "",
-    attachments: [],
-    description: "",
-    promotionType: PromotionType.BARTER_COLLAB,
-    budget: {
-      min: 0,
-      max: 0,
-    },
-    preferredContentLanguage: ["English", "Hindi"],
-    contentFormat: [],
-    platform: [],
-    numberOfInfluencersNeeded: 1,
-    location: {
-      type: "Remote",
-      name: "",
-      latlong: {
-        lat: 0,
-        long: 0,
-      },
-    },
-    externalLinks: [],
-    questionsToInfluencers: [],
-    preferences: {},
-    status: "",
-    timeStamp: 0,
-    viewsLastHour: 0,
-    lastReviewedTimeStamp: 0,
-  });
+    const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
+        name: "",
+        brandId: "",
+        managerId: "",
+        attachments: [],
+        description: "",
+        promotionType: PromotionType.BARTER_COLLAB,
+        budget: {
+            min: 0,
+            max: 0,
+        },
+        preferredContentLanguage: ["English", "Hindi"],
+        contentFormat: [],
+        platform: [],
+        numberOfInfluencersNeeded: 1,
+        location: {
+            type: "Remote",
+            name: "",
+            latlong: {
+                lat: 0,
+                long: 0,
+            },
+        },
+        externalLinks: [],
+        questionsToInfluencers: [],
+        preferences: {},
+        status: "",
+        timeStamp: 0,
+        viewsLastHour: 0,
+        lastReviewedTimeStamp: 0,
+    });
 
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
-
-  const [screen, setScreen] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEdited, setIsEdited] = useState(false);
-  const theme = useTheme();
-  const params = useLocalSearchParams();
-  const type = params.id ? "Edit" : "Add";
-  const { publish } = usePublishCollaboration();
-
-  const {
-    isProcessing,
-    processMessage,
-    processPercentage,
-    setIsProcessing,
-    setProcessMessage,
-    setProcessPercentage,
-  } = useProcess();
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-
-  const { selectedBrand, isOnFreeTrial } = useBrandContext();
-  const { getCollaborationById, createCollaboration, updateCollaboration } =
-    useCollaborationContext();
-
-  const { openModal } = useConfirmationModel();
-
-  useEffect(() => {
-    async function getCurrentLocation() {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        alert("Permission to access location was denied");
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setMapRegion({
-        ...mapRegion,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    }
-
-    getCurrentLocation();
-  }, []);
-
-  const fetchCollaboration = async (id: string) => {
-    const collaboration = await getCollaborationById(id);
-    setCollaboration(collaboration);
-
-    setAttachments(collaboration?.attachments || []);
-
-    if (collaboration.location.latlong) {
-      setMapRegion({
-        latitude: collaboration.location.latlong.lat,
-        longitude: collaboration.location.latlong.long,
+    const [mapRegion, setMapRegion] = useState({
+        latitude: 37.78825,
+        longitude: -122.4324,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (params.id && typeof params.id === "string") {
-      setIsLoading(true);
-      fetchCollaboration(params.id).finally(() => {
-        setIsLoading(false);
-      });
-    }
-  }, []);
-
-  const onLocationChange = (
-    latlong: { lat: number; long: number },
-    address: string
-  ) => {
-    setCollaboration({
-      ...collaboration,
-      location: {
-        ...collaboration.location,
-        type: "On-Site",
-        name: address,
-        latlong,
-      },
     });
-  };
 
-  const handleCollaboration = async (
-    data: Partial<ICollaboration>
-  ): Promise<void> => {
-    if (params.id && typeof params.id === "string") {
-      await updateCollaboration(params.id, data);
-    } else {
-      await createCollaboration(data);
-    }
-  };
+    const [screen, setScreen] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isEdited, setIsEdited] = useState(false);
+    const theme = useTheme();
+    const params = useLocalSearchParams();
+    const type = params.id ? "Edit" : "Add";
+    const { publish } = usePublishCollaboration();
+    const isSavingRef = useRef(false);
 
-  const notifyUprade = () => {
-    openModal({
-      title: "Free Trial!",
-      description:
-        "You need to upgrade your plan to be able to post a collaboration",
-      confirmAction: () => {
-        router.push("/billing");
-      },
-      confirmText: "Upgrade Now",
-    });
-  };
-  const saveCollaboration = async (myStatus: "draft" | "active") => {
-    try {
-      if (!AuthApp.currentUser || !selectedBrand) {
-        Console.error("User or brand not selected");
-        return;
-      }
+    const {
+        isProcessing,
+        processMessage,
+        processPercentage,
+        setIsProcessing,
+        setProcessMessage,
+        setProcessPercentage,
+    } = useProcess();
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-      let wantedStatus = myStatus;
-      if (isOnFreeTrial && wantedStatus === "active") {
-        // if on free trial, show modal and fallback to draft
-        notifyUprade();
-        wantedStatus = "draft";
-      }
+    const { selectedBrand, isOnFreeTrial } = useBrandContext();
+    const { getCollaborationById, createCollaboration, updateCollaboration } =
+        useCollaborationContext();
 
-      let locationAddress = collaboration?.location;
+    const { openModal } = useConfirmationModel();
 
-      if (
-        collaboration?.location?.type === "On-Site" &&
-        mapRegion.latitude &&
-        mapRegion.longitude
-      ) {
-        locationAddress = {
-          ...collaboration.location,
-          type: collaboration.location.type || "Remote",
-          latlong: {
-            lat: mapRegion.latitude,
-            long: mapRegion.longitude,
-          },
-        };
-      }
+    const fetchCollaboration = async (id: string) => {
+        const collaboration = await getCollaborationById(id);
+        setCollaboration(collaboration);
 
-      setIsProcessing(true);
-      setProcessMessage("Saving collaboration attachments...");
-      setProcessPercentage(40);
+        setAttachments(collaboration?.attachments || []);
 
-      // Upload assets to S3 (if you do)
-      // const uploadedAssets = await uploadNewAssets(...)
-
-      setProcessMessage("Saved collaboration attachments...");
-      setProcessPercentage(70);
-
-      setProcessMessage("Saving collaboration...");
-      setProcessPercentage(100);
-
-      // Call create or update. IMPORTANT: we assume createCollaboration returns the new doc id
-      if (params.id && typeof params.id === "string") {
-        // editing existing collab
-        await updateCollaboration(params.id, {
-          ...collaboration,
-          attachments: attachments,
-          brandId: selectedBrand ? selectedBrand?.id : "",
-          budget: {
-            min: collaboration.budget?.min || 0,
-            max: collaboration.budget?.max || 0,
-          },
-          managerId: AuthApp.currentUser?.uid as string,
-          location: locationAddress,
-          status: wantedStatus,
-          timeStamp: collaboration.timeStamp || Date.now(),
-        }).catch((error) => {
-          Console.error(error);
-          Toaster.error("Failed to update collaboration");
-        });
-        // If user wanted publish and we set wantedStatus active then call publish
-        if (wantedStatus === "active") {
-          // params.id exists so we can publish by id
-          await publish(params.id);
+        if (collaboration.location.latlong) {
+            setMapRegion({
+                latitude: collaboration.location.latlong.lat,
+                longitude: collaboration.location.latlong.long,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+            });
         }
-      } else {
-        // creating new collaboration
-        // IMPORTANT: your createCollaboration should return the newly created doc id.
-        let created: string | null = null;
+    };
 
-        try {
-          created = await createCollaboration({
+    useEffect(() => {
+        if (params.id && typeof params.id === "string") {
+            setIsLoading(true);
+            fetchCollaboration(params.id).finally(() => {
+                setIsLoading(false);
+            });
+        }
+    }, []);
+
+    const onLocationChange = (
+        latlong: { lat: number; long: number },
+        address: string
+    ) => {
+        setCollaboration({
             ...collaboration,
-            attachments,
-            brandId: selectedBrand ? selectedBrand.id : "",
-            budget: {
-              min: collaboration.budget?.min || 0,
-              max: collaboration.budget?.max || 0,
+            location: {
+                ...collaboration.location,
+                type: "On-Site",
+                name: address,
+                latlong,
             },
-            managerId: AuthApp.currentUser?.uid as string,
-            location: locationAddress,
-            status: wantedStatus,
-            timeStamp: Date.now(),
-          });
-        } catch (error) {
-          Console.error(error);
-          Toaster.error("Failed to create collaboration");
-          created = null;
-        }
+        });
+    };
 
-        // ASSUMPTION: createCollaboration returns the created doc id
-        // If it returns an object, adjust accordingly (e.g. created.id)
-        let newId: string | null = null;
-        if (typeof created === "string") {
-          newId = created;
-        } else if (created && (created as any).id) {
-          newId = (created as any).id;
-        }
-
-        if (!newId) {
-          // fallback: if createCollaboration didn't return id, log and stop.
-          Console.error(
-            "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
-          );
+    const handleCollaboration = async (
+        data: Partial<ICollaboration>
+    ): Promise<void> => {
+        if (params.id && typeof params.id === "string") {
+            await updateCollaboration(params.id, data);
         } else {
-          // If wantedStatus is 'active', then call publish using shared hook
-          if (wantedStatus === "active") {
-            await publish(newId);
-            router.push("/collaborations");
-          } else {
-            // optionally navigate to edit or details
-          }
+            await createCollaboration(data);
         }
-      }
-    } catch (error) {
-      Console.error(error);
-    } finally {
-      setProcessPercentage(0);
-      setProcessMessage("");
-      setIsProcessing(false);
-      if (myStatus === "draft") {
-        notifyUprade();
-      }
-    }
-  };
+    };
 
-  const submitCollaboration = async () => {
-    await saveCollaboration("active");
-  };
+    const notifyUprade = () => {
+        openModal({
+            title: "Free Trial!",
+            description:
+                "You need to upgrade your plan to be able to post a collaboration",
+            confirmAction: () => {
+                router.push("/billing");
+            },
+            confirmText: "Upgrade Now",
+        });
+    };
+    const saveCollaboration = async (myStatus: "draft" | "active") => {
+        try {
+            if (isSavingRef.current) {
+                return;
+            }
+            isSavingRef.current = true;
+            let shouldNavigateToCollaborations = false;
+            if (!AuthApp.currentUser || !selectedBrand) {
+                Console.error("User or brand not selected");
+                return;
+            }
 
-  const saveAsDraft = async () => {
-    await saveCollaboration("draft");
-  };
+            let wantedStatus = myStatus;
+            if (isOnFreeTrial && wantedStatus === "active") {
+                // if on free trial, show modal and fallback to draft
+                notifyUprade();
+                wantedStatus = "draft";
+            }
 
-  if (isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator size="large" color={Colors(theme).primary} />
-      </View>
-    );
-  }
+            let locationAddress = collaboration?.location;
 
-  if (screen === 1) {
-    return (
-      <ScreenOne
-        attachments={attachments}
-        collaboration={collaboration}
-        setAttachments={setAttachments}
-        // handleAssetsUpdateNative={handleAssetsUpdateNative}
-        // handleAssetsUpdateWeb={handleAssetsUpdateWeb}
-        isEdited={isEdited}
-        isSubmitting={isProcessing}
-        setCollaboration={setCollaboration}
-        setIsEdited={setIsEdited}
-        setScreen={setScreen}
-        type={type}
-      />
-    );
-  }
+            if (
+                collaboration?.location?.type === "On-Site" &&
+                mapRegion.latitude &&
+                mapRegion.longitude
+            ) {
+                locationAddress = {
+                    ...collaboration.location,
+                    type: collaboration.location.type || "Remote",
+                    latlong: {
+                        lat: mapRegion.latitude,
+                        long: mapRegion.longitude,
+                    },
+                };
+            }
 
-  if (screen == 2) {
-    return (
-      <ScreenTwo
-        collaboration={collaboration}
-        isEdited={isEdited}
-        isSubmitting={isProcessing}
-        mapRegion={{
-          state: mapRegion,
-          setState: setMapRegion,
-        }}
-        onLocationChange={onLocationChange}
-        saveAsDraft={saveAsDraft}
-        setCollaboration={setCollaboration}
-        setScreen={setScreen}
-        type={type}
-      />
-    );
-  }
+            setIsProcessing(true);
+            setProcessMessage("Saving collaboration attachments...");
+            setProcessPercentage(40);
 
-  if (screen === 3) {
-    return (
-      <ScreenThree
-        collaboration={collaboration}
-        isEdited={isEdited}
-        isSubmitting={isProcessing}
-        processMessage={processMessage}
-        processPercentage={processPercentage}
-        saveAsDraft={saveAsDraft}
-        setCollaboration={setCollaboration}
-        setScreen={setScreen}
-        submitCollaboration={submitCollaboration}
-        type={type}
-      />
-    );
-  }
+            // Upload assets to S3 (if you do)
+            // const uploadedAssets = await uploadNewAssets(...)
 
-  if (screen === 4) {
-     if (!selectedBrand) {
-      Console.error("Cannot preview collaboration without selected brand");
-      // Optionally show error UI or navigate back
-      return null;
-    }
-    return (
-      <PreviewCollaboration
-        collaboration={
-          {
-            ...collaboration,
-            brandName: selectedBrand?.name ?? "",
-            brandDescription: selectedBrand?.profile?.about ?? "",
-            brandCategory: selectedBrand?.profile?.industries ?? [],
-            logo: selectedBrand?.image ?? "",
-            paymentVerified: selectedBrand?.paymentMethodVerified ?? false,
-            brandWebsite: selectedBrand?.profile?.website ?? "",
-          } as any
+            setProcessMessage("Saved collaboration attachments...");
+            setProcessPercentage(70);
+
+            setProcessMessage("Saving collaboration...");
+            setProcessPercentage(100);
+
+            // Call create or update. IMPORTANT: we assume createCollaboration returns the new doc id
+            if (params.id && typeof params.id === "string") {
+                // editing existing collab
+                try {
+                    await updateCollaboration(params.id, {
+                        ...collaboration,
+                        attachments: attachments,
+                        brandId: selectedBrand ? selectedBrand?.id : "",
+                        budget: {
+                            min: collaboration.budget?.min || 0,
+                            max: collaboration.budget?.max || 0,
+                        },
+                        managerId: AuthApp.currentUser?.uid as string,
+                        location: locationAddress,
+                        status: wantedStatus,
+                        timeStamp: collaboration.timeStamp || Date.now(),
+                    });
+                    if (wantedStatus === "draft") {
+                        shouldNavigateToCollaborations = true;
+                    }
+                } catch (error) {
+                    Console.error(error);
+                    Toaster.error("Failed to update collaboration");
+                }
+                // If user wanted publish and we set wantedStatus active then call publish
+                if (wantedStatus === "active") {
+                    // params.id exists so we can publish by id
+                    await publish(params.id);
+                }
+            } else {
+                // creating new collaboration
+                // IMPORTANT: your createCollaboration should return the newly created doc id.
+                let created: string | null = null;
+
+                try {
+                    created = await createCollaboration({
+                        ...collaboration,
+                        attachments,
+                        brandId: selectedBrand ? selectedBrand.id : "",
+                        budget: {
+                            min: collaboration.budget?.min || 0,
+                            max: collaboration.budget?.max || 0,
+                        },
+                        managerId: AuthApp.currentUser?.uid as string,
+                        location: locationAddress,
+                        status: wantedStatus,
+                        timeStamp: Date.now(),
+                    });
+                } catch (error) {
+                    Console.error(error);
+                    Toaster.error("Failed to create collaboration");
+                    created = null;
+                }
+
+                if (!created) {
+                    return;
+                }
+
+                // ASSUMPTION: createCollaboration returns the created doc id
+                // If it returns an object, adjust accordingly (e.g. created.id)
+                let newId: string | null = null;
+                if (typeof created === "string") {
+                    newId = created;
+                } else if (created && (created as any).id) {
+                    newId = (created as any).id;
+                }
+
+                if (!newId) {
+                    // fallback: if createCollaboration didn't return id, log and stop.
+                    Console.error(
+                        "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
+                    );
+                } else {
+                    // If wantedStatus is 'active', then call publish using shared hook
+                    if (wantedStatus === "active") {
+                        await publish(newId);
+                        router.push("/collaborations");
+                    } else {
+                        shouldNavigateToCollaborations = true;
+                    }
+                }
+            }
+            if (shouldNavigateToCollaborations) {
+                router.push("/collaborations");
+            }
+        } catch (error) {
+            Console.error(error);
+        } finally {
+            setProcessPercentage(0);
+            setProcessMessage("");
+            setIsProcessing(false);
+            isSavingRef.current = false;
         }
-        onEdit={() => setScreen(3)}
-        onSaveDraft={saveAsDraft}
-        onPublish={submitCollaboration}
-      />
-    );
-  }
+    };
+
+    const submitCollaboration = async () => {
+        await saveCollaboration("active");
+    };
+
+    const saveAsDraft = async () => {
+        await saveCollaboration("draft");
+    };
+
+    if (isLoading) {
+        return (
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                }}
+            >
+                <ActivityIndicator size="large" color={Colors(theme).primary} />
+            </View>
+        );
+    }
+
+    if (screen === 1) {
+        return (
+            <ScreenOne
+                attachments={attachments}
+                collaboration={collaboration}
+                setAttachments={setAttachments}
+                // handleAssetsUpdateNative={handleAssetsUpdateNative}
+                // handleAssetsUpdateWeb={handleAssetsUpdateWeb}
+                isEdited={isEdited}
+                isSubmitting={isProcessing}
+                setCollaboration={setCollaboration}
+                setIsEdited={setIsEdited}
+                setScreen={setScreen}
+                type={type}
+            />
+        );
+    }
+
+    if (screen == 2) {
+        return (
+            <ScreenTwo
+                collaboration={collaboration}
+                isEdited={isEdited}
+                isSubmitting={isProcessing}
+                mapRegion={{
+                    state: mapRegion,
+                    setState: setMapRegion,
+                }}
+                onLocationChange={onLocationChange}
+                saveAsDraft={saveAsDraft}
+                setCollaboration={setCollaboration}
+                setScreen={setScreen}
+                type={type}
+            />
+        );
+    }
+
+    if (screen === 3) {
+        return (
+            <ScreenThree
+                collaboration={collaboration}
+                isEdited={isEdited}
+                isSubmitting={isProcessing}
+                processMessage={processMessage}
+                processPercentage={processPercentage}
+                saveAsDraft={saveAsDraft}
+                setCollaboration={setCollaboration}
+                setScreen={setScreen}
+                submitCollaboration={submitCollaboration}
+                type={type}
+            />
+        );
+    }
+
+    if (screen === 4) {
+        if (!selectedBrand) {
+            Console.error("Cannot preview collaboration without selected brand");
+            // Optionally show error UI or navigate back
+            return null;
+        }
+        return (
+            <PreviewCollaboration
+                collaboration={
+                    {
+                        ...collaboration,
+                        brandName: selectedBrand?.name ?? "",
+                        brandDescription: selectedBrand?.profile?.about ?? "",
+                        brandCategory: selectedBrand?.profile?.industries ?? [],
+                        logo: selectedBrand?.image ?? "",
+                        paymentVerified: selectedBrand?.paymentMethodVerified ?? false,
+                        brandWebsite: selectedBrand?.profile?.website ?? "",
+                    } as any
+                }
+                isSubmitting={isProcessing}
+                onEdit={() => setScreen(3)}
+                onSaveDraft={saveAsDraft}
+                onPublish={submitCollaboration}
+            />
+        );
+    }
 };
 
 export default CreateCollaboration;

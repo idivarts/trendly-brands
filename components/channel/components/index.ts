@@ -6,10 +6,11 @@ import { MoreOptionsButton } from "./more-options-button";
 import { SendButton } from "./send-button";
 
 export {
-  AttachButton,
-  AttachmentPickerSelectionBar,
-  AudioRecordingButton,
-  CommandsButton,
-  MoreOptionsButton,
-  SendButton,
+    AttachButton,
+    AttachmentPickerSelectionBar,
+    AudioRecordingButton,
+    CommandsButton,
+    MoreOptionsButton,
+    SendButton
 };
+

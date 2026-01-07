@@ -1,5 +1,5 @@
 
-// import pricingPage from "@/app/(landing)/pricing-page";
+//  import pricingPage from "@/app/(landing)/pricing-page";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useState } from "react";

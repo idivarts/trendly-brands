@@ -8,101 +8,105 @@ import { Linking, ScrollView } from "react-native";
 import { Text, View } from "../theme/Themed";
 
 interface UserResponseProps {
-  application?: IApplications;
-  influencerQuestions?: string[];
-  setConfirmationModalVisible: (value: boolean) => void;
+    application?: IApplications;
+    influencerQuestions?: string[];
+    setConfirmationModalVisible: (value: boolean) => void;
 }
 
 const UserResponse: FC<UserResponseProps> = ({
-  application,
-  influencerQuestions,
-  setConfirmationModalVisible,
+    application,
+    influencerQuestions,
+    setConfirmationModalVisible,
 }) => {
-  const attachmentFiltered = application?.attachments.map((attachment) => {
-    return processRawAttachment(attachment);
-  });
-  const theme = useTheme();
+    const attachmentFiltered = application?.attachments.map((attachment) => {
+        return processRawAttachment(attachment);
+    });
+    const theme = useTheme();
 
-  const downloadAndSaveFile = async (url: string, filename: string) => {
-    try {
-      Linking.openURL(url)
-      // const { uri } = await FileSystem.downloadAsync(
-      //   url,
-      //   FileSystem.documentDirectory + filename
-      // );
-      // if (Platform.OS === "web") {
-      //   Sharing.shareAsync(uri);
-      // } else {
-      //   await Sharing.shareAsync(uri);
-      // }
-    } catch (error) {
-      Console.error(error, "Error downloading file");
-      setConfirmationModalVisible(false);
-      alert("Failed to download file. Please try again.");
-    }
-  };
+    const downloadAndSaveFile = async (url: string, filename: string) => {
+        try {
+            Linking.openURL(url)
+            // const { uri } = await FileSystem.downloadAsync(
+            //   url,
+            //   FileSystem.documentDirectory + filename
+            // );
+            // if (Platform.OS === "web") {
+            //   Sharing.shareAsync(uri);
+            // } else {
+            //   await Sharing.shareAsync(uri);
+            // }
+        } catch (error) {
+            Console.error(error, "Error downloading file");
+            setConfirmationModalVisible(false);
+            alert("Failed to download file. Please try again.");
+        }
+    };
 
-  return (
-    <View
-      style={{
-        borderRadius: 5,
-        width: "100%",
-        gap: 16,
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 16,
-            fontWeight: "bold",
-          }}
-        >
-          Application
-        </Text>
-      </View>
-      <View
-        style={{
-          width: "100%",
-          gap: 16,
-        }}
-      >
-        <ScrollView horizontal style={{}}>
-          {attachmentFiltered?.map((attachment, index) => (
-            <RenderMediaItem
-              key={index}
-              item={attachment}
-              index={index}
-              height={100}
-              width={100}
-              handleImagePress={() => { }}
-            />
-          ))}
-        </ScrollView>
-        <Text style={{ fontSize: 16 }}>{application?.message}</Text>
+    return (
         <View
-          style={{
-            flexDirection: "row",
-            gap: 16,
-            justifyContent: "space-between",
-          }}
+            style={{
+                borderRadius: 5,
+                width: "100%",
+                gap: 16,
+                backgroundColor: "transparent",
+            }}
         >
-          <Text style={{ fontSize: 16 }}>
-            Quote: {application?.quotation || "N/A"}
-          </Text>
-          {/* {application?.timeline && (
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    backgroundColor: "transparent",
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontWeight: "bold",
+                    }}
+                >
+                    Application
+                </Text>
+            </View>
+            <View
+                style={{
+                    width: "100%",
+                    gap: 16,
+                    backgroundColor: "transparent",
+                }}
+            >
+                <ScrollView horizontal style={{}}>
+                    {attachmentFiltered?.map((attachment, index) => (
+                        <RenderMediaItem
+                            key={index}
+                            item={attachment}
+                            index={index}
+                            height={100}
+                            width={100}
+                            handleImagePress={() => { }}
+                        />
+                    ))}
+                </ScrollView>
+                <Text style={{ fontSize: 16 }}>{application?.message}</Text>
+                <View
+                    style={{
+                        flexDirection: "row",
+                        gap: 16,
+                        justifyContent: "space-between",
+                        backgroundColor: "transparent",
+                    }}
+                >
+                    <Text style={{ fontSize: 16 }}>
+                        Quote: {application?.quotation || "N/A"}
+                    </Text>
+                    {/* {application?.timeline && (
             <Text style={{ fontSize: 16 }}>
               Timeline:{" "}
               {new Date(application?.timeline).toLocaleDateString() || "N/A"}
             </Text>
           )} */}
-        </View>
-        {/* {application?.fileAttachments &&
+                </View>
+                {/* {application?.fileAttachments &&
           application.fileAttachments.map((attachment, index) => {
             return (
               <Pressable
@@ -126,46 +130,49 @@ const UserResponse: FC<UserResponseProps> = ({
             );
           })} */}
 
-        <View
-          style={{
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
-          {application?.answersFromInfluencer &&
-            influencerQuestions &&
-            application?.answersFromInfluencer.map((answer, index) => {
-              return (
                 <View
-                  style={{
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
+                    style={{
+                        flexDirection: "column",
+                        gap: 16,
+                        backgroundColor: "transparent",
+                    }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Q{") "}
-                    {influencerQuestions[answer.question]}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 16,
-                    }}
-                  >
-                    A{") "}
-                    {answer.answer}
-                  </Text>
+                    {application?.answersFromInfluencer &&
+                        influencerQuestions &&
+                        application?.answersFromInfluencer.map((answer, index) => {
+                            return (
+                                <View
+                                    key={`${answer.question}-${index}`}
+                                    style={{
+                                        flexDirection: "column",
+                                        gap: 10,
+                                        backgroundColor: "transparent",
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            fontSize: 16,
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        Q{") "}
+                                        {influencerQuestions[answer.question]}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            fontSize: 16,
+                                        }}
+                                    >
+                                        A{") "}
+                                        {answer.answer}
+                                    </Text>
+                                </View>
+                            );
+                        })}
                 </View>
-              );
-            })}
+            </View>
         </View>
-      </View>
-    </View>
-  );
+    );
 };
 
 export default UserResponse;

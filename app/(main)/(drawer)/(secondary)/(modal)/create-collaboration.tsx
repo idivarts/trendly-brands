@@ -3,11 +3,11 @@ import AppLayout from "@/layouts/app-layout";
 import React from "react";
 
 const CreateCollaborationScreen = () => {
-  return (
-    <AppLayout>
-      <CreateCollaboration />
-    </AppLayout>
-  );
+    return (
+        <AppLayout>
+            <CreateCollaboration />
+        </AppLayout>
+    );
 };
 
 export default CreateCollaborationScreen;

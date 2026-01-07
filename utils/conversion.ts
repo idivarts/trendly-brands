@@ -6,17 +6,17 @@
 // E.g. 45000 -> 45k
 // E.g. 999 -> 999
 export const convertToKUnits = (num: number) => {
-  if (Number.isNaN(num)) {
-    return 0;
-  }
+    if (Number.isNaN(num)) {
+        return 0;
+    }
 
-  if (num < 1000) {
+    if (num < 1000) {
+        return num;
+    }
+
+    if (num >= 1000) {
+        return num % 1000 === 0 ? `${num / 1000}k` : `${(num / 1000).toFixed(1)}k`;
+    }
+
     return num;
-  }
-
-  if (num >= 1000) {
-    return num % 1000 === 0 ? `${num / 1000}k` : `${(num / 1000).toFixed(1)}k`;
-  }
-
-  return num;
 };

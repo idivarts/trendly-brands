@@ -1,117 +1,117 @@
-import { Modal, Platform, Pressable } from "react-native";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { Modal, Platform, Pressable } from "react-native";
 
 import { View } from "@/components/theme/Themed";
 import stylesFn from "@/styles/modal/UploadModal.styles";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faCamera, faImage } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import Button from "../ui/button";
 
 interface ImageUploadModalProps {
-  onImageUpload: (image: string) => void;
-  setVisible: (visible: boolean) => void;
-  visible: boolean;
+    onImageUpload: (image: string) => void;
+    setVisible: (visible: boolean) => void;
+    visible: boolean;
 }
 
 const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
-  onImageUpload,
-  setVisible,
-  visible,
+    onImageUpload,
+    setVisible,
+    visible,
 }) => {
-  const theme = useTheme();
-  const styles = stylesFn(theme);
+    const theme = useTheme();
+    const styles = stylesFn(theme);
 
-  const openGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert('We need camera permissions');
-      return;
+    const openGallery = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            alert('We need camera permissions');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            onImageUpload(result.assets[0].uri);
+            setVisible(false);
+        }
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+    const openCamera = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            alert('We need camera permissions');
+            return;
+        }
 
-    if (!result.canceled) {
-      onImageUpload(result.assets[0].uri);
-      setVisible(false);
-    }
-  }
+        const result = await ImagePicker.launchCameraAsync({
+            cameraType: ImagePicker.CameraType.back,
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 1,
+        });
 
-  const openCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      alert('We need camera permissions');
-      return;
-    }
+        if (!result.canceled) {
+            onImageUpload(result.assets[0].uri);
+            setVisible(false);
+        }
+    };
 
-    const result = await ImagePicker.launchCameraAsync({
-      cameraType: ImagePicker.CameraType.back,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
+    const removeImage = () => {
+        onImageUpload('');
+        setVisible(false);
+    };
 
-    if (!result.canceled) {
-      onImageUpload(result.assets[0].uri);
-      setVisible(false);
-    }
-  };
-
-  const removeImage = () => {
-    onImageUpload('');
-    setVisible(false);
-  };
-
-  return (
-    <Modal
-      style={styles.modal}
-      visible={visible}
-      animationType={Platform.OS === "web" ? "fade" : "slide"}
-      transparent={true}
-    >
-      <View
-        style={styles.modalOverlay}
-      >
-        <View
-          style={styles.uploadContainer}
+    return (
+        <Modal
+            style={styles.modal}
+            visible={visible}
+            animationType={Platform.OS === "web" ? "fade" : "slide"}
+            transparent={true}
         >
-          <View
-            style={styles.uploadInnerContainer}
-          >
-            <Pressable
-              onPress={openCamera}
-              style={styles.modalButton}
+            <View
+                style={styles.modalOverlay}
             >
-              <FontAwesomeIcon
-                icon={faCamera}
-                size={20}
-              />
-            </Pressable>
-            <Pressable
-              onPress={openGallery}
-              style={styles.modalButton}
-            >
-              <FontAwesomeIcon
-                icon={faImage}
-                size={20}
-              />
-            </Pressable>
-          </View>
-          <Button
-            mode="contained"
-            onPress={removeImage}
-          >
-            Cancel
-          </Button>
-        </View>
-      </View>
-    </Modal>
-  );
+                <View
+                    style={styles.uploadContainer}
+                >
+                    <View
+                        style={styles.uploadInnerContainer}
+                    >
+                        <Pressable
+                            onPress={openCamera}
+                            style={styles.modalButton}
+                        >
+                            <FontAwesomeIcon
+                                icon={faCamera}
+                                size={20}
+                            />
+                        </Pressable>
+                        <Pressable
+                            onPress={openGallery}
+                            style={styles.modalButton}
+                        >
+                            <FontAwesomeIcon
+                                icon={faImage}
+                                size={20}
+                            />
+                        </Pressable>
+                    </View>
+                    <Button
+                        mode="contained"
+                        onPress={removeImage}
+                    >
+                        Cancel
+                    </Button>
+                </View>
+            </View>
+        </Modal>
+    );
 };
 
 export default ImageUploadModal;

@@ -12,152 +12,152 @@ import { useRouter } from "expo-router";
 import ScreenHeader from "../ui/screen-header";
 
 interface ScreenLayoutProps {
-  children: React.ReactNode;
-  isEdited: boolean;
-  isSubmitting?: boolean;
-  saveAsDraft?: () => Promise<void>;
-  screen: number;
-  setScreen: React.Dispatch<React.SetStateAction<number>>;
-  type: "Add" | "Edit";
+    children: React.ReactNode;
+    isEdited: boolean;
+    isSubmitting?: boolean;
+    saveAsDraft?: () => Promise<void>;
+    screen: number;
+    setScreen: React.Dispatch<React.SetStateAction<number>>;
+    type: "Add" | "Edit";
 }
 
 const ScreenLayout: React.FC<ScreenLayoutProps> = ({
-  children,
-  isEdited,
-  isSubmitting,
-  screen,
-  saveAsDraft,
-  setScreen,
-  type,
+    children,
+    isEdited,
+    isSubmitting,
+    screen,
+    saveAsDraft,
+    setScreen,
+    type,
 }) => {
-  const theme = useTheme();
+    const theme = useTheme();
 
-  const router = useRouter();
-  const [isModalVisible, setIsModalVisible] = useState(false);
+    const router = useRouter();
+    const [isModalVisible, setIsModalVisible] = useState(false);
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{
-        flex: 1,
-        paddingTop: 8,
-      }}
-    >
-      <ScreenHeader
-        action={() => {
-          if (screen === 1) {
-            setIsModalVisible(true);
-            router.back();
-          } else {
-            setScreen(screen - 1);
-          }
-        }}
-        hideAction={screen === 1 && (type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
-        title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
-        rightAction={screen !== 1 && type === "Add"}
-        rightActionButton={
-          <Pressable
-            onPress={() => {
-              if (isEdited) {
-                setIsModalVisible(true);
-              } else {
-                router.back();
-              }
-            }}
+    return (
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{
-              marginLeft: 20,
-              marginRight: 8,
-            }}
-          >
-            <FontAwesomeIcon
-              icon={faXmark}
-              size={24}
-              color={theme.colors.text}
-            />
-          </Pressable>
-        }
-      />
-
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
-        {
-          Array.from({ length: 3 }).map((_, index) => (
-            <View
-              key={index}
-              style={{
                 flex: 1,
-                height: 4,
-                backgroundColor: screen > index ? Colors(theme).primary : Colors(theme).platinum,
-                marginTop: 8,
-              }}
-            />
-          ))
-        }
-      </View>
-      <ScrollView
-        style={{
-          flex: 1,
-          paddingTop: 16,
-          paddingHorizontal: 16,
-        }}
-        contentContainerStyle={{
-          paddingBottom: 32,
-          flexGrow: 1,
-        }}
-      >
-
-        <View
-          style={{
-            paddingTop: 16,
-            gap: 32,
-            flexGrow: 1,
-          }}
+                paddingTop: 8,
+            }}
         >
-          {children}
-        </View>
-      </ScrollView>
+            <ScreenHeader
+                action={() => {
+                    if (screen === 1) {
+                        setIsModalVisible(true);
+                        router.back();
+                    } else {
+                        setScreen(screen - 1);
+                    }
+                }}
+                hideAction={screen === 1 && (type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
+                title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
+                rightAction={screen !== 1 && type === "Add"}
+                rightActionButton={
+                    <Pressable
+                        onPress={() => {
+                            if (isEdited) {
+                                setIsModalVisible(true);
+                            } else {
+                                router.back();
+                            }
+                        }}
+                        style={{
+                            marginLeft: 20,
+                            marginRight: 8,
+                        }}
+                    >
+                        <FontAwesomeIcon
+                            icon={faXmark}
+                            size={24}
+                            color={theme.colors.text}
+                        />
+                    </Pressable>
+                }
+            />
 
-      <ConfirmationModal
-        visible={isModalVisible}
-        setVisible={setIsModalVisible}
-        cancelAction={() => {
-          if (isSubmitting) {
-            return;
-          }
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 8,
+                }}
+            >
+                {
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <View
+                            key={index}
+                            style={{
+                                flex: 1,
+                                height: 4,
+                                backgroundColor: screen > index ? Colors(theme).primary : Colors(theme).platinum,
+                                marginTop: 8,
+                            }}
+                        />
+                    ))
+                }
+            </View>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    paddingTop: 16,
+                    paddingHorizontal: 16,
+                }}
+                contentContainerStyle={{
+                    paddingBottom: 32,
+                    flexGrow: 1,
+                }}
+            >
 
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            resetAndNavigate("/collaborations");
-          }
-          setIsModalVisible(false)
-        }}
-        confirmAction={() => {
-          if (isSubmitting) {
-            return;
-          }
+                <View
+                    style={{
+                        paddingTop: 16,
+                        gap: 32,
+                        flexGrow: 1,
+                    }}
+                >
+                    {children}
+                </View>
+            </ScrollView>
 
-          if (isEdited && saveAsDraft) {
-            saveAsDraft().then(() => {
-              setIsModalVisible(false);
-            });
-          } else {
-            router.back();
-            setIsModalVisible(false);
-          }
-        }}
-        confirmText={isSubmitting ? "Saving..." : "Save as Draft"}
-        cancelText="Discard"
-        description="Are you sure you want to discard the changes? You can save as draft instead"
-      />
-    </KeyboardAvoidingView>
-  );
+            <ConfirmationModal
+                visible={isModalVisible}
+                setVisible={setIsModalVisible}
+                cancelAction={() => {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        resetAndNavigate("/collaborations");
+                    }
+                    setIsModalVisible(false)
+                }}
+                confirmAction={() => {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    if (isEdited && saveAsDraft) {
+                        saveAsDraft().then(() => {
+                            setIsModalVisible(false);
+                        });
+                    } else {
+                        router.back();
+                        setIsModalVisible(false);
+                    }
+                }}
+                confirmText={isSubmitting ? "Saving..." : "Save as Draft"}
+                cancelText="Discard"
+                description="Are you sure you want to discard the changes? You can save as draft instead"
+            />
+        </KeyboardAvoidingView>
+    );
 };
 
 export default ScreenLayout;

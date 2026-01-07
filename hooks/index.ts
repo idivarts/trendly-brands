@@ -4,7 +4,7 @@ import { useStorageState } from "./use-storage-state";
 import useStreamTheme from "./use-stream-theme";
 
 export {
-  useBreakpoints, useProcess, useStorageState,
-  useStreamTheme
+    useBreakpoints, useProcess, useStorageState,
+    useStreamTheme
 };
 

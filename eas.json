@@ -23,15 +23,31 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "node": "20.11.1",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
+    "production-apk": {
+      "node": "20.11.1",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "rahul.sinha1908@gmail.com"
+        "appleId": "rahul.sinha1908@gmail.com",
+        "ascAppId": "6736949941"
       },
-      "android": {}
+      "android": {
+        "serviceAccountKeyPath": "./play-console-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": true
+      }
     }
   }
 }

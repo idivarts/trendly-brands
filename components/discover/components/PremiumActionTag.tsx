@@ -5,6 +5,8 @@ import { View } from '@/shared-uis/components/theme/Themed'
 import { useTheme } from '@react-navigation/native'
 import React from 'react'
 import { Chip, Text } from 'react-native-paper'
+import Colors from "@/shared-uis/constants/Colors";
+import { useMemo } from 'react'
 
 export const PremiumActionTag: React.FC<{
     label: string
@@ -18,6 +20,8 @@ export const PremiumActionTag: React.FC<{
     const { xl } = useBreakpoints()
     const { openModal } = useConfirmationModel()
     const router = useMyNavigation()
+    const colors = Colors(theme);
+
 
     const palette = variant === 'gold'
         ? { bg: '#FFF6D1', border: '#E6B800', text: '#6B4E00' }
@@ -56,7 +60,9 @@ export const PremiumActionTag: React.FC<{
                     color: palette.text,
                 }}
             >
-                <Text style={{ fontWeight: '800', marginRight: 4 }}>{count}</Text>
+                <Text style={{
+                    fontWeight: '800', marginRight: 4, color: colors.black
+                }}>{count}</Text>
                 {xl && label}
             </Chip>
         </View>

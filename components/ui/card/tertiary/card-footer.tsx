@@ -3,19 +3,19 @@ import React from 'react';
 import { View } from '@/components/theme/Themed';
 
 type CardFooterProps = {
-  footerActions?: React.ReactNode;
+    footerActions?: React.ReactNode;
 };
 
 export const CardFooter = ({
-  footerActions = null,
+    footerActions = null,
 }: CardFooterProps) => {
-  return (
-    <View
-      style={{
-        backgroundColor: 'transparent',
-      }}
-    >
-      {footerActions}
-    </View>
-  );
+    return (
+        <View
+            style={{
+                backgroundColor: 'transparent',
+            }}
+        >
+            {footerActions}
+        </View>
+    );
 };

@@ -7,9 +7,11 @@ import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { HttpWrapper } from '@/shared-libs/utils/http-wrapper'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
+import Colors from '@/shared-uis/constants/Colors'
 import { Collaboration } from '@/types/Collaboration'
 import { User } from '@/types/User'
 import { collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
+import { useTheme } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
 import { Button, Card, Checkbox } from 'react-native-paper'
 
@@ -22,13 +24,14 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
     const [collaborations, setCollaborations] = useState<Collaboration[]>([])
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
+    const theme = useTheme();
 
     const fetchCollaborations = async () => {
         const collaborationCol = collection(FirestoreDB, "collaborations");
         const q = query(
             collaborationCol,
             where("brandId", "==", selectedBrand?.id),
-            where("status", "!=", "inactive"),
+            where("status", "==", "active"),
             orderBy("timeStamp", "desc")
         );
         const docSnap = await getDocs(q)
@@ -91,19 +94,20 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
         }
     };
 
-    if (collaborations.length == 0)
-        return []
+    if (collaborations.length == 0) {
+        return null
+    }
     return (
         <Card style={{ margin: 8, paddingVertical: 16 }}>
             <Card.Title title="You can invite this influencer to any of the below listed active campaign" />
             <Card.Content>
                 {collaborations.map(collab => (
-                    <View key={collab.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View key={collab.id} style={{ flexDirection: "row-reverse", alignItems: 'center', marginBottom: 8, borderWidth: 0.5, borderRadius: 12, paddingHorizontal: 4, borderColor: Colors(theme).aliceBlue, justifyContent:"space-between" }}>
                         <Checkbox
                             status={selectedIds.includes(collab.id) ? 'checked' : 'unchecked'}
                             onPress={() => toggleSelection(collab.id)}
                         />
-                        <Text style={{ fontSize: 16 }}>{collab.name}</Text>
+                        <Text style={{ fontSize: 16 }}>{collab.name}</Text>x
                     </View>
                 ))}
             </Card.Content>

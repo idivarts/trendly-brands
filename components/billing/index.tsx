@@ -1,9 +1,9 @@
-import { View } from "../theme/Themed"
+import { View } from "../theme/Themed";
 
 const Billing = () => {
-  return (
-    <View></View>
-  );
+    return (
+        <View></View>
+    );
 };
 
 export default Billing;

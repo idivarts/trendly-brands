@@ -5,17 +5,17 @@ import AppLayout from "@/layouts/app-layout";
 import React from "react";
 
 const BillingScreen = () => {
-  const { xl } = useBreakpoints()
-  return (
-    <AppLayout withWebPadding={false}>
-      {!xl && <ScreenHeader title="" />}
-      {/* <ScreenHeader
+    const { xl } = useBreakpoints()
+    return (
+        <AppLayout withWebPadding={false}>
+            {!xl && <ScreenHeader title="" />}
+            {/* <ScreenHeader
         title="Billing"
       /> */}
-      <PayWallComponent />
-      {/* <Billing /> */}
-    </AppLayout>
-  );
+            <PayWallComponent />
+            {/* <Billing /> */}
+        </AppLayout>
+    );
 };
 
 export default BillingScreen;

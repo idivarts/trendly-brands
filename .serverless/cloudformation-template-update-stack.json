@@ -71,11 +71,30 @@
         }
       }
     },
-    "Route53Record": {
+    "Route53DevRecord": {
+      "Condition": "IsDev",
       "Type": "AWS::Route53::RecordSet",
       "Properties": {
-        "HostedZoneId": "Z041635312HLFEY0WZ4F3",
-        "Name": "brands.trendly.pro",
+        "HostedZoneId": "Z02250033690XMWB8LXL7",
+        "Name": "dev.brands.trendly.now",
+        "Type": "A",
+        "AliasTarget": {
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "DNSName": {
+            "Fn::GetAtt": [
+              "trendlyBrandsCDN912DEDFC",
+              "DomainName"
+            ]
+          }
+        }
+      }
+    },
+    "Route53ProdRecord": {
+      "Condition": "IsProd",
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "HostedZoneId": "Z02250033690XMWB8LXL7",
+        "Name": "brands.trendly.now",
         "Type": "A",
         "AliasTarget": {
           "HostedZoneId": "Z2FDTNDATAQYW2",
@@ -138,10 +157,10 @@
         "AutoPublish": true,
         "FunctionCode": "function handler(event) {\n    var response = event.response;\n    response.headers = Object.assign({}, {\n    \"x-frame-options\": {\n        \"value\": \"SAMEORIGIN\"\n    },\n    \"x-content-type-options\": {\n        \"value\": \"nosniff\"\n    },\n    \"x-xss-protection\": {\n        \"value\": \"1; mode=block\"\n    },\n    \"strict-transport-security\": {\n        \"value\": \"max-age=63072000\"\n    }\n}, response.headers);\n    return response;\n}",
         "FunctionConfig": {
-          "Comment": "trendly-brands-dev-us-east-1-trendlyBrands-response",
+          "Comment": "trendly-brands-prod-us-east-1-trendlyBrands-response",
           "Runtime": "cloudfront-js-1.0"
         },
-        "Name": "trendly-brands-dev-us-east-1-trendlyBrands-response"
+        "Name": "trendly-brands-prod-us-east-1-trendlyBrands-response"
       }
     },
     "trendlyBrandsCDNOrigin1S3OriginAE775097": {
@@ -157,9 +176,9 @@
       "Properties": {
         "DistributionConfig": {
           "Aliases": [
-            "brands.trendly.pro"
+            "brands.trendly.now"
           ],
-          "Comment": "trendly-brands-dev trendlyBrands website CDN",
+          "Comment": "trendly-brands-prod trendlyBrands website CDN",
           "CustomErrorResponses": [
             {
               "ErrorCachingMinTTL": 0,
@@ -228,7 +247,7 @@
             }
           ],
           "ViewerCertificate": {
-            "AcmCertificateArn": "arn:aws:acm:us-east-1:730335628944:certificate/824dbf36-435d-4ca7-a7c7-1e2c0944cf40",
+            "AcmCertificateArn": "arn:aws:acm:us-east-1:730335628944:certificate/a9492504-8dff-4ad4-a672-926102597dd0",
             "MinimumProtocolVersion": "TLSv1.2_2021",
             "SslSupportMethod": "sni-only"
           }
@@ -241,10 +260,10 @@
         "AutoPublish": true,
         "FunctionCode": "var REDIRECT_REGEX = /^[^.]+$|\\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webp|xml|pdf|webmanifest|avif|wasm)$)([^.]+$)/;\n\nfunction handler(event) {\n    var uri = event.request.uri;\n    var request = event.request;\n    var isUriToRedirect = REDIRECT_REGEX.test(uri);\n\n    if (isUriToRedirect) {\n        request.uri = \"/index.html\";\n    }\n\n    return event.request;\n}",
         "FunctionConfig": {
-          "Comment": "trendly-brands-dev-us-east-1-trendlyBrands-request",
+          "Comment": "trendly-brands-prod-us-east-1-trendlyBrands-request",
           "Runtime": "cloudfront-js-1.0"
         },
-        "Name": "trendly-brands-dev-us-east-1-trendlyBrands-request"
+        "Name": "trendly-brands-prod-us-east-1-trendlyBrands-request"
       }
     }
   },
@@ -254,7 +273,7 @@
         "Ref": "ServerlessDeploymentBucket"
       },
       "Export": {
-        "Name": "sls-trendly-brands-dev-ServerlessDeploymentBucketName"
+        "Name": "sls-trendly-brands-prod-ServerlessDeploymentBucketName"
       }
     },
     "trendlyBrandsBucketName01B9621F": {
@@ -265,7 +284,7 @@
     },
     "trendlyBrandsDomain0551295C": {
       "Description": "Website domain name.",
-      "Value": "brands.trendly.pro"
+      "Value": "brands.trendly.now"
     },
     "trendlyBrandsCloudFrontCName47669FFA": {
       "Description": "CloudFront CNAME.",
@@ -281,6 +300,20 @@
       "Value": {
         "Ref": "trendlyBrandsCDN912DEDFC"
       }
+    }
+  },
+  "Conditions": {
+    "IsDev": {
+      "Fn::Equals": [
+        "prod",
+        "dev"
+      ]
+    },
+    "IsProd": {
+      "Fn::Equals": [
+        "prod",
+        "prod"
+      ]
     }
   }
 }

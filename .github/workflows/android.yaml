@@ -1,0 +1,57 @@
+name: Android Build & Play Store Deploy
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    env:
+      # Decide env/stage based on branch
+      STAGE: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          ssh-key: ${{ secrets.GIT_SSH_KEY }}
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - run: npm install
+
+      - name: Load Config JS
+        env:
+          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
+          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
+          PLAY_CONSOLE_SA_BASE64: ${{ secrets.PLAY_CONSOLE_SA }}
+          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
+        run: |
+          echo $FIREBASE_CONFIG_BASE64 | base64 -d > firebase-config.js
+          echo $ENV_LOCAL_BASE64 | base64 -d > .env.local
+          echo $PLAY_CONSOLE_SA_BASE64 | base64 -d > play-console-service-account.json
+          echo $ANDROID_FIREBASE_CONFIG_BASE64 | base64 -d > google-services.json
+
+      - name: EAS Build Android (local)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
+        run: npm run build-android
+
+      - name: Submit to Play Store
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npm run submit-android

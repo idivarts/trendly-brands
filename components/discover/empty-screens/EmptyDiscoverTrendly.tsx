@@ -1,4 +1,4 @@
-import { useDiscovery } from '@/components/discover/Discover';
+import { useDiscovery } from "@/components/discover/discovery-context";
 import { useBrandContext } from '@/contexts/brand-context.provider';
 import { useMyNavigation } from '@/shared-libs/utils/router';
 import { LinearGradient } from 'expo-linear-gradient';

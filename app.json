@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trendly Brands",
     "slug": "trendly-brands",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon2.png",
     "scheme": "trendly-brands",
@@ -33,7 +33,8 @@
         "CFBundleDisplayName": "Trendly Brands",
         "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
         "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
-      }
+      },
+      "appleTeamId": "8UTA9QW6TV"
     },
     "android": {
       "adaptiveIcon": {
@@ -49,10 +50,22 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_MEDIA_LOCATION",
-        "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.ACCESS_MEDIA_LOCATION",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "com.google.android.gms.permission.AD_ID"
       ]
     },
     "web": {
@@ -67,14 +80,13 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "buildReactNativeFromSource": true
           }
         }
       ],
+      "expo-notifications",
       "@react-native-google-signin/google-signin",
-      "@react-native-firebase/app",
-      "@react-native-firebase/crashlytics",
-      "@react-native-firebase/messaging",
       [
         "expo-camera",
         {
@@ -109,10 +121,13 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-audio",
+      "expo-video"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
       "router": {
