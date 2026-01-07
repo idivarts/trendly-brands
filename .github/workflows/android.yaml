@@ -54,4 +54,5 @@ jobs:
       - name: Submit to Play Store
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npm run submit-android
+          SUBMIT_COMMAND: ${{ env.STAGE == 'prod' && 'submit-android-prod' || 'submit-android' }}
+        run: npm run $SUBMIT_COMMAND
