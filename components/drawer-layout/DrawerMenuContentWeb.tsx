@@ -266,10 +266,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                 {/* Promotional Banner */}
                 {selectedBrand && !selectedBrand.isBillingDisabled && (
                     <>
-                        {!selectedBrand.billing && (
+                        {!selectedBrand.billing || selectedBrand?.billing?.planKey == "starter" && (
                             <RenderBanner
-                                title="You’re on the Free Plan"
-                                description="Upgrade now to keep your community access"
+                                title="You’re on a Free Plan"
+                                description="Upgrade now to enjoy all the premium features and grow your brand."
                                 buttonText="Upgrade Now"
                             />
                         )}

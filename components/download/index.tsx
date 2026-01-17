@@ -1,9 +1,11 @@
 import { usePathname, useSegments } from "expo-router";
-import { useEffect, useState } from "react";
-import DownloadAppModal from "./DownloadAppModal";
+import React, { useEffect, useState } from "react";
+import DownloadAndroidModal from "./DownloadAndroidModal";
+import DownloadIOSModal from "./DownloadIOSModal";
 
 const DownloadApp = () => {
-    const [showModal, setShowModal] = useState(false);
+    const [showIOSModal, setShowIOSModal] = useState(false);
+    const [showAndroidModal, setShowAndroidModal] = useState(false)
     const pathname = usePathname()
     const segments = useSegments();
 
@@ -13,11 +15,15 @@ const DownloadApp = () => {
         const userAgent = window.navigator.userAgent;
         // @ts-ignore
         const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+        const isAndroid = /Android/i.test(userAgent);
         // @ts-ignore
         const isInBrowser = typeof window !== "undefined" && window.navigator.standalone !== true;
 
         if (isIOS && isInBrowser) {
-            setShowModal(true);
+            setShowIOSModal(true);
+        }
+        if (isAndroid && isInBrowser) {
+            setShowAndroidModal(true);
         }
     }, []);
 
@@ -31,9 +37,10 @@ const DownloadApp = () => {
     if (pathname.includes("collaboration-application"))
         return null
 
-    if (!showModal) return null;
+    if (showIOSModal) return <DownloadIOSModal />;
+    if (showAndroidModal) return <DownloadAndroidModal />;
 
-    return <DownloadAppModal />;
+    return null;
 };
 
 export default DownloadApp 
