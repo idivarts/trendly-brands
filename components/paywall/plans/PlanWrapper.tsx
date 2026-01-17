@@ -317,7 +317,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         : plan.monthly;
                     const billedYearly = plan.monthly * 10; // pay for 10 months
                     const currentPlan = currentPlanKey === plan.key
-                        && currentPlanCycle === billing
+                        && (currentPlanCycle === billing || plan.monthly == 0)
                         && selectedBrand?.billing?.status == ModelStatus.Accepted
                     const BuyButton = (<Pressable
                         onPress={() => {
