@@ -2,10 +2,10 @@ import { Theme, useTheme } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 
 import { useBreakpoints } from "@/hooks";
+import { BRANDS_APPSTORE_URL } from "@/shared-constants/app";
 import { Console } from "@/shared-libs/utils/console";
 import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
-import { handleDeepLink } from "@/utils/deeplink";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { usePathname } from "expo-router";
@@ -45,6 +45,7 @@ const DownloadAppModal: React.FC<DownloadAppModalProps> = ({
             }
         }
     }
+
     useEffect(() => {
         setTimeout(() => {
             setIsVisible(true);
@@ -107,7 +108,7 @@ const DownloadAppModal: React.FC<DownloadAppModalProps> = ({
                         if (isAppInstalled)
                             openUrl()
                         else
-                            handleDeepLink(undefined, lg);
+                            Linking.openURL(BRANDS_APPSTORE_URL);
                     }}
                 >
                     {isAppInstalled ? "Open App" : "Download App Now"}
