@@ -11,6 +11,8 @@ import { useAuthContext, useChatContext, useContractContext } from "@/contexts";
 import { streamClient } from "@/contexts/streamClient";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { Console } from "@/shared-libs/utils/console";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import FirstMessageThreadModal from "@/shared-uis/components/FirstMessageThreadModal";
 import { User } from "@/types/User";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
@@ -29,6 +31,7 @@ const ChannelNative = () => {
     const [channel, setChannel] = useState<ChannelType | null>(null);
     const [contract, setContract] = useState<IContracts | null>(null);
     const [influencer, setInfluencer] = useState<User | null>(null);
+    const [showFirstMessageModal, setShowFirstMessageModal] = useState(false);
     const { cid } = useLocalSearchParams<{ cid: string }>();
 
     const theme = useTheme();
@@ -71,6 +74,24 @@ const ChannelNative = () => {
             await fetchContract(channels[0]?.data?.contractId as string);
         }
     };
+
+    useEffect(() => {
+        if (channel && cid) {
+            // Check if modal has been shown for this channel before
+            const checkAndShowModal = async () => {
+                const modalShownKey = `firstMessageModal_${cid}`;
+                const hasShown = await PersistentStorage.get(modalShownKey);
+
+                if (!hasShown) {
+                    setShowFirstMessageModal(true);
+                    // Mark as shown for this channel
+                    await PersistentStorage.set(modalShownKey, 'true');
+                }
+            };
+
+            checkAndShowModal();
+        }
+    }, [channel, cid]);
 
     useEffect(() => {
         if (cid && isStreamConnected)
@@ -160,6 +181,13 @@ const ChannelNative = () => {
                     AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
                 />
             </Channel>
+            <FirstMessageThreadModal
+                visible={showFirstMessageModal}
+                setVisible={setShowFirstMessageModal}
+                onClose={() => {
+                    setShowFirstMessageModal(false);
+                }}
+            />
         </View>
     );
 }
