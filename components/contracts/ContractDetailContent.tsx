@@ -123,6 +123,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         refreshData={props.refreshData}
                         feedbackModalVisible={() => setFeedbackModalVisible(true)}
                         userData={props.userData}
+                        collaborationData={props.collaborationDetail}
                     />
 
                     <MemberContainer

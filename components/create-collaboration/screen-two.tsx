@@ -350,25 +350,45 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                         theme={theme}
                     />
                 </ContentWrapper>
-                {(collaboration.location?.type === "on_site" || collaboration.location?.type === "physical_mode") && (
+
+                {/* ===== PHYSICAL MODE: Product/Service Will Be Shipped to Influencer ===== */}
+                {collaboration.location?.type === "physical_mode" && (
                     <View
                         style={{
                             gap: 16,
                         }}
                     >
-                        {collaboration.location?.type === "on_site" && (
-                            <>
-                                <AddressAutocomplete
-                                    collaboration={collaboration}
-                                    mapRegion={mapRegion}
-                                    setCollaboration={setCollaboration}
-                                />
-                                <CreateCollaborationMap
-                                    mapRegion={mapRegion.state}
-                                    onLocationChange={onLocationChange}
-                                />
-                            </>
-                        )}
+                        {/* Physical Mode UI will be added here */}
+                    </View>
+                )}
+
+                {/* ===== REMOTE MODE: Digital / Remote Collaboration ===== */}
+                {collaboration.location?.type === "remote" && (
+                    <View
+                        style={{
+                            gap: 16,
+                        }}
+                    >
+                        {/* Remote Mode UI will be added here */}
+                    </View>
+                )}
+
+                {/* ===== ON-SITE MODE: Influencer Visits Store / Location ===== */}
+                {collaboration.location?.type === "on_site" && (
+                    <View
+                        style={{
+                            gap: 16,
+                        }}
+                    >
+                        <AddressAutocomplete
+                            collaboration={collaboration}
+                            mapRegion={mapRegion}
+                            setCollaboration={setCollaboration}
+                        />
+                        <CreateCollaborationMap
+                            mapRegion={mapRegion.state}
+                            onLocationChange={onLocationChange}
+                        />
                     </View>
                 )}
 
