@@ -2,7 +2,11 @@ import { faGift, faHandHoldingDollar } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 
-import { INITIAL_LANGUAGES, LANGUAGES } from "@/constants/ItemsList";
+import Colors from "@/constants/Colors";
+import {
+    CONTENT_FORMATS,
+    INITIAL_CONTENT_FORMATS, INITIAL_LANGUAGES, LANGUAGES
+} from "@/constants/ItemsList";
 import { CURRENCY } from "@/constants/Unit";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
@@ -14,6 +18,8 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Collaboration } from "@/types/Collaboration";
 import { convertToKUnits } from "@/utils/conversion";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { View } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
@@ -240,6 +246,44 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                         theme={theme}
                     />
                 </ContentWrapper>
+
+                <ContentWrapper
+                    theme={theme}
+                    title="Content Format"
+                    description="Which content format are you willing to post on your social media account for promotions."
+                    titleStyle={{
+                        fontSize: 16,
+                    }}
+                >
+                    <MultiSelectExtendable
+                        buttonIcon={
+                            <FontAwesomeIcon
+                                icon={faArrowRight}
+                                color={Colors(theme).primary}
+                                size={14}
+                            />
+                        }
+                        buttonLabel="Others"
+                        closeOnSelect
+                        initialMultiselectItemsList={INITIAL_CONTENT_FORMATS}
+                        initialItemsList={includeSelectedItems(
+                            CONTENT_FORMATS,
+                            collaboration.contentFormat || []
+                        )}
+                        onSelectedItemsChange={(value) => {
+                            setCollaboration({
+                                ...collaboration,
+                                contentFormat: value,
+                            });
+                        }}
+                        selectedItems={collaboration.contentFormat || []}
+                        theme={theme}
+                    />
+                </ContentWrapper>
+
+
+
+
                 <Button
                     loading={isSubmitting}
                     mode="contained"

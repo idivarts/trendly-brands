@@ -1,7 +1,5 @@
 import Colors from "@/constants/Colors";
 import {
-    CONTENT_FORMATS,
-    INITIAL_CONTENT_FORMATS,
     INITIAL_PLATFORMS,
     PLATFORMS,
 } from "@/constants/ItemsList";
@@ -12,6 +10,7 @@ import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Collaboration } from "@/types/Collaboration";
 import {
     faArrowRight,
+    faBox,
     faHouseLaptop,
     faMapLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
@@ -19,7 +18,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
 import React, { useMemo } from "react";
-import { Alert, useWindowDimensions } from "react-native";
+import { Alert, Text, useWindowDimensions } from "react-native";
 import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import { View } from "../theme/Themed";
@@ -84,8 +83,10 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         return `${collaboration.numberOfInfluencersNeeded || 1}`;
     }, [collaboration.numberOfInfluencersNeeded]);
 
-    const handleLocationSelect = async (value: string) => {
-        if (value === "On-Site") {
+    const handleLocationSelect = async (
+        value: "remote" | "on_site" | "physical_mode"
+    ) => {
+        if (value === "on_site") {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== "granted") {
@@ -130,40 +131,6 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 setScreen={setScreen}
                 type={type}
             >
-                <ContentWrapper
-                    description="Which content format are you willing to post on your social media account for promotions."
-                    theme={theme}
-                    title="Content Format"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
-                >
-                    <MultiSelectExtendable
-                        buttonIcon={
-                            <FontAwesomeIcon
-                                icon={faArrowRight}
-                                color={Colors(theme).primary}
-                                size={14}
-                            />
-                        }
-                        buttonLabel="Others"
-                        closeOnSelect
-
-                        initialMultiselectItemsList={INITIAL_CONTENT_FORMATS}
-                        initialItemsList={includeSelectedItems(
-                            CONTENT_FORMATS,
-                            collaboration.contentFormat || []
-                        )}
-                        onSelectedItemsChange={(value) => {
-                            setCollaboration({
-                                ...collaboration,
-                                contentFormat: value,
-                            });
-                        }}
-                        selectedItems={collaboration.contentFormat || []}
-                        theme={theme}
-                    />
-                </ContentWrapper>
                 <ContentWrapper
                     description="Which platforms would you like to post content on?"
                     theme={theme}
@@ -242,7 +209,102 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 </ContentWrapper>
                 <ContentWrapper
                     theme={theme}
-                    title="Location"
+                    title="What are you promoting?"
+                    titleStyle={{ fontSize: 16 }}
+                >
+                    <Selector
+                        options={[
+                            {
+                                label: "Physical Product",
+                                value: "physical_product",
+                                description: "Any product based items like Beauty cream, shirts and so on.",
+                            },
+                            {
+                                label: "Services",
+                                value: "services",
+                                description: "Any professional services like Spa or Nail or any other digital services like SaaS Product",
+                            },
+                            {
+                                label: "Others",
+                                value: "others",
+                                description: "Any other thing like maybe food/restaurant promotion, store promotion.",
+                            },
+                        ]}
+                        selectedValue={collaboration.promotionSubject}
+                        onSelect={(value) => {
+                            setCollaboration({
+                                ...collaboration,
+                                promotionSubject: value as Collaboration["promotionSubject"],
+                            });
+                        }}
+                        variant="vertical"
+                        theme={theme}
+                    />
+                </ContentWrapper>
+                {collaboration.promotionSubject && (
+                    <View
+                        style={{
+                            gap: 12,
+                            marginTop: 12,
+                        }}
+                    >
+                        <TextInput
+                            label="About Product"
+                            mode="outlined"
+                            placeholder="Eg. TShirt for Kids"
+                            multiline
+                            numberOfLines={2}
+                            value={(collaboration as any).productDetails?.name || ""}
+                            onChangeText={(text) => {
+                                setCollaboration({
+                                    ...(collaboration as any),
+                                    productDetails: {
+                                        ...((collaboration as any).productDetails),
+                                        name: text,
+                                    },
+                                });
+                            }}
+                        />
+
+                        {collaboration.promotionSubject === "physical_product" && (
+                            <>
+                                <TextInput
+                                    label="Product Cost (Optional)"
+                                    mode="outlined"
+                                    placeholder="Approx Retail Cost of Product"
+                                    keyboardType="number-pad"
+                                    value={
+                                        (collaboration as any).productDetails?.cost !== undefined
+                                            ? (collaboration as any).productDetails.cost.toString()
+                                            : ""
+                                    }
+                                    onChangeText={(text) => {
+                                        const value = Number(text);
+                                        setCollaboration({
+                                            ...(collaboration as any),
+                                            productDetails: {
+                                                ...((collaboration as any).productDetails),
+                                                cost: isNaN(value) ? undefined : value,
+                                            },
+                                        });
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        fontSize: 12,
+                                        color: "#6B7280",
+                                        marginTop: -6,
+                                    }}
+                                >
+                                    This cost would be incurred by the brand and not influencers
+                                </Text>
+                            </>
+                        )}
+                    </View>
+                )}
+                <ContentWrapper
+                    theme={theme}
+                    title="Collaboration Fulfillment Type"
                     titleStyle={{
                         fontSize: 16,
                     }}
@@ -250,22 +312,69 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     <Selector
                         options={[
                             {
+                                icon: faBox,
+                                label: "Product/Service Will Be Shipped to Influencer",
+                                value: "physical_mode",
+                                description: "Brand will courier the product or perform the service to the influencer's address.",
+                            },
+                            {
                                 icon: faHouseLaptop,
-                                label: "Remote",
-                                value: "Remote",
+                                label: "Digital / Remote Collaboration",
+                                value: "remote",
+                                description: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
                             },
                             {
                                 icon: faMapLocationDot,
-                                label: "On-Site",
-                                value: "On-Site",
+                                label: "Influencer Visits Store / Location",
+                                value: "on_site",
+                                description: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
                             },
                         ]}
-                        onSelect={handleLocationSelect}
-                        selectedValue={collaboration.location?.type || "Remote"}
+                        onSelect={(value) => {
+                            if (value === "remote" || value === "on_site" || value === "physical_mode") {
+                                if (value === "on_site") {
+                                    handleLocationSelect(value);
+                                } else {
+                                    setCollaboration({
+                                        ...collaboration,
+                                        location: {
+                                            ...collaboration.location,
+                                            type: value,
+                                        },
+                                    });
+                                }
+                            }
+                        }}
+                        selectedValue={collaboration.location?.type || "remote"}
+                        variant="vertical"
                         theme={theme}
                     />
                 </ContentWrapper>
-                {collaboration.location?.type === "On-Site" && (
+
+                {/* ===== PHYSICAL MODE: Product/Service Will Be Shipped to Influencer ===== */}
+                {collaboration.location?.type === "physical_mode" && (
+                    <View
+                        style={{
+                            gap: 16,
+                        }}
+                    >
+                        {/* Physical Mode UI will be added here */}
+                    </View>
+                )}
+
+                {/* ===== REMOTE MODE: Digital / Remote Collaboration ===== */}
+                {collaboration.location?.type === "remote" && (
+                    <View
+                        style={{
+                            gap: 16,
+                        }}
+                    >
+                        {/* Remote Mode UI will be added here */}
+                    </View>
+                )}
+
+                {/* ===== ON-SITE MODE: Influencer Visits Store / Location ===== */}
+                {collaboration.location?.type === "on_site" && (
                     <View
                         style={{
                             gap: 16,

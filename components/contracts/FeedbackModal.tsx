@@ -99,7 +99,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
             const date = new Date();
             await updateDoc(contractRef, {
-                status: 2,
+                status: 12, // Settlement Done after feedback
                 contractTimestamp: {
                     ...contract.contractTimestamp,
                     endedOn: Date.now(),
