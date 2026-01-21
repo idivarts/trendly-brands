@@ -33,6 +33,7 @@ import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationM
 import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { Platform } from "react-native";
 import { Provider } from "react-native-paper";
 import Toast from "react-native-toast-message";
 
@@ -52,6 +53,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
     const [loaded, error] = useFonts({
         SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+        ...(Platform.OS === 'web' ? { Figtree: require("../assets/fonts/Figtree-Regular.ttf") } : {}),
         ...FontAwesome.font,
     });
 
@@ -94,6 +96,29 @@ const RootLayoutStack = () => {
 
     const appTheme = themeOverride ?? manager?.settings?.theme ?? colorScheme;
     const navigationTheme = appTheme === "dark" ? DarkTheme : DefaultTheme;
+
+    if (Platform.OS === 'web') {
+        const WEB_FONT_STACK = 'Figtree';
+        navigationTheme.fonts = {
+            regular: {
+                fontFamily: WEB_FONT_STACK,
+                fontWeight: '400',
+            },
+            medium: {
+                fontFamily: WEB_FONT_STACK,
+                fontWeight: '500',
+            },
+            bold: {
+                fontFamily: WEB_FONT_STACK,
+                fontWeight: '600',
+            },
+            heavy: {
+                fontFamily: WEB_FONT_STACK,
+                fontWeight: '700',
+            },
+        }
+    }
+
 
     useEffect(() => {
         if (themeOverride && manager?.settings?.theme === themeOverride) {

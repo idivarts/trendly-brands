@@ -1,6 +1,8 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
-import { MD3Theme, DefaultTheme as PaperDefaultTheme } from "react-native-paper";
+import { Platform } from "react-native";
+import { configureFonts, MD3Theme, DefaultTheme as PaperDefaultTheme } from "react-native-paper";
+import { MD3Type } from "react-native-paper/lib/typescript/types";
 
 const CustomPaperTheme = (theme: Theme): MD3Theme => ({
     ...PaperDefaultTheme,
@@ -44,6 +46,15 @@ const CustomPaperTheme = (theme: Theme): MD3Theme => ({
             level5: Colors(theme).card,
         },
     },
+    // This applies the font to all variants (body, display, headline, etc.)
+    fonts: configureFonts({ config: fontConfig }),
+});
+const fontConfig: Partial<MD3Type> = Platform.select({
+    web: {
+        fontFamily: 'Figtree, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"', // The name you used in useFonts
+        fontWeight: "100"
+    },
+    default: {}
 });
 
 export default CustomPaperTheme;
