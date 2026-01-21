@@ -45,7 +45,7 @@ export type KanbanColumnT = {
     cards: KanbanCardT[];
 };
 
-export default function KanbanBoard() {
+export default function BrandCRMBoard() {
     const [columns, setColumns] = useState<KanbanColumnT[]>([
         { id: "waiting", title: "Waiting", cards: [] },
         { id: "accepted", title: "Accepted", cards: [] },
@@ -226,7 +226,7 @@ export default function KanbanBoard() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Trendly Admin Invites</Text>
+                <Text style={styles.title}>Brands CRM</Text>
             </View>
 
             {loading && (
@@ -324,6 +324,7 @@ const SortableCard = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     return (
+        // @ts-ignore
         <View
             ref={setNodeRef as any}
             {...attributes}

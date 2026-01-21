@@ -5,6 +5,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import {
+    faAddressCard,
     faComment,
     faEye,
     faFileLines,
@@ -15,6 +16,7 @@ import {
     faChevronRight,
     faComment as faCommentSolid,
     faCreditCard,
+    faDiagramProject,
     faGem as faGemSolid,
     faPlus,
     faSliders,
@@ -84,11 +86,6 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
         href: "/contracts",
         icon: () => <DrawerIcon href="/contracts" icon={faFileLines} />,
         label: "Contracts",
-    },
-    {
-        href: "/applications",
-        icon: () => <DrawerIcon href="/applications" icon={faEye} />,
-        label: "All Applications",
     },
     {
         href: "/billing",
@@ -162,7 +159,22 @@ const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
         href: "/admin-invites",
         icon: () => <DrawerIcon href="/kanban-board" icon={faUserShield} />,
-        label: "Connection Invites",
+        label: "Invites Management",
+    },
+    {
+        href: "/brand-crm",
+        icon: () => <DrawerIcon href="/brand-crm" icon={faAddressCard} />,
+        label: "Brands CRM",
+    },
+    {
+        href: "/collaboration-cms",
+        icon: () => <DrawerIcon href="/collaboration-cms" icon={faDiagramProject} />,
+        label: "Collaboration CMS",
+    },
+    {
+        href: "/applications",
+        icon: () => <DrawerIcon href="/applications" icon={faEye} />,
+        label: "All Applications",
     },
 ];
 
