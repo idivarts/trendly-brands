@@ -93,6 +93,11 @@ const PreSignInWeb = () => {
                                 of Trendly
                             </Text>
                         </View>
+                        {error && (
+                            <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+                                {error}
+                            </Text>
+                        )}
                     </View>
                 </View>
             </View>
