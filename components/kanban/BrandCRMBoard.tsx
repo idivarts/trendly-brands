@@ -89,7 +89,7 @@ export default function BrandCRMBoard() {
                 console.log("[Kanban] Fetching brands from brands collection");
 
                 const brandsRef = collection(FirestoreDB, "brands");
-                const brandsQuery = query(brandsRef, where("crmStatus", "!=", null));
+                const brandsQuery = query(brandsRef);
 
                 const snap = await getDocs(brandsQuery);
                 console.log("[Kanban] Brands found", snap.size);
@@ -509,7 +509,7 @@ export default function BrandCRMBoard() {
 
             {loading && (
                 <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
-                    Loading invites…
+                    Loading Brands…
                 </Text>
             )}
             {error && (
