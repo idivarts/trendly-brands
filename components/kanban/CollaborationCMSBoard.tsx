@@ -225,24 +225,31 @@ export default function CollaborationCMSBoard() {
                 <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
             )}
 
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                nestedScrollEnabled
             >
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 20 }}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
                 >
-                    <View style={styles.row}>
-                        {columns.map((col) => (
-                            <DroppableColumn key={col.id} column={col} />
-                        ))}
-                    </View>
-                </ScrollView>
-            </DndContext>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 20, paddingRight: 16 }}
+                        nestedScrollEnabled
+                    >
+                        <View style={styles.row}>
+                            {columns.map((col) => (
+                                <DroppableColumn key={col.id} column={col} />
+                            ))}
+                        </View>
+                    </ScrollView>
+                </DndContext>
+            </ScrollView>
         </View>
     );
 }

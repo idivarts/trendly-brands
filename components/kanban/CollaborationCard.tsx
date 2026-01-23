@@ -7,6 +7,8 @@ import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import type { InfluencerItem } from "../discover/discover-types";
+import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
+import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
 
 export type CollaborationCardData = {
     id: string;
@@ -46,6 +48,8 @@ export const CollaborationCard = ({
 
     const [brandData, setBrandData] = useState<BrandData | null>(null);
     const [loadingBrand, setLoadingBrand] = useState(false);
+    const [collabData, setCollabData] = useState<any>(null);
+    const [loadingCollab, setLoadingCollab] = useState(false);
 
     useEffect(() => {
         const fetchBrandData = async () => {
@@ -78,6 +82,35 @@ export const CollaborationCard = ({
 
         fetchBrandData();
     }, [card.brandId, card.id]);
+
+    useEffect(() => {
+        const fetchCollaborationData = async () => {
+            if (!card.collaborationId) {
+                console.log("[CollaborationCard] No collaborationId for card:", card.id);
+                return;
+            }
+
+            setLoadingCollab(true);
+            try {
+                const collabRef = doc(FirestoreDB, "collaborations", card.collaborationId);
+                const collabSnap = await getDoc(collabRef);
+
+                if (collabSnap.exists()) {
+                    const data = collabSnap.data();
+                    setCollabData(data);
+                    console.log("[CollaborationCard] Fetched collaboration:", data.name);
+                } else {
+                    console.warn("[CollaborationCard] Collaboration not found:", card.collaborationId);
+                }
+            } catch (err) {
+                console.warn("[CollaborationCard] Failed to fetch collaboration:", err);
+            } finally {
+                setLoadingCollab(false);
+            }
+        };
+
+        fetchCollaborationData();
+    }, [card.collaborationId, card.id]);
 
     return (
         // @ts-ignore
@@ -128,32 +161,28 @@ export const CollaborationCard = ({
             {/* Divider */}
             <View style={styles.divider} />
 
-            {/* Collaboration Info */}
-            <Text style={styles.cardTitle}>
-                {card.socialProfile?.name || "Unknown"}{" "}
-                <Text style={{ fontWeight: "400", opacity: 0.7 }}>
-                    @{card.socialProfile?.username || ""}
-                </Text>
-            </Text>
-            <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
-                Status: {colId.charAt(0).toUpperCase() + colId.slice(1)}
-            </Text>
-            {card.collaborationId && (
-                <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
-                    Collaboration: {card.collaborationId}
-                </Text>
-            )}
-            <Text style={styles.cardDesc} numberOfLines={3} ellipsizeMode="tail">
-                {card.message || "No message"}
-            </Text>
-            <Text style={[styles.cardDesc, { marginTop: 6 }]}>
-                Followers: {card.socialProfile?.follower_count ?? "-"} | ER:{" "}
-                {card.socialProfile?.engagement_rate?.toFixed?.(2) ?? "-"}%
-            </Text>
-            {card.timeStamp && (
-                <Text style={[styles.cardDesc, { marginTop: 4, opacity: 0.7 }]}>
-                    Invited: {new Date(card.timeStamp).toLocaleDateString()}
-                </Text>
+            {/* Collaboration Details */}
+            {loadingCollab ? (
+                <Text style={styles.cardDesc}>Loading collaboration...</Text>
+            ) : collabData ? (
+                <>
+                    <CollaborationDetails
+                        collabDescription={collabData.description || ""}
+                        name={collabData.name || ""}
+                        contentType={collabData.contentFormat || []}
+                        location={collabData.location}
+                        platform={collabData.platform || []}
+                        promotionType={collabData.promotionType}
+                        collabId={card.collaborationId || ""}
+                    />
+                    <CollaborationStats
+                        budget={collabData.budget || { min: 0, max: 0 }}
+                        collabID={card.collaborationId || ""}
+                        influencerCount={collabData.numberOfInfluencersNeeded || 0}
+                    />
+                </>
+            ) : (
+                <Text style={styles.cardDesc}>No collaboration data</Text>
             )}
         </View>
     );
