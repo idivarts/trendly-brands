@@ -108,23 +108,12 @@ export default function BrandCRMBoard() {
 
                 const brands: KanbanCardT[] = [];
 
-                // Fetch collaboration counts for each brand
-                const collaborationsRef = collection(FirestoreDB, "collaborations");
-
                 for (const docSnap of snap.docs) {
                     const data = docSnap.data() as any;
                     console.log("[Kanban] Brand doc", docSnap.id, data);
 
                     // Get collaboration count for this brand
                     let collaborationCount = 0;
-                    try {
-                        const collabQuery = query(collaborationsRef, where("brandId", "==", docSnap.id));
-                        const collabSnap = await getDocs(collabQuery);
-                        collaborationCount = collabSnap.size;
-                    } catch (err) {
-                        console.warn("[Kanban] Failed to fetch collaborations for brand", docSnap.id, err);
-                    }
-
                     brands.push({
                         id: docSnap.id,
                         crmStatus: data.crmStatus || CRMStatus.NEW_LEADS,
@@ -616,11 +605,28 @@ const SortableCard = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
+    const [collaborationCount, setCollaborationCount] = useState(0);
 
     const handlePress = () => {
         console.log("[BrandCRMBoard] Card pressed:", card.name, card.id);
         onPress(card);
     };
+
+    const getCount = async () => {
+        // Fetch collaboration counts for each brand
+        const collaborationsRef = collection(FirestoreDB, "collaborations");
+
+        try {
+            const collabQuery = query(collaborationsRef, where("brandId", "==", id));
+            const collabSnap = await getDocs(collabQuery);
+            setCollaborationCount(collabSnap.size)
+        } catch (err) {
+            console.warn("[Kanban] Failed to fetch collaborations for brand", id, err);
+        }
+    }
+    useEffect(() => {
+        getCount();
+    }, [])
 
     // Filter out web-specific attributes
     const { tabIndex, role, ...restAttributes } = attributes as any;
@@ -677,7 +683,7 @@ const SortableCard = ({
 
                 {/* Row 3: Campaigns */}
                 <Text style={[styles.cardInfo, { marginTop: 4 }]}>
-                    Campaigns - {card.collaborationCount ?? 0}
+                    Campaigns - {collaborationCount ?? 0}
                 </Text>
 
                 {/* Row 4: Industry */}
