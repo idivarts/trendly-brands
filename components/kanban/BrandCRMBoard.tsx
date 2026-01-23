@@ -246,7 +246,8 @@ export default function BrandCRMBoard() {
             const collaborationCol = collection(FirestoreDB, "collaborations");
             const q = query(
                 collaborationCol,
-                where("brandId", "==", brandId)
+                where("brandId", "==", brandId),
+                where("status", "==", "active")
             );
 
             const snap = await getDocs(q);
@@ -254,11 +255,6 @@ export default function BrandCRMBoard() {
 
             for (const docSnap of snap.docs) {
                 const data = docSnap.data();
-
-                // Filter to only active collaborations
-                const statusValue = (data?.status || "").toString().toLowerCase();
-                const isActive = data?.isActive === true || statusValue === "active";
-                if (!isActive) continue;
 
                 // Fetch applications count
                 const applicationCol = collection(
@@ -617,7 +613,10 @@ const SortableCard = ({
         const collaborationsRef = collection(FirestoreDB, "collaborations");
 
         try {
-            const collabQuery = query(collaborationsRef, where("brandId", "==", id));
+            const collabQuery = query(collaborationsRef,
+                where("brandId", "==", card.id),
+                where("status", "==", "active")
+            );
             const collabSnap = await getDocs(collabQuery);
             setCollaborationCount(collabSnap.size)
         } catch (err) {
@@ -683,7 +682,7 @@ const SortableCard = ({
 
                 {/* Row 3: Campaigns */}
                 <Text style={[styles.cardInfo, { marginTop: 4 }]}>
-                    Campaigns - {collaborationCount ?? 0}
+                    Campaigns - {collaborationCount}
                 </Text>
 
                 {/* Row 4: Industry */}
