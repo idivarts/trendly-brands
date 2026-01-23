@@ -1,4 +1,3 @@
-import { useAuthContext } from "@/contexts/auth-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -8,36 +7,25 @@ import {
     closestCenter,
     useDroppable,
     useSensor,
-    useSensors,
+    useSensors
 } from "@dnd-kit/core";
 import {
     SortableContext,
     arrayMove,
-    rectSortingStrategy,
-    useSortable
+    rectSortingStrategy
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { useTheme } from "@react-navigation/native";
 import {
     collection,
     doc,
     getDocs,
-    query,
     updateDoc,
-    where,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import type { InfluencerItem } from "../discover/discover-types";
+import { CollaborationCard, type CollaborationCardData } from "./CollaborationCard";
 
-export type KanbanCardT = {
-    id: string;
-    status: string;
-    message: string;
-    socialProfile?: InfluencerItem;
-    timeStamp?: number;
-    collaborationId?: string;
-};
+export type KanbanCardT = CollaborationCardData;
 
 export type KanbanColumnT = {
     id: string;
@@ -47,138 +35,154 @@ export type KanbanColumnT = {
 
 export default function CollaborationCMSBoard() {
     const [columns, setColumns] = useState<KanbanColumnT[]>([
-        { id: "waiting", title: "Waiting", cards: [] },
-        { id: "accepted", title: "Accepted", cards: [] },
-        { id: "declined", title: "Declined", cards: [] },
+        { id: "draft", title: "Draft Campaign", cards: [] },
+        { id: "active", title: "Active Campaign", cards: [] },
+        { id: "stopped", title: "Stopped Campaign", cards: [] },
+        { id: "deleted", title: "Deleted Campaign", cards: [] },
     ]);
-    const [activeId, setActiveId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const { manager } = useAuthContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     useEffect(() => {
-        const fetchInvites = async () => {
+        const fetchCollaborations = async () => {
             setError(null);
             setLoading(true);
             try {
-                console.log("[Kanban] Fetching invites. managerId:", manager?.id);
+                console.log("[Kanban] Fetching collaborations (all)");
 
-                const collectionsToTry = ["collaborations-invites"];
-                let snapshot = null;
-                let usedCollection = "";
-                let usedConstraintLabel = "";
+                const collRef = collection(FirestoreDB, "collaborations");
+                const snapshot = await getDocs(collRef);
+                console.log("[Kanban] Collaborations found", snapshot.size);
 
-                for (const colName of collectionsToTry) {
-                    const colRef = collection(FirestoreDB, colName);
-                    const candidateQueries = [
-                        manager?.id
-                            ? {
-                                label: `${colName} isDiscover=true managerId=${manager.id}`,
-                                q: query(
-                                    colRef,
-                                    where("isDiscover", "==", true),
-                                    where("managerId", "==", manager.id)
-                                ),
-                            }
-                            : null,
-                        {
-                            label: `${colName} isDiscover=true (no manager filter)`,
-                            q: query(colRef, where("isDiscover", "==", true)),
-                        },
-                    ].filter(Boolean) as { label: string; q: any }[];
-
-                    for (const { label, q } of candidateQueries) {
-                        console.log("[Kanban] Running query", label);
-                        const snap = await getDocs(q);
-                        console.log("[Kanban] Query size", snap.size);
-                        if (!snap.empty) {
-                            snapshot = snap;
-                            usedCollection = colName;
-                            usedConstraintLabel = label;
-                            break;
-                        }
-                    }
-                    if (snapshot) break;
-                }
-
-                if (!snapshot) throw new Error("No invites found in tried collections");
-                console.log("[Kanban] Using collection", usedCollection, "query", usedConstraintLabel);
-
-                const invites: KanbanCardT[] = [];
+                const collabs: KanbanCardT[] = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() as any;
-                    console.log("[Kanban] Doc", docSnap.id, data);
-                    invites.push({
+                    collabs.push({
                         id: docSnap.id,
-                        status: data.status || "waiting",
-                        message: data.message || "",
+                        status: (data.status || "draft") as string,
+                        message: data.message || data.name || "",
                         socialProfile: data.socialProfile,
                         timeStamp: data.timeStamp,
-                        collaborationId: data.collaborationId,
+                        collaborationId: docSnap.id,
+                        brandId: data.brandId,
                     });
                 });
-                console.log("[Kanban] Total invites", invites.length);
+                console.log("[Kanban] Total collaborations", collabs.length);
 
                 const grouped: Record<string, KanbanCardT[]> = {
-                    waiting: [],
-                    accepted: [],
-                    declined: [],
+                    draft: [],
+                    active: [],
+                    stopped: [],
+                    deleted: [],
                 };
-                invites.forEach((inv) => {
-                    const bucket = (inv.status || "waiting").toLowerCase();
-                    if (bucket === "accepted") grouped.accepted.push(inv);
-                    else if (
-                        bucket === "declined" ||
-                        bucket === "denied" ||
-                        bucket === "inactive"
-                    )
-                        grouped.declined.push(inv);
-                    else grouped.waiting.push(inv);
+                collabs.forEach((collab) => {
+                    const bucket = (collab.status || "draft").toLowerCase();
+                    if (bucket === "active") grouped.active.push(collab);
+                    else if (bucket === "stopped") grouped.stopped.push(collab);
+                    else if (bucket === "deleted") grouped.deleted.push(collab);
+                    else grouped.draft.push(collab);
                 });
                 console.log("[Kanban] Grouped counts", {
-                    waiting: grouped.waiting.length,
-                    accepted: grouped.accepted.length,
-                    declined: grouped.declined.length,
+                    draft: grouped.draft.length,
+                    active: grouped.active.length,
+                    stopped: grouped.stopped.length,
+                    deleted: grouped.deleted.length,
                 });
                 setColumns([
                     {
-                        id: "waiting",
-                        title: `Waiting (${grouped.waiting.length})`,
-                        cards: grouped.waiting,
+                        id: "draft",
+                        title: `Draft Campaign (${grouped.draft.length})`,
+                        cards: grouped.draft,
                     },
                     {
-                        id: "accepted",
-                        title: `Accepted (${grouped.accepted.length})`,
-                        cards: grouped.accepted,
+                        id: "active",
+                        title: `Active Campaign (${grouped.active.length})`,
+                        cards: grouped.active,
                     },
                     {
-                        id: "declined",
-                        title: `Declined (${grouped.declined.length})`,
-                        cards: grouped.declined,
+                        id: "stopped",
+                        title: `Stopped Campaign (${grouped.stopped.length})`,
+                        cards: grouped.stopped,
+                    },
+                    {
+                        id: "deleted",
+                        title: `Deleted Campaign (${grouped.deleted.length})`,
+                        cards: grouped.deleted,
                     },
                 ]);
             } catch (err: any) {
-                console.warn("Failed to fetch invites", err);
-                setError(err?.message || "Unable to load invites");
+                console.warn("Failed to fetch collaborations", err);
+                setError(err?.message || "Unable to load collaborations");
             } finally {
                 setLoading(false);
             }
         };
-        fetchInvites();
-    }, [manager?.id]);
+        fetchCollaborations();
+    }, []);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        })
     );
+
+    const handleDragOver = (event: any) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const activeIdVal = active.id as string;
+        const overIdVal = over.id as string;
+
+        const [activeColumnId] = activeIdVal.split(":");
+        const [overColumnId] = overIdVal.split(":");
+
+        if (activeColumnId === overColumnId) return;
+
+        setColumns((cols) => {
+            const activeColumn = cols.find((col) => col.id === activeColumnId);
+            const overColumn = cols.find((col) => col.id === overColumnId);
+
+            if (!activeColumn || !overColumn) return cols;
+
+            const activeCard = activeColumn.cards.find((c) => activeIdVal.includes(c.id));
+            if (!activeCard) return cols;
+
+            const newColumns = cols.map((col) => {
+                if (col.id === activeColumnId) {
+                    return {
+                        ...col,
+                        cards: col.cards.filter((c) => !activeIdVal.includes(c.id)),
+                    };
+                }
+                if (col.id === overColumnId) {
+                    return {
+                        ...col,
+                        cards: [...col.cards, activeCard],
+                    };
+                }
+                return col;
+            });
+
+            return newColumns;
+        });
+    };
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
         if (!over) return;
-        const [fromColumnId, fromCardId] = (active.id as string).split(":");
-        const [toColumnId, toCardId] = (over.id as string).split(":");
+        const activeIdVal = active.id as string;
+        const overIdVal = over.id as string;
+
+        const [fromColumnId, fromCardId] = activeIdVal.split(":");
+
+        const toColumn = columns.find((c) => c.id === overIdVal);
+        const toColumnId = toColumn ? overIdVal : overIdVal.split(":")[0];
+        const toCardId = toColumn ? null : overIdVal.split(":")[1];
 
         if (fromColumnId === toColumnId) {
             const col = columns.find((c) => c.id === fromColumnId);
@@ -196,31 +200,14 @@ export default function CollaborationCMSBoard() {
             const from = columns.find((c) => c.id === fromColumnId);
             const to = columns.find((c) => c.id === toColumnId);
             if (!from || !to) return;
-            const card = from.cards.find((c) => c.id === fromCardId);
-            if (!card) return;
-
-            const fromCards = from.cards.filter((c) => c.id !== fromCardId);
-            const updatedCard = { ...card, status: to.id };
-            const toCards = [...to.cards, updatedCard];
-
-            const updated = columns.map((c) =>
-                c.id === from.id
-                    ? { ...c, cards: fromCards }
-                    : c.id === to.id
-                        ? { ...c, cards: toCards }
-                        : c
-            );
-            setColumns(updated);
 
             try {
-                // Persist to primary collection name (collaborations-invites)
-                const inviteRef = doc(FirestoreDB, "collaborations-invites", card.id);
-                await updateDoc(inviteRef, { status: to.id });
+                const collabRef = doc(FirestoreDB, "collaborations", fromCardId);
+                await updateDoc(collabRef, { status: to.id });
             } catch (err) {
-                console.warn("Failed to update invite status", err);
+                console.warn("Failed to update collaboration status", err);
             }
         }
-        setActiveId(null);
     };
 
     return (
@@ -231,7 +218,7 @@ export default function CollaborationCMSBoard() {
 
             {loading && (
                 <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
-                    Loading invites…
+                    Loading collaborations…
                 </Text>
             )}
             {error && (
@@ -241,6 +228,7 @@ export default function CollaborationCMSBoard() {
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
+                onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
             >
                 <ScrollView
@@ -286,7 +274,7 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                 strategy={rectSortingStrategy}
             >
                 {column.cards.map((card) => (
-                    <SortableCard
+                    <CollaborationCard
                         key={card.id}
                         id={`${column.id}:${card.id}`}
                         card={card}
@@ -304,70 +292,7 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     );
 };
 
-const SortableCard = ({
-    id,
-    card,
-    colId,
-}: {
-    id: string;
-    card: KanbanCardT;
-    colId: string;
-}) => {
-    const { attributes, listeners, setNodeRef, transform, transition } =
-        useSortable({ id });
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
-    const theme = useTheme();
-    const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
 
-    return (
-        // @ts-ignore
-        <View
-            ref={setNodeRef as any}
-            {...attributes}
-            {...listeners}
-            style={[
-                styles.card,
-                style,
-                {
-                    display: "flex",
-                    flexDirection: "column",
-                    marginBottom: 8,
-                },
-            ]}
-        >
-            <Text style={styles.cardTitle}>
-                {card.socialProfile?.name || "Unknown"}{" "}
-                <Text style={{ fontWeight: "400", opacity: 0.7 }}>
-                    @{card.socialProfile?.username || ""}
-                </Text>
-            </Text>
-            <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
-                Status: {colId.charAt(0).toUpperCase() + colId.slice(1)}
-            </Text>
-            {card.collaborationId && (
-                <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
-                    Collaboration: {card.collaborationId}
-                </Text>
-            )}
-            <Text style={styles.cardDesc} numberOfLines={3} ellipsizeMode="tail">
-                {card.message || "No message"}
-            </Text>
-            <Text style={[styles.cardDesc, { marginTop: 6 }]}>
-                Followers: {card.socialProfile?.follower_count ?? "-"} | ER:{" "}
-                {card.socialProfile?.engagement_rate?.toFixed?.(2) ?? "-"}%
-            </Text>
-            {card.timeStamp && (
-                <Text style={[styles.cardDesc, { marginTop: 4, opacity: 0.7 }]}>
-                    Invited: {new Date(card.timeStamp).toLocaleDateString()}
-                </Text>
-            )}
-        </View>
-    );
-};
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
@@ -411,21 +336,4 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             marginBottom: 8,
         },
         columnTitle: { fontSize: 16, fontWeight: "700" },
-        card: {
-            backgroundColor: colors.white,
-            borderRadius: 8,
-            padding: 10,
-            marginBottom: 8,
-        },
-        cardTitle: {
-            fontWeight: "600",
-            // borderBottomWidth: 1
-            // borderColor: "#D1D5DB",
-            paddingBottom: 4,
-            marginBottom: 4,
-        },
-        cardDesc: {
-            marginTop: 0,
-            color: colors.text,
-        },
     });
