@@ -26,6 +26,7 @@ import {
     doc,
     getDoc,
     getDocs,
+    orderBy,
     query,
     updateDoc,
     where,
@@ -89,7 +90,7 @@ export default function BrandCRMBoard() {
                 console.log("[Kanban] Fetching brands from brands collection");
 
                 const brandsRef = collection(FirestoreDB, "brands");
-                const brandsQuery = query(brandsRef);
+                const brandsQuery = query(brandsRef, orderBy("creationTime", "desc"));
 
                 const snap = await getDocs(brandsQuery);
                 console.log("[Kanban] Brands found", snap.size);
@@ -449,6 +450,8 @@ export default function BrandCRMBoard() {
         const { active, over } = event;
         if (!over) return;
 
+        console.log("Drag End Event", event);
+
         const activeId = active.id as string;
         const overId = over.id as string;
 
@@ -459,6 +462,7 @@ export default function BrandCRMBoard() {
         const toColumnId = toColumn ? overId : overId.split(":")[0];
         const toCardId = toColumn ? null : overId.split(":")[1];
 
+        console.log("Drag End Details", fromColumnId, toColumnId);
         if (fromColumnId === toColumnId) {
             const col = columns.find((c) => c.id === fromColumnId);
             if (!col) return;
@@ -475,25 +479,14 @@ export default function BrandCRMBoard() {
             const from = columns.find((c) => c.id === fromColumnId);
             const to = columns.find((c) => c.id === toColumnId);
             if (!from || !to) return;
-            const card = from.cards.find((c) => c.id === fromCardId);
-            if (!card) return;
-
-            const fromCards = from.cards.filter((c) => c.id !== fromCardId);
-            const updatedCard = { ...card, status: to.id };
-            const toCards = [...to.cards, updatedCard];
-
-            const updated = columns.map((c) =>
-                c.id === from.id
-                    ? { ...c, cards: fromCards }
-                    : c.id === to.id
-                        ? { ...c, cards: toCards }
-                        : c
-            );
-            setColumns(updated);
+            console.log("From and To Columns", from, to, fromCardId);
+            console.log("Moving Card", fromCardId);
 
             try {
                 // Update crmStatus in brands collection
-                const brandRef = doc(FirestoreDB, "brands", card.id);
+                console.log("Updating Brand", fromCardId, to.id);
+
+                const brandRef = doc(FirestoreDB, "brands", fromCardId);
                 await updateDoc(brandRef, { crmStatus: to.id });
             } catch (err) {
                 console.warn("Failed to update brand crmStatus", err);
