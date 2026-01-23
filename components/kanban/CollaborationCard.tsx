@@ -6,9 +6,9 @@ import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
-import type { InfluencerItem } from "../discover/discover-types";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import type { InfluencerItem } from "../discover/discover-types";
 
 export type CollaborationCardData = {
     id: string;
