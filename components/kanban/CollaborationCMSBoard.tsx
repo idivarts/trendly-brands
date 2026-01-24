@@ -19,6 +19,8 @@ import {
     collection,
     doc,
     getDocs,
+    orderBy,
+    query,
     updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
@@ -38,6 +40,7 @@ export default function CollaborationCMSBoard() {
         { id: "draft", title: "Draft Campaign", cards: [] },
         { id: "active", title: "Active Campaign", cards: [] },
         { id: "stopped", title: "Stopped Campaign", cards: [] },
+        { id: "inactive", title: "Past Campaign", cards: [] },
         { id: "deleted", title: "Deleted Campaign", cards: [] },
     ]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -54,7 +57,7 @@ export default function CollaborationCMSBoard() {
                 console.log("[Kanban] Fetching collaborations (all)");
 
                 const collRef = collection(FirestoreDB, "collaborations");
-                const snapshot = await getDocs(collRef);
+                const snapshot = await getDocs(query(collRef, orderBy("timeStamp", "desc")));
                 console.log("[Kanban] Collaborations found", snapshot.size);
 
                 const collabs: KanbanCardT[] = [];
@@ -75,6 +78,7 @@ export default function CollaborationCMSBoard() {
                 const grouped: Record<string, KanbanCardT[]> = {
                     draft: [],
                     active: [],
+                    inactive: [],
                     stopped: [],
                     deleted: [],
                 };
@@ -83,6 +87,7 @@ export default function CollaborationCMSBoard() {
                     if (bucket === "active") grouped.active.push(collab);
                     else if (bucket === "stopped") grouped.stopped.push(collab);
                     else if (bucket === "deleted") grouped.deleted.push(collab);
+                    else if (bucket === "inactive") grouped.inactive.push(collab);
                     else grouped.draft.push(collab);
                 });
                 console.log("[Kanban] Grouped counts", {
@@ -102,10 +107,16 @@ export default function CollaborationCMSBoard() {
                         title: `Active Campaign (${grouped.active.length})`,
                         cards: grouped.active,
                     },
+
                     {
                         id: "stopped",
                         title: `Stopped Campaign (${grouped.stopped.length})`,
                         cards: grouped.stopped,
+                    },
+                    {
+                        id: "inactive",
+                        title: `Past Campaign (${grouped.inactive.length})`,
+                        cards: grouped.inactive,
                     },
                     {
                         id: "deleted",
