@@ -73,7 +73,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             const q = query(
                 collaborationCol,
                 where("brandId", "==", selectedBrand?.id),
-                (active ? where("status", "in", ["active", "draft"]) : where("status", "in", ["stopped"])),
+                (active ? where("status", "in", ["active", "draft"]) : where("status", "in", ["inactive", "stopped"])),
                 orderBy("timeStamp", "desc")
             );
 
