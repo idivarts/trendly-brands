@@ -293,10 +293,20 @@ export default function BrandDetailsBottomSheet({
                             ) : (
                                 members.map((m) => (
                                     <View key={m.id} style={styles.memberRow}>
-                                        <Image
-                                            source={{ uri: m.image || m.photoURL }}
-                                            style={styles.memberImage}
-                                        />
+                                        <View style={styles.memberImage}>
+                                            {(m.image || m.photoURL) ? (
+                                                <Image
+                                                    source={{ uri: m.image || m.photoURL }}
+                                                    style={styles.memberImage}
+                                                />
+                                            ) : (
+                                                <View style={[styles.memberImage, styles.memberImagePlaceholder]}>
+                                                    <Text style={styles.memberInitial}>
+                                                        {(m.name || m.email || "U").charAt(0).toUpperCase()}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
                                         <View>
                                             <Text style={styles.memberName}>{m.name || "Unknown"}</Text>
                                             <Text style={styles.memberEmail}>{m.email}</Text>
@@ -494,6 +504,16 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         campaignBudget: { marginTop: 4, color: "#6B7280" },
         memberRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
         memberImage: { width: 44, height: 44, borderRadius: 22 },
+        memberImagePlaceholder: {
+            backgroundColor: colors.primary,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        memberInitial: {
+            fontSize: 18,
+            fontWeight: "700",
+            color: "#FFFFFF",
+        },
         memberName: { fontWeight: "600" },
         memberEmail: { color: "#6B7280" },
         subscriptionContainer: {
@@ -501,7 +521,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         subscriptionRow: {
             flexDirection: "row",
-            justifyContent: "space-between",
+            columnGap:8,
             paddingVertical: 4,
         },
         subscriptionLabel: {
