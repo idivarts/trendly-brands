@@ -99,28 +99,28 @@ export default function CollaborationCMSBoard() {
                 setColumns([
                     {
                         id: "draft",
-                        title: `Draft Campaign (${grouped.draft.length})`,
+                        title: `Draft (${grouped.draft.length})`,
                         cards: grouped.draft,
                     },
                     {
                         id: "active",
-                        title: `Active Campaign (${grouped.active.length})`,
+                        title: `Active (${grouped.active.length})`,
                         cards: grouped.active,
                     },
 
                     {
                         id: "stopped",
-                        title: `Stopped Campaign (${grouped.stopped.length})`,
+                        title: `Stopped (${grouped.stopped.length})`,
                         cards: grouped.stopped,
                     },
                     {
                         id: "inactive",
-                        title: `Past Campaign (${grouped.inactive.length})`,
+                        title: `Past (${grouped.inactive.length})`,
                         cards: grouped.inactive,
                     },
                     {
                         id: "deleted",
-                        title: `Deleted Campaign (${grouped.deleted.length})`,
+                        title: `Deleted (${grouped.deleted.length})`,
                         cards: grouped.deleted,
                     },
                 ]);
