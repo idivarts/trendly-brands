@@ -15,6 +15,7 @@ import {
     rectSortingStrategy
 } from "@dnd-kit/sortable";
 import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import {
     collection,
     doc,
@@ -271,6 +272,7 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const styles = useMemo(() => useStyles(colors), [colors]);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
+    const router = useRouter();
 
     return (
         <View
