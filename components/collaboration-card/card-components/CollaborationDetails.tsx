@@ -63,8 +63,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                     marginBottom: 8,
                 }}
             >
-                <Pressable
-                    onPress={() => router.push(`/collaboration-details/${collabId}`)}
+                <View
+
                     style={{
                         flex: 1,
                     }}
@@ -78,7 +78,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                     >
                         {name}
                     </Text>
-                </Pressable>
+                </View>
                 {onOpenBottomSheet && (
                     <Pressable
                         onPress={() => {
@@ -92,8 +92,8 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                         />
                     </Pressable>)}
             </View>
-            <Pressable
-                onPress={() => router.push(`/collaboration-details/${collabId}`)}
+            <View
+
             >
                 <Text
                     style={{
@@ -159,7 +159,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                             />
                         ))}
                 </View>
-            </Pressable>
+            </View>
         </View>
     );
 };

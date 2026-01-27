@@ -24,7 +24,7 @@ import {
     updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CollaborationCard, type CollaborationCardData } from "./CollaborationCard";
 
 export type KanbanCardT = CollaborationCardData;
@@ -292,12 +292,19 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                 strategy={rectSortingStrategy}
             >
                 {column.cards.map((card) => (
-                    <CollaborationCard
+                    <Pressable
                         key={card.id}
-                        id={`${column.id}:${card.id}`}
-                        card={card}
-                        colId={column.id}
-                    />
+                        onPress={() => {
+                            const url = `https://brands.trendly.now/collaboration-details/${card.id}`;
+                            Linking.openURL(url);
+                        }}
+                    >
+                        <CollaborationCard
+                            id={`${column.id}:${card.id}`}
+                            card={card}
+                            colId={column.id}
+                        />
+                    </Pressable>
                 ))}
             </SortableContext>
 
