@@ -634,16 +634,16 @@ const SortableCard = ({
         const collaborationsRef = collection(FirestoreDB, "collaborations");
 
         try {
-            const collabQuery = query(collaborationsRef, where("brandId", "==", id));
+            const collabQuery = query(collaborationsRef, where("brandId", "==", card.id));
             const collabSnap = await getDocs(collabQuery);
             setCollaborationCount(collabSnap.size)
         } catch (err) {
-            console.warn("[Kanban] Failed to fetch collaborations for brand", id, err);
+            console.warn("[Kanban] Failed to fetch collaborations for brand", card.id, err);
         }
     }
     useEffect(() => {
         getCount();
-    }, [])
+    }, [card.id])
 
     // Filter out web-specific attributes
     const { tabIndex, role, ...restAttributes } = attributes as any;
