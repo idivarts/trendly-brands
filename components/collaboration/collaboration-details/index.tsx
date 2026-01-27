@@ -280,6 +280,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         <View
             style={{
                 flex: 1,
+                flexDirection: "column",
             }}
         >
             {/* <View
@@ -340,12 +341,14 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 console.log("[CollaborationDetails] Rendering TopTabNavigation for status:", collaboration.status);
                 return (
                     <CollapseProvider>
-                        <TopTabNavigation
-                            tabs={tabs(xl)}
-                            size="compact"
-                            mobileFullWidth={true}
-                            splitTwoColumns={true}
-                        />
+                        <View style={{ flex: 1, width: "100%", minHeight: 0 }}>
+                            <TopTabNavigation
+                                tabs={tabs(xl)}
+                                size="compact"
+                                mobileFullWidth={true}
+                                splitTwoColumns={true}
+                            />
+                        </View>
                     </CollapseProvider>
                 );
             })()}

@@ -4,6 +4,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import * as Clipboard from 'expo-clipboard';
+import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
     Alert,
@@ -173,12 +174,15 @@ export default function BrandDetailsBottomSheet({
                                 ) : (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         {discoveredInfluencers.map((inf) => (
-                                            <Pressable 
-                                                key={inf.id} 
+                                            <Pressable
+                                                key={inf.id}
                                                 style={{ width: 280, marginRight: 12 }}
                                                 onPress={() => {
-                                                    const url = `https://brands.trendly.now/discover?influencerId=${inf.id}`;
-                                                    Linking.openURL(url);
+                                                    console.log("[BrandDetailsBottomSheet] Opening influencer:", inf.id);
+                                                    router.push({
+                                                        pathname: "/(main)/(drawer)/(tabs)/discover",
+                                                        params: { influencerId: inf.id }
+                                                    });
                                                 }}
                                             >
                                                 <InfluencerCard item={inf} isCollapsed={false} />
@@ -521,7 +525,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         subscriptionRow: {
             flexDirection: "row",
-            columnGap:8,
+            columnGap: 8,
             paddingVertical: 4,
         },
         subscriptionLabel: {

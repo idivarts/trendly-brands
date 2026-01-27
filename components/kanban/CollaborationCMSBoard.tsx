@@ -25,7 +25,7 @@ import {
     updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Menu } from "react-native-paper";
 import { CollaborationCard, type CollaborationCardData } from "./CollaborationCard";
 
@@ -410,8 +410,8 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                     <Pressable
                         key={card.id}
                         onPress={() => {
-                            const url = `https://brands.trendly.now/collaboration-details/${card.id}`;
-                            Linking.openURL(url);
+                            console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
+                            router.push(`/collaboration-details/${card.id}`);
                         }}
                     >
                         <CollaborationCard
