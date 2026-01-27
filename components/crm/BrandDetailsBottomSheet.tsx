@@ -64,7 +64,7 @@ export default function BrandDetailsBottomSheet({
                 <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
                     {/* Header */}
                     <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{brand.name}</Text>
+                        <Text style={styles.modalTitle}>{brand.name}</Text>
                         <View style={styles.DateAndCross}>
                             <Text style={styles.joinedDate}>
                                 {(() => {
@@ -76,9 +76,9 @@ export default function BrandDetailsBottomSheet({
                                     return `Joined ${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
                                 })()}
                             </Text>
-                        <TouchableOpacity onPress={onClose}>
-                            <Text style={styles.closeButton}>✕</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity onPress={onClose}>
+                                <Text style={styles.closeButton}>✕</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -194,7 +194,14 @@ export default function BrandDetailsBottomSheet({
                                 ) : (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         {campaigns.map((campaign) => (
-                                            <View key={campaign.id} style={styles.campaignCard}>
+                                            <Pressable
+                                                key={campaign.id}
+                                                style={styles.campaignCard}
+                                                onPress={() => {
+                                                    const url = `https://brands.trendly.now/collaboration-details/${campaign.id}`;
+                                                    Linking.openURL(url);
+                                                }}
+                                            >
                                                 {/* Header with title and menu */}
                                                 <View style={styles.campaignHeaderRow}>
                                                     <Text style={styles.campaignTitle} numberOfLines={1}>
@@ -263,7 +270,7 @@ export default function BrandDetailsBottomSheet({
                                                         </View>
                                                     </View>
                                                 </View>
-                                            </View>
+                                            </Pressable>
                                         ))}
                                     </ScrollView>
                                 )}
