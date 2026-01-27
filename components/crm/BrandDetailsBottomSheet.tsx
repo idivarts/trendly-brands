@@ -173,9 +173,16 @@ export default function BrandDetailsBottomSheet({
                                 ) : (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         {discoveredInfluencers.map((inf) => (
-                                            <View key={inf.id} style={{ width: 280, marginRight: 12 }}>
+                                            <Pressable 
+                                                key={inf.id} 
+                                                style={{ width: 280, marginRight: 12 }}
+                                                onPress={() => {
+                                                    const url = `https://brands.trendly.now/discover?influencerId=${inf.id}`;
+                                                    Linking.openURL(url);
+                                                }}
+                                            >
                                                 <InfluencerCard item={inf} isCollapsed={false} />
-                                            </View>
+                                            </Pressable>
                                         ))}
                                     </ScrollView>
                                 )}
