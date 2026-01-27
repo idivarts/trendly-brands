@@ -1,12 +1,12 @@
+import type { DB_TYPE } from "@/components/discover/discover-types";
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
-import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
 import {
     DiscoveryProvider,
     OpenFilterRightPanel,
     type DiscoverCommunication,
     type PageSortCommunication,
 } from "@/components/discover/discovery-context";
-import type { DB_TYPE, InfluencerItem } from "@/components/discover/discover-types";
+import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
 import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
@@ -33,6 +33,7 @@ const DiscoverComponent = ({
      * to show the collaboration's preferences only.
      */
     useStoredFilters = true,
+    initialInfluencerId,
 }: {
     showRightPanel?: boolean;
     topPanel?: boolean;
@@ -43,6 +44,7 @@ const DiscoverComponent = ({
     onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     useStoredFilters?: boolean;
+    initialInfluencerId?: string;
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand } = useBrandContext();
@@ -179,6 +181,7 @@ const DiscoverComponent = ({
                         onStatusChange={onStatusChange}
                         isStatusCard={isStatusCard}
                         defaultAdvanceFilters={filtersToUse}
+                        initialInfluencerId={initialInfluencerId}
                     />
                     <RightPanelDiscover
                         defaultAdvanceFilters={filtersToUse}
