@@ -57,7 +57,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         if (!pageID) return;
         try {
             console.log("[CollaborationDetails] Fetching collaboration:", pageID);
-            const collabRef = doc(FirestoreDB, "collaborations", pageID as string);
+            const collabRef = doc(FirestoreDB, "collaborations", pageID);
             const snapshot = await getDoc(collabRef);
             const data = snapshot.data() as ICollaboration;
 
@@ -95,7 +95,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
             console.log("[CollaborationDetails] Collaboration set successfully");
         } catch (e) {
-            Console.error("[CollaborationDetails] Error:", e);
+            Console.error(e, "[CollaborationDetails] Error:");
         } finally {
             setLoading(false);
         }

@@ -26,9 +26,10 @@ import {
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Menu } from "react-native-paper";
 import { CollaborationCard, type CollaborationCardData } from "./CollaborationCard";
 
-export type KanbanCardT = CollaborationCardData;
+export type KanbanCardT = CollaborationCardData & { isLive?: boolean };
 
 export type KanbanColumnT = {
     id: string;
@@ -46,6 +47,9 @@ export default function CollaborationCMSBoard() {
     ]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [liveFilter, setLiveFilter] = useState<"none" | "live" | "not-live">("none");
+    const [menuVisible, setMenuVisible] = useState(false);
+    const [allCollaborations, setAllCollaborations] = useState<KanbanCardT[]>([]);
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
@@ -72,9 +76,11 @@ export default function CollaborationCMSBoard() {
                         timeStamp: data.timeStamp,
                         collaborationId: docSnap.id,
                         brandId: data.brandId,
+                        isLive: data.isLive ?? false, // Default to false if not present
                     });
                 });
                 console.log("[Kanban] Total collaborations", collabs.length);
+                setAllCollaborations(collabs);
 
                 const grouped: Record<string, KanbanCardT[]> = {
                     draft: [],
@@ -83,7 +89,16 @@ export default function CollaborationCMSBoard() {
                     stopped: [],
                     deleted: [],
                 };
-                collabs.forEach((collab) => {
+
+                // Apply live filter
+                const filteredCollabs = collabs.filter((collab) => {
+                    if (liveFilter === "none") return true;
+                    if (liveFilter === "live") return collab.isLive === true;
+                    if (liveFilter === "not-live") return !collab.isLive;
+                    return true;
+                });
+
+                filteredCollabs.forEach((collab) => {
                     const bucket = (collab.status || "draft").toLowerCase();
                     if (bucket === "active") grouped.active.push(collab);
                     else if (bucket === "stopped") grouped.stopped.push(collab);
@@ -134,6 +149,64 @@ export default function CollaborationCMSBoard() {
         };
         fetchCollaborations();
     }, []);
+
+    // Re-filter when liveFilter changes
+    useEffect(() => {
+        if (allCollaborations.length === 0) return;
+
+        const grouped: Record<string, KanbanCardT[]> = {
+            draft: [],
+            active: [],
+            inactive: [],
+            stopped: [],
+            deleted: [],
+        };
+
+        // Apply live filter
+        const filteredCollabs = allCollaborations.filter((collab) => {
+            if (liveFilter === "none") return true;
+            if (liveFilter === "live") return collab.isLive === true;
+            if (liveFilter === "not-live") return !collab.isLive;
+            return true;
+        });
+
+        filteredCollabs.forEach((collab) => {
+            const bucket = (collab.status || "draft").toLowerCase();
+            if (bucket === "active") grouped.active.push(collab);
+            else if (bucket === "stopped") grouped.stopped.push(collab);
+            else if (bucket === "deleted") grouped.deleted.push(collab);
+            else if (bucket === "inactive") grouped.inactive.push(collab);
+            else grouped.draft.push(collab);
+        });
+
+        setColumns([
+            {
+                id: "draft",
+                title: `Draft (${grouped.draft.length})`,
+                cards: grouped.draft,
+            },
+            {
+                id: "active",
+                title: `Active (${grouped.active.length})`,
+                cards: grouped.active,
+            },
+            {
+                id: "stopped",
+                title: `Stopped (${grouped.stopped.length})`,
+                cards: grouped.stopped,
+            },
+            {
+                id: "inactive",
+                title: `Past (${grouped.inactive.length})`,
+                cards: grouped.inactive,
+            },
+            {
+                id: "deleted",
+                title: `Deleted (${grouped.deleted.length})`,
+                cards: grouped.deleted,
+            },
+        ]);
+    }, [liveFilter]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -226,6 +299,46 @@ export default function CollaborationCMSBoard() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Collaboration CMS</Text>
+                <Menu
+                    visible={menuVisible}
+                    onDismiss={() => setMenuVisible(false)}
+                    anchor={
+                        <Pressable
+                            onPress={() => setMenuVisible(true)}
+                            style={[styles.filterBtn]}
+                        >
+                            <Text style={styles.filterBtnText}>
+                                {liveFilter === "none"
+                                    ? "All Campaigns"
+                                    : liveFilter === "live"
+                                        ? "Live Campaigns"
+                                        : "Not-Live Campaigns"}
+                            </Text>
+                        </Pressable>
+                    }
+                >
+                    <Menu.Item
+                        onPress={() => {
+                            setLiveFilter("none");
+                            setMenuVisible(false);
+                        }}
+                        title="None (All Campaigns)"
+                    />
+                    <Menu.Item
+                        onPress={() => {
+                            setLiveFilter("live");
+                            setMenuVisible(false);
+                        }}
+                        title="Live Campaigns"
+                    />
+                    <Menu.Item
+                        onPress={() => {
+                            setLiveFilter("not-live");
+                            setMenuVisible(false);
+                        }}
+                        title="Not-Live Campaigns"
+                    />
+                </Menu>
             </View>
 
             {loading && (
@@ -331,6 +444,13 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             marginBottom: 20,
         },
         title: { fontSize: 22, fontWeight: "700" },
+        filterBtn: {
+            backgroundColor: colors.primary,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            borderRadius: 8,
+        },
+        filterBtnText: { color: colors.white, fontWeight: "600", fontSize: 14 },
         addBtn: {
             backgroundColor: colors.primary,
             paddingHorizontal: 12,
