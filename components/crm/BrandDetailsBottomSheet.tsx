@@ -3,8 +3,10 @@ import { KanbanCardT } from "@/components/kanban/BrandCRMBoard";
 import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
+import * as Clipboard from 'expo-clipboard';
 import React, { useMemo } from "react";
 import {
+    Alert,
     Image,
     Linking,
     Modal,
@@ -62,10 +64,22 @@ export default function BrandDetailsBottomSheet({
                 <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
                     {/* Header */}
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>{brand.name}</Text>
+                            <Text style={styles.modalTitle}>{brand.name}</Text>
+                        <View style={styles.DateAndCross}>
+                            <Text style={styles.joinedDate}>
+                                {(() => {
+                                    if (!brand.creationTime) return "";
+                                    const now = new Date();
+                                    const created = new Date(brand.creationTime);
+                                    const diffTime = Math.abs(now.getTime() - created.getTime());
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    return `Joined ${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+                                })()}
+                            </Text>
                         <TouchableOpacity onPress={onClose}>
                             <Text style={styles.closeButton}>✕</Text>
                         </TouchableOpacity>
+                        </View>
                     </View>
 
                     <ScrollView style={styles.modalBody}>
@@ -113,6 +127,36 @@ export default function BrandDetailsBottomSheet({
                                     <Text style={styles.brandDescription} numberOfLines={3}>
                                         {brand.profile.about}
                                     </Text>
+                                )}
+
+                                {/* Contact Details */}
+                                {(brand.profile?.phone || brand.profile?.website) && (
+                                    <View style={styles.contactDetailsContainer}>
+                                        {brand.profile?.phone && (
+                                            <TouchableOpacity
+                                                style={styles.contactDetailRow}
+                                                onPress={async () => {
+                                                    await Clipboard.setStringAsync(brand.profile!.phone!);
+                                                    Alert.alert('Copied', 'Phone number copied to clipboard');
+                                                }}
+                                            >
+                                                <Icon name="phone-outline" size={18} color="#4B5563" />
+                                                <Text style={styles.contactDetailText}>{brand.profile.phone}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {brand.profile?.website && (
+                                            <TouchableOpacity
+                                                style={styles.contactDetailRow}
+                                                onPress={async () => {
+                                                    await Clipboard.setStringAsync(brand.profile!.website!);
+                                                    Alert.alert('Copied', 'Website copied to clipboard');
+                                                }}
+                                            >
+                                                <Icon name="globe-model" size={18} color="#4B5563" />
+                                                <Text style={styles.contactDetailText}>{brand.profile.website}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
                                 )}
                             </View>
                         </View>
@@ -305,14 +349,21 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             borderTopRightRadius: 20,
             maxHeight: "90%",
         },
+        DateAndCross: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 16,
+        },
         modalHeader: {
             padding: 20,
             flexDirection: "row",
             justifyContent: "space-between",
             borderBottomWidth: 1,
             borderColor: "#E5E7EB",
+            alignItems: "center",
         },
         modalTitle: { fontSize: 20, fontWeight: "700" },
+        joinedDate: { fontSize: 12, color: "#9CA3AF", fontWeight: "500" },
         closeButton: { fontSize: 22 },
         modalBody: { padding: 20 },
         brandHeaderSection: { flexDirection: "row", gap: 16 },
@@ -331,6 +382,26 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         brandIconsRow: { flexDirection: "row", gap: 6 },
         iconButton: { padding: 6 },
         brandDescription: { marginTop: 8, color: "#6B7280" },
+        contactDetailsContainer: {
+            marginTop: 12,
+            gap: 8,
+        },
+        contactDetailRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+            backgroundColor: "#F9FAFB",
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: "#E5E7EB",
+        },
+        contactDetailText: {
+            fontSize: 14,
+            color: "#374151",
+            flex: 1,
+        },
         section: { marginTop: 24 },
         sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
         centerText: { textAlign: "center", opacity: 0.7 },
