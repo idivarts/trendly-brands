@@ -50,10 +50,10 @@ const DiscoverComponent = ({
     const { selectedBrand } = useBrandContext();
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
-    const discoverCommunication =
-        useRef<(action: DiscoverCommunication) => any>();
-    const pageSortCommunication =
-        useRef<(action: PageSortCommunication) => any>();
+    // @ts-ignore
+    const discoverCommunication = useRef<(action: DiscoverCommunication) => any>();
+    // @ts-ignore
+    const pageSortCommunication = useRef<(action: PageSortCommunication) => any>();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
         null
