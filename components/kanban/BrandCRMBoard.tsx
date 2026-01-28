@@ -1,20 +1,19 @@
 import BrandDetailsBottomSheet from "@/components/crm/BrandDetailsBottomSheet";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { CRMStatus } from "@/shared-libs/firestore/trendly-pro/models/brands";
+import { CRMColumnId, moveCardBetweenColumns } from "@/shared-libs/kanban";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import {
-  DndContext,
-  DragEndEvent,
-  PointerSensor,
-  useDroppable,
-  useSensor,
-  useSensors,
-  DragOverlay,
-  pointerWithin,
+    DndContext,
+    DragEndEvent,
+    DragOverlay,
+    PointerSensor,
+    pointerWithin,
+    useDroppable,
+    useSensor,
+    useSensors,
 } from "@dnd-kit/core";
-import { moveCardBetweenColumns } from "@/shared-libs/kanban/reducer";
-import { CRMColumnId } from "@/shared-libs/kanban/types";
 import {
     SortableContext,
     rectSortingStrategy,
@@ -62,10 +61,10 @@ export type KanbanColumnT = {
 
 export default function BrandCRMBoard() {
     const [columns, setColumns] = useState<KanbanColumnT[]>([
-      { id: "new_leads", title: "New Leads", cards: [] },
-      { id: "in_progress_leads", title: "In Progress Leads", cards: [] },
-      { id: "active_leads", title: "Active Leads", cards: [] },
-      { id: "churned_leads", title: "Churned Leads", cards: [] },
+        { id: "new_leads", title: "New Leads", cards: [] },
+        { id: "in_progress_leads", title: "In Progress Leads", cards: [] },
+        { id: "active_leads", title: "Active Leads", cards: [] },
+        { id: "churned_leads", title: "Churned Leads", cards: [] },
     ]);
     const [activeCard, setActiveCard] = useState<KanbanCardT | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -130,17 +129,17 @@ export default function BrandCRMBoard() {
                 console.log("[Kanban] Total brands", brands.length);
 
                 const grouped: Record<CRMColumnId, KanbanCardT[]> = {
-                  new_leads: [],
-                  in_progress_leads: [],
-                  active_leads: [],
-                  churned_leads: [],
+                    new_leads: [],
+                    in_progress_leads: [],
+                    active_leads: [],
+                    churned_leads: [],
                 };
                 brands.forEach((brand) => {
-                  const bucket = brand.crmStatus;
-                  if (bucket === "in_progress_leads") grouped.in_progress_leads.push(brand);
-                  else if (bucket === "active_leads") grouped.active_leads.push(brand);
-                  else if (bucket === "churned_leads") grouped.churned_leads.push(brand);
-                  else grouped.new_leads.push(brand);
+                    const bucket = brand.crmStatus;
+                    if (bucket === "in_progress_leads") grouped.in_progress_leads.push(brand);
+                    else if (bucket === "active_leads") grouped.active_leads.push(brand);
+                    else if (bucket === "churned_leads") grouped.churned_leads.push(brand);
+                    else grouped.new_leads.push(brand);
                 });
                 console.log("[Kanban] Grouped counts", {
                     new_leads: grouped.new_leads.length,
@@ -413,57 +412,57 @@ export default function BrandCRMBoard() {
     };
 
     const handleDragStart = (event: any) => {
-      const [, cardId] = event.active.id.split(":");
-      const card =
-        columns.flatMap((c) => c.cards).find((c) => c.id === cardId) || null;
-      setActiveCard(card);
+        const [, cardId] = event.active.id.split(":");
+        const card =
+            columns.flatMap((c) => c.cards).find((c) => c.id === cardId) || null;
+        setActiveCard(card);
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
-      const { active, over } = event;
-      setActiveCard(null);
+        const { active, over } = event;
+        setActiveCard(null);
 
-      if (!over) return;
+        if (!over) return;
 
-      const previousColumns = columns;
+        const previousColumns = columns;
 
-      const activeId = active.id as string;
-      const overId = over.id as string;
+        const activeId = active.id as string;
+        const overId = over.id as string;
 
-      const [fromColumnId, fromCardId] = activeId.split(":");
+        const [fromColumnId, fromCardId] = activeId.split(":");
 
-      const isDroppingOnColumn = columns.some((c) => c.id === overId);
-      const toColumnId = (isDroppingOnColumn
-        ? overId
-        : overId.split(":")[0]) as CRMColumnId;
+        const isDroppingOnColumn = columns.some((c) => c.id === overId);
+        const toColumnId = (isDroppingOnColumn
+            ? overId
+            : overId.split(":")[0]) as CRMColumnId;
 
-      const toCardId = isDroppingOnColumn ? null : overId.split(":")[1];
+        const toCardId = isDroppingOnColumn ? null : overId.split(":")[1];
 
-      let insertIndex: number | undefined = undefined;
+        let insertIndex: number | undefined = undefined;
 
-      if (toCardId) {
-        const targetColumn = columns.find((c) => c.id === toColumnId);
-        insertIndex = targetColumn?.cards.findIndex((c) => c.id === toCardId);
-      }
+        if (toCardId) {
+            const targetColumn = columns.find((c) => c.id === toColumnId);
+            insertIndex = targetColumn?.cards.findIndex((c) => c.id === toCardId);
+        }
 
-      // OPTIMISTIC UI UPDATE
-      setColumns((prev) =>
-        moveCardBetweenColumns(
-          prev,
-          fromCardId,
-          fromColumnId as CRMColumnId,
-          toColumnId,
-          insertIndex
-        )
-      );
+        // OPTIMISTIC UI UPDATE
+        setColumns((prev) =>
+            moveCardBetweenColumns(
+                prev,
+                fromCardId,
+                fromColumnId as CRMColumnId,
+                toColumnId,
+                insertIndex
+            )
+        );
 
-      try {
-        const brandRef = doc(FirestoreDB, "brands", fromCardId);
-        await updateDoc(brandRef, { crmStatus: toColumnId });
-      } catch (err) {
-        console.warn("Firestore failed, rolling back", err);
-        setColumns(previousColumns);
-      }
+        try {
+            const brandRef = doc(FirestoreDB, "brands", fromCardId);
+            await updateDoc(brandRef, { crmStatus: toColumnId });
+        } catch (err) {
+            console.warn("Firestore failed, rolling back", err);
+            setColumns(previousColumns);
+        }
     };
 
     return (
@@ -482,37 +481,37 @@ export default function BrandCRMBoard() {
             )}
 
             <DndContext
-              sensors={sensors}
-              collisionDetection={pointerWithin}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
+                sensors={sensors}
+                collisionDetection={pointerWithin}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
             >
-              <DragOverlay>
-                {activeCard ? (
-                  <View
-                    style={{
-                      padding: 12,
-                      borderRadius: 8,
-                      backgroundColor: "#fff",
-                      boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
-                      width: 260,
-                    }}
-                  >
-                    <Text style={{ fontWeight: "700" }}>{activeCard.name}</Text>
-                  </View>
-                ) : null}
-              </DragOverlay>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 20, paddingRight: 16 }}
-              >
-                <View style={styles.row}>
-                  {columns.map((col) => (
-                    <DroppableColumn key={col.id} column={col} onCardPress={handleOpenBottomSheet} />
-                  ))}
-                </View>
-              </ScrollView>
+                <DragOverlay>
+                    {activeCard ? (
+                        <View
+                            style={{
+                                padding: 12,
+                                borderRadius: 8,
+                                backgroundColor: "#fff",
+                                boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
+                                width: 260,
+                            }}
+                        >
+                            <Text style={{ fontWeight: "700" }}>{activeCard.name}</Text>
+                        </View>
+                    ) : null}
+                </DragOverlay>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 20, paddingRight: 16 }}
+                >
+                    <View style={styles.row}>
+                        {columns.map((col) => (
+                            <DroppableColumn key={col.id} column={col} onCardPress={handleOpenBottomSheet} />
+                        ))}
+                    </View>
+                </ScrollView>
             </DndContext>
 
             <BrandDetailsBottomSheet
@@ -595,12 +594,12 @@ const SortableCard = ({
     onPress: (card: KanbanCardT) => void;
 }) => {
     const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isOver,
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isOver,
     } = useSortable({ id });
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -646,24 +645,24 @@ const SortableCard = ({
                 style,
                 { touchAction: "none", position: "relative" },
                 {
-                  display: "flex",
-                  flexDirection: "column",
-                  marginBottom: 8,
+                    display: "flex",
+                    flexDirection: "column",
+                    marginBottom: 8,
                 },
             ]}
         >
             {isOver && (
-              <View
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  left: 0,
-                  right: 0,
-                  height: 3,
-                  backgroundColor: "#2563EB",
-                  borderRadius: 2,
-                }}
-              />
+                <View
+                    style={{
+                        position: "absolute",
+                        top: -4,
+                        left: 0,
+                        right: 0,
+                        height: 3,
+                        backgroundColor: "#2563EB",
+                        borderRadius: 2,
+                    }}
+                />
             )}
             <Pressable onPress={handlePress} style={{ flex: 1 }}>
                 {/* Row 1: Image and Name */}
