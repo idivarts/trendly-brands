@@ -56,10 +56,21 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const fetchCollaboration = async () => {
         if (!pageID) return;
         try {
-            const collabRef = doc(FirestoreDB, "collaborations", pageID as string);
+            console.log("[CollaborationDetails] Fetching collaboration:", pageID);
+            const collabRef = doc(FirestoreDB, "collaborations", pageID);
             const snapshot = await getDoc(collabRef);
             const data = snapshot.data() as ICollaboration;
-            if (!data) return;
+
+            console.log("[CollaborationDetails] Fetched data:", {
+                exists: snapshot.exists(),
+                status: data?.status,
+                hasData: !!data
+            });
+
+            if (!data) {
+                console.warn("[CollaborationDetails] No data found for:", pageID);
+                return;
+            }
 
             const brandRef = doc(FirestoreDB, "brands", data.brandId);
             const brandSnapshot = await getDoc(brandRef);
@@ -81,8 +92,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     ? brandData?.profile?.industries || []
                     : [],
             });
+
+            console.log("[CollaborationDetails] Collaboration set successfully");
         } catch (e) {
-            Console.error(e);
+            Console.error(e, "[CollaborationDetails] Error:");
         } finally {
             setLoading(false);
         }
@@ -252,12 +265,22 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             </View>
         );
 
-    if (!collaboration) return null;
+    console.log("[CollaborationDetails] Rendering:", {
+        hasCollaboration: !!collaboration,
+        status: collaboration?.status,
+        id: collaboration?.id
+    });
+
+    if (!collaboration) {
+        console.warn("[CollaborationDetails] No collaboration data available");
+        return null;
+    }
 
     return (
         <View
             style={{
                 flex: 1,
+                flexDirection: "column",
             }}
         >
             {/* <View
@@ -314,16 +337,21 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             {collaboration.status === "draft" && (
                 <OverviewTabContent collaboration={collaboration} />
             )}
-            {collaboration.status === "active" && (
-                <CollapseProvider>
-                    <TopTabNavigation
-                        tabs={tabs(xl)}
-                        size="compact"
-                        mobileFullWidth={true}
-                        splitTwoColumns={true}
-                    />
-                </CollapseProvider>
-            )}
+            {collaboration.status !== "draft" && (() => {
+                console.log("[CollaborationDetails] Rendering TopTabNavigation for status:", collaboration.status);
+                return (
+                    <CollapseProvider>
+                        <View style={{ flex: 1, width: "100%", minHeight: 0 }}>
+                            <TopTabNavigation
+                                tabs={tabs(xl)}
+                                size="compact"
+                                mobileFullWidth={true}
+                                splitTwoColumns={true}
+                            />
+                        </View>
+                    </CollapseProvider>
+                );
+            })()}
         </View>
     );
 };

@@ -5,7 +5,7 @@ import {
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { ISocialAnalytics, ISocials, SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
+import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
@@ -18,6 +18,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     FlatList,
@@ -39,7 +40,6 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
-import { InfluencerStatsModal } from "./InfluencerStatModal";
 import type { InfluencerItem } from "./discover-types";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
@@ -149,6 +149,7 @@ interface DiscoverInfluencerProps {
     isStatusCard?: boolean;
     onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
+    initialInfluencerId?: string;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -157,6 +158,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     isStatusCard = false,
     onStatusChange,
     defaultAdvanceFilters,
+    initialInfluencerId,
 }) => {
     const {
         selectedDb,
@@ -230,6 +232,72 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setShadowSocial(null);
         setIsAnalyticsLoading(false);
     };
+    const [autoOpenedId, setAutoOpenedId] = useState<string | null>(null);
+
+    // Auto-open profile when initialInfluencerId is provided (deep-linking)
+    useEffect(() => {
+        if (!initialInfluencerId || autoOpenedId === initialInfluencerId) return;
+
+        console.log("[DiscoverInfluencer] Auto-open effect running:", {
+            initialInfluencerId,
+            dataLength: data.length,
+            loading,
+            alreadyOpened: autoOpenedId,
+        });
+
+
+        if (data.length === 0 && loading) {
+            console.log("[DiscoverInfluencer] Data still loading, skipping...");
+            return;
+        }
+
+        const influencerMatch = data.find((item) => item.id === initialInfluencerId);
+        console.log("[DiscoverInfluencer] Search result:", {
+            found: !!influencerMatch,
+            matchId: influencerMatch?.id,
+        });
+
+        if (influencerMatch) {
+            console.log("[DiscoverInfluencer]  Found influencer in data, opening profile:", influencerMatch.name);
+            openProfile(influencerMatch);
+            setAutoOpenedId(initialInfluencerId);
+        } else if (!loading && data.length > 0) {
+
+            console.log("[DiscoverInfluencer] Influencer not in initial results, fetching from Firestore...");
+            (async () => {
+                try {
+
+                    const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const body = docSnap.data();
+                        console.log("[DiscoverInfluencer] Fetched influencer from Firestore:", body);
+
+                        if (body?.id) {
+                            const influencerItem: InfluencerItem = {
+                                id: body.id,
+                                name: body.name || "Unknown",
+                                username: body.username || "unknown",
+                                profile_pic: body.profile_pic || "",
+                                follower_count: body.follower_count || 0,
+                                engagement_count: body.engagement_count || 0,
+                                views_count: body.views_count || 0,
+                                engagement_rate: body.engagement_rate || 0,
+                            };
+                            console.log("[DiscoverInfluencer] ✅ Opening profile from Firestore fetch");
+                            openProfile(influencerItem);
+                            setAutoOpenedId(initialInfluencerId);
+                        }
+                    } else {
+                        console.log("[DiscoverInfluencer] Influencer document not found in Firestore");
+                    }
+                } catch (error) {
+                    console.error("[DiscoverInfluencer] Error fetching influencer from Firestore:", error);
+                }
+            })();
+        }
+    }, [initialInfluencerId, data, loading, openProfile]);
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(20);
@@ -795,7 +863,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         size={20}
                                         style={{ margin: 0, }}
                                         onPress={() => setSelectedIds([])}
-                                        
+
                                     />
                                 </View>
                                 <View style={{ marginTop: 8, alignItems: "center", backgroundColor: "transparent", alignSelf: "center" }}>

@@ -3,8 +3,11 @@ import { KanbanCardT } from "@/components/kanban/BrandCRMBoard";
 import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
+import * as Clipboard from 'expo-clipboard';
+import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
+    Alert,
     Image,
     Linking,
     Modal,
@@ -63,9 +66,21 @@ export default function BrandDetailsBottomSheet({
                     {/* Header */}
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>{brand.name}</Text>
-                        <TouchableOpacity onPress={onClose}>
-                            <Text style={styles.closeButton}>✕</Text>
-                        </TouchableOpacity>
+                        <View style={styles.DateAndCross}>
+                            <Text style={styles.joinedDate}>
+                                {(() => {
+                                    if (!brand.creationTime) return "";
+                                    const now = new Date();
+                                    const created = new Date(brand.creationTime);
+                                    const diffTime = Math.abs(now.getTime() - created.getTime());
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    return `Joined ${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+                                })()}
+                            </Text>
+                            <TouchableOpacity onPress={onClose}>
+                                <Text style={styles.closeButton}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <ScrollView style={styles.modalBody}>
@@ -114,6 +129,36 @@ export default function BrandDetailsBottomSheet({
                                         {brand.profile.about}
                                     </Text>
                                 )}
+
+                                {/* Contact Details */}
+                                {(brand.profile?.phone || brand.profile?.website) && (
+                                    <View style={styles.contactDetailsContainer}>
+                                        {brand.profile?.phone && (
+                                            <TouchableOpacity
+                                                style={styles.contactDetailRow}
+                                                onPress={async () => {
+                                                    await Clipboard.setStringAsync(brand.profile!.phone!);
+                                                    Alert.alert('Copied', 'Phone number copied to clipboard');
+                                                }}
+                                            >
+                                                <Icon name="phone-outline" size={18} color="#4B5563" />
+                                                <Text style={styles.contactDetailText}>{brand.profile.phone}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {brand.profile?.website && (
+                                            <TouchableOpacity
+                                                style={styles.contactDetailRow}
+                                                onPress={async () => {
+                                                    await Clipboard.setStringAsync(brand.profile!.website!);
+                                                    Alert.alert('Copied', 'Website copied to clipboard');
+                                                }}
+                                            >
+                                                <Icon name="globe-model" size={18} color="#4B5563" />
+                                                <Text style={styles.contactDetailText}>{brand.profile.website}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                )}
                             </View>
                         </View>
 
@@ -129,9 +174,19 @@ export default function BrandDetailsBottomSheet({
                                 ) : (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         {discoveredInfluencers.map((inf) => (
-                                            <View key={inf.id} style={{ width: 280, marginRight: 12 }}>
+                                            <Pressable
+                                                key={inf.id}
+                                                style={{ width: 280, marginRight: 12 }}
+                                                onPress={() => {
+                                                    console.log("[BrandDetailsBottomSheet] Opening influencer:", inf.id);
+                                                    router.push({
+                                                        pathname: "/(main)/(drawer)/(tabs)/discover",
+                                                        params: { influencerId: inf.id }
+                                                    });
+                                                }}
+                                            >
                                                 <InfluencerCard item={inf} isCollapsed={false} />
-                                            </View>
+                                            </Pressable>
                                         ))}
                                     </ScrollView>
                                 )}
@@ -150,7 +205,14 @@ export default function BrandDetailsBottomSheet({
                                 ) : (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         {campaigns.map((campaign) => (
-                                            <View key={campaign.id} style={styles.campaignCard}>
+                                            <Pressable
+                                                key={campaign.id}
+                                                style={styles.campaignCard}
+                                                onPress={() => {
+                                                    const url = `/collaboration-details/${campaign.id}`;
+                                                    Linking.openURL(url);
+                                                }}
+                                            >
                                                 {/* Header with title and menu */}
                                                 <View style={styles.campaignHeaderRow}>
                                                     <Text style={styles.campaignTitle} numberOfLines={1}>
@@ -219,7 +281,7 @@ export default function BrandDetailsBottomSheet({
                                                         </View>
                                                     </View>
                                                 </View>
-                                            </View>
+                                            </Pressable>
                                         ))}
                                     </ScrollView>
                                 )}
@@ -235,10 +297,20 @@ export default function BrandDetailsBottomSheet({
                             ) : (
                                 members.map((m) => (
                                     <View key={m.id} style={styles.memberRow}>
-                                        <Image
-                                            source={{ uri: m.image || m.photoURL }}
-                                            style={styles.memberImage}
-                                        />
+                                        <View style={styles.memberImage}>
+                                            {(m.image || m.photoURL) ? (
+                                                <Image
+                                                    source={{ uri: m.image || m.photoURL }}
+                                                    style={styles.memberImage}
+                                                />
+                                            ) : (
+                                                <View style={[styles.memberImage, styles.memberImagePlaceholder]}>
+                                                    <Text style={styles.memberInitial}>
+                                                        {(m.name || m.email || "U").charAt(0).toUpperCase()}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                        </View>
                                         <View>
                                             <Text style={styles.memberName}>{m.name || "Unknown"}</Text>
                                             <Text style={styles.memberEmail}>{m.email}</Text>
@@ -305,14 +377,21 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             borderTopRightRadius: 20,
             maxHeight: "90%",
         },
+        DateAndCross: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 16,
+        },
         modalHeader: {
             padding: 20,
             flexDirection: "row",
             justifyContent: "space-between",
             borderBottomWidth: 1,
             borderColor: "#E5E7EB",
+            alignItems: "center",
         },
         modalTitle: { fontSize: 20, fontWeight: "700" },
+        joinedDate: { fontSize: 12, color: "#9CA3AF", fontWeight: "500" },
         closeButton: { fontSize: 22 },
         modalBody: { padding: 20 },
         brandHeaderSection: { flexDirection: "row", gap: 16 },
@@ -331,6 +410,26 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         brandIconsRow: { flexDirection: "row", gap: 6 },
         iconButton: { padding: 6 },
         brandDescription: { marginTop: 8, color: "#6B7280" },
+        contactDetailsContainer: {
+            marginTop: 12,
+            gap: 8,
+        },
+        contactDetailRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+            backgroundColor: "#F9FAFB",
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: "#E5E7EB",
+        },
+        contactDetailText: {
+            fontSize: 14,
+            color: "#374151",
+            flex: 1,
+        },
         section: { marginTop: 24 },
         sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
         centerText: { textAlign: "center", opacity: 0.7 },
@@ -409,6 +508,16 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         campaignBudget: { marginTop: 4, color: "#6B7280" },
         memberRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
         memberImage: { width: 44, height: 44, borderRadius: 22 },
+        memberImagePlaceholder: {
+            backgroundColor: colors.primary,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        memberInitial: {
+            fontSize: 18,
+            fontWeight: "700",
+            color: "#FFFFFF",
+        },
         memberName: { fontWeight: "600" },
         memberEmail: { color: "#6B7280" },
         subscriptionContainer: {
@@ -416,7 +525,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         subscriptionRow: {
             flexDirection: "row",
-            justifyContent: "space-between",
+            columnGap: 8,
             paddingVertical: 4,
         },
         subscriptionLabel: {

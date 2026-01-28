@@ -311,14 +311,31 @@ export default function BrandCRMBoard() {
             return;
         }
         try {
-            const managersRef = collection(FirestoreDB, "managers");
-            const q = query(managersRef, where("brandId", "==", brandId));
-            const querySnapshot = await getDocs(q);
+            const memberRef = collection(
+                FirestoreDB,
+                "brands",
+                brandId,
+                "members"
+            );
+            const memberDoc = await getDocs(memberRef);
+            const membersData = memberDoc.docs.map((doc) => {
+                return {
+                    ...doc.data(),
+                    managerId: doc.id,
+                };
+            });
 
-            const managersList = querySnapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
+            const managersList = await Promise.all(
+                membersData.map(async (member: any) => {
+                    const memberDocRef = doc(FirestoreDB, "managers", member.managerId);
+                    const memberData = await getDoc(memberDocRef);
+                    return {
+                        ...memberData.data(),
+                        id: memberData.id,
+                        status: member.status,
+                    };
+                })
+            );
 
             console.log("[BrandCRMBoard] Fetched managers:", managersList);
             setMembers(managersList);
@@ -617,16 +634,16 @@ const SortableCard = ({
         const collaborationsRef = collection(FirestoreDB, "collaborations");
 
         try {
-            const collabQuery = query(collaborationsRef, where("brandId", "==", id));
+            const collabQuery = query(collaborationsRef, where("brandId", "==", card.id));
             const collabSnap = await getDocs(collabQuery);
             setCollaborationCount(collabSnap.size)
         } catch (err) {
-            console.warn("[Kanban] Failed to fetch collaborations for brand", id, err);
+            console.warn("[Kanban] Failed to fetch collaborations for brand", card.id, err);
         }
     }
     useEffect(() => {
         getCount();
-    }, [])
+    }, [card.id])
 
     // Filter out web-specific attributes
     const { tabIndex, role, ...restAttributes } = attributes as any;
