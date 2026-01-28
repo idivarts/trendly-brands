@@ -209,7 +209,7 @@ export default function BrandDetailsBottomSheet({
                                                 key={campaign.id}
                                                 style={styles.campaignCard}
                                                 onPress={() => {
-                                                    const url = `/collaboration-details/${campaign.id}`;
+                                                    const url = `https://brands.trendly.now/collaboration-details/${campaign.id}`;
                                                     Linking.openURL(url);
                                                 }}
                                             >
