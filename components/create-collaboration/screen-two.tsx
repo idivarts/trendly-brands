@@ -26,6 +26,13 @@ import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
 
+// Location type constants - single source of truth
+const LOCATION_TYPES = {
+    PHYSICAL_MODE: "Physical-Mode",
+    REMOTE: "Remote",
+    ON_SITE: "On_Site",
+} as const;
+
 interface ScreenTwoProps {
     collaboration: Partial<Collaboration>;
     isEdited: boolean;
@@ -84,9 +91,9 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
     }, [collaboration.numberOfInfluencersNeeded]);
 
     const handleLocationSelect = async (
-        value: "remote" | "on_site" | "physical_mode"
+        value: typeof LOCATION_TYPES[keyof typeof LOCATION_TYPES]
     ) => {
-        if (value === "on_site") {
+        if (value === LOCATION_TYPES.ON_SITE) {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== "granted") {
@@ -237,7 +244,6 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 promotionSubject: value as Collaboration["promotionSubject"],
                             });
                         }}
-                        variant="vertical"
                         theme={theme}
                     />
                 </ContentWrapper>
@@ -266,40 +272,40 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             }}
                         />
 
-                        {collaboration.promotionSubject === "physical_product" && (
-                            <>
-                                <TextInput
-                                    label="Product Cost (Optional)"
-                                    mode="outlined"
-                                    placeholder="Approx Retail Cost of Product"
-                                    keyboardType="number-pad"
-                                    value={
-                                        (collaboration as any).productDetails?.cost !== undefined
-                                            ? (collaboration as any).productDetails.cost.toString()
-                                            : ""
-                                    }
-                                    onChangeText={(text) => {
-                                        const value = Number(text);
-                                        setCollaboration({
-                                            ...(collaboration as any),
-                                            productDetails: {
-                                                ...((collaboration as any).productDetails),
-                                                cost: isNaN(value) ? undefined : value,
-                                            },
-                                        });
-                                    }}
-                                />
-                                <Text
-                                    style={{
-                                        fontSize: 12,
-                                        color: "#6B7280",
-                                        marginTop: -6,
-                                    }}
-                                >
-                                    This cost would be incurred by the brand and not influencers
-                                </Text>
-                            </>
-                        )}
+
+                        <>
+                            <TextInput
+                                label="Product Cost (Optional)"
+                                mode="outlined"
+                                placeholder="Approx Retail Cost of Product"
+                                keyboardType="number-pad"
+                                value={
+                                    (collaboration as any).productDetails?.cost !== undefined
+                                        ? (collaboration as any).productDetails.cost.toString()
+                                        : ""
+                                }
+                                onChangeText={(text) => {
+                                    const value = Number(text);
+                                    setCollaboration({
+                                        ...(collaboration as any),
+                                        productDetails: {
+                                            ...((collaboration as any).productDetails),
+                                            cost: isNaN(value) ? undefined : value,
+                                        },
+                                    });
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    fontSize: 12,
+                                    color: "#6B7280",
+                                    marginTop: -6,
+                                }}
+                            >
+                                This cost would be incurred by the brand and not influencers
+                            </Text>
+                        </>
+
                     </View>
                 )}
                 <ContentWrapper
@@ -314,25 +320,25 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             {
                                 icon: faBox,
                                 label: "Product/Service Will Be Shipped to Influencer",
-                                value: "physical_mode",
+                                value: LOCATION_TYPES.PHYSICAL_MODE,
                                 description: "Brand will courier the product or perform the service to the influencer's address.",
                             },
                             {
                                 icon: faHouseLaptop,
                                 label: "Digital / Remote Collaboration",
-                                value: "remote",
+                                value: LOCATION_TYPES.REMOTE,
                                 description: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
                             },
                             {
                                 icon: faMapLocationDot,
                                 label: "Influencer Visits Store / Location",
-                                value: "on_site",
+                                value: LOCATION_TYPES.ON_SITE,
                                 description: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
                             },
                         ]}
                         onSelect={(value) => {
-                            if (value === "remote" || value === "on_site" || value === "physical_mode") {
-                                if (value === "on_site") {
+                            if (value === LOCATION_TYPES.REMOTE || value === LOCATION_TYPES.ON_SITE || value === LOCATION_TYPES.PHYSICAL_MODE) {
+                                if (value === LOCATION_TYPES.ON_SITE) {
                                     handleLocationSelect(value);
                                 } else {
                                     setCollaboration({
@@ -345,18 +351,17 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 }
                             }
                         }}
-                        selectedValue={collaboration.location?.type || "remote"}
-                        variant="vertical"
+                        selectedValue={collaboration.location?.type || LOCATION_TYPES.REMOTE}
                         theme={theme}
                     />
                 </ContentWrapper>
-                {(collaboration.location?.type === "on_site" || collaboration.location?.type === "physical_mode") && (
+                {(collaboration.location?.type === LOCATION_TYPES.ON_SITE) && (
                     <View
                         style={{
                             gap: 16,
                         }}
                     >
-                        {collaboration.location?.type === "on_site" && (
+                        {collaboration.location?.type === LOCATION_TYPES.ON_SITE && (
                             <>
                                 <AddressAutocomplete
                                     collaboration={collaboration}
