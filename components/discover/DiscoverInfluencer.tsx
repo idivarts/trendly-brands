@@ -13,6 +13,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
@@ -28,7 +29,6 @@ import {
     Text
 } from "react-native";
 import {
-    ActivityIndicator,
     Button,
     Chip,
     Divider,
@@ -525,8 +525,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         // Full screen loader when we're fetching the first page
         return (
             <View style={styles.fullScreenLoader}>
-                <ActivityIndicator />
-                <Text style={{ marginTop: 8, opacity: 0.7 }}>Loading influencers…</Text>
+                <SlowLoader messages={["Searching for influencers...", "Analyzing profiles...", "Applying filters...", "Almost there...", "Loading results..."]} />
             </View>
         );
     }
@@ -968,9 +967,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 closeModal={closeProfileModal}
                             />
                         ) : (
-                            <View style={{ padding: 24, alignItems: "center" }}>
+                            <View style={{ padding: 24, alignItems: "center", flex: 1 }}>
                                 {isAnalyticsLoading ? (
-                                    <ActivityIndicator />
+                                    <SlowLoader messages={["Loading profile data...", "Fetching analytics...", "Getting social insights...", "Almost ready..."]} />
                                 ) : (
                                     <Text style={{ color: colors.text }}>
                                         Unable to load profile.

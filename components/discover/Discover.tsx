@@ -15,8 +15,8 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator } from "react-native-paper";
 
 const DiscoverComponent = ({
     showRightPanel = true,
@@ -154,7 +154,7 @@ const DiscoverComponent = ({
         );
 
     if (!manager || !selectedBrand || !selectedBrand.id)
-        return <ActivityIndicator />;
+        return <SlowLoader messages={["Loading brand information...", "Preparing discovery...", "Almost ready..."]} />;
 
     return (
         <DiscoveryProvider
