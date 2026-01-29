@@ -330,11 +330,14 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
-            setRightPanel(false);
+            // Only close right panel on mobile after applying filters
+            if (!xl) {
+                setRightPanel(false);
+            }
             if (page) setCurrentPage(page);
             if (sort) setCurrentSort(sort);
         },
-        [dedupeById]
+        [dedupeById, xl, setRightPanel]
     );
 
     useEffect(() => {
@@ -495,22 +498,30 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         (p: number) => {
             if (p < 1 || p > pageCount || p === currentPage) return;
             setCurrentPage(p);
+            // Close right panel on mobile when changing pages
+            if (!xl) {
+                setRightPanel(false);
+            }
             pageSortCommunication.current?.({
                 page: p,
                 sort: currentSort,
             });
         },
-        [currentPage, pageCount]
+        [currentPage, pageCount, xl, setRightPanel]
     );
 
     const onSelectSort = useCallback((val: string) => {
         setCurrentSort(val);
         setSortMenuVisible(false);
+        // Close right panel on mobile when changing sort
+        if (!xl) {
+            setRightPanel(false);
+        }
         pageSortCommunication.current?.({
             page: currentPage,
             sort: val,
         });
-    }, []);
+    }, [xl, setRightPanel, currentPage]);
 
     const onSelectStatus = useCallback(
         (val: string) => {

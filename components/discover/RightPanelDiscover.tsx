@@ -100,6 +100,17 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
         }
     }, [selectedDb]);
 
+    // Sync animation state with isCollapsed prop from context
+    useEffect(() => {
+        const toValue = isCollapsed ? 1 : 0;
+        Animated.spring(slideAnim, {
+            toValue,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 10,
+        }).start();
+    }, [isCollapsed, slideAnim]);
+
     // Friendly label for current selection
     const selectedDbLabel =
         selectedDb === "trendly"
@@ -181,6 +192,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
                             onPress={() => {
                                 setShowFilters(false);
                                 setRightPanel(true);
+                                setIsCollapsed(false);
                             }}
                         >
                             Change database
