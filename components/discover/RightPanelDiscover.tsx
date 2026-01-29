@@ -17,8 +17,6 @@ import {
 import { Button, Chip, HelperText } from "react-native-paper";
 import ModashFilter from "./modash/ModashFilter";
 import TrendlyAdvancedFilter from "./trendly/TrendlyAdvancedFilter";
-import { Dropdown, RangeInput, Section } from "./filter-components";
-import type { DB_TYPE } from "./discover-types";
 
 // --------------------
 // Component
