@@ -311,12 +311,21 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
         const seen = new Set<string>();
-        return items.filter((item) => {
+        const duplicates: string[] = [];
+        const result = items.filter((item) => {
             if (!item?.id) return true;
-            if (seen.has(item.id)) return false;
+            if (seen.has(item.id)) {
+                duplicates.push(`${item.name} (${item.username}) - ID: ${item.id}`);
+                return false;
+            }
             seen.add(item.id);
             return true;
         });
+        if (duplicates.length > 0) {
+            console.log('🔍 DEDUPLICATION - Removed duplicates:', duplicates);
+            console.log('🔍 Original count:', items.length, '| After dedup:', result.length);
+        }
+        return result;
     }, []);
 
     const statusOptions = [

@@ -217,7 +217,12 @@ const TrendlyAdvancedFilter = ({
     }, [selectedBrand, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
-        if (page) setOffset((page - 1) * 15);
+        console.log('📄 PAGE CHANGE - Incoming page:', page, 'Current sort:', sort);
+        if (page) {
+            const newOffset = (page - 1) * 16;
+            console.log('📄 Calculated offset:', newOffset, '= (', page, '- 1) * 16');
+            setOffset(newOffset);
+        }
         setSort(sort as any);
         setTimeout(() => {
             callApiRef.current(true);
@@ -374,6 +379,10 @@ const TrendlyAdvancedFilter = ({
             });
             return;
         }
+        const formData = getFormData();
+        console.log('🚀 API CALL - Reset:', reset);
+        console.log('🚀 Offset:', formData.offset, '| Limit:', formData.limit);
+        console.log('🚀 Page number being sent:', formData.offset / 16 + 1);
         discoverCommunication.current?.({
             loading: true,
             data: [],
@@ -386,20 +395,31 @@ const TrendlyAdvancedFilter = ({
                     headers: {
                         "content-type": "application/json",
                     },
-                    body: JSON.stringify(getFormData()),
+                    body: JSON.stringify(formData),
                 }
             ).then(async (res) => {
                 return res.json();
             });
             const d = body.data as InfluencerItem[];
-            console.log("🔥 Filtered influencers count:", d.length);
+            console.log("🔥 API Response - Returned influencers count:", d.length, "| Expected:", formData.limit);
+            console.log("🔥 Full API response body:", { totalReturned: d.length, hasMore: body.hasMore, total: body.total });
+
+            // Check for duplicates in the API response itself
+            const ids = d.map(item => item.id);
+            const uniqueIds = new Set(ids);
+            if (ids.length !== uniqueIds.size) {
+                console.log("⚠️ BACKEND ISSUE - API returned duplicate IDs in same response!");
+                const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+                console.log("⚠️ Duplicate IDs:", duplicateIds);
+            }
+
             const newData = [...(reset ? [] : data), ...d];
-            console.log("🔥 Total accumulated influencers:", newData.length);
+            console.log("🔥 Data accumulation - Previous:", data.length, "| New:", d.length, "| Total:", newData.length);
             setData(newData);
             discoverCommunication.current?.({
                 loading: false,
                 data: newData,
-                page: offset / 15 + 1,
+                page: offset / 16 + 1,
                 sort: sort,
             });
         } catch (e) {
@@ -454,7 +474,7 @@ const TrendlyAdvancedFilter = ({
         setSort("followers");
         setSortDirection("desc");
         setOffset(0);
-        setLimit(15);
+        setLimit(16);
 
         // Clear current data
         setData([]);
