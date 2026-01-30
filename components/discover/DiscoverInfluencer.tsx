@@ -13,6 +13,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
@@ -28,7 +29,6 @@ import {
     Text
 } from "react-native";
 import {
-    ActivityIndicator,
     Button,
     Chip,
     Divider,
@@ -311,12 +311,21 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
         const seen = new Set<string>();
-        return items.filter((item) => {
+        const duplicates: string[] = [];
+        const result = items.filter((item) => {
             if (!item?.id) return true;
-            if (seen.has(item.id)) return false;
+            if (seen.has(item.id)) {
+                duplicates.push(`${item.name} (${item.username}) - ID: ${item.id}`);
+                return false;
+            }
             seen.add(item.id);
             return true;
         });
+        if (duplicates.length > 0) {
+            console.log('🔍 DEDUPLICATION - Removed duplicates:', duplicates);
+            console.log('🔍 Original count:', items.length, '| After dedup:', result.length);
+        }
+        return result;
     }, []);
 
     const statusOptions = [
@@ -330,11 +339,14 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
-            setRightPanel(false);
+            // Only close right panel on mobile after applying filters
+            if (!xl) {
+                setRightPanel(false);
+            }
             if (page) setCurrentPage(page);
             if (sort) setCurrentSort(sort);
         },
-        [dedupeById]
+        [dedupeById, xl, setRightPanel]
     );
 
     useEffect(() => {
@@ -495,22 +507,30 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         (p: number) => {
             if (p < 1 || p > pageCount || p === currentPage) return;
             setCurrentPage(p);
+            // Close right panel on mobile when changing pages
+            if (!xl) {
+                setRightPanel(false);
+            }
             pageSortCommunication.current?.({
                 page: p,
                 sort: currentSort,
             });
         },
-        [currentPage, pageCount]
+        [currentPage, pageCount, xl, setRightPanel]
     );
 
     const onSelectSort = useCallback((val: string) => {
         setCurrentSort(val);
         setSortMenuVisible(false);
+        // Close right panel on mobile when changing sort
+        if (!xl) {
+            setRightPanel(false);
+        }
         pageSortCommunication.current?.({
             page: currentPage,
             sort: val,
         });
-    }, []);
+    }, [xl, setRightPanel, currentPage]);
 
     const onSelectStatus = useCallback(
         (val: string) => {
@@ -525,8 +545,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         // Full screen loader when we're fetching the first page
         return (
             <View style={styles.fullScreenLoader}>
-                <ActivityIndicator />
-                <Text style={{ marginTop: 8, opacity: 0.7 }}>Loading influencers…</Text>
+                <SlowLoader messages={["Searching for influencers...", "Analyzing profiles...", "Applying filters...", "Almost there...", "Loading results..."]} />
             </View>
         );
     }
@@ -968,9 +987,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 closeModal={closeProfileModal}
                             />
                         ) : (
-                            <View style={{ padding: 24, alignItems: "center" }}>
+                            <View style={{ padding: 24, alignItems: "center", flex: 1 }}>
                                 {isAnalyticsLoading ? (
-                                    <ActivityIndicator />
+                                    <SlowLoader messages={["Loading profile data...", "Fetching analytics...", "Getting social insights...", "Almost ready..."]} />
                                 ) : (
                                     <Text style={{ color: colors.text }}>
                                         Unable to load profile.

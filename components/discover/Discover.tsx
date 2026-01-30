@@ -15,8 +15,8 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator } from "react-native-paper";
 
 const DiscoverComponent = ({
     showRightPanel = true,
@@ -50,10 +50,10 @@ const DiscoverComponent = ({
     const { selectedBrand } = useBrandContext();
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
-    // @ts-ignore
-    const discoverCommunication = useRef<(action: DiscoverCommunication) => any>();
-    // @ts-ignore
-    const pageSortCommunication = useRef<(action: PageSortCommunication) => any>();
+    const discoverCommunication =
+        useRef<(action: DiscoverCommunication) => any>();
+    const pageSortCommunication =
+        useRef<(action: PageSortCommunication) => any>();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
         null
@@ -154,7 +154,7 @@ const DiscoverComponent = ({
         );
 
     if (!manager || !selectedBrand || !selectedBrand.id)
-        return <ActivityIndicator />;
+        return <SlowLoader messages={["Loading brand information...", "Preparing discovery...", "Almost ready..."]} />;
 
     return (
         <DiscoveryProvider
