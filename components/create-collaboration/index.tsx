@@ -16,8 +16,9 @@ import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { ActivityIndicator } from "react-native";
-import { View } from "../theme/Themed";
+import { ActivityIndicator, Modal } from "react-native";
+import { Text, View } from "../theme/Themed";
+import Button from "../ui/button";
 import PreviewCollaboration from "./PreviewCollaboration";
 import ScreenThree from "./screen-three";
 
@@ -79,6 +80,13 @@ const CreateCollaboration = () => {
         setProcessPercentage,
     } = useProcess();
     const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [publishState, setPublishState] = useState<
+        "idle" | "in-process" | "fail" | "success"
+    >("idle");
+    const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(
+        null
+    );
+    const [publishedCollabId, setPublishedCollabId] = useState<string | null>(null);
 
     const { selectedBrand, isOnFreeTrial } = useBrandContext();
     const { getCollaborationById, createCollaboration, updateCollaboration } =
@@ -147,6 +155,24 @@ const CreateCollaboration = () => {
             confirmText: "Upgrade Now",
         });
     };
+
+    const resetPublishModal = () => {
+        setPublishState("idle");
+        setPublishErrorMessage(null);
+        setPublishedCollabId(null);
+    };
+
+    const getApiMessage = (payload: unknown): string | null => {
+        if (!payload) return null;
+        if (typeof payload === "string") return payload;
+        if (typeof payload === "object" && "message" in payload) {
+            return String((payload as { message?: unknown }).message ?? "");
+        }
+        return null;
+    };
+
+    const campaignGuideMessage =
+        "The Collaboration posted was not put live as it did not meet our guidelines. Please review the collaboration details and make necessary changes before reposting.";
     const saveCollaboration = async (myStatus: "draft" | "active") => {
         try {
             if (isSavingRef.current) {
@@ -228,7 +254,19 @@ const CreateCollaboration = () => {
             } else {
                 // creating new collaboration
                 // IMPORTANT: your createCollaboration should return the newly created doc id.
-                let created: string | null = null;
+                let created:
+                    | {
+                        id: string | null;
+                        apiResponse?: unknown;
+                        apiError?: unknown;
+                        status?: number;
+                    }
+                    | null = null;
+
+                // Only show modal for publish (active), not for draft
+                if (wantedStatus === "active") {
+                    setPublishState("in-process");
+                }
 
                 try {
                     created = await createCollaboration({
@@ -250,18 +288,23 @@ const CreateCollaboration = () => {
                     created = null;
                 }
 
-                if (!created) {
+                if (created?.apiError) {
+                    const apiMessage =
+                        getApiMessage(created.apiError) ||
+                        "The collaboration could not be published. Please review and try again.";
+
+                    setPublishErrorMessage(apiMessage);
+                    setPublishState("fail");
+                    return;
+                }
+
+                if (!created?.id) {
                     return;
                 }
 
                 // ASSUMPTION: createCollaboration returns the created doc id
-                // If it returns an object, adjust accordingly (e.g. created.id)
                 let newId: string | null = null;
-                if (typeof created === "string") {
-                    newId = created;
-                } else if (created && (created as any).id) {
-                    newId = (created as any).id;
-                }
+                newId = created.id;
 
                 if (!newId) {
                     // fallback: if createCollaboration didn't return id, log and stop.
@@ -272,7 +315,8 @@ const CreateCollaboration = () => {
                     // If wantedStatus is 'active', then call publish using shared hook
                     if (wantedStatus === "active") {
                         await publish(newId);
-                        router.push("/collaborations");
+                        setPublishedCollabId(newId);
+                        setPublishState("success");
                     } else {
                         shouldNavigateToCollaborations = true;
                     }
@@ -299,98 +343,273 @@ const CreateCollaboration = () => {
         await saveCollaboration("draft");
     };
 
-    if (isLoading) {
+    const renderPublishModal = () => {
         return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
+            <Modal
+                transparent={true}
+                animationType="fade"
+                visible={publishState !== "idle"}
+                onRequestClose={() => {
+                    if (publishState === "fail") {
+                        resetPublishModal();
+                    }
                 }}
             >
-                <ActivityIndicator size="large" color={Colors(theme).primary} />
-            </View>
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: Colors(theme).background,
+                            borderRadius: 16,
+                            padding: 24,
+                            alignItems: "center",
+                            minWidth: 300,
+                            maxWidth: "80%",
+                        }}
+                    >
+                        {/* STATE 1: IN-PROCESS */}
+                        {publishState === "in-process" && (
+                            <>
+                                <ActivityIndicator
+                                    size="large"
+                                    color={Colors(theme).primary}
+                                    style={{ marginBottom: 16 }}
+                                />
+                                <Text
+                                    style={{
+                                        fontSize: 18,
+                                        fontWeight: "bold",
+                                        marginBottom: 8,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    Campaign under review
+                                </Text>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        textAlign: "center",
+                                        color: Colors(theme).text,
+                                        opacity: 0.7,
+                                    }}
+                                >
+                                    Please wait while we process your collaboration...
+                                </Text>
+                            </>
+                        )}
+
+                        {/* STATE 2: FAIL */}
+                        {publishState === "fail" && (
+                            <>
+                                <Text
+                                    style={{
+                                        fontSize: 18,
+                                        fontWeight: "bold",
+                                        marginBottom: 12,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    Collaboration Not Live
+                                </Text>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        textAlign: "center",
+                                        color: Colors(theme).text,
+                                        marginBottom: 20,
+                                        lineHeight: 22,
+                                    }}
+                                >
+                                    {publishErrorMessage}
+                                </Text>
+                                <View
+                                    style={{
+                                        flexDirection: "row",
+                                        gap: 12,
+                                        width: "100%",
+                                    }}
+                                >
+                                    <Button
+                                        mode="contained"
+                                        style={{ flex: 1 }}
+                                        onPress={() => {
+                                            resetPublishModal();
+                                            router.push("/collaborations");
+                                        }}
+                                    >
+                                        Understood
+                                    </Button>
+                                    <Button
+                                        mode="outlined"
+                                        style={{ flex: 1 }}
+                                        textColor={Colors(theme).primary}
+                                        onPress={() => {
+                                            // TODO: navigate to Campaign Guide screen when available
+                                            resetPublishModal();
+                                        }}
+                                    >
+                                        Read Campaign Guide
+                                    </Button>
+                                </View>
+                            </>
+                        )}
+
+                        {/* STATE 3: SUCCESS */}
+                        {publishState === "success" && (
+                            <>
+                                <Text
+                                    style={{
+                                        fontSize: 18,
+                                        fontWeight: "bold",
+                                        marginBottom: 12,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    Congratulations!
+                                </Text>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        textAlign: "center",
+                                        color: Colors(theme).text,
+                                        marginBottom: 20,
+                                        lineHeight: 22,
+                                    }}
+                                >
+                                    Campaign created successfully
+                                </Text>
+                                <Button
+                                    mode="contained"
+                                    style={{ width: "100%" }}
+                                    onPress={() => {
+                                        resetPublishModal();
+                                        if (publishedCollabId) {
+                                            router.push(
+                                                `/collaboration-details/${publishedCollabId}`
+                                            );
+                                        }
+                                    }}
+                                >
+                                    View Campaign
+                                </Button>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+
+    if (isLoading) {
+        return (
+            <>
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                    }}
+                >
+                    <ActivityIndicator size="large" color={Colors(theme).primary} />
+                </View>
+                {renderPublishModal()}
+            </>
         );
     }
 
     if (screen === 1) {
         return (
-            <ScreenOne
-                attachments={attachments}
-                collaboration={collaboration}
-                setAttachments={setAttachments}
-                // handleAssetsUpdateNative={handleAssetsUpdateNative}
-                // handleAssetsUpdateWeb={handleAssetsUpdateWeb}
-                isEdited={isEdited}
-                isSubmitting={isProcessing}
-                setCollaboration={setCollaboration}
-                setIsEdited={setIsEdited}
-                setScreen={setScreen}
-                type={type}
-            />
+            <>
+                <ScreenOne
+                    attachments={attachments}
+                    collaboration={collaboration}
+                    setAttachments={setAttachments}
+                    isEdited={isEdited}
+                    isSubmitting={isProcessing}
+                    setCollaboration={setCollaboration}
+                    setIsEdited={setIsEdited}
+                    setScreen={setScreen}
+                    type={type}
+                />
+                {renderPublishModal()}
+            </>
         );
     }
 
     if (screen == 2) {
         return (
-            <ScreenTwo
-                collaboration={collaboration}
-                isEdited={isEdited}
-                isSubmitting={isProcessing}
-                mapRegion={{
-                    state: mapRegion,
-                    setState: setMapRegion,
-                }}
-                onLocationChange={onLocationChange}
-                saveAsDraft={saveAsDraft}
-                setCollaboration={setCollaboration}
-                setScreen={setScreen}
-                type={type}
-            />
+            <>
+                <ScreenTwo
+                    collaboration={collaboration}
+                    isEdited={isEdited}
+                    isSubmitting={isProcessing}
+                    mapRegion={{
+                        state: mapRegion,
+                        setState: setMapRegion,
+                    }}
+                    onLocationChange={onLocationChange}
+                    saveAsDraft={saveAsDraft}
+                    setCollaboration={setCollaboration}
+                    setScreen={setScreen}
+                    type={type}
+                />
+                {renderPublishModal()}
+            </>
         );
     }
 
     if (screen === 3) {
         return (
-            <ScreenThree
-                collaboration={collaboration}
-                isEdited={isEdited}
-                isSubmitting={isProcessing}
-                processMessage={processMessage}
-                processPercentage={processPercentage}
-                saveAsDraft={saveAsDraft}
-                setCollaboration={setCollaboration}
-                setScreen={setScreen}
-                submitCollaboration={submitCollaboration}
-                type={type}
-            />
+            <>
+                <ScreenThree
+                    collaboration={collaboration}
+                    isEdited={isEdited}
+                    isSubmitting={isProcessing}
+                    processMessage={processMessage}
+                    processPercentage={processPercentage}
+                    saveAsDraft={saveAsDraft}
+                    setCollaboration={setCollaboration}
+                    setScreen={setScreen}
+                    submitCollaboration={submitCollaboration}
+                    type={type}
+                />
+                {renderPublishModal()}
+            </>
         );
     }
 
     if (screen === 4) {
         if (!selectedBrand) {
             Console.error("Cannot preview collaboration without selected brand");
-            // Optionally show error UI or navigate back
             return null;
         }
         return (
-            <PreviewCollaboration
-                collaboration={
-                    {
-                        ...collaboration,
-                        brandName: selectedBrand?.name ?? "",
-                        brandDescription: selectedBrand?.profile?.about ?? "",
-                        brandCategory: selectedBrand?.profile?.industries ?? [],
-                        logo: selectedBrand?.image ?? "",
-                        paymentVerified: selectedBrand?.paymentMethodVerified ?? false,
-                        brandWebsite: selectedBrand?.profile?.website ?? "",
-                    } as any
-                }
-                isSubmitting={isProcessing}
-                onEdit={() => setScreen(3)}
-                onSaveDraft={saveAsDraft}
-                onPublish={submitCollaboration}
-            />
+            <>
+                <PreviewCollaboration
+                    collaboration={
+                        {
+                            ...collaboration,
+                            brandName: selectedBrand?.name ?? "",
+                            brandDescription: selectedBrand?.profile?.about ?? "",
+                            brandCategory: selectedBrand?.profile?.industries ?? [],
+                            logo: selectedBrand?.image ?? "",
+                            paymentVerified: selectedBrand?.paymentMethodVerified ?? false,
+                            brandWebsite: selectedBrand?.profile?.website ?? "",
+                        } as any
+                    }
+                    isSubmitting={isProcessing}
+                    onEdit={() => setScreen(3)}
+                    onSaveDraft={saveAsDraft}
+                    onPublish={submitCollaboration}
+                />
+                {renderPublishModal()}
+            </>
         );
     }
 };

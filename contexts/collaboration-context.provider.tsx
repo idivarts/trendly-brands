@@ -21,7 +21,14 @@ import { useBrandContext } from "./brand-context.provider";
 
 interface CollaborationContextProps {
     getCollaborationById: (id: string) => Promise<Collaboration>;
-    createCollaboration: (collaboration: Partial<ICollaboration>) => Promise<string | null>;
+    createCollaboration: (
+        collaboration: Partial<ICollaboration>
+    ) => Promise<{
+        id: string | null;
+        apiResponse?: unknown;
+        apiError?: unknown;
+        status?: number;
+    }>;
     updateCollaboration: (id: string, collaboration: Partial<ICollaboration>) => Promise<void>;
 }
 
@@ -48,9 +55,29 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
         };
     }
 
+    const parseResponseBody = async (response?: Response) => {
+        if (!response) return null;
+        try {
+            const text = await response.text();
+            if (!text) return null;
+            try {
+                return JSON.parse(text);
+            } catch {
+                return text;
+            }
+        } catch {
+            return null;
+        }
+    };
+
     const createCollaboration = async (
         collaboration: Partial<ICollaboration>,
-    ): Promise<string | null> => {
+    ): Promise<{
+        id: string | null;
+        apiResponse?: unknown;
+        apiError?: unknown;
+        status?: number;
+    }> => {
         const collaborationCredits = Number(selectedBrand?.credits?.collaboration);
         if (Number.isFinite(collaborationCredits) && collaborationCredits <= 0) {
             openModal({
@@ -61,16 +88,33 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
                     router.push("/billing")
                 }
             })
-            return null;
+            return { id: null };
         }
         const collaborationRef = collection(FirestoreDB, "collaborations");
 
         const collabDoc = await addDoc(collaborationRef, collaboration);
 
-        HttpWrapper.fetch(`/api/collabs/collaborations/${collabDoc.id}`, {
-            method: "POST",
-        })
-        return collabDoc.id;
+        let apiResponse: unknown = null;
+        let apiError: unknown = null;
+        let status: number | undefined;
+
+        try {
+            const response = await HttpWrapper.fetch(
+                `/api/collabs/collaborations/${collabDoc.id}`,
+                {
+                    method: "POST",
+                }
+            );
+            status = response.status;
+            apiResponse = await parseResponseBody(response);
+        } catch (error) {
+            const response = error as Response;
+            status = response?.status;
+            apiError = await parseResponseBody(response);
+        }
+
+        console.log("createCollaboration response:", apiResponse ?? apiError);
+        return { id: collabDoc.id, apiResponse, apiError, status };
     }
 
     const updateCollaboration = async (
