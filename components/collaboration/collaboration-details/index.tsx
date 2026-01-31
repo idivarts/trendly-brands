@@ -1,3 +1,4 @@
+import PublishModal from "@/components/create-collaboration/PublishModal";
 import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { useTheme } from "@react-navigation/native";
@@ -46,12 +48,28 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     >(undefined);
     const theme = useTheme();
     const [loading, setLoading] = useState(true);
+    const [publishState, setPublishState] = useState<"idle" | "in-process" | "fail" | "success">("idle");
+    const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
+    const [publishedCollabId, setPublishedCollabId] = useState<string | null>(null);
     const { xl } = useBreakpoints();
     const { isOnFreeTrial } = useBrandContext();
     const { openModal } = useConfirmationModel();
     const router = useMyNavigation();
 
     const { publish } = usePublishCollaboration();
+
+    const getApiMessage = (error: any): string | null => {
+        if (typeof error === "string") return error;
+        if (error?.message) return error.message;
+        if (error?.error) return error.error;
+        return null;
+    };
+
+    const resetPublishModal = () => {
+        setPublishState("idle");
+        setPublishErrorMessage(null);
+        setPublishedCollabId(null);
+    };
 
     const fetchCollaboration = async () => {
         if (!pageID) return;
@@ -325,7 +343,49 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     </Button>
                     <Button
                         mode="contained"
-                        onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
+                        onPress={async () => {
+                            if (!pageID) return;
+                            setPublishState("in-process");
+                            try {
+                                const response = await HttpWrapper.fetch(
+                                    `/api/collabs/collaborations/${pageID}`,
+                                    {
+                                        method: "PATCH",
+                                        body: JSON.stringify({
+                                            status: "active",
+                                        }),
+                                    }
+                                );
+
+                                const responseBody = await response.text();
+                                let apiResponse = null;
+                                try {
+                                    apiResponse = JSON.parse(responseBody);
+                                } catch (e) {
+                                    apiResponse = responseBody;
+                                }
+
+                                if (response.status !== 200 && response.status !== 201) {
+                                    const apiMessage =
+                                        getApiMessage(apiResponse) ||
+                                        "The collaboration could not be published. Please review and try again.";
+                                    setPublishErrorMessage(apiMessage);
+                                    setPublishState("fail");
+                                    return;
+                                }
+
+                                setPublishedCollabId(pageID);
+                                setPublishState("success");
+                                setTimeout(() => {
+                                    fetchCollaboration();
+                                }, 1500);
+                            } catch (error) {
+                                Console.error(error);
+                                const apiMessage = getApiMessage(error) || "Failed to publish collaboration";
+                                setPublishErrorMessage(apiMessage);
+                                setPublishState("fail");
+                            }
+                        }}
                         style={{
                             flex: 1,
                         }}
@@ -352,6 +412,12 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     </CollapseProvider>
                 );
             })()}
+            <PublishModal
+                state={publishState}
+                errorMessage={publishErrorMessage}
+                publishedCollabId={publishedCollabId}
+                onReset={resetPublishModal}
+            />
         </View>
     );
 };

@@ -16,10 +16,10 @@ import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { ActivityIndicator, Modal } from "react-native";
-import { Text, View } from "../theme/Themed";
-import Button from "../ui/button";
+import { ActivityIndicator } from "react-native";
+import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
+import PublishModal from "./PublishModal";
 import ScreenThree from "./screen-three";
 
 const CreateCollaboration = () => {
@@ -343,169 +343,6 @@ const CreateCollaboration = () => {
         await saveCollaboration("draft");
     };
 
-    const renderPublishModal = () => {
-        return (
-            <Modal
-                transparent={true}
-                animationType="fade"
-                visible={publishState !== "idle"}
-                onRequestClose={() => {
-                    if (publishState === "fail") {
-                        resetPublishModal();
-                    }
-                }}
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: "center",
-                        alignItems: "center",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                    }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: Colors(theme).background,
-                            borderRadius: 16,
-                            padding: 24,
-                            alignItems: "center",
-                            minWidth: 300,
-                            maxWidth: "80%",
-                        }}
-                    >
-                        {/* STATE 1: IN-PROCESS */}
-                        {publishState === "in-process" && (
-                            <>
-                                <ActivityIndicator
-                                    size="large"
-                                    color={Colors(theme).primary}
-                                    style={{ marginBottom: 16 }}
-                                />
-                                <Text
-                                    style={{
-                                        fontSize: 18,
-                                        fontWeight: "bold",
-                                        marginBottom: 8,
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    Campaign under review
-                                </Text>
-                                <Text
-                                    style={{
-                                        fontSize: 14,
-                                        textAlign: "center",
-                                        color: Colors(theme).text,
-                                        opacity: 0.7,
-                                    }}
-                                >
-                                    Please wait while we process your collaboration...
-                                </Text>
-                            </>
-                        )}
-
-                        {/* STATE 2: FAIL */}
-                        {publishState === "fail" && (
-                            <>
-                                <Text
-                                    style={{
-                                        fontSize: 18,
-                                        fontWeight: "bold",
-                                        marginBottom: 12,
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    Collaboration Not Live
-                                </Text>
-                                <Text
-                                    style={{
-                                        fontSize: 14,
-                                        textAlign: "center",
-                                        color: Colors(theme).text,
-                                        marginBottom: 20,
-                                        lineHeight: 22,
-                                    }}
-                                >
-                                    {publishErrorMessage}
-                                </Text>
-                                <View
-                                    style={{
-                                        flexDirection: "row",
-                                        gap: 12,
-                                        width: "100%",
-                                    }}
-                                >
-                                    <Button
-                                        mode="contained"
-                                        style={{ flex: 1 }}
-                                        onPress={() => {
-                                            resetPublishModal();
-                                            router.push("/collaborations");
-                                        }}
-                                    >
-                                        Understood
-                                    </Button>
-                                    <Button
-                                        mode="outlined"
-                                        style={{ flex: 1 }}
-                                        textColor={Colors(theme).primary}
-                                        onPress={() => {
-                                            // TODO: navigate to Campaign Guide screen when available
-                                            resetPublishModal();
-                                        }}
-                                    >
-                                        Read Campaign Guide
-                                    </Button>
-                                </View>
-                            </>
-                        )}
-
-                        {/* STATE 3: SUCCESS */}
-                        {publishState === "success" && (
-                            <>
-                                <Text
-                                    style={{
-                                        fontSize: 18,
-                                        fontWeight: "bold",
-                                        marginBottom: 12,
-                                        textAlign: "center",
-                                    }}
-                                >
-                                    Congratulations!
-                                </Text>
-                                <Text
-                                    style={{
-                                        fontSize: 14,
-                                        textAlign: "center",
-                                        color: Colors(theme).text,
-                                        marginBottom: 20,
-                                        lineHeight: 22,
-                                    }}
-                                >
-                                    Campaign created successfully
-                                </Text>
-                                <Button
-                                    mode="contained"
-                                    style={{ width: "100%" }}
-                                    onPress={() => {
-                                        resetPublishModal();
-                                        if (publishedCollabId) {
-                                            router.push(
-                                                `/collaboration-details/${publishedCollabId}`
-                                            );
-                                        }
-                                    }}
-                                >
-                                    View Campaign
-                                </Button>
-                            </>
-                        )}
-                    </View>
-                </View>
-            </Modal>
-        );
-    };
-
     if (isLoading) {
         return (
             <>
@@ -518,7 +355,12 @@ const CreateCollaboration = () => {
                 >
                     <ActivityIndicator size="large" color={Colors(theme).primary} />
                 </View>
-                {renderPublishModal()}
+                <PublishModal
+                    state={publishState}
+                    errorMessage={publishErrorMessage}
+                    publishedCollabId={publishedCollabId}
+                    onReset={resetPublishModal}
+                />
             </>
         );
     }
@@ -537,7 +379,12 @@ const CreateCollaboration = () => {
                     setScreen={setScreen}
                     type={type}
                 />
-                {renderPublishModal()}
+                <PublishModal
+                    state={publishState}
+                    errorMessage={publishErrorMessage}
+                    publishedCollabId={publishedCollabId}
+                    onReset={resetPublishModal}
+                />
             </>
         );
     }
@@ -559,7 +406,12 @@ const CreateCollaboration = () => {
                     setScreen={setScreen}
                     type={type}
                 />
-                {renderPublishModal()}
+                <PublishModal
+                    state={publishState}
+                    errorMessage={publishErrorMessage}
+                    publishedCollabId={publishedCollabId}
+                    onReset={resetPublishModal}
+                />
             </>
         );
     }
@@ -579,7 +431,12 @@ const CreateCollaboration = () => {
                     submitCollaboration={submitCollaboration}
                     type={type}
                 />
-                {renderPublishModal()}
+                <PublishModal
+                    state={publishState}
+                    errorMessage={publishErrorMessage}
+                    publishedCollabId={publishedCollabId}
+                    onReset={resetPublishModal}
+                />
             </>
         );
     }
@@ -608,7 +465,12 @@ const CreateCollaboration = () => {
                     onSaveDraft={saveAsDraft}
                     onPublish={submitCollaboration}
                 />
-                {renderPublishModal()}
+                <PublishModal
+                    state={publishState}
+                    errorMessage={publishErrorMessage}
+                    publishedCollabId={publishedCollabId}
+                    onReset={resetPublishModal}
+                />
             </>
         );
     }
