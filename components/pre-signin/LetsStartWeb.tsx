@@ -1,79 +1,119 @@
-import Button from "@/components/ui/button";
-import InfiniteMarquee from "@/components/ui/InfiniteMarquee";
+import ActionCard from "@/components/pre-signin/ActionCard";
+import IntroSplash from "@/components/pre-signin/IntroSplash";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
-import { imageUrl } from "@/utils/url";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import gsap from "gsap";
-import React, { useEffect, useRef } from "react";
-import { Image, Platform, StyleSheet, View, Dimensions } from "react-native";
-import { Text } from "react-native-paper";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, StyleSheet, View, Text, useWindowDimensions } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
-const MARQUEE_ICONS = [
-    "shopping", "camera-iris", "video-vintage", "star-circle", 
-    "heart-multiple", "chart-timeline-variant", "account-group", 
-    "monitor-dashboard", "lightbulb-on", "rocket-launch", 
-    "storefront", "tag-heart", "trending-up", "instagram", "youtube", "facebook"
+// Expanded Social Universe
+const SOCIAL_ORBS = [
+    { icon: "youtube", color: "#FF0000", size: 90, x: -280, y: -150, depth: 0.2 }, // Moved further left/up (was blocking text)
+    { icon: "instagram", color: "#C13584", size: 80, x: 250, y: -50, depth: 0.15 },
+    { icon: "linkedin", color: "#0077B5", size: 70, x: -100, y: 180, depth: 0.1 },
+    { icon: "facebook", color: "#1877F2", size: 60, x: 180, y: 120, depth: 0.25 },
+    
+    // New Icons for Density
+    { icon: "twitter", color: "#1DA1F2", size: 50, x: 50, y: -250, depth: 0.08 },
+    { icon: "music-note", color: "#000000", size: 65, x: 300, y: 200, depth: 0.12 }, // TikTok-ish
+    { icon: "snapchat", color: "#FFFC00", size: 55, x: -350, y: 50, depth: 0.18 },
+    { icon: "pinterest", color: "#E60023", size: 45, x: 100, y: 280, depth: 0.05 },
+    { icon: "whatsapp", color: "#25D366", size: 40, x: -200, y: -220, depth: 0.1 }, 
 ];
 
 const LetsStartWeb = () => {
     const theme = useTheme();
-    const containerRef = useRef<View>(null);
-    const cardRef = useRef<View>(null);
-    const bgLayerRef = useRef<View>(null);
     const brandColors = Colors(theme);
+    const { width } = useWindowDimensions();
+    const isMobileWeb = width < 900;
+    
+    const [showSplash, setShowSplash] = useState(true);
+    const [showContent, setShowContent] = useState(false);
+
+    // Refs
+    const containerRef = useRef<View>(null);
+    const textRef = useRef<Text>(null);
+    const orbsRef = useRef<View[]>([]);
+
+    const handleSplashComplete = () => {
+        setShowSplash(false);
+        setShowContent(true);
+    };
 
     useEffect(() => {
+        if (!showContent) return;
+
         if (Platform.OS === 'web') {
-            // Initial Entrance
-            gsap.fromTo(cardRef.current,
-                { opacity: 0, scale: 0.9, y: 30, rotationX: 15 },
-                { opacity: 1, scale: 1, y: 0, rotationX: 0, duration: 1, ease: "power3.out", delay: 0.2 }
-            );
+            const ctx = gsap.context(() => {
+                const tl = gsap.timeline();
 
-            // Mouse Move Listener for Tilt & Parallax
-            const handleMouseMove = (e: any) => {
-                if (!cardRef.current || !bgLayerRef.current) return;
-                
-                const { clientX, clientY } = e;
-                const { innerWidth, innerHeight } = window;
-                
-                const centerX = innerWidth / 2;
-                const centerY = innerHeight / 2;
-                
-                // Tilt Calculation (Card follows mouse)
-                // Max rotation: 8 degrees
-                const rotateX = ((centerY - clientY) / centerY) * 8; 
-                const rotateY = ((clientX - centerX) / centerX) * 8;
-
-                // Parallax Calculation (Bg moves opposite to mouse)
-                const moveX = ((centerX - clientX) / centerX) * 30; // Max 30px move
-                const moveY = ((centerY - clientY) / centerY) * 30;
-
-                gsap.to(cardRef.current, {
-                    rotationX: rotateX,
-                    rotationY: rotateY,
-                    duration: 0.5,
-                    ease: "power2.out",
-                    transformPerspective: 1000, // Important for 3D effect
-                    transformOrigin: "center center"
+                // 1. Orbs Entrance (Explosion style)
+                gsap.set(orbsRef.current, { scale: 0, opacity: 0 });
+                tl.to(orbsRef.current, {
+                    scale: 1,
+                    opacity: 0.8,
+                    duration: 1,
+                    stagger: { amount: 0.5, from: "center" },
+                    ease: "elastic.out(1, 0.5)",
                 });
 
-                gsap.to(bgLayerRef.current, {
-                    x: moveX,
-                    y: moveY,
-                    duration: 1.5,
-                    ease: "power2.out"
+                // 2. Text Breathing Animation
+                gsap.to(textRef.current, {
+                    scale: 1.05,
+                    textShadowRadius: 20,
+                    textShadowColor: 'rgba(0,0,0,0.2)',
+                    duration: 3,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: "sine.inOut",
                 });
-            };
 
-            window.addEventListener('mousemove', handleMouseMove);
-            return () => window.removeEventListener('mousemove', handleMouseMove);
+                // 3. Orb Floating Loop
+                orbsRef.current.forEach((orb, i) => {
+                    gsap.to(orb, {
+                        y: "+=25",
+                        rotation: Math.random() * 20 - 10,
+                        duration: 3 + Math.random() * 2,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: "sine.inOut",
+                        delay: Math.random(),
+                    });
+                });
+
+                // 4. Mouse Parallax
+                const handleMouseMove = (e: MouseEvent) => {
+                    const { clientX, clientY } = e;
+                    const centerX = window.innerWidth / 2;
+                    const centerY = window.innerHeight / 2;
+
+                    orbsRef.current.forEach((orb, i) => {
+                        const depth = SOCIAL_ORBS[i].depth;
+                        gsap.to(orb, {
+                            x: (centerX - clientX) * depth * 0.5, // Stronger parallax
+                            y: (centerY - clientY) * depth * 0.5,
+                            duration: 1,
+                            ease: "power2.out",
+                        });
+                    });
+                };
+
+                window.addEventListener('mousemove', handleMouseMove);
+                return () => window.removeEventListener('mousemove', handleMouseMove);
+
+            }, containerRef);
+            return () => ctx.revert();
         }
-    }, []);
+    }, [showContent]);
+
+    if (showSplash) {
+        return <IntroSplash onComplete={handleSplashComplete} />;
+    }
 
     return (
         <AppLayout withWebPadding={false}>
@@ -81,100 +121,80 @@ const LetsStartWeb = () => {
                 ref={containerRef}
                 style={[styles.container, { backgroundColor: brandColors.background }]}
             >
-                {/* Background Marquee Layer with Parallax */}
-                <View ref={bgLayerRef} style={styles.marqueeLayer}>
-                    <View style={{ transform: [{ rotate: '-6deg' }, { scale: 1.15 }], opacity: 0.05 }}>
-                        <InfiniteMarquee duration={60000}>
-                            {MARQUEE_ICONS.map((icon, index) => (
-                                <MaterialCommunityIcons 
-                                    key={index} 
-                                    name={icon as any} 
-                                    size={100} 
-                                    color={brandColors.text} 
-                                    style={{ marginHorizontal: 50 }} 
-                                />
+                {/* Responsive Split/Stack Wrapper */}
+                <View style={[styles.splitWrapper, isMobileWeb && styles.splitWrapperMobile]}>
+                    
+                    {/* LEFT COLUMN */}
+                    <Animated.View entering={FadeIn.duration(800)} style={[styles.leftColumn, isMobileWeb && styles.leftColumnMobile]}>
+                        <View style={styles.orbContainer}>
+                            {SOCIAL_ORBS.map((orb, index) => (
+                                <View
+                                    key={index}
+                                    ref={el => orbsRef.current[index] = el!}
+                                    style={[
+                                        styles.orb,
+                                        {
+                                            left: '50%',
+                                            top: '50%',
+                                            marginLeft: orb.x, // Initial offset
+                                            marginTop: orb.y,
+                                            width: orb.size,
+                                            height: orb.size,
+                                            borderRadius: orb.size / 2,
+                                            backgroundColor: theme.dark ? orb.color + '30' : orb.color + '15',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                        }
+                                    ]}
+                                >
+                                    <MaterialCommunityIcons 
+                                        name={orb.icon as any} 
+                                        size={orb.size * 0.6} 
+                                        color={orb.color} 
+                                    />
+                                </View>
                             ))}
-                        </InfiniteMarquee>
-                         <View style={{ height: 80 }} />
-                        <InfiniteMarquee duration={70000} reverse>
-                            {MARQUEE_ICONS.map((icon, index) => (
-                                <MaterialCommunityIcons 
-                                    key={index + 'rev'} 
-                                    name={icon as any} 
-                                    size={100} 
-                                    color={brandColors.primary} 
-                                    style={{ marginHorizontal: 50 }} 
-                                />
-                            ))}
-                        </InfiniteMarquee>
-                         <View style={{ height: 80 }} />
-                        <InfiniteMarquee duration={55000}>
-                            {MARQUEE_ICONS.map((icon, index) => (
-                                <MaterialCommunityIcons 
-                                    key={index + '3'} 
-                                    name={icon as any} 
-                                    size={100} 
-                                    color={brandColors.secondary} 
-                                    style={{ marginHorizontal: 50 }} 
-                                />
-                            ))}
-                        </InfiniteMarquee>
-                    </View>
-                </View>
-
-                {/* Foreground Glass Card with 3D Tilt */}
-                <View 
-                    ref={cardRef}
-                    style={[
-                        styles.glassCard, 
-                        { 
-                            backgroundColor: theme.dark ? 'rgba(20,20,20,0.85)' : 'rgba(255,255,255,0.85)',
-                            borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)',
-                            // @ts-ignore
-                            backdropFilter: 'blur(25px)',
-                        }
-                    ]} 
-                >
-                    <View style={styles.logoContainer}>
-                        <Image
-                            source={imageUrl(require("@/assets/images/logo.png"))}
-                            style={styles.logo}
-                            resizeMode="contain"
-                        />
-                    </View>
-
-                    <Text style={[styles.title, { color: brandColors.text }]}>
-                        Welcome to Trendly
-                    </Text>
-                    <Text style={[styles.subtitle, { color: brandColors.gray300 }]}>
-                        The ultimate platform for brands to connect with top-tier creators. 
-                        Scale your marketing with data-driven collaborations in real-time.
-                    </Text>
-
-                    <View style={styles.buttonContainer}>
-                        <Button 
-                            onPress={() => router.push("/pre-signin")}
-                            style={styles.primaryButton}
-                            contentStyle={{ paddingVertical: 12 }}
-                            mode="contained"
-                        >
-                            Join as Brand / Agency
-                        </Button>
+                        </View>
                         
-                        <Button 
-                            mode="outlined" 
-                            onPress={() => {
-                                if (Platform.OS === "web")
-                                    window.open(CREATORS_FE_URL, "_blank");
-                                else
-                                    router.push("/wrong-app")
-                            }}
-                            style={styles.secondaryButton}
-                            contentStyle={{ paddingVertical: 12 }}
-                        >
-                            Join as Influencer
-                        </Button>
-                    </View>
+                        <View style={styles.brandingContent}>
+                            <Text 
+                                ref={textRef} 
+                                style={[styles.heroText, { color: brandColors.text }, isMobileWeb && styles.heroTextMobile]}
+                            >
+                                TRENDLY
+                            </Text>
+                            <Text style={[styles.tagline, { color: brandColors.gray300 }]}>
+                                Where Brands Meet Creators.
+                            </Text>
+                            <Text style={[styles.description, { color: brandColors.gray300 }]}>
+                                Scale your marketing with data-driven collaborations in real-time.
+                            </Text>
+                        </View>
+                    </Animated.View>
+
+                    {/* RIGHT COLUMN */}
+                    <Animated.View entering={FadeIn.delay(500).duration(800)} style={[styles.rightColumn, isMobileWeb && styles.rightColumnMobile]}>
+                        <View style={[styles.cardsWrapper, isMobileWeb && styles.cardsWrapperMobile]}>
+                            <ActionCard 
+                                title="Join as Brand / Agency"
+                                description="Connect with creators. Amplify your reach."
+                                colors={['#0F2027', '#203A43', '#2C5364']}
+                                onPress={() => router.push("/pre-signin")}
+                            />
+                            
+                            <ActionCard 
+                                title="Join as Influencer"
+                                description="Monetize your content. Grow your community."
+                                colors={['#FF512F', '#DD2476']}
+                                onPress={() => {
+                                    if (Platform.OS === "web")
+                                        window.open(CREATORS_FE_URL, "_blank");
+                                    else
+                                        router.push("/wrong-app")
+                                }}
+                            />
+                        </View>
+                    </Animated.View>
                 </View>
             </View>
         </AppLayout>
@@ -184,67 +204,88 @@ const LetsStartWeb = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: "center",
+        justifyContent: "center", 
         alignItems: "center",
-        position: "relative",
         overflow: "hidden",
-        minHeight: 600,
-        // @ts-ignore
-        perspective: 1000, 
+        position: 'relative',
+        minHeight: 700,
     },
-    marqueeLayer: {
+    splitWrapper: {
+        flexDirection: 'row',
+        width: '100%',
+        maxWidth: 1400,
+        height: '100%',
+        paddingHorizontal: 60,
+    },
+    splitWrapperMobile: {
+        flexDirection: 'column', // Stack on small screens
+        paddingHorizontal: 20,
+        paddingTop: 40,
+        height: 'auto',
+    },
+    leftColumn: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center', 
+        position: 'relative',
+    },
+    leftColumnMobile: {
+        flex: 0,
+        marginBottom: 40,
+        height: 400, // Fixed height for orbs area
+    },
+    rightColumn: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingLeft: 60,
+    },
+    rightColumnMobile: {
+        flex: 0,
+        paddingLeft: 0,
+        paddingBottom: 60,
+    },
+    orbContainer: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 0,
     },
-    glassCard: {
-        width: "90%",
-        maxWidth: 550,
-        padding: 50,
-        borderRadius: 32,
-        alignItems: "center",
+    orb: {
+        position: 'absolute',
+    },
+    brandingContent: {
         zIndex: 10,
-        borderWidth: 1,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.2,
-        shadowRadius: 50,
+        alignItems: 'center',
     },
-    logoContainer: {
-        marginBottom: 32,
-    },
-    logo: {
-        height: 60,
-        width: 220, 
-    },
-    title: {
-        fontSize: 40,
-        fontWeight: "800",
+    heroText: {
+        fontSize: 100,
+        fontWeight: '900',
+        letterSpacing: -4,
         marginBottom: 16,
-        textAlign: "center",
-        letterSpacing: -0.5,
     },
-    subtitle: {
+    heroTextMobile: {
+        fontSize: 60, // Smaller on mobile web
+    },
+    tagline: {
+        fontSize: 24,
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+    description: {
         fontSize: 18,
+        marginTop: 16,
+        maxWidth: 450,
+        textAlign: 'center',
         lineHeight: 28,
-        marginBottom: 40,
-        textAlign: "center",
-        maxWidth: 460,
         opacity: 0.8,
     },
-    buttonContainer: {
-        gap: 16,
-        width: "100%",
-        maxWidth: 400,
+    cardsWrapper: {
+        width: '100%',
+        maxWidth: 500,
+        gap: 24,
     },
-    primaryButton: {
-        borderRadius: 14,
+    cardsWrapperMobile: {
+        maxWidth: '100%',
     },
-    secondaryButton: {
-        borderRadius: 14,
-        borderWidth: 1.5,
-    }
 });
 
 export default LetsStartWeb;
