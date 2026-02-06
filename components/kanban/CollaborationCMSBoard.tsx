@@ -370,6 +370,9 @@ const SortableCollaborationCard = ({
     } = useSortable({ id });
     const router = useRouter();
     
+    // Filter out web-specific attributes
+    const { tabIndex, role, ...restAttributes } = attributes as any;
+    
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
@@ -381,7 +384,7 @@ const SortableCollaborationCard = ({
     return (
          <View
             ref={setNodeRef as any}
-            {...attributes}
+            {...restAttributes}
             {...listeners}
             style={[
                 {
