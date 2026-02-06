@@ -3,17 +3,20 @@ import Colors from "@/shared-uis/constants/Colors";
 import {
     DndContext,
     DragEndEvent,
+    DragOverlay,
     PointerSensor,
-    closestCenter,
+    pointerWithin,
     useDroppable,
     useSensor,
-    useSensors
+    useSensors,
 } from "@dnd-kit/core";
 import {
     SortableContext,
     arrayMove,
-    rectSortingStrategy
+    rectSortingStrategy,
+    useSortable,
 } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import {
@@ -45,6 +48,7 @@ export default function CollaborationCMSBoard() {
         { id: "inactive", title: "Past Campaign", cards: [] },
         { id: "deleted", title: "Deleted Campaign", cards: [] },
     ]);
+    const [activeCard, setActiveCard] = useState<KanbanCardT | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [liveFilter, setLiveFilter] = useState<"none" | "live" | "not-live">("none");
@@ -82,64 +86,8 @@ export default function CollaborationCMSBoard() {
                 console.log("[Kanban] Total collaborations", collabs.length);
                 setAllCollaborations(collabs);
 
-                const grouped: Record<string, KanbanCardT[]> = {
-                    draft: [],
-                    active: [],
-                    inactive: [],
-                    stopped: [],
-                    deleted: [],
-                };
+                updateColumns(collabs, liveFilter);
 
-                // Apply live filter
-                const filteredCollabs = collabs.filter((collab) => {
-                    if (liveFilter === "none") return true;
-                    if (liveFilter === "live") return collab.isLive === true;
-                    if (liveFilter === "not-live") return !collab.isLive;
-                    return true;
-                });
-
-                filteredCollabs.forEach((collab) => {
-                    const bucket = (collab.status || "draft").toLowerCase();
-                    if (bucket === "active") grouped.active.push(collab);
-                    else if (bucket === "stopped") grouped.stopped.push(collab);
-                    else if (bucket === "deleted") grouped.deleted.push(collab);
-                    else if (bucket === "inactive") grouped.inactive.push(collab);
-                    else grouped.draft.push(collab);
-                });
-                console.log("[Kanban] Grouped counts", {
-                    draft: grouped.draft.length,
-                    active: grouped.active.length,
-                    stopped: grouped.stopped.length,
-                    deleted: grouped.deleted.length,
-                });
-                setColumns([
-                    {
-                        id: "draft",
-                        title: `Draft (${grouped.draft.length})`,
-                        cards: grouped.draft,
-                    },
-                    {
-                        id: "active",
-                        title: `Active (${grouped.active.length})`,
-                        cards: grouped.active,
-                    },
-
-                    {
-                        id: "stopped",
-                        title: `Stopped (${grouped.stopped.length})`,
-                        cards: grouped.stopped,
-                    },
-                    {
-                        id: "inactive",
-                        title: `Past (${grouped.inactive.length})`,
-                        cards: grouped.inactive,
-                    },
-                    {
-                        id: "deleted",
-                        title: `Deleted (${grouped.deleted.length})`,
-                        cards: grouped.deleted,
-                    },
-                ]);
             } catch (err: any) {
                 console.warn("Failed to fetch collaborations", err);
                 setError(err?.message || "Unable to load collaborations");
@@ -150,10 +98,7 @@ export default function CollaborationCMSBoard() {
         fetchCollaborations();
     }, []);
 
-    // Re-filter when liveFilter changes
-    useEffect(() => {
-        if (allCollaborations.length === 0) return;
-
+    const updateColumns = (collabs: KanbanCardT[], filter: "none" | "live" | "not-live") => {
         const grouped: Record<string, KanbanCardT[]> = {
             draft: [],
             active: [],
@@ -162,11 +107,10 @@ export default function CollaborationCMSBoard() {
             deleted: [],
         };
 
-        // Apply live filter
-        const filteredCollabs = allCollaborations.filter((collab) => {
-            if (liveFilter === "none") return true;
-            if (liveFilter === "live") return collab.isLive === true;
-            if (liveFilter === "not-live") return !collab.isLive;
+        const filteredCollabs = collabs.filter((collab) => {
+            if (filter === "none") return true;
+            if (filter === "live") return collab.isLive === true;
+            if (filter === "not-live") return !collab.isLive;
             return true;
         });
 
@@ -180,33 +124,19 @@ export default function CollaborationCMSBoard() {
         });
 
         setColumns([
-            {
-                id: "draft",
-                title: `Draft (${grouped.draft.length})`,
-                cards: grouped.draft,
-            },
-            {
-                id: "active",
-                title: `Active (${grouped.active.length})`,
-                cards: grouped.active,
-            },
-            {
-                id: "stopped",
-                title: `Stopped (${grouped.stopped.length})`,
-                cards: grouped.stopped,
-            },
-            {
-                id: "inactive",
-                title: `Past (${grouped.inactive.length})`,
-                cards: grouped.inactive,
-            },
-            {
-                id: "deleted",
-                title: `Deleted (${grouped.deleted.length})`,
-                cards: grouped.deleted,
-            },
+            { id: "draft", title: `Draft (${grouped.draft.length})`, cards: grouped.draft },
+            { id: "active", title: `Active (${grouped.active.length})`, cards: grouped.active },
+            { id: "stopped", title: `Stopped (${grouped.stopped.length})`, cards: grouped.stopped },
+            { id: "inactive", title: `Past (${grouped.inactive.length})`, cards: grouped.inactive },
+            { id: "deleted", title: `Deleted (${grouped.deleted.length})`, cards: grouped.deleted },
         ]);
-    }, [liveFilter]);
+    };
+
+    useEffect(() => {
+        if (allCollaborations.length > 0) {
+            updateColumns(allCollaborations, liveFilter);
+        }
+    }, [liveFilter, allCollaborations]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -216,79 +146,75 @@ export default function CollaborationCMSBoard() {
         })
     );
 
-    const handleDragOver = (event: any) => {
-        const { active, over } = event;
-        if (!over) return;
-
-        const activeIdVal = active.id as string;
-        const overIdVal = over.id as string;
-
-        const [activeColumnId] = activeIdVal.split(":");
-        const [overColumnId] = overIdVal.split(":");
-
-        if (activeColumnId === overColumnId) return;
-
-        setColumns((cols) => {
-            const activeColumn = cols.find((col) => col.id === activeColumnId);
-            const overColumn = cols.find((col) => col.id === overColumnId);
-
-            if (!activeColumn || !overColumn) return cols;
-
-            const activeCard = activeColumn.cards.find((c) => activeIdVal.includes(c.id));
-            if (!activeCard) return cols;
-
-            const newColumns = cols.map((col) => {
-                if (col.id === activeColumnId) {
-                    return {
-                        ...col,
-                        cards: col.cards.filter((c) => !activeIdVal.includes(c.id)),
-                    };
-                }
-                if (col.id === overColumnId) {
-                    return {
-                        ...col,
-                        cards: [...col.cards, activeCard],
-                    };
-                }
-                return col;
-            });
-
-            return newColumns;
-        });
+    const handleDragStart = (event: any) => {
+        const activeId = event.active.id as string;
+        const [, cardId] = activeId.split(":");
+        const card = columns.flatMap((c) => c.cards).find((c) => c.id === cardId) || null;
+        setActiveCard(card);
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
+        setActiveCard(null);
+
         if (!over) return;
+
         const activeIdVal = active.id as string;
         const overIdVal = over.id as string;
 
         const [fromColumnId, fromCardId] = activeIdVal.split(":");
 
-        const toColumn = columns.find((c) => c.id === overIdVal);
-        const toColumnId = toColumn ? overIdVal : overIdVal.split(":")[0];
-        const toCardId = toColumn ? null : overIdVal.split(":")[1];
+        // Determine drop column
+        const isColumnDrop = !overIdVal.includes(":"); // Dropped on column container
+        const toColumnId = isColumnDrop ? overIdVal : overIdVal.split(":")[0];
+        const toCardId = isColumnDrop ? null : overIdVal.split(":")[1];
+
+        // Find source and dest columns
+        const sourceColIndex = columns.findIndex(c => c.id === fromColumnId);
+        const destColIndex = columns.findIndex(c => c.id === toColumnId);
+        
+        if (sourceColIndex === -1 || destColIndex === -1) return;
 
         if (fromColumnId === toColumnId) {
-            const col = columns.find((c) => c.id === fromColumnId);
-            if (!col) return;
-            const oldIndex = col.cards.findIndex((c) => c.id === fromCardId);
-            const newIndex = col.cards.findIndex((c) => c.id === toCardId);
-            if (oldIndex === -1 || newIndex === -1) return;
-            const updated = columns.map((c) =>
-                c.id === col.id
-                    ? { ...c, cards: arrayMove(c.cards, oldIndex, newIndex) }
-                    : c
-            );
-            setColumns(updated);
-        } else {
-            const from = columns.find((c) => c.id === fromColumnId);
-            const to = columns.find((c) => c.id === toColumnId);
-            if (!from || !to) return;
+            // Same column reorder
+            const column = columns[sourceColIndex];
+            const oldIndex = column.cards.findIndex(c => c.id === fromCardId);
+            const newIndex = toCardId ? column.cards.findIndex(c => c.id === toCardId) : column.cards.length;
 
+            if (oldIndex !== newIndex && oldIndex !== -1) {
+                 const newCards = arrayMove(column.cards, oldIndex, newIndex);
+                 const newColumns = [...columns];
+                 newColumns[sourceColIndex] = { ...column, cards: newCards };
+                 setColumns(newColumns);
+            }
+        } else {
+            // Move between columns
+            const sourceCol = columns[sourceColIndex];
+            const destCol = columns[destColIndex];
+            const card = sourceCol.cards.find(c => c.id === fromCardId);
+            
+            if (!card) return;
+
+            const newSourceCards = sourceCol.cards.filter(c => c.id !== fromCardId);
+            const newDestCards = [...destCol.cards];
+            
+            const insertIndex = toCardId 
+                ? newDestCards.findIndex(c => c.id === toCardId)
+                : newDestCards.length;
+            
+            // Insert at index
+            newDestCards.splice(insertIndex < 0 ? newDestCards.length : insertIndex, 0, card);
+
+            const newColumns = [...columns];
+            newColumns[sourceColIndex] = { ...sourceCol, cards: newSourceCards };
+            newColumns[destColIndex] = { ...destCol, cards: newDestCards };
+            
+            setColumns(newColumns);
+
+            // Update Backend
             try {
                 const collabRef = doc(FirestoreDB, "collaborations", fromCardId);
-                await updateDoc(collabRef, { status: to.id });
+                await updateDoc(collabRef, { status: toColumnId });
             } catch (err) {
                 console.warn("Failed to update collaboration status", err);
             }
@@ -296,71 +222,66 @@ export default function CollaborationCMSBoard() {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Collaboration CMS</Text>
-                <Menu
-                    visible={menuVisible}
-                    onDismiss={() => setMenuVisible(false)}
-                    anchor={
-                        <Pressable
-                            onPress={() => setMenuVisible(true)}
-                            style={[styles.filterBtn]}
-                        >
-                            <Text style={styles.filterBtnText}>
-                                {liveFilter === "none"
-                                    ? "All Campaigns"
-                                    : liveFilter === "live"
-                                        ? "Live Campaigns"
-                                        : "Not-Live Campaigns"}
-                            </Text>
-                        </Pressable>
-                    }
-                >
-                    <Menu.Item
-                        onPress={() => {
-                            setLiveFilter("none");
-                            setMenuVisible(false);
-                        }}
-                        title="None (All Campaigns)"
-                    />
-                    <Menu.Item
-                        onPress={() => {
-                            setLiveFilter("live");
-                            setMenuVisible(false);
-                        }}
-                        title="Live Campaigns"
-                    />
-                    <Menu.Item
-                        onPress={() => {
-                            setLiveFilter("not-live");
-                            setMenuVisible(false);
-                        }}
-                        title="Not-Live Campaigns"
-                    />
-                </Menu>
-            </View>
+        <View style={{ flex: 1, backgroundColor: colors.white }}>
+             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Collaboration CMS</Text>
+                    <Menu
+                        visible={menuVisible}
+                        onDismiss={() => setMenuVisible(false)}
+                        anchor={
+                            <Pressable
+                                onPress={() => setMenuVisible(true)}
+                                style={[styles.filterBtn]}
+                            >
+                                <Text style={styles.filterBtnText}>
+                                    {liveFilter === "none"
+                                        ? "All Campaigns"
+                                        : liveFilter === "live"
+                                            ? "Live Campaigns"
+                                            : "Not-Live Campaigns"}
+                                </Text>
+                            </Pressable>
+                        }
+                    >
+                        <Menu.Item onPress={() => { setLiveFilter("none"); setMenuVisible(false); }} title="None (All Campaigns)" />
+                        <Menu.Item onPress={() => { setLiveFilter("live"); setMenuVisible(false); }} title="Live Campaigns" />
+                        <Menu.Item onPress={() => { setLiveFilter("not-live"); setMenuVisible(false); }} title="Not-Live Campaigns" />
+                    </Menu>
+                </View>
 
-            {loading && (
-                <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
-                    Loading collaborations…
-                </Text>
-            )}
-            {error && (
-                <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
-            )}
+                {loading && (
+                    <Text style={{ paddingVertical: 8, opacity: 0.7 }}>Loading collaborations…</Text>
+                )}
+                {error && (
+                    <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
+                )}
 
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: 20 }}
-                nestedScrollEnabled
-            >
                 <DndContext
                     sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragOver={handleDragOver}
+                    collisionDetection={pointerWithin} // Switched to pointerWithin like BrandCRMBoard
+                    onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
                 >
+                    <DragOverlay>
+                        {activeCard ? (
+                             <View
+                                style={{
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    backgroundColor: "#fff",
+                                    boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
+                                    width: 260,
+                                    borderWidth: 1,
+                                    borderColor: colors.border,
+                                }}
+                            >
+                                <Text style={{ fontWeight: "700" }}>{activeCard.message || "Unknown Campaign"}</Text>
+                                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>ID: {activeCard.id}</Text>
+                            </View>
+                        ) : null}
+                    </DragOverlay>
+
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -385,7 +306,6 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const styles = useMemo(() => useStyles(colors), [colors]);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
-    const router = useRouter();
 
     return (
         <View
@@ -398,41 +318,114 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                 >
-                    {column.title}
+                    {column.title.split(" (")[0]} ({column.cards.length})
                 </Text>
             </View>
 
-            <SortableContext
-                items={column.cards.map((c) => `${column.id}:${c.id}`)}
-                strategy={rectSortingStrategy}
+            <ScrollView
+                style={styles.columnScroll}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
             >
-                {column.cards.map((card) => (
-                    <Pressable
-                        key={card.id}
-                        onPress={() => {
-                            console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
-                            router.push(`/collaboration-details/${card.id}`);
-                        }}
-                    >
-                        <CollaborationCard
+                <SortableContext
+                    items={column.cards.map((c) => `${column.id}:${c.id}`)}
+                    strategy={rectSortingStrategy}
+                >
+                    {column.cards.map((card) => (
+                        <SortableCollaborationCard
+                            key={card.id}
                             id={`${column.id}:${card.id}`}
                             card={card}
                             colId={column.id}
                         />
-                    </Pressable>
-                ))}
-            </SortableContext>
+                    ))}
+                </SortableContext>
 
-            {column.cards.length === 0 && (
-                <Text style={{ textAlign: "center", opacity: 0.6 }}>
-                    Drop here to move card
-                </Text>
-            )}
+                {column.cards.length === 0 && (
+                    <Text style={{ textAlign: "center", opacity: 0.6, marginTop: 20 }}>
+                        Drop here to move card
+                    </Text>
+                )}
+            </ScrollView>
         </View>
     );
 };
 
-
+const SortableCollaborationCard = ({
+    id,
+    card,
+    colId,
+}: {
+    id: string;
+    card: KanbanCardT;
+    colId: string;
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isOver,
+    } = useSortable({ id });
+    const router = useRouter();
+    
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+    
+    // Using inline style specifically to avoid "touchAction: none" which blocks scrolling
+    // and to match BrandCRMBoard's structure wrapper
+    
+    return (
+         <View
+            ref={setNodeRef as any}
+            {...attributes}
+            {...listeners}
+            style={[
+                {
+                    marginBottom: 8,
+                    borderRadius: 8,
+                    backgroundColor: "transparent", // Wrapper is transparent, card handling bg
+                    position: "relative",
+                    opacity: isOver ? 0.5 : 1, // Simple visual feedback for source
+                    // touchAction: "none" <-- OMITTED to enable scrolling
+                },
+                style
+            ]}
+        >
+            {/* Drop Indicator Logic like BrandCRMBoard */}
+            {isOver && (
+                <View
+                    style={{
+                        position: "absolute",
+                        top: -4,
+                        left: 0,
+                        right: 0,
+                        height: 3,
+                        backgroundColor: "#2563EB",
+                        borderRadius: 2,
+                        zIndex: 10,
+                    }}
+                />
+            )}
+            
+            <Pressable
+                onPress={() => {
+                     console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
+                     router.push(`/collaboration-details/${card.id}`);
+                }}
+            >
+                <CollaborationCard
+                    id={id}
+                    card={card}
+                    colId={colId}
+                />
+            </Pressable>
+        </View>
+    );
+}
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
@@ -451,27 +444,22 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             borderRadius: 8,
         },
         filterBtnText: { color: colors.white, fontWeight: "600", fontSize: 14 },
-        addBtn: {
-            backgroundColor: colors.primary,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 8,
-        },
-        addBtnText: { color: colors.white, fontWeight: "700" },
         row: {
             flexDirection: "row",
             gap: 16,
             alignItems: "flex-start",
             flexWrap: "nowrap",
-            // overflowX: "auto",
         },
         column: {
             borderRadius: 12,
             padding: 12,
             width: 280,
+            minHeight: 500, // Added min/max height to allow column scrolling
+            maxHeight: 900,
             shadowColor: colors.black,
             shadowOpacity: 0.1,
             shadowRadius: 6,
+            flexShrink: 0,
         },
         columnHeader: {
             flexDirection: "row",
@@ -483,4 +471,8 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             marginBottom: 8,
         },
         columnTitle: { fontSize: 16, fontWeight: "700" },
+        columnScroll: {
+            flex: 1,
+            paddingBottom: 8,
+        },
     });
