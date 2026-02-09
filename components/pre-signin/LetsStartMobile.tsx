@@ -31,7 +31,15 @@ const LetsStartMobile = () => {
                     <View style={styles.header}>
                         <Animated.Text 
                             entering={FadeInDown.duration(800)} 
-                            style={[styles.heroText, { color: brandColors.text }]}
+                            style={[
+                                styles.heroText, 
+                                { 
+                                    color: brandColors.primary,
+                                    textShadowColor: '#00ffff', // Neon cyan glow
+                                    textShadowRadius: 20,
+                                    textShadowOffset: { width: 0, height: 0 },
+                                }
+                            ]}
                         >
                             TRENDLY
                         </Animated.Text>
@@ -101,6 +109,11 @@ const styles = StyleSheet.create({
         letterSpacing: -2,
         marginBottom: 8,
         textAlign: 'center',
+        fontFamily: Platform.select({
+            ios: 'System',
+            android: 'sans-serif',
+            default: 'System',
+        }),
     },
     tagline: {
         fontSize: 18,

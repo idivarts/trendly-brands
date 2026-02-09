@@ -11,9 +11,10 @@ interface ActionCardProps {
     description: string;
     colors: readonly [string, string, ...string[]];
     onPress: () => void;
+    onPressWithAnimation?: (buttonLayout: { x: number; y: number; width: number; height: number }, colors: readonly [string, string, ...string[]]) => void;
 }
 
-const ActionCard = ({ title, description, colors, onPress }: ActionCardProps) => {
+const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation }: ActionCardProps) => {
     const scale = useSharedValue(1);
     const cardRef = useRef<View>(null);
 
@@ -27,6 +28,15 @@ const ActionCard = ({ title, description, colors, onPress }: ActionCardProps) =>
 
     const handlePressOut = () => {
         scale.value = withSpring(1);
+        
+        // If custom animation callback is provided, measure button and call it
+        if (onPressWithAnimation && cardRef.current) {
+            cardRef.current.measure((x, y, width, height, pageX, pageY) => {
+                onPressWithAnimation({ x: pageX, y: pageY, width, height }, colors);
+            });
+        } else {
+            onPress();
+        }
     };
 
     // Web: 3D Wobble Effect
@@ -71,7 +81,6 @@ const ActionCard = ({ title, description, colors, onPress }: ActionCardProps) =>
 
     return (
         <Pressable 
-            onPress={onPress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             // @ts-ignore: Web only props
@@ -109,7 +118,7 @@ const styles = StyleSheet.create({
         width: '100%',
         marginVertical: 10,
         // @ts-ignore
-        perspective: 1000, // Important for 3D effect
+        perspective: '1000px', // Important for 3D effect
     },
     container: {
         width: '100%',

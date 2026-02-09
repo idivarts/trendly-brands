@@ -8,7 +8,7 @@ import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import gsap from "gsap";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, View, Text, useWindowDimensions } from "react-native";
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 // Expanded Social Universe
@@ -17,13 +17,13 @@ const SOCIAL_ORBS = [
     { icon: "instagram", color: "#C13584", size: 80, x: 250, y: -50, depth: 0.15 },
     { icon: "linkedin", color: "#0077B5", size: 70, x: -100, y: 180, depth: 0.1 },
     { icon: "facebook", color: "#1877F2", size: 60, x: 180, y: 120, depth: 0.25 },
-    
+
     // New Icons for Density
-    { icon: "twitter", color: "#1DA1F2", size: 50, x: 50, y: -250, depth: 0.08 },
-    { icon: "music-note", color: "#000000", size: 65, x: 300, y: 200, depth: 0.12 }, // TikTok-ish
-    { icon: "snapchat", color: "#FFFC00", size: 55, x: -350, y: 50, depth: 0.18 },
-    { icon: "pinterest", color: "#E60023", size: 45, x: 100, y: 280, depth: 0.05 },
-    { icon: "whatsapp", color: "#25D366", size: 40, x: -200, y: -220, depth: 0.1 }, 
+    { icon: "twitter", color: "#1DA1F2", size: 50, x: 50, y: -340, depth: 0.08 },
+    { icon: "music-note", color: "#000000", size: 65, x: 300, y: -200, depth: 0.12 }, // TikTok-ish
+    { icon: "snapchat", color: "#FFFC00", size: 60, x: -380, y: -45, depth: 0.18 },
+    { icon: "pinterest", color: "#E60023", size: 45, x: 30, y: -140, depth: 0.05 },
+    { icon: "whatsapp", color: "#25D366", size: 48, x: -300, y: -280, depth: 0.1 },
 ];
 
 const LetsStartWeb = () => {
@@ -31,7 +31,7 @@ const LetsStartWeb = () => {
     const brandColors = Colors(theme);
     const { width } = useWindowDimensions();
     const isMobileWeb = width < 900;
-    
+
     const [showSplash, setShowSplash] = useState(true);
     const [showContent, setShowContent] = useState(false);
 
@@ -47,6 +47,14 @@ const LetsStartWeb = () => {
 
     useEffect(() => {
         if (!showContent) return;
+
+        // Load Google Fonts for web
+        if (Platform.OS === 'web') {
+            const link = document.createElement('link');
+            link.href = 'https://fonts.googleapis.com/css2?family=Coiny&family=Varela+Round&family=Quicksand:wght@500&family=Comfortaa:wght@700&family=Fredoka:wght@700&display=swap';
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+        }
 
         if (Platform.OS === 'web') {
             const ctx = gsap.context(() => {
@@ -117,20 +125,20 @@ const LetsStartWeb = () => {
 
     return (
         <AppLayout withWebPadding={false}>
-            <View 
+            <View
                 ref={containerRef}
                 style={[styles.container, { backgroundColor: brandColors.background }]}
             >
-                {/* Responsive Split/Stack Wrapper */}
-                <View style={[styles.splitWrapper, isMobileWeb && styles.splitWrapperMobile]}>
-                    
-                    {/* LEFT COLUMN */}
-                    <Animated.View entering={FadeIn.duration(800)} style={[styles.leftColumn, isMobileWeb && styles.leftColumnMobile]}>
+                {/* Single Centered Column */}
+                <View style={styles.centeredWrapper}>
+
+                    <Animated.View entering={FadeIn.duration(800)} style={styles.contentColumn}>
+                        {/* Background Orbs */}
                         <View style={styles.orbContainer}>
                             {SOCIAL_ORBS.map((orb, index) => (
                                 <View
                                     key={index}
-                                    ref={el => orbsRef.current[index] = el!}
+                                    ref={el => { if (el) orbsRef.current[index] = el; }}
                                     style={[
                                         styles.orb,
                                         {
@@ -147,22 +155,35 @@ const LetsStartWeb = () => {
                                         }
                                     ]}
                                 >
-                                    <MaterialCommunityIcons 
-                                        name={orb.icon as any} 
-                                        size={orb.size * 0.6} 
-                                        color={orb.color} 
+                                    <MaterialCommunityIcons
+                                        name={orb.icon as any}
+                                        size={orb.size * 0.6}
+                                        color={orb.color}
                                     />
                                 </View>
                             ))}
                         </View>
-                        
+
+                        {/* Branding Content */}
                         <View style={styles.brandingContent}>
-                            <Text 
-                                ref={textRef} 
-                                style={[styles.heroText, { color: brandColors.text }, isMobileWeb && styles.heroTextMobile]}
+
+                            <Text
+                                ref={textRef}
+                                style={[
+                                    styles.heroText,
+                                    {
+                                        color: brandColors.primary,
+                                        // @ts-ignore - textShadowColor is supported on web
+                                        textShadowColor: '#1f83c1ff', // Neon cyan glow
+                                        // textShadowRadius: 10,
+                                        textShadowOffset: { width: 0, height: 0 },
+                                    },
+                                    isMobileWeb && styles.heroTextMobile
+                                ]}
                             >
                                 TRENDLY
                             </Text>
+
                             <Text style={[styles.tagline, { color: brandColors.gray300 }]}>
                                 Where Brands Meet Creators.
                             </Text>
@@ -170,30 +191,32 @@ const LetsStartWeb = () => {
                                 Scale your marketing with data-driven collaborations in real-time.
                             </Text>
                         </View>
-                    </Animated.View>
 
-                    {/* RIGHT COLUMN */}
-                    <Animated.View entering={FadeIn.delay(500).duration(800)} style={[styles.rightColumn, isMobileWeb && styles.rightColumnMobile]}>
-                        <View style={[styles.cardsWrapper, isMobileWeb && styles.cardsWrapperMobile]}>
-                            <ActionCard 
-                                title="Join as Brand / Agency"
-                                description="Connect with creators. Amplify your reach."
-                                colors={['#0F2027', '#203A43', '#2C5364']}
-                                onPress={() => router.push("/pre-signin")}
-                            />
-                            
-                            <ActionCard 
-                                title="Join as Influencer"
-                                description="Monetize your content. Grow your community."
-                                colors={['#FF512F', '#DD2476']}
-                                onPress={() => {
-                                    if (Platform.OS === "web")
-                                        window.open(CREATORS_FE_URL, "_blank");
-                                    else
-                                        router.push("/wrong-app")
-                                }}
-                            />
-                        </View>
+                        {/* Buttons in Row */}
+                        <Animated.View entering={FadeIn.delay(500).duration(800)} style={styles.buttonsRow}>
+                            <View style={styles.buttonWrapper}>
+                                <ActionCard
+                                    title="Join as Brand / Agency"
+                                    description="Connect with creators. Amplify your reach."
+                                    colors={['#0F2027', '#203A43', '#2C5364']}
+                                    onPress={() => router.push("/pre-signin")}
+                                />
+                            </View>
+
+                            <View style={styles.buttonWrapper}>
+                                <ActionCard
+                                    title="Join as Influencer"
+                                    description="Monetize your content. Grow your community."
+                                    colors={['#FF512F', '#DD2476']}
+                                    onPress={() => {
+                                        if (Platform.OS === "web")
+                                            window.open(CREATORS_FE_URL, "_blank");
+                                        else
+                                            router.push("/wrong-app")
+                                    }}
+                                />
+                            </View>
+                        </Animated.View>
                     </Animated.View>
                 </View>
             </View>
@@ -204,45 +227,24 @@ const LetsStartWeb = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: "center", 
+        justifyContent: "center",
         alignItems: "center",
         overflow: "hidden",
         position: 'relative',
         minHeight: 700,
     },
-    splitWrapper: {
-        flexDirection: 'row',
+    centeredWrapper: {
         width: '100%',
-        maxWidth: 1400,
-        height: '100%',
+        maxWidth: 1200,
         paddingHorizontal: 60,
-    },
-    splitWrapperMobile: {
-        flexDirection: 'column', // Stack on small screens
-        paddingHorizontal: 20,
-        paddingTop: 40,
-        height: 'auto',
-    },
-    leftColumn: {
-        flex: 1,
+        alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'center', 
+    },
+    contentColumn: {
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
         position: 'relative',
-    },
-    leftColumnMobile: {
-        flex: 0,
-        marginBottom: 40,
-        height: 400, // Fixed height for orbs area
-    },
-    rightColumn: {
-        flex: 1,
-        justifyContent: 'center',
-        paddingLeft: 60,
-    },
-    rightColumnMobile: {
-        flex: 0,
-        paddingLeft: 0,
-        paddingBottom: 60,
     },
     orbContainer: {
         ...StyleSheet.absoluteFillObject,
@@ -255,12 +257,18 @@ const styles = StyleSheet.create({
     brandingContent: {
         zIndex: 10,
         alignItems: 'center',
+        marginBottom: 48,
+
     },
     heroText: {
         fontSize: 100,
-        fontWeight: '900',
+        fontWeight: '400',
         letterSpacing: -4,
         marginBottom: 16,
+        fontFamily: Platform.select({
+            web: 'Coiny, Varela Round, Quicksand, Comfortaa, Fredoka, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            default: 'System',
+        }),
     },
     heroTextMobile: {
         fontSize: 60, // Smaller on mobile web
@@ -278,13 +286,16 @@ const styles = StyleSheet.create({
         lineHeight: 28,
         opacity: 0.8,
     },
-    cardsWrapper: {
-        width: '100%',
-        maxWidth: 500,
+    buttonsRow: {
+        flexDirection: 'row',
         gap: 24,
+        width: '100%',
+        maxWidth: 1100,
+        zIndex: 10,
     },
-    cardsWrapperMobile: {
-        maxWidth: '100%',
+    buttonWrapper: {
+        flex: 1,
+        minWidth: 400,
     },
 });
 
