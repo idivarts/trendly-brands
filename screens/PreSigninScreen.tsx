@@ -28,8 +28,8 @@ const TITLE_LETTER_SPACING = 0.4;
 const TAGLINE_FONT_SIZE = 15;
 const TAGLINE_LINE_HEIGHT = 22;
 const ERROR_TEXT_MARGIN_TOP = 18;
-const TITLE_COLOR = "#F5F7FA";
-const TAGLINE_COLOR = "rgba(231, 236, 243, 0.7)";
+const TITLE_COLOR = "#0F172A";
+const TAGLINE_COLOR = "rgba(15, 23, 42, 0.7)";
 const ERROR_COLOR = "#FF6B6B";
 const CTA_LABEL = "Get Started";
 const GOOGLE_LABEL = "Continue with Google";
@@ -41,7 +41,7 @@ const TERMS_FONT_SIZE = 12;
 const TERMS_LINE_HEIGHT = 18;
 const TERMS_MARGIN_TOP = 22;
 const TERMS_LINK_DECORATION = "underline" as const;
-const TERMS_TEXT_COLOR = "rgba(231, 236, 243, 0.7)";
+const TERMS_TEXT_COLOR = "rgba(15, 23, 42, 0.65)";
 
 const PreSigninScreen = () => {
     const theme = useTheme();

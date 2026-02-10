@@ -23,9 +23,9 @@ const PRESS_SCALE = 0.98;
 const PRESS_OPACITY = 0.9;
 const DEFAULT_OPACITY = 1;
 const PRESS_DURATION = 120;
-const SECONDARY_SURFACE = "rgba(255, 255, 255, 0.08)";
-const SECONDARY_BORDER = "rgba(255, 255, 255, 0.22)";
-const SECONDARY_TEXT = "#E8EEF5";
+const SECONDARY_SURFACE = "rgba(15, 23, 42, 0.16)";
+const SECONDARY_BORDER = "rgba(15, 23, 42, 0.28)";
+const SECONDARY_TEXT = "#0F172A";
 const PRIMARY_TEXT = "#FFFFFF";
 
 const GlassButton = ({
