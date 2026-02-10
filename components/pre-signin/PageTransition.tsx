@@ -98,16 +98,16 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                 ease: 'power2.in',
             }, '+=0.2');
 
-            // 6. Expand further and fade out to reveal page underneath
+            // 6. Collapse back to bottom center to reveal next page smoothly
             tl.to(overlay, {
-                scale: fullExpandScale,
-                opacity: 0,
-                duration: 0.8,
-                ease: 'power2.inOut',
+                scale: 0,
+                duration: 0.9,
+                ease: 'power3.in',
                 onComplete: () => {
                     gsap.set(overlay, { display: 'none' });
+                    gsap.set(textContainer, { display: 'none' });
                 },
-            }, '-=0.2');
+            }, '-=0.1');
         },
     }));
 

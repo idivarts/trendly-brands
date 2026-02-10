@@ -1,6 +1,6 @@
 import ActionCard from "@/components/pre-signin/ActionCard";
 import IntroSplash from "@/components/pre-signin/IntroSplash";
-import PageTransition, { PageTransitionRef } from "@/components/pre-signin/PageTransition";
+import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
@@ -40,7 +40,7 @@ const LetsStartWeb = () => {
     const containerRef = useRef<View>(null);
     const textRef = useRef<Text>(null);
     const orbsRef = useRef<View[]>([]);
-    const transitionRef = useRef<PageTransitionRef>(null);
+    const { triggerTransition } = useTransition();
 
     const handleSplashComplete = () => {
         setShowSplash(false);
@@ -203,8 +203,8 @@ const LetsStartWeb = () => {
                                     colors={['#0F2027', '#203A43', '#2C5364']}
                                     onPress={() => router.push("/pre-signin")}
                                     onPressWithAnimation={(layout, colors) => {
-                                        if (Platform.OS === 'web' && transitionRef.current) {
-                                            transitionRef.current.triggerTransition(
+                                        if (Platform.OS === 'web') {
+                                            triggerTransition(
                                                 layout,
                                                 [...colors],
                                                 () => {
@@ -234,7 +234,6 @@ const LetsStartWeb = () => {
                         </Animated.View>
                     </Animated.View>
                 </View>
-                <PageTransition ref={transitionRef} />
             </View>
         </AppLayout>
     );
