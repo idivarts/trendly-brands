@@ -1,5 +1,6 @@
 import ActionCard from "@/components/pre-signin/ActionCard";
 import IntroSplash from "@/components/pre-signin/IntroSplash";
+import PageTransition, { PageTransitionRef } from "@/components/pre-signin/PageTransition";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
@@ -39,6 +40,7 @@ const LetsStartWeb = () => {
     const containerRef = useRef<View>(null);
     const textRef = useRef<Text>(null);
     const orbsRef = useRef<View[]>([]);
+    const transitionRef = useRef<PageTransitionRef>(null);
 
     const handleSplashComplete = () => {
         setShowSplash(false);
@@ -174,9 +176,9 @@ const LetsStartWeb = () => {
                                     {
                                         color: brandColors.primary,
                                         // @ts-ignore - textShadowColor is supported on web
-                                        textShadowColor: '#1f83c1ff', // Neon cyan glow
-                                        // textShadowRadius: 10,
-                                        textShadowOffset: { width: 0, height: 0 },
+                                        textShadowColor: 'rgba(0, 0, 0, 0.3)', // Dark shadow for elevation
+                                        textShadowRadius: 25,
+                                        textShadowOffset: { width: 0, height: 15 },
                                     },
                                     isMobileWeb && styles.heroTextMobile
                                 ]}
@@ -200,6 +202,19 @@ const LetsStartWeb = () => {
                                     description="Connect with creators. Amplify your reach."
                                     colors={['#0F2027', '#203A43', '#2C5364']}
                                     onPress={() => router.push("/pre-signin")}
+                                    onPressWithAnimation={(layout, colors) => {
+                                        if (Platform.OS === 'web' && transitionRef.current) {
+                                            transitionRef.current.triggerTransition(
+                                                layout,
+                                                [...colors],
+                                                () => {
+                                                    router.push("/pre-signin");
+                                                }
+                                            );
+                                        } else {
+                                            router.push("/pre-signin");
+                                        }
+                                    }}
                                 />
                             </View>
 
@@ -219,6 +234,7 @@ const LetsStartWeb = () => {
                         </Animated.View>
                     </Animated.View>
                 </View>
+                <PageTransition ref={transitionRef} />
             </View>
         </AppLayout>
     );
