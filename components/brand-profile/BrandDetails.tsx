@@ -1,6 +1,6 @@
 import { useTheme } from "@react-navigation/native";
 import { View } from "react-native";
-import { Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface } from "react-native-paper";
+import { Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface, Button } from "react-native-paper";
 
 import { useBreakpoints } from "@/hooks";
 import ImageUpload from "@/shared-uis/components/image-upload";
@@ -11,12 +11,14 @@ interface BrandDetailsProps {
     brandData: Partial<Brand>;
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
     setBrandWebImage: React.Dispatch<React.SetStateAction<File | null>>;
+    onNext?: () => void;
 }
 
 const BrandDetails: React.FC<BrandDetailsProps> = ({
     brandData,
     setBrandData,
     setBrandWebImage,
+    onNext,
 }) => {
     const theme = useTheme();
     const { xl } = useBreakpoints();
@@ -136,6 +138,19 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                     />
                 </View>
             </View>
+
+            {onNext && (
+                <View style={{ marginTop: 16 }}>
+                    <Button
+                        mode="contained"
+                        onPress={onNext}
+                        style={{ borderRadius: 12 }}
+                        buttonColor={colors.primary}
+                    >
+                        Next
+                    </Button>
+                </View>
+            )}
         </Surface>
     );
 };

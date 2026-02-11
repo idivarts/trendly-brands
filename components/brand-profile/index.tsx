@@ -1,4 +1,5 @@
 import { useTheme } from "@react-navigation/native";
+import { useState } from "react";
 import { ScrollView } from "react-native";
 import { Surface } from "react-native-paper";
 
@@ -25,29 +26,42 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const [currentStep, setCurrentStep] = useState(1);
+
+    const handleNext = () => {
+        setCurrentStep((prev) => prev + 1);
+    };
 
     return (
         <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 24, paddingBottom: 32 }}
         >
-            <BrandDetails
-                brandData={brandData}
-                setBrandData={setBrandData}
-                setBrandWebImage={setBrandWebImage}
-            />
+            {currentStep === 1 && (
+                <BrandDetails
+                    brandData={brandData}
+                    setBrandData={setBrandData}
+                    setBrandWebImage={setBrandWebImage}
+                    onNext={handleNext}
+                />
+            )}
 
-            <BrandAge
-                brandData={brandData}
-                setBrandData={setBrandData}
-            />
+            {currentStep === 2 && (
+                <BrandAge
+                    brandData={brandData}
+                    setBrandData={setBrandData}
+                    onNext={handleNext}
+                />
+            )}
 
-            <BrandIndustry
-                brandData={brandData}
-                setBrandData={setBrandData}
-            />
+            {currentStep === 3 && (
+                <BrandIndustry
+                    brandData={brandData}
+                    setBrandData={setBrandData}
+                />
+            )}
 
-            {!!action && (
+            {currentStep === 3 && !!action && (
                 <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
                     {action}
                 </Surface>
