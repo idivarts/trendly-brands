@@ -4,10 +4,13 @@ import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { sendPasswordResetEmail } from "firebase/auth";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     Dimensions,
@@ -20,6 +23,8 @@ import {
 } from "react-native";
 import Animated, {
     Easing,
+    FlipInXUp,
+    FlipOutXUp,
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
@@ -80,6 +85,7 @@ const SHOWCASE_CARD_OPACITY = 0.6;
 const SHOWCASE_TEXT_BLOCK_HEIGHT = 72;
 const SHOWCASE_TITLE_SHADOW = "rgba(255,255,255,0.3)";
 const SHOWCASE_TITLE_SHADOW_RADIUS = 10;
+const FORM_ANIMATION_DURATION = 260;
 
 const SAMPLE_INFLUENCERS: InfluencerItem[] = [
     {
@@ -206,15 +212,19 @@ const AutoScrollColumn = ({
     );
 };
 
+type AuthFormMode = "signup" | "login" | "forgot";
+
 const SignUpScreen = () => {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [formMode, setFormMode] = useState<AuthFormMode>("signup");
+    const [hasToggledForm, setHasToggledForm] = useState(false);
     const router = useRouter();
     const theme = useTheme();
     const styles = fnStyles(theme);
-    const { signUp } = useAuthContext();
+    const { signUp, signIn } = useAuthContext();
     const { width } = useWindowDimensions();
     const windowHeight = Dimensions.get("window").height;
     const isWideLayout = width >= WIDE_LAYOUT_MIN;
@@ -231,6 +241,47 @@ const SignUpScreen = () => {
         () => SAMPLE_INFLUENCERS.slice(SHOWCASE_SPLIT_INDEX),
         []
     );
+
+    const handleSignIn = () => {
+        signIn(email, password);
+    };
+
+    const handleSignUp = () => {
+        signUp(name, email, password);
+    };
+
+    const handleResetPassword = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailRegex.test(email)) {
+            alert("Please enter a valid email address");
+            return;
+        }
+
+        sendPasswordResetEmail(AuthApp, email)
+            .then(() => {
+                Toaster.success("Password reset email sent successfully");
+                setFormMode("login");
+            })
+            .catch((error) => {
+                Toaster.error(error.message);
+            });
+    };
+
+    const handleShowLogin = () => {
+        setHasToggledForm(true);
+        setFormMode("login");
+    };
+
+    const handleShowSignUp = () => {
+        setHasToggledForm(true);
+        setFormMode("signup");
+    };
+
+    const handleShowForgotPassword = () => {
+        setHasToggledForm(true);
+        setFormMode("forgot");
+    };
 
     return (
         <LinearGradient colors={BACKGROUND_GRADIENT} style={stylesLocal.background}>
@@ -270,82 +321,275 @@ const SignUpScreen = () => {
                                 style={styles.logo}
                                 resizeMode="contain"
                             />
-                            <Text style={[styles.title, stylesLocal.formTitle]}>
-                                Create your brand
-                            </Text>
-                            <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
-                                Use your work email to create a Trendly brand account
-                            </Text>
+                            <View style={stylesLocal.formHeader}>
+                                {formMode === "login" ? (
+                                    <Animated.View
+                                        key="login-header"
+                                        entering={
+                                            hasToggledForm
+                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                        exiting={
+                                            hasToggledForm
+                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                    >
+                                        <Text style={[styles.title, stylesLocal.formTitle]}>
+                                            Login
+                                        </Text>
+                                        <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
+                                            Welcome to Trendly Brands
+                                        </Text>
+                                    </Animated.View>
+                                ) : formMode === "forgot" ? (
+                                    <Animated.View
+                                        key="forgot-header"
+                                        entering={
+                                            hasToggledForm
+                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                        exiting={
+                                            hasToggledForm
+                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                    >
+                                        <Text style={[styles.title, stylesLocal.formTitle]}>
+                                            Forgot Password
+                                        </Text>
+                                        <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
+                                            We will email you a reset link.
+                                        </Text>
+                                    </Animated.View>
+                                ) : (
+                                    <Animated.View
+                                        key="signup-header"
+                                        entering={
+                                            hasToggledForm
+                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                        exiting={
+                                            hasToggledForm
+                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                    >
+                                        <Text style={[styles.title, stylesLocal.formTitle]}>
+                                            Create your brand
+                                        </Text>
+                                        <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
+                                            Use your work email to create a Trendly brand account
+                                        </Text>
+                                    </Animated.View>
+                                )}
+                            </View>
                             <View style={[styles.inputContainer, stylesLocal.inputStack]}>
-                                <TextInput
-                                    label="Name"
-                                    value={name}
-                                    onChangeText={setName}
-                                    mode="outlined"
-                                    textColor={Colors(theme).text}
-                                    placeholderTextColor={Colors(theme).text}
-                                    style={styles.input}
-                                    theme={{ colors: { primary: Colors(theme).text } }}
-                                />
-                                <TextInput
-                                    autoCapitalize="none"
-                                    label="Work Email"
-                                    value={email}
-                                    placeholderTextColor={Colors(theme).text}
-                                    onChangeText={setEmail}
-                                    textColor={Colors(theme).text}
-                                    mode="outlined"
-                                    style={styles.input}
-                                    theme={{ colors: { primary: Colors(theme).text } }}
-                                />
-                                <TextInput
-                                    label="Password"
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    secureTextEntry
-                                    mode="outlined"
-                                    placeholderTextColor={Colors(theme).text}
-                                    textColor={Colors(theme).text}
-                                    style={styles.input}
-                                    theme={{ colors: { primary: Colors(theme).text } }}
-                                />
-                                <TextInput
-                                    label="Confirm Password"
-                                    value={confirmPassword}
-                                    onChangeText={setConfirmPassword}
-                                    placeholderTextColor={Colors(theme).text}
-                                    textColor={Colors(theme).text}
-                                    secureTextEntry
-                                    mode="outlined"
-                                    style={styles.input}
-                                    theme={{ colors: { primary: Colors(theme).text } }}
-                                />
-                                <Button
-                                    mode="contained"
-                                    style={stylesLocal.primaryButton}
-                                    onPress={() => signUp(name, email, password)}
-                                >
-                                    Create Account
-                                </Button>
+                                {formMode === "login" ? (
+                                    <Animated.View
+                                        key="login-form"
+                                        entering={
+                                            hasToggledForm
+                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                        exiting={
+                                            hasToggledForm
+                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                    >
+                                        <TextInput
+                                            autoCapitalize="none"
+                                            label="Email"
+                                            value={email}
+                                            onChangeText={setEmail}
+                                            mode="outlined"
+                                            textColor={Colors(theme).text}
+                                            style={styles.input}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <TextInput
+                                            label="Password"
+                                            value={password}
+                                            onChangeText={setPassword}
+                                            secureTextEntry
+                                            mode="outlined"
+                                            style={styles.input}
+                                            textColor={Colors(theme).text}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <Button
+                                            mode="contained"
+                                            style={stylesLocal.primaryButton}
+                                            onPress={handleSignIn}
+                                        >
+                                            Login
+                                        </Button>
+                                    </Animated.View>
+                                ) : formMode === "forgot" ? (
+                                    <Animated.View
+                                        key="forgot-form"
+                                        entering={
+                                            hasToggledForm
+                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                        exiting={
+                                            hasToggledForm
+                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                    >
+                                        <TextInput
+                                            autoCapitalize="none"
+                                            label="Enter your Email ID"
+                                            value={email}
+                                            onChangeText={setEmail}
+                                            mode="outlined"
+                                            textColor={Colors(theme).text}
+                                            style={styles.input}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <Button
+                                            mode="contained"
+                                            style={stylesLocal.primaryButton}
+                                            onPress={handleResetPassword}
+                                        >
+                                            Reset Password
+                                        </Button>
+                                    </Animated.View>
+                                ) : (
+                                    <Animated.View
+                                        key="signup-form"
+                                        entering={
+                                            hasToggledForm
+                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                        exiting={
+                                            hasToggledForm
+                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
+                                                : undefined
+                                        }
+                                    >
+                                        <TextInput
+                                            label="Name"
+                                            value={name}
+                                            onChangeText={setName}
+                                            mode="outlined"
+                                            textColor={Colors(theme).text}
+                                            placeholderTextColor={Colors(theme).text}
+                                            style={styles.input}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <TextInput
+                                            autoCapitalize="none"
+                                            label="Work Email"
+                                            value={email}
+                                            placeholderTextColor={Colors(theme).text}
+                                            onChangeText={setEmail}
+                                            textColor={Colors(theme).text}
+                                            mode="outlined"
+                                            style={styles.input}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <TextInput
+                                            label="Password"
+                                            value={password}
+                                            onChangeText={setPassword}
+                                            secureTextEntry
+                                            mode="outlined"
+                                            placeholderTextColor={Colors(theme).text}
+                                            textColor={Colors(theme).text}
+                                            style={styles.input}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <TextInput
+                                            label="Confirm Password"
+                                            value={confirmPassword}
+                                            onChangeText={setConfirmPassword}
+                                            placeholderTextColor={Colors(theme).text}
+                                            textColor={Colors(theme).text}
+                                            secureTextEntry
+                                            mode="outlined"
+                                            style={styles.input}
+                                            theme={{ colors: { primary: Colors(theme).text } }}
+                                        />
+                                        <Button
+                                            mode="contained"
+                                            style={stylesLocal.primaryButton}
+                                            onPress={handleSignUp}
+                                        >
+                                            Create Account
+                                        </Button>
+                                    </Animated.View>
+                                )}
                             </View>
-                            <View style={stylesLocal.loginPrompt}>
-                                <Text style={[styles.loginText, stylesLocal.loginText]}>
-                                    Already have an account?
-                                </Text>
-                                <Button
-                                    mode="outlined"
-                                    style={stylesLocal.secondaryButton}
-                                    onPress={() => router.replace("/(auth)/login")}
-                                >
-                                    Login
-                                </Button>
-                            </View>
-                            <Text style={[styles.loginText, stylesLocal.backText]}>
-                                Looking for Social Signup?{" "}
-                                <Text style={styles.loginLink} onPress={() => router.back()}>
-                                    Go Back
-                                </Text>
-                            </Text>
+                            {formMode === "login" ? (
+                                <View style={stylesLocal.loginPrompt}>
+                                    <Text style={[styles.loginText, stylesLocal.loginText]}>
+                                        Don&apos;t have an account?
+                                    </Text>
+                                    <Button
+                                        mode="outlined"
+                                        style={stylesLocal.secondaryButton}
+                                        onPress={handleShowSignUp}
+                                    >
+                                        Sign Up
+                                    </Button>
+                                    <Text
+                                        style={[
+                                            styles.loginText,
+                                            stylesLocal.forgotPassword,
+                                            styles.loginLink,
+                                        ]}
+                                        onPress={handleShowForgotPassword}
+                                    >
+                                        Forgot Password?
+                                    </Text>
+                                </View>
+                            ) : formMode === "forgot" ? (
+                                <View style={stylesLocal.loginPrompt}>
+                                    <Text style={[styles.loginText, stylesLocal.loginText]}>
+                                        Remember your password?
+                                    </Text>
+                                    <Button
+                                        mode="outlined"
+                                        style={stylesLocal.secondaryButton}
+                                        onPress={handleShowLogin}
+                                    >
+                                        Login
+                                    </Button>
+                                </View>
+                            ) : (
+                                <>
+                                    <View style={stylesLocal.loginPrompt}>
+                                        <Text style={[styles.loginText, stylesLocal.loginText]}>
+                                            Already have an account?
+                                        </Text>
+                                        <Button
+                                            mode="outlined"
+                                            style={stylesLocal.secondaryButton}
+                                            onPress={handleShowLogin}
+                                        >
+                                            Login
+                                        </Button>
+                                    </View>
+                                    <Text style={[styles.loginText, stylesLocal.backText]}>
+                                        Looking for Social Signup?{" "}
+                                        <Text
+                                            style={styles.loginLink}
+                                            onPress={() => router.back()}
+                                        >
+                                            Go Back
+                                        </Text>
+                                    </Text>
+                                </>
+                            )}
                         </View>
                     </View>
                 </View>
@@ -452,6 +696,9 @@ const stylesLocal = {
         opacity: 0.8,
         marginBottom: FORM_SUBTITLE_MARGIN,
     },
+    formHeader: {
+        minHeight: 96,
+    },
     inputStack: {
         gap: INPUT_GAP,
     },
@@ -469,6 +716,10 @@ const stylesLocal = {
     secondaryButton: {
         marginTop: SECONDARY_BUTTON_MARGIN,
         borderRadius: BUTTON_RADIUS,
+    },
+    forgotPassword: {
+        marginTop: 12,
+        textAlign: "center" as const,
     },
     backText: {
         opacity: 0.7,
