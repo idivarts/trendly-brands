@@ -1,5 +1,6 @@
 import type { DB_TYPE } from "@/components/discover/discover-types";
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
+import DiscoverSurvey from "@/components/discover/DiscoverSurvey";
 import {
     DiscoveryProvider,
     OpenFilterRightPanel,
@@ -7,7 +8,6 @@ import {
     type PageSortCommunication,
 } from "@/components/discover/discovery-context";
 import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
-import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -102,14 +102,8 @@ const DiscoverComponent = ({
         return () => unsubs.unsubscribe();
     }, []);
 
-    const [fullIllustration, setFullIllustration] = useState(true);
-    useEffect(() => {
-        if (!selectedBrand) return;
-        (async () => {
-            const x = await PersistentStorage.get(selectedBrand.id + "-discover");
-            setFullIllustration(!x);
-        })();
-    }, [selectedBrand]);
+    // Always show survey on login
+    const [showSurvey, setShowSurvey] = useState(true);
 
     // Determine which filter source to use:
     // If collaboration passed defaultAdvanceFilters → use only that.
@@ -129,28 +123,23 @@ const DiscoverComponent = ({
             ? storedFilters || undefined
             : undefined;
 
-    if (fullIllustration)
+    const handleSurveyComplete = async (filters: IAdvanceFilters) => {
+        // Save the filters for this session and future logins
+        if (selectedBrand) {
+            const key = `defaultFilter-${selectedBrand.id}`;
+            await PersistentStorage.set(key, JSON.stringify(filters));
+            setStoredFilters(filters);
+        }
+
+        // Hide survey for current session
+        setShowSurvey(false);
+    };
+
+    if (showSurvey)
         return (
-            <FullInformationalIllustration
-                action={() => {
-                    PersistentStorage.set(selectedBrand?.id + "-discover", "true");
-                    setFullIllustration(false);
-                }}
-                config={{
-                    title: "{Advanced Filtering} for Instagram Profiles",
-                    description:
-                        "Find the right influencer in seconds with powerful filters. Skip scrolling through hundreds of profiles — save time and connect with creators that truly fit your campaign.",
-                    action: "Discover Now",
-                    items: [
-                        "Target Micro-Influencers (under 100k followers)",
-                        "Trustability & Budget Insights",
-                        "See Estimated Views Upfront",
-                    ],
-                    image:
-                        "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1758395157_images-1758395157102-discovery tool walkthrough thumbnail.jpg",
-                }}
-                videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO"
-            />
+            <AppLayout safeAreaEdges={["left", "right"]}>
+                <DiscoverSurvey onComplete={handleSurveyComplete} />
+            </AppLayout>
         );
 
     if (!manager || !selectedBrand || !selectedBrand.id)
