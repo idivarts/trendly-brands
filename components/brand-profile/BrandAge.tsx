@@ -1,6 +1,6 @@
 import { useTheme } from "@react-navigation/native";
 import { Pressable, View } from "react-native";
-import { Divider, Text as PaperText, Surface } from "react-native-paper";
+import { Divider, Text as PaperText, Surface, Button } from "react-native-paper";
 
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
@@ -15,9 +15,10 @@ const AGE_OPTIONS = [
 interface BrandAgeProps {
     brandData: Partial<Brand>;
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
+    onNext?: () => void;
 }
 
-const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData }) => {
+const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData, onNext }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const brandAge = brandData.age;
@@ -65,6 +66,19 @@ const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData }) => {
                     );
                 })}
             </View>
+
+            {onNext && (
+                <View style={{ marginTop: 16 }}>
+                    <Button
+                        mode="contained"
+                        onPress={onNext}
+                        style={{ borderRadius: 12 }}
+                        buttonColor={colors.primary}
+                    >
+                        Next
+                    </Button>
+                </View>
+            )}
         </Surface>
     );
 };
