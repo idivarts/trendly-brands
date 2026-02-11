@@ -1,6 +1,6 @@
 import { useTheme } from "@react-navigation/native";
-import { useState } from "react";
-import { ScrollView } from "react-native";
+import { useRef, useState } from "react";
+import { ScrollView, View } from "react-native";
 import { Surface } from "react-native-paper";
 
 import Colors from "@/shared-uis/constants/Colors";
@@ -27,41 +27,54 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const [currentStep, setCurrentStep] = useState(1);
+    const scrollViewRef = useRef<ScrollView>(null);
+    const cardRefs = useRef<{ [key: number]: View | null }>({});
 
-    const handleNext = () => {
-        setCurrentStep((prev) => prev + 1);
+    const handleNext = (step: number) => {
+        setCurrentStep(step);
+        // Scroll to the next card
+        setTimeout(() => {
+            cardRefs.current[step]?.measureLayout(
+                scrollViewRef.current as any,
+                (x, y) => {
+                    scrollViewRef.current?.scrollTo({ y: y - 16, animated: true });
+                },
+                () => {}
+            );
+        }, 100);
     };
 
     return (
         <ScrollView
+            ref={scrollViewRef}
             style={{ flex: 1 }}
             contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 24, paddingBottom: 32 }}
         >
-            {currentStep === 1 && (
+            <View ref={(ref) => (cardRefs.current[1] = ref)}>
                 <BrandDetails
                     brandData={brandData}
                     setBrandData={setBrandData}
                     setBrandWebImage={setBrandWebImage}
-                    onNext={handleNext}
+                    onNext={() => handleNext(2)}
                 />
-            )}
+            </View>
 
-            {currentStep === 2 && (
+            <View ref={(ref) => (cardRefs.current[2] = ref)}>
                 <BrandAge
                     brandData={brandData}
                     setBrandData={setBrandData}
-                    onNext={handleNext}
+                    onNext={() => handleNext(3)}
                 />
-            )}
+            </View>
 
-            {currentStep === 3 && (
+            <View ref={(ref) => (cardRefs.current[3] = ref)}>
                 <BrandIndustry
                     brandData={brandData}
                     setBrandData={setBrandData}
                 />
-            )}
+            </View>
 
-            {currentStep === 3 && !!action && (
+            {!!action && (
                 <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
                     {action}
                 </Surface>
