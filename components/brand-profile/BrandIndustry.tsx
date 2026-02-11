@@ -1,6 +1,7 @@
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { Pressable, View } from "react-native";
 import { Divider, Text as PaperText, Surface } from "react-native-paper";
 
 import {
@@ -15,17 +16,25 @@ import { Brand } from "@/types/Brand";
 interface BrandIndustryProps {
     brandData: Partial<Brand>;
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
+    onBack?: () => void;
 }
 
-const BrandIndustry: React.FC<BrandIndustryProps> = ({ brandData, setBrandData }) => {
+const BrandIndustry: React.FC<BrandIndustryProps> = ({ brandData, setBrandData, onBack }) => {
     const theme = useTheme();
     const colors = Colors(theme);
 
     return (
         <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-            <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                Brand Industry
-            </PaperText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                {onBack && (
+                    <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
+                        <PaperText style={{ fontSize: 20, color: colors.text }}>←</PaperText>
+                    </Pressable>
+                )}
+                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
+                    Brand Industry
+                </PaperText>
+            </View>
             <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
                 Specifying the industry helps us match you with relevant creators.
             </PaperText>

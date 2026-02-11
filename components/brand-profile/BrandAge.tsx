@@ -1,6 +1,6 @@
 import { useTheme } from "@react-navigation/native";
 import { Pressable, View } from "react-native";
-import { Divider, Text as PaperText, Surface, Button } from "react-native-paper";
+import { Button, Divider, Text as PaperText, Surface } from "react-native-paper";
 
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
@@ -16,18 +16,26 @@ interface BrandAgeProps {
     brandData: Partial<Brand>;
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
     onNext?: () => void;
+    onBack?: () => void;
 }
 
-const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData, onNext }) => {
+const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData, onNext, onBack }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const brandAge = brandData.age;
 
     return (
         <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-            <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                Brand age
-            </PaperText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                {onBack && (
+                    <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
+                        <PaperText style={{ fontSize: 20, color: colors.text }}>←</PaperText>
+                    </Pressable>
+                )}
+                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
+                    Brand age
+                </PaperText>
+            </View>
             <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
                 How established is your brand? (required)
             </PaperText>

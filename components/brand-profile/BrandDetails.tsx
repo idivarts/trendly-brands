@@ -1,6 +1,6 @@
 import { useTheme } from "@react-navigation/native";
-import { View } from "react-native";
-import { Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface, Button } from "react-native-paper";
+import { Pressable, View } from "react-native";
+import { Button, Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface } from "react-native-paper";
 
 import { useBreakpoints } from "@/hooks";
 import ImageUpload from "@/shared-uis/components/image-upload";
@@ -12,6 +12,7 @@ interface BrandDetailsProps {
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
     setBrandWebImage: React.Dispatch<React.SetStateAction<File | null>>;
     onNext?: () => void;
+    onBack?: () => void;
 }
 
 const BrandDetails: React.FC<BrandDetailsProps> = ({
@@ -19,6 +20,7 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
     setBrandData,
     setBrandWebImage,
     onNext,
+    onBack,
 }) => {
     const theme = useTheme();
     const { xl } = useBreakpoints();
@@ -37,9 +39,16 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
 
     return (
         <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-            <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                Brand Details
-            </PaperText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                {onBack && (
+                    <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
+                        <PaperText style={{ fontSize: 20, color: colors.text }}>←</PaperText>
+                    </Pressable>
+                )}
+                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
+                    Brand Details
+                </PaperText>
+            </View>
             <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
                 Add your brand logo and core details so creators can recognize you.
             </PaperText>
