@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import gsap from 'gsap';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 
 export interface PageTransitionRef {
     triggerTransition: (
@@ -11,131 +12,264 @@ export interface PageTransitionRef {
     ) => void;
 }
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
     const overlayRef = useRef<View>(null);
     const textContainerRef = useRef<View>(null);
     const textRef = useRef<Text>(null);
     const [gradientColors, setGradientColors] = useState(['#0F2027', '#203A43', '#2C5364']);
+    const [isAnimating, setIsAnimating] = useState(false);
+    
+    // Mobile animation values
+    const scale = useSharedValue(0);
+    const textOpacity = useSharedValue(0);
+    const overlayOpacity = useSharedValue(0);
 
     useImperativeHandle(ref, () => ({
         triggerTransition: (buttonPosition, gradient, onComplete) => {
-            if (Platform.OS !== 'web' || !overlayRef.current) {
-                onComplete();
-                return;
-            }
-
             // Update gradient colors
             setGradientColors(gradient);
 
-            const overlay = overlayRef.current as any;
-            const textElement = textRef.current as any;
-            const textContainer = textContainerRef.current as any;
+            if (Platform.OS === 'web' && overlayRef.current) {
+                // Web animation using GSAP
+                const overlay = overlayRef.current as any;
+                const textElement = textRef.current as any;
+                const textContainer = textContainerRef.current as any;
 
-            // Start from bottom center of screen
-            const startX = window.innerWidth / 2;
-            const startY = window.innerHeight;
-            const startSize = 100;
+                const startX = window.innerWidth / 2;
+                const startY = window.innerHeight;
+                const startSize = 100;
 
-            // Calculate maximum distance to cover entire screen from bottom
-            const maxDistance = Math.max(
-                Math.sqrt(startX ** 2 + startY ** 2),
-                Math.sqrt((window.innerWidth - startX) ** 2 + startY ** 2),
-                Math.sqrt(startX ** 2 + (window.innerHeight - startY) ** 2),
-                Math.sqrt((window.innerWidth - startX) ** 2 + (window.innerHeight - startY) ** 2)
-            );
+                const maxDistance = Math.max(
+                    Math.sqrt(startX ** 2 + startY ** 2),
+                    Math.sqrt((window.innerWidth - startX) ** 2 + startY ** 2),
+                    Math.sqrt(startX ** 2 + (window.innerHeight - startY) ** 2),
+                    Math.sqrt((window.innerWidth - startX) ** 2 + (window.innerHeight - startY) ** 2)
+                );
 
-            const coverScreenScale = (maxDistance * 2.2) / startSize;
-            const fullExpandScale = coverScreenScale * 1.5;
+                const coverScreenScale = (maxDistance * 2.2) / startSize;
 
-            // Set initial state - circular shape at bottom
-            gsap.set(overlay, {
-                display: 'flex',
-                opacity: 1,
-                scale: 0,
-                x: startX,
-                y: startY,
-                width: startSize,
-                height: startSize,
-                borderRadius: '50%',
-                xPercent: -50,
-                yPercent: -50,
-            });
+                gsap.set(overlay, {
+                    display: 'flex',
+                    opacity: 1,
+                    scale: 0,
+                    x: startX,
+                    y: startY,
+                    width: startSize,
+                    height: startSize,
+                    borderRadius: '50%',
+                    xPercent: -50,
+                    yPercent: -50,
+                });
 
-            gsap.set(textContainer, {
-                display: 'flex',
-            });
-            // Set initial text state
-            gsap.set(textElement, {
-                opacity: 0,
-            });
+                gsap.set(textContainer, {
+                    display: 'flex',
+                });
+                
+                gsap.set(textElement, {
+                    opacity: 0,
+                });
 
-            // Create timeline
-            const tl = gsap.timeline();
+                const tl = gsap.timeline();
 
-            // 1. Expand circle to cover screen (curved expansion)
-            tl.to(overlay, {
-                scale: coverScreenScale,
-                duration: 0.9,
-                ease: 'power2.out',
-            });
+                tl.to(overlay, {
+                    scale: coverScreenScale,
+                    duration: 0.9,
+                    ease: 'power2.out',
+                });
 
-            // 2. Fade in text after circle starts expanding
-            tl.to(textElement, {
-                opacity: 1,
-                duration: 0.6,
-                ease: 'power2.out',
-            }, '-=0.3');
+                tl.to(textElement, {
+                    opacity: 1,
+                    duration: 0.6,
+                    ease: 'power2.out',
+                }, '-=0.3');
 
-            // 3. Hold with text visible and navigate
-            tl.add(() => {
-                onComplete(); // Navigate to new page
-            }, '+=1.2');
+                tl.add(() => {
+                    onComplete();
+                }, '+=1.2');
 
-            // 4. Fade out text
-            tl.to(textElement, {
-                opacity: 0,
-                duration: 0.5,
-                ease: 'power2.in',
-            }, '+=0.2');
+                tl.to(textElement, {
+                    opacity: 0,
+                    duration: 0.5,
+                    ease: 'power2.in',
+                }, '+=0.2');
 
-            // 6. Collapse back to bottom center to reveal next page smoothly
-            tl.to(overlay, {
-                scale: 0,
-                duration: 0.9,
-                ease: 'power3.in',
-                onComplete: () => {
-                    gsap.set(overlay, { display: 'none' });
-                    gsap.set(textContainer, { display: 'none' });
-                },
-            }, '-=0.1');
+                tl.to(overlay, {
+                    scale: 0,
+                    duration: 0.9,
+                    ease: 'power3.in',
+                    onComplete: () => {
+                        gsap.set(overlay, { display: 'none' });
+                        gsap.set(textContainer, { display: 'none' });
+                    },
+                }, '-=0.1');
+            } else {
+                // Mobile animation using Reanimated
+                const maxDimension = Math.max(SCREEN_WIDTH, SCREEN_HEIGHT);
+                // From a 100px circle to cover full screen (diagonal distance)
+                const diagonal = Math.sqrt(SCREEN_WIDTH ** 2 + SCREEN_HEIGHT ** 2);
+                const coverScreenScale = diagonal / 100;
+                
+                console.log('Starting mobile transition animation', { maxDimension, coverScreenScale, SCREEN_WIDTH, SCREEN_HEIGHT });
+                
+                // Show the overlay component
+                console.log('Setting isAnimating to true');
+                setIsAnimating(true);
+                
+                // Show overlay immediately with full opacity
+                overlayOpacity.value = 1;
+                scale.value = 1; // Start visible
+                textOpacity.value = 0;
+                
+                console.log('Initial values set');
+
+                // Small delay to ensure component renders before animating
+                setTimeout(() => {
+                    console.log('Starting scale animation');
+                    // Expand animation
+                    scale.value = withTiming(coverScreenScale, {
+                        duration: 900,
+                        easing: Easing.out(Easing.quad),
+                    });
+
+                    // Text fade in
+                    textOpacity.value = withDelay(
+                        300,
+                        withTiming(1, {
+                            duration: 600,
+                            easing: Easing.out(Easing.quad),
+                        })
+                    );
+                }, 50);
+
+                // Call navigation callback
+                setTimeout(() => {
+                    console.log('Navigating...');
+                    onComplete();
+                }, 2100);
+
+                // Text fade out
+                textOpacity.value = withDelay(
+                    2100,
+                    withTiming(0, {
+                        duration: 500,
+                        easing: Easing.in(Easing.quad),
+                    })
+                );
+
+                // Collapse animation
+                scale.value = withDelay(
+                    2400,
+                    withTiming(0, {
+                        duration: 900,
+                        easing: Easing.in(Easing.cubic),
+                    })
+                );
+
+                // Final fade out and hide component
+                overlayOpacity.value = withDelay(
+                    3100,
+                    withTiming(0, { 
+                        duration: 200,
+                    })
+                );
+                
+                // Hide overlay component after animation completes
+                setTimeout(() => {
+                    setIsAnimating(false);
+                }, 3400);
+            }
         },
     }));
 
+    // Mobile animated styles
+    const overlayAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: overlayOpacity.value,
+    }));
+    
+    const circleAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    const textAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: textOpacity.value,
+    }));
+
+    if (Platform.OS === 'web') {
+        return (
+            <>
+                <View
+                    ref={overlayRef}
+                    style={styles.overlay}
+                    pointerEvents="none"
+                >
+                    <LinearGradient
+                        colors={gradientColors as any}
+                        style={StyleSheet.absoluteFillObject}
+                    />
+                </View>
+
+                <View
+                    ref={textContainerRef}
+                    style={styles.textContainer}
+                    pointerEvents="none"
+                >
+                    <Text
+                        ref={textRef}
+                        style={styles.transitionText}
+                    >
+                        Get Started...
+                    </Text>
+                </View>
+            </>
+        );
+    }
+
+    // Mobile version
+    console.log('Mobile PageTransition render', { isAnimating, Platform: Platform.OS, scale: scale.value, overlayOpacity: overlayOpacity.value });
     return (
         <>
-            <View
-                ref={overlayRef}
-                style={styles.overlay}
-                pointerEvents="none"
-            >
-                <LinearGradient
-                    colors={gradientColors as any}
-                    style={StyleSheet.absoluteFillObject}
-                />
-            </View>
-
-            <View
-                ref={textContainerRef}
-                style={styles.textContainer}
-                pointerEvents="none"
-            >
-                <Text
-                    ref={textRef}
-                    style={styles.transitionText}
+            {isAnimating && (
+                <Animated.View
+                    style={[
+                        styles.mobileOverlay,
+                        overlayAnimatedStyle,
+                        {
+                            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Slight debug tint
+                        }
+                    ]}
+                    pointerEvents="none"
                 >
-                    Get Started...
-                </Text>
-            </View>
+                    <Animated.View
+                        style={[
+                            {
+                                width: 100,
+                                height: 100,
+                                borderRadius: 50,
+                                overflow: 'hidden',
+                            },
+                            circleAnimatedStyle,
+                        ]}
+                    >
+                        <LinearGradient
+                            colors={gradientColors as any}
+                            style={StyleSheet.absoluteFillObject}
+                        />
+                    </Animated.View>
+                    <Animated.Text 
+                        style={[
+                            styles.transitionText, 
+                            textAnimatedStyle,
+                            {
+                                position: 'absolute',
+                            }
+                        ]}
+                    >
+                        Get Started...
+                    </Animated.Text>
+                </Animated.View>
+            )}
         </>
     );
 });
@@ -147,10 +281,20 @@ const styles = StyleSheet.create({
         left: 0,
         zIndex: 9999,
         display: 'none',
-        // opacity: 0,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
+    },
+    mobileOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 999, // For Android
     },
     transitionText: {
         fontSize: 20,
@@ -158,7 +302,7 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         textAlign: 'center',
         letterSpacing: 2,
-        zIndex: 10,
+        zIndex: 100000,
     },
     textContainer: {
         position: 'absolute',

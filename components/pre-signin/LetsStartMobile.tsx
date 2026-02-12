@@ -1,5 +1,6 @@
 import ActionCard from "@/components/pre-signin/ActionCard";
 import IntroSplash from "@/components/pre-signin/IntroSplash";
+import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
@@ -13,10 +14,24 @@ const LetsStartMobile = () => {
     const theme = useTheme();
     const brandColors = Colors(theme);
     const [showSplash, setShowSplash] = React.useState(true);
+    const { triggerTransition } = useTransition();
 
     const handleBrandPress = React.useCallback(() => {
         router.push("/pre-signin");
     }, []);
+
+    const handleBrandPressWithAnimation = React.useCallback(
+        (layout: { x: number; y: number; width: number; height: number }, colors: readonly [string, string, ...string[]]) => {
+            triggerTransition(
+                layout,
+                [...colors],
+                () => {
+                    router.push("/pre-signin");
+                }
+            );
+        },
+        [triggerTransition]
+    );
 
     const handleInfluencerPress = React.useCallback(() => {
         if (Platform.OS === "web") {
@@ -78,6 +93,7 @@ const LetsStartMobile = () => {
                             description="Connect with creators. Amplify your reach."
                             colors={['#0F2027', '#203A43', '#2C5364']}
                             onPress={handleBrandPress}
+                            onPressWithAnimation={handleBrandPressWithAnimation}
                         />
 
                         <ActionCard
