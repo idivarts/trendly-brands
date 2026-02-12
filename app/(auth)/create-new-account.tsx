@@ -199,17 +199,22 @@ const AutoScrollColumn = ({
         transform: [{ translateY: translateY.value }],
     }));
 
-    return (
-        <View style={stylesLocal.showcaseColumn}>
-            <Animated.View style={animatedStyle}>
-                {loopItems.map((item, index) => (
-                    <View key={`${item.id}-${index}`} style={stylesLocal.showcaseCardWrapper}>
-                        <InfluencerCard item={item} isCollapsed />
-                    </View>
-                ))}
-            </Animated.View>
-        </View>
-    );
+    return Platform.OS === "web" ? (
+    <View style={stylesLocal.showcaseColumn}>
+        <Animated.View style={animatedStyle}>
+            {loopItems.map((item, index) => (
+                <View
+                    key={`${item.id}-${index}`}
+                    style={stylesLocal.showcaseCardWrapper}
+                >
+                    <InfluencerCard item={item} isCollapsed />
+                </View>
+            ))}
+        </Animated.View>
+    </View>
+) : (
+    null
+);
 };
 
 type AuthFormMode = "signup" | "login" | "forgot";

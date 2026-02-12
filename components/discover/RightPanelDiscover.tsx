@@ -26,11 +26,17 @@ interface IProps {
     style?: StyleProp<ViewStyle>;
     defaultAdvanceFilters?: IAdvanceFilters;
     onClearStoredFilters?: () => void;
+    disableCollapse?: boolean;
 }
 
 import { useBreakpoints } from "@/hooks";
 
-const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, onClearStoredFilters }) => {
+const RightPanelDiscover: React.FC<IProps> = ({
+    style,
+    defaultAdvanceFilters,
+    onClearStoredFilters,
+    disableCollapse = false,
+}) => {
     const {
         selectedDb,
         setSelectedDb: dbWrapper,
@@ -55,6 +61,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     const styles = useMemo(() => styleFn(colors), [colors]);
 
     const toggleCollapse = () => {
+        if (disableCollapse) return;
         const nextCollapsed = !isCollapsed;
         const toValue = nextCollapsed ? 1 : 0;
         Animated.spring(slideAnim, {
@@ -69,6 +76,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     };
 
     const collapsePanel = () => {
+        if (disableCollapse) return;
         // animate to collapsed state and update context
         Animated.spring(slideAnim, {
             toValue: 1,
@@ -100,6 +108,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
 
     // Sync animation state with isCollapsed prop from context
     useEffect(() => {
+        if (disableCollapse) return;
         const toValue = isCollapsed ? 1 : 0;
         Animated.spring(slideAnim, {
             toValue,
@@ -107,7 +116,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
             tension: 65,
             friction: 10,
         }).start();
-    }, [isCollapsed, slideAnim]);
+    }, [disableCollapse, isCollapsed, slideAnim]);
 
     // Friendly label for current selection
     const selectedDbLabel =
@@ -124,14 +133,16 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
             style={[
                 styles.container,
                 style,
-                {
-                    transform: [{ translateX: translateX }],
-                    maxWidth: isCollapsed ? 0 : 400,
-                    width: isCollapsed ? 0 : "100%",
-                },
+                disableCollapse
+                    ? { transform: [{ translateX: 0 }], maxWidth: "100%", width: "100%" }
+                    : {
+                        transform: [{ translateX: translateX }],
+                        maxWidth: isCollapsed ? 0 : 400,
+                        width: isCollapsed ? 0 : "100%",
+                    },
             ]}
         >
-            {xl && (
+            {xl && !disableCollapse && (
                 <Pressable
                     style={[
                         styles.collapseButton,

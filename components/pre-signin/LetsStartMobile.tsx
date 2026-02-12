@@ -6,7 +6,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React from "react";
-import { Platform, ScrollView, StyleSheet, View, Text } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 const LetsStartMobile = () => {
@@ -21,57 +21,54 @@ const LetsStartMobile = () => {
     return (
         <AppLayout withWebPadding={false}>
             {/* ScrollView allows content to fit on small screens without cut-off */}
-            <ScrollView 
-                contentContainerStyle={styles.scrollContent} 
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
                 <View style={[styles.container, { backgroundColor: brandColors.background }]}>
-                    
+
                     {/* Header Section */}
                     <View style={styles.header}>
-                        <Animated.Text 
-                            entering={FadeInDown.duration(800)} 
-                            style={[
-                                styles.heroText, 
-                                { 
-                                    color: brandColors.primary,
-                                    textShadowColor: '#00ffff', // Neon cyan glow
-                                    textShadowRadius: 20,
-                                    textShadowOffset: { width: 0, height: 0 },
-                                }
-                            ]}
-                        >
-                            TRENDLY
-                        </Animated.Text>
-                        <Animated.Text 
-                            entering={FadeInDown.delay(200).duration(800)}
-                            style={[styles.tagline, { color: brandColors.gray300 }]}
-                        >
-                            Where Brands Meet Creators.
-                        </Animated.Text>
-                        <Animated.Text 
-                            entering={FadeInDown.delay(300).duration(800)}
-                            style={[styles.description, { color: brandColors.gray300 }]}
-                        >
-                            Scale your marketing with data-driven collaborations in real-time.
-                        </Animated.Text>
+                        <Animated.View entering={FadeInDown.duration(800)}>
+                            <Text
+                                style={[
+                                    styles.heroText,
+                                    {
+                                        color: brandColors.primary,
+                                        textShadowColor: '#00ffff', // Neon cyan glow
+                                        textShadowRadius: 20,
+                                        textShadowOffset: { width: 0, height: 0 },
+                                    }
+                                ]}
+                            >
+                                TRENDLY
+                            </Text>
+                        </Animated.View>
+                        <Animated.View entering={FadeInDown.delay(200).duration(800)}>
+                            <Text style={[styles.tagline, { color: brandColors.gray300 }]}>
+                                Where Brands Meet Creators.
+                            </Text>
+                        </Animated.View>
+                        <Animated.View entering={FadeInDown.delay(300).duration(800)}>
+                            <Text style={[styles.description, { color: brandColors.gray300 }]}>
+                                Scale your marketing with data-driven collaborations in real-time.
+                            </Text>
+                        </Animated.View>
                     </View>
 
                     {/* Action Cards Section */}
-                    <Animated.View 
+                    <Animated.View
                         entering={FadeInDown.delay(400).duration(800)}
                         style={styles.cardsContainer}
                     >
-                        <ActionCard 
+                        <ActionCard
                             title="Join as Brand / Agency"
                             description="Connect with creators. Amplify your reach."
                             colors={['#0F2027', '#203A43', '#2C5364']}
                             onPress={() => router.push("/pre-signin")}
                         />
-                        
-                        <View style={{ height: 16 }} /> {/* Spacer */}
 
-                        <ActionCard 
+                        <ActionCard
                             title="Join as Influencer"
                             description="Monetize your content. Grow your community."
                             colors={['#FF512F', '#DD2476']}
@@ -96,7 +93,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 24,
-        paddingTop: 60, // Ensure top spacing
+        paddingTop: 24,
         justifyContent: 'center', // Center vertically if space allows
     },
     header: {

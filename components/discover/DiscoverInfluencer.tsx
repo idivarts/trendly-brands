@@ -39,7 +39,6 @@ import {
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
-import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import type { InfluencerItem } from "./discover-types";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
@@ -339,6 +338,12 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
+            console.log("[DiscoverInfluencer] Data update:", {
+                loading: Boolean(loading),
+                received: nextData.length,
+                page,
+                sort,
+            });
             // Only close right panel on mobile after applying filters
             if (!xl) {
                 setRightPanel(false);
@@ -551,16 +556,38 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     }
 
     if (data.length == 0) {
-        if (xl)
-            return (
-                <View style={{ flex: 1, minWidth: 0 }}>
-                    <DiscoverPlaceholder
-                        selectedDb={selectedDb}
-                        setSelectedDb={setSelectedDb}
-                    />
-                </View>
-            );
-        else return null;
+        return (
+            <View
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 24,
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: Colors(theme).text,
+                        textAlign: "center",
+                    }}
+                >
+                    No influencers matched your filters.
+                </Text>
+                <Text
+                    style={{
+                        marginTop: 8,
+                        fontSize: 13,
+                        color: Colors(theme).textSecondary,
+                        textAlign: "center",
+                    }}
+                >
+                    Try widening follower range or clearing a few filters.
+                </Text>
+            </View>
+        );
     }
 
     return (

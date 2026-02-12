@@ -16,7 +16,11 @@ import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
+import Colors from "@/shared-uis/constants/Colors";
+import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
+import { Platform, Pressable, ScrollView, StyleSheet, type ViewStyle } from "react-native";
 
 const DiscoverComponent = ({
     showRightPanel = true,
@@ -48,12 +52,19 @@ const DiscoverComponent = ({
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand } = useBrandContext();
+    const theme = useTheme();
+    const colors = Colors(theme);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [filterSheetIndex, setFilterSheetIndex] = useState(-1);
+    const filterSheetRef = useRef<BottomSheet>(null);
+    const filterSnapPoints = React.useMemo(() => ["40%", "92%"], []);
+    const isWeb = Platform.OS === "web";
+    const sheetStyles = React.useMemo(() => createSheetStyles(colors), [colors]);
     const discoverCommunication =
-        useRef<(action: DiscoverCommunication) => any>();
+        useRef<((action: DiscoverCommunication) => any) | undefined>(undefined);
     const pageSortCommunication =
-        useRef<(action: PageSortCommunication) => any>();
+        useRef<((action: PageSortCommunication) => any) | undefined>(undefined);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
         null
@@ -93,14 +104,23 @@ const DiscoverComponent = ({
 
     useEffect(() => {
         const unsubs = OpenFilterRightPanel.subscribe(() => {
-
-            setRightPanel(true);
+            console.log("[Discover] Filter icon pressed", {
+                showRightPanel,
+                filterSheetIndex,
+                selectedDb,
+            });
+            if (!showRightPanel) return;
+            setFilterSheetIndex(0);
+            if (!isWeb) {
+                filterSheetRef.current?.snapToIndex(0);
+                filterSheetRef.current?.expand?.();
+            }
             setShowFilters(true);
             setIsCollapsed(false);
         });
 
         return () => unsubs.unsubscribe();
-    }, []);
+    }, [showRightPanel, filterSheetIndex, selectedDb, isWeb]);
 
     // Always show survey on login
     const [showSurvey, setShowSurvey] = useState(true);
@@ -163,7 +183,7 @@ const DiscoverComponent = ({
             }}
         >
             <AppLayout safeAreaEdges={["left", "right"]}>
-                <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
+                <View style={{ width: "100%", flexDirection: "row", height: "100%", paddingHorizontal:100}}>
                     <DiscoverInfluencer
                         advanceFilter={advanceFilter}
                         statusFilter={statusFilter}
@@ -172,26 +192,100 @@ const DiscoverComponent = ({
                         defaultAdvanceFilters={filtersToUse}
                         initialInfluencerId={initialInfluencerId}
                     />
-                    <RightPanelDiscover
-                        defaultAdvanceFilters={filtersToUse}
-                        onClearStoredFilters={() => setStoredFilters(null)}
-                        style={[
-                            (!showRightPanel || (!rightPanel && !xl)) && { display: "none" },
-                            !xl && {
-                                width: "100%",
-                                maxWidth: "auto",
-                                position: "absolute",
-                                right: 0,
-                                top: 0,
-                                bottom: 0,
-                                zIndex: 100,
-                            },
-                        ]}
-                    />
                 </View>
+                {showRightPanel && !isWeb && (
+                    <BottomSheet
+                        ref={filterSheetRef}
+                        index={filterSheetIndex}
+                        snapPoints={filterSnapPoints}
+                        enablePanDownToClose
+                        onChange={setFilterSheetIndex}
+                        backdropComponent={(props) => (
+                            <BottomSheetBackdrop
+                                {...props}
+                                appearsOnIndex={0}
+                                disappearsOnIndex={-1}
+                            />
+                        )}
+                    >
+                        <RightPanelDiscover
+                            defaultAdvanceFilters={filtersToUse}
+                            onClearStoredFilters={() => setStoredFilters(null)}
+                            disableCollapse
+                            style={{
+                                maxWidth: "100%",
+                                width: "100%",
+                                borderLeftWidth: 0,
+                            }}
+                        />
+                    </BottomSheet>
+                )}
+                {showRightPanel && isWeb && filterSheetIndex >= 0 && (
+                    <Pressable
+                        style={sheetStyles.overlay}
+                        onPress={() => setFilterSheetIndex(-1)}
+                    />
+                )}
+                {showRightPanel && isWeb && (
+                    <View
+                        style={[
+                            sheetStyles.sheet,
+                            filterSheetIndex < 0 && sheetStyles.sheetHidden,
+                        ]}
+                    >
+                        <ScrollView style={sheetStyles.sheetScroll}>
+                            <RightPanelDiscover
+                                defaultAdvanceFilters={filtersToUse}
+                                onClearStoredFilters={() => setStoredFilters(null)}
+                                disableCollapse
+                                style={{
+                                    maxWidth: "100%",
+                                    width: "100%",
+                                    borderLeftWidth: 0,
+                                }}
+                            />
+                        </ScrollView>
+                    </View>
+                )}
             </AppLayout>
         </DiscoveryProvider>
     );
 };
+
+const createSheetStyles = (colors: ReturnType<typeof Colors>) =>
+    StyleSheet.create<{
+        overlay: ViewStyle;
+        sheet: ViewStyle;
+        sheetScroll: ViewStyle;
+        sheetHidden: ViewStyle;
+    }>({
+        overlay: {
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            zIndex: 9998,
+        },
+        sheet: {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: "88%",
+            backgroundColor: colors.background,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            zIndex: 9999,
+            paddingTop: 8,
+        },
+        sheetScroll: {
+            flex: 1,
+        },
+        sheetHidden: {
+            display: "none",
+        },
+    });
 
 export default DiscoverComponent;
