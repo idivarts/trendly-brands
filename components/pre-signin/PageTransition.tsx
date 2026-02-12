@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import gsap from 'gsap';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 
 export interface PageTransitionRef {
     triggerTransition: (
@@ -20,7 +20,7 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
     const textRef = useRef<Text>(null);
     const [gradientColors, setGradientColors] = useState(['#0F2027', '#203A43', '#2C5364']);
     const [isAnimating, setIsAnimating] = useState(false);
-    
+
     // Mobile animation values
     const scale = useSharedValue(0);
     const textOpacity = useSharedValue(0);
@@ -66,7 +66,7 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                 gsap.set(textContainer, {
                     display: 'flex',
                 });
-                
+
                 gsap.set(textElement, {
                     opacity: 0,
                 });
@@ -110,75 +110,75 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                 // From a 100px circle to cover full screen (diagonal distance)
                 const diagonal = Math.sqrt(SCREEN_WIDTH ** 2 + SCREEN_HEIGHT ** 2);
                 const coverScreenScale = diagonal / 100;
-                
-                console.log('Starting mobile transition animation', { maxDimension, coverScreenScale, SCREEN_WIDTH, SCREEN_HEIGHT });
-                
+
                 // Show the overlay component
-                console.log('Setting isAnimating to true');
                 setIsAnimating(true);
-                
+
                 // Show overlay immediately with full opacity
                 overlayOpacity.value = 1;
                 scale.value = 1; // Start visible
                 textOpacity.value = 0;
-                
-                console.log('Initial values set');
 
                 // Small delay to ensure component renders before animating
                 setTimeout(() => {
-                    console.log('Starting scale animation');
-                    // Expand animation
-                    scale.value = withTiming(coverScreenScale, {
-                        duration: 900,
-                        easing: Easing.out(Easing.quad),
-                    });
-
-                    // Text fade in
-                    textOpacity.value = withDelay(
-                        300,
-                        withTiming(1, {
-                            duration: 600,
+                    // Expand animation, hold, then collapse smoothly
+                    scale.value = withSequence(
+                        // Expand to cover screen
+                        withTiming(coverScreenScale, {
+                            duration: 900,
                             easing: Easing.out(Easing.quad),
+                        }),
+                        // Hold at full size
+                        withDelay(500, withTiming(coverScreenScale, { duration: 0 })),
+                        // Collapse back to small circle
+                        withTiming(1, {
+                            duration: 700,
+                            easing: Easing.in(Easing.quad),
+                        }),
+                        // Shrink to nothing
+                        withTiming(0, {
+                            duration: 300,
+                            easing: Easing.in(Easing.cubic),
+                        })
+                    );
+
+                    // Text fade in and out
+                    textOpacity.value = withSequence(
+                        // Fade in
+                        withDelay(
+                            300,
+                            withTiming(1, {
+                                duration: 600,
+                                easing: Easing.out(Easing.quad),
+                            })
+                        ),
+                        // Hold visible
+                        withDelay(600, withTiming(1, { duration: 0 })),
+                        // Fade out
+                        withTiming(0, {
+                            duration: 400,
+                            easing: Easing.in(Easing.quad),
                         })
                     );
                 }, 50);
 
-                // Call navigation callback
+                // Navigate while screen is fully covered
                 setTimeout(() => {
-                    console.log('Navigating...');
                     onComplete();
-                }, 2100);
+                }, 1400);
 
-                // Text fade out
-                textOpacity.value = withDelay(
-                    2100,
-                    withTiming(0, {
-                        duration: 500,
-                        easing: Easing.in(Easing.quad),
-                    })
-                );
-
-                // Collapse animation
-                scale.value = withDelay(
-                    2400,
-                    withTiming(0, {
-                        duration: 900,
-                        easing: Easing.in(Easing.cubic),
-                    })
-                );
-
-                // Final fade out and hide component
+                // Final fade out
                 overlayOpacity.value = withDelay(
-                    3100,
-                    withTiming(0, { 
+                    2700,
+                    withTiming(0, {
                         duration: 200,
                     })
                 );
-                
+
                 // Hide overlay component after animation completes
                 setTimeout(() => {
                     setIsAnimating(false);
-                }, 3400);
+                }, 3000);
             }
         },
     }));
@@ -187,7 +187,7 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
     const overlayAnimatedStyle = useAnimatedStyle(() => ({
         opacity: overlayOpacity.value,
     }));
-    
+
     const circleAnimatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
     }));
@@ -227,18 +227,11 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
     }
 
     // Mobile version
-    console.log('Mobile PageTransition render', { isAnimating, Platform: Platform.OS, scale: scale.value, overlayOpacity: overlayOpacity.value });
     return (
         <>
             {isAnimating && (
                 <Animated.View
-                    style={[
-                        styles.mobileOverlay,
-                        overlayAnimatedStyle,
-                        {
-                            backgroundColor: 'rgba(0, 0, 0, 0.1)', // Slight debug tint
-                        }
-                    ]}
+                    style={[styles.mobileOverlay, overlayAnimatedStyle]}
                     pointerEvents="none"
                 >
                     <Animated.View
@@ -257,9 +250,9 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                             style={StyleSheet.absoluteFillObject}
                         />
                     </Animated.View>
-                    <Animated.Text 
+                    <Animated.Text
                         style={[
-                            styles.transitionText, 
+                            styles.transitionText,
                             textAnimatedStyle,
                             {
                                 position: 'absolute',
