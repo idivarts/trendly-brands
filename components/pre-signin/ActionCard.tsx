@@ -1,10 +1,9 @@
-import React, { useRef } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import gsap from "gsap";
+import React, { useRef } from "react";
+import { Animated, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Text } from "react-native-paper";
 
 interface ActionCardProps {
     title: string;
@@ -15,28 +14,37 @@ interface ActionCardProps {
 }
 
 const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation }: ActionCardProps) => {
-    const scale = useSharedValue(1);
+    const scaleAnim = useRef(new Animated.Value(1)).current;
     const cardRef = useRef<View>(null);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }]
-    }));
-
     const handlePressIn = () => {
-        scale.value = withSpring(0.96); // Deeper press
+        Animated.spring(scaleAnim, {
+            toValue: 0.96,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 7,
+        }).start();
     };
 
     const handlePressOut = () => {
-        scale.value = withSpring(1);
-        
-        // If custom animation callback is provided, measure button and call it
-        if (onPressWithAnimation && cardRef.current) {
-            cardRef.current.measure((x, y, width, height, pageX, pageY) => {
-                onPressWithAnimation({ x: pageX, y: pageY, width, height }, colors);
-            });
-        } else {
-            onPress();
-        }
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 7,
+        }).start();
+
+        // Execute the callback after a short delay
+        setTimeout(() => {
+            // If custom animation callback is provided, measure button and call it
+            if (onPressWithAnimation && cardRef.current) {
+                cardRef.current.measure((x, y, width, height, pageX, pageY) => {
+                    onPressWithAnimation({ x: pageX, y: pageY, width, height }, colors);
+                });
+            } else {
+                onPress();
+            }
+        }, 0);
     };
 
     // Web: 3D Wobble Effect
@@ -44,13 +52,13 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
         if (Platform.OS === 'web' && cardRef.current) {
             // @ts-ignore
             const rect = e.target.getBoundingClientRect();
-            const x = e.nativeEvent.clientX - rect.left; // x position within the element.
-            const y = e.nativeEvent.clientY - rect.top;  // y position within the element.
-            
+            const x = e.nativeEvent.clientX - rect.left;
+            const y = e.nativeEvent.clientY - rect.top;
+
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
-            
-            const rotateX = ((y - centerY) / centerY) * -10; // Max rotation 10deg
+
+            const rotateX = ((y - centerY) / centerY) * -10;
             const rotateY = ((x - centerX) / centerX) * 10;
 
             gsap.to(cardRef.current, {
@@ -62,10 +70,15 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
             });
         }
     };
-    
+
     const handleMouseLeave = () => {
         if (Platform.OS === 'web' && cardRef.current) {
-            scale.value = withSpring(1);
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                useNativeDriver: true,
+                tension: 100,
+                friction: 7,
+            }).start();
             gsap.to(cardRef.current, {
                 rotationX: 0,
                 rotationY: 0,
@@ -76,21 +89,29 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
     };
 
     const handleMouseEnter = () => {
-        if (Platform.OS === 'web') scale.value = withSpring(1.02);
+        if (Platform.OS === 'web') {
+            Animated.spring(scaleAnim, {
+                toValue: 1.02,
+                useNativeDriver: true,
+                tension: 100,
+                friction: 7,
+            }).start();
+        }
     };
 
     return (
-        <Pressable 
+        <TouchableOpacity
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
+            activeOpacity={0.9}
             // @ts-ignore: Web only props
-            onHoverIn={handleMouseEnter}
-            onHoverOut={handleMouseLeave}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
             style={styles.pressable}
         >
             <View ref={cardRef}>
-                <Animated.View style={[styles.container, animatedStyle]}>
+                <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
                     <LinearGradient
                         colors={colors}
                         start={{ x: 0, y: 0 }}
@@ -102,14 +123,14 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
                                 <Text style={styles.title}>{title}</Text>
                                 <Text style={styles.description}>{description}</Text>
                             </View>
-                            <Animated.View>
+                            <View>
                                 <MaterialCommunityIcons name="arrow-right" size={40} color="white" style={styles.icon} />
-                            </Animated.View>
+                            </View>
                         </View>
                     </LinearGradient>
                 </Animated.View>
             </View>
-        </Pressable>
+        </TouchableOpacity>
     );
 };
 
@@ -146,7 +167,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 32,
-        fontWeight: '800', 
+        fontWeight: '800',
         color: 'white',
         marginBottom: 8,
         lineHeight: 38,

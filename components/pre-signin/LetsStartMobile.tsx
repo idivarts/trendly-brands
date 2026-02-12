@@ -14,6 +14,18 @@ const LetsStartMobile = () => {
     const brandColors = Colors(theme);
     const [showSplash, setShowSplash] = React.useState(true);
 
+    const handleBrandPress = React.useCallback(() => {
+        router.push("/pre-signin");
+    }, []);
+
+    const handleInfluencerPress = React.useCallback(() => {
+        if (Platform.OS === "web") {
+            window.open(CREATORS_FE_URL, "_blank");
+        } else {
+            router.push("/wrong-app");
+        }
+    }, []);
+
     if (showSplash) {
         return <IntroSplash onComplete={() => setShowSplash(false)} />;
     }
@@ -65,19 +77,14 @@ const LetsStartMobile = () => {
                             title="Join as Brand / Agency"
                             description="Connect with creators. Amplify your reach."
                             colors={['#0F2027', '#203A43', '#2C5364']}
-                            onPress={() => router.push("/pre-signin")}
+                            onPress={handleBrandPress}
                         />
 
                         <ActionCard
                             title="Join as Influencer"
                             description="Monetize your content. Grow your community."
                             colors={['#FF512F', '#DD2476']}
-                            onPress={() => {
-                                if (Platform.OS === "web")
-                                    window.open(CREATORS_FE_URL, "_blank");
-                                else
-                                    router.push("/wrong-app")
-                            }}
+                            onPress={handleInfluencerPress}
                         />
                     </Animated.View>
                 </View>

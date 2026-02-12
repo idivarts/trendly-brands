@@ -1,6 +1,5 @@
-import { MotiPressable } from "moti/interactions";
-import React from "react";
-import { StyleProp, StyleSheet, Text, ViewStyle } from "react-native";
+import React, { useRef } from "react";
+import { Animated, StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
 
 type GlassButtonVariant = "primary" | "secondary";
 
@@ -37,29 +36,70 @@ const GlassButton = ({
     style,
 }: GlassButtonProps) => {
     const isPrimary = variant === "primary";
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const opacityAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.parallel([
+            Animated.timing(scaleAnim, {
+                toValue: PRESS_SCALE,
+                duration: PRESS_DURATION,
+                useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+                toValue: PRESS_OPACITY,
+                duration: PRESS_DURATION,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.parallel([
+            Animated.timing(scaleAnim, {
+                toValue: DEFAULT_OPACITY,
+                duration: PRESS_DURATION,
+                useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+                toValue: DEFAULT_OPACITY,
+                duration: PRESS_DURATION,
+                useNativeDriver: true,
+            }),
+        ]).start();
+
+        // Execute onPress after animation
+        if (!disabled) {
+            setTimeout(() => onPress(), 0);
+        }
+    };
 
     return (
-        <MotiPressable
-            onPress={onPress}
+        <TouchableOpacity
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
             disabled={disabled}
-            animate={({ pressed }: { pressed: boolean }) => ({
-                scale: pressed ? PRESS_SCALE : DEFAULT_OPACITY,
-                opacity: pressed ? PRESS_OPACITY : DEFAULT_OPACITY,
-            })}
-            transition={{ type: "timing", duration: PRESS_DURATION }}
-            style={[
-                styles.base,
-                isPrimary
-                    ? { backgroundColor: accentColor, borderColor: accentColor }
-                    : { backgroundColor: SECONDARY_SURFACE, borderColor: SECONDARY_BORDER },
-                disabled && styles.disabled,
-                style,
-            ]}
+            activeOpacity={1}
         >
-            <Text style={[styles.label, isPrimary ? styles.primaryLabel : { color: SECONDARY_TEXT }]}>
-                {label}
-            </Text>
-        </MotiPressable>
+            <Animated.View
+                style={[
+                    styles.base,
+                    isPrimary
+                        ? { backgroundColor: accentColor, borderColor: accentColor }
+                        : { backgroundColor: SECONDARY_SURFACE, borderColor: SECONDARY_BORDER },
+                    disabled && styles.disabled,
+                    style,
+                    {
+                        transform: [{ scale: scaleAnim }],
+                        opacity: opacityAnim,
+                    },
+                ]}
+            >
+                <Text style={[styles.label, isPrimary ? styles.primaryLabel : { color: SECONDARY_TEXT }]}>
+                    {label}
+                </Text>
+            </Animated.View>
+        </TouchableOpacity>
     );
 };
 

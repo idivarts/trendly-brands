@@ -9,9 +9,8 @@ import { useAppleLogin } from "@/utils/use-apple-login";
 import { useGoogleLogin } from "@/utils/use-google-login";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { MotiView } from "moti";
-import React, { useMemo, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 
 const CARD_MAX_WIDTH = 520;
 const CARD_MIN_WIDTH = 300;
@@ -55,19 +54,48 @@ const PreSigninScreen = () => {
     // Apple sign-in is only supported on iOS.
     const showApple = useMemo(() => Platform.OS === "ios", []);
 
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const translateYAnim = useRef(new Animated.Value(CARD_TRANSLATE_Y)).current;
+    const scaleAnim = useRef(new Animated.Value(CARD_SCALE_FROM)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: CARD_ANIMATION_DURATION,
+                delay: CARD_ANIMATION_DELAY,
+                useNativeDriver: true,
+            }),
+            Animated.timing(translateYAnim, {
+                toValue: 0,
+                duration: CARD_ANIMATION_DURATION,
+                delay: CARD_ANIMATION_DELAY,
+                useNativeDriver: true,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: CARD_ANIMATION_DURATION,
+                delay: CARD_ANIMATION_DELAY,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [fadeAnim, translateYAnim, scaleAnim]);
+
     return (
         <AppLayout>
             <View style={styles.container}>
                 <GlassBackground />
-                <MotiView
-                    from={{ opacity: 0, translateY: CARD_TRANSLATE_Y, scale: CARD_SCALE_FROM }}
-                    animate={{ opacity: 1, translateY: 0, scale: 1 }}
-                    transition={{
-                        type: "timing",
-                        duration: CARD_ANIMATION_DURATION,
-                        delay: CARD_ANIMATION_DELAY,
-                    }}
-                    style={styles.cardWrapper}
+                <Animated.View
+                    style={[
+                        styles.cardWrapper,
+                        {
+                            opacity: fadeAnim,
+                            transform: [
+                                { translateY: translateYAnim },
+                                { scale: scaleAnim },
+                            ],
+                        },
+                    ]}
                 >
                     <GlassCard>
                         <View style={styles.header}>
@@ -122,7 +150,7 @@ const PreSigninScreen = () => {
                         </Text>
                         {error && <Text style={styles.errorText}>{error}</Text>}
                     </GlassCard>
-                </MotiView>
+                </Animated.View>
             </View>
             <BottomSheetScrollContainer
                 isVisible={termsVisible}
