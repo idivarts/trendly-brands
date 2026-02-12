@@ -200,21 +200,21 @@ const AutoScrollColumn = ({
     }));
 
     return Platform.OS === "web" ? (
-    <View style={stylesLocal.showcaseColumn}>
-        <Animated.View style={animatedStyle}>
-            {loopItems.map((item, index) => (
-                <View
-                    key={`${item.id}-${index}`}
-                    style={stylesLocal.showcaseCardWrapper}
-                >
-                    <InfluencerCard item={item} isCollapsed />
-                </View>
-            ))}
-        </Animated.View>
-    </View>
-) : (
-    null
-);
+        <View style={stylesLocal.showcaseColumn}>
+            <Animated.View style={animatedStyle}>
+                {loopItems.map((item, index) => (
+                    <View
+                        key={`${item.id}-${index}`}
+                        style={stylesLocal.showcaseCardWrapper}
+                    >
+                        <InfluencerCard item={item} isCollapsed />
+                    </View>
+                ))}
+            </Animated.View>
+        </View>
+    ) :
+        null;
+
 };
 
 type AuthFormMode = "signup" | "login" | "forgot";
@@ -301,19 +301,21 @@ const SignUpScreen = () => {
                         !isWideLayout && stylesLocal.contentColumn,
                     ]}
                 >
-                    <View
-                        style={[
-                            stylesLocal.leftPane,
-                            !isWideLayout && stylesLocal.leftPaneStacked,
-                        ]}
-                    >
-                        <Text style={stylesLocal.showcaseTitle}>{SHOWCASE_TITLE}</Text>
-                        <Text style={stylesLocal.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
-                        <View style={[stylesLocal.showcaseContainer, { height: showcaseHeight }]}>
-                            <AutoScrollColumn items={leftItems} direction={1} />
-                            <AutoScrollColumn items={rightItems} direction={-1} />
+                    {isWideLayout && (
+                        <View
+                            style={[
+                                stylesLocal.leftPane,
+                                !isWideLayout && stylesLocal.leftPaneStacked,
+                            ]}
+                        >
+                            <Text style={stylesLocal.showcaseTitle}>{SHOWCASE_TITLE}</Text>
+                            <Text style={stylesLocal.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
+                            <View style={[stylesLocal.showcaseContainer, { height: showcaseHeight }]}>
+                                <AutoScrollColumn items={leftItems} direction={1} />
+                                <AutoScrollColumn items={rightItems} direction={-1} />
+                            </View>
                         </View>
-                    </View>
+                    )}
                     <View
                         style={[
                             stylesLocal.rightPane,
@@ -624,6 +626,7 @@ const stylesLocal = {
     },
     contentColumn: {
         flexDirection: "column" as const,
+        justifyContent: "flex-start" as const,
     },
     leftPane: {
         flex: LEFT_COLUMN_WIDTH,

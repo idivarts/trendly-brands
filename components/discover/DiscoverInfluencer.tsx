@@ -22,9 +22,11 @@ import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     Linking,
     ListRenderItemInfo,
+    Platform,
     StyleSheet,
     Text
 } from "react-native";
@@ -789,7 +791,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 style={{
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: 16,
+                    paddingHorizontal: Platform.OS === "web" ? 120 : 16,
 
                 }}
             >
