@@ -46,7 +46,7 @@ const LetsStartMobile = () => {
     }
 
     return (
-        <AppLayout withWebPadding={false}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["left","right","bottom"]}>
             {/* ScrollView allows content to fit on small screens without cut-off */}
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
