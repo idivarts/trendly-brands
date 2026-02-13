@@ -1,6 +1,4 @@
-import { INITIAL_MANAGER_DATA } from "@/constants/Manager";
 import { useStorageState } from "@/hooks";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -15,18 +13,15 @@ import { resetAndNavigate } from "@/utils/router";
 import { checkTestUsers } from "@/utils/test-users";
 import { useRouter } from "expo-router";
 import {
-    createUserWithEmailAndPassword,
     sendEmailVerification,
     signInWithEmailAndPassword,
     signOut,
     UserCredential,
 } from "firebase/auth";
 import {
-    collection,
     doc,
     getDoc,
     onSnapshot,
-    setDoc,
     updateDoc,
 } from "firebase/firestore";
 import {
@@ -200,53 +195,75 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             return;
         }
 
-        await createUserWithEmailAndPassword(AuthApp, email, password)
-            .then(async (userCredential) => {
-                const colRef = collection(FirestoreDB, "managers");
-                const docRef = doc(colRef, userCredential.user.uid);
+        try {
+            const response = await HttpWrapper.fetch("/onboard/signup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    name,
+                }),
+            });
 
+            const data = await response.json();
+            Console.log("Signup API Response:", data);
 
-                let userData: IManagers = {
-                    ...INITIAL_MANAGER_DATA,
-                    name: name,
-                    email: email,
-                    creationTime: Date.now(),
-                };
+            // Store the session using the user ID or token from the response
+            const userId = data.id || data.userId || data.user?.id || data.data?.id;
+            Console.log("Extracted User ID:", userId);
 
-                await setDoc(docRef, userData);
+            if (userId) {
+                setSession(userId);
 
-                await sendEmailVerification(userCredential.user).then(() => {
-                    Toaster.success("Verification email sent successfully.");
+                // Call the chat auth endpoint
+                HttpWrapper.fetch("/api/v2/chat/auth", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                 });
 
-                const checkVerification = async () => {
-                    await userCredential.user.reload();
-                    if (userCredential.user.emailVerified) {
-                        firebaseSignUp(userCredential)
-                    } else {
-                        setTimeout(checkVerification, 2000);
-                    }
-                };
+                // Navigate to brand onboarding
+                resetAndNavigate({
+                    pathname: "/onboarding-your-brand",
+                    params: {
+                        firstBrand: "true",
+                    },
+                });
 
-                checkVerification();
-            })
-            .catch((error) => {
-                let errorMessage = "An unknown error occurred. Please try again.";
-                switch (error.code) {
-                    case "auth/email-already-in-use":
-                        errorMessage = "The email address is already in use.";
-                        break;
-                    case "auth/invalid-email":
-                        errorMessage = "The email address is not valid.";
-                        break;
-                    case "auth/weak-password":
-                        errorMessage = "The password is too weak.";
-                        break;
-                    default:
-                        errorMessage = error.message;
-                }
+                Toaster.success("Account created successfully!");
+            } else {
+                // Signup successful but no user ID returned - redirect to login
+                Toaster.success(data.message || "Account created successfully. Please log in with your credentials.");
+                router.push({
+                    pathname: "/(auth)/login",
+                    params: { email },
+                });
+            }
+        } catch (error: any) {
+            let errorMessage = "An unknown error occurred. Please try again.";
+
+            // Handle Response object thrown by HttpWrapper
+            if (error instanceof Response) {
+                error.json().then((data) => {
+                    const apiErrorMessage = data.message || data.error || "Sign up failed";
+                    Toaster.error(apiErrorMessage);
+                    Console.error("API Error Response:", data);
+                }).catch(() => {
+                    Toaster.error("Sign up failed");
+                });
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
                 Toaster.error(errorMessage);
-            });
+            } else {
+                Toaster.error(errorMessage);
+            }
+
+            Console.error("Signup error:", error);
+        }
     };
 
     const signOutManager = async () => {
