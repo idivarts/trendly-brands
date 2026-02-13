@@ -181,8 +181,12 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                 width: xl ? undefined : "100%",
                                 backgroundColor: Colors(theme).primary,
                                 borderRadius: 14,
-                                paddingRight: 2,
-                                paddingBottom: 2,
+                                shadowColor: Colors(theme).primary,
+                                shadowOffset: { width: 2, height: 4 },
+                                shadowOpacity: 0.25,
+                                shadowRadius: 8,
+                                elevation: 5,
+                                
                             }}>
                                 <View style={{
                                     flex: 1,
@@ -191,7 +195,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                     borderRadius: 12,
                                     backgroundColor: Colors(theme).card,
                                     borderStyle: item.status === "draft" ? "dashed" : "solid",
-                                    transform: [{ translateX: -4 }, { translateY: -4 }],
+                                    
                                 }}>
                                     <View
                                         key={item.id}
