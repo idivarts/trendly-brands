@@ -239,41 +239,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     useEffect(() => {
         if (!initialInfluencerId || autoOpenedId === initialInfluencerId) return;
 
-        console.log("[DiscoverInfluencer] Auto-open effect running:", {
-            initialInfluencerId,
-            dataLength: data.length,
-            loading,
-            alreadyOpened: autoOpenedId,
-        });
-
-
         if (data.length === 0 && loading) {
-            console.log("[DiscoverInfluencer] Data still loading, skipping...");
             return;
         }
 
         const influencerMatch = data.find((item) => item.id === initialInfluencerId);
-        console.log("[DiscoverInfluencer] Search result:", {
-            found: !!influencerMatch,
-            matchId: influencerMatch?.id,
-        });
 
         if (influencerMatch) {
-            console.log("[DiscoverInfluencer]  Found influencer in data, opening profile:", influencerMatch.name);
             openProfile(influencerMatch);
             setAutoOpenedId(initialInfluencerId);
         } else if (!loading && data.length > 0) {
-
-            console.log("[DiscoverInfluencer] Influencer not in initial results, fetching from Firestore...");
             (async () => {
                 try {
-
                     const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
                     const docSnap = await getDoc(docRef);
 
                     if (docSnap.exists()) {
                         const body = docSnap.data();
-                        console.log("[DiscoverInfluencer] Fetched influencer from Firestore:", body);
 
                         if (body?.id) {
                             const influencerItem: InfluencerItem = {
@@ -286,15 +268,12 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 views_count: body.views_count || 0,
                                 engagement_rate: body.engagement_rate || 0,
                             };
-                            console.log("[DiscoverInfluencer] ✅ Opening profile from Firestore fetch");
                             openProfile(influencerItem);
                             setAutoOpenedId(initialInfluencerId);
                         }
-                    } else {
-                        console.log("[DiscoverInfluencer] Influencer document not found in Firestore");
                     }
                 } catch (error) {
-                    console.error("[DiscoverInfluencer] Error fetching influencer from Firestore:", error);
+                    console.error("[DiscoverInfluencer] Error fetching influencer:", error);
                 }
             })();
         }
@@ -312,20 +291,14 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
         const seen = new Set<string>();
-        const duplicates: string[] = [];
         const result = items.filter((item) => {
             if (!item?.id) return true;
             if (seen.has(item.id)) {
-                duplicates.push(`${item.name} (${item.username}) - ID: ${item.id}`);
                 return false;
             }
             seen.add(item.id);
             return true;
         });
-        if (duplicates.length > 0) {
-            console.log('🔍 DEDUPLICATION - Removed duplicates:', duplicates);
-            console.log('🔍 Original count:', items.length, '| After dedup:', result.length);
-        }
         return result;
     }, []);
 
@@ -340,13 +313,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
-            console.log("[DiscoverInfluencer] Data update:", {
-                loading: Boolean(loading),
-                received: nextData.length,
-                page,
-                sort,
-            });
-            // Only close right panel on mobile after applying filters
             if (!xl) {
                 setRightPanel(false);
             }
@@ -357,8 +323,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     );
 
     useEffect(() => {
-        if (defaultAdvanceFilters && !appliedFilters) {
-            console.log("🔥 Default Filters Applied:", defaultAdvanceFilters);
+        if (defaultAdvanceFilters) {
             setAppliedFilters(defaultAdvanceFilters);
 
             discoverCommunication.current?.({

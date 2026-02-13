@@ -83,11 +83,13 @@ interface IProps {
     FilterApplyRef: MutableRefObject<any>;
     defaultAdvanceFilters?: IAdvanceFilters;
     onClearStoredFilters?: () => void;
+    onFiltersApplied?: (filters: IAdvanceFilters) => void;
 }
 const TrendlyAdvancedFilter = ({
     FilterApplyRef,
     defaultAdvanceFilters,
     onClearStoredFilters,
+    onFiltersApplied,
 }: IProps) => {
     const theme = useTheme();
     const styles = stylesFn(theme);
@@ -208,7 +210,6 @@ const TrendlyAdvancedFilter = ({
                 const saved = await PersistentStorage.get(key);
                 if (!saved) return;
                 const parsed = JSON.parse(saved);
-                console.log("Loaded saved filters for brand:", key, parsed);
                 setFieldsFromFilters(parsed as Partial<IAdvanceFilters>);
             } catch (err) {
                 console.warn("Failed to load saved filters:", err);
@@ -219,10 +220,8 @@ const TrendlyAdvancedFilter = ({
     }, [selectedBrand, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
-        console.log('📄 PAGE CHANGE - Incoming page:', page, 'Current sort:', sort);
         if (page) {
             const newOffset = (page - 1) * 16;
-            console.log('📄 Calculated offset:', newOffset, '= (', page, '- 1) * 16');
             setOffset(newOffset);
         }
         setSort(sort as any);
@@ -343,9 +342,6 @@ const TrendlyAdvancedFilter = ({
             ),
         } as const;
 
-        console.log("Payload Object", payload, followerMin, followerMax);
-
-        // prune empty objects/undefined recursively
         const prune = (obj: any): any => {
             if (obj == null || typeof obj !== "object") return obj;
             if (Array.isArray(obj)) return obj;
@@ -382,9 +378,6 @@ const TrendlyAdvancedFilter = ({
             return;
         }
         const formData = getFormData();
-        console.log('🚀 API CALL - Reset:', reset);
-        console.log('🚀 Offset:', formData.offset, '| Limit:', formData.limit);
-        console.log('🚀 Page number being sent:', formData.offset / 16 + 1);
         discoverCommunication.current?.({
             loading: true,
             data: [],
@@ -402,11 +395,6 @@ const TrendlyAdvancedFilter = ({
                 }
             );
             const rawText = await res.text();
-            console.log(`[Discover] API response (${label}):`, {
-                status: res.status,
-                ok: res.ok,
-                body: rawText,
-            });
             let body: any = null;
             try {
                 body = rawText ? JSON.parse(rawText) : {};
@@ -418,38 +406,11 @@ const TrendlyAdvancedFilter = ({
 
         const applyData = (body: any) => {
             const d = body.data as InfluencerItem[];
-            console.log(
-                "🔥 API Response - Returned influencers count:",
-                d.length,
-                "| Expected:",
-                formData.limit
-            );
-            console.log("🔥 Full API response body:", {
-                totalReturned: d.length,
-                hasMore: body.hasMore,
-                total: body.total,
-            });
 
-            // Check for duplicates in the API response itself
             const ids = d.map((item) => item.id);
             const uniqueIds = new Set(ids);
-            if (ids.length !== uniqueIds.size) {
-                console.log("⚠️ BACKEND ISSUE - API returned duplicate IDs in same response!");
-                const duplicateIds = ids.filter(
-                    (id, index) => ids.indexOf(id) !== index
-                );
-                console.log("⚠️ Duplicate IDs:", duplicateIds);
-            }
 
             const newData = [...(reset ? [] : data), ...d];
-            console.log(
-                "🔥 Data accumulation - Previous:",
-                data.length,
-                "| New:",
-                d.length,
-                "| Total:",
-                newData.length
-            );
             setData(newData);
             discoverCommunication.current?.({
                 loading: false,
@@ -470,10 +431,6 @@ const TrendlyAdvancedFilter = ({
                 const response = e as Response;
                 status = response.status;
                 rawText = await response.text();
-                console.log("[Discover] API error response:", {
-                    status: response.status,
-                    body: rawText,
-                });
                 try {
                     const parsed = rawText ? JSON.parse(rawText) : {};
                     message =
@@ -495,7 +452,6 @@ const TrendlyAdvancedFilter = ({
                     selectedLocations: undefined,
                     descKeywords: undefined,
                 };
-                console.log("[Discover] Retrying without array filters:", strippedPayload);
                 try {
                     const { body } = await runRequest(strippedPayload, "fallback-no-arrays");
                     Toaster.error(
@@ -506,7 +462,6 @@ const TrendlyAdvancedFilter = ({
                     applyData(body);
                     return;
                 } catch (retryError) {
-                    console.log("[Discover] Fallback request failed:", retryError);
                 }
             }
 
@@ -605,14 +560,12 @@ const TrendlyAdvancedFilter = ({
             const key = `defaultFilter-${selectedBrand?.id}`;
 
             await PersistentStorage.set(key, JSON.stringify(payload));
-            console.log("Saved filter for brand:", key, payload);
-
+            onFiltersApplied?.(payload);
             callApiRef.current(true);
         } else {
             const key = `defaultFilter-${selectedBrand?.id}`;
             try {
                 await PersistentStorage.clear(key);
-                console.log("Cleared saved filter for brand:", key);
                 onClearStoredFilters?.();
             } catch (err) {
                 console.warn("Failed to clear saved filter:", err);

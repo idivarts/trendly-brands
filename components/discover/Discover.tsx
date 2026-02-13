@@ -16,6 +16,7 @@ import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
@@ -51,7 +52,7 @@ const DiscoverComponent = ({
     initialInfluencerId?: string;
 }) => {
     const { manager } = useAuthContext();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, updateBrand } = useBrandContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const [rightPanel, setRightPanel] = useState(false);
@@ -69,11 +70,14 @@ const DiscoverComponent = ({
     const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
         null
     );
+    const [isFiltersCleared, setIsFiltersCleared] = useState(false);
+    const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
 
     useEffect(() => {
         if (!selectedBrand) return;
         if (!useStoredFilters) {
             setStoredFilters(null);
+            setHasLoadedStoredFilters(true);
             return;
         }
 
@@ -84,12 +88,16 @@ const DiscoverComponent = ({
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    console.log(" Loaded last-applied filter from storage:", parsed);
                     setStoredFilters(parsed);
+                    setIsFiltersCleared(false);
                 } catch (e) {
-                    console.log(" Failed to parse saved filter:", saved);
+                    setStoredFilters(null);
                 }
+            } else {
+                setStoredFilters(null);
             }
+
+            setHasLoadedStoredFilters(true);
         })();
     }, [selectedBrand, useStoredFilters]);
 
@@ -104,11 +112,6 @@ const DiscoverComponent = ({
 
     useEffect(() => {
         const unsubs = OpenFilterRightPanel.subscribe(() => {
-            console.log("[Discover] Filter icon pressed", {
-                showRightPanel,
-                filterSheetIndex,
-                selectedDb,
-            });
             if (!showRightPanel) return;
             setFilterSheetIndex(0);
             if (!isWeb) {
@@ -122,12 +125,20 @@ const DiscoverComponent = ({
         return () => unsubs.unsubscribe();
     }, [showRightPanel, filterSheetIndex, selectedDb, isWeb]);
 
-    // Always show survey on login
-    const [showSurvey, setShowSurvey] = useState(true);
+    const hasBrandPreferences = selectedBrand?.discoverPreferences &&
+        Object.values(selectedBrand.discoverPreferences).some(
+            (v) =>
+                v !== undefined &&
+                v !== null &&
+                v !== "" &&
+                !(Array.isArray(v) && v.length === 0)
+        );
+    const [showSurvey, setShowSurvey] = useState(!hasBrandPreferences);
 
-    // Determine which filter source to use:
-    // If collaboration passed defaultAdvanceFilters → use only that.
-    // Else → use stored persistent filters.
+    useEffect(() => {
+        setShowSurvey(!hasBrandPreferences);
+    }, [hasBrandPreferences]);
+
     const hasMeaningfulDefaults =
         defaultAdvanceFilters &&
         Object.values(defaultAdvanceFilters).some(
@@ -137,21 +148,59 @@ const DiscoverComponent = ({
                 v !== "" &&
                 !(Array.isArray(v) && v.length === 0)
         );
+
     const filtersToUse = hasMeaningfulDefaults
         ? defaultAdvanceFilters
-        : useStoredFilters
-            ? storedFilters || undefined
+        : useStoredFilters && hasLoadedStoredFilters
+            ? storedFilters !== null
+                ? storedFilters
+                : isFiltersCleared
+                    ? undefined
+                    : selectedBrand?.discoverPreferences
+            : undefined;
+
+    const filtersForChildren = hasMeaningfulDefaults
+        ? defaultAdvanceFilters
+        : useStoredFilters && hasLoadedStoredFilters && storedFilters !== null
+            ? storedFilters
             : undefined;
 
     const handleSurveyComplete = async (filters: IAdvanceFilters) => {
-        // Save the filters for this session and future logins
-        if (selectedBrand) {
-            const key = `defaultFilter-${selectedBrand.id}`;
-            await PersistentStorage.set(key, JSON.stringify(filters));
-            setStoredFilters(filters);
+        try {
+            if (selectedBrand?.id) {
+                const cleanFilters = (obj: any): any => {
+                    const cleaned: Record<string, any> = {};
+                    for (const [key, value] of Object.entries(obj)) {
+                        if (value !== undefined && value !== null) {
+                            if (Array.isArray(value)) {
+                                const cleanedArray = value.filter(v => v !== undefined && v !== null);
+                                if (cleanedArray.length > 0) {
+                                    cleaned[key] = cleanedArray;
+                                }
+                            } else {
+                                cleaned[key] = value;
+                            }
+                        }
+                    }
+                    return cleaned;
+                };
+
+                const cleanedFilters = cleanFilters(filters);
+
+                await updateBrand(selectedBrand.id, {
+                    discoverPreferences: cleanedFilters,
+                });
+
+                const surveyKey = `survey-completed-${selectedBrand.id}`;
+                await PersistentStorage.set(surveyKey, "true");
+
+                Toaster.success("Preferences saved!");
+            }
+        } catch (error) {
+            Toaster.error("Failed to save preferences. Please try again");
+            return;
         }
 
-        // Hide survey for current session
         setShowSurvey(false);
     };
 
@@ -209,8 +258,15 @@ const DiscoverComponent = ({
                         )}
                     >
                         <RightPanelDiscover
-                            defaultAdvanceFilters={filtersToUse}
-                            onClearStoredFilters={() => setStoredFilters(null)}
+                            defaultAdvanceFilters={filtersForChildren}
+                            onClearStoredFilters={() => {
+                                setStoredFilters(null);
+                                setIsFiltersCleared(true);
+                            }}
+                            onFiltersApplied={(filters) => {
+                                setStoredFilters(filters);
+                                setIsFiltersCleared(false);
+                            }}
                             disableCollapse
                             style={{
                                 maxWidth: "100%",
@@ -235,8 +291,15 @@ const DiscoverComponent = ({
                     >
                         <ScrollView style={sheetStyles.sheetScroll}>
                             <RightPanelDiscover
-                                defaultAdvanceFilters={filtersToUse}
-                                onClearStoredFilters={() => setStoredFilters(null)}
+                                defaultAdvanceFilters={filtersForChildren}
+                                onClearStoredFilters={() => {
+                                    setStoredFilters(null);
+                                    setIsFiltersCleared(true);
+                                }}
+                                onFiltersApplied={(filters) => {
+                                    setStoredFilters(filters);
+                                    setIsFiltersCleared(false);
+                                }}
                                 disableCollapse
                                 style={{
                                     maxWidth: "100%",

@@ -26,6 +26,7 @@ interface IProps {
     style?: StyleProp<ViewStyle>;
     defaultAdvanceFilters?: IAdvanceFilters;
     onClearStoredFilters?: () => void;
+    onFiltersApplied?: (filters: IAdvanceFilters) => void;
     disableCollapse?: boolean;
 }
 
@@ -35,6 +36,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
     style,
     defaultAdvanceFilters,
     onClearStoredFilters,
+    onFiltersApplied,
     disableCollapse = false,
 }) => {
     const {
@@ -267,6 +269,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                                 FilterApplyRef={filterApply}
                                 defaultAdvanceFilters={defaultAdvanceFilters}
                                 onClearStoredFilters={onClearStoredFilters}
+                                onFiltersApplied={onFiltersApplied}
                             />
                         )}
                         {selectedDb == "modash" && <ModashFilter />}
@@ -278,9 +281,10 @@ const RightPanelDiscover: React.FC<IProps> = ({
                             <Button
                                 mode="text"
                                 style={styles.clearBtn}
-                                onPress={() => {
-                                    filterApply.current?.("clear");
-                                    // FilterApplySubject.next({ action: "clear" })
+                                onPress={async () => {
+                                    await filterApply.current?.("clear");
+                                    // Close/collapse panel after clearing filters
+                                    setTimeout(() => collapsePanel(), 100);
                                 }}
                             >
                                 Clear all
@@ -289,11 +293,10 @@ const RightPanelDiscover: React.FC<IProps> = ({
                                 mode="contained"
                                 style={styles.actionBtn}
                                 icon="filter-variant"
-                                onPress={() => {
-                                    filterApply.current?.("apply");
+                                onPress={async () => {
+                                    await filterApply.current?.("apply");
                                     // Close/collapse panel after applying filters on both mobile and web
-                                    collapsePanel();
-                                    // FilterApplySubject.next({ action: "apply" })
+                                    setTimeout(() => collapsePanel(), 100);
                                 }}
                             >
                                 Apply
