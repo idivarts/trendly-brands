@@ -13,6 +13,7 @@ import { resetAndNavigate } from "@/utils/router";
 import { checkTestUsers } from "@/utils/test-users";
 import { useRouter } from "expo-router";
 import {
+    createUserWithEmailAndPassword,
     sendEmailVerification,
     signInWithEmailAndPassword,
     signOut,
@@ -196,6 +197,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         }
 
         try {
+            // First, create the account on the custom backend
             const response = await HttpWrapper.fetch("/onboard/signup", {
                 method: "POST",
                 headers: {
@@ -211,38 +213,55 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             const data = await response.json();
             Console.log("Signup API Response:", data);
 
-            // Store the session using the user ID or token from the response
-            const userId = data.id || data.userId || data.user?.id || data.data?.id;
-            Console.log("Extracted User ID:", userId);
+            // Try to extract user ID from backend response
+            let userId = data.id || data.userId || data.user?.id || data.data?.id;
 
-            if (userId) {
-                setSession(userId);
-
-                // Call the chat auth endpoint
-                HttpWrapper.fetch("/api/v2/chat/auth", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                });
-
-                // Navigate to brand onboarding
-                resetAndNavigate({
-                    pathname: "/onboarding-your-brand",
-                    params: {
-                        firstBrand: "true",
-                    },
-                });
-
-                Toaster.success("Account created successfully!");
-            } else {
-                // Signup successful but no user ID returned - redirect to login
-                Toaster.success(data.message || "Account created successfully. Please log in with your credentials.");
-                router.push({
-                    pathname: "/(auth)/login",
-                    params: { email },
-                });
+            // If no user ID from backend, create Firebase auth and use that as session
+            if (!userId) {
+                Console.log("No user ID from backend, creating Firebase auth...");
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(
+                        AuthApp,
+                        email,
+                        password
+                    );
+                    userId = userCredential.user.uid;
+                    Console.log("Firebase UID created:", userId);
+                } catch (firebaseError: any) {
+                    // If email already exists in Firebase, try to sign in
+                    if (firebaseError.code === "auth/email-already-in-use") {
+                        const signInResult = await signInWithEmailAndPassword(
+                            AuthApp,
+                            email,
+                            password
+                        );
+                        userId = signInResult.user.uid;
+                        Console.log("Using existing Firebase UID:", userId);
+                    } else {
+                        throw firebaseError;
+                    }
+                }
             }
+
+            setSession(userId);
+
+            // Call the chat auth endpoint
+            HttpWrapper.fetch("/api/v2/chat/auth", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            // Navigate to brand onboarding
+            resetAndNavigate({
+                pathname: "/onboarding-your-brand",
+                params: {
+                    firstBrand: "true",
+                },
+            });
+
+            Toaster.success("Account created successfully!");
         } catch (error: any) {
             let errorMessage = "An unknown error occurred. Please try again.";
 
