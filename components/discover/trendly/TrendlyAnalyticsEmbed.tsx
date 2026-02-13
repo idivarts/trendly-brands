@@ -6,6 +6,7 @@ import {
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { Brand } from "@/types/Brand";
 import { useTheme } from "@react-navigation/native";
@@ -42,6 +43,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const [isSaving, setIsSaving] = useState(false);
         const [saveError, setSaveError] = useState<string | null>(null);
         const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({});
+        const [isRescraping, setIsRescraping] = useState(false);
         const isAdmin = manager?.isAdmin === true;
         const hasChanges = Object.keys(editedSocial).length > 0;
         const theme = useTheme();
@@ -150,14 +152,49 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             }
         };
 
+        const handleRescrape = async () => {
+            if (!selectedBrand?.id) return;
+
+            try {
+                setIsRescraping(true);
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}/rescrape`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to rescrape. Please try again."
+                    );
+                }
+
+                Toaster.success("Rescrape initiated successfully!");
+                // Optionally reload the influencer data
+                await loadInfluencer();
+            } catch (e: any) {
+                console.error("Error rescrapting influencer:", e);
+                const errorMessage = e?.message || "Failed to rescrape. Please try again.";
+                Toaster.error(errorMessage);
+            } finally {
+                setIsRescraping(false);
+            }
+        };
+
         React.useImperativeHandle(
             ref,
             () => ({
                 handleEditClick,
+                handleRescrape,
                 isAdmin,
                 openEditModal: handleEditClick,
             }),
-            [handleEditClick, isAdmin]
+            [handleEditClick, handleRescrape, isAdmin]
         );
 
         useEffect(() => {
