@@ -13,7 +13,6 @@ import { resetAndNavigate } from "@/utils/router";
 import { checkTestUsers } from "@/utils/test-users";
 import { useRouter } from "expo-router";
 import {
-    createUserWithEmailAndPassword,
     sendEmailVerification,
     signInWithEmailAndPassword,
     signOut,
@@ -214,33 +213,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             Console.log("Signup API Response:", data);
 
             // Try to extract user ID from backend response
-            let userId = data.id || data.userId || data.user?.id || data.data?.id;
+            const userId = data.id || data.userId || data.user?.id || data.data?.id;
 
-            // If no user ID from backend, create Firebase auth and use that as session
             if (!userId) {
-                Console.log("No user ID from backend, creating Firebase auth...");
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(
-                        AuthApp,
-                        email,
-                        password
-                    );
-                    userId = userCredential.user.uid;
-                    Console.log("Firebase UID created:", userId);
-                } catch (firebaseError: any) {
-                    // If email already exists in Firebase, try to sign in
-                    if (firebaseError.code === "auth/email-already-in-use") {
-                        const signInResult = await signInWithEmailAndPassword(
-                            AuthApp,
-                            email,
-                            password
-                        );
-                        userId = signInResult.user.uid;
-                        Console.log("Using existing Firebase UID:", userId);
-                    } else {
-                        throw firebaseError;
-                    }
-                }
+                throw new Error("Sign up failed: missing user id from API");
             }
 
             setSession(userId);
