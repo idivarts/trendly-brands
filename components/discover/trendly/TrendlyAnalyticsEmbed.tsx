@@ -1,3 +1,4 @@
+import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import {
     ISocialAnalytics,
@@ -6,9 +7,11 @@ import {
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
-import { Brand } from "@/types/Brand";
-import { collection, doc, updateDoc } from "firebase/firestore"
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
+import { Brand } from "@/types/Brand";
+import { getTrustabilityLevel } from "@/utils/trustability";
+import { useTheme } from "@react-navigation/native";
+import { collection, doc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
 import {
@@ -22,8 +25,6 @@ import {
 import { StatChip } from "../StatChip";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 
 interface IProps {
     influencer: InfluencerItem;
@@ -250,9 +251,14 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             >
                                 Trustability
                             </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.trustablity}
-                                <Text variant={labelVariant}>%</Text>
+                            <Text
+                                variant={valueVariant}
+                                style={{
+                                    color: getTrustabilityLevel(analytics.trustablity)?.color || "#666",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                {getTrustabilityLevel(analytics.trustablity)?.label || "—"} ({analytics.trustablity}%)
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Signals from past collabs, engagement quality
@@ -417,15 +423,15 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                 <Card.Title title="Averages & Rates" />
                 <Card.Content>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black} />
                         <StatChip label="Median Likes" value={social.average_likes} textColor={Colors(theme).black} />
-                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black} />
                         <StatChip
                             label="Engagement Rate %"
                             value={social.engagement_rate || 0}
                             textColor={Colors(theme).black}
                         />
-                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black}/>
+                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black} />
                     </View>
                 </Card.Content>
             </Card>
@@ -441,7 +447,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                 {social.reels.map((r) => (
                                     <Card
                                         key={r.id}
-                                        style={{ width: 140, marginRight: 12, borderWidth:1,borderColor:colors.border }}
+                                        style={{ width: 140, marginRight: 12, borderWidth: 1, borderColor: colors.border }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
                                         {!!r.thumbnail_url && (
@@ -477,7 +483,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="heart"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.likes_count)}
                                                 </Chip>
@@ -485,7 +491,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="comment-text"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.comments_count)}
                                                 </Chip>
