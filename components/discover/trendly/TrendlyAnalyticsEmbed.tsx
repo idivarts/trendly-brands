@@ -1,14 +1,14 @@
+import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import {
     ISocialAnalytics,
     ISocials,
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
-import { Brand } from "@/types/Brand";
-import { collection, doc, updateDoc } from "firebase/firestore"
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
+import { Brand } from "@/types/Brand";
+import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
 import {
@@ -22,8 +22,6 @@ import {
 import { StatChip } from "../StatChip";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 
 interface IProps {
     influencer: InfluencerItem;
@@ -89,16 +87,47 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         }, [initialSocial, initialAnalytics, onLoadingChange]);
 
         const handleSaveChanges = async () => {
-            if (!social?.id || !hasChanges) return;
+            if (!social?.id || !selectedBrand?.id || !hasChanges) return;
 
             try {
                 setIsSaving(true);
                 setSaveError(null);
                 const updatedSocial = { ...social, ...editedSocial };
-                const col = collection(FirestoreDB, "scrapped-socials");
-                const docRef = doc(col, social.id);
 
-                await updateDoc(docRef, updatedSocial);
+                // Prepare the request body with the API format
+                const requestBody = {
+                    name: updatedSocial.name,
+                    bio: updatedSocial.bio,
+                    category: updatedSocial.category,
+                    follower_count: updatedSocial.follower_count,
+                    following_count: updatedSocial.following_count,
+                    content_count: updatedSocial.content_count,
+                    profile_verified: updatedSocial.profile_verified,
+                    links: updatedSocial.links,
+                    gender: updatedSocial.gender,
+                    quality_score: updatedSocial.quality_score,
+                    niches: updatedSocial.niches,
+                    location: updatedSocial.location,
+                };
+
+                // Call the API using HttpWrapper
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(requestBody),
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to save changes. Please try again."
+                    );
+                }
 
                 setSocial(updatedSocial);
                 setIsEditModalVisible(false);
@@ -417,15 +446,15 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                 <Card.Title title="Averages & Rates" />
                 <Card.Content>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black} />
                         <StatChip label="Median Likes" value={social.average_likes} textColor={Colors(theme).black} />
-                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black} />
                         <StatChip
                             label="Engagement Rate %"
                             value={social.engagement_rate || 0}
                             textColor={Colors(theme).black}
                         />
-                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black}/>
+                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black} />
                     </View>
                 </Card.Content>
             </Card>
@@ -441,7 +470,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                 {social.reels.map((r) => (
                                     <Card
                                         key={r.id}
-                                        style={{ width: 140, marginRight: 12, borderWidth:1,borderColor:colors.border }}
+                                        style={{ width: 140, marginRight: 12, borderWidth: 1, borderColor: colors.border }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
                                         {!!r.thumbnail_url && (
@@ -477,7 +506,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="heart"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.likes_count)}
                                                 </Chip>
@@ -485,7 +514,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="comment-text"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.comments_count)}
                                                 </Chip>
