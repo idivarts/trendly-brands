@@ -20,6 +20,7 @@ import {
     where,
     writeBatch
 } from "firebase/firestore";
+import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
 
 interface NotificationContextProps {
@@ -53,31 +54,73 @@ export const NotificationContextProvider: React.FC<PropsWithChildren> = ({
         managerId: string
     ) => {
         const managerRef = doc(FirestoreDB, "managers", managerId);
-
         const notificationsRef = collection(managerRef, "notifications");
         const notificationsQuery = query(notificationsRef, orderBy("timeStamp", "desc"));
-        return onSnapshot(notificationsQuery, (snapshot) => {
-            const notifications: Notification[] = [];
-            snapshot.forEach((doc) => {
-                notifications.push({
-                    ...doc.data() as Notification,
-                    id: doc.id,
+        
+        // On web, use getDocs with polling instead of real-time listeners
+        if (Platform.OS === "web") {
+            const fetchAndSetNotifications = async () => {
+                try {
+                    const snapshot = await getDocs(notificationsQuery);
+                    const notifications: Notification[] = [];
+                    snapshot.forEach((doc) => {
+                        notifications.push({
+                            ...doc.data() as Notification,
+                            id: doc.id,
+                        });
+                    });
+
+                    const unreadNotifications = notifications.filter((notification) => !notification.isRead);
+                    setUnreadNotifications(unreadNotifications.length);
+                    setManagerNotifications(notifications);
+                } catch (error) {
+                    Console.error("Error fetching notifications on web:", error instanceof Error ? error.message : String(error));
+                }
+            };
+
+            // Initial fetch
+            fetchAndSetNotifications();
+
+            // Poll every 30 seconds on web
+            const intervalId = setInterval(fetchAndSetNotifications, 30000);
+            
+            return () => clearInterval(intervalId);
+        }
+
+        // On native platforms, use real-time listeners
+        try {
+            return onSnapshot(notificationsQuery, (snapshot) => {
+                const notifications: Notification[] = [];
+                snapshot.forEach((doc) => {
+                    notifications.push({
+                        ...doc.data() as Notification,
+                        id: doc.id,
+                    });
                 });
+
+                const unreadNotifications = notifications.filter((notification) => !notification.isRead);
+
+                setUnreadNotifications(unreadNotifications.length);
+
+                setManagerNotifications(notifications);
+            }, (error) => {
+                Console.error("Error in notification listener:", error instanceof Error ? error.message : String(error));
             });
-
-            const unreadNotifications = notifications.filter((notification) => !notification.isRead);
-
-            setUnreadNotifications(unreadNotifications.length);
-
-            setManagerNotifications(notifications);
-        });
+        } catch (error) {
+            Console.error("Error setting up notification listener:", error instanceof Error ? error.message : String(error));
+            return () => {};
+        }
     }
 
     useEffect(() => {
         if (manager && manager.id) {
-            const unsubscribe = fetchManagerNotifications(manager.id);
-            return () => {
-                unsubscribe()
+            try {
+                const unsubscribe = fetchManagerNotifications(manager.id);
+                return () => {
+                    unsubscribe();
+                }
+            } catch (error) {
+                Console.error("Error initializing notifications:", error instanceof Error ? error.message : String(error));
             }
         }
     }, [manager]);

@@ -28,6 +28,28 @@ const formatNumber = (n: number | undefined) => {
     return `${Math.round(n / 100_000_000) / 10}B`;
 };
 
+const formatQualityStars = (quality?: number | null) => {
+    if (quality === null || quality === undefined) return 0;
+    // If quality is in 0-5 range, use it directly
+    if (quality <= 5) {
+        return Math.round(quality);
+    }
+    // Otherwise, assume it's in 0-100 range and convert to 0-5
+    return Math.round(quality / 20);
+};
+
+const renderStars = (rating: number) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+        stars.push(
+            <Text key={i} style={{ fontSize: 14, marginRight: 3 }}>
+                {i <= rating ? "⭐" : "☆"}
+            </Text>
+        );
+    }
+    return stars;
+};
+
 const Avatar = ({
     item,
     parentWidth,
@@ -105,7 +127,7 @@ const NameSection = ({
     const colors = Colors(theme);
 
     return (
-        <View style={{ marginTop: isCollapsed ? 14 : 10, maxWidth: "60%" }}>
+        <View style={{ marginTop: isCollapsed ? 14 : 10, width: "100%" }}>
             <Text
                 numberOfLines={1}
                 ellipsizeMode="tail"
@@ -130,6 +152,15 @@ const NameSection = ({
             >
                 @{maskHandle(item.username)}
             </Text>
+
+            {(() => {
+                const quality = item.quality ?? (item as any).quality_score;
+                return quality !== undefined && quality !== null ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 8 }}>
+                        {renderStars(formatQualityStars(quality))}
+                    </View>
+                ) : null;
+            })()}
 
             <View style={{ marginTop: isCollapsed ? 14 : 10 }}>
                 {isStatusCard ? (

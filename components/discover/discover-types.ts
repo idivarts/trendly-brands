@@ -4,6 +4,8 @@ export type InfluencerItem = SocialsBrief & {
     // For invitation card
     invitedAt?: number; // timestamp in milliseconds
     status?: string;
+    quality?: number; // Quality score (0-100)
+    quality_score?: number; // Alternative property name for quality
 };
 
 export type InfluencerInviteUnit = InfluencerItem & {

@@ -14,7 +14,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { collection, doc, onSnapshot } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
     Platform,
@@ -105,16 +105,38 @@ export default function PricingPage() {
 
     useEffect(() => {
         if (selectedBrand?.id) {
-            const bSnapShop = onSnapshot(doc(collection(FirestoreDB, "brands"), selectedBrand.id), (data) => {
-                setMyBrand({
-                    ...data.data() as any,
-                    id: data.id
+            if (Platform.OS === "web") {
+                // On web, use polling instead of real-time listeners
+                const fetchBrandData = async () => {
+                    try {
+                        const snap = await getDocs(collection(FirestoreDB, "brands"));
+                        const brandDoc = snap.docs.find(d => d.id === selectedBrand.id);
+                        if (brandDoc) {
+                            setMyBrand({
+                                ...brandDoc.data() as any,
+                                id: brandDoc.id
+                            })
+                        }
+                    } catch (error) {
+                        Toaster.error("Something went wrong!", "Cant load your brand")
+                    }
+                };
+                fetchBrandData();
+                const intervalId = setInterval(fetchBrandData, 30000);
+                return () => clearInterval(intervalId);
+            } else {
+                // On native platforms, use real-time listeners
+                const bSnapShop = onSnapshot(doc(collection(FirestoreDB, "brands"), selectedBrand.id), (data) => {
+                    setMyBrand({
+                        ...data.data() as any,
+                        id: data.id
+                    })
+                }, (err) => {
+                    Toaster.error("Something went wrong!", "Cant load your brand")
                 })
-            }, (err) => {
-                Toaster.error("Something went wrong!", "Cant load your brand")
-            })
 
-            return () => bSnapShop()
+                return () => bSnapShop()
+            }
         }
     }, [selectedBrand])
 

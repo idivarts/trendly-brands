@@ -24,6 +24,7 @@ import {
     DocumentData,
     documentId,
     DocumentReference,
+    getDoc,
     getDocs,
     onSnapshot,
     query,
@@ -99,13 +100,33 @@ export const BrandContextProvider: React.FC<
         if (!selectedBrand?.id) return;
 
         const sBrandRef = doc(collection(FirestoreDB, "brands"), selectedBrand.id);
-        const unsubscribe = onSnapshot(sBrandRef, (snapshot) => {
-            const bData = snapshot.data() as IBrands;
-            setSelectedBrandHandler({ ...bData, id: selectedBrand.id }, false);
-        });
-        return () => {
-            unsubscribe();
-        };
+        
+        if (Platform.OS === "web") {
+            // On web, use getDoc polling instead of real-time listeners
+            const fetchBrandData = async () => {
+                try {
+                    const snapshot = await getDoc(sBrandRef);
+                    if (snapshot.exists()) {
+                        const bData = snapshot.data() as IBrands;
+                        setSelectedBrandHandler({ ...bData, id: selectedBrand.id }, false);
+                    }
+                } catch (error) {
+                    Console.error("Error fetching brand:", error instanceof Error ? error.message : String(error));
+                }
+            };
+            fetchBrandData();
+            const intervalId = setInterval(fetchBrandData, 30000);
+            return () => clearInterval(intervalId);
+        } else {
+            // On native platforms, use real-time listeners
+            const unsubscribe = onSnapshot(sBrandRef, (snapshot) => {
+                const bData = snapshot.data() as IBrands;
+                setSelectedBrandHandler({ ...bData, id: selectedBrand.id }, false);
+            });
+            return () => {
+                unsubscribe();
+            };
+        }
     }, [selectedBrand?.id]);
 
     useEffect(() => {
@@ -119,10 +140,12 @@ export const BrandContextProvider: React.FC<
         );
         Console.log("Brand ID from member Query:", manager.id);
 
-        const unsubscribe = onSnapshot(membersQuery, async (membersSnapshot) => {
+        const fetchAndSetBrands = async () => {
             setLoading(true);
             try {
                 Console.log("Brand ID from member Inside:", manager.id);
+                const membersSnapshot = await getDocs(membersQuery);
+                
                 if (membersSnapshot.empty) {
                     Console.log("No members found for this manager");
                     setBrands([]);
@@ -181,14 +204,91 @@ export const BrandContextProvider: React.FC<
                         } else await setSelectedBrandHandler(fetchedBrands[0], false);
                     }
                 });
+            } catch (error) {
+                Console.error("Error fetching brands:", error instanceof Error ? error.message : String(error));
             } finally {
                 setLoading(false);
             }
-        });
-
-        return () => {
-            unsubscribe();
         };
+
+        if (Platform.OS === "web") {
+            // On web, use polling instead of real-time listeners
+            fetchAndSetBrands();
+            const intervalId = setInterval(fetchAndSetBrands, 30000);
+            return () => clearInterval(intervalId);
+        } else {
+            // On native platforms, use real-time listeners
+            const unsubscribe = onSnapshot(membersQuery, async (membersSnapshot) => {
+                setLoading(true);
+                try {
+                    Console.log("Brand ID from member Inside:", manager.id);
+                    if (membersSnapshot.empty) {
+                        Console.log("No members found for this manager");
+                        setBrands([]);
+                        setSelectedBrandHandler(undefined, false);
+                        return;
+                    }
+
+                    const brandIds = new Set<string>();
+                    membersSnapshot.docs.forEach((doc) => {
+                        const member = doc.data() as IBrandsMembers;
+                        if (member.status === 0 || member.status > 1) {
+                            return;
+                        }
+
+                        const brandId = doc.ref.parent.parent?.id; // Get the brand ID from the member's document reference
+                        Console.log("Brand ID from member:", brandId);
+                        if (brandId) {
+                            brandIds.add(brandId);
+                        }
+                    });
+
+                    if (brandIds.size === 0) {
+                        Console.log("No brands associated with this manager");
+                        setBrands([]);
+                        setSelectedBrandHandler(undefined, false);
+                        return;
+                    }
+
+                    const brandsCollection = collection(FirestoreDB, "brands");
+                    const brandsQuery = query(
+                        brandsCollection,
+                        where(documentId(), "in", Array.from(brandIds))
+                    );
+
+                    await getDocs(brandsQuery).then(async (brandsSnapshot) => {
+                        const fetchedBrands: Brand[] = [];
+                        brandsSnapshot.docs.forEach((brandDoc) => {
+                            fetchedBrands.push({
+                                ...(brandDoc.data() as Brand),
+                                id: brandDoc.id,
+                            });
+                        });
+
+                        setBrands(fetchedBrands);
+
+                        if (fetchedBrands.length > 0 && !selectedBrand) {
+                            const bId = await PersistentStorage.get("selectedBrandId");
+                            Console.log("Selected Brand ID from storage:", bId);
+                            if (bId) {
+                                const brand = fetchedBrands.find((b) => b.id === bId);
+                                if (brand) {
+                                    await setSelectedBrandHandler(brand, false);
+                                } else {
+                                    await setSelectedBrandHandler(fetchedBrands[0], false);
+                                }
+                            } else await setSelectedBrandHandler(fetchedBrands[0], false);
+                        }
+                    });
+                } finally {
+                    setLoading(false);
+                }
+            });
+
+            return () => {
+                unsubscribe();
+            };
+        }
     }, [manager?.id]);
 
     useEffect(() => {

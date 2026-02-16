@@ -205,6 +205,23 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             }
         };
 
+        const formatQualityStars = (quality?: number | null) => {
+            if (quality === null || quality === undefined) return 0;
+            return Math.round(quality / 20);
+        };
+
+        const renderStars = (rating: number) => {
+            const stars = [];
+            for (let i = 1; i <= 5; i++) {
+                stars.push(
+                    <Text key={i} style={{ fontSize: 20, marginRight: 4 }}>
+                        {i <= rating ? "⭐" : "☆"}
+                    </Text>
+                );
+            }
+            return stars;
+        };
+
         const isNarrow = width < 520;
         const isTiny = width < 360;
         const smallCardWidth = isNarrow ? "48%" : "31%";
@@ -224,24 +241,6 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         justifyContent: "space-between",
                     }}
                 >
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Quality
-                            </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.quality}
-                                <Text variant={labelVariant}>%</Text>
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Higher = richer, classy, aesthetic creators
-                            </Text>
-                        </Card.Content>
-                    </Card>
-
                     <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
                         <Card.Content style={{ padding: contentPadding }}>
                             <Text

@@ -28,6 +28,7 @@ import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
+    Platform,
     Pressable,
     RefreshControl
 } from "react-native";
@@ -66,7 +67,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     const fetchProposals = async () => {
         try {
             if (!selectedBrand) {
-                return;
+                return () => {};
             }
 
             const collaborationCol = collection(FirestoreDB, "collaborations");
@@ -77,69 +78,132 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 orderBy("timeStamp", "desc")
             );
 
-            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-                const proposals = await Promise.all(
-                    querySnapshot.docs.map(async (doc) => {
-                        const data = {
-                            ...doc.data(),
-                            id: doc.id,
-                        };
+            const fetchAndSetProposals = async () => {
+                try {
+                    const querySnapshot = await getDocs(q);
+                    const proposals = await Promise.all(
+                        querySnapshot.docs.map(async (doc) => {
+                            const data = {
+                                ...doc.data(),
+                                id: doc.id,
+                            };
 
-                        // Fetch applications
-                        const applicationCol = collection(
-                            FirestoreDB,
-                            "collaborations",
-                            data.id,
-                            "applications"
-                        );
-                        const applicationSnapshot = await getDocs(applicationCol);
-                        const applications = applicationSnapshot.docs.map((appDoc) =>
-                            appDoc.data()
-                        );
-                        const acceptedApplications = applications.filter(
-                            (application) => application.status === "accepted"
-                        ).length;
+                            // Fetch applications
+                            const applicationCol = collection(
+                                FirestoreDB,
+                                "collaborations",
+                                data.id,
+                                "applications"
+                            );
+                            const applicationSnapshot = await getDocs(applicationCol);
+                            const applications = applicationSnapshot.docs.map((appDoc) =>
+                                appDoc.data()
+                            );
+                            const acceptedApplications = applications.filter(
+                                (application) => application.status === "accepted"
+                            ).length;
 
-                        // Fetch invitations
-                        const invitationCol = collection(
-                            FirestoreDB,
-                            "collaborations",
-                            data.id,
-                            "invitations"
-                        );
-                        const invitationSnapshot = await getDocs(invitationCol);
-                        const invitations = invitationSnapshot.docs.map((invDoc) =>
-                            invDoc.data()
-                        );
+                            // Fetch invitations
+                            const invitationCol = collection(
+                                FirestoreDB,
+                                "collaborations",
+                                data.id,
+                                "invitations"
+                            );
+                            const invitationSnapshot = await getDocs(invitationCol);
+                            const invitations = invitationSnapshot.docs.map((invDoc) =>
+                                invDoc.data()
+                            );
 
-                        return {
-                            ...data,
-                            applications: applications.length,
-                            invitations: invitations.length,
-                            acceptedApplications,
-                        };
-                    })
-                );
-                setProposals(proposals);
-                setIsLoading(false);
-            }, (error) => {
-                setIsLoading(false);
-            }, () => {
-                setIsLoading(false);
-            });
-
-            return () => {
-                unsubscribe();
+                            return {
+                                ...data,
+                                applications: applications.length,
+                                invitations: invitations.length,
+                                acceptedApplications,
+                            };
+                        })
+                    );
+                    setProposals(proposals);
+                    setIsLoading(false);
+                } catch (error) {
+                    Console.error(error, "Error fetching proposals");
+                    setIsLoading(false);
+                }
             };
+
+            if (Platform.OS === "web") {
+                // On web, use polling instead of real-time listeners
+                fetchAndSetProposals();
+                const intervalId = setInterval(fetchAndSetProposals, 30000);
+                return () => clearInterval(intervalId);
+            } else {
+                // On native platforms, use real-time listeners
+                const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+                    const proposals = await Promise.all(
+                        querySnapshot.docs.map(async (doc) => {
+                            const data = {
+                                ...doc.data(),
+                                id: doc.id,
+                            };
+
+                            // Fetch applications
+                            const applicationCol = collection(
+                                FirestoreDB,
+                                "collaborations",
+                                data.id,
+                                "applications"
+                            );
+                            const applicationSnapshot = await getDocs(applicationCol);
+                            const applications = applicationSnapshot.docs.map((appDoc) =>
+                                appDoc.data()
+                            );
+                            const acceptedApplications = applications.filter(
+                                (application) => application.status === "accepted"
+                            ).length;
+
+                            // Fetch invitations
+                            const invitationCol = collection(
+                                FirestoreDB,
+                                "collaborations",
+                                data.id,
+                                "invitations"
+                            );
+                            const invitationSnapshot = await getDocs(invitationCol);
+                            const invitations = invitationSnapshot.docs.map((invDoc) =>
+                                invDoc.data()
+                            );
+
+                            return {
+                                ...data,
+                                applications: applications.length,
+                                invitations: invitations.length,
+                                acceptedApplications,
+                            };
+                        })
+                    );
+                    setProposals(proposals);
+                    setIsLoading(false);
+                }, (error) => {
+                    setIsLoading(false);
+                }, () => {
+                    setIsLoading(false);
+                });
+
+                return () => {
+                    unsubscribe();
+                };
+            }
         } catch (error) {
             Console.error(error, "Error fetching proposals");
             setIsLoading(false);
+            return () => {};
         }
     };
 
     useEffect(() => {
-        fetchProposals();
-    }, [user, selectedBrand]);
+        const cleanup = fetchProposals();
+        return cleanup;
+    }, [user, selectedBrand, active]);
 
     const filteredProposals = proposals;
 

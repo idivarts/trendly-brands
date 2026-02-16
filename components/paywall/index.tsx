@@ -5,9 +5,9 @@ import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
-import { collection, doc, onSnapshot } from 'firebase/firestore'
+import { collection, doc, getDocs, onSnapshot } from 'firebase/firestore'
 import { default as React, useEffect, useState } from 'react'
-import { ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import CancelPlanModal from './CancelPlanModal'
 import PlanWrapper from './plans/PlanWrapper'
@@ -26,16 +26,35 @@ const PayWallComponent = () => {
     // Live billing status listener
     useEffect(() => {
         if (selectedBrand?.id) {
-            const bSnap = onSnapshot(
-                doc(collection(FirestoreDB, 'brands'), selectedBrand.id),
-                (data) => {
-                    setSelectedBrand({ ...(data.data() as any), id: data.id }, false)
-                },
-                () => {
-                    Toaster.error('Something went wrong!', 'Cant load your brand')
-                }
-            )
-            return () => bSnap()
+            if (Platform.OS === "web") {
+                // On web, use polling instead of real-time listeners
+                const fetchBrandData = async () => {
+                    try {
+                        const snap = await getDocs(collection(FirestoreDB, 'brands'));
+                        const brandDoc = snap.docs.find(d => d.id === selectedBrand.id);
+                        if (brandDoc) {
+                            setSelectedBrand({ ...(brandDoc.data() as any), id: brandDoc.id }, false)
+                        }
+                    } catch (error) {
+                        Toaster.error('Something went wrong!', 'Cant load your brand')
+                    }
+                };
+                fetchBrandData();
+                const intervalId = setInterval(fetchBrandData, 30000);
+                return () => clearInterval(intervalId);
+            } else {
+                // On native platforms, use real-time listeners
+                const bSnap = onSnapshot(
+                    doc(collection(FirestoreDB, 'brands'), selectedBrand.id),
+                    (data) => {
+                        setSelectedBrand({ ...(data.data() as any), id: data.id }, false)
+                    },
+                    () => {
+                        Toaster.error('Something went wrong!', 'Cant load your brand')
+                    }
+                )
+                return () => bSnap()
+            }
         }
     }, [selectedBrand?.id])
 

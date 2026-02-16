@@ -92,19 +92,43 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         if (session) {
             const managerDocRef = doc(FirestoreDB, "managers", session);
 
-            const unsubscribe = onSnapshot(managerDocRef, (managerSnap) => {
-                if (managerSnap.exists()) {
-                    const managerData = {
-                        ...(managerSnap.data() as Manager),
-                        id: managerSnap.id as string,
-                    };
-                    setManager(managerData);
-                } else {
-                    Console.error("Manager not found");
-                }
-            });
+            if (Platform.OS === "web") {
+                // On web, use getDoc polling instead of real-time listeners
+                const fetchManagerData = async () => {
+                    try {
+                        const managerSnap = await getDoc(managerDocRef);
+                        if (managerSnap.exists()) {
+                            const managerData = {
+                                ...(managerSnap.data() as Manager),
+                                id: managerSnap.id as string,
+                            };
+                            setManager(managerData);
+                        } else {
+                            Console.error("Manager not found");
+                        }
+                    } catch (error) {
+                        Console.error("Error fetching manager:", error instanceof Error ? error.message : String(error));
+                    }
+                };
+                fetchManagerData();
+                const intervalId = setInterval(fetchManagerData, 30000);
+                return () => clearInterval(intervalId);
+            } else {
+                // On native platforms, use real-time listeners
+                const unsubscribe = onSnapshot(managerDocRef, (managerSnap) => {
+                    if (managerSnap.exists()) {
+                        const managerData = {
+                            ...(managerSnap.data() as Manager),
+                            id: managerSnap.id as string,
+                        };
+                        setManager(managerData);
+                    } else {
+                        Console.error("Manager not found");
+                    }
+                });
 
-            return unsubscribe;
+                return unsubscribe;
+            }
         }
     };
 
