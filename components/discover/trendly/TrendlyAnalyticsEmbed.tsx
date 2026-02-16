@@ -9,6 +9,7 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { Brand } from "@/types/Brand";
+import { getTrustabilityLevel } from "@/utils/trustability";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
@@ -316,9 +317,14 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             >
                                 Trustability
                             </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.trustablity}
-                                <Text variant={labelVariant}>%</Text>
+                            <Text
+                                variant={valueVariant}
+                                style={{
+                                    color: getTrustabilityLevel(analytics.trustablity)?.color || "#666",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                {getTrustabilityLevel(analytics.trustablity)?.label || "—"} ({analytics.trustablity}%)
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Signals from past collabs, engagement quality
