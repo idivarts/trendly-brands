@@ -177,6 +177,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
+    const [isRescraping, setIsRescraping] = useState(false);
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
     const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
@@ -971,13 +972,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerName={selectedInfluencer.name}
                                         />
                                         {manager?.isAdmin ? (
-                                            <Button
-                                                mode="contained"
-                                                onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
-                                                icon="pencil"
-                                            >
-                                                Edit Metrics
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    mode="contained"
+                                                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
+                                                    icon="pencil"
+                                                >
+                                                    Edit Metrics
+                                                </Button>
+                                                <Button
+                                                    mode="contained"
+                                                    onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
+                                                    loading={isRescraping}
+                                                    disabled={isRescraping}
+                                                >
+                                                    Re-scrape
+                                                </Button>
+                                            </>
                                         ) : null}
                                     </View>
                                 }
