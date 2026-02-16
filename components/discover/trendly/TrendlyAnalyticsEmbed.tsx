@@ -4,14 +4,13 @@ import {
     ISocialAnalytics,
     ISocials,
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { Brand } from "@/types/Brand";
 import { getTrustabilityLevel } from "@/utils/trustability";
 import { useTheme } from "@react-navigation/native";
-import { collection, doc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
 import {
@@ -45,6 +44,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const [isSaving, setIsSaving] = useState(false);
         const [saveError, setSaveError] = useState<string | null>(null);
         const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({});
+        const [isRescraping, setIsRescraping] = useState(false);
         const isAdmin = manager?.isAdmin === true;
         const hasChanges = Object.keys(editedSocial).length > 0;
         const theme = useTheme();
@@ -90,16 +90,47 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         }, [initialSocial, initialAnalytics, onLoadingChange]);
 
         const handleSaveChanges = async () => {
-            if (!social?.id || !hasChanges) return;
+            if (!social?.id || !selectedBrand?.id || !hasChanges) return;
 
             try {
                 setIsSaving(true);
                 setSaveError(null);
                 const updatedSocial = { ...social, ...editedSocial };
-                const col = collection(FirestoreDB, "scrapped-socials");
-                const docRef = doc(col, social.id);
 
-                await updateDoc(docRef, updatedSocial);
+                // Prepare the request body with the API format
+                const requestBody = {
+                    name: updatedSocial.name,
+                    bio: updatedSocial.bio,
+                    category: updatedSocial.category,
+                    follower_count: updatedSocial.follower_count,
+                    following_count: updatedSocial.following_count,
+                    content_count: updatedSocial.content_count,
+                    profile_verified: updatedSocial.profile_verified,
+                    links: updatedSocial.links,
+                    gender: updatedSocial.gender,
+                    quality_score: updatedSocial.quality_score,
+                    niches: updatedSocial.niches,
+                    location: updatedSocial.location,
+                };
+
+                // Call the API using HttpWrapper
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(requestBody),
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to save changes. Please try again."
+                    );
+                }
 
                 setSocial(updatedSocial);
                 setIsEditModalVisible(false);
@@ -122,14 +153,49 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             }
         };
 
+        const handleRescrape = async () => {
+            if (!selectedBrand?.id) return;
+
+            try {
+                setIsRescraping(true);
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}/rescrape`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to rescrape. Please try again."
+                    );
+                }
+
+                Toaster.success("Rescrape initiated successfully!");
+                // Optionally reload the influencer data
+                await loadInfluencer();
+            } catch (e: any) {
+                console.error("Error rescrapting influencer:", e);
+                const errorMessage = e?.message || "Failed to rescrape. Please try again.";
+                Toaster.error(errorMessage);
+            } finally {
+                setIsRescraping(false);
+            }
+        };
+
         React.useImperativeHandle(
             ref,
             () => ({
                 handleEditClick,
+                handleRescrape,
                 isAdmin,
                 openEditModal: handleEditClick,
             }),
-            [handleEditClick, isAdmin]
+            [handleEditClick, handleRescrape, isAdmin]
         );
 
         useEffect(() => {
