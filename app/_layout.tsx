@@ -25,6 +25,7 @@ import {
     AuthContextProvider,
     AWSContextProvider,
     ThemeOverrideProvider,
+    TransitionProvider,
     useAuthContext,
     useThemeOverride
 } from "@/contexts";
@@ -122,20 +123,22 @@ const RootLayoutStack = () => {
         <ThemeProvider value={navigationTheme}>
             <AWSContextProvider>
                 <Provider theme={CustomPaperTheme(navigationTheme)}>
-                    <DownloadApp />
-                    <ConfirmationModalProvider>
-                        <BottomSheetModalProvider>
-                            <Stack
-                                screenOptions={{
-                                    headerShown: false,
-                                }}
-                            >
-                                <Stack.Screen name="index" />
-                                <Stack.Screen name="+not-found" />
-                            </Stack>
-                            <Toast config={toastConfig} />
-                        </BottomSheetModalProvider>
-                    </ConfirmationModalProvider>
+                    <TransitionProvider>
+                        <DownloadApp />
+                        <ConfirmationModalProvider>
+                            <BottomSheetModalProvider>
+                                <Stack
+                                    screenOptions={{
+                                        headerShown: false,
+                                    }}
+                                >
+                                    <Stack.Screen name="index" />
+                                    <Stack.Screen name="+not-found" />
+                                </Stack>
+                                <Toast config={toastConfig} />
+                            </BottomSheetModalProvider>
+                        </ConfirmationModalProvider>
+                    </TransitionProvider>
                 </Provider>
             </AWSContextProvider>
         </ThemeProvider>
