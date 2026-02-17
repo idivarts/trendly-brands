@@ -24,10 +24,9 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
     AWSContextProvider,
-    NicheProvider,
     ThemeOverrideProvider,
     useAuthContext,
-    useThemeOverride,
+    useThemeOverride
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
@@ -75,11 +74,9 @@ export default function RootLayout() {
         <GestureHandlerRootView>
             <UpdateProvider force={true}>
                 <AuthContextProvider>
-                    <NicheProvider>
-                        <ThemeOverrideProvider>
-                            <RootLayoutStack />
-                        </ThemeOverrideProvider>
-                    </NicheProvider>
+                    <ThemeOverrideProvider>
+                        <RootLayoutStack />
+                    </ThemeOverrideProvider>
                 </AuthContextProvider>
             </UpdateProvider>
         </GestureHandlerRootView>
