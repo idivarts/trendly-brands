@@ -17,8 +17,6 @@ import {
 import { Button, Chip, HelperText } from "react-native-paper";
 import ModashFilter from "./modash/ModashFilter";
 import TrendlyAdvancedFilter from "./trendly/TrendlyAdvancedFilter";
-import { Dropdown, RangeInput, Section } from "./filter-components";
-import type { DB_TYPE } from "./discover-types";
 
 // --------------------
 // Component
@@ -28,11 +26,19 @@ interface IProps {
     style?: StyleProp<ViewStyle>;
     defaultAdvanceFilters?: IAdvanceFilters;
     onClearStoredFilters?: () => void;
+    onFiltersApplied?: (filters: IAdvanceFilters) => void;
+    disableCollapse?: boolean;
 }
 
 import { useBreakpoints } from "@/hooks";
 
-const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, onClearStoredFilters }) => {
+const RightPanelDiscover: React.FC<IProps> = ({
+    style,
+    defaultAdvanceFilters,
+    onClearStoredFilters,
+    onFiltersApplied,
+    disableCollapse = false,
+}) => {
     const {
         selectedDb,
         setSelectedDb: dbWrapper,
@@ -57,6 +63,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     const styles = useMemo(() => styleFn(colors), [colors]);
 
     const toggleCollapse = () => {
+        if (disableCollapse) return;
         const nextCollapsed = !isCollapsed;
         const toValue = nextCollapsed ? 1 : 0;
         Animated.spring(slideAnim, {
@@ -71,6 +78,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
     };
 
     const collapsePanel = () => {
+        if (disableCollapse) return;
         // animate to collapsed state and update context
         Animated.spring(slideAnim, {
             toValue: 1,
@@ -100,6 +108,18 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
         }
     }, [selectedDb]);
 
+    // Sync animation state with isCollapsed prop from context
+    useEffect(() => {
+        if (disableCollapse) return;
+        const toValue = isCollapsed ? 1 : 0;
+        Animated.spring(slideAnim, {
+            toValue,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 10,
+        }).start();
+    }, [disableCollapse, isCollapsed, slideAnim]);
+
     // Friendly label for current selection
     const selectedDbLabel =
         selectedDb === "trendly"
@@ -115,14 +135,16 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
             style={[
                 styles.container,
                 style,
-                {
-                    transform: [{ translateX: translateX }],
-                    maxWidth: isCollapsed ? 0 : 400,
-                    width: isCollapsed ? 0 : "100%",
-                },
+                disableCollapse
+                    ? { transform: [{ translateX: 0 }], maxWidth: "100%", width: "100%" }
+                    : {
+                        transform: [{ translateX: translateX }],
+                        maxWidth: isCollapsed ? 0 : 400,
+                        width: isCollapsed ? 0 : "100%",
+                    },
             ]}
         >
-            {xl && (
+            {xl && !disableCollapse && (
                 <Pressable
                     style={[
                         styles.collapseButton,
@@ -181,6 +203,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
                             onPress={() => {
                                 setShowFilters(false);
                                 setRightPanel(true);
+                                setIsCollapsed(false);
                             }}
                         >
                             Change database
@@ -246,6 +269,7 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
                                 FilterApplyRef={filterApply}
                                 defaultAdvanceFilters={defaultAdvanceFilters}
                                 onClearStoredFilters={onClearStoredFilters}
+                                onFiltersApplied={onFiltersApplied}
                             />
                         )}
                         {selectedDb == "modash" && <ModashFilter />}
@@ -257,9 +281,10 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
                             <Button
                                 mode="text"
                                 style={styles.clearBtn}
-                                onPress={() => {
-                                    filterApply.current?.("clear");
-                                    // FilterApplySubject.next({ action: "clear" })
+                                onPress={async () => {
+                                    await filterApply.current?.("clear");
+                                    // Close/collapse panel after clearing filters
+                                    setTimeout(() => collapsePanel(), 100);
                                 }}
                             >
                                 Clear all
@@ -268,11 +293,10 @@ const RightPanelDiscover: React.FC<IProps> = ({ style, defaultAdvanceFilters, on
                                 mode="contained"
                                 style={styles.actionBtn}
                                 icon="filter-variant"
-                                onPress={() => {
-                                    filterApply.current?.("apply");
+                                onPress={async () => {
+                                    await filterApply.current?.("apply");
                                     // Close/collapse panel after applying filters on both mobile and web
-                                    collapsePanel();
-                                    // FilterApplySubject.next({ action: "apply" })
+                                    setTimeout(() => collapsePanel(), 100);
                                 }}
                             >
                                 Apply

@@ -1,5 +1,6 @@
 import type { DB_TYPE } from "@/components/discover/discover-types";
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
+import DiscoverSurvey from "@/components/discover/DiscoverSurvey";
 import {
     DiscoveryProvider,
     OpenFilterRightPanel,
@@ -7,7 +8,6 @@ import {
     type PageSortCommunication,
 } from "@/components/discover/discovery-context";
 import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
-import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -15,8 +15,13 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
+import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator } from "react-native-paper";
+import { Platform, Pressable, ScrollView, StyleSheet, type ViewStyle } from "react-native";
 
 const DiscoverComponent = ({
     showRightPanel = true,
@@ -47,22 +52,32 @@ const DiscoverComponent = ({
     initialInfluencerId?: string;
 }) => {
     const { manager } = useAuthContext();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, updateBrand } = useBrandContext();
+    const theme = useTheme();
+    const colors = Colors(theme);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [filterSheetIndex, setFilterSheetIndex] = useState(-1);
+    const filterSheetRef = useRef<BottomSheet>(null);
+    const filterSnapPoints = React.useMemo(() => ["40%", "92%"], []);
+    const isWeb = Platform.OS === "web";
+    const sheetStyles = React.useMemo(() => createSheetStyles(colors), [colors]);
     const discoverCommunication =
-        useRef<(action: DiscoverCommunication) => any>();
+        useRef<((action: DiscoverCommunication) => any) | undefined>(undefined);
     const pageSortCommunication =
-        useRef<(action: PageSortCommunication) => any>();
+        useRef<((action: PageSortCommunication) => any) | undefined>(undefined);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
         null
     );
+    const [isFiltersCleared, setIsFiltersCleared] = useState(false);
+    const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
 
     useEffect(() => {
         if (!selectedBrand) return;
         if (!useStoredFilters) {
             setStoredFilters(null);
+            setHasLoadedStoredFilters(true);
             return;
         }
 
@@ -73,12 +88,16 @@ const DiscoverComponent = ({
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    console.log(" Loaded last-applied filter from storage:", parsed);
                     setStoredFilters(parsed);
+                    setIsFiltersCleared(false);
                 } catch (e) {
-                    console.log(" Failed to parse saved filter:", saved);
+                    setStoredFilters(null);
                 }
+            } else {
+                setStoredFilters(null);
             }
+
+            setHasLoadedStoredFilters(true);
         })();
     }, [selectedBrand, useStoredFilters]);
 
@@ -93,27 +112,33 @@ const DiscoverComponent = ({
 
     useEffect(() => {
         const unsubs = OpenFilterRightPanel.subscribe(() => {
-
-            setRightPanel(true);
+            if (!showRightPanel) return;
+            setFilterSheetIndex(0);
+            if (!isWeb) {
+                filterSheetRef.current?.snapToIndex(0);
+                filterSheetRef.current?.expand?.();
+            }
             setShowFilters(true);
             setIsCollapsed(false);
         });
 
         return () => unsubs.unsubscribe();
-    }, []);
+    }, [showRightPanel, filterSheetIndex, selectedDb, isWeb]);
 
-    const [fullIllustration, setFullIllustration] = useState(true);
+    const hasBrandPreferences = selectedBrand?.discoverPreferences &&
+        Object.values(selectedBrand.discoverPreferences).some(
+            (v) =>
+                v !== undefined &&
+                v !== null &&
+                v !== "" &&
+                !(Array.isArray(v) && v.length === 0)
+        );
+    const [showSurvey, setShowSurvey] = useState(!hasBrandPreferences);
+
     useEffect(() => {
-        if (!selectedBrand) return;
-        (async () => {
-            const x = await PersistentStorage.get(selectedBrand.id + "-discover");
-            setFullIllustration(!x);
-        })();
-    }, [selectedBrand]);
+        setShowSurvey(!hasBrandPreferences);
+    }, [hasBrandPreferences]);
 
-    // Determine which filter source to use:
-    // If collaboration passed defaultAdvanceFilters → use only that.
-    // Else → use stored persistent filters.
     const hasMeaningfulDefaults =
         defaultAdvanceFilters &&
         Object.values(defaultAdvanceFilters).some(
@@ -123,38 +148,71 @@ const DiscoverComponent = ({
                 v !== "" &&
                 !(Array.isArray(v) && v.length === 0)
         );
+
     const filtersToUse = hasMeaningfulDefaults
         ? defaultAdvanceFilters
-        : useStoredFilters
-            ? storedFilters || undefined
+        : useStoredFilters && hasLoadedStoredFilters
+            ? storedFilters !== null
+                ? storedFilters
+                : isFiltersCleared
+                    ? undefined
+                    : selectedBrand?.discoverPreferences
             : undefined;
 
-    if (fullIllustration)
+    const filtersForChildren = hasMeaningfulDefaults
+        ? defaultAdvanceFilters
+        : useStoredFilters && hasLoadedStoredFilters && storedFilters !== null
+            ? storedFilters
+            : undefined;
+
+    const handleSurveyComplete = async (filters: IAdvanceFilters) => {
+        try {
+            if (selectedBrand?.id) {
+                const cleanFilters = (obj: any): any => {
+                    const cleaned: Record<string, any> = {};
+                    for (const [key, value] of Object.entries(obj)) {
+                        if (value !== undefined && value !== null) {
+                            if (Array.isArray(value)) {
+                                const cleanedArray = value.filter(v => v !== undefined && v !== null);
+                                if (cleanedArray.length > 0) {
+                                    cleaned[key] = cleanedArray;
+                                }
+                            } else {
+                                cleaned[key] = value;
+                            }
+                        }
+                    }
+                    return cleaned;
+                };
+
+                const cleanedFilters = cleanFilters(filters);
+
+                await updateBrand(selectedBrand.id, {
+                    discoverPreferences: cleanedFilters,
+                });
+
+                const surveyKey = `survey-completed-${selectedBrand.id}`;
+                await PersistentStorage.set(surveyKey, "true");
+
+                Toaster.success("Preferences saved!");
+            }
+        } catch (error) {
+            Toaster.error("Failed to save preferences. Please try again");
+            return;
+        }
+
+        setShowSurvey(false);
+    };
+
+    if (showSurvey)
         return (
-            <FullInformationalIllustration
-                action={() => {
-                    PersistentStorage.set(selectedBrand?.id + "-discover", "true");
-                    setFullIllustration(false);
-                }}
-                config={{
-                    title: "{Advanced Filtering} for Instagram Profiles",
-                    description:
-                        "Find the right influencer in seconds with powerful filters. Skip scrolling through hundreds of profiles — save time and connect with creators that truly fit your campaign.",
-                    action: "Discover Now",
-                    items: [
-                        "Target Micro-Influencers (under 100k followers)",
-                        "Trustability & Budget Insights",
-                        "See Estimated Views Upfront",
-                    ],
-                    image:
-                        "https://d1tfun8qrz04mk.cloudfront.net/uploads/file_1758395157_images-1758395157102-discovery tool walkthrough thumbnail.jpg",
-                }}
-                videoUrl="https://www.youtube.com/embed/oqYLHTnszIg?si=NTYuarzgkbLEPhTO"
-            />
+            <AppLayout safeAreaEdges={["left", "right"]}>
+                <DiscoverSurvey onComplete={handleSurveyComplete} />
+            </AppLayout>
         );
 
     if (!manager || !selectedBrand || !selectedBrand.id)
-        return <ActivityIndicator />;
+        return <SlowLoader messages={["Loading brand information...", "Preparing discovery...", "Almost ready..."]} />;
 
     return (
         <DiscoveryProvider
@@ -174,7 +232,7 @@ const DiscoverComponent = ({
             }}
         >
             <AppLayout safeAreaEdges={["left", "right"]}>
-                <View style={{ width: "100%", flexDirection: "row", height: "100%" }}>
+                <View style={{ width: "100%", flexDirection: "row", height: "100%", }}>
                     <DiscoverInfluencer
                         advanceFilter={advanceFilter}
                         statusFilter={statusFilter}
@@ -183,26 +241,114 @@ const DiscoverComponent = ({
                         defaultAdvanceFilters={filtersToUse}
                         initialInfluencerId={initialInfluencerId}
                     />
-                    <RightPanelDiscover
-                        defaultAdvanceFilters={filtersToUse}
-                        onClearStoredFilters={() => setStoredFilters(null)}
-                        style={[
-                            (!showRightPanel || (!rightPanel && !xl)) && { display: "none" },
-                            !xl && {
-                                width: "100%",
-                                maxWidth: "auto",
-                                position: "absolute",
-                                right: 0,
-                                top: 0,
-                                bottom: 0,
-                                zIndex: 100,
-                            },
-                        ]}
-                    />
                 </View>
+                {showRightPanel && !isWeb && (
+                    <BottomSheet
+                        ref={filterSheetRef}
+                        index={filterSheetIndex}
+                        snapPoints={filterSnapPoints}
+                        enablePanDownToClose
+                        onChange={setFilterSheetIndex}
+                        backdropComponent={(props) => (
+                            <BottomSheetBackdrop
+                                {...props}
+                                appearsOnIndex={0}
+                                disappearsOnIndex={-1}
+                            />
+                        )}
+                    >
+                        <RightPanelDiscover
+                            defaultAdvanceFilters={filtersForChildren}
+                            onClearStoredFilters={() => {
+                                setStoredFilters(null);
+                                setIsFiltersCleared(true);
+                            }}
+                            onFiltersApplied={(filters) => {
+                                setStoredFilters(filters);
+                                setIsFiltersCleared(false);
+                            }}
+                            disableCollapse
+                            style={{
+                                maxWidth: "100%",
+                                width: "100%",
+                                borderLeftWidth: 0,
+                            }}
+                        />
+                    </BottomSheet>
+                )}
+                {showRightPanel && isWeb && filterSheetIndex >= 0 && (
+                    <Pressable
+                        style={sheetStyles.overlay}
+                        onPress={() => setFilterSheetIndex(-1)}
+                    />
+                )}
+                {showRightPanel && isWeb && (
+                    <View
+                        style={[
+                            sheetStyles.sheet,
+                            filterSheetIndex < 0 && sheetStyles.sheetHidden,
+                        ]}
+                    >
+                        <ScrollView style={sheetStyles.sheetScroll}>
+                            <RightPanelDiscover
+                                defaultAdvanceFilters={filtersForChildren}
+                                onClearStoredFilters={() => {
+                                    setStoredFilters(null);
+                                    setIsFiltersCleared(true);
+                                }}
+                                onFiltersApplied={(filters) => {
+                                    setStoredFilters(filters);
+                                    setIsFiltersCleared(false);
+                                }}
+                                disableCollapse
+                                style={{
+                                    maxWidth: "100%",
+                                    width: "100%",
+                                    borderLeftWidth: 0,
+                                }}
+                            />
+                        </ScrollView>
+                    </View>
+                )}
             </AppLayout>
         </DiscoveryProvider>
     );
 };
+
+const createSheetStyles = (colors: ReturnType<typeof Colors>) =>
+    StyleSheet.create<{
+        overlay: ViewStyle;
+        sheet: ViewStyle;
+        sheetScroll: ViewStyle;
+        sheetHidden: ViewStyle;
+    }>({
+        overlay: {
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            zIndex: 9998,
+        },
+        sheet: {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: "88%",
+            backgroundColor: colors.background,
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            zIndex: 9999,
+            paddingTop: 8,
+        },
+        sheetScroll: {
+            flex: 1,
+        },
+        sheetHidden: {
+            display: "none",
+        },
+    });
 
 export default DiscoverComponent;

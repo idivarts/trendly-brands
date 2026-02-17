@@ -1,109 +1,316 @@
-import Button from "@/components/ui/button";
+import ActionCard from "@/components/pre-signin/ActionCard";
+import IntroSplash from "@/components/pre-signin/IntroSplash";
+import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
-import { imageUrl } from "@/utils/url";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React from "react";
-import { Image, Platform, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import gsap from "gsap";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+
+// Expanded Social Universe
+const SOCIAL_ORBS = [
+    { icon: "youtube", color: "#FF0000", size: 90, x: -280, y: -150, depth: 0.2 }, // Moved further left/up (was blocking text)
+    { icon: "instagram", color: "#C13584", size: 80, x: 250, y: -50, depth: 0.15 },
+    { icon: "linkedin", color: "#0077B5", size: 70, x: -100, y: 180, depth: 0.1 },
+    { icon: "facebook", color: "#1877F2", size: 60, x: 180, y: 120, depth: 0.25 },
+
+    // New Icons for Density
+    { icon: "twitter", color: "#1DA1F2", size: 50, x: 50, y: -340, depth: 0.08 },
+    { icon: "music-note", color: "#000000", size: 65, x: 300, y: -200, depth: 0.12 }, // TikTok-ish
+    { icon: "snapchat", color: "#FFFC00", size: 60, x: -380, y: -45, depth: 0.18 },
+    { icon: "pinterest", color: "#E60023", size: 45, x: 30, y: -140, depth: 0.05 },
+    { icon: "whatsapp", color: "#25D366", size: 48, x: -300, y: -280, depth: 0.1 },
+];
 
 const LetsStartWeb = () => {
-    // const { socials } = useSocialContext();
     const theme = useTheme();
+    const brandColors = Colors(theme);
+    const { width } = useWindowDimensions();
+    const isMobileWeb = width < 900;
+
+    const [showSplash, setShowSplash] = useState(true);
+    const [showContent, setShowContent] = useState(false);
+
+    // Refs
+    const containerRef = useRef<View>(null);
+    const textRef = useRef<Text>(null);
+    const orbsRef = useRef<View[]>([]);
+    const { triggerTransition } = useTransition();
+
+    const handleSplashComplete = () => {
+        setShowSplash(false);
+        setShowContent(true);
+    };
+
+    useEffect(() => {
+        if (!showContent) return;
+
+        // Load Google Fonts for web
+        if (Platform.OS === 'web') {
+            const link = document.createElement('link');
+            link.href = 'https://fonts.googleapis.com/css2?family=Coiny&family=Varela+Round&family=Quicksand:wght@500&family=Comfortaa:wght@700&family=Fredoka:wght@700&display=swap';
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+        }
+
+        if (Platform.OS === 'web') {
+            const ctx = gsap.context(() => {
+                const tl = gsap.timeline();
+
+                // 1. Orbs Entrance (Explosion style)
+                gsap.set(orbsRef.current, { scale: 0, opacity: 0 });
+                tl.to(orbsRef.current, {
+                    scale: 1,
+                    opacity: 0.8,
+                    duration: 1,
+                    stagger: { amount: 0.5, from: "center" },
+                    ease: "elastic.out(1, 0.5)",
+                });
+
+                // 2. Text Breathing Animation
+                gsap.to(textRef.current, {
+                    scale: 1.05,
+                    textShadowRadius: 20,
+                    textShadowColor: 'rgba(0,0,0,0.2)',
+                    duration: 3,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: "sine.inOut",
+                });
+
+                // 3. Orb Floating Loop
+                orbsRef.current.forEach((orb, i) => {
+                    gsap.to(orb, {
+                        y: "+=25",
+                        rotation: Math.random() * 20 - 10,
+                        duration: 3 + Math.random() * 2,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: "sine.inOut",
+                        delay: Math.random(),
+                    });
+                });
+
+                // 4. Mouse Parallax
+                const handleMouseMove = (e: MouseEvent) => {
+                    const { clientX, clientY } = e;
+                    const centerX = window.innerWidth / 2;
+                    const centerY = window.innerHeight / 2;
+
+                    orbsRef.current.forEach((orb, i) => {
+                        const depth = SOCIAL_ORBS[i].depth;
+                        gsap.to(orb, {
+                            x: (centerX - clientX) * depth * 0.5, // Stronger parallax
+                            y: (centerY - clientY) * depth * 0.5,
+                            duration: 1,
+                            ease: "power2.out",
+                        });
+                    });
+                };
+
+                window.addEventListener('mousemove', handleMouseMove);
+                return () => window.removeEventListener('mousemove', handleMouseMove);
+
+            }, containerRef);
+            return () => ctx.revert();
+        }
+    }, [showContent]);
+
+    if (showSplash) {
+        return <IntroSplash onComplete={handleSplashComplete} />;
+    }
 
     return (
-        <AppLayout withWebPadding={true}>
+        <AppLayout withWebPadding={false}>
             <View
-                style={{
-                    flex: 1,
-                    backgroundColor: Colors(theme).background,
-                    padding: 16,
-                    justifyContent: "space-between",
-                }}
+                ref={containerRef}
+                style={[styles.container, { backgroundColor: brandColors.background }]}
             >
-                <View style={{ flex: 1, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 50 }}>
-                    {/* Illustration */}
-                    <View>
-                        <View style={styles.imageContainer}>
-                            <Image
-                                source={imageUrl(require("@/assets/images/icon2.png"))} // Replace with your local image
-                                style={styles.image}
-                                resizeMode="contain"
-                            />
+                {/* Single Centered Column */}
+                <View style={styles.centeredWrapper}>
+
+                    <Animated.View entering={FadeIn.duration(800)} style={styles.contentColumn}>
+                        {/* Background Orbs */}
+                        <View style={styles.orbContainer}>
+                            {SOCIAL_ORBS.map((orb, index) => (
+                                <View
+                                    key={index}
+                                    ref={el => { if (el) orbsRef.current[index] = el; }}
+                                    style={[
+                                        styles.orb,
+                                        {
+                                            left: '50%',
+                                            top: '50%',
+                                            marginLeft: orb.x, // Initial offset
+                                            marginTop: orb.y,
+                                            width: orb.size,
+                                            height: orb.size,
+                                            borderRadius: orb.size / 2,
+                                            backgroundColor: theme.dark ? orb.color + '30' : orb.color + '15',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                        }
+                                    ]}
+                                >
+                                    <MaterialCommunityIcons
+                                        name={orb.icon as any}
+                                        size={orb.size * 0.6}
+                                        color={orb.color}
+                                    />
+                                </View>
+                            ))}
                         </View>
-                    </View>
-                    <View style={{ maxWidth: 500, alignItems: "flex-start" }}>
-                        {/* No Account Text */}
-                        <Text style={styles.noAccountText}>Welcome to Trendly</Text>
-                        <Text
-                            style={{
-                                fontSize: 18,
-                                lineHeight: 28,
-                                marginVertical: 16,
-                                // textAlign: "center",
-                                color: Colors(theme).gray100,
-                                marginBottom: 30,
-                            }}
-                        >
-                            Welcome to the Trendly community! To get started, let us know which audience you belong to — are you a brand or an agency looking to collaborate with creators?
-                        </Text>
-                        <View style={[styles.buttonContainer, { display: "flex", alignContent: "stretch", gap: 16, alignItems: "stretch", width: 300, alignSelf: "flex-start" }]}>
-                            <Button onPress={() => router.push("/pre-signin")}>Join as Brand / Agency</Button>
-                            <Button mode={"outlined"} onPress={() => {
-                                if (Platform.OS === "web")
-                                    window.open(CREATORS_FE_URL, "_blank");
-                                else
-                                    router.push("/wrong-app")
-                            }}>Join as Influencer</Button>
-                            {/* <InstagramLoginButton />
-              <FacebookLoginButton /> */}
+
+                        {/* Branding Content */}
+                        <View style={styles.brandingContent}>
+
+                            <Text
+                                ref={textRef}
+                                style={[
+                                    styles.heroText,
+                                    {
+                                        color: brandColors.primary,
+                                        // @ts-ignore - textShadowColor is supported on web
+                                        textShadowColor: 'rgba(0, 0, 0, 0.3)', // Dark shadow for elevation
+                                        textShadowRadius: 25,
+                                        textShadowOffset: { width: 0, height: 15 },
+                                    },
+                                    isMobileWeb && styles.heroTextMobile
+                                ]}
+                            >
+                                TRENDLY
+                            </Text>
+
+                            <Text style={[styles.tagline, { color: brandColors.gray300 }]}>
+                                Where Brands Meet Creators.
+                            </Text>
+                            <Text style={[styles.description, { color: brandColors.gray300 }]}>
+                                Scale your marketing with data-driven collaborations in real-time.
+                            </Text>
                         </View>
-                    </View>
+
+                        {/* Buttons in Row */}
+                        <Animated.View entering={FadeIn.delay(500).duration(800)} style={styles.buttonsRow}>
+                            <View style={styles.buttonWrapper}>
+                                <ActionCard
+                                    title="Join as Brand / Agency"
+                                    description="Connect with creators. Amplify your reach."
+                                    colors={['#0F2027', '#203A43', '#2C5364']}
+                                    onPress={() => router.push("/pre-signin")}
+                                    onPressWithAnimation={(layout, colors) => {
+                                        if (Platform.OS === 'web') {
+                                            triggerTransition(
+                                                layout,
+                                                [...colors],
+                                                () => {
+                                                    router.push("/pre-signin");
+                                                }
+                                            );
+                                        } else {
+                                            router.push("/pre-signin");
+                                        }
+                                    }}
+                                />
+                            </View>
+
+                            <View style={styles.buttonWrapper}>
+                                <ActionCard
+                                    title="Join as Influencer"
+                                    description="Monetize your content. Grow your community."
+                                    colors={['#FF512F', '#DD2476']}
+                                    onPress={() => {
+                                        if (Platform.OS === "web")
+                                            window.open(CREATORS_FE_URL, "_blank");
+                                        else
+                                            router.push("/wrong-app")
+                                    }}
+                                />
+                            </View>
+                        </Animated.View>
+                    </Animated.View>
                 </View>
-
-                {/* Buttons */}
-
             </View>
         </AppLayout>
     );
 };
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
+    container: {
+        flex: 1,
+        justifyContent: "center",
         alignItems: "center",
+        overflow: "hidden",
+        position: 'relative',
+        minHeight: 700,
     },
-    title: {
+    centeredWrapper: {
+        width: '100%',
+        maxWidth: 1200,
+        paddingHorizontal: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    contentColumn: {
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    orbContainer: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    orb: {
+        position: 'absolute',
+    },
+    brandingContent: {
+        zIndex: 10,
+        alignItems: 'center',
+        marginBottom: 48,
+
+    },
+    heroText: {
+        fontSize: 100,
+        fontWeight: '400',
+        letterSpacing: -4,
+        marginBottom: 16,
+        fontFamily: Platform.select({
+            web: 'Coiny, Varela Round, Quicksand, Comfortaa, Fredoka, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            default: 'System',
+        }),
+    },
+    heroTextMobile: {
+        fontSize: 60, // Smaller on mobile web
+    },
+    tagline: {
         fontSize: 24,
-        fontWeight: "bold",
+        fontWeight: '500',
+        textAlign: 'center',
     },
-    imageContainer: {
-        alignItems: "center",
-        // marginVertical: 0,
+    description: {
+        fontSize: 18,
+        marginTop: 16,
+        maxWidth: 450,
+        textAlign: 'center',
+        lineHeight: 28,
+        opacity: 0.8,
     },
-    image: {
-        height: 300,
-        width: 300,
-        margin: 70,
-        borderRadius: 40,
-        // marginBottom: 40,
+    buttonsRow: {
+        flexDirection: 'row',
+        gap: 24,
+        width: '100%',
+        maxWidth: 1100,
+        zIndex: 10,
     },
-    noAccountText: {
-        textAlign: "center",
-        fontSize: 32,
-        fontWeight: "bold",
-        marginVertical: 10,
-    },
-    buttonContainer: {
-        alignItems: "center",
-        marginTop: 20,
-    },
-    button: {
-        marginVertical: 10,
-        paddingVertical: 5,
+    buttonWrapper: {
+        flex: 1,
+        minWidth: 400,
     },
 });
 

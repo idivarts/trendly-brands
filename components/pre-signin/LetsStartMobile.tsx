@@ -1,104 +1,157 @@
-import Button from "@/components/ui/button";
+import ActionCard from "@/components/pre-signin/ActionCard";
+import IntroSplash from "@/components/pre-signin/IntroSplash";
+import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
-import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React from "react";
-import { Image, Platform, StyleSheet, View } from "react-native";
-import { Text } from "react-native-paper";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 const LetsStartMobile = () => {
-    // const { socials } = useSocialContext();
     const theme = useTheme();
+    const brandColors = Colors(theme);
+    const [showSplash, setShowSplash] = React.useState(true);
+    const { triggerTransition } = useTransition();
+
+    const handleBrandPress = React.useCallback(() => {
+        router.push("/pre-signin");
+    }, []);
+
+    const handleBrandPressWithAnimation = React.useCallback(
+        (layout: { x: number; y: number; width: number; height: number }, colors: readonly [string, string, ...string[]]) => {
+            triggerTransition(
+                layout,
+                [...colors],
+                () => {
+                    router.push("/pre-signin");
+                }
+            );
+        },
+        [triggerTransition]
+    );
+
+    const handleInfluencerPress = React.useCallback(() => {
+        if (Platform.OS === "web") {
+            window.open(CREATORS_FE_URL, "_blank");
+        } else {
+            router.push("/wrong-app");
+        }
+    }, []);
+
+    if (showSplash) {
+        return <IntroSplash onComplete={() => setShowSplash(false)} />;
+    }
 
     return (
-        <AppLayout withWebPadding={true}>
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: Colors(theme).background,
-                    padding: 16,
-                    justifyContent: "space-between",
-                }}
+        <AppLayout withWebPadding={false} safeAreaEdges={["left","right","bottom"]}>
+            {/* ScrollView allows content to fit on small screens without cut-off */}
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
             >
-                <View style={{ flex: 1, justifyContent: "center" }}>
-                    {/* Illustration */}
-                    <View>
-                        <View style={styles.imageContainer}>
-                            <Image
-                                source={imageUrl(require("@/assets/images/icon2.png"))} // Replace with your local image
-                                style={styles.image}
-                                resizeMode="contain"
-                            />
-                        </View>
+                <View style={[styles.container, { backgroundColor: brandColors.background }]}>
 
-                        {/* No Account Text */}
-                        <Text style={styles.noAccountText}>Welcome to Trendly - for Brands</Text>
-                        <Text
-                            style={{
-                                textAlign: "center",
-                                color: Colors(theme).gray100,
-                                marginBottom: 30,
-                            }}
-                        >
-                            Welcome to the Trendly community! To get started, let us know which audience you belong to — are you a brand or an agency looking to collaborate with creators?
-                        </Text>
-                        <View style={[styles.buttonContainer, { display: "flex", alignContent: "stretch", gap: 16, alignItems: "stretch", width: 300, alignSelf: "center" }]}>
-                            <Button onPress={() => router.push("/pre-signin")}>Join as Brand / Agency</Button>
-                            <Button mode={"outlined"} onPress={() => {
-                                if (Platform.OS === "web")
-                                    window.open(CREATORS_FE_URL, "_blank");
-                                else
-                                    router.push("/wrong-app")
-                            }}>Join as Influencer</Button>
-                            {/* <InstagramLoginButton />
-              <FacebookLoginButton /> */}
-                        </View>
+                    {/* Header Section */}
+                    <View style={styles.header}>
+                        <Animated.View entering={FadeInDown.duration(800)}>
+                            <Text
+                                style={[
+                                    styles.heroText,
+                                    {
+                                        color: brandColors.primary,
+                                        textShadowColor: '#00ffff', // Neon cyan glow
+                                        textShadowRadius: 20,
+                                        textShadowOffset: { width: 0, height: 0 },
+                                    }
+                                ]}
+                            >
+                                TRENDLY
+                            </Text>
+                        </Animated.View>
+                        <Animated.View entering={FadeInDown.delay(200).duration(800)}>
+                            <Text style={[styles.tagline, { color: brandColors.gray300 }]}>
+                                Where Brands Meet Creators.
+                            </Text>
+                        </Animated.View>
+                        <Animated.View entering={FadeInDown.delay(300).duration(800)}>
+                            <Text style={[styles.description, { color: brandColors.gray300 }]}>
+                                Scale your marketing with data-driven collaborations in real-time.
+                            </Text>
+                        </Animated.View>
                     </View>
+
+                    {/* Action Cards Section */}
+                    <Animated.View
+                        entering={FadeInDown.delay(400).duration(800)}
+                        style={styles.cardsContainer}
+                    >
+                        <ActionCard
+                            title="Join as Brand / Agency"
+                            description="Connect with creators. Amplify your reach."
+                            colors={['#0F2027', '#203A43', '#2C5364']}
+                            onPress={handleBrandPress}
+                            onPressWithAnimation={handleBrandPressWithAnimation}
+                        />
+
+                        <ActionCard
+                            title="Join as Influencer"
+                            description="Monetize your content. Grow your community."
+                            colors={['#FF512F', '#DD2476']}
+                            onPress={handleInfluencerPress}
+                        />
+                    </Animated.View>
                 </View>
-
-                {/* Buttons */}
-
-            </View>
+            </ScrollView>
         </AppLayout>
     );
 };
 
 const styles = StyleSheet.create({
+    scrollContent: {
+        flexGrow: 1,
+    },
+    container: {
+        flex: 1,
+        padding: 24,
+        paddingTop: 24,
+        justifyContent: 'center', // Center vertically if space allows
+    },
     header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
+        marginBottom: 48,
+        alignItems: 'center',
     },
-    title: {
-        fontSize: 24,
-        fontWeight: "bold",
+    heroText: {
+        fontSize: 56,
+        fontWeight: '900',
+        letterSpacing: -2,
+        marginBottom: 8,
+        textAlign: 'center',
+        fontFamily: Platform.select({
+            ios: 'System',
+            android: 'sans-serif',
+            default: 'System',
+        }),
     },
-    imageContainer: {
-        alignItems: "center",
-        // marginVertical: 0,
-    },
-    image: {
-        height: 200,
-        width: 200,
-        borderRadius: 40,
-        marginBottom: 40,
-    },
-    noAccountText: {
-        textAlign: "center",
+    tagline: {
         fontSize: 18,
-        fontWeight: "bold",
-        marginVertical: 10,
+        textAlign: 'center',
+        opacity: 0.8,
     },
-    buttonContainer: {
-        alignItems: "center",
-        marginTop: 20,
+    description: {
+        fontSize: 16,
+        textAlign: 'center',
+        opacity: 0.7,
+        marginTop: 12,
+        maxWidth: 320,
+        lineHeight: 24,
     },
-    button: {
-        marginVertical: 10,
-        paddingVertical: 5,
+    cardsContainer: {
+        width: '100%',
+        gap: 16, // Gap support depends on RN version, spacer used above as backup
+        paddingBottom: 40,
     },
 });
 

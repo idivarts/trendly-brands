@@ -1,4 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
+import Colors from "@/constants/Colors";
 import { CURRENCY } from "@/constants/Unit";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
@@ -63,6 +64,8 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
         <View
             style={{
                 padding: 16,
+backgroundColor: Colors(theme).aliceBlue,
+
             }}
         >
             <View style={styles.infoRow}>
