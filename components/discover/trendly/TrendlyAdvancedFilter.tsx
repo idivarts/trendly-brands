@@ -19,6 +19,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { faRightLong } from "@fortawesome/free-solid-svg-icons";
@@ -82,11 +83,13 @@ interface IProps {
     FilterApplyRef: MutableRefObject<any>;
     defaultAdvanceFilters?: IAdvanceFilters;
     onClearStoredFilters?: () => void;
+    onFiltersApplied?: (filters: IAdvanceFilters) => void;
 }
 const TrendlyAdvancedFilter = ({
     FilterApplyRef,
     defaultAdvanceFilters,
     onClearStoredFilters,
+    onFiltersApplied,
 }: IProps) => {
     const theme = useTheme();
     const styles = stylesFn(theme);
@@ -131,6 +134,7 @@ const TrendlyAdvancedFilter = ({
 
     const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
     const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+    const [apiError, setApiError] = useState<string | null>(null);
 
     // Sorting & pagination state
     const [sort, setSort] = useState<
@@ -206,7 +210,6 @@ const TrendlyAdvancedFilter = ({
                 const saved = await PersistentStorage.get(key);
                 if (!saved) return;
                 const parsed = JSON.parse(saved);
-                console.log("Loaded saved filters for brand:", key, parsed);
                 setFieldsFromFilters(parsed as Partial<IAdvanceFilters>);
             } catch (err) {
                 console.warn("Failed to load saved filters:", err);
@@ -217,10 +220,8 @@ const TrendlyAdvancedFilter = ({
     }, [selectedBrand, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
-        console.log('📄 PAGE CHANGE - Incoming page:', page, 'Current sort:', sort);
         if (page) {
             const newOffset = (page - 1) * 16;
-            console.log('📄 Calculated offset:', newOffset, '= (', page, '- 1) * 16');
             setOffset(newOffset);
         }
         setSort(sort as any);
@@ -341,9 +342,6 @@ const TrendlyAdvancedFilter = ({
             ),
         } as const;
 
-        console.log("Payload Object", payload, followerMin, followerMax);
-
-        // prune empty objects/undefined recursively
         const prune = (obj: any): any => {
             if (obj == null || typeof obj !== "object") return obj;
             if (Array.isArray(obj)) return obj;
@@ -380,41 +378,39 @@ const TrendlyAdvancedFilter = ({
             return;
         }
         const formData = getFormData();
-        console.log('🚀 API CALL - Reset:', reset);
-        console.log('🚀 Offset:', formData.offset, '| Limit:', formData.limit);
-        console.log('🚀 Page number being sent:', formData.offset / 16 + 1);
         discoverCommunication.current?.({
             loading: true,
             data: [],
         });
-        try {
-            let body = await HttpWrapper.fetch(
+        setApiError(null);
+        const runRequest = async (payload: any, label: string) => {
+            const res = await HttpWrapper.fetch(
                 `/discovery/brands/${selectedBrand.id}/influencers`,
                 {
                     method: "POST",
                     headers: {
                         "content-type": "application/json",
                     },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(payload),
                 }
-            ).then(async (res) => {
-                return res.json();
-            });
-            const d = body.data as InfluencerItem[];
-            console.log("🔥 API Response - Returned influencers count:", d.length, "| Expected:", formData.limit);
-            console.log("🔥 Full API response body:", { totalReturned: d.length, hasMore: body.hasMore, total: body.total });
-
-            // Check for duplicates in the API response itself
-            const ids = d.map(item => item.id);
-            const uniqueIds = new Set(ids);
-            if (ids.length !== uniqueIds.size) {
-                console.log("⚠️ BACKEND ISSUE - API returned duplicate IDs in same response!");
-                const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
-                console.log("⚠️ Duplicate IDs:", duplicateIds);
+            );
+            const rawText = await res.text();
+            let body: any = null;
+            try {
+                body = rawText ? JSON.parse(rawText) : {};
+            } catch (err) {
+                body = { raw: rawText };
             }
+            return { body };
+        };
+
+        const applyData = (body: any) => {
+            const d = body.data as InfluencerItem[];
+
+            const ids = d.map((item) => item.id);
+            const uniqueIds = new Set(ids);
 
             const newData = [...(reset ? [] : data), ...d];
-            console.log("🔥 Data accumulation - Previous:", data.length, "| New:", d.length, "| Total:", newData.length);
             setData(newData);
             discoverCommunication.current?.({
                 loading: false,
@@ -422,7 +418,55 @@ const TrendlyAdvancedFilter = ({
                 page: offset / 16 + 1,
                 sort: sort,
             });
+        };
+
+        try {
+            const { body } = await runRequest(formData, "primary");
+            applyData(body);
         } catch (e) {
+            let message = "Unknown error";
+            let rawText = "";
+            let status: number | undefined;
+            if (e && typeof (e as Response).text === "function") {
+                const response = e as Response;
+                status = response.status;
+                rawText = await response.text();
+                try {
+                    const parsed = rawText ? JSON.parse(rawText) : {};
+                    message =
+                        parsed?.message ||
+                        parsed?.error ||
+                        `Request failed (${response.status})`;
+                } catch (err) {
+                    message = rawText || `Request failed (${response.status})`;
+                }
+            } else if (e instanceof Error) {
+                message = e.message;
+            }
+
+            if (rawText.includes("text[]") || rawText.includes("SQLSTATE 42883")) {
+                const strippedPayload = {
+                    ...formData,
+                    genders: undefined,
+                    selectedNiches: undefined,
+                    selectedLocations: undefined,
+                    descKeywords: undefined,
+                };
+                try {
+                    const { body } = await runRequest(strippedPayload, "fallback-no-arrays");
+                    Toaster.error(
+                        "Some filters were skipped",
+                        "Backend rejected array filters; results may be broader."
+                    );
+                    setApiError(null);
+                    applyData(body);
+                    return;
+                } catch (retryError) {
+                }
+            }
+
+            setApiError(message);
+            Toaster.error("Failed to load influencers", message);
             discoverCommunication.current?.({
                 loading: false,
                 data: [],
@@ -516,14 +560,12 @@ const TrendlyAdvancedFilter = ({
             const key = `defaultFilter-${selectedBrand?.id}`;
 
             await PersistentStorage.set(key, JSON.stringify(payload));
-            console.log("Saved filter for brand:", key, payload);
-
+            onFiltersApplied?.(payload);
             callApiRef.current(true);
         } else {
             const key = `defaultFilter-${selectedBrand?.id}`;
             try {
                 await PersistentStorage.clear(key);
-                console.log("Cleared saved filter for brand:", key);
                 onClearStoredFilters?.();
             } catch (err) {
                 console.warn("Failed to clear saved filter:", err);
@@ -536,6 +578,11 @@ const TrendlyAdvancedFilter = ({
     // Unlocked: full filter UI
     return (
         <View style={[styles.surface]}>
+            {apiError && (
+                <HelperText type="error" visible style={{ marginBottom: 8 }}>
+                    {apiError}
+                </HelperText>
+            )}
             <View style={styles.fieldsWrap}>
                 <Text style={{ fontWeight: 600 }}>Demography and Niche</Text>
                 {/* creator_gender */}

@@ -33,6 +33,7 @@ import {
 } from "react-native";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import CustomDivider from "../CustomDivider";
 import Button from "../ui/button";
 import EmptyState from "../ui/empty-state";
 
@@ -175,65 +176,95 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                         data={filteredProposals}
                         showsVerticalScrollIndicator={false}
                         renderItem={({ item }) => (
-                            <View
-                                key={item.id}
-                                style={{
-                                    width: "100%",
-                                    borderWidth: 0.3,
-                                    borderColor: Colors(theme).gray300,
-                                    gap: 8,
-                                    borderRadius: 5,
-                                    overflow: "hidden",
+                            <View style={{
+                                flex: xl ? 1 : undefined,
+                                width: xl ? undefined : "100%",
+                                backgroundColor: Colors(theme).primary,
+                                borderRadius: 14,
+                                shadowColor: Colors(theme).primary,
+                                shadowOffset: { width: 2, height: 4 },
+                                shadowOpacity: 0.25,
+                                shadowRadius: 8,
+                                elevation: 5,
+                                
+                            }}>
+                                <View style={{
+                                    flex: 1,
+                                    borderWidth: 2,
+                                    borderColor: Colors(theme).primary,
+                                    borderRadius: 12,
+                                    backgroundColor: Colors(theme).card,
+                                    borderStyle: item.status === "draft" ? "dashed" : "solid",
+                                    
                                 }}>
+                                    <View
+                                        key={item.id}
+                                        style={{
+                                            flex: 1,
+                                            gap: 8,
+                                            overflow: "hidden",
+                                            borderRadius: 10,
+                                        }}>
 
-                                {item.attachments && item.attachments?.length > 0 && (
-                                    <ScrollMedia
-                                        theme={theme}
-                                        MAX_WIDTH_WEB={MAX_WIDTH_WEB}
-                                        media={item.attachments?.map(
-                                            //@ts-ignore
-                                            (attachment: MediaItem) =>
-                                                processRawAttachment(attachment)
-                                        ) || []}
-                                        xl={xl}
-                                    />
-                                )}
-                                <Pressable onPress={() =>
-                                    router.push(`/collaboration-details/${item.id}`)
-                                }>
 
-                                    {item.status === "draft" && (
-                                        <View
-                                            style={{
-                                                position: "absolute",
-                                                top: 10,
-                                                right: 10,
-                                                backgroundColor: Colors(theme).backdrop,
-                                                padding: 4,
-                                                borderRadius: 4,
-                                            }}
-                                        >
-                                            <Text style={{ color: Colors(theme).white }}>Draft</Text>
-                                        </View>
-                                    )}
+                                        {item.attachments && item.attachments?.length > 0 && (
+                                            <ScrollMedia
+                                                theme={theme}
+                                                MAX_WIDTH_WEB={MAX_WIDTH_WEB}
+                                                media={item.attachments?.map(
+                                                    //@ts-ignore
+                                                    (attachment: MediaItem) =>
+                                                        processRawAttachment(attachment)
+                                                ) || []}
+                                                xl={xl}
+                                            />
+                                        )}
+                                        <Pressable style={{ borderRadius: 10, overflow: "hidden", flex: 1, justifyContent: "space-between" }} onPress={() =>
+                                            router.push(`/collaboration-details/${item.id}`)
+                                        }>
 
-                                    <CollaborationDetails
-                                        collabDescription={item.description || ""}
-                                        name={item.name || ""}
-                                        contentType={item.contentFormat}
-                                        location={item.location}
-                                        platform={item.platform}
-                                        promotionType={item.promotionType}
-                                        onOpenBottomSheet={active ? openBottomSheet : undefined}
-                                        collabId={item.id}
-                                    />
+                                            {item.status === "draft" && (
+                                                <View
+                                                    style={{
+                                                        position: "absolute",
+                                                        right:10,
+                                                        top:28,
+                                                        backgroundColor: Colors(theme).backdrop,
+                                                        padding: 4,
+                                                        borderRadius: 4,
+                                                        zIndex: 1,
+                                                    }}
+                                                >
+                                                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                                                </View>
+                                            )}
 
-                                    <CollaborationStats
-                                        budget={item.budget}
-                                        collabID={item.id}
-                                        influencerCount={item.numberOfInfluencersNeeded}
-                                    />
-                                </Pressable>
+                                            <View style={{ flex: 1 }}>
+                                                <CollaborationDetails
+                                                    collabDescription={item.description || ""}
+                                                    name={item.name || ""}
+                                                    contentType={item.contentFormat}
+                                                    location={item.location}
+                                                    platform={item.platform}
+                                                    promotionType={item.promotionType}
+                                                    onOpenBottomSheet={active ? openBottomSheet : undefined}
+                                                    collabId={item.id}
+                                                />
+                                            </View>
+
+                                            <View>
+                                                <CustomDivider thickness={2} />
+
+                                                <CollaborationStats
+                                                    budget={item.budget}
+                                                    collabID={item.id}
+                                                    influencerCount={item.numberOfInfluencersNeeded}
+                                                />
+                                            </View>
+                                        </Pressable>
+
+                                    </View>
+                                </View>
                             </View>
                         )}
                         keyExtractor={(item, index) => index.toString()}
@@ -246,7 +277,6 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                         contentContainerStyle={{
                             gap: 16,
                             paddingBottom: 64,
-                            width: xl ? "50%" : "100%",
                         }}
                         refreshControl={
                             <RefreshControl

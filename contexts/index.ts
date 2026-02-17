@@ -25,6 +25,10 @@ import {
     ThemeOverrideProvider,
     useThemeOverride,
 } from "./theme-override-context.provider";
+import {
+    TransitionProvider,
+    useTransition,
+} from "./transition-context.provider";
 
 export {
     AuthContextProvider,
@@ -36,6 +40,7 @@ export {
     FirebaseStorageContextProvider,
     NotificationContextProvider,
     ThemeOverrideProvider,
+    TransitionProvider,
     useAuthContext,
     useAWSContext,
     useChatContext,
@@ -44,5 +49,6 @@ export {
     useContractContext,
     useFirebaseStorageContext,
     useNotificationContext,
-    useThemeOverride
+    useThemeOverride,
+    useTransition
 };
