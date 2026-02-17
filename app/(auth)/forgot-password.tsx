@@ -1,12 +1,11 @@
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
-import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/forgot-password.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { sendPasswordResetEmail } from "firebase/auth";
 import * as React from "react";
 import { Image, Text, View } from "react-native";
 
@@ -16,7 +15,7 @@ const ForgotPasswordScreen = () => {
     const theme = useTheme();
     const styles = fnStyles(theme);
 
-    const handleResetPassword = () => {
+    const handleResetPassword = async () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (!emailRegex.test(email)) {
@@ -24,14 +23,37 @@ const ForgotPasswordScreen = () => {
             return;
         }
 
-        sendPasswordResetEmail(AuthApp, email)
-            .then(() => {
-                Toaster.success("Password reset email sent successfully");
-                router.replace("/(auth)/login");
-            })
-            .catch((error) => {
-                Toaster.error(error.message);
-            });
+        try {
+            await HttpWrapper.fetch(
+                "/onboard/reset-password",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ email }),
+                }
+            );
+            Toaster.success("Password reset email sent successfully");
+            router.replace("/(auth)/login");
+        } catch (error) {
+            if (error instanceof Response) {
+                let message = `Request failed (${error.status})`;
+
+                try {
+                    const data = await error.json();
+                    if (data?.message) {
+                        message = data.message;
+                    }
+                } catch {
+                    // ignore JSON parsing errors
+                }
+
+                Toaster.error(message);
+            } else {
+                Toaster.error("Something went wrong. Please try again.");
+            }
+        }
     };
 
     return (

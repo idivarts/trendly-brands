@@ -22,9 +22,11 @@ import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     Linking,
     ListRenderItemInfo,
+    Platform,
     StyleSheet,
     Text
 } from "react-native";
@@ -39,7 +41,6 @@ import {
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
-import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
 import type { InfluencerItem } from "./discover-types";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
@@ -177,6 +178,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
+    const [isRescraping, setIsRescraping] = useState(false);
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
     const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
@@ -238,41 +240,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     useEffect(() => {
         if (!initialInfluencerId || autoOpenedId === initialInfluencerId) return;
 
-        console.log("[DiscoverInfluencer] Auto-open effect running:", {
-            initialInfluencerId,
-            dataLength: data.length,
-            loading,
-            alreadyOpened: autoOpenedId,
-        });
-
-
         if (data.length === 0 && loading) {
-            console.log("[DiscoverInfluencer] Data still loading, skipping...");
             return;
         }
 
         const influencerMatch = data.find((item) => item.id === initialInfluencerId);
-        console.log("[DiscoverInfluencer] Search result:", {
-            found: !!influencerMatch,
-            matchId: influencerMatch?.id,
-        });
 
         if (influencerMatch) {
-            console.log("[DiscoverInfluencer]  Found influencer in data, opening profile:", influencerMatch.name);
             openProfile(influencerMatch);
             setAutoOpenedId(initialInfluencerId);
         } else if (!loading && data.length > 0) {
-
-            console.log("[DiscoverInfluencer] Influencer not in initial results, fetching from Firestore...");
             (async () => {
                 try {
-
                     const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
                     const docSnap = await getDoc(docRef);
 
                     if (docSnap.exists()) {
                         const body = docSnap.data();
-                        console.log("[DiscoverInfluencer] Fetched influencer from Firestore:", body);
 
                         if (body?.id) {
                             const influencerItem: InfluencerItem = {
@@ -285,15 +269,12 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 views_count: body.views_count || 0,
                                 engagement_rate: body.engagement_rate || 0,
                             };
-                            console.log("[DiscoverInfluencer] ✅ Opening profile from Firestore fetch");
                             openProfile(influencerItem);
                             setAutoOpenedId(initialInfluencerId);
                         }
-                    } else {
-                        console.log("[DiscoverInfluencer] Influencer document not found in Firestore");
                     }
                 } catch (error) {
-                    console.error("[DiscoverInfluencer] Error fetching influencer from Firestore:", error);
+                    console.error("[DiscoverInfluencer] Error fetching influencer:", error);
                 }
             })();
         }
@@ -311,20 +292,14 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
         const seen = new Set<string>();
-        const duplicates: string[] = [];
         const result = items.filter((item) => {
             if (!item?.id) return true;
             if (seen.has(item.id)) {
-                duplicates.push(`${item.name} (${item.username}) - ID: ${item.id}`);
                 return false;
             }
             seen.add(item.id);
             return true;
         });
-        if (duplicates.length > 0) {
-            console.log('🔍 DEDUPLICATION - Removed duplicates:', duplicates);
-            console.log('🔍 Original count:', items.length, '| After dedup:', result.length);
-        }
         return result;
     }, []);
 
@@ -339,7 +314,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
-            // Only close right panel on mobile after applying filters
             if (!xl) {
                 setRightPanel(false);
             }
@@ -350,8 +324,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     );
 
     useEffect(() => {
-        if (defaultAdvanceFilters && !appliedFilters) {
-            console.log("🔥 Default Filters Applied:", defaultAdvanceFilters);
+        if (defaultAdvanceFilters) {
             setAppliedFilters(defaultAdvanceFilters);
 
             discoverCommunication.current?.({
@@ -551,16 +524,38 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     }
 
     if (data.length == 0) {
-        if (xl)
-            return (
-                <View style={{ flex: 1, minWidth: 0 }}>
-                    <DiscoverPlaceholder
-                        selectedDb={selectedDb}
-                        setSelectedDb={setSelectedDb}
-                    />
-                </View>
-            );
-        else return null;
+        return (
+            <View
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 24,
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: Colors(theme).text,
+                        textAlign: "center",
+                    }}
+                >
+                    No influencers matched your filters.
+                </Text>
+                <Text
+                    style={{
+                        marginTop: 8,
+                        fontSize: 13,
+                        color: Colors(theme).textSecondary,
+                        textAlign: "center",
+                    }}
+                >
+                    Try widening follower range or clearing a few filters.
+                </Text>
+            </View>
+        );
     }
 
     return (
@@ -762,7 +757,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 style={{
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: 16,
+                    paddingHorizontal: Platform.OS === "web" ? 120 : 16,
 
                 }}
             >
@@ -971,13 +966,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerName={selectedInfluencer.name}
                                         />
                                         {manager?.isAdmin ? (
-                                            <Button
-                                                mode="contained"
-                                                onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
-                                                icon="pencil"
-                                            >
-                                                Edit Metrics
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    mode="contained"
+                                                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
+                                                    icon="pencil"
+                                                >
+                                                    Edit Metrics
+                                                </Button>
+                                                <Button
+                                                    mode="contained"
+                                                    onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
+                                                    loading={isRescraping}
+                                                    disabled={isRescraping}
+                                                >
+                                                    Re-scrape
+                                                </Button>
+                                            </>
                                         ) : null}
                                     </View>
                                 }
