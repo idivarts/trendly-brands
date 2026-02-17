@@ -103,7 +103,7 @@ const PreSigninScreen = () => {
                             <Text style={styles.tagline}>{TAGLINE}</Text>
                         </View>
                         <View style={styles.buttonStack}>
-                            <GlassButton
+                            {/* <GlassButton
                                 label={CTA_LABEL}
                                 variant="primary"
                                 accentColor={brandColor}
@@ -111,7 +111,7 @@ const PreSigninScreen = () => {
                                     router.push("/create-new-account");
                                 }}
                                 disabled={loading}
-                            />
+                            /> */}
                             <GlassButton
                                 label={GOOGLE_LABEL}
                                 variant="secondary"
