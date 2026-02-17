@@ -24,6 +24,7 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
     AWSContextProvider,
+    NicheProvider,
     ThemeOverrideProvider,
     useAuthContext,
     useThemeOverride,
@@ -74,9 +75,11 @@ export default function RootLayout() {
         <GestureHandlerRootView>
             <UpdateProvider force={true}>
                 <AuthContextProvider>
-                    <ThemeOverrideProvider>
-                        <RootLayoutStack />
-                    </ThemeOverrideProvider>
+                    <NicheProvider>
+                        <ThemeOverrideProvider>
+                            <RootLayoutStack />
+                        </ThemeOverrideProvider>
+                    </NicheProvider>
                 </AuthContextProvider>
             </UpdateProvider>
         </GestureHandlerRootView>

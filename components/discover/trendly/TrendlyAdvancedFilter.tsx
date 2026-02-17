@@ -3,12 +3,8 @@ import {
     useDiscovery,
 } from "@/components/discover/discovery-context";
 import Select from "@/components/ui/select";
-import {
-    INFLUENCER_CATEGORIES,
-    INITIAL_INFLUENCER_CATEGORIES,
-} from "@/constants/ItemsList";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useBreakpoints } from "@/hooks";
+import { useBreakpoints, useNicheSearch } from "@/hooks";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import {
     CITIES,
@@ -18,13 +14,14 @@ import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/coll
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { MultiSelectExtendableAsync } from "@/shared-uis/components/multiselect-extendable/async";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { faRightLong } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
+import React, { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { HelperText, Switch, Text, TextInput } from "react-native-paper";
 import type { InfluencerItem } from "../discover-types";
@@ -92,6 +89,13 @@ const TrendlyAdvancedFilter = ({
     const styles = stylesFn(theme);
 
     const { selectedBrand } = useBrandContext();
+
+    // Use dynamic niches from context
+    const { niches: dynamicNiches, getAllNiches, handleSearch: searchNiches, isLoading: isLoadingNiches } = useNicheSearch();
+
+    // Memoize the niche lists to prevent unnecessary re-renders
+    const allNichesList = useMemo(() => getAllNiches(), [getAllNiches]);
+    const initialNichesList = useMemo(() => dynamicNiches.slice(0, 8), [dynamicNiches]);
 
     /** Local state (can be lifted later) */
     const [followerMin, setFollowerMin] = useState("");
@@ -559,7 +563,7 @@ const TrendlyAdvancedFilter = ({
                     <Text style={styles.fieldLabel} variant="labelSmall">
                         Influencer niche
                     </Text>
-                    <MultiSelectExtendable
+                    <MultiSelectExtendableAsync
                         key={`niche-${selectedNiches.join(",")}`}
                         buttonIcon={
                             <FontAwesomeIcon
@@ -569,17 +573,15 @@ const TrendlyAdvancedFilter = ({
                             />
                         }
                         buttonLabel="Others"
-                        initialItemsList={includeSelectedItems(
-                            INFLUENCER_CATEGORIES,
-                            selectedNiches
-                        )}
+                        initialItemsList={allNichesList}
                         initialMultiselectItemsList={includeSelectedItems(
-                            INITIAL_INFLUENCER_CATEGORIES,
+                            initialNichesList,
                             selectedNiches
                         )}
                         onSelectedItemsChange={(values) => {
                             setSelectedNiches(values.map((v) => v));
                         }}
+                        onSearch={searchNiches}
                         selectedItems={selectedNiches}
                         theme={theme}
                     />
