@@ -1,26 +1,18 @@
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { Pressable, ScrollView, View } from "react-native";
+import { BlurView } from "expo-blur";
+import { useRef, useState } from "react";
+import { Animated, Dimensions, Platform, StyleSheet, View } from "react-native";
+import { Surface } from "react-native-paper";
 
-import {
-    BRAND_INDUSTRIES,
-    INITIAL_BRAND_INDUSTRIES
-} from "@/constants/ItemsList";
-import { useBreakpoints } from "@/hooks";
-import ImageUpload from "@/shared-uis/components/image-upload";
-import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import Colors from "@/shared-uis/constants/Colors";
-import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Brand } from "@/types/Brand";
-import { Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface } from "react-native-paper";
+import BrandAge from "./BrandAge";
+import BrandDetails from "./BrandDetails";
+import BrandIndustry from "./BrandIndustry";
 
-const AGE_OPTIONS = [
-    { key: "JUST_STARTING", title: "Just starting", desc: "New or pre-launch brand" },
-    { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
-    { key: "LT_5", title: "Less than 5 years", desc: "Established but growing" },
-    { key: "GT_5", title: "5+ years", desc: "Well established brand" },
-];
+const { height: screenHeight } = Dimensions.get("window");
+const CARD_HEIGHT = screenHeight * 0.75;
+const CARD_SPACING = CARD_HEIGHT * 0.55; // Tighter premium stack spacing
 
 interface BrandProfileProps {
     action?: React.ReactNode;
@@ -38,217 +30,194 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     type = "update",
 }) => {
     const theme = useTheme();
-    const { xl } = useBreakpoints();
+    const colors = Colors(theme);
+    const [currentStep, setCurrentStep] = useState(1);
+    const scrollAnim = useRef(new Animated.Value(0)).current;
 
-    const handleImageUpload = (image: string | File) => {
-        if (typeof image !== "string") {
-            setBrandWebImage(image);
-        } else {
-            setBrandData({
-                ...brandData,
-                image,
-            });
+    const handleNext = () => {
+        const nextStep = currentStep + 1;
+        if (nextStep <= 3) {
+            setCurrentStep(nextStep);
+            Animated.spring(scrollAnim, {
+                toValue: -(nextStep - 1) * CARD_SPACING,
+                useNativeDriver: true,
+                tension: 80,
+                friction: 12,
+            }).start();
         }
     };
 
-    const colors = Colors(theme);
-    const brandAge = brandData.age
+    const handleBack = () => {
+        const prevStep = currentStep - 1;
+        if (prevStep >= 1) {
+            setCurrentStep(prevStep);
+            Animated.spring(scrollAnim, {
+                toValue: -(prevStep - 1) * CARD_SPACING,
+                useNativeDriver: true,
+                tension: 80,
+                // friction: 12,
+            }).start();
+        }
+    };
+
+    const getCardStyle = (index: number) => {
+        // Hide cards that are more than 1 step away (only show adjacent cards)
+        if (Math.abs(index - currentStep) > 1) {
+            return {
+                opacity: 0,
+                transform: [{ translateY: 0 }],
+            };
+        }
+
+        const inputRange = [
+            -(index) * CARD_SPACING,
+            -(index - 1) * CARD_SPACING,
+            -(index - 2) * CARD_SPACING,
+        ];
+
+        return {
+            transform: [
+                {
+                    translateY: scrollAnim.interpolate({
+                        inputRange,
+                        outputRange: [
+                            CARD_SPACING * 0.5,
+                            0,
+                            -CARD_SPACING * 0.5,
+                        ],
+                        extrapolate: "clamp",
+                    }),
+                },
+                { perspective: 1000 },
+                {
+                    rotateX: scrollAnim.interpolate({
+                        inputRange,
+                        outputRange: ["-25deg", "0deg", "25deg"],
+                        extrapolate: "clamp",
+                    }),
+                },
+                {
+                    scale: scrollAnim.interpolate({
+                        inputRange,
+                        outputRange: [0.85, 1, 0.85],
+                        extrapolate: "clamp",
+                    }),
+                },
+            ],
+            opacity: scrollAnim.interpolate({
+                inputRange,
+                outputRange: [0.4, 1, 0.4],
+                extrapolate: "clamp",
+            }),
+            zIndex: scrollAnim.interpolate({
+                inputRange,
+                outputRange: [1, 10, 1],
+                extrapolate: "clamp",
+            }),
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: scrollAnim.interpolate({
+                inputRange,
+                outputRange: [0.1, 0.25, 0.1],
+                extrapolate: "clamp",
+            }),
+            shadowRadius: scrollAnim.interpolate({
+                inputRange,
+                outputRange: [10, 25, 10],
+                extrapolate: "clamp",
+            }),
+            elevation: 10,
+        };
+    };
+
+    const cardContainerStyle = StyleSheet.create({
+        card: {
+            position: "absolute",
+            width: "100%",
+            paddingHorizontal: 16,
+            height: CARD_HEIGHT,
+        },
+    });
 
     return (
-        <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 24, paddingBottom: 32 }}
-        >
-            {/* Brand details: image on the left, fields on the right */}
-            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                    Brand Details
-                </PaperText>
-                <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-                    Add your brand logo and core details so creators can recognize you.
-                </PaperText>
-                <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
-
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
-                    {/* Left column: image uploader */}
-                    <View style={xl ? { width: 240 } : { width: "100%", alignItems: "center" }}>
-                        <ImageUpload initialImage={brandData.image} onUploadImage={handleImageUpload} theme={theme} />
-                        <HelperText type="info" style={{ color: colors.textSecondary, marginTop: 6 }}>
-                            Recommended: square logo, 512×512 or higher
-                        </HelperText>
-                    </View>
-
-                    {/* Right column: inputs */}
-                    <View style={{ flex: 1, minWidth: 260, gap: 12 }}>
-                        <PaperTextInput
-                            mode="outlined"
-                            label="Brand Name*"
-                            value={brandData.name}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    name: value,
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
-                        />
-                        <HelperText type="info" style={{ color: colors.textSecondary, marginTop: -4 }}>
-                            This will be visible on your public profile.
-                        </HelperText>
-
-                        <PaperTextInput
-                            mode="outlined"
-                            label="About the Brand"
-                            multiline
-                            value={brandData.profile?.about}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    profile: {
-                                        ...brandData.profile,
-                                        about: value,
-                                    },
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
-                        />
-
-                        <PaperTextInput
-                            mode="outlined"
-                            label="Phone*"
-                            keyboardType="phone-pad"
-                            autoCapitalize="none"
-                            value={brandData.profile?.phone}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    profile: {
-                                        ...brandData.profile,
-                                        phone: value,
-                                    },
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
-                        />
-
-                        <PaperTextInput
-                            mode="outlined"
-                            label="Website"
-                            keyboardType="url"
-                            autoCapitalize="none"
-                            value={brandData.profile?.website}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    profile: {
-                                        ...brandData.profile,
-                                        website: value,
-                                    },
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', paddingVertical: 40 }}>
+            <Animated.View style={[cardContainerStyle.card, getCardStyle(1), { pointerEvents: currentStep === 1 ? 'auto' : 'none' }]}>
+                {currentStep !== 1 && Platform.OS !== 'web' ? (
+                    <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
+                        <View style={{ opacity: 0.6 }}>
+                            <BrandDetails
+                                brandData={brandData}
+                                setBrandData={setBrandData}
+                                setBrandWebImage={setBrandWebImage}
+                                onNext={handleNext}
+                                onBack={currentStep > 1 ? handleBack : undefined}
+                            />
+                        </View>
+                    </BlurView>
+                ) : (
+                    <View style={currentStep !== 1 ? { opacity: 0.3 } : {}}>
+                        <BrandDetails
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            setBrandWebImage={setBrandWebImage}
+                            onNext={handleNext}
+                            onBack={currentStep > 1 ? handleBack : undefined}
                         />
                     </View>
-                </View>
-            </Surface>
-            {/* Brand Age */}
-            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                    Brand age
-                </PaperText>
-                <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-                    How established is your brand? (required)
-                </PaperText>
-                <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
+                )}
+            </Animated.View>
 
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {AGE_OPTIONS.map((opt) => {
-                        const selected = brandAge === opt.key;
-                        return (
-                            <Pressable
-                                key={opt.key}
-                                onPress={() =>
-                                    setBrandData({
-                                        ...brandData,
-                                        profile: { ...brandData.profile },
-                                        age: opt.key as any,
-                                    })
-                                }
-                                style={{
-                                    flexBasis: "48%",
-                                    marginBottom: 12,
-                                    borderRadius: 12,
-                                    borderWidth: 1,
-                                    borderColor: selected ? colors.primary : colors.border,
-                                    backgroundColor: selected ? colors.primaryLight : colors.background,
-                                    padding: 16,
-                                }}
-                            >
-                                <PaperText style={{ fontWeight: "800", fontSize: 15, color: selected ? colors.primary : colors.text }}>
-                                    {opt.title}
-                                </PaperText>
-                                <PaperText style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>
-                                    {opt.desc}
-                                </PaperText>
-                            </Pressable>
-                        );
-                    })}
-                </View>
-            </Surface>
-            {/* Industry selection card */}
-            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                    Brand Industry
-                </PaperText>
-                <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-                    Specifying the industry helps us match you with relevant creators.
-                </PaperText>
-                <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
+            <Animated.View style={[cardContainerStyle.card, getCardStyle(2), { pointerEvents: currentStep === 2 ? 'auto' : 'none' }]}>
+                {currentStep !== 2 && Platform.OS !== 'web' ? (
+                    <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
+                        <View style={{ opacity: 0.6 }}>
+                            <BrandAge
+                                brandData={brandData}
+                                setBrandData={setBrandData}
+                                onNext={handleNext}
+                                onBack={handleBack}
+                            />
+                        </View>
+                    </BlurView>
+                ) : (
+                    <View style={currentStep !== 2 ? { opacity: 0.3 } : {}}>
+                        <BrandAge
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        />
+                    </View>
+                )}
+            </Animated.View>
 
-                <MultiSelectExtendable
-                    buttonIcon={<FontAwesomeIcon icon={faArrowRight} color={Colors(theme).primary} size={14} />}
-                    buttonLabel="See Other Options"
-                    initialItemsList={includeSelectedItems(
-                        BRAND_INDUSTRIES,
-                        brandData.profile?.industries || []
-                    )}
-                    initialMultiselectItemsList={includeSelectedItems(
-                        INITIAL_BRAND_INDUSTRIES,
-                        brandData.profile?.industries || []
-                    )}
-                    onSelectedItemsChange={(value) => {
-                        setBrandData({
-                            ...brandData,
-                            profile: {
-                                ...brandData.profile,
-                                industries: value.map((v) => v),
-                            },
-                        });
-                    }}
-                    selectedItems={brandData.profile?.industries || []}
-                    theme={theme}
-                    closeOnSelect
-                />
-            </Surface>
-
-            {!!action && (
-                <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                    {action}
-                </Surface>
-            )}
-        </ScrollView>
+            <Animated.View style={[cardContainerStyle.card, getCardStyle(3), { pointerEvents: currentStep === 3 ? 'auto' : 'none' }]}>
+                {currentStep !== 3 && Platform.OS !== 'web' ? (
+                    <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
+                        <View style={{ opacity: 0.6 }}>
+                            <BrandIndustry
+                                brandData={brandData}
+                                setBrandData={setBrandData}
+                                onBack={handleBack}
+                            />
+                        </View>
+                    </BlurView>
+                ) : (
+                    <View style={currentStep !== 3 ? { opacity: 0.3 } : {}}>
+                        <BrandIndustry
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onBack={handleBack}
+                        />
+                        {currentStep === 3 && !!action && (
+                            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card, marginTop: 24 }} elevation={1}>
+                                {action}
+                            </Surface>
+                        )}
+                    </View>
+                )}
+            </Animated.View>
+        </View>
     );
 };
 
