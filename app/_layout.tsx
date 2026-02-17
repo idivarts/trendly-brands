@@ -27,7 +27,7 @@ import {
     ThemeOverrideProvider,
     TransitionProvider,
     useAuthContext,
-    useThemeOverride,
+    useThemeOverride
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
