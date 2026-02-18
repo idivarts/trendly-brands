@@ -14,7 +14,6 @@ import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/coll
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
-import { MultiSelectExtendableAsync } from "@/shared-uis/components/multiselect-extendable/async";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -610,7 +609,7 @@ const TrendlyAdvancedFilter = ({
                     <Text style={styles.fieldLabel} variant="labelSmall">
                         Influencer niche
                     </Text>
-                    <MultiSelectExtendableAsync
+                    <MultiSelectExtendable
                         key={`niche-${selectedNiches.join(",")}`}
                         buttonIcon={
                             <FontAwesomeIcon
