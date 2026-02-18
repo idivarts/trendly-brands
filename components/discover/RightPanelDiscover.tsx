@@ -123,7 +123,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
     // Friendly label for current selection
     const selectedDbLabel =
         selectedDb === "trendly"
-            ? "Trendly Internal"
+            ? "Advanced Trendly Filters"
             : selectedDb === "phyllo"
                 ? "Phyllo"
                 : selectedDb === "modash"
@@ -197,7 +197,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                                 {selectedDb === "trendly" ? "PRO" : "ENTERPRISE"}
                             </Chip>
                         </View>
-                        <Button
+                        {/* <Button
                             mode="text"
                             icon="swap-horizontal"
                             onPress={() => {
@@ -207,7 +207,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                             }}
                         >
                             Change database
-                        </Button>
+                        </Button> */}
                     </View>
                     <Text style={styles.headerSubtitle}>
                         Filters for {selectedDbLabel}
@@ -223,9 +223,6 @@ const RightPanelDiscover: React.FC<IProps> = ({
                     <View style={styles.dbCards}>
                         <DatabaseCard
                             title="Trendly Internal"
-                            badge="PRO"
-                            planTone="pro"
-                            emoji="🟡"
                             description="Perfect for startup brands. 30k+ Instagram creators under 100k followers. Included in Pro."
                             selected={selectedDb === "trendly"}
                             onPress={() => setSelectedDb("trendly")}
@@ -352,10 +349,10 @@ const DatabaseCard = ({
     onPress,
     emoji,
 }: {
-    title: string;
-    badge: "PRO" | "ENTERPRISE";
-    planTone: "pro" | "enterprise";
-    description: string;
+    title?: string;
+    badge?: "PRO" | "ENTERPRISE";
+    planTone?: "pro" | "enterprise";
+    description?: string;
     selected?: boolean;
     onPress?: () => void;
     emoji?: string;
