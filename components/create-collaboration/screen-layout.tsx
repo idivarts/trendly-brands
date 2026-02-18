@@ -13,6 +13,7 @@ import ScreenHeader from "../ui/screen-header";
 
 interface ScreenLayoutProps {
     children: React.ReactNode;
+    headerRight?: React.ReactNode;
     isEdited: boolean;
     isSubmitting?: boolean;
     saveAsDraft?: () => Promise<void>;
@@ -23,6 +24,7 @@ interface ScreenLayoutProps {
 
 const ScreenLayout: React.FC<ScreenLayoutProps> = ({
     children,
+    headerRight,
     isEdited,
     isSubmitting,
     screen,
@@ -34,6 +36,36 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
 
     const router = useRouter();
     const [isModalVisible, setIsModalVisible] = useState(false);
+
+    const showCloseButton = screen !== 1 && type === "Add";
+    const showHeaderRight = Boolean(headerRight) || showCloseButton;
+
+    const headerRightContent = showHeaderRight ? (
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {headerRight}
+            {showCloseButton && (
+                <Pressable
+                    onPress={() => {
+                        if (isEdited) {
+                            setIsModalVisible(true);
+                        } else {
+                            router.back();
+                        }
+                    }}
+                    style={{
+                        marginLeft: 20,
+                        marginRight: 8,
+                    }}
+                >
+                    <FontAwesomeIcon
+                        icon={faXmark}
+                        size={24}
+                        color={theme.colors.text}
+                    />
+                </Pressable>
+            )}
+        </View>
+    ) : undefined;
 
     return (
         <KeyboardAvoidingView
@@ -54,28 +86,8 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
                 }}
                 hideAction={screen === 1 && (type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
                 title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
-                rightAction={screen !== 1 && type === "Add"}
-                rightActionButton={
-                    <Pressable
-                        onPress={() => {
-                            if (isEdited) {
-                                setIsModalVisible(true);
-                            } else {
-                                router.back();
-                            }
-                        }}
-                        style={{
-                            marginLeft: 20,
-                            marginRight: 8,
-                        }}
-                    >
-                        <FontAwesomeIcon
-                            icon={faXmark}
-                            size={24}
-                            color={theme.colors.text}
-                        />
-                    </Pressable>
-                }
+                rightAction={showHeaderRight}
+                rightActionButton={headerRightContent}
             />
 
             <View

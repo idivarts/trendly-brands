@@ -23,6 +23,7 @@ import ScreenLayout from "./screen-layout";
 
 interface ScreenThreeProps {
     collaboration: Partial<Collaboration>;
+    headerRight?: React.ReactNode;
     isEdited: boolean;
     isSubmitting: boolean;
     processMessage: string;
@@ -38,6 +39,7 @@ interface ScreenThreeProps {
 
 const ScreenThree: React.FC<ScreenThreeProps> = ({
     collaboration,
+    headerRight,
     isEdited,
     isSubmitting,
     processMessage,
@@ -121,6 +123,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     return (
         <>
             <ScreenLayout
+                headerRight={headerRight}
                 isEdited={isEdited}
                 isSubmitting={isSubmitting}
                 saveAsDraft={saveAsDraft}

@@ -35,6 +35,7 @@ const LOCATION_TYPES = {
 
 interface ScreenTwoProps {
     collaboration: Partial<Collaboration>;
+    headerRight?: React.ReactNode;
     isEdited: boolean;
     isSubmitting: boolean;
     mapRegion: {
@@ -67,6 +68,7 @@ interface ScreenTwoProps {
 
 const ScreenTwo: React.FC<ScreenTwoProps> = ({
     collaboration,
+    headerRight,
     isEdited,
     isSubmitting,
     mapRegion,
@@ -131,6 +133,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
     return (
         <>
             <ScreenLayout
+                headerRight={headerRight}
                 isEdited={isEdited}
                 isSubmitting={isSubmitting}
                 saveAsDraft={saveAsDraft}
