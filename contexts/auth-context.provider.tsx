@@ -248,6 +248,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         } catch (e) {
             Console.error(e, "Sign out Error")
         }
+        PersistentStorage.setItemWithExpiry("suppress_lets_start", "true", 0.25); // 0.25 hours
 
         signOut(AuthApp)
             .then(() => {
@@ -258,8 +259,6 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
                     id: manager?.id,
                     email: manager?.email,
                 });
-
-                resetAndNavigate("/pre-signin");
                 Toaster.success("Signed Out Successfully!");
             })
             .catch((error) => {
