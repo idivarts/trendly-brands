@@ -42,7 +42,7 @@ interface AuthContextProps {
     setSession: (value: string | null) => void;
     signIn: (email: string, password: string) => void;
     signOutManager: () => Promise<void>;
-    signUp: (name: string, email: string, password: string) => void;
+    signUp: (name: string, email: string, password: string) => Promise<boolean>;
     updateManager: (
         managerId: string,
         manager: Partial<Manager>
@@ -60,7 +60,7 @@ const AuthContext = createContext<AuthContextProps>({
     session: null,
     signIn: (email: string, password: string) => null,
     signOutManager: async () => { },
-    signUp: (name: string, email: string, password: string) => null,
+    signUp: (name: string, email: string, password: string) => Promise.resolve(false),
     updateManager: () => Promise.resolve(),
     manager: null,
     firebaseSignIn: () => { },
@@ -197,18 +197,17 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         }
     };
 
-    const signUp = async (name: string, email: string, password: string) => {
+    const signUp = async (name: string, email: string, password: string): Promise<boolean> => {
         if (!name || !email || !password) {
             Toaster.error("Please fill in all fields.");
-            return;
+            return false;
         }
         if (!isWorkEmail(email)) {
             Toaster.error("Please enter a work email to proceed.");
-            return;
+            return false;
         }
 
         try {
-            // First, create the account on the custom backend
             const response = await HttpWrapper.fetch("/onboard/signup", {
                 method: "POST",
                 headers: {
@@ -225,9 +224,11 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             Console.log("Signup API Response:", data);
 
             Toaster.success("Verification Email Sent!");
+            return true;
         } catch (error: any) {
             Console.error("Signup error:", error);
             Toaster.error("Signup failed. Please try again.");
+            return false;
         }
     };
 

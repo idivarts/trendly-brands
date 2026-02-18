@@ -14,14 +14,63 @@ const SignUpScreen = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [verificationSent, setVerificationSent] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const theme = useTheme();
     const styles = fnStyles(theme);
     const { signUp } = useAuthContext();
 
-    const handleSignUp = () => {
-        signUp(name, email, password);
+    const handleSignUp = async () => {
+        setIsSubmitting(true);
+        try {
+            const success = await signUp(name, email, password);
+            if (success) {
+                setVerificationSent(true);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
+    if (verificationSent) {
+        return (
+            <AuthPageLayout>
+                <Image
+                    source={require("@/assets/images/logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+                <View style={authLayoutStyles.formHeader}>
+                    <Text style={[styles.title, authLayoutStyles.formTitle]}>
+                        Verification Email Sent
+                    </Text>
+                    <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
+                        We've sent a verification email to{" "}
+                        <Text style={{ fontWeight: "bold" }}>{email}</Text>.
+                        {"\n\n"}
+                        Please open your inbox and click the verification link to activate your account.
+                    </Text>
+                </View>
+                <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
+                    <Button
+                        mode="contained"
+                        style={authLayoutStyles.primaryButton}
+                        onPress={() => router.replace("/(auth)/login")}
+                    >
+                        Go to Login
+                    </Button>
+                    <Button
+                        mode="outlined"
+                        style={authLayoutStyles.secondaryButton}
+                        onPress={() => setVerificationSent(false)}
+                    >
+                        Back to Sign Up
+                    </Button>
+                </View>
+            </AuthPageLayout>
+        );
+    }
 
     return (
         <AuthPageLayout>
@@ -86,6 +135,8 @@ const SignUpScreen = () => {
                     mode="contained"
                     style={authLayoutStyles.primaryButton}
                     onPress={handleSignUp}
+                    disabled={isSubmitting}
+                    loading={isSubmitting}
                 >
                     Create Account
                 </Button>
