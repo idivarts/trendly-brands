@@ -466,7 +466,8 @@ export default function BrandCRMBoard() {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={{ flex: 1, backgroundColor: colors.white }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
             <View style={styles.header}>
                 <Text style={styles.title}>Brands CRM</Text>
             </View>
@@ -514,6 +515,7 @@ export default function BrandCRMBoard() {
                 </ScrollView>
             </DndContext>
 
+            </ScrollView>
             <BrandDetailsBottomSheet
                 visible={isModalVisible}
                 brand={selectedBrand}
@@ -643,7 +645,7 @@ const SortableCard = ({
             style={[
                 styles.card,
                 style,
-                { touchAction: "none", position: "relative" },
+                { position: "relative" },
                 {
                     display: "flex",
                     flexDirection: "column",

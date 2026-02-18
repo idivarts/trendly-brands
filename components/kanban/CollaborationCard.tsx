@@ -1,7 +1,6 @@
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+
 import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
@@ -36,12 +35,6 @@ export const CollaborationCard = ({
     card,
     colId,
 }: CollaborationCardProps) => {
-    const { attributes, listeners, setNodeRef, transform, transition } =
-        useSortable({ id });
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-    };
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
@@ -113,21 +106,7 @@ export const CollaborationCard = ({
     }, [card.collaborationId, card.id]);
 
     return (
-        // @ts-ignore
-        <View
-            ref={setNodeRef as any}
-            {...attributes}
-            {...listeners}
-            style={[
-                styles.card,
-                style,
-                {
-                    display: "flex",
-                    flexDirection: "column",
-                    marginBottom: 8,
-                },
-            ]}
-        >
+        <View style={styles.card}>
             {/* Brand Section */}
             {loadingBrand ? (
                 <View style={styles.brandSection}>
