@@ -1,7 +1,7 @@
 import { useTheme } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import { useRef, useState } from "react";
-import { Animated, Dimensions, Platform, StyleSheet, View } from "react-native";
+import { Animated, Dimensions, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Surface } from "react-native-paper";
 
 import Colors from "@/shared-uis/constants/Colors";
@@ -81,9 +81,9 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                     translateY: scrollAnim.interpolate({
                         inputRange,
                         outputRange: [
-                            CARD_SPACING * 0.5,
-                            0,
                             -CARD_SPACING * 0.5,
+                            0,
+                            CARD_SPACING * 0.5,
                         ],
                         extrapolate: "clamp",
                     }),
@@ -92,7 +92,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                 {
                     rotateX: scrollAnim.interpolate({
                         inputRange,
-                        outputRange: ["-25deg", "0deg", "25deg"],
+                        outputRange: ["25deg", "0deg", "-25deg"],
                         extrapolate: "clamp",
                     }),
                 },
@@ -138,6 +138,46 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
             height: CARD_HEIGHT,
         },
     });
+
+    if (type === "update") {
+        return (
+            <ScrollView
+                contentContainerStyle={{
+                    paddingVertical: 40,
+                    paddingHorizontal: 16,
+                    gap: 24,
+                }}
+                showsVerticalScrollIndicator={false}
+            >
+                <BrandDetails
+                    brandData={brandData}
+                    setBrandData={setBrandData}
+                    setBrandWebImage={setBrandWebImage}
+                />
+                <BrandAge
+                    brandData={brandData}
+                    setBrandData={setBrandData}
+                />
+                <BrandIndustry
+                    brandData={brandData}
+                    setBrandData={setBrandData}
+                />
+                {action && (
+                    <Surface
+                        style={{
+                            borderRadius: 16,
+                            padding: 16,
+                            backgroundColor: colors.card,
+                            marginTop: 8,
+                        }}
+                        elevation={1}
+                    >
+                        {action}
+                    </Surface>
+                )}
+            </ScrollView>
+        );
+    }
 
     return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', paddingVertical: 40 }}>
