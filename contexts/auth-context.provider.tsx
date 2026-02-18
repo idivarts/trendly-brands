@@ -1,4 +1,6 @@
+import { INITIAL_MANAGER_DATA } from "@/constants/Manager";
 import { useStorageState } from "@/hooks";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -10,19 +12,18 @@ import { Manager } from "@/types/Manager";
 import { User } from "@/types/User";
 import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
 import { resetAndNavigate } from "@/utils/router";
-import { checkTestUsers } from "@/utils/test-users";
 import { useRouter } from "expo-router";
 import {
-    sendEmailVerification,
     signInWithEmailAndPassword,
     signOut,
-    UserCredential,
+    UserCredential
 } from "firebase/auth";
 import {
     doc,
     getDoc,
     onSnapshot,
-    updateDoc,
+    setDoc,
+    updateDoc
 } from "firebase/firestore";
 import {
     createContext,
@@ -159,26 +160,37 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
     const signIn = async (email: string, password: string) => {
         try {
+
+            if (!email || !password) {
+                Toaster.error("Please enter your email and password.");
+                return;
+            }
             const managerCredential = await signInWithEmailAndPassword(
                 AuthApp,
                 email,
                 password
             );
 
-            if (!email || !password) {
-                Toaster.error("Please enter your email and password.");
-                return;
+            const managerRef = await doc(FirestoreDB, "managers", managerCredential.user.uid);
+            const findUser = await getDoc(managerRef);
+            const isExistingUser = findUser.exists();
+
+            if (!isExistingUser) {
+                const userData: IManagers = {
+                    ...INITIAL_MANAGER_DATA,
+                    name: managerCredential.user.displayName || "",
+                    email: email,
+                    profileImage: managerCredential.user.photoURL || "",
+                };
+                await setDoc(managerRef, userData);
             }
 
-            const testUsers = checkTestUsers(email);
-
-            if (!testUsers && !managerCredential.user.emailVerified) {
-                Toaster.error("Please verify your email first.");
-                sendEmailVerification(managerCredential.user);
-                return;
+            Console.log("User logged in", isExistingUser, managerCredential.user)
+            if (isExistingUser) {
+                firebaseSignIn(managerCredential);
+            } else {
+                firebaseSignUp(managerCredential);
             }
-
-            await firebaseSignIn(managerCredential)
         } catch (error) {
             Console.error(error, "Error signing in");
             Toaster.error("Error signing in. Please try again.");
@@ -212,52 +224,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             const data = await response.json();
             Console.log("Signup API Response:", data);
 
-            // Try to extract user ID from backend response
-            const userId = data.id || data.userId || data.user?.id || data.data?.id;
-
-            if (!userId) {
-                throw new Error("Sign up failed: missing user id from API");
-            }
-
-            setSession(userId);
-
-            // Call the chat auth endpoint
-            HttpWrapper.fetch("/api/v2/chat/auth", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            // Navigate to brand onboarding
-            resetAndNavigate({
-                pathname: "/onboarding-your-brand",
-                params: {
-                    firstBrand: "true",
-                },
-            });
-
-            Toaster.success("Account created successfully!");
+            Toaster.success("Verification Email Sent!");
         } catch (error: any) {
-            let errorMessage = "An unknown error occurred. Please try again.";
-
-            // Handle Response object thrown by HttpWrapper
-            if (error instanceof Response) {
-                error.json().then((data) => {
-                    const apiErrorMessage = data.message || data.error || "Sign up failed";
-                    Toaster.error(apiErrorMessage);
-                    Console.error("API Error Response:", data);
-                }).catch(() => {
-                    Toaster.error("Sign up failed");
-                });
-            } else if (error instanceof Error) {
-                errorMessage = error.message;
-                Toaster.error(errorMessage);
-            } else {
-                Toaster.error(errorMessage);
-            }
-
             Console.error("Signup error:", error);
+            Toaster.error("Signup failed. Please try again.");
         }
     };
 
