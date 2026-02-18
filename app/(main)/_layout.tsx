@@ -1,4 +1,4 @@
-import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
+import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NicheProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import { streamClient } from "@/contexts/chat-context.provider";
 import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
@@ -14,22 +14,23 @@ const MainLayout = () => {
     return (
         // <AWSContextProvider>
         <TrackingProvider>
-            <ConfirmationModalProvider>
-                <FirebaseStorageContextProvider>
-                    <NotificationContextProvider>
-                        <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
-                            <BrandContextProvider>
-                                <CollaborationContextProvider>
-                                    <ContractContextProvider>
-                                        <AutocompleteDropdownContextProvider>
-                                            <ChatContextProvider>
-                                                <ScrollProvider>
-                                                    <Stack
-                                                        screenOptions={{
-                                                            headerShown: false,
-                                                        }}
-                                                    >
-                                                        {/* <Stack.Screen
+            <NicheProvider>
+                <ConfirmationModalProvider>
+                    <FirebaseStorageContextProvider>
+                        <NotificationContextProvider>
+                            <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
+                                <BrandContextProvider>
+                                    <CollaborationContextProvider>
+                                        <ContractContextProvider>
+                                            <AutocompleteDropdownContextProvider>
+                                                <ChatContextProvider>
+                                                    <ScrollProvider>
+                                                        <Stack
+                                                            screenOptions={{
+                                                                headerShown: false,
+                                                            }}
+                                                        >
+                                                            {/* <Stack.Screen
                               name="(drawer)"
                               options={{
                                 headerShown: false,
@@ -41,17 +42,18 @@ const MainLayout = () => {
                                 headerShown: false,
                               }}
                             /> */}
-                                                    </Stack>
-                                                </ScrollProvider>
-                                            </ChatContextProvider>
-                                        </AutocompleteDropdownContextProvider>
-                                    </ContractContextProvider>
-                                </CollaborationContextProvider>
-                            </BrandContextProvider>
-                        </CloudMessagingContextProvider>
-                    </NotificationContextProvider>
-                </FirebaseStorageContextProvider>
-            </ConfirmationModalProvider>
+                                                        </Stack>
+                                                    </ScrollProvider>
+                                                </ChatContextProvider>
+                                            </AutocompleteDropdownContextProvider>
+                                        </ContractContextProvider>
+                                    </CollaborationContextProvider>
+                                </BrandContextProvider>
+                            </CloudMessagingContextProvider>
+                        </NotificationContextProvider>
+                    </FirebaseStorageContextProvider>
+                </ConfirmationModalProvider>
+            </NicheProvider>
         </TrackingProvider>
         // </AWSContextProvider>
     );
