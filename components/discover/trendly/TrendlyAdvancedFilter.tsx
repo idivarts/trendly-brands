@@ -19,11 +19,12 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
-import { faRightLong } from "@fortawesome/free-solid-svg-icons";
+import { faStar } from "@fortawesome/free-regular-svg-icons";
+import { faRightLong, faStar as faStarSolid } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { HelperText, Switch, Text, TextInput } from "react-native-paper";
 import type { InfluencerItem } from "../discover-types";
 
@@ -71,6 +72,76 @@ const RangeInputs = ({
                     placeholder={placeholderMax}
                     style={[styles.input, styles.rangeInput]}
                 />
+            </View>
+        </View>
+    );
+};
+
+/** Tappable star row for picking a 0-5 star value (full-star increments) */
+const TappableStarRow = ({
+    value,
+    onChange,
+    theme,
+}: {
+    value: number;
+    onChange: (stars: number) => void;
+    theme: Theme;
+}) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: "transparent" }}>
+        {Array.from({ length: 5 }, (_, i) => {
+            const starNum = i + 1;
+            const filled = starNum <= value;
+            return (
+                <Pressable
+                    key={i}
+                    onPress={() => onChange(starNum === value ? 0 : starNum)}
+                    hitSlop={4}
+                >
+                    <FontAwesomeIcon
+                        icon={filled ? faStarSolid : faStar}
+                        size={22}
+                        color={Colors(theme).yellow}
+                    />
+                </Pressable>
+            );
+        })}
+        <Text style={{ marginLeft: 6, fontSize: 13, color: Colors(theme).textSecondary }}>
+            {value > 0 ? `${value}.0` : "Any"}
+        </Text>
+    </View>
+);
+
+/** Star-based min/max range picker for quality filtering */
+const StarRangePicker = ({
+    label,
+    minStars,
+    maxStars,
+    onChangeMin,
+    onChangeMax,
+    theme,
+}: {
+    label: string;
+    minStars: number;
+    maxStars: number;
+    onChangeMin: (stars: number) => void;
+    onChangeMax: (stars: number) => void;
+    theme: Theme;
+}) => {
+    const styles = stylesFn(theme);
+    return (
+        <View style={{ backgroundColor: "transparent" }}>
+            <Text style={styles.fieldLabel} variant="labelSmall">
+                {label}
+            </Text>
+            <View style={{ gap: 8, backgroundColor: "transparent" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "transparent" }}>
+                    <Text style={{ fontSize: 13, width: 30, color: Colors(theme).textSecondary }}>Min</Text>
+                    <TappableStarRow value={minStars} onChange={onChangeMin} theme={theme} />
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "transparent" }}>
+                    <Text style={{ fontSize: 13, width: 30, color: Colors(theme).textSecondary }}>Max</Text>
+                    <TappableStarRow value={maxStars} onChange={onChangeMax} theme={theme} />
+                </View>
             </View>
         </View>
     );
@@ -311,7 +382,7 @@ const TrendlyAdvancedFilter = ({
                 defaultAdvanceFilters?.avgCommentsMax
             ),
 
-            // Quality/aesthetics slider (0..100) (int)
+            // Quality/aesthetics (0..10, displayed as 0-5 stars)
             qualityMin: safeNum(qualityMin, defaultAdvanceFilters?.qualityMin),
             qualityMax: safeNum(qualityMax, defaultAdvanceFilters?.qualityMax),
 
@@ -757,15 +828,13 @@ const TrendlyAdvancedFilter = ({
                     theme={theme}
                 />
 
-                {/* influencer aesthetics / quality*/}
-                <RangeInputs
-                    label="Influencer aesthetics / quality (0-100)"
-                    min={qualityMin}
-                    max={qualityMax}
-                    onChangeMin={setQualityMin}
-                    onChangeMax={setQualityMax}
-                    placeholderMin="Min (0)"
-                    placeholderMax="Max (100)"
+                {/* influencer aesthetics / quality (0-5 stars, stored as 0-10 internally) */}
+                <StarRangePicker
+                    label="Influencer aesthetics / quality"
+                    minStars={qualityMin ? Math.round(parseFloat(qualityMin) / 2) : 0}
+                    maxStars={qualityMax ? Math.round(parseFloat(qualityMax) / 2) : 0}
+                    onChangeMin={(stars) => setQualityMin(stars > 0 ? String(stars * 2) : "")}
+                    onChangeMax={(stars) => setQualityMax(stars > 0 ? String(stars * 2) : "")}
                     theme={theme}
                 />
 
