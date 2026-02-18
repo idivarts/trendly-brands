@@ -13,6 +13,7 @@ import BrandIndustry from "./BrandIndustry";
 const { height: screenHeight } = Dimensions.get("window");
 const CARD_HEIGHT = screenHeight * 0.75;
 const CARD_SPACING = CARD_HEIGHT * 0.55; // Tighter premium stack spacing
+const CARD_MAX_WIDTH = 480; // Constrained width for a modern, readable card layout
 
 interface BrandProfileProps {
     action?: React.ReactNode;
@@ -145,43 +146,46 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                 contentContainerStyle={{
                     paddingVertical: 40,
                     paddingHorizontal: 16,
-                    gap: 24,
+                    alignItems: "center",
                 }}
                 showsVerticalScrollIndicator={false}
             >
-                <BrandDetails
-                    brandData={brandData}
-                    setBrandData={setBrandData}
-                    setBrandWebImage={setBrandWebImage}
-                />
-                <BrandAge
-                    brandData={brandData}
-                    setBrandData={setBrandData}
-                />
-                <BrandIndustry
-                    brandData={brandData}
-                    setBrandData={setBrandData}
-                />
-                {action && (
-                    <Surface
-                        style={{
-                            borderRadius: 16,
-                            padding: 16,
-                            backgroundColor: colors.card,
-                            marginTop: 8,
-                        }}
-                        elevation={1}
-                    >
-                        {action}
-                    </Surface>
-                )}
+                <View style={{ width: "100%", maxWidth: CARD_MAX_WIDTH, gap: 24 }}>
+                    <BrandDetails
+                        brandData={brandData}
+                        setBrandData={setBrandData}
+                        setBrandWebImage={setBrandWebImage}
+                    />
+                    <BrandAge
+                        brandData={brandData}
+                        setBrandData={setBrandData}
+                    />
+                    <BrandIndustry
+                        brandData={brandData}
+                        setBrandData={setBrandData}
+                    />
+                    {action && (
+                        <Surface
+                            style={{
+                                borderRadius: 16,
+                                padding: 16,
+                                backgroundColor: colors.card,
+                                marginTop: 8,
+                            }}
+                            elevation={1}
+                        >
+                            {action}
+                        </Surface>
+                    )}
+                </View>
             </ScrollView>
         );
     }
 
     return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', paddingVertical: 40 }}>
-            <Animated.View style={[cardContainerStyle.card, getCardStyle(1), { pointerEvents: currentStep === 1 ? 'auto' : 'none' }]}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", overflow: "hidden", paddingVertical: 40 }}>
+            <View style={{ width: "100%", maxWidth: CARD_MAX_WIDTH, height: CARD_HEIGHT, position: "relative" }}>
+            <Animated.View style={[cardContainerStyle.card, getCardStyle(1), { pointerEvents: currentStep === 1 ? "auto" : "none" }]}>
                 {currentStep !== 1 && Platform.OS !== 'web' ? (
                     <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
                         <View style={{ opacity: 0.6 }}>
@@ -207,7 +211,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                 )}
             </Animated.View>
 
-            <Animated.View style={[cardContainerStyle.card, getCardStyle(2), { pointerEvents: currentStep === 2 ? 'auto' : 'none' }]}>
+            <Animated.View style={[cardContainerStyle.card, getCardStyle(2), { pointerEvents: currentStep === 2 ? "auto" : "none" }]}>
                 {currentStep !== 2 && Platform.OS !== 'web' ? (
                     <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
                         <View style={{ opacity: 0.6 }}>
@@ -231,7 +235,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                 )}
             </Animated.View>
 
-            <Animated.View style={[cardContainerStyle.card, getCardStyle(3), { pointerEvents: currentStep === 3 ? 'auto' : 'none' }]}>
+            <Animated.View style={[cardContainerStyle.card, getCardStyle(3), { pointerEvents: currentStep === 3 ? "auto" : "none" }]}>
                 {currentStep !== 3 && Platform.OS !== 'web' ? (
                     <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
                         <View style={{ opacity: 0.6 }}>
@@ -257,6 +261,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                     </View>
                 )}
             </Animated.View>
+            </View>
         </View>
     );
 };
