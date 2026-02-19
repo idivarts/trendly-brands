@@ -21,6 +21,53 @@ import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
 import ScreenThree from "./screen-three";
 
+// Mapping functions to convert API response to app format
+const mapPromotionType = (apiValue: string): PromotionType => {
+    const mapping: Record<string, PromotionType> = {
+        "sponsored-post": PromotionType.PAID_COLLAB,
+        "paid-collab": PromotionType.PAID_COLLAB,
+        "paid": PromotionType.PAID_COLLAB,
+        "barter": PromotionType.BARTER_COLLAB,
+        "barter-collab": PromotionType.BARTER_COLLAB,
+    };
+    return mapping[apiValue.toLowerCase()] || PromotionType.BARTER_COLLAB;
+};
+
+const mapPlatform = (apiValue: string): string => {
+    const mapping: Record<string, string> = {
+        "instagram": "Instagram",
+        "facebook": "Facebook",
+        "youtube": "YouTube",
+        "linkedin": "LinkedIn",
+    };
+    return mapping[apiValue.toLowerCase()] || apiValue;
+};
+
+const mapContentFormat = (apiValue: string): string => {
+    if (!apiValue || typeof apiValue !== 'string') {
+        Console.log("Invalid content format value:", apiValue);
+        return "";
+    }
+
+    const mapping: Record<string, string> = {
+        "post": "Post",
+        "reel": "Reels",
+        "reels": "Reels",
+        "story": "Stories",
+        "stories": "Stories",
+        "live": "Live",
+        "online-review": "Online Reviews",
+        "online-reviews": "Online Reviews",
+    };
+
+    const normalized = apiValue.trim().toLowerCase();
+    const result = mapping[normalized] || apiValue;
+
+    Console.log(`mapContentFormat: "${apiValue}" (normalized: "${normalized}") -> "${result}"`);
+
+    return result;
+};
+
 const CreateCollaboration = () => {
     const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
         name: "",
@@ -108,8 +155,88 @@ const CreateCollaboration = () => {
             fetchCollaboration(params.id).finally(() => {
                 setIsLoading(false);
             });
+        } else if (params.aiData && typeof params.aiData === "string") {
+            // Handle AI-generated data
+            try {
+                const aiResponse = JSON.parse(decodeURIComponent(params.aiData as string));
+                Console.log("Received AI Data:", aiResponse);
+
+                // Extract the collaboration data from the response
+                const aiData = aiResponse.collaboration || aiResponse;
+
+                Console.log("Extracted collaboration data:", aiData);
+                Console.log("Raw Name:", aiData.name);
+                Console.log("Raw Budget:", aiData.budget);
+                Console.log("Raw Platform:", aiData.platform);
+                Console.log("Raw ContentFormat:", aiData.contentFormat);
+                Console.log("Raw PromotionType:", aiData.promotionType);
+
+                // Map content format with detailed logging
+                const mappedContentFormat = Array.isArray(aiData.contentFormat)
+                    ? aiData.contentFormat.map((format: string) => {
+                        const mapped = mapContentFormat(format);
+                        Console.log(`Mapping contentFormat: "${format}" -> "${mapped}"`);
+                        return mapped;
+                    })
+                    : collaboration.contentFormat;
+
+                Console.log("Final mapped contentFormat:", mappedContentFormat);
+
+                // Map AI data to collaboration object with proper type conversion and value mapping
+                const updatedCollaboration = {
+                    ...collaboration,
+                    name: aiData.name ? String(aiData.name) : collaboration.name,
+                    description: aiData.description ? String(aiData.description) : collaboration.description,
+                    promotionType: aiData.promotionType
+                        ? mapPromotionType(aiData.promotionType)
+                        : collaboration.promotionType,
+                    budget: aiData.budget ? {
+                        min: Number(aiData.budget.min) || 0,
+                        max: Number(aiData.budget.max) || 0,
+                    } : collaboration.budget,
+                    numberOfInfluencersNeeded: aiData.numberOfInfluencersNeeded
+                        ? Number(aiData.numberOfInfluencersNeeded)
+                        : collaboration.numberOfInfluencersNeeded,
+                    platform: Array.isArray(aiData.platform)
+                        ? aiData.platform.map(mapPlatform)
+                        : collaboration.platform,
+                    contentFormat: mappedContentFormat,
+                    preferredContentLanguage: Array.isArray(aiData.preferredContentLanguage)
+                        ? aiData.preferredContentLanguage
+                        : collaboration.preferredContentLanguage,
+                    location: aiData.location || collaboration.location,
+                    questionsToInfluencers: Array.isArray(aiData.questionsToInfluencers)
+                        ? aiData.questionsToInfluencers
+                        : collaboration.questionsToInfluencers,
+                    preferences: aiData.preferences || collaboration.preferences,
+                };
+
+                Console.log("Updated collaboration object:", updatedCollaboration);
+                Console.log("Mapped promotionType:", updatedCollaboration.promotionType);
+                Console.log("Mapped platforms:", updatedCollaboration.platform);
+                Console.log("Mapped contentFormats:", updatedCollaboration.contentFormat);
+
+                setCollaboration(updatedCollaboration);
+
+                Toaster.success("Campaign generated successfully! Review and customize as needed.");
+            } catch (error) {
+                Console.error("Failed to parse AI data:");
+                Console.error(error);
+                Toaster.error("Failed to load AI-generated campaign data.");
+            }
         }
     }, []);
+
+    // Debug: Log collaboration state changes
+    useEffect(() => {
+        Console.log("=== Collaboration State Changed ===");
+        Console.log("Name:", collaboration.name);
+        Console.log("ContentFormat:", collaboration.contentFormat);
+        Console.log("Platform:", collaboration.platform);
+        Console.log("PromotionType:", collaboration.promotionType);
+        Console.log("Budget:", collaboration.budget);
+        Console.log("===================================");
+    }, [collaboration]);
 
     const onLocationChange = (
         latlong: { lat: number; long: number },
