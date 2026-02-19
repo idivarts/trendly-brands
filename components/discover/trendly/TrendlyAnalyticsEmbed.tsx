@@ -9,6 +9,7 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { Brand } from "@/types/Brand";
+import { getTrustabilityLevel } from "@/utils/trustability";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
@@ -20,6 +21,7 @@ import {
     List,
     Text,
 } from "react-native-paper";
+import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import { StatChip } from "../StatChip";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
@@ -298,10 +300,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             >
                                 Quality
                             </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.quality}
-                                <Text variant={labelVariant}>%</Text>
-                            </Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "transparent" }}>
+                                <Stars rating={qualityScoreToStars(analytics.quality)} size={isTiny ? 14 : isNarrow ? 16 : 20} />
+                                <Text variant={labelVariant}>
+                                    {qualityScoreToStars(analytics.quality).toFixed(1)}
+                                </Text>
+                            </View>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Higher = richer, classy, aesthetic creators
                             </Text>
@@ -316,9 +320,14 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             >
                                 Trustability
                             </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.trustablity}
-                                <Text variant={labelVariant}>%</Text>
+                            <Text
+                                variant={valueVariant}
+                                style={{
+                                    color: getTrustabilityLevel(analytics.trustablity)?.color || "#666",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                {getTrustabilityLevel(analytics.trustablity)?.label || "—"} ({analytics.trustablity}%)
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Signals from past collabs, engagement quality
@@ -434,9 +443,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             </Chip>
                         )}
                         {typeof social.quality_score === "number" && (
-                            <Chip style={{ marginRight: 8, marginBottom: 0 }} icon="star">
-                                Quality: {social.quality_score}/100
-                            </Chip>
+                            <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, marginBottom: 0, backgroundColor: "transparent" }}>
+                                <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
+                                <Text variant="bodySmall" style={{ marginLeft: 4 }}>
+                                    {qualityScoreToStars(social.quality_score).toFixed(1)}
+                                </Text>
+                            </View>
                         )}
                     </View>
 
@@ -491,7 +503,13 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             value={social.engagement_rate || 0}
                             textColor={Colors(theme).black}
                         />
-                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black} />
+                        <View style={{ flexDirection: "row", alignItems: "center", marginRight: 12, marginBottom: 8, backgroundColor: "transparent" }}>
+                            <Text variant="labelMedium" style={{ marginRight: 6, color: Colors(theme).black }}>Quality</Text>
+                            <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
+                            <Text variant="bodySmall" style={{ marginLeft: 4, color: Colors(theme).black }}>
+                                {qualityScoreToStars(social.quality_score).toFixed(1)}
+                            </Text>
+                        </View>
                     </View>
                 </Card.Content>
             </Card>
