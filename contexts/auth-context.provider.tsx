@@ -191,9 +191,14 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             } else {
                 firebaseSignUp(managerCredential);
             }
-        } catch (error) {
+        } catch (error: any) {
             Console.error(error, "Error signing in");
-            Toaster.error("Error signing in. Please try again.");
+            const code = error?.code || error?.message || "";
+            if (code.includes("invalid-credential") || code.includes("invalid-email") || code.includes("wrong-password") || code.includes("user-not-found")) {
+                Toaster.error("Invalid email or password. Please check your credentials and try again.");
+            } else {
+                Toaster.error("Error signing in. Please try again.");
+            }
         }
     };
 

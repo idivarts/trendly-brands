@@ -12,7 +12,14 @@ import { Brand } from "@/types/Brand";
 import { getTrustabilityLevel } from "@/utils/trustability";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
+import {
+    Image,
+    Linking,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+} from "react-native";
 import {
     ActivityIndicator,
     Card,
@@ -275,257 +282,158 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const isNarrow = width < 520;
         const isTiny = width < 360;
-        const smallCardWidth = isNarrow ? "48%" : "31%";
-        const wideCardWidth = isNarrow ? "100%" : "48%";
-        const labelVariant = isTiny ? "labelSmall" : isNarrow ? "labelMedium" : "labelLarge";
-        const valueVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "displaySmall";
-        const rangeVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "headlineLarge";
-        const contentPadding = isNarrow ? 12 : 16;
-        const cardSpacing = isNarrow ? 10 : 12;
+        const PADDING = isNarrow ? 16 : 20;
+        const cardRadius = 16;
+        const heroRadius = 20;
 
-        const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => (
-            <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                <View
-                    style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        justifyContent: "space-between",
-                    }}
-                >
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Quality
-                            </Text>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "transparent" }}>
-                                <Stars rating={qualityScoreToStars(analytics.quality)} size={isTiny ? 14 : isNarrow ? 16 : 20} />
-                                <Text variant={labelVariant}>
-                                    {qualityScoreToStars(analytics.quality).toFixed(1)}
-                                </Text>
-                            </View>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Higher = richer, classy, aesthetic creators
-                            </Text>
-                        </Card.Content>
-                    </Card>
+        const cardBaseStyle = {
+            marginBottom: 12,
+            borderRadius: cardRadius,
+            borderWidth: 1,
+            borderColor: theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+            backgroundColor: theme.dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)",
+            marginHorizontal: PADDING,
+            overflow: "hidden" as const,
+        };
 
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Trustability
-                            </Text>
-                            <Text
-                                variant={valueVariant}
-                                style={{
-                                    color: getTrustabilityLevel(analytics.trustablity)?.color || "#666",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                {getTrustabilityLevel(analytics.trustablity)?.label || "—"} ({analytics.trustablity}%)
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Signals from past collabs, engagement quality
-                            </Text>
-                        </Card.Content>
-                    </Card>
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                CPM
-                            </Text>
-                            <Text variant={valueVariant}>
-                                {formatCurrency(analytics.cpm)}{" "}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Cost per Mille (1000 views)
-                            </Text>
-                        </Card.Content>
-                    </Card>
+        const styles = StyleSheet.create({
+            section: { marginBottom: 24 },
+            sectionLabel: {
+                fontSize: 11,
+                fontWeight: "700",
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                color: colors.gray300,
+                marginBottom: 12,
+                paddingHorizontal: PADDING,
+            },
+            heroCard: {
+                marginHorizontal: PADDING,
+                marginBottom: 16,
+                borderRadius: heroRadius,
+                overflow: "hidden",
+                backgroundColor: theme.dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
+                borderWidth: 1,
+                borderColor: theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+            },
+            heroValue: { fontSize: isTiny ? 22 : isNarrow ? 26 : 32, fontWeight: "800" as const },
+            heroLabel: { fontSize: 12, opacity: 0.7, marginTop: 4 },
+            statPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+        });
 
-                    <Card style={{ width: wideCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Estimated Budget
+        const HeroCard = ({ analytics }: { analytics: ISocialAnalytics }) => (
+            <View style={[styles.heroCard, { padding: 20 }]}>
+                <Text style={styles.sectionLabel}>Budget & Reach</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, backgroundColor: "transparent" }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={[styles.heroValue, { color: colors.text }]}>
+                            {formatCurrency(analytics.estimatedBudget?.min)} — {formatCurrency(analytics.estimatedBudget?.max)}
+                        </Text>
+                        <Text style={[styles.heroLabel, { color: colors.text }]}>Estimated budget</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={[styles.heroValue, { color: colors.text }]}>
+                            {formatNumber(analytics.estimatedReach?.min)} — {formatNumber(analytics.estimatedReach?.max)}
+                        </Text>
+                        <Text style={[styles.heroLabel, { color: colors.text }]}>Estimated reach</Text>
+                    </View>
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
+                    <View style={[styles.statPill, { backgroundColor: getTrustabilityLevel(analytics.trustablity)?.color ? getTrustabilityLevel(analytics.trustablity)!.color + "20" : (theme.dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)") }]}>
+                        <Text style={{ fontSize: 12, fontWeight: "600", color: getTrustabilityLevel(analytics.trustablity)?.color || colors.text }}>
+                            {getTrustabilityLevel(analytics.trustablity)?.label || "—"} ({analytics.trustablity}%)
+                        </Text>
+                    </View>
+                    <View style={[styles.statPill, { backgroundColor: theme.dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }]}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <Stars rating={qualityScoreToStars(analytics.quality)} size={18} />
+                            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>
+                                {qualityScoreToStars(analytics.quality).toFixed(1)} Quality
                             </Text>
-                            <Text variant={rangeVariant}>
-                                {formatCurrency(analytics.estimatedBudget?.min)} —{" "}
-                                {formatCurrency(analytics.estimatedBudget?.max)}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Typical creator ask for one deliverable
-                            </Text>
-                        </Card.Content>
-                    </Card>
+                        </View>
+                    </View>
+                    <View style={[styles.statPill, { backgroundColor: theme.dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }]}>
+                        <Text style={{ fontSize: 14, fontWeight: "700", color: colors.text }}>
+                            {formatCurrency(analytics.cpm)} CPM
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        );
 
-                    <Card style={{ width: wideCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Estimated Reach
-                            </Text>
-                            <Text variant={rangeVariant}>
-                                {formatNumber(analytics.estimatedReach?.min)} —{" "}
-                                {formatNumber(analytics.estimatedReach?.max)}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Projected unique views per post
-                            </Text>
-                        </Card.Content>
-                    </Card>
+        const SocialStatsCard = ({ social }: { social: ISocials }) => (
+            <View style={[styles.section]}>
+                <Text style={styles.sectionLabel}>Key metrics</Text>
+                <View style={[cardBaseStyle, { padding: 16 }]}>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, backgroundColor: "transparent" }}>
+                        <StatChip label="Followers" value={social.follower_count} textColor={colors.text} />
+                        <StatChip label="Views" value={convertToMUnits(social.views_count)} textColor={colors.text} />
+                        <StatChip label="Engagements" value={social.engagement_count} textColor={colors.text} />
+                        <StatChip label="ER %" value={social.engagement_rate || 0} textColor={colors.text} />
+                        <StatChip label="Posts" value={social.content_count} textColor={colors.text} />
+                    </View>
                 </View>
             </View>
         );
 
         const ProfileOverviewCard = ({ social }: { social: ISocials }) => (
-            <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                <Card.Title
-                    title={social.name || social.username}
-                    subtitle={[
-                        social.username ? `@${social.username}` : "",
-                        social.category,
-                    ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    right={(props) => (
-                        <View
-                            style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                paddingRight: 12,
-                            }}
-                        >
-                            {social.profile_verified && (
-                                <Chip compact icon="check-decagram" style={{ marginRight: 6 }}>
-                                    Verified
-                                </Chip>
-                            )}
-                        </View>
-                    )}
-                />
-
-                <Card.Content>
-                    <Text
-                        variant="bodyMedium"
-                        style={{ marginBottom: 8 }}
-                        numberOfLines={2}
-                    >
-                        {social.bio != "unknown" ? social.bio : ""}
-                    </Text>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                        {!!social.location && social.location != "unknown" && (
-                            <Chip
-                                style={{ marginRight: 8, marginBottom: 8 }}
-                                icon="map-marker"
-                            >
+            <View style={[styles.section]}>
+                <Text style={styles.sectionLabel}>About</Text>
+                <View style={[cardBaseStyle, { padding: 16 }]}>
+                    {(social.bio && social.bio !== "unknown") ? (
+                        <Text style={{ fontSize: 15, lineHeight: 22, color: colors.text, marginBottom: 12 }} numberOfLines={3}>
+                            {social.bio}
+                        </Text>
+                    ) : null}
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                        {!!social.location && social.location !== "unknown" && (
+                            <Chip compact icon="map-marker" style={{ marginRight: 0 }}>
                                 {social.location}
                             </Chip>
                         )}
-                        {!!social.gender && social.gender != "unknown" && (
-                            <Chip
-                                style={{ marginRight: 8, marginBottom: 8 }}
-                                icon="gender-male-female"
+                        {!!social.gender && social.gender !== "unknown" && (
+                            <Chip compact icon="gender-male-female"
                             >
                                 {social.gender}
                             </Chip>
                         )}
-                        {typeof social.quality_score === "number" && (
-                            <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, marginBottom: 0, backgroundColor: "transparent" }}>
-                                <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
-                                <Text variant="bodySmall" style={{ marginLeft: 4 }}>
-                                    {qualityScoreToStars(social.quality_score).toFixed(1)}
-                                </Text>
-                            </View>
+                        {social.profile_verified && (
+                            <Chip compact icon="check-decagram">Verified</Chip>
                         )}
                     </View>
-
                     {Array.isArray(social.niches) && social.niches.length > 0 && (
-                        <View style={{ marginTop: 8 }}>
-                            <Text variant="labelLarge" style={{ marginBottom: 6 }}>
-                                Niches
-                            </Text>
-                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                        <View style={{ marginTop: 12 }}>
+                            <Text style={{ fontSize: 12, fontWeight: "600", color: colors.gray300, marginBottom: 8 }}>Niches</Text>
+                            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                                 {social.niches.map((n) => (
-                                    <Chip key={n} style={{ marginRight: 8, marginBottom: 8 }}>
-                                        {n}
-                                    </Chip>
+                                    <Chip key={n} compact style={{ marginRight: 0 }}>{n}</Chip>
                                 ))}
                             </View>
                         </View>
                     )}
-                </Card.Content>
-            </Card>
-        );
-
-        const TotalsCard = ({ social }: { social: ISocials }) => (
-
-            <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                <Card.Title title="Totals" />
-                <Card.Content>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Followers" value={social.follower_count} textColor={Colors(theme).black} />
-                        <StatChip label="Following" value={social.following_count} textColor={Colors(theme).black} />
-                        <StatChip label="Posts" value={social.content_count} textColor={Colors(theme).black} />
-                        <StatChip label="Total Views" value={convertToMUnits(social.views_count)} textColor={Colors(theme).black} />
-                        <StatChip
-                            label="Total Engagements"
-                            value={social.engagement_count}
-                            textColor={Colors(theme).black}
-                        />
-                    </View>
-                </Card.Content>
-            </Card>
-        );
-
-        const AveragesCard = ({ social }: { social: ISocials }) => (
-            <Card style={{ marginHorizontal: 12, marginBottom: 12, }}>
-                <Card.Title title="Averages & Rates" />
-                <Card.Content>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black} />
-                        <StatChip label="Median Likes" value={social.average_likes} textColor={Colors(theme).black} />
-                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black} />
-                        <StatChip
-                            label="Engagement Rate %"
-                            value={social.engagement_rate || 0}
-                            textColor={Colors(theme).black}
-                        />
-                        <View style={{ flexDirection: "row", alignItems: "center", marginRight: 12, marginBottom: 8, backgroundColor: "transparent" }}>
-                            <Text variant="labelMedium" style={{ marginRight: 6, color: Colors(theme).black }}>Quality</Text>
-                            <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
-                            <Text variant="bodySmall" style={{ marginLeft: 4, color: Colors(theme).black }}>
-                                {qualityScoreToStars(social.quality_score).toFixed(1)}
-                            </Text>
-                        </View>
-                    </View>
-                </Card.Content>
-            </Card>
+                </View>
+            </View>
         );
 
         const ReelsCard = ({ social }: { social: ISocials }) =>
             Array.isArray(social.reels) && social.reels.length > 0 ? (
-                <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                    <Card.Title title={`Reels`} />
-                    <Card.Content>
+                <View style={[styles.section]}>
+                    <Text style={styles.sectionLabel}>Top Reels</Text>
+                    <Card style={cardBaseStyle}>
+                        <Card.Content style={{ paddingHorizontal: 12, paddingTop: 12 }}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} >
                             <View style={{ flexDirection: "row", backgroundColor: "transparent" }}>
                                 {social.reels.map((r) => (
                                     <Card
                                         key={r.id}
-                                        style={{ width: 140, marginRight: 12, borderWidth: 1, borderColor: colors.border }}
+                                        style={{
+                                            width: 160,
+                                            marginRight: 14,
+                                            borderRadius: 14,
+                                            overflow: "hidden",
+                                            borderWidth: 1,
+                                            borderColor: theme.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+                                        }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
                                         {!!r.thumbnail_url && (
@@ -533,44 +441,28 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                 source={{ uri: r.thumbnail_url }}
                                                 style={{
                                                     width: "100%",
-                                                    height: 180,
-                                                    borderTopLeftRadius: 12,
-                                                    borderTopRightRadius: 12,
+                                                    height: 200,
+                                                    borderTopLeftRadius: 14,
+                                                    borderTopRightRadius: 14,
                                                 }}
                                             />
                                         )}
-                                        <Card.Content>
+                                        <Card.Content style={{ padding: 10 }}>
                                             <Text
                                                 numberOfLines={2}
                                                 variant="bodySmall"
-                                                style={{ marginTop: 6 }}
+                                                style={{ marginTop: 4, color: colors.text }}
                                             >
                                                 {r.caption || "Reel"}
                                             </Text>
-                                            <Divider style={{ marginVertical: 6 }} />
-                                            <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                                                <Chip
-                                                    compact
-                                                    style={{ marginRight: 6, marginBottom: 6 }}
-                                                    icon="play-circle"
-                                                    textStyle={{ color: colors.black }}
-                                                >
+                                            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8, backgroundColor: "transparent" }}>
+                                                <Chip compact icon="play-circle" textStyle={{ color: colors.text, fontSize: 11 }}>
                                                     {formatNumber(r.views_count)}
                                                 </Chip>
-                                                <Chip
-                                                    compact
-                                                    style={{ marginRight: 6, marginBottom: 6 }}
-                                                    icon="heart"
-                                                    textStyle={{ color: colors.black }}
-                                                >
+                                                <Chip compact icon="heart" textStyle={{ color: colors.text, fontSize: 11 }}>
                                                     {formatNumber(r.likes_count)}
                                                 </Chip>
-                                                <Chip
-                                                    compact
-                                                    style={{ marginRight: 6, marginBottom: 6 }}
-                                                    icon="comment-text"
-                                                    textStyle={{ color: colors.black }}
-                                                >
+                                                <Chip compact icon="comment-text" textStyle={{ color: colors.text, fontSize: 11 }}>
                                                     {formatNumber(r.comments_count)}
                                                 </Chip>
                                             </View>
@@ -579,29 +471,32 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                 ))}
                             </View>
                         </ScrollView>
-                    </Card.Content>
-                </Card>
+                        </Card.Content>
+                    </Card>
+                </View>
             ) : null;
 
         const LinksList = ({ social }: { social: ISocials }) =>
             Array.isArray(social.links) && social.links.length > 0 ? (
-                <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                    <Card.Title title="Links" />
-                    <Card.Content>
-                        <List.Section>
-                            {social.links.map((l, idx) => (
-                                <List.Item
-                                    key={`${l.url}-${idx}`}
-                                    title={l.text || l.url}
-                                    description={l.url}
-                                    onPress={() => Linking.openURL(l.url)}
-                                    left={(props) => <List.Icon {...props} icon="link-variant" />}
-                                    right={(props) => <List.Icon {...props} icon="open-in-new" />}
-                                />
-                            ))}
-                        </List.Section>
-                    </Card.Content>
-                </Card>
+                <View style={[styles.section]}>
+                    <Text style={styles.sectionLabel}>Links</Text>
+                    <Card style={cardBaseStyle}>
+                        <Card.Content>
+                            <List.Section>
+                                {social.links.map((l, idx) => (
+                                    <List.Item
+                                        key={`${l.url}-${idx}`}
+                                        title={l.text || l.url}
+                                        description={l.url}
+                                        onPress={() => Linking.openURL(l.url)}
+                                        left={(props) => <List.Icon {...props} icon="link-variant" />}
+                                        right={(props) => <List.Icon {...props} icon="open-in-new" />}
+                                    />
+                                ))}
+                            </List.Section>
+                        </Card.Content>
+                    </Card>
+                </View>
             ) : null;
 
         const MetaCard = ({ social }: { social: ISocials }) => (
@@ -644,10 +539,10 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                     )}
 
                     {!loading && social && (
-                        <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
-                            {analytics && <HeaderCards analytics={analytics} />}
-                            <TotalsCard social={social} />
-                            <AveragesCard social={social} />
+                        <ScrollView contentContainerStyle={{ paddingBottom: 32, paddingTop: 8 }} showsVerticalScrollIndicator={false}>
+                            {analytics && <HeroCard analytics={analytics} />}
+                            <SocialStatsCard social={social} />
+                            <ProfileOverviewCard social={social} />
                             <ReelsCard social={social} />
                             <LinksList social={social} />
                         </ScrollView>
