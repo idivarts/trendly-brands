@@ -45,7 +45,7 @@ export type KanbanColumnT = {
     cards: KanbanCardT[];
 };
 
-export default function KanbanBoard() {
+export default function InviteManagementBoard() {
     const [columns, setColumns] = useState<KanbanColumnT[]>([
         { id: "waiting", title: "Waiting", cards: [] },
         { id: "accepted", title: "Accepted", cards: [] },
@@ -324,6 +324,7 @@ const SortableCard = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     return (
+        // @ts-ignore
         <View
             ref={setNodeRef as any}
             {...attributes}

@@ -123,6 +123,28 @@ const BottomSheetActions = ({
         }
     };
 
+    const delistCollaboration = async () => {
+        handleClose();
+        openModal({
+            title: "Delist Collaboration",
+            description: "This would delist the collaboration and you can still access the campaign in the past campaigns section",
+            confirmText: "Delist Collaboration",
+            confirmAction: async () => {
+                try {
+                    const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
+                    await updateDoc(collaborationRef, {
+                        status: "inactive",
+                    }).then(() => {
+                        Toaster.success("Collaboration delisted successfully");
+                    });
+                } catch (error) {
+                    Console.error(error);
+                    Toaster.error("Failed to delist collaboration");
+                }
+            }
+        })
+
+    };
     const deleteCollaboration = async () => {
         handleClose();
         openModal({
@@ -148,9 +170,9 @@ const BottomSheetActions = ({
     const stopCollaboration = async () => {
         handleClose();
         openModal({
-            title: "Stop Collaboration",
-            description: "This means you have either already hired or changed your mind and hence no longer want to receive new applications",
-            confirmText: "Stop Collaboration",
+            title: "Stop Receiving Applications",
+            description: "This means you would still be shown to the influencers but they would no longer be able to apply to this collaboration",
+            confirmText: "Stop!",
             confirmAction: async () => {
                 try {
                     const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
@@ -306,17 +328,24 @@ const BottomSheetActions = ({
                             }}
                         />
                         <List.Item
+                            title="Stop Receiving Applications"
+                            titleStyle={actionTextStyle}
+                            onPress={() => {
+                                stopCollaboration();
+                            }}
+                        />
+                        <List.Item
+                            title="Delist Collaboration"
+                            titleStyle={actionTextStyle}
+                            onPress={() => {
+                                delistCollaboration();
+                            }}
+                        />
+                        <List.Item
                             title="Delete Collaboration"
                             titleStyle={actionTextStyle}
                             onPress={() => {
                                 deleteCollaboration();
-                            }}
-                        />
-                        <List.Item
-                            title="Stop Collaboration"
-                            titleStyle={actionTextStyle}
-                            onPress={() => {
-                                stopCollaboration();
                             }}
                         />
                     </List.Section>
