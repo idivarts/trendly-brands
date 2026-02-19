@@ -237,17 +237,23 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 description: "Any other thing like maybe food/restaurant promotion, store promotion.",
                             },
                         ]}
-                        selectedValue={collaboration.promotionSubject}
-                        onSelect={(value) => {
+                        selectedValues={collaboration.promotionSubject}
+                        onToggle={(value) => {
+                            const current = collaboration.promotionSubject || [];
+                            const isSelected = current.includes(value as "physical_product" | "services" | "others");
+                            const next = isSelected
+                                ? current.filter((v) => v !== value)
+                                : [...current, value as "physical_product" | "services" | "others"];
                             setCollaboration({
                                 ...collaboration,
-                                promotionSubject: value as Collaboration["promotionSubject"],
+                                promotionSubject: next.length > 0 ? next : undefined,
                             });
                         }}
                         theme={theme}
+                        multiSelect
                     />
                 </ContentWrapper>
-                {collaboration.promotionSubject && (
+                {collaboration.promotionSubject && collaboration.promotionSubject.length > 0 && (
                     <View
                         style={{
                             gap: 12,
