@@ -318,21 +318,26 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         }) => (
             <View style={{
                 flex: 1,
+                minWidth: 0,
                 backgroundColor: cardBg(accent),
                 borderRadius: 20,
-                paddingVertical: large ? 24 : 16,
-                paddingHorizontal: 14,
+                paddingVertical: large ? 20 : 14,
+                paddingHorizontal: 10,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
                 borderColor: cardBorder(accent),
             }}>
-                <Text style={{
-                    fontSize: large ? 28 : 20,
-                    fontWeight: "800",
-                    color: accent,
-                    letterSpacing: -0.5,
-                }}>
+                <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    style={{
+                        fontSize: large ? (isNarrow ? 18 : 22) : (isNarrow ? 14 : 18),
+                        fontWeight: "800",
+                        color: accent,
+                        letterSpacing: -0.5,
+                    }}
+                >
                     {value}
                 </Text>
                 <Text style={{
