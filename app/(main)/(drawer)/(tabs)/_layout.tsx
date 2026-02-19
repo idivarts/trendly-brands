@@ -214,12 +214,18 @@ const TabLayout = () => {
                                 variant="purple"
                                 count={connectionCreditsLeft}
                             />
-                            {!xl &&
-                                <Pressable onPress={() => {
+                            <Pressable
+                                onPress={() => {
                                     OpenFilterRightPanel.next();
-                                }} style={{ marginLeft: 12 }}>
-                                    <FontAwesomeIcon color={Colors(theme).text} icon={faFilter} size={24} />
-                                </Pressable>}
+                                }}
+                                style={{ marginLeft: 12 }}
+                            >
+                                <FontAwesomeIcon
+                                    color={Colors(theme).text}
+                                    icon={faFilter}
+                                    size={24}
+                                />
+                            </Pressable>
                         </View>
                     </View>,
                 }}
