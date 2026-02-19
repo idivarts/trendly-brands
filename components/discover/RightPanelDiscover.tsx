@@ -28,6 +28,8 @@ interface IProps {
     onClearStoredFilters?: () => void;
     onFiltersApplied?: (filters: IAdvanceFilters) => void;
     disableCollapse?: boolean;
+    /** When provided (e.g. in overlay mode), called instead of collapsePanel when Apply/Clear is used */
+    onDismiss?: () => void;
 }
 
 import { useBreakpoints } from "@/hooks";
@@ -38,6 +40,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
     onClearStoredFilters,
     onFiltersApplied,
     disableCollapse = false,
+    onDismiss,
 }) => {
     const {
         selectedDb,
@@ -157,7 +160,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                     <MaterialCommunityIcons
                         name={isCollapsed ? "chevron-left" : "chevron-right"}
                         size={24}
-                        color="white"
+                        color={colors.onPrimary}
                     />
                 </Pressable>
             )}
@@ -172,9 +175,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
             ) : (
                 <View style={styles.headerWrap}>
                     <View style={styles.filterHeaderRow}>
-                        <View
-                            style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-                        >
+                        <View style={styles.filterHeaderLeft}>
                             <Text style={styles.dbCardEmoji}>
                                 {selectedDb === "trendly"
                                     ? "🟡"
@@ -200,11 +201,13 @@ const RightPanelDiscover: React.FC<IProps> = ({
                         <Button
                             mode="text"
                             icon="swap-horizontal"
+                            compact
                             onPress={() => {
                                 setShowFilters(false);
                                 setRightPanel(true);
                                 setIsCollapsed(false);
                             }}
+                            style={styles.changeDbBtn}
                         >
                             Change database
                         </Button>
@@ -283,8 +286,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                                 style={styles.clearBtn}
                                 onPress={async () => {
                                     await filterApply.current?.("clear");
-                                    // Close/collapse panel after clearing filters
-                                    setTimeout(() => collapsePanel(), 100);
+                                    setTimeout(() => (onDismiss ? onDismiss() : collapsePanel()), 100);
                                 }}
                             >
                                 Clear all
@@ -295,8 +297,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                                 icon="filter-variant"
                                 onPress={async () => {
                                     await filterApply.current?.("apply");
-                                    // Close/collapse panel after applying filters on both mobile and web
-                                    setTimeout(() => collapsePanel(), 100);
+                                    setTimeout(() => (onDismiss ? onDismiss() : collapsePanel()), 100);
                                 }}
                             >
                                 Apply
@@ -463,6 +464,18 @@ const styleFn = (colors: ReturnType<typeof Colors>) =>
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: 8,
+        },
+        filterHeaderLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flexShrink: 1,
+            minWidth: 0,
+        },
+        changeDbBtn: {
+            flexShrink: 0,
         },
         dbCards: {
             gap: 10,
@@ -530,13 +543,13 @@ const styleFn = (colors: ReturnType<typeof Colors>) =>
             borderWidth: 0, // border colors set in plan variations
         },
         planBadgePro: {
-            backgroundColor: "rgba(255, 215, 0, 0.16)",
-            borderColor: colors.success ?? "gold",
+            backgroundColor: colors.planBadgeProBg ?? colors.gold,
+            borderColor: colors.gold,
             borderWidth: 1,
         },
         planBadgeEnterprise: {
-            backgroundColor: "rgba(147, 112, 219, 0.16)",
-            borderColor: "purple",
+            backgroundColor: colors.planBadgeEnterpriseBg ?? colors.secondary,
+            borderColor: colors.secondary,
             borderWidth: 1,
         },
         planBadgeText: {
