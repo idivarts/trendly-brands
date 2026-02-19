@@ -17,10 +17,12 @@ import {
     Image,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     Text,
     useWindowDimensions,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
     Easing,
     FlipInXUp,
@@ -28,6 +30,7 @@ import Animated, {
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
+    withSequence,
     withTiming,
 } from "react-native-reanimated";
 
@@ -45,15 +48,16 @@ const FLOATING_CARD_BORDER_COLOR = "rgba(15, 23, 42, 0.08)";
 const FLOATING_CARD_SHADOW = "rgba(15, 23, 42, 0.12)";
 const FLOATING_CARD_SHADOW_OPACITY = 0.35;
 const FLOATING_CARD_SHADOW_RADIUS = 30;
-const FLOATING_CARD_SHADOW_OFFSET_Y = 18;
+const FLOATING_CARD_SHADOW_OFFSET_Y = 10;
 const CONTENT_PADDING_HORIZONTAL = 24;
 const CONTENT_PADDING_VERTICAL = 30;
 const PAGE_PADDING_TOP = 0;
+const RIGHT_PANE_TOP_PADDING = 32;
 const GRID_GAP = 32;
 const LEFT_COLUMN_WIDTH = 0.52;
 const RIGHT_COLUMN_WIDTH = 0.48;
 const SHOWCASE_CARD_HEIGHT = 260;
-const SHOWCASE_CARD_GAP = 36;
+const SHOWCASE_CARD_GAP = 48;
 const SHOWCASE_ANIMATION_DURATION = 26000;
 const SHOWCASE_COLUMN_GAP = 20;
 const SHOWCASE_MIN_HEIGHT = 640;
@@ -72,7 +76,6 @@ const SHOWCASE_TITLE = "Creators you can work with";
 const SHOWCASE_SUBTITLE = "Live marketplace snapshots, updated continuously.";
 const TITLE_TEXT_ALIGN = "center" as const;
 const WIDE_LAYOUT_MIN = 980;
-const SHOWCASE_SPLIT_INDEX = 3;
 const FORM_SUBTITLE_MARGIN = 16;
 const INPUT_GAP = 10;
 const PRIMARY_BUTTON_MARGIN_TOP = 16;
@@ -168,30 +171,51 @@ const SAMPLE_INFLUENCERS: InfluencerItem[] = [
     },
 ];
 
-const buildLoop = (items: InfluencerItem[]) => [...items, ...items];
+const CARD_ROW_HEIGHT = SHOWCASE_CARD_HEIGHT + SHOWCASE_CARD_GAP;
+
+const buildLoop = (
+    items: InfluencerItem[],
+    containerHeight: number,
+    direction: 1 | -1
+) => {
+    const singleSetHeight = items.length * CARD_ROW_HEIGHT;
+    const copiesNeeded = Math.max(
+        5,
+        Math.ceil(containerHeight / singleSetHeight) + 3
+    );
+    const looped = Array.from({ length: copiesNeeded }, () => items).flat();
+    return direction === -1 ? [...items, ...looped] : looped;
+};
 
 const AutoScrollColumn = ({
     items,
     direction,
+    containerHeight,
 }: {
     items: InfluencerItem[];
     direction: 1 | -1;
+    containerHeight: number;
 }) => {
-    const loopItems = useMemo(() => buildLoop(items), [items]);
+    const loopItems = useMemo(
+        () => buildLoop(items, containerHeight, direction),
+        [items, containerHeight, direction]
+    );
     const translateY = useSharedValue(0);
     const scrollDistance = useMemo(
-        () => items.length * (SHOWCASE_CARD_HEIGHT + SHOWCASE_CARD_GAP),
+        () => items.length * CARD_ROW_HEIGHT,
         [items.length]
     );
 
     useEffect(() => {
         translateY.value = withRepeat(
-            withTiming(-direction * scrollDistance, {
-                duration: SHOWCASE_ANIMATION_DURATION,
-                easing: Easing.linear,
-            }),
-            -1,
-            false
+            withSequence(
+                withTiming(-direction * scrollDistance, {
+                    duration: SHOWCASE_ANIMATION_DURATION,
+                    easing: Easing.linear,
+                }),
+                withTiming(0, { duration: 0 })
+            ),
+            -1
         );
     }, [direction, scrollDistance, translateY]);
 
@@ -199,18 +223,25 @@ const AutoScrollColumn = ({
         transform: [{ translateY: translateY.value }],
     }));
 
+    const needsTopOffset = direction === -1;
+    const containerStyle = needsTopOffset
+        ? { marginTop: -scrollDistance }
+        : undefined;
+
     return Platform.OS === "web" ? (
         <View style={stylesLocal.showcaseColumn}>
-            <Animated.View style={animatedStyle}>
-                {loopItems.map((item, index) => (
-                    <View
-                        key={`${item.id}-${index}`}
-                        style={stylesLocal.showcaseCardWrapper}
-                    >
-                        <InfluencerCard item={item} isCollapsed />
-                    </View>
-                ))}
-            </Animated.View>
+            <View style={containerStyle}>
+                <Animated.View style={[animatedStyle, stylesLocal.showcaseCardsColumn]}>
+                    {loopItems.map((item, index) => (
+                        <View
+                            key={`${item.id}-${index}`}
+                            style={stylesLocal.showcaseCardWrapper}
+                        >
+                            <InfluencerCard item={item} isCollapsed />
+                        </View>
+                    ))}
+                </Animated.View>
+            </View>
         </View>
     ) :
         null;
@@ -228,6 +259,7 @@ const SignUpScreen = () => {
     const [hasToggledForm, setHasToggledForm] = useState(false);
     const router = useRouter();
     const theme = useTheme();
+    const insets = useSafeAreaInsets();
     const styles = fnStyles(theme);
     const { signUp, signIn } = useAuthContext();
     const { width } = useWindowDimensions();
@@ -238,14 +270,7 @@ const SignUpScreen = () => {
         windowHeight - SHOWCASE_VERTICAL_PADDING * 2 - SHOWCASE_TEXT_BLOCK_HEIGHT
     );
 
-    const leftItems = useMemo(
-        () => SAMPLE_INFLUENCERS.slice(0, SHOWCASE_SPLIT_INDEX),
-        []
-    );
-    const rightItems = useMemo(
-        () => SAMPLE_INFLUENCERS.slice(SHOWCASE_SPLIT_INDEX),
-        []
-    );
+    const showcaseItems = useMemo(() => SAMPLE_INFLUENCERS, []);
 
     const handleSignIn = () => {
         signIn(email, password);
@@ -288,19 +313,25 @@ const SignUpScreen = () => {
         setFormMode("forgot");
     };
 
-    return (
-        <LinearGradient colors={BACKGROUND_GRADIENT} style={stylesLocal.background}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={stylesLocal.flex}
-            >
-                <View
-                    style={[
-                        stylesLocal.page,
-                        stylesLocal.contentRow,
-                        !isWideLayout && stylesLocal.contentColumn,
-                    ]}
-                >
+    const pagePadding = {
+        paddingTop: PAGE_PADDING_TOP + insets.top,
+        paddingBottom: CONTENT_PADDING_VERTICAL + insets.bottom,
+    };
+
+    const isWeb = Platform.OS === "web";
+    const contentWrapperStyle = [
+        stylesLocal.scrollContent,
+        pagePadding,
+    ];
+
+    const pageContent = (
+        <View
+            style={[
+                stylesLocal.page,
+                stylesLocal.contentRow,
+                !isWideLayout && stylesLocal.contentColumn,
+            ]}
+        >
                     {isWideLayout && (
                         <View
                             style={[
@@ -311,8 +342,16 @@ const SignUpScreen = () => {
                             <Text style={stylesLocal.showcaseTitle}>{SHOWCASE_TITLE}</Text>
                             <Text style={stylesLocal.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
                             <View style={[stylesLocal.showcaseContainer, { height: showcaseHeight }]}>
-                                <AutoScrollColumn items={leftItems} direction={1} />
-                                <AutoScrollColumn items={rightItems} direction={-1} />
+                                <AutoScrollColumn
+                                    items={showcaseItems}
+                                    direction={-1}
+                                    containerHeight={showcaseHeight}
+                                />
+                                <AutoScrollColumn
+                                    items={showcaseItems}
+                                    direction={1}
+                                    containerHeight={showcaseHeight}
+                                />
                             </View>
                         </View>
                     )}
@@ -320,6 +359,7 @@ const SignUpScreen = () => {
                         style={[
                             stylesLocal.rightPane,
                             !isWideLayout && stylesLocal.rightPaneStacked,
+                            stylesLocal.rightPaneTopPadding,
                         ]}
                     >
                         <View style={stylesLocal.floatingCard}>
@@ -600,6 +640,25 @@ const SignUpScreen = () => {
                         </View>
                     </View>
                 </View>
+    );
+
+    return (
+        <LinearGradient colors={BACKGROUND_GRADIENT} style={stylesLocal.background}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={stylesLocal.flex}
+            >
+                {isWeb ? (
+                    <View style={contentWrapperStyle}>{pageContent}</View>
+                ) : (
+                    <ScrollView
+                        contentContainerStyle={contentWrapperStyle}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {pageContent}
+                    </ScrollView>
+                )}
             </KeyboardAvoidingView>
         </LinearGradient>
     );
@@ -612,11 +671,12 @@ const stylesLocal = {
     flex: {
         flex: 1,
     },
+    scrollContent: {
+        flexGrow: 1,
+    },
     page: {
         minHeight: Dimensions.get("window").height,
         paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
-        paddingTop: PAGE_PADDING_TOP,
-        paddingBottom: CONTENT_PADDING_VERTICAL,
     },
     contentRow: {
         flexDirection: "row" as const,
@@ -647,6 +707,9 @@ const stylesLocal = {
     rightPaneStacked: {
         alignItems: "stretch" as const,
     },
+    rightPaneTopPadding: {
+        paddingTop: RIGHT_PANE_TOP_PADDING,
+    },
     showcaseTitle: {
         color: SHOWCASE_TITLE_COLOR,
         fontSize: SHOWCASE_TITLE_SIZE,
@@ -676,6 +739,9 @@ const stylesLocal = {
     showcaseColumn: {
         flex: 1,
         overflow: "hidden" as const,
+    },
+    showcaseCardsColumn: {
+        flexDirection: "column" as const,
     },
     showcaseCardWrapper: {
         height: SHOWCASE_CARD_HEIGHT,
