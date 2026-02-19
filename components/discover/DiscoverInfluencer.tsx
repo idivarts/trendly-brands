@@ -918,44 +918,20 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 isPhoneMasked={false}
                                 social={profileSocial}
                                 actionCard={
-                                    <>
-                                        <TrendlyAnalyticsEmbed
-                                            ref={trendlyAnalyticsRef}
-                                            influencer={selectedInfluencer}
-                                            selectedBrand={selectedBrand}
-                                            initialSocial={trendlySocial}
-                                            initialAnalytics={trendlyAnalytics}
-                                        />
-                                        <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-                                            {/* TODO Need to get the Profile Meta rendered correctly */}
-                                            {/* <Title style={[styles.cardColor, { marginBottom: 8 }]}>
-                                                Profile Meta
-                                            </Title>
-                                            <View style={{ gap: 6 }}>
-                                                <Text style={styles.subTextHeading}>
-                                                    ID: {trendlySocial.id}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Platform: {trendlySocial.social_type || "—"}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Last Updated:{" "}
-                                                    {formatDate(
-                                                        trendlySocial.last_update_time
-                                                            ? trendlySocial.last_update_time / 1000000
-                                                            : undefined
-                                                    )}
-                                                </Text>
-                                            </View> */}
-                                        </View>
-                                    </>
+                                    <TrendlyAnalyticsEmbed
+                                        ref={trendlyAnalyticsRef}
+                                        influencer={selectedInfluencer}
+                                        selectedBrand={selectedBrand}
+                                        initialSocial={trendlySocial}
+                                        initialAnalytics={trendlyAnalytics}
+                                    />
                                 }
                                 actionButton={
                                     <View
                                         style={{
                                             flexDirection: "row",
                                             alignItems: "center",
-                                            gap: 8,
+                                            gap: 10,
                                             flexWrap: "wrap",
                                         }}
                                     >
@@ -968,17 +944,22 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         {manager?.isAdmin ? (
                                             <>
                                                 <Button
-                                                    mode="contained"
+                                                    mode="outlined"
                                                     onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
                                                     icon="pencil"
+                                                    style={{ borderRadius: 24 }}
+                                                    compact
                                                 >
-                                                    Edit Metrics
+                                                    Edit
                                                 </Button>
                                                 <Button
-                                                    mode="contained"
+                                                    mode="outlined"
                                                     onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
                                                     loading={isRescraping}
                                                     disabled={isRescraping}
+                                                    icon="refresh"
+                                                    style={{ borderRadius: 24 }}
+                                                    compact
                                                 >
                                                     Re-scrape
                                                 </Button>
