@@ -4,8 +4,11 @@ import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import { POPULAR_CITIES } from "@/shared-constants/preferences/locations";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import Colors from "@/shared-uis/constants/Colors";
+import { faStar } from "@fortawesome/free-regular-svg-icons";
+import { faStar as faStarSolid } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@react-navigation/native";
+import { Theme, useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet } from "react-native";
 import { Button, Chip, ProgressBar } from "react-native-paper";
@@ -18,12 +21,64 @@ interface SurveyQuestion {
     id: string;
     question: string;
     subtitle?: string;
-    type: "multiselect" | "range" | "single-select" | "slider";
-    field: keyof IAdvanceFilters | "followerRange" | "budgetRange";
+    type: "multiselect" | "range" | "single-select" | "slider" | "stars";
+    field: keyof IAdvanceFilters | "followerRange" | "budgetRange" | "qualityStars";
     options?: Array<{ label: string; value: any }>;
     rangeOptions?: { min: number; max: number; step: number; prefix?: string; suffix?: string };
     skippable?: boolean;
 }
+
+/** Tappable star row for picking minimum quality (0-5 stars, maps to qualityMin 0-10) */
+const TappableStarRow = ({
+    value,
+    onChange,
+    theme,
+}: {
+    value: number;
+    onChange: (stars: number) => void;
+    theme: Theme;
+}) => (
+    <View style={starStyles.row}>
+        {Array.from({ length: 5 }, (_, i) => {
+            const starNum = i + 1;
+            const filled = starNum <= value;
+            return (
+                <Pressable
+                    key={i}
+                    onPress={() => onChange(starNum === value ? 0 : starNum)}
+                    hitSlop={8}
+                    style={starStyles.starButton}
+                >
+                    <FontAwesomeIcon
+                        icon={filled ? faStarSolid : faStar}
+                        size={36}
+                        color={Colors(theme).yellow}
+                    />
+                </Pressable>
+            );
+        })}
+        <Text style={[starStyles.label, { color: Colors(theme).textSecondary }]}>
+            {value > 0 ? `${value} star${value > 1 ? "s" : ""} minimum` : "Any quality"}
+        </Text>
+    </View>
+);
+
+const starStyles = StyleSheet.create({
+    row: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        flexWrap: "wrap",
+    },
+    starButton: {
+        padding: 4,
+    },
+    label: {
+        marginLeft: 12,
+        fontSize: 15,
+        fontWeight: "500",
+    },
+});
 
 const SURVEY_QUESTIONS: SurveyQuestion[] = [
     {
@@ -94,16 +149,10 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
     },
     {
         id: "quality",
-        question: "What content quality are you looking for?",
-        subtitle: "Filter by aesthetic and production quality",
-        type: "single-select",
-        field: "qualityMin",
-        options: [
-            { label: "High Quality (80+)", value: 80 },
-            { label: "Good Quality (60+)", value: 60 },
-            { label: "Standard Quality (40+)", value: 40 },
-            { label: "Any Quality", value: undefined },
-        ],
+        question: "Influencer aesthetics / quality",
+        subtitle: "Tap stars to set minimum quality (aesthetic & content quality)",
+        type: "stars",
+        field: "qualityStars",
         skippable: true,
     },
 ];
@@ -144,9 +193,9 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                 filters.erMax = answers.budgetRange.max;
             }
 
-            // Handle quality
-            if (answers.qualityMin !== undefined) {
-                filters.qualityMin = answers.qualityMin;
+            // Handle quality (stars 0-5 map to qualityMin 0-10; 0 = any/skip)
+            if (answers.qualityStars !== undefined && answers.qualityStars > 0) {
+                filters.qualityMin = answers.qualityStars * 2;
             }
 
             // Handle multi-selects
@@ -268,6 +317,17 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                             })}
                         </View>
                     </ScrollView>
+                );
+
+            case "stars":
+                return (
+                    <View style={styles.starsContainer}>
+                        <TappableStarRow
+                            value={answers[currentQuestion.field] ?? 0}
+                            onChange={(stars) => handleAnswer(stars)}
+                            theme={theme}
+                        />
+                    </View>
                 );
 
             default:
@@ -412,7 +472,10 @@ const styles = StyleSheet.create({
     },
     singleSelectContainer: {
         gap: 12,
-
+    },
+    starsContainer: {
+        paddingVertical: 24,
+        paddingHorizontal: 8,
     },
     singleSelectOption: {
         backgroundColor: "rgba(0, 0, 0, 0.03)",

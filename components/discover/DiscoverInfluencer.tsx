@@ -408,6 +408,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             gender: trendlySocial?.gender,
             quality: trendlySocial?.quality_score,
             isVerified: trendlySocial?.profile_verified,
+            location: trendlySocial?.location ?? (shadowSocial as any)?.location,
         }
         : undefined;
 
@@ -912,6 +913,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 influencer={{
                                     ...shadowUser,
                                     id: selectedInfluencer.id,
+                                    location: shadowUser?.location ?? trendlySocial?.location,
                                 } as User}
                                 theme={theme}
                                 isOnFreePlan={isOnFreeTrial}
