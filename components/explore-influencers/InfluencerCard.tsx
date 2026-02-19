@@ -1,5 +1,6 @@
 import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignButton";
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
+import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import Colors from "@/shared-uis/constants/Colors";
 import { maskHandle } from "@/shared-uis/utils/masks";
 import { useTheme } from "@react-navigation/native";
@@ -130,6 +131,15 @@ const NameSection = ({
             >
                 @{maskHandle(item.username)}
             </Text>
+
+            {typeof item.quality_score === "number" && item.quality_score > 0 && (
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 }}>
+                    <Stars rating={qualityScoreToStars(item.quality_score)} size={isCollapsed ? 14 : 12} />
+                    <Text style={{ fontSize: isCollapsed ? 12 : 10, color: colors.black, opacity: 0.6 }}>
+                        {qualityScoreToStars(item.quality_score).toFixed(1)}
+                    </Text>
+                </View>
+            )}
 
             <View style={{ marginTop: isCollapsed ? 14 : 10 }}>
                 {isStatusCard ? (

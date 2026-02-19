@@ -1,5 +1,6 @@
 import type { InfluencerItem } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
+import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
@@ -255,8 +256,10 @@ const SignUpScreen = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [formMode, setFormMode] = useState<AuthFormMode>("signup");
+    const [formMode, setFormMode] = useState<"signup" | "login" | "forgot">("signup");
     const [hasToggledForm, setHasToggledForm] = useState(false);
+    const [verificationSent, setVerificationSent] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const theme = useTheme();
     const insets = useSafeAreaInsets();
@@ -312,6 +315,45 @@ const SignUpScreen = () => {
         setHasToggledForm(true);
         setFormMode("forgot");
     };
+
+    if (verificationSent) {
+        return (
+            <AuthPageLayout>
+                <Image
+                    source={require("@/assets/images/logo.png")}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+                <View style={authLayoutStyles.formHeader}>
+                    <Text style={[styles.title, authLayoutStyles.formTitle]}>
+                        Verification Email Sent
+                    </Text>
+                    <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
+                        We've sent a verification email to{" "}
+                        <Text style={{ fontWeight: "bold" }}>{email}</Text>.
+                        {"\n\n"}
+                        Please open your inbox and click the verification link to activate your account.
+                    </Text>
+                </View>
+                <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
+                    <Button
+                        mode="contained"
+                        style={authLayoutStyles.primaryButton}
+                        onPress={() => router.replace("/(auth)/login")}
+                    >
+                        Go to Login
+                    </Button>
+                    <Button
+                        mode="outlined"
+                        style={authLayoutStyles.secondaryButton}
+                        onPress={() => setVerificationSent(false)}
+                    >
+                        Back to Sign Up
+                    </Button>
+                </View>
+            </AuthPageLayout>
+        );
+    }
 
     const pagePadding = {
         paddingTop: PAGE_PADDING_TOP + insets.top,

@@ -1,14 +1,16 @@
+import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import {
     ISocialAnalytics,
     ISocials,
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { View } from "@/shared-uis/components/theme/Themed";
-import { Brand } from "@/types/Brand";
-import { collection, doc, updateDoc } from "firebase/firestore"
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
+import { Brand } from "@/types/Brand";
+import { getTrustabilityLevel } from "@/utils/trustability";
+import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
 import {
@@ -19,11 +21,10 @@ import {
     List,
     Text,
 } from "react-native-paper";
+import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import { StatChip } from "../StatChip";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 
 interface IProps {
     influencer: InfluencerItem;
@@ -44,6 +45,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const [isSaving, setIsSaving] = useState(false);
         const [saveError, setSaveError] = useState<string | null>(null);
         const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({});
+        const [isRescraping, setIsRescraping] = useState(false);
         const isAdmin = manager?.isAdmin === true;
         const hasChanges = Object.keys(editedSocial).length > 0;
         const theme = useTheme();
@@ -89,16 +91,47 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         }, [initialSocial, initialAnalytics, onLoadingChange]);
 
         const handleSaveChanges = async () => {
-            if (!social?.id || !hasChanges) return;
+            if (!social?.id || !selectedBrand?.id || !hasChanges) return;
 
             try {
                 setIsSaving(true);
                 setSaveError(null);
                 const updatedSocial = { ...social, ...editedSocial };
-                const col = collection(FirestoreDB, "scrapped-socials");
-                const docRef = doc(col, social.id);
 
-                await updateDoc(docRef, updatedSocial);
+                // Prepare the request body with the API format
+                const requestBody = {
+                    name: updatedSocial.name,
+                    bio: updatedSocial.bio,
+                    category: updatedSocial.category,
+                    follower_count: updatedSocial.follower_count,
+                    following_count: updatedSocial.following_count,
+                    content_count: updatedSocial.content_count,
+                    profile_verified: updatedSocial.profile_verified,
+                    links: updatedSocial.links,
+                    gender: updatedSocial.gender,
+                    quality_score: updatedSocial.quality_score,
+                    niches: updatedSocial.niches,
+                    location: updatedSocial.location,
+                };
+
+                // Call the API using HttpWrapper
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(requestBody),
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to save changes. Please try again."
+                    );
+                }
 
                 setSocial(updatedSocial);
                 setIsEditModalVisible(false);
@@ -121,14 +154,49 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             }
         };
 
+        const handleRescrape = async () => {
+            if (!selectedBrand?.id) return;
+
+            try {
+                setIsRescraping(true);
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}/rescrape`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to rescrape. Please try again."
+                    );
+                }
+
+                Toaster.success("Rescrape initiated successfully!");
+                // Optionally reload the influencer data
+                await loadInfluencer();
+            } catch (e: any) {
+                console.error("Error rescrapting influencer:", e);
+                const errorMessage = e?.message || "Failed to rescrape. Please try again.";
+                Toaster.error(errorMessage);
+            } finally {
+                setIsRescraping(false);
+            }
+        };
+
         React.useImperativeHandle(
             ref,
             () => ({
                 handleEditClick,
+                handleRescrape,
                 isAdmin,
                 openEditModal: handleEditClick,
             }),
-            [handleEditClick, isAdmin]
+            [handleEditClick, handleRescrape, isAdmin]
         );
 
         useEffect(() => {
@@ -232,10 +300,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             >
                                 Quality
                             </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.quality}
-                                <Text variant={labelVariant}>%</Text>
-                            </Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "transparent" }}>
+                                <Stars rating={qualityScoreToStars(analytics.quality)} size={isTiny ? 14 : isNarrow ? 16 : 20} />
+                                <Text variant={labelVariant}>
+                                    {qualityScoreToStars(analytics.quality).toFixed(1)}
+                                </Text>
+                            </View>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Higher = richer, classy, aesthetic creators
                             </Text>
@@ -250,9 +320,14 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             >
                                 Trustability
                             </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.trustablity}
-                                <Text variant={labelVariant}>%</Text>
+                            <Text
+                                variant={valueVariant}
+                                style={{
+                                    color: getTrustabilityLevel(analytics.trustablity)?.color || "#666",
+                                    fontWeight: "bold",
+                                }}
+                            >
+                                {getTrustabilityLevel(analytics.trustablity)?.label || "—"} ({analytics.trustablity}%)
                             </Text>
                             <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
                                 Signals from past collabs, engagement quality
@@ -368,9 +443,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             </Chip>
                         )}
                         {typeof social.quality_score === "number" && (
-                            <Chip style={{ marginRight: 8, marginBottom: 0 }} icon="star">
-                                Quality: {social.quality_score}/100
-                            </Chip>
+                            <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, marginBottom: 0, backgroundColor: "transparent" }}>
+                                <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
+                                <Text variant="bodySmall" style={{ marginLeft: 4 }}>
+                                    {qualityScoreToStars(social.quality_score).toFixed(1)}
+                                </Text>
+                            </View>
                         )}
                     </View>
 
@@ -417,15 +495,21 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                 <Card.Title title="Averages & Rates" />
                 <Card.Content>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black} />
                         <StatChip label="Median Likes" value={social.average_likes} textColor={Colors(theme).black} />
-                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black}/>
+                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black} />
                         <StatChip
                             label="Engagement Rate %"
                             value={social.engagement_rate || 0}
                             textColor={Colors(theme).black}
                         />
-                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black}/>
+                        <View style={{ flexDirection: "row", alignItems: "center", marginRight: 12, marginBottom: 8, backgroundColor: "transparent" }}>
+                            <Text variant="labelMedium" style={{ marginRight: 6, color: Colors(theme).black }}>Quality</Text>
+                            <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
+                            <Text variant="bodySmall" style={{ marginLeft: 4, color: Colors(theme).black }}>
+                                {qualityScoreToStars(social.quality_score).toFixed(1)}
+                            </Text>
+                        </View>
                     </View>
                 </Card.Content>
             </Card>
@@ -441,7 +525,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                 {social.reels.map((r) => (
                                     <Card
                                         key={r.id}
-                                        style={{ width: 140, marginRight: 12, borderWidth:1,borderColor:colors.border }}
+                                        style={{ width: 140, marginRight: 12, borderWidth: 1, borderColor: colors.border }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
                                         {!!r.thumbnail_url && (
@@ -477,7 +561,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="heart"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.likes_count)}
                                                 </Chip>
@@ -485,7 +569,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="comment-text"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.comments_count)}
                                                 </Chip>

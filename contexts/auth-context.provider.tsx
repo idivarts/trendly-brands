@@ -12,22 +12,18 @@ import { Manager } from "@/types/Manager";
 import { User } from "@/types/User";
 import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
 import { resetAndNavigate } from "@/utils/router";
-import { checkTestUsers } from "@/utils/test-users";
 import { useRouter } from "expo-router";
 import {
-    createUserWithEmailAndPassword,
-    sendEmailVerification,
     signInWithEmailAndPassword,
     signOut,
-    UserCredential,
+    UserCredential
 } from "firebase/auth";
 import {
-    collection,
     doc,
     getDoc,
     onSnapshot,
     setDoc,
-    updateDoc,
+    updateDoc
 } from "firebase/firestore";
 import {
     createContext,
@@ -46,7 +42,7 @@ interface AuthContextProps {
     setSession: (value: string | null) => void;
     signIn: (email: string, password: string) => void;
     signOutManager: () => Promise<void>;
-    signUp: (name: string, email: string, password: string) => void;
+    signUp: (name: string, email: string, password: string) => Promise<boolean>;
     updateManager: (
         managerId: string,
         manager: Partial<Manager>
@@ -64,7 +60,7 @@ const AuthContext = createContext<AuthContextProps>({
     session: null,
     signIn: (email: string, password: string) => null,
     signOutManager: async () => { },
-    signUp: (name: string, email: string, password: string) => null,
+    signUp: (name: string, email: string, password: string) => Promise.resolve(false),
     updateManager: () => Promise.resolve(),
     manager: null,
     firebaseSignIn: () => { },
@@ -164,89 +160,76 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
     const signIn = async (email: string, password: string) => {
         try {
+
+            if (!email || !password) {
+                Toaster.error("Please enter your email and password.");
+                return;
+            }
             const managerCredential = await signInWithEmailAndPassword(
                 AuthApp,
                 email,
                 password
             );
 
-            if (!email || !password) {
-                Toaster.error("Please enter your email and password.");
-                return;
+            const managerRef = await doc(FirestoreDB, "managers", managerCredential.user.uid);
+            const findUser = await getDoc(managerRef);
+            const isExistingUser = findUser.exists();
+
+            if (!isExistingUser) {
+                const userData: IManagers = {
+                    ...INITIAL_MANAGER_DATA,
+                    name: managerCredential.user.displayName || "",
+                    email: email,
+                    profileImage: managerCredential.user.photoURL || "",
+                };
+                await setDoc(managerRef, userData);
             }
 
-            const testUsers = checkTestUsers(email);
-
-            if (!testUsers && !managerCredential.user.emailVerified) {
-                Toaster.error("Please verify your email first.");
-                sendEmailVerification(managerCredential.user);
-                return;
+            Console.log("User logged in", isExistingUser, managerCredential.user)
+            if (isExistingUser) {
+                firebaseSignIn(managerCredential);
+            } else {
+                firebaseSignUp(managerCredential);
             }
-
-            await firebaseSignIn(managerCredential)
         } catch (error) {
             Console.error(error, "Error signing in");
             Toaster.error("Error signing in. Please try again.");
         }
     };
 
-    const signUp = async (name: string, email: string, password: string) => {
+    const signUp = async (name: string, email: string, password: string): Promise<boolean> => {
         if (!name || !email || !password) {
             Toaster.error("Please fill in all fields.");
-            return;
+            return false;
         }
         if (!isWorkEmail(email)) {
             Toaster.error("Please enter a work email to proceed.");
-            return;
+            return false;
         }
 
-        await createUserWithEmailAndPassword(AuthApp, email, password)
-            .then(async (userCredential) => {
-                const colRef = collection(FirestoreDB, "managers");
-                const docRef = doc(colRef, userCredential.user.uid);
-
-
-                let userData: IManagers = {
-                    ...INITIAL_MANAGER_DATA,
-                    name: name,
-                    email: email,
-                    creationTime: Date.now(),
-                };
-
-                await setDoc(docRef, userData);
-
-                await sendEmailVerification(userCredential.user).then(() => {
-                    Toaster.success("Verification email sent successfully.");
-                });
-
-                const checkVerification = async () => {
-                    await userCredential.user.reload();
-                    if (userCredential.user.emailVerified) {
-                        firebaseSignUp(userCredential)
-                    } else {
-                        setTimeout(checkVerification, 2000);
-                    }
-                };
-
-                checkVerification();
-            })
-            .catch((error) => {
-                let errorMessage = "An unknown error occurred. Please try again.";
-                switch (error.code) {
-                    case "auth/email-already-in-use":
-                        errorMessage = "The email address is already in use.";
-                        break;
-                    case "auth/invalid-email":
-                        errorMessage = "The email address is not valid.";
-                        break;
-                    case "auth/weak-password":
-                        errorMessage = "The password is too weak.";
-                        break;
-                    default:
-                        errorMessage = error.message;
-                }
-                Toaster.error(errorMessage);
+        try {
+            const response = await HttpWrapper.fetch("/onboard/signup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    name,
+                }),
             });
+
+            const data = await response.json();
+            Console.log("Signup API Response:", data);
+
+            Toaster.success("Verification Email Sent!");
+            return true;
+        } catch (error: any) {
+            Console.error("Signup error:", error);
+            Toaster.error("Signup failed. Please try again.");
+            return false;
+        }
     };
 
     const signOutManager = async () => {
@@ -265,6 +248,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         } catch (e) {
             Console.error(e, "Sign out Error")
         }
+        PersistentStorage.setItemWithExpiry("suppress_lets_start", "true", 0.25); // 0.25 hours
 
         signOut(AuthApp)
             .then(() => {
@@ -275,8 +259,6 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
                     id: manager?.id,
                     email: manager?.email,
                 });
-
-                resetAndNavigate("/pre-signin");
                 Toaster.success("Signed Out Successfully!");
             })
             .catch((error) => {
