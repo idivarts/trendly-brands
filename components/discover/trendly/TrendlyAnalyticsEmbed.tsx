@@ -510,9 +510,9 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                         style={{ width: 140, marginRight: 12, borderWidth: 1, borderColor: colors.border }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
-                                        {!!r.thumbnail_url && (
+                                        {(r.display_url || r.thumbnail_url) ? (
                                             <Image
-                                                source={{ uri: r.thumbnail_url }}
+                                                source={{ uri: r.display_url || r.thumbnail_url || "" }}
                                                 style={{
                                                     width: "100%",
                                                     height: 180,
@@ -520,7 +520,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     borderTopRightRadius: 12,
                                                 }}
                                             />
-                                        )}
+                                        ) : null}
                                         <Card.Content>
                                             <Text
                                                 numberOfLines={2}

@@ -22,6 +22,7 @@ import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     Linking,
     ListRenderItemInfo,
