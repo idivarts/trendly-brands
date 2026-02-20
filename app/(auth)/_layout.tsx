@@ -23,20 +23,20 @@ const AuthLayout = () => {
             ),
         [pathname]
     );
-    const layoutProps = useMemo(
+    const layoutProps: any = useMemo(
         () =>
             isFullBleedAuth
                 ? {
-                      safeAreaEdges: [] as const,
-                      backgroundColor:
-                          pathname === "/pre-signin" || pathname?.endsWith("/pre-signin")
-                              ? theme.dark
-                                  ? Colors(theme).background
-                                  : Colors(theme).aliceBlue
-                              : theme.dark
+                    safeAreaEdges: [] as const,
+                    backgroundColor:
+                        pathname === "/pre-signin" || pathname?.endsWith("/pre-signin")
+                            ? theme.dark
+                                ? Colors(theme).background
+                                : Colors(theme).aliceBlue
+                            : theme.dark
                                 ? Colors(theme).background
                                 : "#F7F9FC",
-                  }
+                }
                 : undefined,
         [isFullBleedAuth, theme, pathname]
     );
