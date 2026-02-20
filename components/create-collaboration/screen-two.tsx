@@ -263,52 +263,61 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             placeholder="Eg. TShirt for Kids"
                             multiline
                             numberOfLines={2}
-                            value={(collaboration as any).productDetails?.name || ""}
+                            value={
+                                (collaboration.products ?? [])[0]?.name || ""
+                            }
                             onChangeText={(text) => {
+                                const current =
+                                    (collaboration.products ?? [])[0] ?? {};
                                 setCollaboration({
-                                    ...(collaboration as any),
-                                    productDetails: {
-                                        ...((collaboration as any).productDetails),
-                                        name: text,
-                                    },
+                                    ...collaboration,
+                                    products: [
+                                        { ...current, name: text || undefined },
+                                    ],
                                 });
                             }}
                         />
-
-
-                        <>
-                            <TextInput
-                                label="Product Cost (Optional)"
-                                mode="outlined"
-                                placeholder="Approx Retail Cost of Product"
-                                keyboardType="number-pad"
-                                value={
-                                    (collaboration as any).productDetails?.cost !== undefined
-                                        ? (collaboration as any).productDetails.cost.toString()
-                                        : ""
-                                }
-                                onChangeText={(text) => {
-                                    const value = Number(text);
-                                    setCollaboration({
-                                        ...(collaboration as any),
-                                        productDetails: {
-                                            ...((collaboration as any).productDetails),
-                                            cost: isNaN(value) ? undefined : value,
+                        <TextInput
+                            label="Product Cost (Optional)"
+                            mode="outlined"
+                            placeholder="Approx Retail Cost of Product"
+                            keyboardType="number-pad"
+                            value={
+                                (collaboration.products ?? [])[0]?.cost !==
+                                undefined
+                                    ? String(
+                                          (collaboration.products ?? [])[0]
+                                              ?.cost ?? ""
+                                      )
+                                    : ""
+                            }
+                            onChangeText={(text) => {
+                                const value = Number(text);
+                                const current =
+                                    (collaboration.products ?? [])[0] ?? {};
+                                setCollaboration({
+                                    ...collaboration,
+                                    products: [
+                                        {
+                                            ...current,
+                                            cost: isNaN(value)
+                                                ? undefined
+                                                : value,
                                         },
-                                    });
-                                }}
-                            />
-                            <Text
-                                style={{
-                                    fontSize: 12,
-                                    color: "#6B7280",
-                                    marginTop: -6,
-                                }}
-                            >
-                                This cost would be incurred by the brand and not influencers
-                            </Text>
-                        </>
-
+                                    ],
+                                });
+                            }}
+                        />
+                        <Text
+                            style={{
+                                fontSize: 12,
+                                color: "#6B7280",
+                                marginTop: -6,
+                            }}
+                        >
+                            This cost would be incurred by the brand and not
+                            influencers
+                        </Text>
                     </View>
                 )}
                 <ContentWrapper

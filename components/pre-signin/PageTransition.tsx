@@ -75,35 +75,35 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
 
                 tl.to(overlay, {
                     scale: coverScreenScale,
-                    duration: 0.9,
+                    duration: 0.45,
                     ease: 'power2.out',
                 });
 
                 tl.to(textElement, {
                     opacity: 1,
-                    duration: 0.6,
+                    duration: 0.3,
                     ease: 'power2.out',
-                }, '-=0.3');
+                }, '-=0.15');
 
                 tl.add(() => {
                     onComplete();
-                }, '+=1.2');
+                }, '+=0.6');
 
                 tl.to(textElement, {
                     opacity: 0,
-                    duration: 0.5,
+                    duration: 0.25,
                     ease: 'power2.in',
-                }, '+=0.2');
+                }, '+=0.1');
 
                 tl.to(overlay, {
                     scale: 0,
-                    duration: 0.9,
+                    duration: 0.45,
                     ease: 'power3.in',
                     onComplete: () => {
                         gsap.set(overlay, { display: 'none' });
                         gsap.set(textContainer, { display: 'none' });
                     },
-                }, '-=0.1');
+                }, '-=0.05');
             } else {
                 // Mobile animation using Reanimated
                 const maxDimension = Math.max(SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -125,19 +125,19 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                     scale.value = withSequence(
                         // Expand to cover screen
                         withTiming(coverScreenScale, {
-                            duration: 900,
+                            duration: 450,
                             easing: Easing.out(Easing.quad),
                         }),
                         // Hold at full size
-                        withDelay(500, withTiming(coverScreenScale, { duration: 0 })),
+                        withDelay(250, withTiming(coverScreenScale, { duration: 0 })),
                         // Collapse back to small circle
                         withTiming(1, {
-                            duration: 700,
+                            duration: 350,
                             easing: Easing.in(Easing.quad),
                         }),
                         // Shrink to nothing
                         withTiming(0, {
-                            duration: 300,
+                            duration: 150,
                             easing: Easing.in(Easing.cubic),
                         })
                     );
@@ -146,17 +146,17 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                     textOpacity.value = withSequence(
                         // Fade in
                         withDelay(
-                            300,
+                            150,
                             withTiming(1, {
-                                duration: 600,
+                                duration: 300,
                                 easing: Easing.out(Easing.quad),
                             })
                         ),
                         // Hold visible
-                        withDelay(600, withTiming(1, { duration: 0 })),
+                        withDelay(300, withTiming(1, { duration: 0 })),
                         // Fade out
                         withTiming(0, {
-                            duration: 400,
+                            duration: 200,
                             easing: Easing.in(Easing.quad),
                         })
                     );
@@ -165,20 +165,20 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
                 // Navigate while screen is fully covered
                 setTimeout(() => {
                     onComplete();
-                }, 1400);
+                }, 700);
 
                 // Final fade out
                 overlayOpacity.value = withDelay(
-                    2700,
+                    1350,
                     withTiming(0, {
-                        duration: 200,
+                        duration: 100,
                     })
                 );
 
                 // Hide overlay component after animation completes
                 setTimeout(() => {
                     setIsAnimating(false);
-                }, 3000);
+                }, 1500);
             }
         },
     }));

@@ -10,6 +10,7 @@ interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> {
     withWebPadding?: boolean;
     setInvisible?: boolean
     safeAreaEdges?: Array<"top" | "bottom" | "left" | "right">;
+    backgroundColor?: string;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({
@@ -17,11 +18,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     withWebPadding = false,
     setInvisible,
     safeAreaEdges,
+    backgroundColor,
 }) => {
     const theme = useTheme();
     const isAndroid = useMemo(() => Platform.OS === "android", []);
     const { xl } = useBreakpoints()
     const edges = safeAreaEdges ?? ["top", "right", "bottom", "left"];
+    const colors = Colors(theme);
     return (
         <SafeAreaView
             edges={edges}
@@ -29,7 +32,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                 styles.container,
                 setInvisible && { display: "none" },
                 {
-                    backgroundColor: Colors(theme).background,
+                    backgroundColor: backgroundColor ?? colors.background,
                     paddingTop: isAndroid && edges.includes("top")
                         ? StatusBar.currentHeight ?? 0
                         : 0,
