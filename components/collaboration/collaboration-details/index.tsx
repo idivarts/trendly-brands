@@ -52,13 +52,6 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const router = useMyNavigation();
 
 
-    const getApiMessage = (error: any): string | null => {
-        if (typeof error === "string") return error;
-        if (error?.message) return error.message;
-        if (error?.error) return error.error;
-        return null;
-    };
-
     const resetPublishModal = () => {
         setPublishState(PublishState.Idle);
         setPublishErrorMessage(null);
@@ -69,27 +62,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         if (!pageID) return;
         setPublishState(PublishState.InProcess);
         try {
-            const response = await HttpWrapper.fetch(
+            await HttpWrapper.fetch(
                 `/api/collabs/collaborations/${pageID}`,
-                { method: "POST", }
+                { method: "POST" }
             );
-
-            const responseBody = await response.text();
-            let apiResponse = null;
-            try {
-                apiResponse = JSON.parse(responseBody);
-            } catch (e) {
-                apiResponse = responseBody;
-            }
-
-            if (response.status !== 200 && response.status !== 201) {
-                const apiMessage =
-                    getApiMessage(apiResponse) ||
-                    "The collaboration could not be published. Please review and try again.";
-                setPublishErrorMessage(apiMessage);
-                setPublishState(PublishState.Fail);
-                return;
-            }
 
             setPublishedCollabId(pageID);
             setPublishState(PublishState.Success);
@@ -98,7 +74,8 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             }, 1500);
         } catch (error) {
             Console.error(error);
-            const apiMessage = getApiMessage(error) || "Failed to publish collaboration";
+            const apiMessage = await HttpWrapper.extractErrorMessage(error)
+                || "The collaboration could not be published. Please review and try again.";
             setPublishErrorMessage(apiMessage);
             setPublishState(PublishState.Fail);
         }

@@ -13,6 +13,7 @@ import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/pro
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
@@ -287,15 +288,6 @@ const CreateCollaboration = () => {
         setPublishedCollabId(null);
     };
 
-    const getApiMessage = (payload: unknown): string | null => {
-        if (!payload) return null;
-        if (typeof payload === "string") return payload;
-        if (typeof payload === "object" && "message" in payload) {
-            return String((payload as { message?: unknown }).message ?? "");
-        }
-        return null;
-    };
-
     const campaignGuideMessage =
         "The Collaboration posted was not put live as it did not meet our guidelines. Please review the collaboration details and make necessary changes before reposting.";
     const saveCollaboration = async (myStatus: "draft" | "active") => {
@@ -441,7 +433,7 @@ const CreateCollaboration = () => {
 
                 if (created?.apiError) {
                     const apiMessage =
-                        getApiMessage(created.apiError) ||
+                        await HttpWrapper.extractErrorMessage(created.apiError) ||
                         "The collaboration could not be published. Please review and try again.";
 
                     setPublishErrorMessage(apiMessage);
