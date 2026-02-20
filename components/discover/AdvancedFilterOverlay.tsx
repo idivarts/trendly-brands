@@ -14,8 +14,8 @@ import {
 import { IconButton, Text } from "react-native-paper";
 import RightPanelDiscover from "./RightPanelDiscover";
 
-const CORNER_RADIUS = 24;
-const MODAL_INSET = 8;
+const CORNER_RADIUS = 16;
+const PANEL_WIDTH = 420;
 const MOBILE_BREAKPOINT = 480;
 
 interface AdvancedFilterOverlayProps {
@@ -39,7 +39,8 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
     const colors = Colors(theme);
     const { width } = useWindowDimensions();
     const isMobile = width < MOBILE_BREAKPOINT;
-    const scaleAnim = useRef(new Animated.Value(0.9)).current;
+    const panelOffset = isMobile ? width : PANEL_WIDTH;
+    const translateXAnim = useRef(new Animated.Value(panelOffset)).current;
     const backdropOpacity = useRef(new Animated.Value(0)).current;
 
     const styles = useMemo(
@@ -55,15 +56,15 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
                     duration: 200,
                     useNativeDriver: true,
                 }),
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
+                Animated.spring(translateXAnim, {
+                    toValue: 0,
                     useNativeDriver: true,
                     tension: 65,
                     friction: 11,
                 }),
             ]).start();
         }
-    }, [visible, scaleAnim, backdropOpacity]);
+    }, [visible, translateXAnim, backdropOpacity]);
 
     const handleClose = () => {
         if (!visible) return;
@@ -73,8 +74,8 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
                 duration: 150,
                 useNativeDriver: true,
             }),
-            Animated.timing(scaleAnim, {
-                toValue: 0.9,
+            Animated.timing(translateXAnim, {
+                toValue: panelOffset,
                 duration: ANIM_DURATION,
                 useNativeDriver: true,
             }),
@@ -83,67 +84,64 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
         });
     };
 
+    const handleBackdropPress = () => {
+        if (!visible) return;
+        backdropOpacity.setValue(0);
+        translateXAnim.setValue(panelOffset);
+        onClose();
+    };
+
     return (
         <View style={styles.overlay} pointerEvents={visible ? "auto" : "none"}>
-            <View style={styles.wrapper}>
-                <Animated.View
-                    style={[
-                        styles.backdrop,
-                        {
-                            opacity: backdropOpacity,
-                        },
-                    ]}
-                >
-                    <Pressable
-                        style={StyleSheet.absoluteFill}
-                        onPress={handleClose}
-                        accessibilityLabel="Close filter"
-                        accessibilityRole="button"
-                    />
-                </Animated.View>
+            <Animated.View
+                style={[styles.backdrop, { opacity: backdropOpacity }]}
+            >
+                <Pressable
+                    style={StyleSheet.absoluteFill}
+                    onPress={handleBackdropPress}
+                    accessibilityLabel="Close filter"
+                    accessibilityRole="button"
+                />
+            </Animated.View>
 
-                <Animated.View
-                    style={[
-                        styles.modal,
-                        {
-                            opacity: backdropOpacity,
-                            transform: [{ scale: scaleAnim }],
-                        },
-                    ]}
-                >
-                    <View style={styles.header}>
-                        <View style={styles.headerTitleRow}>
-                            <IconButton
-                                icon="close"
-                                size={24}
-                                onPress={handleClose}
-                                iconColor={colors.text}
-                                style={styles.closeBtn}
-                                accessibilityLabel="Close"
-                            />
-                            <Text style={[styles.title, { color: colors.text }]}>
-                                Advanced Filters
-                            </Text>
-                        </View>
-                    </View>
-
-                    <ScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollContent}
-                        showsVerticalScrollIndicator={true}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        <RightPanelDiscover
-                            defaultAdvanceFilters={defaultAdvanceFilters}
-                            onClearStoredFilters={onClearStoredFilters}
-                            onFiltersApplied={onFiltersApplied}
-                            onDismiss={handleClose}
-                            disableCollapse
-                            style={styles.rightPanel}
+            <Animated.View
+                style={[
+                    styles.panel,
+                    { transform: [{ translateX: translateXAnim }] },
+                ]}
+            >
+                <View style={styles.header}>
+                    <View style={styles.headerTitleRow}>
+                        <IconButton
+                            icon="close"
+                            size={24}
+                            onPress={handleClose}
+                            iconColor={colors.text}
+                            style={styles.closeBtn}
+                            accessibilityLabel="Close"
                         />
-                    </ScrollView>
-                </Animated.View>
-            </View>
+                        <Text style={[styles.title, { color: colors.text }]}>
+                            Advanced Filters
+                        </Text>
+                    </View>
+                </View>
+
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={true}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <RightPanelDiscover
+                        defaultAdvanceFilters={defaultAdvanceFilters}
+                        onClearStoredFilters={onClearStoredFilters}
+                        onFiltersApplied={onFiltersApplied}
+                        onDismiss={handleClose}
+                        disableCollapse
+                        style={styles.rightPanel}
+                    />
+                </ScrollView>
+            </Animated.View>
         </View>
     );
 };
@@ -161,29 +159,28 @@ const createStyles = (
             bottom: 0,
             zIndex: 1000,
         },
-        wrapper: {
-            flex: 1,
-            justifyContent: "center",
-            alignItems: isMobile ? "stretch" : "center",
-            padding: isMobile ? 0 : MODAL_INSET,
-        },
         backdrop: {
             ...StyleSheet.absoluteFillObject,
             backgroundColor: colors.backdrop,
         },
-        modal: {
-            flex: 1,
-            width: "100%",
-            alignSelf: "stretch",
+        panel: {
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: isMobile ? "100%" : PANEL_WIDTH,
             backgroundColor: colors.background,
-            borderRadius: CORNER_RADIUS,
+            borderTopLeftRadius: isMobile ? 0 : CORNER_RADIUS,
+            borderBottomLeftRadius: isMobile ? 0 : CORNER_RADIUS,
             overflow: "hidden",
             ...Platform.select({
-                web: {},
+                web: {
+                    boxShadow: "-8px 0 24px rgba(0, 0, 0, 0.18)",
+                } as any,
                 default: {
-                    shadowColor: colors.text,
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.2,
+                    shadowColor: "#000",
+                    shadowOffset: { width: -4, height: 0 },
+                    shadowOpacity: 0.18,
                     shadowRadius: 24,
                     elevation: 24,
                 },
