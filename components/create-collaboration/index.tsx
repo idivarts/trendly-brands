@@ -16,10 +16,10 @@ import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Platform } from "react-native";
 import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
-import PublishModal from "./PublishModal";
+import PublishModal, { PublishState } from "./PublishModal";
 import ScreenThree from "./screen-three";
 
 // Mapping functions to convert API response to app format
@@ -127,9 +127,7 @@ const CreateCollaboration = () => {
         setProcessPercentage,
     } = useProcess();
     const [attachments, setAttachments] = useState<Attachment[]>([]);
-    const [publishState, setPublishState] = useState<
-        "idle" | "in-process" | "fail" | "success"
-    >("idle");
+    const [publishState, setPublishState] = useState<PublishState>(PublishState.Idle);
     const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(
         null
     );
@@ -284,7 +282,7 @@ const CreateCollaboration = () => {
     };
 
     const resetPublishModal = () => {
-        setPublishState("idle");
+        setPublishState(PublishState.Idle);
         setPublishErrorMessage(null);
         setPublishedCollabId(null);
     };
@@ -301,6 +299,7 @@ const CreateCollaboration = () => {
     const campaignGuideMessage =
         "The Collaboration posted was not put live as it did not meet our guidelines. Please review the collaboration details and make necessary changes before reposting.";
     const saveCollaboration = async (myStatus: "draft" | "active") => {
+        let didShowPublishModal = false;
         try {
             if (isSavingRef.current) {
                 return;
@@ -392,27 +391,52 @@ const CreateCollaboration = () => {
 
                 // Only show modal for publish (active), not for draft
                 if (wantedStatus === "active") {
-                    setPublishState("in-process");
+                    didShowPublishModal = true;
+                    setPublishState(PublishState.InProcess);
                 }
 
+                const createPayload = {
+                    ...collaboration,
+                    attachments,
+                    brandId: selectedBrand ? selectedBrand.id : "",
+                    budget: {
+                        min: collaboration.budget?.min || 0,
+                        max: collaboration.budget?.max || 0,
+                    },
+                    managerId: AuthApp.currentUser?.uid as string,
+                    location: locationAddress,
+                    status: wantedStatus,
+                    timeStamp: Date.now(),
+                };
+
+                const CREATE_TIMEOUT_MS = 30000;
+
                 try {
-                    created = await createCollaboration({
-                        ...collaboration,
-                        attachments,
-                        brandId: selectedBrand ? selectedBrand.id : "",
-                        budget: {
-                            min: collaboration.budget?.min || 0,
-                            max: collaboration.budget?.max || 0,
-                        },
-                        managerId: AuthApp.currentUser?.uid as string,
-                        location: locationAddress,
-                        status: wantedStatus,
-                        timeStamp: Date.now(),
-                    });
+                    if (wantedStatus === "active" && Platform.OS === "web") {
+                        created = await Promise.race([
+                            createCollaboration(createPayload),
+                            new Promise<null>((_, reject) =>
+                                setTimeout(
+                                    () => reject(new Error("CREATE_TIMEOUT")),
+                                    CREATE_TIMEOUT_MS
+                                )
+                            ),
+                        ]);
+                    } else {
+                        created = await createCollaboration(createPayload);
+                    }
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to create collaboration");
                     created = null;
+                    if (wantedStatus === "active") {
+                        const message =
+                            error instanceof Error && error.message === "CREATE_TIMEOUT"
+                                ? "Request timed out. Please check your connection and try again."
+                                : "The collaboration could not be published. Please review and try again.";
+                        setPublishErrorMessage(message);
+                        setPublishState(PublishState.Fail);
+                    }
                 }
 
                 if (created?.apiError) {
@@ -421,11 +445,17 @@ const CreateCollaboration = () => {
                         "The collaboration could not be published. Please review and try again.";
 
                     setPublishErrorMessage(apiMessage);
-                    setPublishState("fail");
+                    setPublishState(PublishState.Fail);
                     return;
                 }
 
                 if (!created?.id) {
+                    if (wantedStatus === "active") {
+                        setPublishErrorMessage(
+                            "The collaboration could not be created. Please try again."
+                        );
+                        setPublishState(PublishState.Fail);
+                    }
                     return;
                 }
 
@@ -434,7 +464,12 @@ const CreateCollaboration = () => {
                 newId = created.id;
 
                 if (!newId) {
-                    // fallback: if createCollaboration didn't return id, log and stop.
+                    if (wantedStatus === "active") {
+                        setPublishErrorMessage(
+                            "The collaboration could not be created. Please try again."
+                        );
+                        setPublishState(PublishState.Fail);
+                    }
                     Console.error(
                         "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
                     );
@@ -443,7 +478,7 @@ const CreateCollaboration = () => {
                     if (wantedStatus === "active") {
                         await publish(newId);
                         setPublishedCollabId(newId);
-                        setPublishState("success");
+                        setPublishState(PublishState.Success);
                     } else {
                         shouldNavigateToCollaborations = true;
                     }
@@ -454,6 +489,12 @@ const CreateCollaboration = () => {
             }
         } catch (error) {
             Console.error(error);
+            if (didShowPublishModal) {
+                setPublishErrorMessage(
+                    "Something went wrong. Please try again."
+                );
+                setPublishState(PublishState.Fail);
+            }
         } finally {
             setProcessPercentage(0);
             setProcessMessage("");
@@ -472,99 +513,67 @@ const CreateCollaboration = () => {
 
     if (isLoading) {
         return (
-            <>
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
-                >
-                    <ActivityIndicator size="large" color={Colors(theme).primary} />
-                </View>
-                <PublishModal
-                    state={publishState}
-                    errorMessage={publishErrorMessage}
-                    publishedCollabId={publishedCollabId}
-                    onReset={resetPublishModal}
-                />
-            </>
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                }}
+            >
+                <ActivityIndicator size="large" color={Colors(theme).primary} />
+            </View>
         );
     }
 
     if (screen === 1) {
         return (
-            <>
-                <ScreenOne
-                    attachments={attachments}
-                    collaboration={collaboration}
-                    setAttachments={setAttachments}
-                    isEdited={isEdited}
-                    isSubmitting={isProcessing}
-                    setCollaboration={setCollaboration}
-                    setIsEdited={setIsEdited}
-                    setScreen={setScreen}
-                    type={type}
-                />
-                <PublishModal
-                    state={publishState}
-                    errorMessage={publishErrorMessage}
-                    publishedCollabId={publishedCollabId}
-                    onReset={resetPublishModal}
-                />
-            </>
+            <ScreenOne
+                attachments={attachments}
+                collaboration={collaboration}
+                setAttachments={setAttachments}
+                isEdited={isEdited}
+                isSubmitting={isProcessing}
+                setCollaboration={setCollaboration}
+                setIsEdited={setIsEdited}
+                setScreen={setScreen}
+                type={type}
+            />
         );
     }
 
     if (screen == 2) {
         return (
-            <>
-                <ScreenTwo
-                    collaboration={collaboration}
-                    isEdited={isEdited}
-                    isSubmitting={isProcessing}
-                    mapRegion={{
-                        state: mapRegion,
-                        setState: setMapRegion,
-                    }}
-                    onLocationChange={onLocationChange}
-                    saveAsDraft={saveAsDraft}
-                    setCollaboration={setCollaboration}
-                    setScreen={setScreen}
-                    type={type}
-                />
-                <PublishModal
-                    state={publishState}
-                    errorMessage={publishErrorMessage}
-                    publishedCollabId={publishedCollabId}
-                    onReset={resetPublishModal}
-                />
-            </>
+            <ScreenTwo
+                collaboration={collaboration}
+                isEdited={isEdited}
+                isSubmitting={isProcessing}
+                mapRegion={{
+                    state: mapRegion,
+                    setState: setMapRegion,
+                }}
+                onLocationChange={onLocationChange}
+                saveAsDraft={saveAsDraft}
+                setCollaboration={setCollaboration}
+                setScreen={setScreen}
+                type={type}
+            />
         );
     }
 
     if (screen === 3) {
         return (
-            <>
-                <ScreenThree
-                    collaboration={collaboration}
-                    isEdited={isEdited}
-                    isSubmitting={isProcessing}
-                    processMessage={processMessage}
-                    processPercentage={processPercentage}
-                    saveAsDraft={saveAsDraft}
-                    setCollaboration={setCollaboration}
-                    setScreen={setScreen}
-                    submitCollaboration={submitCollaboration}
-                    type={type}
-                />
-                <PublishModal
-                    state={publishState}
-                    errorMessage={publishErrorMessage}
-                    publishedCollabId={publishedCollabId}
-                    onReset={resetPublishModal}
-                />
-            </>
+            <ScreenThree
+                collaboration={collaboration}
+                isEdited={isEdited}
+                isSubmitting={isProcessing}
+                processMessage={processMessage}
+                processPercentage={processPercentage}
+                saveAsDraft={saveAsDraft}
+                setCollaboration={setCollaboration}
+                setScreen={setScreen}
+                submitCollaboration={submitCollaboration}
+                type={type}
+            />
         );
     }
 

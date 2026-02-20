@@ -1,4 +1,4 @@
-import PublishModal from "@/components/create-collaboration/PublishModal";
+import PublishModal, { PublishState } from "@/components/create-collaboration/PublishModal";
 import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
@@ -45,7 +45,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     >(undefined);
     const theme = useTheme();
     const [loading, setLoading] = useState(true);
-    const [publishState, setPublishState] = useState<"idle" | "in-process" | "fail" | "success">("idle");
+    const [publishState, setPublishState] = useState<PublishState>(PublishState.Idle);
     const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
     const [publishedCollabId, setPublishedCollabId] = useState<string | null>(null);
     const { xl } = useBreakpoints();
@@ -60,14 +60,14 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     };
 
     const resetPublishModal = () => {
-        setPublishState("idle");
+        setPublishState(PublishState.Idle);
         setPublishErrorMessage(null);
         setPublishedCollabId(null);
     };
 
     const publishNow = async () => {
         if (!pageID) return;
-        setPublishState("in-process");
+        setPublishState(PublishState.InProcess);
         try {
             const response = await HttpWrapper.fetch(
                 `/api/collabs/collaborations/${pageID}`,
@@ -87,12 +87,12 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     getApiMessage(apiResponse) ||
                     "The collaboration could not be published. Please review and try again.";
                 setPublishErrorMessage(apiMessage);
-                setPublishState("fail");
+                setPublishState(PublishState.Fail);
                 return;
             }
 
             setPublishedCollabId(pageID);
-            setPublishState("success");
+            setPublishState(PublishState.Success);
             setTimeout(() => {
                 fetchCollaboration();
             }, 1500);
@@ -100,7 +100,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             Console.error(error);
             const apiMessage = getApiMessage(error) || "Failed to publish collaboration";
             setPublishErrorMessage(apiMessage);
-            setPublishState("fail");
+            setPublishState(PublishState.Fail);
         }
     }
 

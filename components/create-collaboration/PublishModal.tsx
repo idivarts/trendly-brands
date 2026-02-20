@@ -4,10 +4,28 @@ import Colors from "@/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React from "react";
-import { ActivityIndicator, Modal } from "react-native";
+import {
+    ActivityIndicator,
+    Modal,
+    Platform,
+    useWindowDimensions,
+    type ViewStyle,
+} from "react-native";
+
+const HORIZONTAL_MARGIN = 24;
+const MODAL_MAX_WIDTH = 440;
+
+const isWeb = Platform.OS === "web";
+
+export enum PublishState {
+    Idle = "idle",
+    InProcess = "in-process",
+    Fail = "fail",
+    Success = "success",
+}
 
 interface PublishModalProps {
-    state: "idle" | "in-process" | "fail" | "success";
+    state: PublishState;
     errorMessage: string | null;
     publishedCollabId: string | null;
     onReset: () => void;
@@ -21,38 +39,61 @@ const PublishModal: React.FC<PublishModalProps> = ({
 }) => {
     const theme = useTheme();
     const router = useRouter();
+    const { width: windowWidth } = useWindowDimensions();
+
+    const availableWidth = windowWidth - HORIZONTAL_MARGIN * 2;
+    const modalWidth = Math.min(MODAL_MAX_WIDTH, availableWidth);
+    const modalPadding = windowWidth < 360 ? 20 : 24;
 
     return (
         <Modal
             transparent={true}
             animationType="fade"
-            visible={state !== "idle"}
+            visible={state !== PublishState.Idle}
             onRequestClose={() => {
-                if (state === "fail") {
+                if (state === PublishState.Fail) {
                     onReset();
                 }
             }}
         >
             <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "rgba(0, 0, 0, 0.5)",
-                }}
+                style={[
+                    {
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        backgroundColor: "rgba(0, 0, 0, 0.5)",
+                        paddingHorizontal: HORIZONTAL_MARGIN,
+                    },
+                    isWeb && ({
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: "100vw",
+                        height: "100vh",
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                    } as unknown as ViewStyle),
+                ]}
             >
                 <View
                     style={{
                         backgroundColor: Colors(theme).background,
                         borderRadius: 16,
-                        padding: 24,
+                        padding: modalPadding,
                         alignItems: "center",
-                        width: 480,
+                        width: modalWidth,
                         minHeight: 200,
+                        maxWidth: isWeb
+                            ? ("min(440px, calc(100vw - 48px))" as ViewStyle["maxWidth"])
+                            : "100%",
+                        ...(isWeb && ({ boxSizing: "border-box" } as ViewStyle)),
                     }}
                 >
                     {/* STATE 1: IN-PROCESS */}
-                    {state === "in-process" && (
+                    {state === PublishState.InProcess && (
                         <>
                             <ActivityIndicator
                                 size="large"
@@ -83,7 +124,7 @@ const PublishModal: React.FC<PublishModalProps> = ({
                     )}
 
                     {/* STATE 2: FAIL */}
-                    {state === "fail" && (
+                    {state === PublishState.Fail && (
                         <>
                             <Text
                                 style={{
@@ -108,7 +149,8 @@ const PublishModal: React.FC<PublishModalProps> = ({
                             </Text>
                             <View
                                 style={{
-                                    flexDirection: "row",
+                                    flexDirection:
+                                        windowWidth < 380 ? "column" : "row",
                                     gap: 12,
                                     width: "100%",
                                 }}
@@ -139,7 +181,7 @@ const PublishModal: React.FC<PublishModalProps> = ({
                     )}
 
                     {/* STATE 3: SUCCESS */}
-                    {state === "success" && (
+                    {state === PublishState.Success && (
                         <>
                             <Text
                                 style={{
