@@ -3,10 +3,8 @@ import AICampaignCreation from "@/components/create-collaboration/AICampaignCrea
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Pressable, Text } from "react-native";
 
 const SKIP_AI_CREATION_KEY = "skipAICampaignCreation";
@@ -14,30 +12,11 @@ const SKIP_AI_CREATION_KEY = "skipAICampaignCreation";
 const CreateCollaborationScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const params = useLocalSearchParams();
     const [showAICreation, setShowAICreation] = useState(true);
-    const [isLoading, setIsLoading] = useState(true);
     const [generatedAiData, setGeneratedAiData] = useState<any>(null);
-
-    useEffect(() => {
-        const loadAICreationState = async () => {
-            try {
-                const savedSkipChoice = await AsyncStorage.getItem(SKIP_AI_CREATION_KEY);
-                setShowAICreation(savedSkipChoice !== "true");
-            } catch (error) {
-                console.error("Error loading AI creation state:", error);
-                setShowAICreation(true);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadAICreationState();
-    }, []);
 
     const handleSkip = async () => {
         try {
-            await AsyncStorage.setItem(SKIP_AI_CREATION_KEY, "true");
             setShowAICreation(false);
         } catch (error) {
             console.error("Error saving skip choice:", error);
@@ -47,7 +26,6 @@ const CreateCollaborationScreen = () => {
 
     const handleAskAi = async () => {
         try {
-            await AsyncStorage.setItem(SKIP_AI_CREATION_KEY, "false");
             setShowAICreation(true);
         } catch (error) {
             console.error("Error resetting AI creation state:", error);
@@ -55,19 +33,17 @@ const CreateCollaborationScreen = () => {
         }
     };
 
-    if (isLoading) {
-        return null;
-    }
-
     if (showAICreation) {
         return (
-            <AICampaignCreation
-                onSkip={handleSkip}
-                onGenerated={(aiData) => {
-                    setGeneratedAiData(aiData);
-                    setShowAICreation(false);
-                }}
-            />
+            <AppLayout>
+                <AICampaignCreation
+                    onSkip={handleSkip}
+                    onGenerated={(aiData) => {
+                        setGeneratedAiData(aiData);
+                        setShowAICreation(false);
+                    }}
+                />
+            </AppLayout>
         );
     }
 

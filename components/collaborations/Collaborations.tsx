@@ -37,6 +37,7 @@ import CustomDivider from "../CustomDivider";
 import Button from "../ui/button";
 import EmptyState from "../ui/empty-state";
 
+
 const CollaborationList = ({ active }: { active: boolean }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [proposals, setProposals] = useState<any[]>([]);
@@ -142,6 +143,12 @@ const CollaborationList = ({ active }: { active: boolean }) => {
         fetchProposals();
     }, [user, selectedBrand]);
 
+    useEffect(() => {
+        if (!isLoading && proposals.length === 0) {
+            router.replace("/create-collaboration");
+        }
+    }, [isLoading, proposals]);
+
     const filteredProposals = proposals;
 
     if (isLoading) {
@@ -186,7 +193,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                 shadowOpacity: 0.25,
                                 shadowRadius: 8,
                                 elevation: 5,
-                                
+
                             }}>
                                 <View style={{
                                     flex: 1,
@@ -195,7 +202,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                     borderRadius: 12,
                                     backgroundColor: Colors(theme).card,
                                     borderStyle: item.status === "draft" ? "dashed" : "solid",
-                                    
+
                                 }}>
                                     <View
                                         key={item.id}
@@ -227,8 +234,8 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                                 <View
                                                     style={{
                                                         position: "absolute",
-                                                        right:10,
-                                                        top:28,
+                                                        right: 10,
+                                                        top: 28,
                                                         backgroundColor: Colors(theme).backdrop,
                                                         padding: 4,
                                                         borderRadius: 4,
