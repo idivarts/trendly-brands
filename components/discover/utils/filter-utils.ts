@@ -16,3 +16,23 @@ export function hasMeaningfulFilters(
             !(Array.isArray(v) && v.length === 0)
     );
 }
+
+/**
+ * Strips null/undefined values and empty arrays from a filters object.
+ */
+export function cleanFilters(obj: Record<string, any>): Record<string, any> {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined && value !== null) {
+            if (Array.isArray(value)) {
+                const cleanedArray = value.filter(
+                    (v) => v !== undefined && v !== null
+                );
+                if (cleanedArray.length > 0) cleaned[key] = cleanedArray;
+            } else {
+                cleaned[key] = value;
+            }
+        }
+    }
+    return cleaned;
+}

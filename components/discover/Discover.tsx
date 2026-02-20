@@ -8,7 +8,7 @@ import {
     type PageSortCommunication,
 } from "@/components/discover/discovery-context";
 import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
-import { hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
+import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -170,22 +170,6 @@ const DiscoverComponent = ({
             setShowSurvey(false);
             return;
         }
-        const cleanFilters = (obj: any): any => {
-            const cleaned: Record<string, any> = {};
-            for (const [key, value] of Object.entries(obj)) {
-                if (value !== undefined && value !== null) {
-                    if (Array.isArray(value)) {
-                        const cleanedArray = value.filter(
-                            (v) => v !== undefined && v !== null
-                        );
-                        if (cleanedArray.length > 0) cleaned[key] = cleanedArray;
-                    } else {
-                        cleaned[key] = value;
-                    }
-                }
-            }
-            return cleaned;
-        };
         const cleanedFilters = cleanFilters(filters);
         const surveyKey = `survey-completed-${selectedBrand.id}`;
 
