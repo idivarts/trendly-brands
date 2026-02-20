@@ -26,6 +26,8 @@ interface IProps {
     onClearStoredFilters?: () => void;
     onFiltersApplied?: (filters: IAdvanceFilters) => void;
     disableCollapse?: boolean;
+    /** When provided (e.g. in overlay mode), called instead of collapsePanel when Apply/Clear is used */
+    onDismiss?: () => void;
 }
 
 import { useBreakpoints } from "@/hooks";
@@ -36,6 +38,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
     onClearStoredFilters,
     onFiltersApplied,
     disableCollapse = false,
+    onDismiss,
 }) => {
     const {
         setRightPanel,
@@ -127,7 +130,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                     <MaterialCommunityIcons
                         name={isCollapsed ? "chevron-left" : "chevron-right"}
                         size={24}
-                        color="white"
+                        color={colors.onPrimary}
                     />
                 </Pressable>
             )}
