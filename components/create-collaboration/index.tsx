@@ -17,7 +17,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
-import { ActivityIndicator, Platform } from "react-native";
+import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
 import PublishModal, { PublishState } from "./PublishModal";
@@ -340,19 +340,17 @@ const CreateCollaboration = () => {
             setProcessMessage("Saving collaboration...");
             setProcessPercentage(100);
 
-            // Call create or update. IMPORTANT: we assume createCollaboration returns the new doc id
             if (params.id && typeof params.id === "string") {
-                // editing existing collab
                 try {
                     await updateCollaboration(params.id, {
                         ...collaboration,
-                        attachments: attachments,
-                        brandId: selectedBrand ? selectedBrand?.id : "",
+                        attachments,
+                        brandId: selectedBrand?.id ?? "",
                         budget: {
                             min: collaboration.budget?.min || 0,
                             max: collaboration.budget?.max || 0,
                         },
-                        managerId: AuthApp.currentUser?.uid as string,
+                        managerId: AuthApp.currentUser.uid,
                         location: locationAddress,
                         status: wantedStatus,
                         timeStamp: collaboration.timeStamp || Date.now(),
@@ -364,24 +362,10 @@ const CreateCollaboration = () => {
                     Console.error(error);
                     Toaster.error("Failed to update collaboration");
                 }
-                // If user wanted publish and we set wantedStatus active then call publish
                 if (wantedStatus === "active") {
-                    // params.id exists so we can publish by id
                     await publish(params.id);
                 }
             } else {
-                // creating new collaboration
-                // IMPORTANT: your createCollaboration should return the newly created doc id.
-                let created:
-                    | {
-                        id: string | null;
-                        apiResponse?: unknown;
-                        apiError?: unknown;
-                        status?: number;
-                    }
-                    | null = null;
-
-                // Only show modal for publish (active), not for draft
                 if (wantedStatus === "active") {
                     didShowPublishModal = true;
                     setPublishState(PublishState.InProcess);
@@ -390,58 +374,42 @@ const CreateCollaboration = () => {
                 const createPayload = {
                     ...collaboration,
                     attachments,
-                    brandId: selectedBrand ? selectedBrand.id : "",
+                    brandId: selectedBrand?.id ?? "",
                     budget: {
                         min: collaboration.budget?.min || 0,
                         max: collaboration.budget?.max || 0,
                     },
-                    managerId: AuthApp.currentUser?.uid as string,
+                    managerId: AuthApp.currentUser.uid,
                     location: locationAddress,
                     status: wantedStatus,
                     timeStamp: Date.now(),
                 };
 
-                const CREATE_TIMEOUT_MS = 30000;
-
+                let created;
                 try {
-                    if (wantedStatus === "active" && Platform.OS === "web") {
-                        created = await Promise.race([
-                            createCollaboration(createPayload),
-                            new Promise<null>((_, reject) =>
-                                setTimeout(
-                                    () => reject(new Error("CREATE_TIMEOUT")),
-                                    CREATE_TIMEOUT_MS
-                                )
-                            ),
-                        ]);
-                    } else {
-                        created = await createCollaboration(createPayload);
-                    }
+                    created = await createCollaboration(createPayload);
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to create collaboration");
-                    created = null;
                     if (wantedStatus === "active") {
-                        const message =
-                            error instanceof Error && error.message === "CREATE_TIMEOUT"
-                                ? "Request timed out. Please check your connection and try again."
-                                : "The collaboration could not be published. Please review and try again.";
-                        setPublishErrorMessage(message);
+                        setPublishErrorMessage(
+                            "The collaboration could not be published. Please review and try again."
+                        );
                         setPublishState(PublishState.Fail);
                     }
+                    return;
                 }
 
-                if (created?.apiError) {
-                    const apiMessage =
-                        await HttpWrapper.extractErrorMessage(created.apiError) ||
+                if (created.apiError) {
+                    const errorMessage =
+                        (await HttpWrapper.extractErrorMessage(created.apiError)) ||
                         "The collaboration could not be published. Please review and try again.";
-
-                    setPublishErrorMessage(apiMessage);
+                    setPublishErrorMessage(errorMessage);
                     setPublishState(PublishState.Fail);
                     return;
                 }
 
-                if (!created?.id) {
+                if (!created.id) {
                     if (wantedStatus === "active") {
                         setPublishErrorMessage(
                             "The collaboration could not be created. Please try again."
@@ -451,29 +419,12 @@ const CreateCollaboration = () => {
                     return;
                 }
 
-                // ASSUMPTION: createCollaboration returns the created doc id
-                let newId: string | null = null;
-                newId = created.id;
-
-                if (!newId) {
-                    if (wantedStatus === "active") {
-                        setPublishErrorMessage(
-                            "The collaboration could not be created. Please try again."
-                        );
-                        setPublishState(PublishState.Fail);
-                    }
-                    Console.error(
-                        "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
-                    );
+                if (wantedStatus === "active") {
+                    await publish(created.id);
+                    setPublishedCollabId(created.id);
+                    setPublishState(PublishState.Success);
                 } else {
-                    // If wantedStatus is 'active', then call publish using shared hook
-                    if (wantedStatus === "active") {
-                        await publish(newId);
-                        setPublishedCollabId(newId);
-                        setPublishState(PublishState.Success);
-                    } else {
-                        shouldNavigateToCollaborations = true;
-                    }
+                    shouldNavigateToCollaborations = true;
                 }
             }
             if (shouldNavigateToCollaborations) {
