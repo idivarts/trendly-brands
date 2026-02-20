@@ -1,9 +1,9 @@
+import type { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef } from "react";
 import {
     Animated,
-    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 import RightPanelDiscover from "./RightPanelDiscover";
-import type { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 
 const CORNER_RADIUS = 24;
 const MODAL_INSET = 8;
@@ -42,7 +41,6 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
     const isMobile = width < MOBILE_BREAKPOINT;
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const backdropOpacity = useRef(new Animated.Value(0)).current;
-    const [isMounted, setIsMounted] = React.useState(visible);
 
     const styles = useMemo(
         () => createStyles(colors, isMobile),
@@ -51,7 +49,6 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
 
     useEffect(() => {
         if (visible) {
-            setIsMounted(true);
             Animated.parallel([
                 Animated.timing(backdropOpacity, {
                     toValue: 1,
@@ -82,21 +79,12 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
                 useNativeDriver: true,
             }),
         ]).start(() => {
-            setIsMounted(false);
             onClose();
         });
     };
 
-    if (!isMounted) return null;
-
     return (
-        <Modal
-            visible={visible}
-            transparent
-            animationType="none"
-            onRequestClose={handleClose}
-            statusBarTranslucent
-        >
+        <View style={styles.overlay} pointerEvents={visible ? "auto" : "none"}>
             <View style={styles.wrapper}>
                 <Animated.View
                     style={[
@@ -156,7 +144,7 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
                     </ScrollView>
                 </Animated.View>
             </View>
-        </Modal>
+        </View>
     );
 };
 
@@ -165,6 +153,14 @@ const createStyles = (
     isMobile: boolean
 ) =>
     StyleSheet.create({
+        overlay: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1000,
+        },
         wrapper: {
             flex: 1,
             justifyContent: "center",
