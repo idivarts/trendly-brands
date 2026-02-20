@@ -25,8 +25,9 @@ import {
     AuthContextProvider,
     AWSContextProvider,
     ThemeOverrideProvider,
+    TransitionProvider,
     useAuthContext,
-    useThemeOverride,
+    useThemeOverride
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
@@ -42,8 +43,7 @@ export {
 } from "expo-router";
 
 export const unstable_settings = {
-    // Ensure that reloading on `/modal` keeps a back button present.
-    initialRouteName: "(tabs)",
+    initialRouteName: "index",
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -122,20 +122,22 @@ const RootLayoutStack = () => {
         <ThemeProvider value={navigationTheme}>
             <AWSContextProvider>
                 <Provider theme={CustomPaperTheme(navigationTheme)}>
-                    <DownloadApp />
-                    <ConfirmationModalProvider>
-                        <BottomSheetModalProvider>
-                            <Stack
-                                screenOptions={{
-                                    headerShown: false,
-                                }}
-                            >
-                                <Stack.Screen name="index" />
-                                <Stack.Screen name="+not-found" />
-                            </Stack>
-                            <Toast config={toastConfig} />
-                        </BottomSheetModalProvider>
-                    </ConfirmationModalProvider>
+                    <TransitionProvider>
+                        <DownloadApp />
+                        <ConfirmationModalProvider>
+                            <BottomSheetModalProvider>
+                                <Stack
+                                    screenOptions={{
+                                        headerShown: false,
+                                    }}
+                                >
+                                    <Stack.Screen name="index" />
+                                    <Stack.Screen name="+not-found" />
+                                </Stack>
+                                <Toast config={toastConfig} />
+                            </BottomSheetModalProvider>
+                        </ConfirmationModalProvider>
+                    </TransitionProvider>
                 </Provider>
             </AWSContextProvider>
         </ThemeProvider>

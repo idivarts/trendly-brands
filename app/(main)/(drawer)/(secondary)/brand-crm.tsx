@@ -6,6 +6,7 @@ const AdminInvites = () => {
     return (
         <AppLayout>
             <BrandCRMBoard />
+            {/* <KanbanPOC /> */}
         </AppLayout>
     );
 };

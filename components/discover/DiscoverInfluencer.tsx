@@ -5,7 +5,7 @@ import {
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { ISocialAnalytics, ISocials, SocialsBrief } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
+import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
@@ -13,21 +13,24 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     Linking,
     ListRenderItemInfo,
+    Platform,
     StyleSheet,
     Text
 } from "react-native";
 import {
-    ActivityIndicator,
     Button,
     Chip,
     Divider,
@@ -38,8 +41,6 @@ import {
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
-import DiscoverPlaceholder from "./DiscoverAdPlaceholder";
-import { InfluencerStatsModal } from "./InfluencerStatModal";
 import type { InfluencerItem } from "./discover-types";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
@@ -149,6 +150,7 @@ interface DiscoverInfluencerProps {
     isStatusCard?: boolean;
     onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
+    initialInfluencerId?: string;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -157,6 +159,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     isStatusCard = false,
     onStatusChange,
     defaultAdvanceFilters,
+    initialInfluencerId,
 }) => {
     const {
         selectedDb,
@@ -175,6 +178,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
+    const [isRescraping, setIsRescraping] = useState(false);
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
     const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
@@ -230,6 +234,51 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setShadowSocial(null);
         setIsAnalyticsLoading(false);
     };
+    const [autoOpenedId, setAutoOpenedId] = useState<string | null>(null);
+
+    // Auto-open profile when initialInfluencerId is provided (deep-linking)
+    useEffect(() => {
+        if (!initialInfluencerId || autoOpenedId === initialInfluencerId) return;
+
+        if (data.length === 0 && loading) {
+            return;
+        }
+
+        const influencerMatch = data.find((item) => item.id === initialInfluencerId);
+
+        if (influencerMatch) {
+            openProfile(influencerMatch);
+            setAutoOpenedId(initialInfluencerId);
+        } else if (!loading && data.length > 0) {
+            (async () => {
+                try {
+                    const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const body = docSnap.data();
+
+                        if (body?.id) {
+                            const influencerItem: InfluencerItem = {
+                                id: body.id,
+                                name: body.name || "Unknown",
+                                username: body.username || "unknown",
+                                profile_pic: body.profile_pic || "",
+                                follower_count: body.follower_count || 0,
+                                engagement_count: body.engagement_count || 0,
+                                views_count: body.views_count || 0,
+                                engagement_rate: body.engagement_rate || 0,
+                            };
+                            openProfile(influencerItem);
+                            setAutoOpenedId(initialInfluencerId);
+                        }
+                    }
+                } catch (error) {
+                    console.error("[DiscoverInfluencer] Error fetching influencer:", error);
+                }
+            })();
+        }
+    }, [initialInfluencerId, data, loading, openProfile]);
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(20);
@@ -243,12 +292,15 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
         const seen = new Set<string>();
-        return items.filter((item) => {
+        const result = items.filter((item) => {
             if (!item?.id) return true;
-            if (seen.has(item.id)) return false;
+            if (seen.has(item.id)) {
+                return false;
+            }
             seen.add(item.id);
             return true;
         });
+        return result;
     }, []);
 
     const statusOptions = [
@@ -262,16 +314,17 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
-            setRightPanel(false);
+            if (!xl) {
+                setRightPanel(false);
+            }
             if (page) setCurrentPage(page);
             if (sort) setCurrentSort(sort);
         },
-        [dedupeById]
+        [dedupeById, xl, setRightPanel]
     );
 
     useEffect(() => {
-        if (defaultAdvanceFilters && !appliedFilters) {
-            console.log("🔥 Default Filters Applied:", defaultAdvanceFilters);
+        if (defaultAdvanceFilters) {
             setAppliedFilters(defaultAdvanceFilters);
 
             discoverCommunication.current?.({
@@ -427,22 +480,30 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         (p: number) => {
             if (p < 1 || p > pageCount || p === currentPage) return;
             setCurrentPage(p);
+            // Close right panel on mobile when changing pages
+            if (!xl) {
+                setRightPanel(false);
+            }
             pageSortCommunication.current?.({
                 page: p,
                 sort: currentSort,
             });
         },
-        [currentPage, pageCount]
+        [currentPage, pageCount, xl, setRightPanel]
     );
 
     const onSelectSort = useCallback((val: string) => {
         setCurrentSort(val);
         setSortMenuVisible(false);
+        // Close right panel on mobile when changing sort
+        if (!xl) {
+            setRightPanel(false);
+        }
         pageSortCommunication.current?.({
             page: currentPage,
             sort: val,
         });
-    }, []);
+    }, [xl, setRightPanel, currentPage]);
 
     const onSelectStatus = useCallback(
         (val: string) => {
@@ -457,23 +518,44 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         // Full screen loader when we're fetching the first page
         return (
             <View style={styles.fullScreenLoader}>
-                <ActivityIndicator />
-                <Text style={{ marginTop: 8, opacity: 0.7 }}>Loading influencers…</Text>
+                <SlowLoader messages={["Searching for influencers...", "Analyzing profiles...", "Applying filters...", "Almost there...", "Loading results..."]} />
             </View>
         );
     }
 
     if (data.length == 0) {
-        if (xl)
-            return (
-                <View style={{ flex: 1, minWidth: 0 }}>
-                    <DiscoverPlaceholder
-                        selectedDb={selectedDb}
-                        setSelectedDb={setSelectedDb}
-                    />
-                </View>
-            );
-        else return null;
+        return (
+            <View
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 24,
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: Colors(theme).text,
+                        textAlign: "center",
+                    }}
+                >
+                    No influencers matched your filters.
+                </Text>
+                <Text
+                    style={{
+                        marginTop: 8,
+                        fontSize: 13,
+                        color: Colors(theme).textSecondary,
+                        textAlign: "center",
+                    }}
+                >
+                    Try widening follower range or clearing a few filters.
+                </Text>
+            </View>
+        );
     }
 
     return (
@@ -675,7 +757,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 style={{
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: 16,
+                    paddingHorizontal: Platform.OS === "web" ? 120 : 16,
 
                 }}
             >
@@ -795,7 +877,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         size={20}
                                         style={{ margin: 0, }}
                                         onPress={() => setSelectedIds([])}
-                                        
+
                                     />
                                 </View>
                                 <View style={{ marginTop: 8, alignItems: "center", backgroundColor: "transparent", alignSelf: "center" }}>
@@ -884,13 +966,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerName={selectedInfluencer.name}
                                         />
                                         {manager?.isAdmin ? (
-                                            <Button
-                                                mode="contained"
-                                                onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
-                                                icon="pencil"
-                                            >
-                                                Edit Metrics
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    mode="contained"
+                                                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
+                                                    icon="pencil"
+                                                >
+                                                    Edit Metrics
+                                                </Button>
+                                                <Button
+                                                    mode="contained"
+                                                    onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
+                                                    loading={isRescraping}
+                                                    disabled={isRescraping}
+                                                >
+                                                    Re-scrape
+                                                </Button>
+                                            </>
                                         ) : null}
                                     </View>
                                 }
@@ -900,9 +992,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                 closeModal={closeProfileModal}
                             />
                         ) : (
-                            <View style={{ padding: 24, alignItems: "center" }}>
+                            <View style={{ padding: 24, alignItems: "center", flex: 1 }}>
                                 {isAnalyticsLoading ? (
-                                    <ActivityIndicator />
+                                    <SlowLoader messages={["Loading profile data...", "Fetching analytics...", "Getting social insights...", "Almost ready..."]} />
                                 ) : (
                                     <Text style={{ color: colors.text }}>
                                         Unable to load profile.

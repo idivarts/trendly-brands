@@ -206,10 +206,13 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
                             <Text variant="labelLarge" style={{ marginTop: 12, marginBottom: 6 }}>Quality Score</Text>
                             <TextInput
                                 mode="outlined"
-                                label="Quality Score (0-100)"
+                                label="Quality Score (0-10)"
                                 value={String(editedSocial.quality_score ?? social?.quality_score ?? '')}
-                                onChangeText={(text) => setEditedSocial({ ...editedSocial, quality_score: parseInt(text) || 0 })}
-                                keyboardType="numeric"
+                                onChangeText={(text) => {
+                                    const val = parseFloat(text) || 0;
+                                    setEditedSocial({ ...editedSocial, quality_score: Math.min(10, Math.max(0, val)) });
+                                }}
+                                keyboardType="decimal-pad"
                                 style={{ marginBottom: 12 }}
                             />
 
