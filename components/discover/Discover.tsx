@@ -8,6 +8,7 @@ import {
     type PageSortCommunication,
 } from "@/components/discover/discovery-context";
 import RightPanelDiscover from "@/components/discover/RightPanelDiscover";
+import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -125,29 +126,28 @@ const DiscoverComponent = ({
         return () => unsubs.unsubscribe();
     }, [showRightPanel, filterSheetIndex, selectedDb, isWeb]);
 
-    const hasBrandPreferences = selectedBrand?.discoverPreferences &&
-        Object.values(selectedBrand.discoverPreferences).some(
-            (v) =>
-                v !== undefined &&
-                v !== null &&
-                v !== "" &&
-                !(Array.isArray(v) && v.length === 0)
-        );
-    const [showSurvey, setShowSurvey] = useState(!hasBrandPreferences);
+    const hasBrandPreferences = hasMeaningfulFilters(
+        selectedBrand?.discoverPreferences
+    );
+    const [showSurvey, setShowSurvey] = useState(false);
+    const [surveyCheckDone, setSurveyCheckDone] = useState(false);
 
     useEffect(() => {
-        setShowSurvey(!hasBrandPreferences);
-    }, [hasBrandPreferences]);
+        if (!selectedBrand?.id) {
+            setSurveyCheckDone(true);
+            setShowSurvey(false);
+            return;
+        }
+        (async () => {
+            const surveyKey = `survey-completed-${selectedBrand.id}`;
+            const completed = await PersistentStorage.get(surveyKey);
+            const surveyDone = completed === "true" || hasBrandPreferences;
+            setShowSurvey(!surveyDone);
+            setSurveyCheckDone(true);
+        })();
+    }, [selectedBrand?.id, hasBrandPreferences]);
 
-    const hasMeaningfulDefaults =
-        defaultAdvanceFilters &&
-        Object.values(defaultAdvanceFilters).some(
-            (v) =>
-                v !== undefined &&
-                v !== null &&
-                v !== "" &&
-                !(Array.isArray(v) && v.length === 0)
-        );
+    const hasMeaningfulDefaults = hasMeaningfulFilters(defaultAdvanceFilters);
 
     const filtersToUse = hasMeaningfulDefaults
         ? defaultAdvanceFilters
@@ -166,43 +166,52 @@ const DiscoverComponent = ({
             : undefined;
 
     const handleSurveyComplete = async (filters: IAdvanceFilters) => {
+        if (!selectedBrand?.id) {
+            setShowSurvey(false);
+            return;
+        }
+        const cleanedFilters = cleanFilters(filters);
+        const surveyKey = `survey-completed-${selectedBrand.id}`;
+
         try {
-            if (selectedBrand?.id) {
-                const cleanFilters = (obj: any): any => {
-                    const cleaned: Record<string, any> = {};
-                    for (const [key, value] of Object.entries(obj)) {
-                        if (value !== undefined && value !== null) {
-                            if (Array.isArray(value)) {
-                                const cleanedArray = value.filter(v => v !== undefined && v !== null);
-                                if (cleanedArray.length > 0) {
-                                    cleaned[key] = cleanedArray;
-                                }
-                            } else {
-                                cleaned[key] = value;
-                            }
-                        }
-                    }
-                    return cleaned;
-                };
-
-                const cleanedFilters = cleanFilters(filters);
-
-                await updateBrand(selectedBrand.id, {
-                    discoverPreferences: cleanedFilters,
-                });
-
-                const surveyKey = `survey-completed-${selectedBrand.id}`;
-                await PersistentStorage.set(surveyKey, "true");
-
-                Toaster.success("Preferences saved!");
-            }
-        } catch (error) {
+            await PersistentStorage.set(surveyKey, "true");
+        } catch (e) {
             Toaster.error("Failed to save preferences. Please try again");
             return;
         }
 
+        if (hasMeaningfulFilters(cleanedFilters)) {
+            try {
+                await updateBrand(selectedBrand.id, {
+                    discoverPreferences: cleanedFilters,
+                });
+                const defaultFilterKey = `defaultFilter-${selectedBrand.id}`;
+                await PersistentStorage.set(
+                    defaultFilterKey,
+                    JSON.stringify(cleanedFilters)
+                );
+                setStoredFilters(cleanedFilters);
+                setIsFiltersCleared(false);
+                Toaster.success("Preferences saved!");
+            } catch (error) {
+                Toaster.error("Failed to save preferences. Please try again");
+                return;
+            }
+        }
+
         setShowSurvey(false);
     };
+
+    if (!surveyCheckDone)
+        return (
+            <SlowLoader
+                messages={[
+                    "Loading brand information...",
+                    "Preparing discovery...",
+                    "Almost ready...",
+                ]}
+            />
+        );
 
     if (showSurvey)
         return (
@@ -212,7 +221,15 @@ const DiscoverComponent = ({
         );
 
     if (!manager || !selectedBrand || !selectedBrand.id)
-        return <SlowLoader messages={["Loading brand information...", "Preparing discovery...", "Almost ready..."]} />;
+        return (
+            <SlowLoader
+                messages={[
+                    "Loading brand information...",
+                    "Preparing discovery...",
+                    "Almost ready...",
+                ]}
+            />
+        );
 
     return (
         <DiscoveryProvider
