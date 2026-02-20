@@ -1,3 +1,4 @@
+import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -21,11 +22,9 @@ import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import {
     collection,
-    doc,
     getDocs,
     orderBy,
     query,
-    updateDoc,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -54,6 +53,7 @@ export default function CollaborationCMSBoard() {
     const [liveFilter, setLiveFilter] = useState<"none" | "live" | "not-live">("none");
     const [menuVisible, setMenuVisible] = useState(false);
     const [allCollaborations, setAllCollaborations] = useState<KanbanCardT[]>([]);
+    const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
@@ -211,10 +211,8 @@ export default function CollaborationCMSBoard() {
             
             setColumns(newColumns);
 
-            // Update Backend
             try {
-                const collabRef = doc(FirestoreDB, "collaborations", fromCardId);
-                await updateDoc(collabRef, { status: toColumnId });
+                await updateCollaboration(fromCardId, { status: toColumnId }, { skipEvaluation: true });
             } catch (err) {
                 console.warn("Failed to update collaboration status", err);
             }

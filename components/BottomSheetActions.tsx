@@ -1,5 +1,5 @@
 import Colors from "@/constants/Colors";
-import { useChatContext } from "@/contexts";
+import { useChatContext, useCollaborationContext } from "@/contexts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -43,6 +43,7 @@ const BottomSheetActions = ({
         React.useState(false);
     const router = useRouter();
     const { openModal } = useConfirmationModel()
+    const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
     const actionTextStyle = { color: Colors(theme).black };
 
@@ -131,12 +132,8 @@ const BottomSheetActions = ({
             confirmText: "Delist Collaboration",
             confirmAction: async () => {
                 try {
-                    const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
-                    await updateDoc(collaborationRef, {
-                        status: "inactive",
-                    }).then(() => {
-                        Toaster.success("Collaboration delisted successfully");
-                    });
+                    await updateCollaboration(cardId, { status: "inactive" }, { skipEvaluation: true });
+                    Toaster.success("Collaboration delisted successfully");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to delist collaboration");
@@ -153,15 +150,11 @@ const BottomSheetActions = ({
             confirmText: "Delete Collaboration",
             confirmAction: async () => {
                 try {
-                    const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
-                    await updateDoc(collaborationRef, {
-                        status: "deleted",
-                    }).then(() => {
-                        Toaster.success("Collaboration delisted successfully");
-                    });
+                    await updateCollaboration(cardId, { status: "deleted" }, { skipEvaluation: true });
+                    Toaster.success("Collaboration deleted successfully");
                 } catch (error) {
                     Console.error(error);
-                    Toaster.error("Failed to delist collaboration");
+                    Toaster.error("Failed to delete collaboration");
                 }
             }
         })
@@ -175,15 +168,11 @@ const BottomSheetActions = ({
             confirmText: "Stop!",
             confirmAction: async () => {
                 try {
-                    const collaborationRef = doc(FirestoreDB, "collaborations", cardId);
-                    await updateDoc(collaborationRef, {
-                        status: "stopped",
-                    }).then(() => {
-                        Toaster.success("Collaboration Stopped successfully");
-                    });
+                    await updateCollaboration(cardId, { status: "stopped" }, { skipEvaluation: true });
+                    Toaster.success("Collaboration Stopped successfully");
                 } catch (error) {
                     Console.error(error);
-                    Toaster.error("Failed to delist collaboration");
+                    Toaster.error("Failed to stop collaboration");
                 }
             }
         })
