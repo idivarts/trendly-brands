@@ -4,17 +4,14 @@ import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import Colors from "@/constants/Colors";
-import { useBrandContext } from "@/contexts/brand-context.provider";
 import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
-import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { useTheme } from "@react-navigation/native";
 import { Href } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
@@ -52,11 +49,8 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
     const [publishedCollabId, setPublishedCollabId] = useState<string | null>(null);
     const { xl } = useBreakpoints();
-    const { isOnFreeTrial } = useBrandContext();
-    const { openModal } = useConfirmationModel();
     const router = useMyNavigation();
 
-    const { publish } = usePublishCollaboration();
 
     const getApiMessage = (error: any): string | null => {
         if (typeof error === "string") return error;
@@ -70,6 +64,45 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         setPublishErrorMessage(null);
         setPublishedCollabId(null);
     };
+
+    const publishNow = async () => {
+        if (!pageID) return;
+        setPublishState("in-process");
+        try {
+            const response = await HttpWrapper.fetch(
+                `/api/collabs/collaborations/${pageID}`,
+                { method: "POST", }
+            );
+
+            const responseBody = await response.text();
+            let apiResponse = null;
+            try {
+                apiResponse = JSON.parse(responseBody);
+            } catch (e) {
+                apiResponse = responseBody;
+            }
+
+            if (response.status !== 200 && response.status !== 201) {
+                const apiMessage =
+                    getApiMessage(apiResponse) ||
+                    "The collaboration could not be published. Please review and try again.";
+                setPublishErrorMessage(apiMessage);
+                setPublishState("fail");
+                return;
+            }
+
+            setPublishedCollabId(pageID);
+            setPublishState("success");
+            setTimeout(() => {
+                fetchCollaboration();
+            }, 1500);
+        } catch (error) {
+            Console.error(error);
+            const apiMessage = getApiMessage(error) || "Failed to publish collaboration";
+            setPublishErrorMessage(apiMessage);
+            setPublishState("fail");
+        }
+    }
 
     const fetchCollaboration = async () => {
         if (!pageID) return;
@@ -343,49 +376,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     </Button>
                     <Button
                         mode="contained"
-                        onPress={async () => {
-                            if (!pageID) return;
-                            setPublishState("in-process");
-                            try {
-                                const response = await HttpWrapper.fetch(
-                                    `/api/collabs/collaborations/${pageID}`,
-                                    {
-                                        method: "PATCH",
-                                        body: JSON.stringify({
-                                            status: "active",
-                                        }),
-                                    }
-                                );
-
-                                const responseBody = await response.text();
-                                let apiResponse = null;
-                                try {
-                                    apiResponse = JSON.parse(responseBody);
-                                } catch (e) {
-                                    apiResponse = responseBody;
-                                }
-
-                                if (response.status !== 200 && response.status !== 201) {
-                                    const apiMessage =
-                                        getApiMessage(apiResponse) ||
-                                        "The collaboration could not be published. Please review and try again.";
-                                    setPublishErrorMessage(apiMessage);
-                                    setPublishState("fail");
-                                    return;
-                                }
-
-                                setPublishedCollabId(pageID);
-                                setPublishState("success");
-                                setTimeout(() => {
-                                    fetchCollaboration();
-                                }, 1500);
-                            } catch (error) {
-                                Console.error(error);
-                                const apiMessage = getApiMessage(error) || "Failed to publish collaboration";
-                                setPublishErrorMessage(apiMessage);
-                                setPublishState("fail");
-                            }
-                        }}
+                        onPress={publishNow}
                         style={{
                             flex: 1,
                         }}
