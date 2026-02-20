@@ -2,6 +2,7 @@ import {
     PageSortCommunication,
     useDiscovery,
 } from "@/components/discover/discovery-context";
+import { hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import Select from "@/components/ui/select";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints, useNicheSearch } from "@/hooks";
@@ -264,15 +265,7 @@ const TrendlyAdvancedFilter = ({
     };
 
     useEffect(() => {
-        // Determine if collaboration preferences actually contain meaningful data
-        const hasRealDefaults =
-            defaultAdvanceFilters &&
-            Object.keys(defaultAdvanceFilters).length > 0 &&
-            Object.values(defaultAdvanceFilters).some(
-                (v) => v !== null && v !== undefined
-            );
-
-        if (hasRealDefaults) {
+        if (hasMeaningfulFilters(defaultAdvanceFilters)) {
             // Use collaboration preferences (never overridden by saved filters)
             setFieldsFromFilters(defaultAdvanceFilters as Partial<IAdvanceFilters>);
             return;
