@@ -76,108 +76,81 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         runStepTransition("back", () => setCurrentStep((s) => s - 1));
     };
 
-    if (type === "update") {
-        return (
-            <ScrollView
-                contentContainerStyle={{
-                    paddingVertical: 40,
-                    paddingHorizontal: 16,
-                    alignItems: "center",
-                }}
-                showsVerticalScrollIndicator={false}
+    const isCreate = type === "create";
+    const showSection = (step: number) => !isCreate || currentStep === step;
+
+    return (
+        <ScrollView
+            contentContainerStyle={
+                isCreate
+                    ? { flexGrow: 1, paddingVertical: 24, paddingHorizontal: 16 }
+                    : { paddingVertical: 40, paddingHorizontal: 16, alignItems: "center" as const }
+            }
+            showsVerticalScrollIndicator={false}
+        >
+            {isCreate && (
+                <View style={styles.stepRow}>
+                    {[1, 2, 3].map((step) => (
+                        <View
+                            key={step}
+                            style={[
+                                styles.stepDot,
+                                currentStep === step && styles.stepDotActive,
+                                currentStep > step && styles.stepDotDone,
+                            ]}
+                        />
+                    ))}
+                </View>
+            )}
+
+            <View
+                style={
+                    isCreate
+                        ? [styles.cardOuter, { maxWidth: CARD_MAX_WIDTH }]
+                        : { width: "100%", maxWidth: CARD_MAX_WIDTH, gap: 24 }
+                }
             >
-                <View style={{ width: "100%", maxWidth: CARD_MAX_WIDTH, gap: 24 }}>
-                    <BrandDetails
-                        brandData={brandData}
-                        setBrandData={setBrandData}
-                        setBrandWebImage={setBrandWebImage}
-                    />
-                    <BrandAge
-                        brandData={brandData}
-                        setBrandData={setBrandData}
-                    />
-                    <BrandIndustry
-                        brandData={brandData}
-                        setBrandData={setBrandData}
-                    />
-                    {action && (
+                <Animated.View
+                    style={
+                        isCreate
+                            ? [styles.cardWrap, { minHeight: CARD_MIN_HEIGHT, opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]
+                            : undefined
+                    }
+                >
+                    {showSection(1) && (
+                        <BrandDetails
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            setBrandWebImage={setBrandWebImage}
+                            onNext={isCreate ? handleNext : undefined}
+                        />
+                    )}
+                    {showSection(2) && (
+                        <BrandAge
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onNext={isCreate ? handleNext : undefined}
+                            onBack={isCreate ? handleBack : undefined}
+                        />
+                    )}
+                    {showSection(3) && (
+                        <BrandIndustry
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onBack={isCreate ? handleBack : undefined}
+                        />
+                    )}
+                    {showSection(3) && action && (
                         <Surface
-                            style={{
-                                borderRadius: 16,
-                                padding: 16,
-                                backgroundColor: colors.card,
-                                marginTop: 8,
-                            }}
+                            style={[styles.actionSurface, { backgroundColor: colors.card, marginTop: isCreate ? 24 : 8 }]}
                             elevation={1}
                         >
                             {action}
                         </Surface>
                     )}
-                </View>
-            </ScrollView>
-        );
-    }
-
-    return (
-        <View style={{ flex: 1, paddingVertical: 24, paddingHorizontal: 16 }}>
-            {/* Step indicator */}
-            <View style={styles.stepRow}>
-                {[1, 2, 3].map((step) => (
-                    <View
-                        key={step}
-                        style={[
-                            styles.stepDot,
-                            currentStep === step && styles.stepDotActive,
-                            currentStep > step && styles.stepDotDone,
-                        ]}
-                    />
-                ))}
-            </View>
-
-            <View style={[styles.cardOuter, { maxWidth: CARD_MAX_WIDTH }]}>
-                <Animated.View
-                    style={[
-                        styles.cardWrap,
-                        { minHeight: CARD_MIN_HEIGHT, opacity: fadeAnim, transform: [{ translateX: slideAnim }] },
-                    ]}
-                >
-                    {currentStep === 1 && (
-                        <BrandDetails
-                            brandData={brandData}
-                            setBrandData={setBrandData}
-                            setBrandWebImage={setBrandWebImage}
-                            onNext={handleNext}
-                            onBack={undefined}
-                        />
-                    )}
-                    {currentStep === 2 && (
-                        <BrandAge
-                            brandData={brandData}
-                            setBrandData={setBrandData}
-                            onNext={handleNext}
-                            onBack={handleBack}
-                        />
-                    )}
-                    {currentStep === 3 && (
-                        <>
-                            <BrandIndustry
-                                brandData={brandData}
-                                setBrandData={setBrandData}
-                                onBack={handleBack}
-                            />
-                            {action && (
-                                <Surface
-                                    style={[styles.actionSurface, { backgroundColor: colors.card }]}
-                                    elevation={1}
-                                >
-                                    {action}
-                                </Surface>
-                            )}
-                        </>
-                    )}
                 </Animated.View>
             </View>
-        </View>
+        </ScrollView>
     );
 };
 
