@@ -1,319 +1,36 @@
-import type { InfluencerItem } from "@/components/discover/discover-types";
-import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
-import { AuthApp } from "@/shared-libs/utils/firebase/auth";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { sendPasswordResetEmail } from "firebase/auth";
-import React, { useEffect, useMemo, useState } from "react";
-import {
-    Dimensions,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    useWindowDimensions,
-    View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-    Easing,
-    FlipInXUp,
-    FlipOutXUp,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withSequence,
-    withTiming,
-} from "react-native-reanimated";
-
-const BACKGROUND_GRADIENT: readonly [string, string, string] = [
-    "#F7F9FC",
-    "#EFF3F9",
-    "#E9EEF6",
-];
-const FLOATING_CARD_MAX_WIDTH = 460;
-const FLOATING_CARD_RADIUS = 24;
-const FLOATING_CARD_PADDING = 18;
-const FLOATING_CARD_BORDER = 1;
-const FLOATING_CARD_BACKGROUND = "rgba(255,255,255,0.9)";
-const FLOATING_CARD_BORDER_COLOR = "rgba(15, 23, 42, 0.08)";
-const FLOATING_CARD_SHADOW = "rgba(15, 23, 42, 0.12)";
-const FLOATING_CARD_SHADOW_OPACITY = 0.35;
-const FLOATING_CARD_SHADOW_RADIUS = 30;
-const FLOATING_CARD_SHADOW_OFFSET_Y = 10;
-const CONTENT_PADDING_HORIZONTAL = 24;
-const CONTENT_PADDING_VERTICAL = 30;
-const PAGE_PADDING_TOP = 0;
-const RIGHT_PANE_TOP_PADDING = 32;
-const GRID_GAP = 32;
-const LEFT_COLUMN_WIDTH = 0.52;
-const RIGHT_COLUMN_WIDTH = 0.48;
-const SHOWCASE_CARD_HEIGHT = 260;
-const SHOWCASE_CARD_GAP = 48;
-const SHOWCASE_ANIMATION_DURATION = 26000;
-const SHOWCASE_COLUMN_GAP = 20;
-const SHOWCASE_MIN_HEIGHT = 640;
-const SHOWCASE_VERTICAL_PADDING = 24;
-const SHOWCASE_RADIUS = 24;
-const SHOWCASE_BACKGROUND = "rgba(255,255,255,0.7)";
-const SHOWCASE_BORDER = "rgba(15, 23, 42, 0.08)";
-const SHOWCASE_BORDER_WIDTH = 1;
-const SHOWCASE_PADDING = 16;
-const SHOWCASE_TITLE_SIZE = 26;
-const SHOWCASE_SUBTITLE_SIZE = 16;
-const SHOWCASE_SUBTITLE_LINE_HEIGHT = 22;
-const SHOWCASE_TITLE_COLOR = "#0F172A";
-const SHOWCASE_SUBTITLE_COLOR = "rgba(15, 23, 42, 0.7)";
-const SHOWCASE_TITLE = "Creators you can work with";
-const SHOWCASE_SUBTITLE = "Live marketplace snapshots, updated continuously.";
-const TITLE_TEXT_ALIGN = "center" as const;
-const WIDE_LAYOUT_MIN = 980;
-const FORM_SUBTITLE_MARGIN = 16;
-const INPUT_GAP = 10;
-const PRIMARY_BUTTON_MARGIN_TOP = 16;
-const BUTTON_RADIUS = 14;
-const LOGIN_PROMPT_MARGIN = 18;
-const SECONDARY_BUTTON_MARGIN = 8;
-const BACK_TEXT_MARGIN = 16;
-const SHOWCASE_TEXT_GAP = 16;
-const SHOWCASE_CARD_OPACITY = 0.6;
-const SHOWCASE_TEXT_BLOCK_HEIGHT = 72;
-const SHOWCASE_TITLE_SHADOW = "rgba(255,255,255,0.3)";
-const SHOWCASE_TITLE_SHADOW_RADIUS = 10;
-const FORM_ANIMATION_DURATION = 260;
-
-const SAMPLE_INFLUENCERS: InfluencerItem[] = [
-    {
-        id: "influencer-1",
-        name: "Mia Alvarez",
-        username: "miaalvarez",
-        profile_pic:
-            "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 125000,
-        engagement_count: 8200,
-        views_count: 242000,
-        engagement_rate: 4.3,
-        location: "Los Angeles, CA",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-2",
-        name: "Kai Morgan",
-        username: "kaimorgan",
-        profile_pic:
-            "https://images.unsplash.com/photo-1546539781-2e9c76dfe0ed?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 98000,
-        engagement_count: 6400,
-        views_count: 198000,
-        engagement_rate: 3.9,
-        location: "Austin, TX",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-3",
-        name: "Sana Patel",
-        username: "sanapatel",
-        profile_pic:
-            "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 210000,
-        engagement_count: 11900,
-        views_count: 312000,
-        engagement_rate: 5.1,
-        location: "New York, NY",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-4",
-        name: "Noah Park",
-        username: "noahpark",
-        profile_pic:
-            "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 76000,
-        engagement_count: 5200,
-        views_count: 141000,
-        engagement_rate: 3.6,
-        location: "Seattle, WA",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-5",
-        name: "Elena Rossi",
-        username: "elenarossi",
-        profile_pic:
-            "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 188000,
-        engagement_count: 10400,
-        views_count: 276000,
-        engagement_rate: 4.7,
-        location: "Miami, FL",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-6",
-        name: "Owen Lee",
-        username: "owenlee",
-        profile_pic:
-            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 142000,
-        engagement_count: 7600,
-        views_count: 224000,
-        engagement_rate: 4.0,
-        location: "Chicago, IL",
-        isDiscover: true,
-    },
-];
-
-const CARD_ROW_HEIGHT = SHOWCASE_CARD_HEIGHT + SHOWCASE_CARD_GAP;
-
-const buildLoop = (
-    items: InfluencerItem[],
-    containerHeight: number,
-    direction: 1 | -1
-) => {
-    const singleSetHeight = items.length * CARD_ROW_HEIGHT;
-    const copiesNeeded = Math.max(
-        5,
-        Math.ceil(containerHeight / singleSetHeight) + 3
-    );
-    const looped = Array.from({ length: copiesNeeded }, () => items).flat();
-    return direction === -1 ? [...items, ...looped] : looped;
-};
-
-const AutoScrollColumn = ({
-    items,
-    direction,
-    containerHeight,
-}: {
-    items: InfluencerItem[];
-    direction: 1 | -1;
-    containerHeight: number;
-}) => {
-    const loopItems = useMemo(
-        () => buildLoop(items, containerHeight, direction),
-        [items, containerHeight, direction]
-    );
-    const translateY = useSharedValue(0);
-    const scrollDistance = useMemo(
-        () => items.length * CARD_ROW_HEIGHT,
-        [items.length]
-    );
-
-    useEffect(() => {
-        translateY.value = withRepeat(
-            withSequence(
-                withTiming(-direction * scrollDistance, {
-                    duration: SHOWCASE_ANIMATION_DURATION,
-                    easing: Easing.linear,
-                }),
-                withTiming(0, { duration: 0 })
-            ),
-            -1
-        );
-    }, [direction, scrollDistance, translateY]);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translateY.value }],
-    }));
-
-    const needsTopOffset = direction === -1;
-    const containerStyle = needsTopOffset
-        ? { marginTop: -scrollDistance }
-        : undefined;
-
-    return Platform.OS === "web" ? (
-        <View style={stylesLocal.showcaseColumn}>
-            <View style={containerStyle}>
-                <Animated.View style={[animatedStyle, stylesLocal.showcaseCardsColumn]}>
-                    {loopItems.map((item, index) => (
-                        <View
-                            key={`${item.id}-${index}`}
-                            style={stylesLocal.showcaseCardWrapper}
-                        >
-                            <InfluencerCard item={item} isCollapsed />
-                        </View>
-                    ))}
-                </Animated.View>
-            </View>
-        </View>
-    ) :
-        null;
-
-};
-
-type AuthFormMode = "signup" | "login" | "forgot";
+import React, { useState } from "react";
+import { Image, Text, View } from "react-native";
 
 const SignUpScreen = () => {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [formMode, setFormMode] = useState<"signup" | "login" | "forgot">("signup");
-    const [hasToggledForm, setHasToggledForm] = useState(false);
     const [verificationSent, setVerificationSent] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const theme = useTheme();
-    const insets = useSafeAreaInsets();
     const styles = fnStyles(theme);
-    const { signUp, signIn } = useAuthContext();
-    const { width } = useWindowDimensions();
-    const windowHeight = Dimensions.get("window").height;
-    const isWideLayout = width >= WIDE_LAYOUT_MIN;
-    const showcaseHeight = Math.max(
-        SHOWCASE_MIN_HEIGHT,
-        windowHeight - SHOWCASE_VERTICAL_PADDING * 2 - SHOWCASE_TEXT_BLOCK_HEIGHT
-    );
+    const { signUp } = useAuthContext();
 
-    const showcaseItems = useMemo(() => SAMPLE_INFLUENCERS, []);
-
-    const handleSignIn = () => {
-        signIn(email, password);
-    };
-
-    const handleSignUp = () => {
-        signUp(name, email, password);
-    };
-
-    const handleResetPassword = () => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(email)) {
-            alert("Please enter a valid email address");
-            return;
+    const handleSignUp = async () => {
+        setIsSubmitting(true);
+        try {
+            const success = await signUp(name, email, password);
+            if (success) {
+                setVerificationSent(true);
+            }
+        } finally {
+            setIsSubmitting(false);
         }
-
-        sendPasswordResetEmail(AuthApp, email)
-            .then(() => {
-                Toaster.success("Password reset email sent successfully");
-                setFormMode("login");
-            })
-            .catch((error) => {
-                Toaster.error(error.message);
-            });
-    };
-
-    const handleShowLogin = () => {
-        setHasToggledForm(true);
-        setFormMode("login");
-    };
-
-    const handleShowSignUp = () => {
-        setHasToggledForm(true);
-        setFormMode("signup");
-    };
-
-    const handleShowForgotPassword = () => {
-        setHasToggledForm(true);
-        setFormMode("forgot");
     };
 
     if (verificationSent) {
@@ -355,493 +72,98 @@ const SignUpScreen = () => {
         );
     }
 
-    const pagePadding = {
-        paddingTop: PAGE_PADDING_TOP + insets.top,
-        paddingBottom: CONTENT_PADDING_VERTICAL + insets.bottom,
-    };
-
-    const isWeb = Platform.OS === "web";
-    const contentWrapperStyle = [
-        stylesLocal.scrollContent,
-        pagePadding,
-    ];
-
-    const pageContent = (
-        <View
-            style={[
-                stylesLocal.page,
-                stylesLocal.contentRow,
-                !isWideLayout && stylesLocal.contentColumn,
-            ]}
-        >
-                    {isWideLayout && (
-                        <View
-                            style={[
-                                stylesLocal.leftPane,
-                                !isWideLayout && stylesLocal.leftPaneStacked,
-                            ]}
-                        >
-                            <Text style={stylesLocal.showcaseTitle}>{SHOWCASE_TITLE}</Text>
-                            <Text style={stylesLocal.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
-                            <View style={[stylesLocal.showcaseContainer, { height: showcaseHeight }]}>
-                                <AutoScrollColumn
-                                    items={showcaseItems}
-                                    direction={-1}
-                                    containerHeight={showcaseHeight}
-                                />
-                                <AutoScrollColumn
-                                    items={showcaseItems}
-                                    direction={1}
-                                    containerHeight={showcaseHeight}
-                                />
-                            </View>
-                        </View>
-                    )}
-                    <View
-                        style={[
-                            stylesLocal.rightPane,
-                            !isWideLayout && stylesLocal.rightPaneStacked,
-                            stylesLocal.rightPaneTopPadding,
-                        ]}
-                    >
-                        <View style={stylesLocal.floatingCard}>
-                            <Image
-                                source={require("@/assets/images/logo.png")}
-                                style={styles.logo}
-                                resizeMode="contain"
-                            />
-                            <View style={stylesLocal.formHeader}>
-                                {formMode === "login" ? (
-                                    <Animated.View
-                                        key="login-header"
-                                        entering={
-                                            hasToggledForm
-                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                        exiting={
-                                            hasToggledForm
-                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                    >
-                                        <Text style={[styles.title, stylesLocal.formTitle]}>
-                                            Login
-                                        </Text>
-                                        <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
-                                            Welcome to Trendly Brands
-                                        </Text>
-                                    </Animated.View>
-                                ) : formMode === "forgot" ? (
-                                    <Animated.View
-                                        key="forgot-header"
-                                        entering={
-                                            hasToggledForm
-                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                        exiting={
-                                            hasToggledForm
-                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                    >
-                                        <Text style={[styles.title, stylesLocal.formTitle]}>
-                                            Forgot Password
-                                        </Text>
-                                        <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
-                                            We will email you a reset link.
-                                        </Text>
-                                    </Animated.View>
-                                ) : (
-                                    <Animated.View
-                                        key="signup-header"
-                                        entering={
-                                            hasToggledForm
-                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                        exiting={
-                                            hasToggledForm
-                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                    >
-                                        <Text style={[styles.title, stylesLocal.formTitle]}>
-                                            Create your brand
-                                        </Text>
-                                        <Text style={[styles.subTitle, stylesLocal.formSubtitle]}>
-                                            Use your work email to create a Trendly brand account
-                                        </Text>
-                                    </Animated.View>
-                                )}
-                            </View>
-                            <View style={[styles.inputContainer, stylesLocal.inputStack]}>
-                                {formMode === "login" ? (
-                                    <Animated.View
-                                        key="login-form"
-                                        entering={
-                                            hasToggledForm
-                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                        exiting={
-                                            hasToggledForm
-                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                    >
-                                        <TextInput
-                                            autoCapitalize="none"
-                                            label="Email"
-                                            value={email}
-                                            onChangeText={setEmail}
-                                            mode="outlined"
-                                            textColor={Colors(theme).text}
-                                            style={styles.input}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <TextInput
-                                            label="Password"
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            secureTextEntry
-                                            mode="outlined"
-                                            style={styles.input}
-                                            textColor={Colors(theme).text}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <Button
-                                            mode="contained"
-                                            style={stylesLocal.primaryButton}
-                                            onPress={handleSignIn}
-                                        >
-                                            Login
-                                        </Button>
-                                    </Animated.View>
-                                ) : formMode === "forgot" ? (
-                                    <Animated.View
-                                        key="forgot-form"
-                                        entering={
-                                            hasToggledForm
-                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                        exiting={
-                                            hasToggledForm
-                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                    >
-                                        <TextInput
-                                            autoCapitalize="none"
-                                            label="Enter your Email ID"
-                                            value={email}
-                                            onChangeText={setEmail}
-                                            mode="outlined"
-                                            textColor={Colors(theme).text}
-                                            style={styles.input}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <Button
-                                            mode="contained"
-                                            style={stylesLocal.primaryButton}
-                                            onPress={handleResetPassword}
-                                        >
-                                            Reset Password
-                                        </Button>
-                                    </Animated.View>
-                                ) : (
-                                    <Animated.View
-                                        key="signup-form"
-                                        entering={
-                                            hasToggledForm
-                                                ? FlipInXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                        exiting={
-                                            hasToggledForm
-                                                ? FlipOutXUp.duration(FORM_ANIMATION_DURATION)
-                                                : undefined
-                                        }
-                                    >
-                                        <TextInput
-                                            label="Name"
-                                            value={name}
-                                            onChangeText={setName}
-                                            mode="outlined"
-                                            textColor={Colors(theme).text}
-                                            placeholderTextColor={Colors(theme).text}
-                                            style={styles.input}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <TextInput
-                                            autoCapitalize="none"
-                                            label="Work Email"
-                                            value={email}
-                                            placeholderTextColor={Colors(theme).text}
-                                            onChangeText={setEmail}
-                                            textColor={Colors(theme).text}
-                                            mode="outlined"
-                                            style={styles.input}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <TextInput
-                                            label="Password"
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            secureTextEntry
-                                            mode="outlined"
-                                            placeholderTextColor={Colors(theme).text}
-                                            textColor={Colors(theme).text}
-                                            style={styles.input}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <TextInput
-                                            label="Confirm Password"
-                                            value={confirmPassword}
-                                            onChangeText={setConfirmPassword}
-                                            placeholderTextColor={Colors(theme).text}
-                                            textColor={Colors(theme).text}
-                                            secureTextEntry
-                                            mode="outlined"
-                                            style={styles.input}
-                                            theme={{ colors: { primary: Colors(theme).text } }}
-                                        />
-                                        <Button
-                                            mode="contained"
-                                            style={stylesLocal.primaryButton}
-                                            onPress={handleSignUp}
-                                        >
-                                            Create Account
-                                        </Button>
-                                    </Animated.View>
-                                )}
-                            </View>
-                            {formMode === "login" ? (
-                                <View style={stylesLocal.loginPrompt}>
-                                    <Text style={[styles.loginText, stylesLocal.loginText]}>
-                                        Don&apos;t have an account?
-                                    </Text>
-                                    <Button
-                                        mode="outlined"
-                                        style={stylesLocal.secondaryButton}
-                                        onPress={handleShowSignUp}
-                                    >
-                                        Sign Up
-                                    </Button>
-                                    <Text
-                                        style={[
-                                            styles.loginText,
-                                            stylesLocal.forgotPassword,
-                                            styles.loginLink,
-                                        ]}
-                                        onPress={handleShowForgotPassword}
-                                    >
-                                        Forgot Password?
-                                    </Text>
-                                </View>
-                            ) : formMode === "forgot" ? (
-                                <View style={stylesLocal.loginPrompt}>
-                                    <Text style={[styles.loginText, stylesLocal.loginText]}>
-                                        Remember your password?
-                                    </Text>
-                                    <Button
-                                        mode="outlined"
-                                        style={stylesLocal.secondaryButton}
-                                        onPress={handleShowLogin}
-                                    >
-                                        Login
-                                    </Button>
-                                </View>
-                            ) : (
-                                <>
-                                    <View style={stylesLocal.loginPrompt}>
-                                        <Text style={[styles.loginText, stylesLocal.loginText]}>
-                                            Already have an account?
-                                        </Text>
-                                        <Button
-                                            mode="outlined"
-                                            style={stylesLocal.secondaryButton}
-                                            onPress={handleShowLogin}
-                                        >
-                                            Login
-                                        </Button>
-                                    </View>
-                                    <Text style={[styles.loginText, stylesLocal.backText]}>
-                                        Looking for Social Signup?{" "}
-                                        <Text
-                                            style={styles.loginLink}
-                                            onPress={() => router.back()}
-                                        >
-                                            Go Back
-                                        </Text>
-                                    </Text>
-                                </>
-                            )}
-                        </View>
-                    </View>
-                </View>
-    );
-
     return (
-        <LinearGradient colors={BACKGROUND_GRADIENT} style={stylesLocal.background}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={stylesLocal.flex}
-            >
-                {isWeb ? (
-                    <View style={contentWrapperStyle}>{pageContent}</View>
-                ) : (
-                    <ScrollView
-                        contentContainerStyle={contentWrapperStyle}
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={false}
-                    >
-                        {pageContent}
-                    </ScrollView>
-                )}
-            </KeyboardAvoidingView>
-        </LinearGradient>
+        <AuthPageLayout>
+            <Image
+                source={require("@/assets/images/logo.png")}
+                style={styles.logo}
+                resizeMode="contain"
+            />
+            <View style={authLayoutStyles.formHeader}>
+                <Text style={[styles.title, authLayoutStyles.formTitle]}>
+                    Create your brand
+                </Text>
+                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
+                    Use your work email to create a Trendly brand account
+                </Text>
+            </View>
+            <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
+                <TextInput
+                    label="Name"
+                    value={name}
+                    onChangeText={setName}
+                    mode="outlined"
+                    textColor={Colors(theme).text}
+                    placeholderTextColor={Colors(theme).text}
+                    style={styles.input}
+                    theme={{ colors: { primary: Colors(theme).text } }}
+                />
+                <TextInput
+                    autoCapitalize="none"
+                    label="Work Email"
+                    value={email}
+                    placeholderTextColor={Colors(theme).text}
+                    onChangeText={setEmail}
+                    textColor={Colors(theme).text}
+                    mode="outlined"
+                    style={styles.input}
+                    theme={{ colors: { primary: Colors(theme).text } }}
+                />
+                <TextInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    mode="outlined"
+                    placeholderTextColor={Colors(theme).text}
+                    textColor={Colors(theme).text}
+                    style={styles.input}
+                    theme={{ colors: { primary: Colors(theme).text } }}
+                />
+                <TextInput
+                    label="Confirm Password"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholderTextColor={Colors(theme).text}
+                    textColor={Colors(theme).text}
+                    secureTextEntry
+                    mode="outlined"
+                    style={styles.input}
+                    theme={{ colors: { primary: Colors(theme).text } }}
+                />
+                <Button
+                    mode="contained"
+                    style={authLayoutStyles.primaryButton}
+                    onPress={handleSignUp}
+                    disabled={isSubmitting}
+                    loading={isSubmitting}
+                >
+                    Create Account
+                </Button>
+            </View>
+            <View style={authLayoutStyles.loginPrompt}>
+                <Text style={[styles.loginText, authLayoutStyles.loginText]}>
+                    Already have an account?
+                </Text>
+                <Button
+                    mode="outlined"
+                    style={authLayoutStyles.secondaryButton}
+                    onPress={() => router.replace("/(auth)/login")}
+                >
+                    Login
+                </Button>
+            </View>
+            <Text style={[styles.loginText, authLayoutStyles.backText]}>
+                Looking for Social Signup?{" "}
+                <Text
+                    style={styles.loginLink}
+                    onPress={() => router.back()}
+                >
+                    Go Back
+                </Text>
+            </Text>
+        </AuthPageLayout>
     );
 };
-
-const stylesLocal = {
-    background: {
-        flex: 1,
-    },
-    flex: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-    },
-    page: {
-        minHeight: Dimensions.get("window").height,
-        paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
-    },
-    contentRow: {
-        flexDirection: "row" as const,
-        gap: GRID_GAP,
-        alignItems: "flex-start",
-        justifyContent: "center",
-    },
-    contentColumn: {
-        flexDirection: "column" as const,
-        justifyContent: "flex-start" as const,
-    },
-    leftPane: {
-        flex: LEFT_COLUMN_WIDTH,
-        width: "100%" as const,
-        gap: SHOWCASE_TEXT_GAP,
-        alignSelf: "flex-start" as const,
-    },
-    leftPaneStacked: {
-        marginBottom: GRID_GAP,
-    },
-    rightPane: {
-        flex: RIGHT_COLUMN_WIDTH,
-        width: "100%" as const,
-        justifyContent: "flex-start",
-        alignItems: "center",
-        alignSelf: "flex-start" as const,
-    },
-    rightPaneStacked: {
-        alignItems: "stretch" as const,
-    },
-    rightPaneTopPadding: {
-        paddingTop: RIGHT_PANE_TOP_PADDING,
-    },
-    showcaseTitle: {
-        color: SHOWCASE_TITLE_COLOR,
-        fontSize: SHOWCASE_TITLE_SIZE,
-        fontWeight: "700",
-        textAlign: TITLE_TEXT_ALIGN,
-        textShadowColor: SHOWCASE_TITLE_SHADOW,
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: SHOWCASE_TITLE_SHADOW_RADIUS,
-    },
-    showcaseSubtitle: {
-        color: SHOWCASE_SUBTITLE_COLOR,
-        fontSize: SHOWCASE_SUBTITLE_SIZE,
-        lineHeight: SHOWCASE_SUBTITLE_LINE_HEIGHT,
-        textAlign: TITLE_TEXT_ALIGN,
-    },
-    showcaseContainer: {
-        flex: 1,
-        flexDirection: "row",
-        gap: SHOWCASE_COLUMN_GAP,
-        padding: SHOWCASE_PADDING,
-        borderRadius: SHOWCASE_RADIUS,
-        backgroundColor: SHOWCASE_BACKGROUND,
-        borderWidth: SHOWCASE_BORDER_WIDTH,
-        borderColor: SHOWCASE_BORDER,
-        overflow: "hidden",
-    },
-    showcaseColumn: {
-        flex: 1,
-        overflow: "hidden" as const,
-    },
-    showcaseCardsColumn: {
-        flexDirection: "column" as const,
-    },
-    showcaseCardWrapper: {
-        height: SHOWCASE_CARD_HEIGHT,
-        marginBottom: SHOWCASE_CARD_GAP,
-        opacity: SHOWCASE_CARD_OPACITY,
-    },
-    floatingCard: {
-        width: "100%" as const,
-        maxWidth: FLOATING_CARD_MAX_WIDTH,
-        alignSelf: "center" as const,
-        backgroundColor: FLOATING_CARD_BACKGROUND,
-        borderRadius: FLOATING_CARD_RADIUS,
-        padding: FLOATING_CARD_PADDING,
-        borderWidth: FLOATING_CARD_BORDER,
-        borderColor: FLOATING_CARD_BORDER_COLOR,
-        shadowColor: FLOATING_CARD_SHADOW,
-        shadowOpacity: FLOATING_CARD_SHADOW_OPACITY,
-        shadowRadius: FLOATING_CARD_SHADOW_RADIUS,
-        shadowOffset: { width: 0, height: FLOATING_CARD_SHADOW_OFFSET_Y },
-    },
-    formTitle: {
-        textAlign: "center" as const,
-    },
-    formSubtitle: {
-        textAlign: "center" as const,
-        opacity: 0.8,
-        marginBottom: FORM_SUBTITLE_MARGIN,
-    },
-    formHeader: {
-        minHeight: 96,
-    },
-    inputStack: {
-        gap: INPUT_GAP,
-    },
-    primaryButton: {
-        marginTop: PRIMARY_BUTTON_MARGIN_TOP,
-        borderRadius: BUTTON_RADIUS,
-    },
-    loginPrompt: {
-        marginTop: LOGIN_PROMPT_MARGIN,
-        alignItems: "center" as const,
-    },
-    loginText: {
-        opacity: 0.8,
-    },
-    secondaryButton: {
-        marginTop: SECONDARY_BUTTON_MARGIN,
-        borderRadius: BUTTON_RADIUS,
-    },
-    forgotPassword: {
-        marginTop: 12,
-        textAlign: "center" as const,
-    },
-    backText: {
-        opacity: 0.7,
-        marginTop: BACK_TEXT_MARGIN,
-        textAlign: "center" as const,
-    },
-} as const;
 
 export default SignUpScreen;
