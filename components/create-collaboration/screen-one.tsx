@@ -28,6 +28,7 @@ import ScreenLayout from "./screen-layout";
 interface ScreenOneProps {
     attachments: any[];
     collaboration: Partial<Collaboration>;
+    headerRight?: React.ReactNode;
     setAttachments: React.Dispatch<React.SetStateAction<Attachment[]>>;
     // handleAssetsUpdateNative: (assets: NativeAssetItem[]) => void;
     // handleAssetsUpdateWeb: (assets: WebAssetItem[]) => void;
@@ -42,6 +43,7 @@ interface ScreenOneProps {
 const ScreenOne: React.FC<ScreenOneProps> = ({
     attachments,
     collaboration,
+    headerRight,
     setAttachments,
     isEdited,
     isSubmitting,
@@ -85,6 +87,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
     return (
         <>
             <ScreenLayout
+                headerRight={headerRight}
                 isEdited={isEdited}
                 screen={1}
                 setScreen={setScreen}

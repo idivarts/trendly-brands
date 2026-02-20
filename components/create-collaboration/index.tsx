@@ -68,7 +68,12 @@ const mapContentFormat = (apiValue: string): string => {
     return result;
 };
 
-const CreateCollaboration = () => {
+interface CreateCollaborationProps {
+    headerRight?: React.ReactNode;
+    aiData?: any;
+}
+
+const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, aiData }) => {
     const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
         name: "",
         brandId: "",
@@ -155,60 +160,72 @@ const CreateCollaboration = () => {
             fetchCollaboration(params.id).finally(() => {
                 setIsLoading(false);
             });
-        } else if (params.aiData && typeof params.aiData === "string") {
+            return;
+        }
+
+        if (aiData) {
             // Handle AI-generated data
             try {
-                const aiResponse = JSON.parse(decodeURIComponent(params.aiData as string));
-                Console.log("Received AI Data:", aiResponse);
+                Console.log("Received AI Data:", aiData);
 
                 // Extract the collaboration data from the response
-                const aiData = aiResponse.collaboration || aiResponse;
+                const collaborationData = aiData.collaboration || aiData;
 
-                Console.log("Extracted collaboration data:", aiData);
-                Console.log("Raw Name:", aiData.name);
-                Console.log("Raw Budget:", aiData.budget);
-                Console.log("Raw Platform:", aiData.platform);
-                Console.log("Raw ContentFormat:", aiData.contentFormat);
-                Console.log("Raw PromotionType:", aiData.promotionType);
+                Console.log("Extracted collaboration data:", collaborationData);
+                Console.log("Raw Name:", collaborationData.name);
+                Console.log("Raw Budget:", collaborationData.budget);
+                Console.log("Raw Platform:", collaborationData.platform);
+                Console.log("Raw ContentFormat:", collaborationData.contentFormat);
+                Console.log("Raw PromotionType:", collaborationData.promotionType);
 
                 // Map content format with detailed logging
-                const mappedContentFormat = Array.isArray(aiData.contentFormat)
-                    ? aiData.contentFormat.map((format: string) => {
+                const mappedContentFormat = Array.isArray(collaborationData.contentFormat)
+                    ? collaborationData.contentFormat.map((format: string) => {
                         const mapped = mapContentFormat(format);
                         Console.log(`Mapping contentFormat: "${format}" -> "${mapped}"`);
                         return mapped;
                     })
-                    : collaboration.contentFormat;
+                    : [];
 
                 Console.log("Final mapped contentFormat:", mappedContentFormat);
 
-                // Map AI data to collaboration object with proper type conversion and value mapping
-                const updatedCollaboration = {
-                    ...collaboration,
-                    name: aiData.name ? String(aiData.name) : collaboration.name,
-                    description: aiData.description ? String(aiData.description) : collaboration.description,
-                    promotionType: aiData.promotionType
-                        ? mapPromotionType(aiData.promotionType)
-                        : collaboration.promotionType,
-                    budget: aiData.budget ? {
-                        min: Number(aiData.budget.min) || 0,
-                        max: Number(aiData.budget.max) || 0,
-                    } : collaboration.budget,
-                    numberOfInfluencersNeeded: aiData.numberOfInfluencersNeeded
-                        ? Number(aiData.numberOfInfluencersNeeded)
-                        : collaboration.numberOfInfluencersNeeded,
-                    platform: Array.isArray(aiData.platform)
-                        ? aiData.platform.map(mapPlatform)
-                        : collaboration.platform,
+                const updatedCollaboration: Partial<ICollaboration> = {
+                    name: collaborationData.name ? String(collaborationData.name) : "",
+                    description: collaborationData.description ? String(collaborationData.description) : "",
+                    promotionType: collaborationData.promotionType
+                        ? mapPromotionType(collaborationData.promotionType)
+                        : PromotionType.BARTER_COLLAB,
+                    budget: collaborationData.budget ? {
+                        min: Number(collaborationData.budget.min) || 0,
+                        max: Number(collaborationData.budget.max) || 0,
+                    } : { min: 0, max: 0 },
+                    numberOfInfluencersNeeded: collaborationData.numberOfInfluencersNeeded
+                        ? Number(collaborationData.numberOfInfluencersNeeded)
+                        : 1,
+                    platform: Array.isArray(collaborationData.platform)
+                        ? collaborationData.platform.map(mapPlatform)
+                        : [],
                     contentFormat: mappedContentFormat,
-                    preferredContentLanguage: Array.isArray(aiData.preferredContentLanguage)
-                        ? aiData.preferredContentLanguage
-                        : collaboration.preferredContentLanguage,
-                    location: aiData.location || collaboration.location,
-                    questionsToInfluencers: Array.isArray(aiData.questionsToInfluencers)
-                        ? aiData.questionsToInfluencers
-                        : collaboration.questionsToInfluencers,
-                    preferences: aiData.preferences || collaboration.preferences,
+                    preferredContentLanguage: Array.isArray(collaborationData.preferredContentLanguage)
+                        ? collaborationData.preferredContentLanguage
+                        : ["English", "Hindi"],
+                    location: collaborationData.location || {
+                        type: "Remote",
+                        name: "",
+                        latlong: { lat: 0, long: 0 },
+                    },
+                    questionsToInfluencers: Array.isArray(collaborationData.questionsToInfluencers)
+                        ? collaborationData.questionsToInfluencers
+                        : [],
+                    preferences: collaborationData.preferences || {},
+                    attachments: [],
+                    brandId: "",
+                    managerId: "",
+                    externalLinks: [],
+                    status: "",
+                    timeStamp: 0,
+                    viewsLastHour: 0,
+                    lastReviewedTimeStamp: 0,
                 };
 
                 Console.log("Updated collaboration object:", updatedCollaboration);
@@ -225,7 +242,7 @@ const CreateCollaboration = () => {
                 Toaster.error("Failed to load AI-generated campaign data.");
             }
         }
-    }, []);
+    }, [aiData]);
 
     // Debug: Log collaboration state changes
     useEffect(() => {
@@ -443,6 +460,7 @@ const CreateCollaboration = () => {
     if (screen === 1) {
         return (
             <ScreenOne
+                headerRight={headerRight}
                 attachments={attachments}
                 collaboration={collaboration}
                 setAttachments={setAttachments}
@@ -461,6 +479,7 @@ const CreateCollaboration = () => {
     if (screen == 2) {
         return (
             <ScreenTwo
+                headerRight={headerRight}
                 collaboration={collaboration}
                 isEdited={isEdited}
                 isSubmitting={isProcessing}
@@ -480,6 +499,7 @@ const CreateCollaboration = () => {
     if (screen === 3) {
         return (
             <ScreenThree
+                headerRight={headerRight}
                 collaboration={collaboration}
                 isEdited={isEdited}
                 isSubmitting={isProcessing}
