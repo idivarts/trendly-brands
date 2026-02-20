@@ -323,23 +323,26 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         [dedupeById, xl, setRightPanel]
     );
 
+    // Trigger first discover API call when we have a brand. Run when filters are set OR when
+    // we're ready with no filters (defaultAdvanceFilters undefined) so the list still loads.
     useEffect(() => {
+        if (!selectedBrand?.id) return;
+
         if (defaultAdvanceFilters) {
             setAppliedFilters(defaultAdvanceFilters);
-
-            discoverCommunication.current?.({
-                loading: true,
-                data: [],
-                page: 1,
-                sort: "followers",
-            });
-
-            pageSortCommunication.current?.({
-                page: 1,
-                sort: "followers",
-            });
         }
-    }, [defaultAdvanceFilters]);
+
+        discoverCommunication.current?.({
+            loading: true,
+            data: [],
+            page: 1,
+            sort: "followers",
+        });
+        pageSortCommunication.current?.({
+            page: 1,
+            sort: "followers",
+        });
+    }, [defaultAdvanceFilters, selectedBrand?.id]);
 
     useEffect(() => {
         if (

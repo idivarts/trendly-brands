@@ -1,7 +1,6 @@
 import { useTheme } from "@react-navigation/native";
-import { BlurView } from "expo-blur";
 import { useRef, useState } from "react";
-import { Animated, Dimensions, Platform, StyleSheet, View } from "react-native";
+import { Animated, Dimensions, ScrollView, StyleSheet, View } from "react-native";
 import { Surface } from "react-native-paper";
 
 import Colors from "@/shared-uis/constants/Colors";
@@ -11,8 +10,9 @@ import BrandDetails from "./BrandDetails";
 import BrandIndustry from "./BrandIndustry";
 
 const { height: screenHeight } = Dimensions.get("window");
-const CARD_HEIGHT = screenHeight * 0.75;
-const CARD_SPACING = CARD_HEIGHT * 0.55; // Tighter premium stack spacing
+const CARD_MAX_WIDTH = 480;
+const CARD_MIN_HEIGHT = Math.min(screenHeight * 0.6, 520);
+const STEP_ANIM_DURATION = 280;
 
 interface BrandProfileProps {
     action?: React.ReactNode;
@@ -32,193 +32,163 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const [currentStep, setCurrentStep] = useState(1);
-    const scrollAnim = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const slideAnim = useRef(new Animated.Value(0)).current;
+
+    const runStepTransition = (direction: "next" | "back", onComplete: () => void) => {
+        const slideDistance = 16;
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: STEP_ANIM_DURATION * 0.4,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: direction === "next" ? -slideDistance : slideDistance,
+                duration: STEP_ANIM_DURATION * 0.4,
+                useNativeDriver: true,
+            }),
+        ]).start(() => {
+            onComplete();
+            slideAnim.setValue(direction === "next" ? slideDistance : -slideDistance);
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: STEP_ANIM_DURATION * 0.6,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: STEP_ANIM_DURATION * 0.6,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        });
+    };
 
     const handleNext = () => {
-        const nextStep = currentStep + 1;
-        if (nextStep <= 3) {
-            setCurrentStep(nextStep);
-            Animated.spring(scrollAnim, {
-                toValue: -(nextStep - 1) * CARD_SPACING,
-                useNativeDriver: true,
-                tension: 80,
-                friction: 12,
-            }).start();
-        }
+        if (currentStep >= 3) return;
+        runStepTransition("next", () => setCurrentStep((s) => s + 1));
     };
 
     const handleBack = () => {
-        const prevStep = currentStep - 1;
-        if (prevStep >= 1) {
-            setCurrentStep(prevStep);
-            Animated.spring(scrollAnim, {
-                toValue: -(prevStep - 1) * CARD_SPACING,
-                useNativeDriver: true,
-                tension: 80,
-                // friction: 12,
-            }).start();
-        }
+        if (currentStep <= 1) return;
+        runStepTransition("back", () => setCurrentStep((s) => s - 1));
     };
 
-    const getCardStyle = (index: number) => {
-        // Hide cards that are more than 1 step away (only show adjacent cards)
-        if (Math.abs(index - currentStep) > 1) {
-            return {
-                opacity: 0,
-                transform: [{ translateY: 0 }],
-            };
-        }
-
-        const inputRange = [
-            -(index) * CARD_SPACING,
-            -(index - 1) * CARD_SPACING,
-            -(index - 2) * CARD_SPACING,
-        ];
-
-        return {
-            transform: [
-                {
-                    translateY: scrollAnim.interpolate({
-                        inputRange,
-                        outputRange: [
-                            CARD_SPACING * 0.5,
-                            0,
-                            -CARD_SPACING * 0.5,
-                        ],
-                        extrapolate: "clamp",
-                    }),
-                },
-                { perspective: 1000 },
-                {
-                    rotateX: scrollAnim.interpolate({
-                        inputRange,
-                        outputRange: ["-25deg", "0deg", "25deg"],
-                        extrapolate: "clamp",
-                    }),
-                },
-                {
-                    scale: scrollAnim.interpolate({
-                        inputRange,
-                        outputRange: [0.85, 1, 0.85],
-                        extrapolate: "clamp",
-                    }),
-                },
-            ],
-            opacity: scrollAnim.interpolate({
-                inputRange,
-                outputRange: [0.4, 1, 0.4],
-                extrapolate: "clamp",
-            }),
-            zIndex: scrollAnim.interpolate({
-                inputRange,
-                outputRange: [1, 10, 1],
-                extrapolate: "clamp",
-            }),
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: scrollAnim.interpolate({
-                inputRange,
-                outputRange: [0.1, 0.25, 0.1],
-                extrapolate: "clamp",
-            }),
-            shadowRadius: scrollAnim.interpolate({
-                inputRange,
-                outputRange: [10, 25, 10],
-                extrapolate: "clamp",
-            }),
-            elevation: 10,
-        };
-    };
-
-    const cardContainerStyle = StyleSheet.create({
-        card: {
-            position: "absolute",
-            width: "100%",
-            paddingHorizontal: 16,
-            height: CARD_HEIGHT,
-        },
-    });
+    const isCreate = type === "create";
+    const showSection = (step: number) => !isCreate || currentStep === step;
 
     return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', paddingVertical: 40 }}>
-            <Animated.View style={[cardContainerStyle.card, getCardStyle(1), { pointerEvents: currentStep === 1 ? 'auto' : 'none' }]}>
-                {currentStep !== 1 && Platform.OS !== 'web' ? (
-                    <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
-                        <View style={{ opacity: 0.6 }}>
-                            <BrandDetails
-                                brandData={brandData}
-                                setBrandData={setBrandData}
-                                setBrandWebImage={setBrandWebImage}
-                                onNext={handleNext}
-                                onBack={currentStep > 1 ? handleBack : undefined}
-                            />
-                        </View>
-                    </BlurView>
-                ) : (
-                    <View style={currentStep !== 1 ? { opacity: 0.3 } : {}}>
+        <ScrollView
+            contentContainerStyle={
+                isCreate
+                    ? { flexGrow: 1, paddingVertical: 24, paddingHorizontal: 16 }
+                    : { paddingVertical: 40, paddingHorizontal: 16, alignItems: "center" as const }
+            }
+            showsVerticalScrollIndicator={false}
+        >
+            {isCreate && (
+                <View style={styles.stepRow}>
+                    {[1, 2, 3].map((step) => (
+                        <View
+                            key={step}
+                            style={[
+                                styles.stepDot,
+                                currentStep === step && styles.stepDotActive,
+                                currentStep > step && styles.stepDotDone,
+                            ]}
+                        />
+                    ))}
+                </View>
+            )}
+
+            <View
+                style={
+                    isCreate
+                        ? [styles.cardOuter, { maxWidth: CARD_MAX_WIDTH }]
+                        : { width: "100%", maxWidth: CARD_MAX_WIDTH, gap: 24 }
+                }
+            >
+                <Animated.View
+                    style={
+                        isCreate
+                            ? [styles.cardWrap, { minHeight: CARD_MIN_HEIGHT, opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]
+                            : undefined
+                    }
+                >
+                    {showSection(1) && (
                         <BrandDetails
                             brandData={brandData}
                             setBrandData={setBrandData}
                             setBrandWebImage={setBrandWebImage}
-                            onNext={handleNext}
-                            onBack={currentStep > 1 ? handleBack : undefined}
+                            onNext={isCreate ? handleNext : undefined}
                         />
-                    </View>
-                )}
-            </Animated.View>
-
-            <Animated.View style={[cardContainerStyle.card, getCardStyle(2), { pointerEvents: currentStep === 2 ? 'auto' : 'none' }]}>
-                {currentStep !== 2 && Platform.OS !== 'web' ? (
-                    <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
-                        <View style={{ opacity: 0.6 }}>
-                            <BrandAge
-                                brandData={brandData}
-                                setBrandData={setBrandData}
-                                onNext={handleNext}
-                                onBack={handleBack}
-                            />
-                        </View>
-                    </BlurView>
-                ) : (
-                    <View style={currentStep !== 2 ? { opacity: 0.3 } : {}}>
+                    )}
+                    {showSection(2) && (
                         <BrandAge
                             brandData={brandData}
                             setBrandData={setBrandData}
-                            onNext={handleNext}
-                            onBack={handleBack}
+                            onNext={isCreate ? handleNext : undefined}
+                            onBack={isCreate ? handleBack : undefined}
                         />
-                    </View>
-                )}
-            </Animated.View>
-
-            <Animated.View style={[cardContainerStyle.card, getCardStyle(3), { pointerEvents: currentStep === 3 ? 'auto' : 'none' }]}>
-                {currentStep !== 3 && Platform.OS !== 'web' ? (
-                    <BlurView intensity={30} style={{ borderRadius: 16, overflow: 'hidden' }}>
-                        <View style={{ opacity: 0.6 }}>
-                            <BrandIndustry
-                                brandData={brandData}
-                                setBrandData={setBrandData}
-                                onBack={handleBack}
-                            />
-                        </View>
-                    </BlurView>
-                ) : (
-                    <View style={currentStep !== 3 ? { opacity: 0.3 } : {}}>
+                    )}
+                    {showSection(3) && (
                         <BrandIndustry
                             brandData={brandData}
                             setBrandData={setBrandData}
-                            onBack={handleBack}
+                            onBack={isCreate ? handleBack : undefined}
                         />
-                        {currentStep === 3 && !!action && (
-                            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card, marginTop: 24 }} elevation={1}>
-                                {action}
-                            </Surface>
-                        )}
-                    </View>
-                )}
-            </Animated.View>
-        </View>
+                    )}
+                    {showSection(3) && action && (
+                        <Surface
+                            style={[styles.actionSurface, { backgroundColor: colors.card, marginTop: isCreate ? 24 : 8 }]}
+                            elevation={1}
+                        >
+                            {action}
+                        </Surface>
+                    )}
+                </Animated.View>
+            </View>
+        </ScrollView>
     );
 };
+
+const styles = StyleSheet.create({
+    stepRow: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 20,
+    },
+    stepDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "rgba(128,128,128,0.35)",
+    },
+    stepDotActive: {
+        width: 24,
+        backgroundColor: "rgba(128,128,128,0.7)",
+    },
+    stepDotDone: {
+        backgroundColor: "rgba(128,128,128,0.55)",
+    },
+    cardOuter: {
+        flex: 1,
+        width: "100%",
+        alignSelf: "center",
+    },
+    cardWrap: {
+        width: "100%",
+        paddingHorizontal: 16,
+    },
+    actionSurface: {
+        borderRadius: 16,
+        padding: 16,
+        marginTop: 24,
+    },
+});
 
 export default BrandProfile;
