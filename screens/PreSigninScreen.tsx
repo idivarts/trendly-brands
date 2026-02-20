@@ -11,7 +11,6 @@ import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
     Animated,
     KeyboardAvoidingView,
@@ -22,6 +21,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CARD_MAX_WIDTH = 520;
 const CARD_MIN_WIDTH = 300;
@@ -45,10 +45,9 @@ const SUBTITLE_LINE_HEIGHT = 22;
 const TERMS_FONT_SIZE = 12;
 const TERMS_LINE_HEIGHT = 18;
 const TERMS_MARGIN_TOP = 22;
-const TITLE = "Sign in with email";
+const TITLE = "Get Started with Trendly";
 const SUBTITLE =
     "Create and manage premium collaborations in one calm space.";
-const CTA_LABEL = "Get Started";
 const GOOGLE_LABEL = "Continue with Google";
 const APPLE_LABEL = "Continue with Apple";
 const EMAIL_LABEL = "Continue with Email/Password";
@@ -226,30 +225,6 @@ const PreSigninScreen = () => {
 
                             {/** 3 buttons */}
                             <View style={styles.buttonStack}>
-                                <Pressable
-                                    onPressIn={handleCardPressIn}
-                                    onPressOut={handleCardPressOut}
-                                    onPress={() =>
-                                        router.push("/create-new-account")
-                                    }
-                                    disabled={loading}
-                                    style={[
-                                        styles.ctaButton,
-                                        {
-                                            backgroundColor: colors.primary,
-                                            opacity: loading ? 0.6 : 1,
-                                        },
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.ctaLabel,
-                                            { color: colors.onPrimary },
-                                        ]}
-                                    >
-                                        {CTA_LABEL}
-                                    </Text>
-                                </Pressable>
                                 <Pressable
                                     onPressIn={handleCardPressIn}
                                     onPressOut={handleCardPressOut}
