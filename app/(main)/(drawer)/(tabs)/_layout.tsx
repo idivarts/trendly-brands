@@ -6,6 +6,7 @@ import { OpenFilterRightPanel } from "@/components/discover/discovery-context";
 import Header from "@/components/explore-influencers/header";
 import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
+import GlassTabBar from "@/components/glass/GlassTabBar";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
@@ -69,25 +70,15 @@ const TabLayout = () => {
 
     return (
         <Tabs
+            tabBar={(props) =>
+                xl ? null : <GlassTabBar {...props} />
+            }
             screenOptions={{
                 tabBarActiveTintColor: Colors(theme).primary,
                 tabBarInactiveTintColor: Colors(theme).text,
                 headerShown: useClientOnlyValue(false, true),
                 tabBarShowLabel: true,
                 tabBarHideOnKeyboard: true,
-                tabBarStyle: {
-                    display: xl ? "none" : "flex",
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    height: 70,
-                    borderTopWidth: 1,
-                    borderTopColor: Colors(theme).border,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: -1 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 4,
-                    backgroundColor: Colors(theme).background,
-                },
                 headerTitleAlign: "left",
                 headerTitleStyle: {
                     fontSize: 22,
