@@ -132,7 +132,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                                 { minHeight: webOnboarding ? undefined : CARD_MIN_HEIGHT, opacity: fadeAnim, transform: [{ translateX: slideAnim }] },
                                 usePlainLayout && styles.cardWrapPlain,
                             ]
-                            : undefined
+                            : [styles.cardWrap, { gap: 24 }]
                     }
                 >
                     {showSection(1) && (
