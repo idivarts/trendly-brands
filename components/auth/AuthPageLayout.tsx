@@ -15,6 +15,7 @@ import Animated, {
     useAnimatedStyle,
     useSharedValue,
     withRepeat,
+    withSequence,
     withTiming,
 } from "react-native-reanimated";
 
@@ -25,7 +26,7 @@ const BACKGROUND_GRADIENT: readonly [string, string, string] = [
 ];
 const FLOATING_CARD_MAX_WIDTH = 460;
 const FLOATING_CARD_RADIUS = 24;
-const FLOATING_CARD_PADDING = 18;
+const FLOATING_CARD_PADDING = 12;
 const FLOATING_CARD_BORDER = 1;
 const FLOATING_CARD_BACKGROUND = "rgba(255,255,255,0.9)";
 const FLOATING_CARD_BORDER_COLOR = "rgba(15, 23, 42, 0.08)";
@@ -40,7 +41,7 @@ const GRID_GAP = 32;
 const LEFT_COLUMN_WIDTH = 0.52;
 const RIGHT_COLUMN_WIDTH = 0.48;
 const SHOWCASE_CARD_HEIGHT = 260;
-const SHOWCASE_CARD_GAP = 36;
+const SHOWCASE_CARD_GAP = 60;
 const SHOWCASE_ANIMATION_DURATION = 26000;
 const SHOWCASE_COLUMN_GAP = 20;
 const SHOWCASE_MIN_HEIGHT = 640;
@@ -66,13 +67,13 @@ const SHOWCASE_TEXT_BLOCK_HEIGHT = 72;
 const SHOWCASE_TITLE_SHADOW = "rgba(255,255,255,0.3)";
 const SHOWCASE_TITLE_SHADOW_RADIUS = 10;
 
-export const FORM_SUBTITLE_MARGIN = 16;
-export const INPUT_GAP = 10;
-export const PRIMARY_BUTTON_MARGIN_TOP = 16;
+export const FORM_SUBTITLE_MARGIN = 10;
+export const INPUT_GAP = 8;
+export const PRIMARY_BUTTON_MARGIN_TOP = 12;
 export const BUTTON_RADIUS = 14;
-export const LOGIN_PROMPT_MARGIN = 18;
-export const SECONDARY_BUTTON_MARGIN = 8;
-export const BACK_TEXT_MARGIN = 16;
+export const LOGIN_PROMPT_MARGIN = 12;
+export const SECONDARY_BUTTON_MARGIN = 6;
+export const BACK_TEXT_MARGIN = 10;
 
 const SAMPLE_INFLUENCERS: InfluencerItem[] = [
     {
@@ -155,7 +156,8 @@ const SAMPLE_INFLUENCERS: InfluencerItem[] = [
     },
 ];
 
-const buildLoop = (items: InfluencerItem[]) => [...items, ...items];
+/** Duplicate items so that when we scroll, duplicated content fills any gap (no white space). */
+const buildLoop = (items: InfluencerItem[]) => [...items, ...items, ...items];
 
 const AutoScrollColumn = ({
     items,
@@ -165,21 +167,40 @@ const AutoScrollColumn = ({
     direction: 1 | -1;
 }) => {
     const loopItems = useMemo(() => buildLoop(items), [items]);
-    const translateY = useSharedValue(0);
     const scrollDistance = useMemo(
         () => items.length * (SHOWCASE_CARD_HEIGHT + SHOWCASE_CARD_GAP),
         [items.length]
     );
+    // direction -1 = scroll downward: start one segment down so content above viewport (no white at top).
+    const initialY = direction === -1 ? -scrollDistance : 0;
+    const translateY = useSharedValue(initialY);
 
     useEffect(() => {
-        translateY.value = withRepeat(
-            withTiming(-direction * scrollDistance, {
-                duration: SHOWCASE_ANIMATION_DURATION,
-                easing: Easing.linear,
-            }),
-            -1,
-            false
-        );
+        if (direction === -1) {
+            // Downward scroll: animate from -scrollDistance to 0 (content moves up), then reset to -scrollDistance (seamless)
+            translateY.value = withRepeat(
+                withSequence(
+                    withTiming(0, {
+                        duration: SHOWCASE_ANIMATION_DURATION,
+                        easing: Easing.linear,
+                    }),
+                    withTiming(-scrollDistance, { duration: 0 })
+                ),
+                -1
+            );
+        } else {
+            // Upward scroll: original behavior – animate from 0 to -scrollDistance, then reset to 0
+            translateY.value = withRepeat(
+                withSequence(
+                    withTiming(-scrollDistance, {
+                        duration: SHOWCASE_ANIMATION_DURATION,
+                        easing: Easing.linear,
+                    }),
+                    withTiming(0, { duration: 0 })
+                ),
+                -1
+            );
+        }
     }, [direction, scrollDistance, translateY]);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -243,8 +264,8 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             <Text style={authLayoutStyles.showcaseTitle}>{SHOWCASE_TITLE}</Text>
                             <Text style={authLayoutStyles.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
                             <View style={[authLayoutStyles.showcaseContainer, { height: showcaseHeight }]}>
-                                <AutoScrollColumn items={leftItems} direction={1} />
                                 <AutoScrollColumn items={rightItems} direction={-1} />
+                                <AutoScrollColumn items={leftItems} direction={1} />
                             </View>
                         </View>
                     )}
@@ -252,6 +273,7 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         style={[
                             authLayoutStyles.rightPane,
                             !isWideLayout && authLayoutStyles.rightPaneStacked,
+                            isWideLayout && { paddingTop: SHOWCASE_TEXT_BLOCK_HEIGHT },
                         ]}
                     >
                         <View style={authLayoutStyles.floatingCard}>
@@ -364,7 +386,7 @@ export const authLayoutStyles = {
         marginBottom: FORM_SUBTITLE_MARGIN,
     },
     formHeader: {
-        minHeight: 96,
+        minHeight: 72,
     },
     inputStack: {
         gap: INPUT_GAP,
@@ -385,7 +407,7 @@ export const authLayoutStyles = {
         borderRadius: BUTTON_RADIUS,
     },
     forgotPassword: {
-        marginTop: 12,
+        // marginTop: 4,
         textAlign: "center" as const,
     },
     backText: {
