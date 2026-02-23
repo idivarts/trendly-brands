@@ -17,15 +17,20 @@ interface BrandAgeProps {
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
     onNext?: () => void;
     onBack?: () => void;
+    plainSection?: boolean;
 }
 
-const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData, onNext, onBack }) => {
+const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData, onNext, onBack, plainSection = false }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const brandAge = brandData.age;
+    const Wrapper = plainSection ? View : Surface;
+    const wrapperProps = plainSection
+        ? { style: { paddingVertical: 8 } }
+        : { style: { borderRadius: 16, padding: 16, backgroundColor: colors.card }, elevation: 1 };
 
     return (
-        <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
+        <Wrapper {...wrapperProps}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 {onBack && (
                     <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
@@ -87,7 +92,7 @@ const BrandAge: React.FC<BrandAgeProps> = ({ brandData, setBrandData, onNext, on
                     </Button>
                 </View>
             )}
-        </Surface>
+        </Wrapper>
     );
 };
 

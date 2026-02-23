@@ -1,8 +1,19 @@
 import { useTheme } from "@react-navigation/native";
+import { faArrowLeft, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useLocalSearchParams } from "expo-router";
+import { useNavigation } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Platform, View } from "react-native";
+import {
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
+} from "react-native";
 import { Portal } from "react-native-paper";
+import { Text } from "react-native-paper";
 
 import BrandProfile from "@/components/brand-profile";
 import Button from "@/components/ui/button";
@@ -10,6 +21,7 @@ import ScreenHeader from "@/components/ui/screen-header";
 import Colors from "@/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -18,7 +30,17 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import fnStyles from "@/styles/onboarding/brand.styles";
 import { Brand } from "@/types/Brand";
 
+const ONBOARDING_STEPS = [
+    { step: 1, title: "Brand Details", subtitle: "Logo and core details" },
+    { step: 2, title: "Brand age", subtitle: "How established is your brand" },
+    { step: 3, title: "Brand Industry", subtitle: "Relevant creator matching" },
+];
+
 const OnboardingScreen = () => {
+    const navigation = useNavigation();
+    const { xl } = useBreakpoints();
+    const isWebOnboarding = Platform.OS === "web" && xl;
+    const [currentStep, setCurrentStep] = useState(1);
     const [brandData, setBrandData] = useState<Partial<IBrands>>({
         name: "",
         image: "",
@@ -135,30 +157,114 @@ const OnboardingScreen = () => {
         }
     };
 
-    return (
-        <AppLayout withWebPadding={true}>
-            <View style={styles.container}>
-                <ScreenHeader
-                    title={firstBrand === "true" ? "Onboarding" : "Create New Brand"}
-                    hideAction={firstBrand === "true"}
-                />
+    const handleBack = () => {
+        if (navigation.canGoBack()) navigation.goBack();
+        else router.resetAndNavigate("/discover");
+    };
 
-                <BrandProfile
-                    action={
-                        <Button
-                            loading={isSubmitting}
-                            mode="contained"
-                            onPress={handleCreateBrand}
-                        >
-                            Create Brand
-                        </Button>
-                    }
-                    brandData={brandData}
-                    setBrandData={setBrandData}
-                    setBrandWebImage={setBrandWebImage}
-                    type="create"
-                />
-            </View>
+    return (
+        <AppLayout withWebPadding={!isWebOnboarding}>
+            {isWebOnboarding ? (
+                <View style={[styles.container, webStyles.container]}>
+                    <View style={[webStyles.row, webStyles.rowPadding]}>
+                        <View style={webStyles.main}>
+                            <View style={webStyles.headerRow}>
+                                <Pressable onPress={handleBack} style={webStyles.backButton}>
+                                    <FontAwesomeIcon
+                                        icon={faArrowLeft}
+                                        size={20}
+                                        color={Colors(theme).text}
+                                    />
+                                </Pressable>
+                                <Text variant="headlineMedium" style={[webStyles.title, { color: Colors(theme).text }]}>
+                                    {firstBrand === "true" ? "Onboarding" : "Create New Brand"}
+                                </Text>
+                            </View>
+                            <ScrollView
+                                style={webStyles.scroll}
+                                contentContainerStyle={webStyles.scrollContent}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                <BrandProfile
+                                    webOnboarding
+                                    onStepChange={setCurrentStep}
+                                    action={
+                                        <Button
+                                            loading={isSubmitting}
+                                            mode="contained"
+                                            onPress={handleCreateBrand}
+                                        >
+                                            Create Brand
+                                        </Button>
+                                    }
+                                    brandData={brandData}
+                                    setBrandData={setBrandData}
+                                    setBrandWebImage={setBrandWebImage}
+                                    type="create"
+                                />
+                            </ScrollView>
+                        </View>
+                        <View style={[webStyles.sidebar, { borderLeftColor: Colors(theme).border }]}>
+                            <Text variant="labelLarge" style={[webStyles.sidebarTitle, { color: Colors(theme).secondary }]}>
+                                Steps
+                            </Text>
+                            {ONBOARDING_STEPS.map(({ step, title, subtitle }) => {
+                                const isActive = currentStep === step;
+                                const isDone = currentStep > step;
+                                return (
+                                    <View key={step} style={webStyles.stepItem}>
+                                        <View
+                                            style={[
+                                                webStyles.stepCircle,
+                                                isActive && { backgroundColor: Colors(theme).primary },
+                                                isDone && { backgroundColor: Colors(theme).primary },
+                                            ]}
+                                        >
+                                            {isDone ? (
+                                                <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
+                                            ) : (
+                                                <Text variant="labelMedium" style={[webStyles.stepNum, { color: isActive ? "#fff" : Colors(theme).secondary }]}>
+                                                    {step}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <View style={webStyles.stepTextWrap}>
+                                            <Text variant="bodyMedium" style={[webStyles.stepTitle, { color: Colors(theme).text }]}>
+                                                {title}
+                                            </Text>
+                                            <Text variant="bodySmall" style={{ color: Colors(theme).secondary }}>
+                                                {subtitle}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </View>
+                </View>
+            ) : (
+                <View style={styles.container}>
+                    <ScreenHeader
+                        title={firstBrand === "true" ? "Onboarding" : "Create New Brand"}
+                        hideAction={firstBrand === "true"}
+                    />
+                    <BrandProfile
+                        action={
+                            <Button
+                                loading={isSubmitting}
+                                mode="contained"
+                                onPress={handleCreateBrand}
+                            >
+                                Create Brand
+                            </Button>
+                        }
+                        brandData={brandData}
+                        setBrandData={setBrandData}
+                        setBrandWebImage={setBrandWebImage}
+                        type="create"
+                    />
+                </View>
+            )}
             {isSubmitting && (
                 <Portal>
                     <View
@@ -180,5 +286,79 @@ const OnboardingScreen = () => {
         </AppLayout>
     );
 };
+
+const webStyles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    row: {
+        flex: 1,
+        flexDirection: "row",
+        maxWidth: Platform.OS == "web" ? 1400 : 1200,
+        alignSelf: "center",
+        width: "100%",
+    },
+    rowPadding: {
+        // paddingHorizontal: 40,
+    },
+    main: {
+        flex: 1,
+        minWidth: 0,
+        paddingRight: 48,
+        paddingTop: 8,
+    },
+    headerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 24,
+        gap: 12,
+    },
+    backButton: {
+        padding: 8,
+        marginLeft: -8,
+    },
+    title: {
+        fontWeight: "700",
+    },
+    scroll: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingBottom: 48,
+    },
+    sidebar: {
+        width: 280,
+        paddingLeft: 32,
+        paddingTop: 24,
+        borderLeftWidth: 1,
+    },
+    sidebarTitle: {
+        marginBottom: 20,
+        fontWeight: "600",
+    },
+    stepItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 20,
+        gap: 12,
+    },
+    stepCircle: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: "rgba(128,128,128,0.25)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    stepNum: {
+        fontWeight: "700",
+    },
+    stepTextWrap: {
+        flex: 1,
+    },
+    stepTitle: {
+        fontWeight: "600",
+    },
+});
 
 export default OnboardingScreen;
