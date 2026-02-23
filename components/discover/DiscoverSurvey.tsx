@@ -42,8 +42,8 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
     {
         id: "followers",
         question: "What's your ideal follower range?",
-        subtitle: "Target influencers with the right audience size",
-        type: "single-select",
+        subtitle: "Select all audience sizes that match your campaign",
+        type: "multiselect",
         field: "followerRange",
         options: [
             { label: "Nano (1K - 10K)", value: { min: 1000, max: 10000 } },
@@ -128,10 +128,14 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
             // Survey complete, convert answers to IAdvanceFilters
             const filters: IAdvanceFilters = {};
 
-            // Handle follower range
-            if (answers.followerRange) {
-                filters.followerMin = answers.followerRange.min;
-                filters.followerMax = answers.followerRange.max;
+            // Handle follower range (multiselect: combine selected ranges into min/max)
+            const followerRanges = answers.followerRange as Array<{ min?: number; max?: number }> | undefined;
+            if (followerRanges && followerRanges.length > 0) {
+                const mins = followerRanges.map((r) => r.min).filter((m): m is number => m != null);
+                const maxes = followerRanges.map((r) => r.max).filter((m): m is number => m != null);
+                const hasUnboundedMax = followerRanges.some((r) => r.max == null);
+                filters.followerMin = mins.length > 0 ? Math.min(...mins) : undefined;
+                filters.followerMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
             }
 
             // Handle engagement rate (budgetRange field temporarily)
@@ -189,10 +193,15 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                             {currentQuestion.options?.map((option) => {
                                 const isSelected = (
                                     answers[currentQuestion.field] || []
-                                ).includes(option.value);
+                                ).some(
+                                    (v: any) =>
+                                        typeof v === "object" && v !== null && typeof option.value === "object" && option.value !== null
+                                            ? v.min === option.value.min && v.max === option.value.max
+                                            : v === option.value
+                                );
                                 return (
                                     <Chip
-                                        key={option.value}
+                                        key={option.label}
                                         selected={isSelected}
                                         onPress={() => toggleMultiSelect(option.value)}
                                         style={[
