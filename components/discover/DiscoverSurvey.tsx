@@ -1,13 +1,26 @@
 import { Text, View } from "@/components/theme/Themed";
 import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
-import { POPULAR_CITIES } from "@/shared-constants/preferences/locations";
+import {
+    CITIES,
+    POPULAR_CITIES,
+} from "@/shared-constants/preferences/locations";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import Colors from "@/shared-uis/constants/Colors";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import React, { useMemo, useState } from "react";
+import {
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Chip, ProgressBar } from "react-native-paper";
 
 interface DiscoverSurveyProps {
@@ -107,7 +120,10 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
 const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [answers, setAnswers] = useState<Record<string, any>>({});
+    const [locationOthersSheetVisible, setLocationOthersSheetVisible] = useState(false);
+    const [locationSearchText, setLocationSearchText] = useState("");
     const theme = useTheme();
+    const insets = useSafeAreaInsets();
     const primaryColor = Colors(theme).primary;
     const textColor = Colors(theme).text;
 
@@ -184,9 +200,174 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
         handleAnswer(newValues);
     };
 
+    const selectedLocations = (answers.selectedLocations || []) as string[];
+    const locationOtherCities = selectedLocations.filter((c) => !POPULAR_CITIES.includes(c));
+    const locationSheetCities = useMemo(
+        () => includeSelectedItems(CITIES, selectedLocations),
+        [selectedLocations]
+    );
+    const filteredLocationSheetCities = useMemo(() => {
+        if (!locationSearchText.trim()) return locationSheetCities;
+        const q = locationSearchText.toLowerCase();
+        return locationSheetCities.filter((c) => c.toLowerCase().includes(q));
+    }, [locationSheetCities, locationSearchText]);
+
+    const handleLocationOtherSelect = (city: string) => {
+        const next = selectedLocations.includes(city)
+            ? selectedLocations.filter((c) => c !== city)
+            : [...selectedLocations, city];
+        handleAnswer(next);
+        setLocationOthersSheetVisible(false);
+    };
+
     const renderQuestion = () => {
         switch (currentQuestion.type) {
             case "multiselect":
+                if (currentQuestion.field === "selectedLocations") {
+                    return (
+                        <>
+                            <ScrollView style={styles.optionsContainer}>
+                                <View style={styles.chipsContainer}>
+                                    {POPULAR_CITIES.map((city) => {
+                                        const isSelected = selectedLocations.includes(city);
+                                        return (
+                                            <Chip
+                                                key={city}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(city)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {city}
+                                            </Chip>
+                                        );
+                                    })}
+                                    {locationOtherCities.map((city) => {
+                                        const isSelected = selectedLocations.includes(city);
+                                        return (
+                                            <Chip
+                                                key={city}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(city)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {city}
+                                            </Chip>
+                                        );
+                                    })}
+                                    <Chip
+                                        selected={false}
+                                        onPress={() => setLocationOthersSheetVisible(true)}
+                                        style={[styles.chip, styles.othersChip]}
+                                        textStyle={[styles.chipText, { color: primaryColor }]}
+                                        icon={() => (
+                                            <Ionicons
+                                                name="chevron-forward"
+                                                size={16}
+                                                color={primaryColor}
+                                            />
+                                        )}
+                                    >
+                                        Others
+                                    </Chip>
+                                </View>
+                            </ScrollView>
+                            {locationOthersSheetVisible && (
+                                <BottomSheetContainer
+                                    isVisible={locationOthersSheetVisible}
+                                    onClose={() => {
+                                        setLocationOthersSheetVisible(false);
+                                        setLocationSearchText("");
+                                    }}
+                                    useBottomSheetView={false}
+                                    enablePanDownToClose
+                                    snapPoints={["50%", "75%", "100%"]}
+                                    topInset={insets.top}
+                                    backgroundStyle={{
+                                        backgroundColor: Colors(theme).background,
+                                    }}
+                                    handleIndicatorStyle={{
+                                        backgroundColor: primaryColor,
+                                    }}
+                                >
+                                    <View style={styles.locationSheetContent}>
+                                        <TextInput
+                                            style={[
+                                                styles.locationSearchInput,
+                                                {
+                                                    borderColor: primaryColor,
+                                                    color: Colors(theme).text,
+                                                },
+                                            ]}
+                                            value={locationSearchText}
+                                            onChangeText={setLocationSearchText}
+                                            placeholder="Search cities"
+                                            placeholderTextColor={Colors(theme).gray300}
+                                            autoCapitalize="none"
+                                        />
+                                        <BottomSheetScrollView
+                                            style={styles.locationSheetList}
+                                            keyboardShouldPersistTaps="handled"
+                                        >
+                                            {filteredLocationSheetCities.map((city) => {
+                                                const isSelected = selectedLocations.includes(city);
+                                                return (
+                                                    <Pressable
+                                                        key={city}
+                                                        style={[
+                                                            styles.locationSheetItem,
+                                                            isSelected && {
+                                                                backgroundColor: primaryColor,
+                                                            },
+                                                        ]}
+                                                        onPress={() => handleLocationOtherSelect(city)}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.locationSheetItemText,
+                                                                {
+                                                                    color: isSelected
+                                                                        ? "#fff"
+                                                                        : Colors(theme).text,
+                                                                },
+                                                            ]}
+                                                        >
+                                                            {city}
+                                                        </Text>
+                                                        {isSelected && (
+                                                            <Ionicons
+                                                                name="checkmark"
+                                                                size={20}
+                                                                color="#fff"
+                                                            />
+                                                        )}
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </BottomSheetScrollView>
+                                    </View>
+                                </BottomSheetContainer>
+                            )}
+                        </>
+                    );
+                }
                 return (
                     <ScrollView style={styles.optionsContainer}>
                         <View style={styles.chipsContainer}>
@@ -469,6 +650,38 @@ const styles = StyleSheet.create({
     },
     chipText: {
         fontSize: 14,
+    },
+    othersChip: {
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.2)",
+    },
+    locationSheetContent: {
+        padding: 16,
+        paddingTop: Platform.OS === "web" ? 30 : 16,
+        paddingBottom: 20,
+    },
+    locationSearchInput: {
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginBottom: 16,
+        fontSize: 16,
+    },
+    locationSheetList: {
+        maxHeight: 400,
+    },
+    locationSheetItem: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(0, 0, 0, 0.08)",
+    },
+    locationSheetItemText: {
+        fontSize: 16,
+        fontWeight: "500",
     },
     singleSelectContainer: {
         gap: 12,
