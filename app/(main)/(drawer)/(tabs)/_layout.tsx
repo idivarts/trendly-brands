@@ -1,6 +1,7 @@
 import { router, Tabs } from "expo-router";
 import React from "react";
 
+import DiscoverHeader from "@/components/discover/DiscoverHeader";
 import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
 import { OpenFilterRightPanel } from "@/components/discover/discovery-context";
 import Header from "@/components/explore-influencers/header";
@@ -185,6 +186,7 @@ const TabLayout = () => {
                 name="discover"
                 options={{
                     title: xl ? "Discover Influencers" : "Discover",
+                    headerTitle: () => <DiscoverHeader />,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
