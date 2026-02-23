@@ -58,39 +58,6 @@ const DiscoverComponent = ({
     const pageSortCommunication =
         useRef<((action: PageSortCommunication) => any) | undefined>(undefined);
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [storedFilters, setStoredFilters] = useState<IAdvanceFilters | null>(
-        null
-    );
-    const [isFiltersCleared, setIsFiltersCleared] = useState(false);
-    const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
-
-    useEffect(() => {
-        if (!selectedBrand) return;
-        if (!useStoredFilters) {
-            setStoredFilters(null);
-            setHasLoadedStoredFilters(true);
-            return;
-        }
-
-        (async () => {
-            const key = `defaultFilter-${selectedBrand.id}`;
-            const saved = await PersistentStorage.get(key);
-
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    setStoredFilters(parsed);
-                    setIsFiltersCleared(false);
-                } catch (e) {
-                    setStoredFilters(null);
-                }
-            } else {
-                setStoredFilters(null);
-            }
-
-            setHasLoadedStoredFilters(true);
-        })();
-    }, [selectedBrand, useStoredFilters]);
 
     const { xl } = useBreakpoints();
 
@@ -137,18 +104,14 @@ const DiscoverComponent = ({
 
     const filtersToUse = hasMeaningfulDefaults
         ? defaultAdvanceFilters
-        : useStoredFilters && hasLoadedStoredFilters
-            ? storedFilters !== null
-                ? storedFilters
-                : isFiltersCleared
-                    ? undefined
-                    : selectedBrand?.discoverPreferences
+        : useStoredFilters
+            ? selectedBrand?.discoverPreferences
             : undefined;
 
     const filtersForChildren = hasMeaningfulDefaults
         ? defaultAdvanceFilters
-        : useStoredFilters && hasLoadedStoredFilters && storedFilters !== null
-            ? storedFilters
+        : useStoredFilters
+            ? selectedBrand?.discoverPreferences
             : undefined;
 
     const handleSurveyComplete = async (filters: IAdvanceFilters) => {
@@ -171,13 +134,6 @@ const DiscoverComponent = ({
                 await updateBrand(selectedBrand.id, {
                     discoverPreferences: cleanedFilters,
                 });
-                const defaultFilterKey = `defaultFilter-${selectedBrand.id}`;
-                await PersistentStorage.set(
-                    defaultFilterKey,
-                    JSON.stringify(cleanedFilters)
-                );
-                setStoredFilters(cleanedFilters);
-                setIsFiltersCleared(false);
                 Toaster.success("Preferences saved!");
             } catch (error) {
                 Toaster.error("Failed to save preferences. Please try again");
@@ -250,14 +206,8 @@ const DiscoverComponent = ({
                         visible={filterOverlayVisible}
                         onClose={() => setFilterOverlayVisible(false)}
                         defaultAdvanceFilters={filtersForChildren}
-                        onClearStoredFilters={() => {
-                            setStoredFilters(null);
-                            setIsFiltersCleared(true);
-                        }}
-                        onFiltersApplied={(filters) => {
-                            setStoredFilters(filters);
-                            setIsFiltersCleared(false);
-                        }}
+                        onClearStoredFilters={() => {}}
+                        onFiltersApplied={() => {}}
                     />
                 )}
             </AppLayout>
