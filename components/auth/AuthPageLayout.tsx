@@ -1,5 +1,6 @@
 import type { InfluencerItem } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo } from "react";
 import {
@@ -20,17 +21,17 @@ import Animated, {
 } from "react-native-reanimated";
 
 const BACKGROUND_GRADIENT: readonly [string, string, string] = [
-    "#F7F9FC",
-    "#EFF3F9",
-    "#E9EEF6",
+    ColorsStatic.backgroundLight,
+    ColorsStatic.backgroundLightAlt,
+    ColorsStatic.backgroundLightTert,
 ];
 const FLOATING_CARD_MAX_WIDTH = 460;
 const FLOATING_CARD_RADIUS = 24;
 const FLOATING_CARD_PADDING = 12;
 const FLOATING_CARD_BORDER = 1;
-const FLOATING_CARD_BACKGROUND = "rgba(255,255,255,0.9)";
-const FLOATING_CARD_BORDER_COLOR = "rgba(15, 23, 42, 0.08)";
-const FLOATING_CARD_SHADOW = "rgba(15, 23, 42, 0.12)";
+const FLOATING_CARD_BACKGROUND = ColorsStatic.overlayWhite90;
+const FLOATING_CARD_BORDER_COLOR = ColorsStatic.borderSlate08;
+const FLOATING_CARD_SHADOW = ColorsStatic.shadowSlate12;
 const FLOATING_CARD_SHADOW_OPACITY = 0.35;
 const FLOATING_CARD_SHADOW_RADIUS = 30;
 const FLOATING_CARD_SHADOW_OFFSET_Y = 18;
@@ -47,15 +48,15 @@ const SHOWCASE_COLUMN_GAP = 20;
 const SHOWCASE_MIN_HEIGHT = 640;
 const SHOWCASE_VERTICAL_PADDING = 24;
 const SHOWCASE_RADIUS = 24;
-const SHOWCASE_BACKGROUND = "rgba(255,255,255,0.7)";
-const SHOWCASE_BORDER = "rgba(15, 23, 42, 0.08)";
+const SHOWCASE_BACKGROUND = ColorsStatic.overlayWhite70;
+const SHOWCASE_BORDER = ColorsStatic.borderSlate08;
 const SHOWCASE_BORDER_WIDTH = 1;
 const SHOWCASE_PADDING = 16;
 const SHOWCASE_TITLE_SIZE = 26;
 const SHOWCASE_SUBTITLE_SIZE = 16;
 const SHOWCASE_SUBTITLE_LINE_HEIGHT = 22;
-const SHOWCASE_TITLE_COLOR = "#0F172A";
-const SHOWCASE_SUBTITLE_COLOR = "rgba(15, 23, 42, 0.7)";
+const SHOWCASE_TITLE_COLOR = ColorsStatic.titleDark;
+const SHOWCASE_SUBTITLE_COLOR = ColorsStatic.shadowSlate70;
 const SHOWCASE_TITLE = "Creators you can work with";
 const SHOWCASE_SUBTITLE = "Live marketplace snapshots, updated continuously.";
 const TITLE_TEXT_ALIGN = "center" as const;
@@ -64,7 +65,7 @@ const SHOWCASE_SPLIT_INDEX = 3;
 const SHOWCASE_TEXT_GAP = 16;
 const SHOWCASE_CARD_OPACITY = 0.6;
 const SHOWCASE_TEXT_BLOCK_HEIGHT = 72;
-const SHOWCASE_TITLE_SHADOW = "rgba(255,255,255,0.3)";
+const SHOWCASE_TITLE_SHADOW = ColorsStatic.shadowWhite30;
 const SHOWCASE_TITLE_SHADOW_RADIUS = 10;
 
 export const FORM_SUBTITLE_MARGIN = 10;

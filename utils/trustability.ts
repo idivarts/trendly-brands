@@ -1,7 +1,10 @@
 /**
  * Trustability score mappings and utilities
  * Maps trustability percentage to descriptive text
+ * Colors from shared-uis/constants/Colors.ts
  */
+
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 
 export interface TrustabilityLevel {
     minScore: number;
@@ -17,35 +20,35 @@ export const TRUSTABILITY_LEVELS: TrustabilityLevel[] = [
         maxScore: 100,
         label: "Excellent",
         description: "Excellent trustable influencer",
-        color: "#4CAF50", // Green
+        color: ColorsStatic.toastSuccess,
     },
     {
         minScore: 80,
         maxScore: 89.99,
         label: "Good",
         description: "Good trustable influencer",
-        color: "#2196F3", // Blue
+        color: ColorsStatic.toastInfo,
     },
     {
         minScore: 70,
         maxScore: 79.99,
         label: "Fair",
         description: "Fair trustable influencer",
-        color: "#FF9800", // Orange
+        color: ColorsStatic.toastWarning,
     },
     {
         minScore: 60,
         maxScore: 69.99,
         label: "Average",
         description: "Average trustability",
-        color: "#FFC107", // Amber
+        color: ColorsStatic.yellow,
     },
     {
         minScore: 0,
         maxScore: 59.99,
         label: "Low",
         description: "Low trustability score",
-        color: "#F44336", // Red
+        color: ColorsStatic.toastError,
     },
 ];
 

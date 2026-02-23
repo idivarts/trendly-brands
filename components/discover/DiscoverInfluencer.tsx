@@ -848,11 +848,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
                             <View
                                 style={{
-                                    backgroundColor: "rgba(255, 255, 255, 0.8)",
+                                    backgroundColor: Colors(theme).overlayWhite80,
                                     paddingHorizontal: 16,
                                     paddingVertical: 12,
                                     borderRadius: 24,
-                                    shadowColor: "#000",
+                                    shadowColor: Colors(theme).black,
                                     shadowOffset: { width: 0, height: 3 },
                                     shadowOpacity: 0.2,
                                     shadowRadius: 6,

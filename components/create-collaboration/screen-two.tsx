@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     INITIAL_PLATFORMS,
     PLATFORMS,
@@ -311,7 +311,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                         <Text
                             style={{
                                 fontSize: 12,
-                                color: "#6B7280",
+                                color: Colors(theme).gray500,
                                 marginTop: -6,
                             }}
                         >

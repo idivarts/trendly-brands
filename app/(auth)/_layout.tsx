@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import { Stack, usePathname } from "expo-router";
@@ -35,7 +35,7 @@ const AuthLayout = () => {
                                 : Colors(theme).aliceBlue
                             : theme.dark
                                 ? Colors(theme).background
-                                : "#F7F9FC",
+                                : Colors(theme).backgroundLight,
                 }
                 : undefined,
         [isFullBleedAuth, theme, pathname]

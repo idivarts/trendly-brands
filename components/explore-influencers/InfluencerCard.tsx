@@ -82,11 +82,12 @@ const SelectCheckbox = ({
     checked: boolean;
     onToggle: () => void;
 }) => {
+    const theme = useTheme();
     return (
         <Checkbox.Android
             status={checked ? "checked" : "unchecked"}
             onPress={onToggle}
-            color="#1D425D"
+            color={Colors(theme).primaryDarkVariant}
         />
     );
 };
@@ -148,10 +149,10 @@ const NameSection = ({
                         style={{
                             backgroundColor:
                                 item.status === "accepted"
-                                    ? "#D1F7DC"
+                                    ? colors.statusSuccessBg
                                     : item.status === "denied"
-                                        ? "#F7D7D7"
-                                        : "#F2E6B5",
+                                        ? colors.statusErrorBg
+                                        : colors.statusWarningBg,
                             paddingHorizontal: 12,
                             paddingVertical: 6,
                             borderRadius: 12,
@@ -162,10 +163,10 @@ const NameSection = ({
                             style={{
                                 color:
                                     item.status === "accepted"
-                                        ? "#0B7A2A"
+                                        ? colors.statusSuccessFg
                                         : item.status === "denied"
-                                            ? "#A92C2C"
-                                            : "#333",
+                                            ? colors.statusErrorFg
+                                            : colors.gray700,
                                 fontWeight: "500",
                             }}
                         >
@@ -218,14 +219,14 @@ const StatsSection = ({
                 <Text style={labelStyle}>Followers</Text>
             </View>
 
-            <View style={{ width: 1, height: "70%", backgroundColor: "#CCC" }} />
+            <View style={{ width: 1, height: "70%", backgroundColor: colors.borderDefault }} />
 
             <View style={{ alignItems: "center", flex: 1 }}>
                 <Text style={valueStyle}>{formatNumber(item.engagement_count)}</Text>
                 <Text style={labelStyle}>Engagements</Text>
             </View>
 
-            <View style={{ width: 1, height: "70%", backgroundColor: "#CCC" }} />
+            <View style={{ width: 1, height: "70%", backgroundColor: colors.borderDefault }} />
 
             <View style={{ alignItems: "center", flex: 1 }}>
                 <Text style={valueStyle}>{formatNumber(item.views_count)}</Text>
@@ -382,7 +383,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         CardLayoutWrapper: {
             width: "100%",
-            shadowColor: "#000",
+            shadowColor: colors.black,
             shadowOffset: { width: 0, height: 8 },
             shadowOpacity: 0.15,
             shadowRadius: 12,

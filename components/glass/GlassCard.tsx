@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { BlurView } from "expo-blur";
 import React, { PropsWithChildren } from "react";
 import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
@@ -10,14 +11,13 @@ const CARD_RADIUS = 28;
 const CARD_BORDER_WIDTH = 1;
 const CARD_PADDING = 28;
 const BLUR_INTENSITY = 90; // stronger frost
-const ANDROID_SURFACE = "rgba(255, 255, 255, 0.14)";
-const BORDER_COLOR = "rgba(255, 255, 255, 0.22)";
-const GLOW_COLOR = "rgba(98, 144, 186, 0.35)";
-const BLUR_SURFACE = "rgba(255, 255, 255, 0.12)";
+const ANDROID_SURFACE = ColorsStatic.surfaceFrost;
+const BORDER_COLOR = ColorsStatic.borderFrost;
+const BLUR_SURFACE = ColorsStatic.overlayWhite12;
 const SHADOW_OFFSET_Y = 12;
 const SHADOW_RADIUS = 30;
 const SHADOW_OPACITY = 0.4;
-const HIGHLIGHT_SURFACE = "rgba(255, 255, 255, 0.06)";
+const HIGHLIGHT_SURFACE = ColorsStatic.surfaceHighlight;
 const HIGHLIGHT_HEIGHT = 120;
 const HIGHLIGHT_OPACITY = 0.7;
 
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
         borderColor: BORDER_COLOR,
         overflow: "hidden",
         backgroundColor: "transparent",
-        shadowColor: "rgba(140,200,240,0.55)",
+        shadowColor: ColorsStatic.cardShadow,
         shadowOpacity: SHADOW_OPACITY,
         shadowRadius: SHADOW_RADIUS,
         shadowOffset: { width: 0, height: SHADOW_OFFSET_Y },
@@ -83,18 +83,18 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         borderRadius: CARD_RADIUS,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.34)",
+        borderColor: ColorsStatic.borderFrost34,
     },
     lightCompression: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: CARD_RADIUS,
-        backgroundColor: "rgba(255,255,255,0.07)",
+        backgroundColor: ColorsStatic.overlayWhite07,
     },
     outerStroke: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: CARD_RADIUS,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.12)",
+        borderColor: ColorsStatic.overlayWhite12,
     },
 });
 

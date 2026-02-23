@@ -18,7 +18,7 @@ import { Text } from "react-native-paper";
 import BrandProfile from "@/components/brand-profile";
 import Button from "@/components/ui/button";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -221,9 +221,9 @@ const OnboardingScreen = () => {
                                             ]}
                                         >
                                             {isDone ? (
-                                                <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
+                                                <FontAwesomeIcon icon={faCheck} size={12} color={Colors(theme).white} />
                                             ) : (
-                                                <Text variant="labelMedium" style={[webStyles.stepNum, { color: isActive ? "#fff" : Colors(theme).secondary }]}>
+                                                <Text variant="labelMedium" style={[webStyles.stepNum, { color: isActive ? Colors(theme).white : Colors(theme).secondary }]}>
                                                     {step}
                                                 </Text>
                                             )}
@@ -346,7 +346,7 @@ const webStyles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: "rgba(128,128,128,0.25)",
+        backgroundColor: ColorsStatic.overlayGray25,
         alignItems: "center",
         justifyContent: "center",
     },

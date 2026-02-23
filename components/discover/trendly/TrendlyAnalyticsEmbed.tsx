@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import {
     ISocialAnalytics,
@@ -323,7 +323,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             <Text
                                 variant={valueVariant}
                                 style={{
-                                    color: getTrustabilityLevel(analytics.trustablity)?.color || "#666",
+                                    color: getTrustabilityLevel(analytics.trustablity)?.color || Colors(theme).textSecondary,
                                     fontWeight: "bold",
                                 }}
                             >

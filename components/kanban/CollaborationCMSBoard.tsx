@@ -267,15 +267,15 @@ export default function CollaborationCMSBoard() {
                                 style={{
                                     padding: 12,
                                     borderRadius: 8,
-                                    backgroundColor: "#fff",
-                                    boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
+                                    backgroundColor: colors.card,
+                                    boxShadow: `0px 8px 24px ${colors.shadowBlack15}`,
                                     width: 260,
                                     borderWidth: 1,
                                     borderColor: colors.border,
                                 }}
                             >
                                 <Text style={{ fontWeight: "700" }}>{activeCard.message || "Unknown Campaign"}</Text>
-                                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>ID: {activeCard.id}</Text>
+                                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>ID: {activeCard.id}</Text>
                             </View>
                         ) : null}
                     </DragOverlay>
@@ -405,7 +405,7 @@ const SortableCollaborationCard = ({
                         left: 0,
                         right: 0,
                         height: 3,
-                        backgroundColor: "#2563EB",
+                        backgroundColor: colors.accentBlue,
                         borderRadius: 2,
                         zIndex: 10,
                     }}

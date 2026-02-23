@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import gsap from "gsap";
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     container: {
         width: '100%',
         borderRadius: 24,
-        shadowColor: "#000",
+        shadowColor: ColorsStatic.black,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.2,
         shadowRadius: 20,
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
+        color: ColorsStatic.textOnOverlay90,
         lineHeight: 24,
     },
     icon: {

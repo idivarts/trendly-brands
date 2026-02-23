@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import React, { useRef } from "react";
 import { Animated, StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
 
@@ -22,10 +23,10 @@ const PRESS_SCALE = 0.98;
 const PRESS_OPACITY = 0.9;
 const DEFAULT_OPACITY = 1;
 const PRESS_DURATION = 120;
-const SECONDARY_SURFACE = "rgba(15, 23, 42, 0.16)";
-const SECONDARY_BORDER = "rgba(15, 23, 42, 0.28)";
-const SECONDARY_TEXT = "#0F172A";
-const PRIMARY_TEXT = "#FFFFFF";
+const SECONDARY_SURFACE = ColorsStatic.surfaceSecondary;
+const SECONDARY_BORDER = ColorsStatic.borderSecondary;
+const SECONDARY_TEXT = ColorsStatic.titleDark;
+const PRIMARY_TEXT = ColorsStatic.white;
 
 const GlassButton = ({
     label,

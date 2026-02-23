@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { LinearGradient } from 'expo-linear-gradient';
 import gsap from 'gsap';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
@@ -18,7 +19,7 @@ const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
     const overlayRef = useRef<View>(null);
     const textContainerRef = useRef<View>(null);
     const textRef = useRef<Text>(null);
-    const [gradientColors, setGradientColors] = useState(['#0F2027', '#203A43', '#2C5364']);
+    const [gradientColors, setGradientColors] = useState([ColorsStatic.gradientDark1, ColorsStatic.gradientDark2, ColorsStatic.gradientDark3]);
     const [isAnimating, setIsAnimating] = useState(false);
 
     // Mobile animation values
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
     transitionText: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#FFFFFF',
+        color: ColorsStatic.white,
         textAlign: 'center',
         letterSpacing: 2,
         zIndex: 100000,

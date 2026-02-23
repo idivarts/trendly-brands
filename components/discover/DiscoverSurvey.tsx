@@ -7,7 +7,7 @@ import {
 } from "@/shared-constants/preferences/locations";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
-import Colors from "@/shared-uis/constants/Colors";
+import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -277,7 +277,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                 ]}
                                                 textStyle={[
                                                     styles.chipText,
-                                                    isSelected && { color: "#fff" },
+                                                    isSelected && { color: Colors(theme).white },
                                                 ]}
                                             >
                                                 {niche}
@@ -299,7 +299,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                 ]}
                                                 textStyle={[
                                                     styles.chipText,
-                                                    isSelected && { color: "#fff" },
+                                                    isSelected && { color: Colors(theme).white },
                                                 ]}
                                             >
                                                 {niche}
@@ -385,7 +385,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                                     styles.locationSheetItemText,
                                                                     {
                                                                         color: isSelected
-                                                                            ? "#fff"
+                                                                            ? Colors(theme).white
                                                                             : Colors(theme).text,
                                                                     },
                                                                 ]}
@@ -396,7 +396,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                                 <Ionicons
                                                                     name="checkmark"
                                                                     size={20}
-                                                                    color="#fff"
+                                                                    color={Colors(theme).white}
                                                                 />
                                                             )}
                                                         </Pressable>
@@ -430,7 +430,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                 ]}
                                                 textStyle={[
                                                     styles.chipText,
-                                                    isSelected && { color: "#fff" },
+                                                    isSelected && { color: Colors(theme).white },
                                                 ]}
                                             >
                                                 {city}
@@ -452,7 +452,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                 ]}
                                                 textStyle={[
                                                     styles.chipText,
-                                                    isSelected && { color: "#fff" },
+                                                    isSelected && { color: Colors(theme).white },
                                                 ]}
                                             >
                                                 {city}
@@ -531,7 +531,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                                 styles.locationSheetItemText,
                                                                 {
                                                                     color: isSelected
-                                                                        ? "#fff"
+                                                                        ? Colors(theme).white
                                                                         : Colors(theme).text,
                                                                 },
                                                             ]}
@@ -542,7 +542,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                             <Ionicons
                                                                 name="checkmark"
                                                                 size={20}
-                                                                color="#fff"
+                                                                color={Colors(theme).white}
                                                             />
                                                         )}
                                                     </Pressable>
@@ -580,7 +580,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                         ]}
                                         textStyle={[
                                             styles.chipText,
-                                            isSelected && { color: "#fff" },
+                                            isSelected && { color: Colors(theme).white },
                                         ]}
                                     >
                                         {option.label}
@@ -685,7 +685,7 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                 value === undefined && { backgroundColor: primaryColor },
                             ]}
                         >
-                            <Text style={[styles.anyQualityText, value === undefined && { color: "#fff" }]}>
+                            <Text style={[styles.anyQualityText, value === undefined && { color: Colors(theme).white }]}>
                                 Any quality
                             </Text>
                         </Pressable>
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
     },
     othersChip: {
         borderWidth: 1,
-        borderColor: "rgba(0, 0, 0, 0.2)",
+        borderColor: ColorsStatic.overlayBlack20,
     },
     locationSheetContent: {
         padding: 16,
@@ -864,7 +864,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: "rgba(0, 0, 0, 0.08)",
+        borderBottomColor: ColorsStatic.overlayBlack08,
     },
     locationSheetItemText: {
         fontSize: 16,
@@ -875,17 +875,17 @@ const styles = StyleSheet.create({
 
     },
     singleSelectOption: {
-        backgroundColor: "rgba(0, 0, 0, 0.03)",
+        backgroundColor: ColorsStatic.overlayBlack03,
         borderRadius: 12,
         padding: 16,
         borderWidth: 2,
-        borderColor: "transparent",
+        borderColor: ColorsStatic.transparent,
     },
     radioContainer: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        backgroundColor: "rgba(0, 0, 0, 0.03)",
+        backgroundColor: ColorsStatic.overlayBlack03,
 
     },
     radioOuter: {
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: "#ccc",
+        borderColor: ColorsStatic.borderDefault,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         borderRadius: 20,
         borderWidth: 2,
-        borderColor: "rgba(0, 0, 0, 0.15)",
+        borderColor: ColorsStatic.overlayBlack15,
     },
     anyQualityText: {
         fontSize: 15,
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
     footer: {
         paddingTop: 20,
         borderTopWidth: 1,
-        borderTopColor: "rgba(0, 0, 0, 0.1)",
+        borderTopColor: ColorsStatic.overlayBlack10,
     },
     buttonContainer: {
         flexDirection: "row",

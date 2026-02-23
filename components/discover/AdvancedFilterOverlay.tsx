@@ -175,10 +175,10 @@ const createStyles = (
             overflow: "hidden",
             ...Platform.select({
                 web: {
-                    boxShadow: "-8px 0 24px rgba(0, 0, 0, 0.18)",
+                    boxShadow: `-8px 0 24px ${colors.shadowBlack18}`,
                 } as any,
                 default: {
-                    shadowColor: "#000",
+                    shadowColor: colors.black,
                     shadowOffset: { width: -4, height: 0 },
                     shadowOpacity: 0.18,
                     shadowRadius: 24,
