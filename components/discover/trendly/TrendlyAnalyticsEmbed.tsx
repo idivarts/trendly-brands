@@ -555,7 +555,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     icon="play-circle"
                                                     textStyle={{ color: colors.black }}
                                                 >
-                                                    {formatNumber(r.views_count)}
+                                                    {formatNumber(r.video_view_count ?? r.video_play_count ?? r.views_count ?? 0)}
                                                 </Chip>
                                                 <Chip
                                                     compact

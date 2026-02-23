@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
+import { useNiche } from "@/contexts";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import {
     CITIES,
@@ -12,7 +12,7 @@ import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -46,10 +46,7 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
         subtitle: "Select all categories that match your campaign",
         type: "multiselect",
         field: "selectedNiches",
-        options: INFLUENCER_CATEGORIES.map((cat) => ({
-            label: cat,
-            value: cat,
-        })),
+        options: undefined, // Loaded from niche context API + Others sheet
         skippable: true,
     },
     {
@@ -122,7 +119,12 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
     const [answers, setAnswers] = useState<Record<string, any>>({});
     const [locationOthersSheetVisible, setLocationOthersSheetVisible] = useState(false);
     const [locationSearchText, setLocationSearchText] = useState("");
+    const [nicheOthersSheetVisible, setNicheOthersSheetVisible] = useState(false);
+    const [nicheSearchText, setNicheSearchText] = useState("");
+    const [nicheSearchResults, setNicheSearchResults] = useState<string[]>([]);
+    const [nicheSearchLoading, setNicheSearchLoading] = useState(false);
     const theme = useTheme();
+    const { niches: topNiches, searchNiches } = useNiche();
     const insets = useSafeAreaInsets();
     const primaryColor = Colors(theme).primary;
     const textColor = Colors(theme).text;
@@ -200,6 +202,9 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
         handleAnswer(newValues);
     };
 
+    const selectedNiches = (answers.selectedNiches || []) as string[];
+    const nicheOtherSelections = selectedNiches.filter((n) => !topNiches.includes(n));
+
     const selectedLocations = (answers.selectedLocations || []) as string[];
     const locationOtherCities = selectedLocations.filter((c) => !POPULAR_CITIES.includes(c));
     const locationSheetCities = useMemo(
@@ -220,9 +225,191 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
         setLocationOthersSheetVisible(false);
     };
 
+    const handleNicheOtherSelect = (niche: string) => {
+        const next = selectedNiches.includes(niche)
+            ? selectedNiches.filter((n) => n !== niche)
+            : [...selectedNiches, niche];
+        handleAnswer(next);
+        setNicheOthersSheetVisible(false);
+    };
+
+    // Debounced search for niche Others sheet
+    useEffect(() => {
+        if (!nicheOthersSheetVisible) return;
+        if (!nicheSearchText.trim()) {
+            setNicheSearchResults([]);
+            return;
+        }
+        const t = setTimeout(async () => {
+            setNicheSearchLoading(true);
+            try {
+                const results = await searchNiches(nicheSearchText.trim());
+                setNicheSearchResults(results.map((item) => item.niche));
+            } catch {
+                setNicheSearchResults([]);
+            } finally {
+                setNicheSearchLoading(false);
+            }
+        }, 300);
+        return () => clearTimeout(t);
+    }, [nicheOthersSheetVisible, nicheSearchText, searchNiches]);
+
     const renderQuestion = () => {
         switch (currentQuestion.type) {
             case "multiselect":
+                if (currentQuestion.field === "selectedNiches") {
+                    return (
+                        <>
+                            <ScrollView style={styles.optionsContainer}>
+                                <View style={styles.chipsContainer}>
+                                    {topNiches.map((niche) => {
+                                        const isSelected = selectedNiches.includes(niche);
+                                        return (
+                                            <Chip
+                                                key={niche}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(niche)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {niche}
+                                            </Chip>
+                                        );
+                                    })}
+                                    {nicheOtherSelections.map((niche) => {
+                                        const isSelected = selectedNiches.includes(niche);
+                                        return (
+                                            <Chip
+                                                key={niche}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(niche)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {niche}
+                                            </Chip>
+                                        );
+                                    })}
+                                    <Chip
+                                        selected={false}
+                                        onPress={() => setNicheOthersSheetVisible(true)}
+                                        style={[styles.chip, styles.othersChip]}
+                                        textStyle={[styles.chipText, { color: primaryColor }]}
+                                        icon={() => (
+                                            <Ionicons
+                                                name="chevron-forward"
+                                                size={16}
+                                                color={primaryColor}
+                                            />
+                                        )}
+                                    >
+                                        Others
+                                    </Chip>
+                                </View>
+                            </ScrollView>
+                            {nicheOthersSheetVisible && (
+                                <BottomSheetContainer
+                                    isVisible={nicheOthersSheetVisible}
+                                    onClose={() => {
+                                        setNicheOthersSheetVisible(false);
+                                        setNicheSearchText("");
+                                        setNicheSearchResults([]);
+                                    }}
+                                    useBottomSheetView={false}
+                                    enablePanDownToClose
+                                    index={2}
+                                    snapPoints={["50%", "75%", "100%"]}
+                                    topInset={insets.top}
+                                    backgroundStyle={{
+                                        backgroundColor: Colors(theme).background,
+                                    }}
+                                    handleIndicatorStyle={{
+                                        backgroundColor: primaryColor,
+                                    }}
+                                >
+                                    <View style={styles.locationSheetContent}>
+                                        <TextInput
+                                            style={[
+                                                styles.locationSearchInput,
+                                                {
+                                                    borderColor: primaryColor,
+                                                    color: Colors(theme).text,
+                                                },
+                                            ]}
+                                            value={nicheSearchText}
+                                            onChangeText={setNicheSearchText}
+                                            placeholder="Search niches"
+                                            placeholderTextColor={Colors(theme).gray300}
+                                            autoCapitalize="none"
+                                        />
+                                        {nicheSearchLoading ? (
+                                            <View style={{ padding: 24, alignItems: "center" }}>
+                                                <Text style={{ color: Colors(theme).text }}>Searching...</Text>
+                                            </View>
+                                        ) : (
+                                            <BottomSheetScrollView
+                                                style={styles.locationSheetList}
+                                                keyboardShouldPersistTaps="handled"
+                                            >
+                                                {nicheSearchResults.map((niche) => {
+                                                    const isSelected = selectedNiches.includes(niche);
+                                                    return (
+                                                        <Pressable
+                                                            key={niche}
+                                                            style={[
+                                                                styles.locationSheetItem,
+                                                                isSelected && {
+                                                                    backgroundColor: primaryColor,
+                                                                },
+                                                            ]}
+                                                            onPress={() => handleNicheOtherSelect(niche)}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.locationSheetItemText,
+                                                                    {
+                                                                        color: isSelected
+                                                                            ? "#fff"
+                                                                            : Colors(theme).text,
+                                                                    },
+                                                                ]}
+                                                            >
+                                                                {niche}
+                                                            </Text>
+                                                            {isSelected && (
+                                                                <Ionicons
+                                                                    name="checkmark"
+                                                                    size={20}
+                                                                    color="#fff"
+                                                                />
+                                                            )}
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </BottomSheetScrollView>
+                                        )}
+                                    </View>
+                                </BottomSheetContainer>
+                            )}
+                        </>
+                    );
+                }
                 if (currentQuestion.field === "selectedLocations") {
                     return (
                         <>
