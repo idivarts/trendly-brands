@@ -18,10 +18,11 @@ interface SurveyQuestion {
     id: string;
     question: string;
     subtitle?: string;
-    type: "multiselect" | "range" | "single-select" | "slider";
+    type: "multiselect" | "range" | "single-select" | "slider" | "star-rating";
     field: keyof IAdvanceFilters | "followerRange" | "budgetRange";
     options?: Array<{ label: string; value: any }>;
     rangeOptions?: { min: number; max: number; step: number; prefix?: string; suffix?: string };
+    starRatingOptions?: { min: number; max: number; step: number };
     skippable?: boolean;
 }
 
@@ -95,15 +96,10 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
     {
         id: "quality",
         question: "What content quality are you looking for?",
-        subtitle: "Filter by aesthetic and production quality",
-        type: "single-select",
+        subtitle: "Rate from 0 to 5 stars (tap half-star for 0.5)",
+        type: "star-rating",
         field: "qualityMin",
-        options: [
-            { label: "High Quality (80+)", value: 80 },
-            { label: "Good Quality (60+)", value: 60 },
-            { label: "Standard Quality (40+)", value: 40 },
-            { label: "Any Quality", value: undefined },
-        ],
+        starRatingOptions: { min: 0, max: 5, step: 0.5 },
         skippable: true,
     },
 ];
@@ -269,6 +265,61 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                         </View>
                     </ScrollView>
                 );
+
+            case "star-rating": {
+                const allowedValues = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] as const;
+                const value = answers[currentQuestion.field] as number | undefined;
+                const starCount = 5;
+                return (
+                    <View style={styles.optionsContainer}>
+                        <View style={styles.starRatingRow}>
+                            {Array.from({ length: starCount }, (_, i) => {
+                                const halfValue = allowedValues[i * 2]; // 0.5, 1.5, 2.5, 3.5, 4.5
+                                const fullValue = allowedValues[i * 2 + 1]; // 1, 2, 3, 4, 5
+                                const isHalfFilled = value !== undefined && value >= halfValue && value < fullValue;
+                                const isFullFilled = value !== undefined && value >= fullValue;
+                                return (
+                                    <View key={i} style={styles.starCell}>
+                                        <View style={styles.starIconWrap} pointerEvents="none">
+                                            {isFullFilled ? (
+                                                <Ionicons name="star" size={40} color={primaryColor} />
+                                            ) : isHalfFilled ? (
+                                                <Ionicons name="star-half" size={40} color={primaryColor} />
+                                            ) : (
+                                                <Ionicons name="star-outline" size={40} color={primaryColor} />
+                                            )}
+                                        </View>
+                                        <Pressable
+                                            style={styles.starHalfTouchRight}
+                                            onPress={() => handleAnswer(fullValue)}
+                                        />
+                                        <Pressable
+                                            style={styles.starHalfTouchLeft}
+                                            onPress={() => handleAnswer(halfValue)}
+                                        />
+                                    </View>
+                                );
+                            })}
+                        </View>
+                        <Pressable
+                            onPress={() => handleAnswer(undefined)}
+                            style={[
+                                styles.anyQualityChip,
+                                value === undefined && { backgroundColor: primaryColor },
+                            ]}
+                        >
+                            <Text style={[styles.anyQualityText, value === undefined && { color: "#fff" }]}>
+                                Any quality
+                            </Text>
+                        </Pressable>
+                        {value !== undefined && (
+                            <Text style={styles.starValueLabel}>
+                                {Number(value) === 1 ? "1 star" : `${Number(value)} stars`}
+                            </Text>
+                        )}
+                    </View>
+                );
+            }
 
             default:
                 return null;
@@ -445,6 +496,54 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 16,
         fontWeight: "500",
+    },
+    starRatingRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 16,
+    },
+    starCell: {
+        width: 44,
+        height: 44,
+        position: "relative",
+    },
+    starHalfTouchLeft: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: "50%",
+    },
+    starHalfTouchRight: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: "50%",
+    },
+    starIconWrap: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    anyQualityChip: {
+        alignSelf: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: "rgba(0, 0, 0, 0.15)",
+    },
+    anyQualityText: {
+        fontSize: 15,
+        fontWeight: "600",
+    },
+    starValueLabel: {
+        fontSize: 14,
+        opacity: 0.8,
+        textAlign: "center",
+        marginTop: 8,
     },
     footer: {
         paddingTop: 20,
