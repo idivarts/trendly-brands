@@ -3,6 +3,7 @@ import { FacebookImageComponent } from "@/shared-uis/components/image-component"
 import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import Colors from "@/shared-uis/constants/Colors";
 import { maskHandle } from "@/shared-uis/utils/masks";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -252,7 +253,10 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
     const noop = () => { };
 
     return (
-        <View
+        <LinearGradient
+            colors={[colors.influencerCardGradientStart, colors.influencerCardGradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={[
                 styles.CardLayoutWrapper,
                 isCollapsed ? styles.CardLayoutWrapperCollapsed : null,
@@ -296,7 +300,6 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
                             </View>
                         </View>
                     </View>
-
                     {/* Avatar and Details */}
                     <View style={[styles.avatarDetailsRow, isCollapsed ? styles.avatarDetailsRowCollapsed : null]}>
                         <Avatar
@@ -320,7 +323,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
                     <Text style={styles.CategoryText}>By Discovery</Text>
                 </View>
             )}
-        </View>
+        </LinearGradient>
     );
 };
 
@@ -343,7 +346,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             overflow: "hidden",
             width: "100%",
             height: "auto",
-            backgroundColor: colors.card,
+            backgroundColor: colors.transparent,
         },
         cardExpanded: {
             minHeight: 252,
@@ -370,7 +373,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             alignItems: "flex-end",
         },
         erTagNotch: {
-            backgroundColor: colors.card,
+            backgroundColor: colors.influencerCardGradientStart,
             height: 24,
             width: 24,
             position: "absolute",
