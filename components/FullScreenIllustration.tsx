@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -149,17 +150,12 @@ export default function FullInformationalIllustration(props: IIllustration) {
 }
 
 /* --------- Styles --------- */
-const BLUE = "#254F7A";
-const BLUE_DARK = "#1A3B5C";
-const BLUE_LIGHT = "#6C91BA";
-const TEXT = "#243A53";
-
 const styles = StyleSheet.create({
     page: {
         paddingHorizontal: 24,
         paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: ColorsStatic.white,
         maxWidth: 1300,
         alignSelf: "center",
         width: "100%",
@@ -173,7 +169,7 @@ const styles = StyleSheet.create({
         // marginBottom: 55,
     },
     heroRow: {
-        backgroundColor: "#F8FBFF",
+        backgroundColor: ColorsStatic.surfaceBlueTint,
         padding: 28,
         flexDirection: "row",
         alignItems: "center",
@@ -188,29 +184,29 @@ const styles = StyleSheet.create({
         flex: 1.3,
     },
     kicker: {
-        color: BLUE_LIGHT,
+        color: ColorsStatic.linkBlue,
         fontSize: 12,
         letterSpacing: 1.4,
         fontWeight: "700",
         marginBottom: 12,
     },
     title: {
-        color: TEXT,
+        color: ColorsStatic.titleDark,
         fontSize: 48,
         lineHeight: 62,
         fontWeight: "600",
         marginTop: 24,
     },
     titleAccent: {
-        color: BLUE,
+        color: ColorsStatic.primary,
         textDecorationLine: "underline",
-        textDecorationColor: "#CFE2F7",
+        textDecorationColor: ColorsStatic.linkUnderline,
         textDecorationStyle: "solid",
     },
     subtitle: {
         marginTop: 24,
         marginBottom: 12,
-        color: "#53657A",
+        color: ColorsStatic.textMutedSecondary,
         fontSize: 16,
         lineHeight: 24,
     },
@@ -223,20 +219,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 22,
         height: 48,
         borderRadius: 999,
-        backgroundColor: BLUE,
-        shadowColor: "#2B5C8F",
+        backgroundColor: ColorsStatic.primary,
+        shadowColor: ColorsStatic.shadowBlue,
         shadowOpacity: 0.25,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 8 },
         ...Platform.select({ android: { elevation: 6 } }),
     },
     ctaText: {
-        color: "#FFFFFF",
+        color: ColorsStatic.white,
         fontSize: 16,
         fontWeight: "700",
     },
     ctaArrow: {
-        color: "#FFFFFF",
+        color: ColorsStatic.white,
         fontSize: 22,
         marginLeft: 10,
         marginTop: -2,

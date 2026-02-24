@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -130,7 +130,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                                     onPress={addMember}
                                     style={styles.addButton}
                                 >
-                                    {loading ? <ActivityIndicator color="#fff" /> : "Add Member"}
+                                    {loading ? <ActivityIndicator color={Colors(theme).white} /> : "Add Member"}
                                 </Button>
                             </ScrollView>
                         </View>

@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import React from "react";
 import { View, StyleSheet, ViewStyle, DimensionValue } from "react-native";
 
@@ -15,7 +16,7 @@ type CustomDividerProps = {
 
 const CustomDivider = ({
   thickness = 1,
-  color = "#E0E0E0",
+  color = ColorsStatic.borderDivider,
   length = "100%",
   orientation = "horizontal",
   margin = 0,

@@ -4,6 +4,7 @@ import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
 import PlanWrapper from "@/components/paywall/plans/PlanWrapper";
 import BrandSwitcher, { OpenBrandSwitcher } from "@/components/ui/brand-switcher";
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
@@ -323,17 +324,17 @@ export default function PricingPage() {
 }
 
 /* --------- Styles --------- */
-const BLUE = "#254F7A";
-const BLUE_DARK = "#1A3B5C";
-const BLUE_LIGHT = "#6C91BA";
-const TEXT = "#243A53";
+const BLUE = ColorsStatic.primary;
+const BLUE_DARK = ColorsStatic.primaryDark;
+const BLUE_LIGHT = ColorsStatic.linkBlue;
+const TEXT = ColorsStatic.titleDark;
 
 const styles = StyleSheet.create({
     page: {
         paddingHorizontal: 24,
         paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: ColorsStatic.white,
         maxWidth: 1300,
         alignSelf: "center",
         width: "100%",

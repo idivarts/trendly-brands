@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -163,7 +164,7 @@ const WaitToRender = () => {
             ]}
         >
             <LinearGradient
-                colors={isExpired ? ["#434343", "#2C3E50", "#1F2937"] : ["#8E2DE2", "#E94057", "#F27121"]}
+                colors={isExpired ? [ColorsStatic.gradientOfferExpired1, ColorsStatic.gradientOfferExpired2, ColorsStatic.gradientOfferExpired3] : [ColorsStatic.gradientOfferActive1, ColorsStatic.gradientOfferActive2, ColorsStatic.gradientOfferActive3]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.offerWrap,

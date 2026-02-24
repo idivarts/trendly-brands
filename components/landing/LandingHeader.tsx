@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useMyGrowthBook } from '@/contexts/growthbook-context-provider'
 import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics'
 import { usePathname } from 'expo-router'
@@ -52,8 +53,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 18,
         height: 42,
         borderRadius: 999,
-        backgroundColor: "#EEF4FB",
-        shadowColor: "#000",
+        backgroundColor: ColorsStatic.surface,
+        shadowColor: ColorsStatic.black,
         shadowOpacity: 0.08,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 3 },

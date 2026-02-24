@@ -420,7 +420,6 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         cardTitle: {
             fontWeight: "600",
             // borderBottomWidth: 1
-            // borderColor: "#D1D5DB",
             paddingBottom: 4,
             marginBottom: 4,
         },

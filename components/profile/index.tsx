@@ -392,7 +392,6 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
         padding: 16,
         marginBottom: 20,
         // subtle shadow
-        // shadowColor: "#000",
         // shadowOpacity: 0.08,
         // shadowOffset: { width: 0, height: 4 },
         // shadowRadius: 10,

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 export const CreateCampaignstylesFn = (theme: Theme) =>
@@ -9,7 +9,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
         },
         backdrop: {
             flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: Colors(theme).overlayBlack50,
             justifyContent: "center",
             alignItems: "center",
         },
@@ -48,7 +48,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             flex: 1,
         },
         input: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderWidth: 1,
             borderRadius: 4,
             height: 40,
@@ -56,7 +56,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             // width: 200,
         },
         inputcampaign1: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderWidth: 1,
             borderRadius: 4,
             height: 40,
@@ -65,7 +65,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             backgroundColor: Colors(theme).background,
         },
         inputTextcampaign1: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderWidth: 1,
             borderRadius: 4,
             height: 40,
@@ -74,7 +74,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             width: 150,
         },
         stageContainer: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderRadius: 4,
             padding: 8,
             width: "100%",
@@ -82,7 +82,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             gap: 18,
         },
         textArea: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderWidth: 1,
             borderRadius: 4,
             width: "100%",
@@ -141,7 +141,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             color: "#fff",
         },
         input3: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderWidth: 1,
             borderRadius: 4,
             width: "100%",
@@ -207,7 +207,7 @@ export const CreateCampaignstylesFn = (theme: Theme) =>
             display: "flex",
         },
         textAreaStage3: {
-            borderColor: "#ccc",
+            borderColor: Colors(theme).borderDefault,
             borderWidth: 1,
             borderRadius: 4,
             height: 40,

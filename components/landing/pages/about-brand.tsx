@@ -2,6 +2,7 @@ import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
@@ -156,7 +157,7 @@ export default function BrandDetailPage() {
 
                         {/* About Brand (Optional) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>About brand <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <Text style={styles.label}>About brand <Text style={{ color: ColorsStatic.textMutedSecondary, fontWeight: "400" }}>(optional)</Text></Text>
                             <TextInput
                                 value={about}
                                 onChangeText={setAbout}
@@ -170,7 +171,7 @@ export default function BrandDetailPage() {
 
                         {/* Brand Website (Optional) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>Brand website <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <Text style={styles.label}>Brand website <Text style={{ color: ColorsStatic.textMutedSecondary, fontWeight: "400" }}>(optional)</Text></Text>
                             <TextInput
                                 value={website}
                                 onChangeText={setWebsite}
@@ -185,7 +186,7 @@ export default function BrandDetailPage() {
 
                         {/* Brand Industry (Optional, multi-select) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>Brand industry <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <Text style={styles.label}>Brand industry <Text style={{ color: ColorsStatic.textMutedSecondary, fontWeight: "400" }}>(optional)</Text></Text>
                             <View style={styles.chipWrap}>
                                 {LANDING_BRAND_INDUSTRIES.map((name) => {
                                     const active = selectedIndustries.includes(name);
@@ -241,17 +242,17 @@ export default function BrandDetailPage() {
 }
 
 /* --------- Styles --------- */
-const BLUE = "#254F7A";
-const BLUE_DARK = "#1A3B5C";
-const BLUE_LIGHT = "#6C91BA";
-const TEXT = "#243A53";
+const BLUE = ColorsStatic.primary;
+const BLUE_DARK = ColorsStatic.primaryDark;
+const BLUE_LIGHT = ColorsStatic.linkBlue;
+const TEXT = ColorsStatic.titleDark;
 
 const styles = StyleSheet.create({
     page: {
         paddingHorizontal: 24,
         paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: ColorsStatic.white,
         maxWidth: 1300,
         alignSelf: "center",
         width: "100%",
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
         marginTop: 0,
     },
     heroRow: {
-        backgroundColor: "#F8FBFF",
+        backgroundColor: ColorsStatic.surfaceBlueTint,
         padding: 28,
         flexDirection: "row",
         alignItems: "center",
@@ -294,13 +295,13 @@ const styles = StyleSheet.create({
     titleAccent: {
         color: BLUE,
         textDecorationLine: "underline",
-        textDecorationColor: "#CFE2F7",
+        textDecorationColor: ColorsStatic.linkUnderline,
         textDecorationStyle: "solid",
     },
     subtitle: {
         marginTop: 18,
         marginBottom: 14,
-        color: "#53657A",
+        color: ColorsStatic.textMutedSecondary,
         fontSize: 16,
         lineHeight: 24,
         maxWidth: 640,
@@ -318,8 +319,8 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         justifyContent: "flex-end",
         marginTop: 18,
-        backgroundColor: "#E7F0F9",
-        shadowColor: "#000",
+        backgroundColor: ColorsStatic.surfaceBlueTintStrong,
+        shadowColor: ColorsStatic.black,
         shadowOpacity: 0.12,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     playBadge: {
         alignSelf: "flex-start",
         margin: 12,
-        backgroundColor: "rgba(255,255,255,0.9)",
+        backgroundColor: ColorsStatic.overlayWhite90,
         borderRadius: 999,
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     /* Form */
     formCard: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: ColorsStatic.white,
         gap: 12,
         ...Platform.select({ web: { maxWidth: 520 } }),
         ...Platform.select({ android: { elevation: 4 } }),
@@ -349,13 +350,13 @@ const styles = StyleSheet.create({
         paddingVertical: 22,
         paddingHorizontal: 22,
         marginTop: 18,
-        shadowColor: "#000",
+        shadowColor: ColorsStatic.black,
         shadowOpacity: 0.08,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 },
     },
     formHeading: { fontSize: 24, fontWeight: "800", color: TEXT },
-    formSub: { marginTop: 6, color: "#6C7A89", fontSize: 13 },
+    formSub: { marginTop: 6, color: ColorsStatic.textMutedSecondary, fontSize: 13 },
     headerRow: {
         marginTop: 0,
         marginBottom: 4,
@@ -369,8 +370,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
-        backgroundColor: "#F5FAFF",
+        borderColor: ColorsStatic.borderBlueTint,
+        backgroundColor: ColorsStatic.surfaceBlueTintAlt,
     },
     skipText: {
         color: BLUE,
@@ -383,14 +384,14 @@ const styles = StyleSheet.create({
         height: 48,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
+        borderColor: ColorsStatic.borderBlueTint,
         paddingHorizontal: 14,
-        backgroundColor: "#FAFCFF",
+        backgroundColor: ColorsStatic.surfaceBlueTintAlt,
         color: TEXT,
     },
-    inputError: { borderColor: "#E87070" },
-    error: { color: "#D64545", marginTop: 6, fontSize: 12 },
-    disclaimer: { color: "#6C7A89", marginTop: 12, fontSize: 12 },
+    inputError: { borderColor: ColorsStatic.inputErrorBorder },
+    error: { color: ColorsStatic.inputErrorText, marginTop: 6, fontSize: 12 },
+    disclaimer: { color: ColorsStatic.textMutedSecondary, marginTop: 12, fontSize: 12 },
 
     // Age select cards
     cardGrid: {
@@ -399,27 +400,27 @@ const styles = StyleSheet.create({
         gap: 12,
         marginTop: 8,
     },
-    ageHelp: { color: "#6C7A89", fontSize: 12, marginTop: 2 },
+    ageHelp: { color: ColorsStatic.textMutedSecondary, fontSize: 12, marginTop: 2 },
     ageCard: {
         flexBasis: "48%",
         borderWidth: 1,
-        borderColor: "#E1E6EE",
-        backgroundColor: "#FFFFFF",
+        borderColor: ColorsStatic.borderBlueTint,
+        backgroundColor: ColorsStatic.white,
         borderRadius: 12,
         padding: 12,
         minHeight: 80,
     },
     ageCardSelected: {
         borderColor: BLUE,
-        backgroundColor: "#F0F6FF",
-        shadowColor: "#2B5C8F",
+        backgroundColor: ColorsStatic.surfaceBlueTintStrong,
+        shadowColor: ColorsStatic.shadowBlue,
         shadowOpacity: 0.12,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 6 },
         ...Platform.select({ android: { elevation: 3 } }),
     },
     ageCardTitle: { fontSize: 14, fontWeight: "800", color: TEXT },
-    ageCardDesc: { fontSize: 12, color: "#6C7A89", marginTop: 4 },
+    ageCardDesc: { fontSize: 12, color: ColorsStatic.textMutedSecondary, marginTop: 4 },
 
     // Text area
     textArea: {
@@ -440,15 +441,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
-        backgroundColor: "#FFFFFF",
+        borderColor: ColorsStatic.borderBlueTint,
+        backgroundColor: ColorsStatic.white,
     },
     chipSelected: {
         backgroundColor: BLUE,
         borderColor: BLUE,
     },
     chipText: { color: TEXT, fontSize: 12, fontWeight: "700" },
-    chipTextSelected: { color: "#FFFFFF" },
+    chipTextSelected: { color: ColorsStatic.white },
 
     /* CTA reused */
     cta: {
@@ -460,19 +461,19 @@ const styles = StyleSheet.create({
         height: 48,
         borderRadius: 999,
         backgroundColor: BLUE,
-        shadowColor: "#2B5C8F",
+        shadowColor: ColorsStatic.shadowBlue,
         shadowOpacity: 0.25,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 8 },
         ...Platform.select({ android: { elevation: 6 } }),
     },
     ctaText: {
-        color: "#FFFFFF",
+        color: ColorsStatic.white,
         fontSize: 16,
         fontWeight: "700",
     },
     ctaArrow: {
-        color: "#FFFFFF",
+        color: ColorsStatic.white,
         fontSize: 22,
         marginLeft: 10,
         marginTop: -2,

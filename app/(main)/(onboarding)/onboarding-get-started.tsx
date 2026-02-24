@@ -1,5 +1,5 @@
 import Button from "@/components/ui/button";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -109,7 +109,7 @@ const GetStartedScreen = () => {
                 <Menu
                     visible={visible1}
                     onDismiss={closeMenu1}
-                    contentStyle={{ backgroundColor: "#fff" }}
+                    contentStyle={{ backgroundColor: Colors(theme).card }}
                     anchor={
                         <TouchableOpacity onPress={openMenu1} style={styles.dropdown}>
                             <Text style={{ color: Colors(theme).text }}>
@@ -146,7 +146,7 @@ const GetStartedScreen = () => {
                 <Menu
                     visible={visible2}
                     onDismiss={closeMenu2}
-                    contentStyle={{ backgroundColor: "#fff" }}
+                    contentStyle={{ backgroundColor: Colors(theme).card }}
                     anchor={
                         <TouchableOpacity onPress={openMenu2} style={styles.dropdown}>
                             <Text style={{ color: Colors(theme).text }}>
@@ -185,7 +185,7 @@ const GetStartedScreen = () => {
                 <Menu
                     visible={visible3}
                     onDismiss={closeMenu3}
-                    contentStyle={{ backgroundColor: "#fff" }}
+                    contentStyle={{ backgroundColor: Colors(theme).card }}
                     anchor={
                         <TouchableOpacity onPress={openMenu3} style={styles.dropdown}>
                             <Text style={{ color: Colors(theme).text }}>

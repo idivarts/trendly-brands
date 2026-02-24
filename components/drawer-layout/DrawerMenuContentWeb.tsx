@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -488,7 +488,7 @@ const RenderBanner = (props: {
 }) => {
     return (
         <LinearGradient
-            colors={["#3b82f6", "#8b5cf6"]}
+            colors={[ColorsStatic.gradientDrawer1, ColorsStatic.gradientDrawer2]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{
@@ -511,7 +511,7 @@ const RenderBanner = (props: {
             </Text>
             <Text
                 style={{
-                    color: "rgba(255,255,255,0.85)",
+                    color: ColorsStatic.overlayWhite85,
                     fontSize: 12,
                     marginBottom: 12,
                 }}
@@ -525,8 +525,8 @@ const RenderBanner = (props: {
                 }}
                 style={({ pressed }) => ({
                     backgroundColor: pressed
-                        ? "rgba(255,255,255,0.3)"
-                        : "rgba(255,255,255,0.4)",
+                        ? ColorsStatic.shimmerOverlayDark
+                        : ColorsStatic.overlayWhite40,
                     paddingVertical: 8,
                     paddingHorizontal: 16,
                     borderRadius: 20,

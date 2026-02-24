@@ -1,5 +1,7 @@
+import Colors from "@/shared-uis/constants/Colors";
 import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
+import { useTheme } from "@react-navigation/native";
 import {
   DndContext,
   DragEndEvent,
@@ -132,6 +134,8 @@ const INITIAL_COLUMNS: Column[] = [
  */
 
 export default function KanbanPOC() {
+  const theme = useTheme();
+  const colors = Colors(theme);
   const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
 
@@ -210,8 +214,8 @@ export default function KanbanPOC() {
               padding: 12,
               borderWidth: 1,
               borderRadius: 6,
-              backgroundColor: "#fff",
-              boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
+              backgroundColor: colors.card,
+              boxShadow: `0px 8px 24px ${colors.shadowBlack15}`,
               width: 180,
               opacity: 0.95,
             }}
@@ -275,6 +279,8 @@ function POCColumn({ column }: { column: Column }) {
  */
 
 function POCCard({ id, title }: { id: string; title: string }) {
+  const theme = useTheme();
+  const colors = Colors(theme);
   const {
     setNodeRef,
     attributes,
@@ -290,7 +296,7 @@ function POCCard({ id, title }: { id: string; title: string }) {
     padding: 12,
     borderWidth: 1,
     marginBottom: 8,
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
   };
 
   // remove web-only a11y props for RN
@@ -314,7 +320,7 @@ function POCCard({ id, title }: { id: string; title: string }) {
             left: 0,
             right: 0,
             height: 3,
-            backgroundColor: "#2563EB",
+            backgroundColor: colors.accentBlue,
             borderRadius: 2,
           }}
         />

@@ -1,6 +1,8 @@
+import Colors from "@/shared-uis/constants/Colors";
 import React from "react";
 import { ColorValue, Text } from "react-native";
 import { Chip } from "react-native-paper";
+import { useTheme } from "@react-navigation/native";
 
 const formatNumber = (n: number | string | undefined) => {
     if (n == null) return "-";
@@ -22,6 +24,8 @@ export const StatChip = ({
     value?: number | string;
     textColor?: ColorValue | null;
 }) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
     const resolvedTextColor: ColorValue | undefined = textColor ?? undefined;
 
     return (
@@ -31,7 +35,7 @@ export const StatChip = ({
             style={{
                 marginRight: 6,
                 marginBottom: 6,
-                shadowColor: "#000",
+                shadowColor: colors.black,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.2,
                 shadowRadius: 1,

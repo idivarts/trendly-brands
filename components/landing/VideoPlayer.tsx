@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ImageBackground, Platform, Pressable, StyleSheet, Text } from 'react-native';
@@ -77,8 +78,8 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#E7F0F9",
-        shadowColor: "#000",
+        backgroundColor: ColorsStatic.surfaceBlueTintStrong,
+        shadowColor: ColorsStatic.black,
         shadowOpacity: 0.12,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
         width: 96,
         height: 96,
         borderRadius: 999,
-        backgroundColor: "rgba(255,255,255,0.9)",
+        backgroundColor: ColorsStatic.overlayWhite90,
         alignItems: "center",
         justifyContent: "center",
     },

@@ -66,7 +66,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                         end={{ x: 1, y: 0 }}
                         style={styles.ribbon}
                     >
-                        <FontAwesome name="bullhorn" size={14} color="#fff" />
+                        <FontAwesome name="bullhorn" size={14} color={Colors(theme).white} />
                         <Text variant="labelLarge" style={styles.ribbonText}>Create a Campaign</Text>
                         <Badge size={18} style={styles.ribbonBadge}>New</Badge>
                     </LinearGradient>

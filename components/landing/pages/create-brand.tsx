@@ -2,6 +2,7 @@ import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
 import OfferCard from "@/components/landing/OfferCard";
 import Stepper from "@/components/landing/Stepper";
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: ColorsStatic.white,
         maxWidth: 1300,
         alignSelf: "center",
         width: "100%",

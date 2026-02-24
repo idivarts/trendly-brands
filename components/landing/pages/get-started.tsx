@@ -1,5 +1,6 @@
 import LandingFooter from "@/components/landing/LandingFooter";
 import LandingHeader from "@/components/landing/LandingHeader";
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     titleAccent: {
         color: BLUE,
         textDecorationLine: "underline",
-        textDecorationColor: "#CFE2F7",
+        textDecorationColor: ColorsStatic.linkUnderline,
         textDecorationStyle: "solid",
     },
     subtitle: {

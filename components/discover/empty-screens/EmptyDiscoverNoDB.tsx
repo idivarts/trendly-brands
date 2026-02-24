@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -27,7 +28,7 @@ const databases = [
 export default function EmptyNoDatabaseSelected({ setSelectedDb }: { setSelectedDb: Function }) {
     return (
         <View style={styles.container}>
-            <LinearGradient colors={["#eef2ff", "#fdf2f8"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
+            <LinearGradient colors={[ColorsStatic.gradientBanner1, ColorsStatic.gradientBanner2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
                 <Text style={styles.bannerTitle}>Discover Influencers Your Way</Text>
                 <Text style={styles.bannerSubtitle}>Pick a database that matches your goals, budget, and stage</Text>
                 <View style={styles.pillsRow}>
@@ -92,19 +93,19 @@ export default function EmptyNoDatabaseSelected({ setSelectedDb }: { setSelected
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 24, backgroundColor: '#f8f9ff', flex: 1 },
+    container: { padding: 24, backgroundColor: ColorsStatic.surfaceTint, flex: 1 },
     banner: { borderRadius: 16, paddingVertical: 22, paddingHorizontal: 16, marginBottom: 12 },
     bannerTitle: { fontSize: 22, fontWeight: '800', textAlign: 'center', letterSpacing: 0.2 },
-    bannerSubtitle: { color: '#4b5563', marginTop: 6, textAlign: 'center' },
+    bannerSubtitle: { color: ColorsStatic.gray600, marginTop: 6, textAlign: 'center' },
     pillsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' },
-    pill: { backgroundColor: 'rgba(255,255,255,0.8)', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, marginHorizontal: 4, marginVertical: 4 },
-    pillText: { fontSize: 12, fontWeight: '600', color: '#374151' },
-    subtext: { color: '#555', marginTop: 8, marginBottom: 24, textAlign: 'center', lineHeight: 20 },
+    pill: { backgroundColor: ColorsStatic.overlayWhite80Alt, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, marginHorizontal: 4, marginVertical: 4 },
+    pillText: { fontSize: 12, fontWeight: '600', color: ColorsStatic.gray700 },
+    subtext: { color: ColorsStatic.gray100, marginTop: 8, marginBottom: 24, textAlign: 'center', lineHeight: 20 },
     cardRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
     card: { flex: 1, marginHorizontal: 6, elevation: 3, borderRadius: 12, paddingVertical: 6 },
-    avatar: { backgroundColor: '#ececec', alignSelf: 'center', marginBottom: 10 },
-    tip: { marginTop: 18, fontStyle: 'italic', color: '#666', textAlign: 'center' },
+    avatar: { backgroundColor: ColorsStatic.surfaceAvatar, alignSelf: 'center', marginBottom: 10 },
+    tip: { marginTop: 18, fontStyle: 'italic', color: ColorsStatic.textSecondaryLight, textAlign: 'center' },
     cardTitle: { fontSize: 18, fontWeight: '700', marginTop: 6, marginBottom: 2, textAlign: 'center', lineHeight: 24 },
-    cardDescription: { fontSize: 15, color: '#444', textAlign: 'center', lineHeight: 20 },
+    cardDescription: { fontSize: 15, color: ColorsStatic.textDark, textAlign: 'center', lineHeight: 20 },
     table: { borderRadius: 12, overflow: 'hidden', marginTop: 6 },
 });

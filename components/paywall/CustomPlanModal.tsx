@@ -241,7 +241,7 @@ const stylesCustomModalFn = (theme: Theme) => {
             padding: 20,
             borderWidth: 1,
             borderColor: colors.border,
-            shadowColor: "#000",
+            shadowColor: Colors(theme).black,
             shadowOpacity: 0.08,
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 6 },

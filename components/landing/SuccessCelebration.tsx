@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { BLUE, TEXT } from "./const";
@@ -59,7 +60,7 @@ export const SuccessCelebration: React.FC<SuccessCelebrationProps> = ({
                     // @ts-ignore
                     position: "absolute",
                     ...StyleSheet.absoluteFillObject,
-                    backgroundColor: "rgba(0,0,0,0.25)",
+                    backgroundColor: ColorsStatic.overlayBlack25,
                     opacity,
                 }}
                 pointerEvents="auto"
@@ -87,8 +88,8 @@ export const SuccessCelebration: React.FC<SuccessCelebrationProps> = ({
                     width: 200,
                     height: 200,
                     borderRadius: 70,
-                    backgroundColor: "#FFFFFF",
-                    shadowColor: "#000",
+                    backgroundColor: ColorsStatic.white,
+                    shadowColor: ColorsStatic.black,
                     shadowOpacity: 0.18,
                     shadowRadius: 16,
                     shadowOffset: { width: 0, height: 10 },

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -29,7 +29,7 @@ const fnStyles = (theme: Theme) =>
         subTitle: {
             textAlign: "center",
             fontSize: 16,
-            color: "#333",
+            color: ColorsStatic.gray700,
             marginBottom: 30,
         },
         input: {

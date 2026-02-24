@@ -1,3 +1,4 @@
+import { ColorsStatic } from "@/shared-uis/constants/Colors";
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -39,7 +40,7 @@ const styles = StyleSheet.create({
     /* Feature summary strip */
     featuresBar: {
         marginTop: 40,
-        backgroundColor: "#1f3f73", // deep blue like screenshot
+        backgroundColor: ColorsStatic.footerBg,
         borderRadius: 16,
         paddingVertical: 16,
         paddingHorizontal: 32,
@@ -64,20 +65,20 @@ const styles = StyleSheet.create({
     featureIcon: {
         fontSize: 42,
         marginRight: 16,
-        color: "#FFFFFF",
+        color: ColorsStatic.white,
     },
     featureTextWrap: {
         flexShrink: 1,
         gap: 8,
     },
     featureTitle: {
-        color: "#FFFFFF",
+        color: ColorsStatic.white,
         fontSize: 14,
         fontWeight: "800",
         letterSpacing: 0.2,
     },
     featureSub: {
-        color: "#D6E2F5",
+        color: ColorsStatic.footerTextMuted,
         fontSize: 12,
         marginTop: 2,
     },

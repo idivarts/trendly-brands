@@ -3,7 +3,7 @@ import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
-import Colors from "@/shared-uis/constants/Colors";
+import Colors, { ColorsStatic } from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -12,19 +12,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
-// Expanded Social Universe
+// Expanded Social Universe - icon colors from theme (brand accents)
 const SOCIAL_ORBS = [
-    { icon: "youtube", color: "#FF0000", size: 90, x: -280, y: -150, depth: 0.2 }, // Moved further left/up (was blocking text)
-    { icon: "instagram", color: "#C13584", size: 80, x: 250, y: -50, depth: 0.15 },
-    { icon: "linkedin", color: "#0077B5", size: 70, x: -100, y: 180, depth: 0.1 },
-    { icon: "facebook", color: "#1877F2", size: 60, x: 180, y: 120, depth: 0.25 },
-
-    // New Icons for Density
-    { icon: "twitter", color: "#1DA1F2", size: 50, x: 50, y: -340, depth: 0.08 },
-    { icon: "music-note", color: "#000000", size: 65, x: 300, y: -200, depth: 0.12 }, // TikTok-ish
-    { icon: "snapchat", color: "#FFFC00", size: 60, x: -380, y: -45, depth: 0.18 },
-    { icon: "pinterest", color: "#E60023", size: 45, x: 30, y: -140, depth: 0.05 },
-    { icon: "whatsapp", color: "#25D366", size: 48, x: -300, y: -280, depth: 0.1 },
+    { icon: "youtube", color: ColorsStatic.toastError, size: 90, x: -280, y: -150, depth: 0.2 },
+    { icon: "instagram", color: ColorsStatic.gradientAccent2, size: 80, x: 250, y: -50, depth: 0.15 },
+    { icon: "linkedin", color: ColorsStatic.toastInfo, size: 70, x: -100, y: 180, depth: 0.1 },
+    { icon: "facebook", color: ColorsStatic.linkBlue, size: 60, x: 180, y: 120, depth: 0.25 },
+    { icon: "twitter", color: ColorsStatic.toastInfo, size: 50, x: 50, y: -340, depth: 0.08 },
+    { icon: "music-note", color: ColorsStatic.black, size: 65, x: 300, y: -200, depth: 0.12 },
+    { icon: "snapchat", color: ColorsStatic.yellow, size: 60, x: -380, y: -45, depth: 0.18 },
+    { icon: "pinterest", color: ColorsStatic.toastError, size: 45, x: 30, y: -140, depth: 0.05 },
+    { icon: "whatsapp", color: ColorsStatic.toastSuccess, size: 48, x: -300, y: -280, depth: 0.1 },
 ];
 
 const LetsStartWeb = () => {
