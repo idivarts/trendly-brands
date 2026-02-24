@@ -1,13 +1,26 @@
 import { Text, View } from "@/components/theme/Themed";
-import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
+import { useNiche } from "@/contexts";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
-import { POPULAR_CITIES } from "@/shared-constants/preferences/locations";
+import {
+    CITIES,
+    POPULAR_CITIES,
+} from "@/shared-constants/preferences/locations";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import BottomSheetContainer from "@/shared-uis/components/bottom-sheet";
 import Colors from "@/shared-uis/constants/Colors";
+import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useTheme } from "@react-navigation/native";
-import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Chip, ProgressBar } from "react-native-paper";
 
 interface DiscoverSurveyProps {
@@ -18,10 +31,11 @@ interface SurveyQuestion {
     id: string;
     question: string;
     subtitle?: string;
-    type: "multiselect" | "range" | "single-select" | "slider";
+    type: "multiselect" | "range" | "single-select" | "slider" | "star-rating";
     field: keyof IAdvanceFilters | "followerRange" | "budgetRange";
     options?: Array<{ label: string; value: any }>;
     rangeOptions?: { min: number; max: number; step: number; prefix?: string; suffix?: string };
+    starRatingOptions?: { min: number; max: number; step: number };
     skippable?: boolean;
 }
 
@@ -32,17 +46,14 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
         subtitle: "Select all categories that match your campaign",
         type: "multiselect",
         field: "selectedNiches",
-        options: INFLUENCER_CATEGORIES.map((cat) => ({
-            label: cat,
-            value: cat,
-        })),
+        options: undefined, // Loaded from niche context API + Others sheet
         skippable: true,
     },
     {
         id: "followers",
         question: "What's your ideal follower range?",
-        subtitle: "Target influencers with the right audience size",
-        type: "single-select",
+        subtitle: "Select all audience sizes that match your campaign",
+        type: "multiselect",
         field: "followerRange",
         options: [
             { label: "Nano (1K - 10K)", value: { min: 1000, max: 10000 } },
@@ -95,15 +106,10 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
     {
         id: "quality",
         question: "What content quality are you looking for?",
-        subtitle: "Filter by aesthetic and production quality",
-        type: "single-select",
+        subtitle: "Rate from 0 to 5 stars (tap half-star for 0.5)",
+        type: "star-rating",
         field: "qualityMin",
-        options: [
-            { label: "High Quality (80+)", value: 80 },
-            { label: "Good Quality (60+)", value: 60 },
-            { label: "Standard Quality (40+)", value: 40 },
-            { label: "Any Quality", value: undefined },
-        ],
+        starRatingOptions: { min: 0, max: 5, step: 0.5 },
         skippable: true,
     },
 ];
@@ -111,7 +117,15 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
 const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [answers, setAnswers] = useState<Record<string, any>>({});
+    const [locationOthersSheetVisible, setLocationOthersSheetVisible] = useState(false);
+    const [locationSearchText, setLocationSearchText] = useState("");
+    const [nicheOthersSheetVisible, setNicheOthersSheetVisible] = useState(false);
+    const [nicheSearchText, setNicheSearchText] = useState("");
+    const [nicheSearchResults, setNicheSearchResults] = useState<string[]>([]);
+    const [nicheSearchLoading, setNicheSearchLoading] = useState(false);
     const theme = useTheme();
+    const { niches: topNiches, searchNiches } = useNiche();
+    const insets = useSafeAreaInsets();
     const primaryColor = Colors(theme).primary;
     const textColor = Colors(theme).text;
 
@@ -132,10 +146,14 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
             // Survey complete, convert answers to IAdvanceFilters
             const filters: IAdvanceFilters = {};
 
-            // Handle follower range
-            if (answers.followerRange) {
-                filters.followerMin = answers.followerRange.min;
-                filters.followerMax = answers.followerRange.max;
+            // Handle follower range (multiselect: combine selected ranges into min/max)
+            const followerRanges = answers.followerRange as Array<{ min?: number; max?: number }> | undefined;
+            if (followerRanges && followerRanges.length > 0) {
+                const mins = followerRanges.map((r) => r.min).filter((m): m is number => m != null);
+                const maxes = followerRanges.map((r) => r.max).filter((m): m is number => m != null);
+                const hasUnboundedMax = followerRanges.some((r) => r.max == null);
+                filters.followerMin = mins.length > 0 ? Math.min(...mins) : undefined;
+                filters.followerMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
             }
 
             // Handle engagement rate (budgetRange field temporarily)
@@ -184,19 +202,374 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
         handleAnswer(newValues);
     };
 
+    const selectedNiches = (answers.selectedNiches || []) as string[];
+    const nicheOtherSelections = selectedNiches.filter((n) => !topNiches.includes(n));
+
+    const selectedLocations = (answers.selectedLocations || []) as string[];
+    const locationOtherCities = selectedLocations.filter((c) => !POPULAR_CITIES.includes(c));
+    const locationSheetCities = useMemo(
+        () => includeSelectedItems(CITIES, selectedLocations),
+        [selectedLocations]
+    );
+    const filteredLocationSheetCities = useMemo(() => {
+        if (!locationSearchText.trim()) return locationSheetCities;
+        const q = locationSearchText.toLowerCase();
+        return locationSheetCities.filter((c) => c.toLowerCase().includes(q));
+    }, [locationSheetCities, locationSearchText]);
+
+    const handleLocationOtherSelect = (city: string) => {
+        const next = selectedLocations.includes(city)
+            ? selectedLocations.filter((c) => c !== city)
+            : [...selectedLocations, city];
+        handleAnswer(next);
+        setLocationOthersSheetVisible(false);
+    };
+
+    const handleNicheOtherSelect = (niche: string) => {
+        const next = selectedNiches.includes(niche)
+            ? selectedNiches.filter((n) => n !== niche)
+            : [...selectedNiches, niche];
+        handleAnswer(next);
+        setNicheOthersSheetVisible(false);
+    };
+
+    // Debounced search for niche Others sheet
+    useEffect(() => {
+        if (!nicheOthersSheetVisible) return;
+        if (!nicheSearchText.trim()) {
+            setNicheSearchResults([]);
+            return;
+        }
+        const t = setTimeout(async () => {
+            setNicheSearchLoading(true);
+            try {
+                const results = await searchNiches(nicheSearchText.trim());
+                setNicheSearchResults(results.map((item) => item.niche));
+            } catch {
+                setNicheSearchResults([]);
+            } finally {
+                setNicheSearchLoading(false);
+            }
+        }, 300);
+        return () => clearTimeout(t);
+    }, [nicheOthersSheetVisible, nicheSearchText, searchNiches]);
+
     const renderQuestion = () => {
         switch (currentQuestion.type) {
             case "multiselect":
+                if (currentQuestion.field === "selectedNiches") {
+                    return (
+                        <>
+                            <ScrollView style={styles.optionsContainer}>
+                                <View style={styles.chipsContainer}>
+                                    {topNiches.map((niche) => {
+                                        const isSelected = selectedNiches.includes(niche);
+                                        return (
+                                            <Chip
+                                                key={niche}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(niche)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {niche}
+                                            </Chip>
+                                        );
+                                    })}
+                                    {nicheOtherSelections.map((niche) => {
+                                        const isSelected = selectedNiches.includes(niche);
+                                        return (
+                                            <Chip
+                                                key={niche}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(niche)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {niche}
+                                            </Chip>
+                                        );
+                                    })}
+                                    <Chip
+                                        selected={false}
+                                        onPress={() => setNicheOthersSheetVisible(true)}
+                                        style={[styles.chip, styles.othersChip]}
+                                        textStyle={[styles.chipText, { color: primaryColor }]}
+                                        icon={() => (
+                                            <Ionicons
+                                                name="chevron-forward"
+                                                size={16}
+                                                color={primaryColor}
+                                            />
+                                        )}
+                                    >
+                                        Others
+                                    </Chip>
+                                </View>
+                            </ScrollView>
+                            {nicheOthersSheetVisible && (
+                                <BottomSheetContainer
+                                    isVisible={nicheOthersSheetVisible}
+                                    onClose={() => {
+                                        setNicheOthersSheetVisible(false);
+                                        setNicheSearchText("");
+                                        setNicheSearchResults([]);
+                                    }}
+                                    useBottomSheetView={false}
+                                    enablePanDownToClose
+                                    index={2}
+                                    snapPoints={["50%", "75%", "100%"]}
+                                    topInset={insets.top}
+                                    backgroundStyle={{
+                                        backgroundColor: Colors(theme).background,
+                                    }}
+                                    handleIndicatorStyle={{
+                                        backgroundColor: primaryColor,
+                                    }}
+                                >
+                                    <View style={styles.locationSheetContent}>
+                                        <TextInput
+                                            style={[
+                                                styles.locationSearchInput,
+                                                {
+                                                    borderColor: primaryColor,
+                                                    color: Colors(theme).text,
+                                                },
+                                            ]}
+                                            value={nicheSearchText}
+                                            onChangeText={setNicheSearchText}
+                                            placeholder="Search niches"
+                                            placeholderTextColor={Colors(theme).gray300}
+                                            autoCapitalize="none"
+                                        />
+                                        {nicheSearchLoading ? (
+                                            <View style={{ padding: 24, alignItems: "center" }}>
+                                                <Text style={{ color: Colors(theme).text }}>Searching...</Text>
+                                            </View>
+                                        ) : (
+                                            <BottomSheetScrollView
+                                                style={styles.locationSheetList}
+                                                keyboardShouldPersistTaps="handled"
+                                            >
+                                                {nicheSearchResults.map((niche) => {
+                                                    const isSelected = selectedNiches.includes(niche);
+                                                    return (
+                                                        <Pressable
+                                                            key={niche}
+                                                            style={[
+                                                                styles.locationSheetItem,
+                                                                isSelected && {
+                                                                    backgroundColor: primaryColor,
+                                                                },
+                                                            ]}
+                                                            onPress={() => handleNicheOtherSelect(niche)}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.locationSheetItemText,
+                                                                    {
+                                                                        color: isSelected
+                                                                            ? "#fff"
+                                                                            : Colors(theme).text,
+                                                                    },
+                                                                ]}
+                                                            >
+                                                                {niche}
+                                                            </Text>
+                                                            {isSelected && (
+                                                                <Ionicons
+                                                                    name="checkmark"
+                                                                    size={20}
+                                                                    color="#fff"
+                                                                />
+                                                            )}
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </BottomSheetScrollView>
+                                        )}
+                                    </View>
+                                </BottomSheetContainer>
+                            )}
+                        </>
+                    );
+                }
+                if (currentQuestion.field === "selectedLocations") {
+                    return (
+                        <>
+                            <ScrollView style={styles.optionsContainer}>
+                                <View style={styles.chipsContainer}>
+                                    {POPULAR_CITIES.map((city) => {
+                                        const isSelected = selectedLocations.includes(city);
+                                        return (
+                                            <Chip
+                                                key={city}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(city)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {city}
+                                            </Chip>
+                                        );
+                                    })}
+                                    {locationOtherCities.map((city) => {
+                                        const isSelected = selectedLocations.includes(city);
+                                        return (
+                                            <Chip
+                                                key={city}
+                                                selected={isSelected}
+                                                onPress={() => toggleMultiSelect(city)}
+                                                style={[
+                                                    styles.chip,
+                                                    isSelected && {
+                                                        backgroundColor: primaryColor,
+                                                    },
+                                                ]}
+                                                textStyle={[
+                                                    styles.chipText,
+                                                    isSelected && { color: "#fff" },
+                                                ]}
+                                            >
+                                                {city}
+                                            </Chip>
+                                        );
+                                    })}
+                                    <Chip
+                                        selected={false}
+                                        onPress={() => setLocationOthersSheetVisible(true)}
+                                        style={[styles.chip, styles.othersChip]}
+                                        textStyle={[styles.chipText, { color: primaryColor }]}
+                                        icon={() => (
+                                            <Ionicons
+                                                name="chevron-forward"
+                                                size={16}
+                                                color={primaryColor}
+                                            />
+                                        )}
+                                    >
+                                        Others
+                                    </Chip>
+                                </View>
+                            </ScrollView>
+                            {locationOthersSheetVisible && (
+                                <BottomSheetContainer
+                                    isVisible={locationOthersSheetVisible}
+                                    onClose={() => {
+                                        setLocationOthersSheetVisible(false);
+                                        setLocationSearchText("");
+                                    }}
+                                    useBottomSheetView={false}
+                                    enablePanDownToClose
+                                    snapPoints={["50%", "75%", "100%"]}
+                                    topInset={insets.top}
+                                    backgroundStyle={{
+                                        backgroundColor: Colors(theme).background,
+                                    }}
+                                    handleIndicatorStyle={{
+                                        backgroundColor: primaryColor,
+                                    }}
+                                >
+                                    <View style={styles.locationSheetContent}>
+                                        <TextInput
+                                            style={[
+                                                styles.locationSearchInput,
+                                                {
+                                                    borderColor: primaryColor,
+                                                    color: Colors(theme).text,
+                                                },
+                                            ]}
+                                            value={locationSearchText}
+                                            onChangeText={setLocationSearchText}
+                                            placeholder="Search cities"
+                                            placeholderTextColor={Colors(theme).gray300}
+                                            autoCapitalize="none"
+                                        />
+                                        <BottomSheetScrollView
+                                            style={styles.locationSheetList}
+                                            keyboardShouldPersistTaps="handled"
+                                        >
+                                            {filteredLocationSheetCities.map((city) => {
+                                                const isSelected = selectedLocations.includes(city);
+                                                return (
+                                                    <Pressable
+                                                        key={city}
+                                                        style={[
+                                                            styles.locationSheetItem,
+                                                            isSelected && {
+                                                                backgroundColor: primaryColor,
+                                                            },
+                                                        ]}
+                                                        onPress={() => handleLocationOtherSelect(city)}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.locationSheetItemText,
+                                                                {
+                                                                    color: isSelected
+                                                                        ? "#fff"
+                                                                        : Colors(theme).text,
+                                                                },
+                                                            ]}
+                                                        >
+                                                            {city}
+                                                        </Text>
+                                                        {isSelected && (
+                                                            <Ionicons
+                                                                name="checkmark"
+                                                                size={20}
+                                                                color="#fff"
+                                                            />
+                                                        )}
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </BottomSheetScrollView>
+                                    </View>
+                                </BottomSheetContainer>
+                            )}
+                        </>
+                    );
+                }
                 return (
                     <ScrollView style={styles.optionsContainer}>
                         <View style={styles.chipsContainer}>
                             {currentQuestion.options?.map((option) => {
                                 const isSelected = (
                                     answers[currentQuestion.field] || []
-                                ).includes(option.value);
+                                ).some(
+                                    (v: any) =>
+                                        typeof v === "object" && v !== null && typeof option.value === "object" && option.value !== null
+                                            ? v.min === option.value.min && v.max === option.value.max
+                                            : v === option.value
+                                );
                                 return (
                                     <Chip
-                                        key={option.value}
+                                        key={option.label}
                                         selected={isSelected}
                                         onPress={() => toggleMultiSelect(option.value)}
                                         style={[
@@ -269,6 +642,61 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                         </View>
                     </ScrollView>
                 );
+
+            case "star-rating": {
+                const allowedValues = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] as const;
+                const value = answers[currentQuestion.field] as number | undefined;
+                const starCount = 5;
+                return (
+                    <View style={styles.optionsContainer}>
+                        <View style={styles.starRatingRow}>
+                            {Array.from({ length: starCount }, (_, i) => {
+                                const halfValue = allowedValues[i * 2]; // 0.5, 1.5, 2.5, 3.5, 4.5
+                                const fullValue = allowedValues[i * 2 + 1]; // 1, 2, 3, 4, 5
+                                const isHalfFilled = value !== undefined && value >= halfValue && value < fullValue;
+                                const isFullFilled = value !== undefined && value >= fullValue;
+                                return (
+                                    <View key={i} style={styles.starCell}>
+                                        <View style={styles.starIconWrap} pointerEvents="none">
+                                            {isFullFilled ? (
+                                                <Ionicons name="star" size={40} color={primaryColor} />
+                                            ) : isHalfFilled ? (
+                                                <Ionicons name="star-half" size={40} color={primaryColor} />
+                                            ) : (
+                                                <Ionicons name="star-outline" size={40} color={primaryColor} />
+                                            )}
+                                        </View>
+                                        <Pressable
+                                            style={styles.starHalfTouchRight}
+                                            onPress={() => handleAnswer(fullValue)}
+                                        />
+                                        <Pressable
+                                            style={styles.starHalfTouchLeft}
+                                            onPress={() => handleAnswer(halfValue)}
+                                        />
+                                    </View>
+                                );
+                            })}
+                        </View>
+                        <Pressable
+                            onPress={() => handleAnswer(undefined)}
+                            style={[
+                                styles.anyQualityChip,
+                                value === undefined && { backgroundColor: primaryColor },
+                            ]}
+                        >
+                            <Text style={[styles.anyQualityText, value === undefined && { color: "#fff" }]}>
+                                Any quality
+                            </Text>
+                        </Pressable>
+                        {value !== undefined && (
+                            <Text style={styles.starValueLabel}>
+                                {Number(value) === 1 ? "1 star" : `${Number(value)} stars`}
+                            </Text>
+                        )}
+                    </View>
+                );
+            }
 
             default:
                 return null;
@@ -410,6 +838,38 @@ const styles = StyleSheet.create({
     chipText: {
         fontSize: 14,
     },
+    othersChip: {
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.2)",
+    },
+    locationSheetContent: {
+        padding: 16,
+        paddingTop: Platform.OS === "web" ? 30 : 16,
+        paddingBottom: 20,
+    },
+    locationSearchInput: {
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginBottom: 16,
+        fontSize: 16,
+    },
+    locationSheetList: {
+        maxHeight: 400,
+    },
+    locationSheetItem: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(0, 0, 0, 0.08)",
+    },
+    locationSheetItemText: {
+        fontSize: 16,
+        fontWeight: "500",
+    },
     singleSelectContainer: {
         gap: 12,
 
@@ -445,6 +905,54 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 16,
         fontWeight: "500",
+    },
+    starRatingRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 16,
+    },
+    starCell: {
+        width: 44,
+        height: 44,
+        position: "relative",
+    },
+    starHalfTouchLeft: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: "50%",
+    },
+    starHalfTouchRight: {
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: "50%",
+    },
+    starIconWrap: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    anyQualityChip: {
+        alignSelf: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: "rgba(0, 0, 0, 0.15)",
+    },
+    anyQualityText: {
+        fontSize: 15,
+        fontWeight: "600",
+    },
+    starValueLabel: {
+        fontSize: 14,
+        opacity: 0.8,
+        textAlign: "center",
+        marginTop: 8,
     },
     footer: {
         paddingTop: 20,

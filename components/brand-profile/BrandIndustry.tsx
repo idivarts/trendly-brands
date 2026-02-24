@@ -17,14 +17,19 @@ interface BrandIndustryProps {
     brandData: Partial<Brand>;
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
     onBack?: () => void;
+    plainSection?: boolean;
 }
 
-const BrandIndustry: React.FC<BrandIndustryProps> = ({ brandData, setBrandData, onBack }) => {
+const BrandIndustry: React.FC<BrandIndustryProps> = ({ brandData, setBrandData, onBack, plainSection = false }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const Wrapper = plainSection ? View : Surface;
+    const wrapperProps = plainSection
+        ? { style: { paddingVertical: 8 } }
+        : { style: { borderRadius: 16, padding: 16, backgroundColor: colors.card }, elevation: 1 };
 
     return (
-        <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
+        <Wrapper {...wrapperProps}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 {onBack && (
                     <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
@@ -64,7 +69,7 @@ const BrandIndustry: React.FC<BrandIndustryProps> = ({ brandData, setBrandData, 
                 theme={theme}
                 closeOnSelect
             />
-        </Surface>
+        </Wrapper>
     );
 };
 

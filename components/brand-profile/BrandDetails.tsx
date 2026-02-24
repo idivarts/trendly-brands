@@ -13,6 +13,8 @@ interface BrandDetailsProps {
     setBrandWebImage: React.Dispatch<React.SetStateAction<File | null>>;
     onNext?: () => void;
     onBack?: () => void;
+    /** Web onboarding: no Surface card wrapper */
+    plainSection?: boolean;
 }
 
 const BrandDetails: React.FC<BrandDetailsProps> = ({
@@ -21,6 +23,7 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
     setBrandWebImage,
     onNext,
     onBack,
+    plainSection = false,
 }) => {
     const theme = useTheme();
     const { xl } = useBreakpoints();
@@ -37,8 +40,13 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
         }
     };
 
+    const Wrapper = plainSection ? View : Surface;
+    const wrapperProps = plainSection
+        ? { style: { paddingVertical: 8 } }
+        : { style: { borderRadius: 16, padding: 16, backgroundColor: colors.card } as any, elevation: 1 };
+
     return (
-        <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
+        <Wrapper {...wrapperProps}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 {onBack && (
                     <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
@@ -160,7 +168,7 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                     </Button>
                 </View>
             )}
-        </Surface>
+        </Wrapper>
     );
 };
 
