@@ -1,0 +1,40 @@
+---
+description: Enforce theme-safe colors, responsive layout utilities, and in-file stylesheet structure for UI work.
+alwaysApply: true
+---
+
+# UI Styling Theme + Responsiveness
+
+## Color and Theme Rules
+- Never use hardcoded colors (`#hex`, `rgb()`, named colors) in UI components.
+- Always derive palette from `const theme = useTheme(); const colors = Colors(theme);`.
+- Reuse existing keys in `shared-uis/constants/Colors.ts` before adding any new key.
+- Add new color keys only when truly required and keep them aligned with the platform's professional visual tone.
+- Every new or updated UI must look correct in both light and dark themes.
+
+## Responsive Layout Rules
+- Use `useBreakpoints()` for `xl` and `!xl` decisions.
+- Use `useBreakpoints().width` for constrained responsive width values.
+- Do not use `Dimensions.get("window")` directly inside components for responsive layout.
+- If hooks cannot be used (module-level utility code), use `getConstrainedWidth()` / `getConstrainedHeight()` from `shared-libs/contexts/mobile-layout-context.provider.tsx`.
+
+## Styling Structure Rules
+- Keep styles in the same file as the component.
+- Keep `StyleSheet.create(...)` definitions at the bottom of the file.
+- Do not use external stylesheets.
+- Do not add inline style objects in JSX.
+
+## Quick Pattern
+```tsx
+const theme = useTheme();
+const colors = Colors(theme);
+const { xl, width } = useBreakpoints();
+const styles = useMemo(() => useStyles(colors, xl, width), [colors, xl, width]);
+```
+
+## Self-Check Before Finishing
+- Colors come from `Colors(theme)` tokens.
+- Existing tokens were preferred over new token additions.
+- UI remains professional and brand-consistent in both themes.
+- Responsive behavior is correct for desktop (`xl`) and mobile (`!xl`).
+- Styles are colocated, bottom `StyleSheet`, and no inline/external styling.
