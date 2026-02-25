@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 
 const useStreamThemeWeb = (
     theme: any,

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { DeepPartial, defaultTheme, Theme as StreamTheme } from "stream-chat-expo";
 

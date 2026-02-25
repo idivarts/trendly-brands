@@ -2,7 +2,7 @@ import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
 
 import { View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 
 const Index = () => {
     const theme = useTheme();

@@ -10,7 +10,7 @@ import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";

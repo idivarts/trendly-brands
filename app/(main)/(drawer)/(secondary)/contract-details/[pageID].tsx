@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";

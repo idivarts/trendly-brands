@@ -1,7 +1,7 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";

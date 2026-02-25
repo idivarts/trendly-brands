@@ -18,7 +18,7 @@ import { Text } from "react-native-paper";
 import BrandProfile from "@/components/brand-profile";
 import Button from "@/components/ui/button";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";

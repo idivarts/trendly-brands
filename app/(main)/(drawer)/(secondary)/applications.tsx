@@ -1,7 +1,7 @@
 import ApplicationsTabContent from "@/components/collaboration/collaboration-details/ApplicationsTabContent";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
