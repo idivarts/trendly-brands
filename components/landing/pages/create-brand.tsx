@@ -10,6 +10,7 @@ import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import React, { useEffect, useState } from "react";
 import {
@@ -19,7 +20,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    useWindowDimensions,
     View
 } from "react-native";
 import { ExplainerDynamic } from "../ExplainerDynamic";
@@ -42,8 +42,8 @@ export default function CreateBrandPage() {
     const { manager, session } = useAuthContext()
     const { createBrand, setSelectedBrand } = useBrandContext()
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
     const showDetails = isWide || showDetailsOnMobile;
 

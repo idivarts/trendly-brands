@@ -106,7 +106,7 @@ export default function BrandDetailsBottomSheet({
                                                 onPress={() => Linking.openURL(`tel:${brand.profile!.phone}`)}
                                                 style={styles.iconButton}
                                             >
-                                                <Icon name="phone-outline" size={22} color="#4B5563" />
+                                                <Icon name="phone-outline" size={22} color={colors.textSecondary} />
                                             </TouchableOpacity>
                                         )}
                                         {brand.profile?.website && (
@@ -118,7 +118,7 @@ export default function BrandDetailsBottomSheet({
                                                 }}
                                                 style={styles.iconButton}
                                             >
-                                                <Icon name="globe-model" size={22} color="#4B5563" />
+                                                <Icon name="globe-model" size={22} color={colors.textSecondary} />
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -141,7 +141,7 @@ export default function BrandDetailsBottomSheet({
                                                     Alert.alert('Copied', 'Phone number copied to clipboard');
                                                 }}
                                             >
-                                                <Icon name="phone-outline" size={18} color="#4B5563" />
+                                                <Icon name="phone-outline" size={18} color={colors.textSecondary} />
                                                 <Text style={styles.contactDetailText}>{brand.profile.phone}</Text>
                                             </TouchableOpacity>
                                         )}
@@ -153,7 +153,7 @@ export default function BrandDetailsBottomSheet({
                                                     Alert.alert('Copied', 'Website copied to clipboard');
                                                 }}
                                             >
-                                                <Icon name="globe-model" size={18} color="#4B5563" />
+                                                <Icon name="globe-model" size={18} color={colors.textSecondary} />
                                                 <Text style={styles.contactDetailText}>{brand.profile.website}</Text>
                                             </TouchableOpacity>
                                         )}
@@ -176,7 +176,7 @@ export default function BrandDetailsBottomSheet({
                                         {discoveredInfluencers.map((inf) => (
                                             <Pressable
                                                 key={inf.id}
-                                                style={{ width: 280, marginRight: 12 }}
+                                                style={styles.influencerCardWrap}
                                                 onPress={() => {
                                                     console.log("[BrandDetailsBottomSheet] Opening influencer:", inf.id);
                                                     router.push({
@@ -219,7 +219,7 @@ export default function BrandDetailsBottomSheet({
                                                         {campaign.name}
                                                     </Text>
                                                     <TouchableOpacity>
-                                                        <Icon name="dots-vertical" size={24} color="#4B5563" />
+                                                        <Icon name="dots-vertical" size={24} color={colors.textSecondary} />
                                                     </TouchableOpacity>
                                                 </View>
 
@@ -233,13 +233,13 @@ export default function BrandDetailsBottomSheet({
                                                 <View style={styles.badgesContainer}>
                                                     {campaign.promotionType && (
                                                         <View style={styles.badge}>
-                                                            <Icon name="cash" size={14} color="white" />
+                                                            <Icon name="cash" size={14} color={colors.onPrimary} />
                                                             <Text style={styles.badgeText}>Paid</Text>
                                                         </View>
                                                     )}
                                                     {campaign.location && (
                                                         <View style={styles.badge}>
-                                                            <Icon name="home" size={14} color="white" />
+                                                            <Icon name="home" size={14} color={colors.onPrimary} />
                                                             <Text style={styles.badgeText}>
                                                                 {typeof campaign.location === "string"
                                                                     ? campaign.location
@@ -251,7 +251,7 @@ export default function BrandDetailsBottomSheet({
                                                         const iconName = p.toLowerCase() === "instagram" ? "instagram" : p.toLowerCase() === "youtube" ? "youtube" : p.toLowerCase() === "tiktok" ? "tiktok" : "link";
                                                         return (
                                                             <View key={idx} style={styles.badge}>
-                                                                <Icon name={iconName as any} size={14} color="white" />
+                                                                <Icon name={iconName as any} size={14} color={colors.onPrimary} />
                                                                 <Text style={styles.badgeText}>{p}</Text>
                                                             </View>
                                                         );
@@ -368,11 +368,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         modalOverlay: {
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: colors.backdrop,
             justifyContent: "flex-end",
         },
         modalContent: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             maxHeight: "90%",
@@ -387,11 +387,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             flexDirection: "row",
             justifyContent: "space-between",
             borderBottomWidth: 1,
-            borderColor: "#E5E7EB",
+            borderColor: colors.border,
             alignItems: "center",
         },
         modalTitle: { fontSize: 20, fontWeight: "700" },
-        joinedDate: { fontSize: 12, color: "#9CA3AF", fontWeight: "500" },
+        joinedDate: { fontSize: 12, color: colors.textSecondary, fontWeight: "500" },
         closeButton: { fontSize: 22 },
         modalBody: { padding: 20 },
         brandHeaderSection: { flexDirection: "row", gap: 16 },
@@ -401,7 +401,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             borderRadius: 12,
             justifyContent: "center",
             alignItems: "center",
-            backgroundColor: "#F3F4F6",
+            backgroundColor: colors.tag,
         },
         brandInitial: { fontSize: 42, fontWeight: "700" },
         brandInfoContainer: { flex: 1 },
@@ -409,7 +409,8 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         brandNameLarge: { fontSize: 22, fontWeight: "700" },
         brandIconsRow: { flexDirection: "row", gap: 6 },
         iconButton: { padding: 6 },
-        brandDescription: { marginTop: 8, color: "#6B7280" },
+        influencerCardWrap: { width: 280, marginRight: 12 },
+        brandDescription: { marginTop: 8, color: colors.textSecondary },
         contactDetailsContainer: {
             marginTop: 12,
             gap: 8,
@@ -420,14 +421,14 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             gap: 8,
             paddingVertical: 6,
             paddingHorizontal: 10,
-            backgroundColor: "#F9FAFB",
+            backgroundColor: colors.tag,
             borderRadius: 8,
             borderWidth: 1,
-            borderColor: "#E5E7EB",
+            borderColor: colors.border,
         },
         contactDetailText: {
             fontSize: 14,
-            color: "#374151",
+            color: colors.text,
             flex: 1,
         },
         section: { marginTop: 24 },
@@ -437,9 +438,9 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         campaignCard: {
             width: 340,
             padding: 16,
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderWidth: 1,
-            borderColor: "#E5E7EB",
+            borderColor: colors.border,
             borderRadius: 8,
             marginRight: 12,
         },
@@ -457,7 +458,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         campaignDescription: {
             fontSize: 13,
-            color: "#6B7280",
+            color: colors.textSecondary,
             marginBottom: 12,
             lineHeight: 18,
         },
@@ -471,7 +472,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
-            backgroundColor: "#1D425D",
+            backgroundColor: colors.primary,
             paddingHorizontal: 8,
             paddingVertical: 4,
             borderRadius: 6,
@@ -479,14 +480,14 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         badgeText: {
             fontSize: 12,
             fontWeight: "500",
-            color: "white",
+            color: colors.onPrimary,
         },
         statsGrid: {
             flexDirection: "row",
             gap: 12,
             paddingTop: 12,
             borderTopWidth: 1,
-            borderColor: "#E5E7EB",
+            borderColor: colors.border,
         },
         statsColumn: {
             flex: 1,
@@ -497,7 +498,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         statLabel: {
             fontSize: 11,
-            color: "#9CA3AF",
+            color: colors.textSecondary,
             marginBottom: 2,
         },
         statValue: {
@@ -505,7 +506,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             fontWeight: "700",
             color: colors.text,
         },
-        campaignBudget: { marginTop: 4, color: "#6B7280" },
+        campaignBudget: { marginTop: 4, color: colors.textSecondary },
         memberRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
         memberImage: { width: 44, height: 44, borderRadius: 22 },
         memberImagePlaceholder: {
@@ -516,10 +517,10 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         memberInitial: {
             fontSize: 18,
             fontWeight: "700",
-            color: "#FFFFFF",
+            color: colors.onPrimary,
         },
         memberName: { fontWeight: "600" },
-        memberEmail: { color: "#6B7280" },
+        memberEmail: { color: colors.textSecondary },
         subscriptionContainer: {
             gap: 12,
         },
@@ -536,6 +537,6 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         subscriptionValue: {
             fontSize: 14,
             fontWeight: "400",
-            color: "#6B7280",
+            color: colors.textSecondary,
         },
     });

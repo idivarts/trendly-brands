@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -50,6 +50,15 @@ const fnStyles = (theme: Theme) =>
             padding: 10,
             marginBottom: 20,
             justifyContent: "center",
+        },
+        dropdownText: {
+            color: Colors(theme).text,
+        },
+        menuContent: {
+            backgroundColor: Colors(theme).background,
+        },
+        fullWidth: {
+            width: "100%",
         },
         footer: {
             flexDirection: "row",

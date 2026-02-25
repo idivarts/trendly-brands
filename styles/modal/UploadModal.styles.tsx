@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -54,7 +54,7 @@ const stylesFn = (theme: Theme) =>
             flex: 1,
             justifyContent: "center",
             alignItems: "center",
-            backgroundColor: "#fff",
+            backgroundColor: Colors(theme).background,
             paddingHorizontal: 24,
         },
         iconButton: {
@@ -105,7 +105,7 @@ const stylesFn = (theme: Theme) =>
         },
         description: {
             fontSize: 16,
-            color: "#555",
+            color: Colors(theme).textSecondary,
             marginBottom: 24,
             textAlign: "center",
         },

@@ -2,8 +2,11 @@ import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
+import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 import { UserCredential } from "firebase/auth";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
     Animated,
@@ -13,7 +16,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View
 } from "react-native";
 
@@ -21,10 +23,8 @@ import { ExplainerConfig } from "@/contexts/growthbook-context-provider";
 import { ExplainerDynamic } from "./landing/ExplainerDynamic";
 import VideoPlayer from "./landing/VideoPlayer";
 
-
 const VIDEO_THUMB =
     "https://www.trendly.now/wp-content/uploads/2025/05/thumbnail-youtube-and-web-for-video.avif";
-
 
 interface IIllustration {
     config: ExplainerConfig
@@ -34,9 +34,11 @@ interface IIllustration {
 export default function FullInformationalIllustration(props: IIllustration) {
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
-
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
+    const styles = useMemo(() => makeStyles(colors), [colors]);
 
     // ---- Animations ----
     const leftFade = useRef(new Animated.Value(0)).current; // opacity for left column
@@ -99,16 +101,13 @@ export default function FullInformationalIllustration(props: IIllustration) {
     return (
         <AppLayout safeAreaEdges={["left", "right"]}>
             <ScrollView
-                contentContainerStyle={[styles.page, { flexGrow: 1 }]}
-                // bounces={false}
+                contentContainerStyle={[styles.page, styles.pageGrow]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Hero */}
-                <View style={[styles.hero, { alignSelf: "stretch" }, isWide ? styles.heroRow : styles.heroCol]}>
-                    {/* Left copy */}
+                <View style={[styles.hero, styles.heroStretch, isWide ? styles.heroRow : styles.heroCol]}>
                     <Animated.View style={[
                         isWide && styles.left,
-                        isWide ? { paddingRight: 90 } : {},
+                        isWide && styles.leftWidePadding,
                         { opacity: leftFade, transform: [{ translateY: leftTranslateY }] },
                     ]}
                     >
@@ -116,134 +115,94 @@ export default function FullInformationalIllustration(props: IIllustration) {
                             config={{ ...config, image: undefined }}
                             viewBelowItems={false}
                             viewAtBottom={<Pressable
-                                onPress={() => {
-                                    props.action()
-                                }}
+                                onPress={() => props.action()}
                                 onHoverIn={() => setCtaHovered(true)}
                                 onHoverOut={() => setCtaHovered(false)}
                                 style={({ pressed }) => [
                                     styles.cta,
-                                    (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
+                                    (pressed || ctaHovered) && styles.ctaPressed,
                                 ]}
                             >
                                 <Text style={styles.ctaText}>{config?.action || "Get Started"}</Text>
                                 <Text style={styles.ctaArrow}>›</Text>
                             </Pressable>}
                         />
-
                     </Animated.View>
 
-                    {/* Right video */}
                     <Animated.View style={[
                         styles.videoWrap,
-                        !isWide && { marginTop: 28 },
+                        !isWide && styles.videoWrapNarrow,
                         { opacity: videoOpacity, transform: [{ scale: videoScale }] },
                     ]}>
                         <VideoPlayer videoLink={props.videoUrl} thumbnail={config?.image || VIDEO_THUMB} />
                     </Animated.View>
-
                 </View>
             </ScrollView>
         </AppLayout>
     );
 }
 
-/* --------- Styles --------- */
-const BLUE = "#254F7A";
-const BLUE_DARK = "#1A3B5C";
-const BLUE_LIGHT = "#6C91BA";
-const TEXT = "#243A53";
-
-const styles = StyleSheet.create({
-    page: {
-        paddingHorizontal: 24,
-        paddingTop: Platform.select({ web: 36, default: 24 }),
-        paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
-        maxWidth: 1300,
-        alignSelf: "center",
-        width: "100%",
-    },
-
-
-    /* Hero layout */
-    hero: {
-        borderRadius: 24,
-        marginTop: 24,
-        // marginBottom: 55,
-    },
-    heroRow: {
-        backgroundColor: "#F8FBFF",
-        padding: 28,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    heroCol: {
-        flexDirection: "column",
-        gap: 42
-    },
-
-    /* Left */
-    left: {
-        flex: 1.3,
-    },
-    kicker: {
-        color: BLUE_LIGHT,
-        fontSize: 12,
-        letterSpacing: 1.4,
-        fontWeight: "700",
-        marginBottom: 12,
-    },
-    title: {
-        color: TEXT,
-        fontSize: 48,
-        lineHeight: 62,
-        fontWeight: "600",
-        marginTop: 24,
-    },
-    titleAccent: {
-        color: BLUE,
-        textDecorationLine: "underline",
-        textDecorationColor: "#CFE2F7",
-        textDecorationStyle: "solid",
-    },
-    subtitle: {
-        marginTop: 24,
-        marginBottom: 12,
-        color: "#53657A",
-        fontSize: 16,
-        lineHeight: 24,
-    },
-
-    cta: {
-        marginTop: 12,
-        alignSelf: "flex-start",
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 22,
-        height: 48,
-        borderRadius: 999,
-        backgroundColor: BLUE,
-        shadowColor: "#2B5C8F",
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 8 },
-        ...Platform.select({ android: { elevation: 6 } }),
-    },
-    ctaText: {
-        color: "#FFFFFF",
-        fontSize: 16,
-        fontWeight: "700",
-    },
-    ctaArrow: {
-        color: "#FFFFFF",
-        fontSize: 22,
-        marginLeft: 10,
-        marginTop: -2,
-    },
-
-    /* Right / Video */
-    videoWrap: {
-        flex: 1,
-    },
-});
+function makeStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
+        page: {
+            paddingHorizontal: 24,
+            paddingTop: Platform.select({ web: 36, default: 24 }),
+            paddingBottom: 48,
+            backgroundColor: colors.background,
+            maxWidth: 1300,
+            alignSelf: "center",
+            width: "100%",
+        },
+        pageGrow: { flexGrow: 1 },
+        hero: {
+            borderRadius: 24,
+            marginTop: 24,
+        },
+        heroStretch: { alignSelf: "stretch" },
+        heroRow: {
+            backgroundColor: colors.surface || colors.card,
+            padding: 28,
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        heroCol: {
+            flexDirection: "column",
+            gap: 42
+        },
+        left: {
+            flex: 1.3,
+        },
+        leftWidePadding: { paddingRight: 90 },
+        cta: {
+            marginTop: 12,
+            alignSelf: "flex-start",
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 22,
+            height: 48,
+            borderRadius: 999,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOpacity: 0.25,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 8 },
+            ...Platform.select({ android: { elevation: 6 } }),
+        },
+        ctaPressed: { transform: [{ scale: 0.98 }] },
+        ctaText: {
+            color: colors.onPrimary,
+            fontSize: 16,
+            fontWeight: "700",
+        },
+        ctaArrow: {
+            color: colors.onPrimary,
+            fontSize: 22,
+            marginLeft: 10,
+            marginTop: -2,
+        },
+        videoWrap: {
+            flex: 1,
+        },
+        videoWrapNarrow: { marginTop: 28 },
+    });
+}

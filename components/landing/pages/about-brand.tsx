@@ -8,6 +8,7 @@ import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import React, { useState } from "react";
 import {
     Platform,
@@ -16,7 +17,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    useWindowDimensions,
     View
 } from "react-native";
 import { ExplainerDynamic } from "../ExplainerDynamic";
@@ -32,8 +32,8 @@ export default function BrandDetailPage() {
     const { selectedBrand, updateBrand } = useBrandContext()
     const { features: { aboutBrand, showDetailsOnMobile } } = useMyGrowthBook()
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
     const showDetails = isWide || showDetailsOnMobile;
 

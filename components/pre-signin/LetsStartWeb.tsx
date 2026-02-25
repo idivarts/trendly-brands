@@ -5,11 +5,12 @@ import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import gsap from "gsap";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 // Expanded Social Universe
@@ -30,7 +31,7 @@ const SOCIAL_ORBS = [
 const LetsStartWeb = () => {
     const theme = useTheme();
     const brandColors = Colors(theme);
-    const { width } = useWindowDimensions();
+    const { width } = useBreakpoints();
     const isMobileWeb = width < 900;
 
     const [showSplash, setShowSplash] = useState(true);

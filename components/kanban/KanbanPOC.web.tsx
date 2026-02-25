@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/shared-uis/constants/Colors";
 import {
   DndContext,
   DragEndEvent,
@@ -132,6 +134,9 @@ const INITIAL_COLUMNS: Column[] = [
  */
 
 export default function KanbanPOC() {
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS);
   const [activeCard, setActiveCard] = useState<Card | null>(null);
 
@@ -205,23 +210,13 @@ export default function KanbanPOC() {
     >
       <DragOverlay>
         {activeCard ? (
-          <View
-            style={{
-              padding: 12,
-              borderWidth: 1,
-              borderRadius: 6,
-              backgroundColor: "#fff",
-              boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
-              width: 180,
-              opacity: 0.95,
-            }}
-          >
+          <View style={styles.dragOverlayCard}>
             <Text>{activeCard.title}</Text>
           </View>
         ) : null}
       </DragOverlay>
       <ScrollView horizontal>
-        <View style={{ flexDirection: "row", padding: 16 }}>
+        <View style={styles.scrollRow}>
           {columns.map((column) => (
             <POCColumn key={column.id} column={column} />
           ))}
@@ -238,6 +233,9 @@ export default function KanbanPOC() {
  */
 
 function POCColumn({ column }: { column: Column }) {
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { setNodeRef } = useDroppable({ id: column.id });
 
   const items = useMemo(
@@ -246,8 +244,8 @@ function POCColumn({ column }: { column: Column }) {
   );
 
   return (
-    <View ref={setNodeRef as any} style={{ width: 220, marginRight: 16 }}>
-      <Text style={{ fontWeight: "700", marginBottom: 8 }}>
+    <View ref={setNodeRef as any} style={styles.columnWrap}>
+      <Text style={styles.columnTitle}>
         {column.title}
       </Text>
 
@@ -262,7 +260,7 @@ function POCColumn({ column }: { column: Column }) {
       </SortableContext>
 
       {column.cards.length === 0 && (
-        <Text style={{ opacity: 0.5 }}>Drop here</Text>
+        <Text style={styles.dropHint}>Drop here</Text>
       )}
     </View>
   );
@@ -275,6 +273,9 @@ function POCColumn({ column }: { column: Column }) {
  */
 
 function POCCard({ id, title }: { id: string; title: string }) {
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const {
     setNodeRef,
     attributes,
@@ -287,13 +288,9 @@ function POCCard({ id, title }: { id: string; title: string }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    padding: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-    backgroundColor: "#fff",
+    ...StyleSheet.flatten(styles.cardBase),
   };
 
-  // remove web-only a11y props for RN
   const { role, tabIndex, ...rest } = attributes as any;
 
   return (
@@ -301,25 +298,51 @@ function POCCard({ id, title }: { id: string; title: string }) {
       ref={setNodeRef as any}
       {...rest}
       {...listeners}
-      style={[
-        style,
-        { touchAction: "none", position: "relative" },
-      ]}
+      style={[style, styles.cardTouch]}
     >
-      {isOver && (
-        <View
-          style={{
-            position: "absolute",
-            top: -4,
-            left: 0,
-            right: 0,
-            height: 3,
-            backgroundColor: "#2563EB",
-            borderRadius: 2,
-          }}
-        />
-      )}
+      {isOver && <View style={styles.cardOverLine} />}
       <Text>{title}</Text>
     </View>
   );
+}
+
+function makeStyles(colors: ReturnType<typeof Colors>) {
+  return StyleSheet.create({
+    dragOverlayCard: {
+      padding: 12,
+      borderWidth: 1,
+      borderRadius: 6,
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      width: 180,
+      opacity: 0.95,
+      shadowColor: colors.text,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+    scrollRow: { flexDirection: "row", padding: 16 },
+    columnWrap: { width: 220, marginRight: 16 },
+    columnTitle: { fontWeight: "700", marginBottom: 8, color: colors.text },
+    dropHint: { opacity: 0.5, color: colors.textSecondary },
+    cardBase: {
+      padding: 12,
+      borderWidth: 1,
+      marginBottom: 8,
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      borderRadius: 6,
+    },
+    cardTouch: { touchAction: "none" as const, position: "relative" as const },
+    cardOverLine: {
+      position: "absolute",
+      top: -4,
+      left: 0,
+      right: 0,
+      height: 3,
+      backgroundColor: colors.primary,
+      borderRadius: 2,
+    },
+  });
 }

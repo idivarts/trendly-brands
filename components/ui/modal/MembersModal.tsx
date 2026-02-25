@@ -1,5 +1,6 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
@@ -12,6 +13,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    StyleSheet,
 } from "react-native";
 import { Modal, Portal } from "react-native-paper";
 import Button from "../button";
@@ -31,6 +33,12 @@ const MembersModal: React.FC<MembersModalProps> = ({
     refresh,
 }) => {
     const styles = stylesFn(theme);
+    const colors = Colors(theme);
+    const layoutStyles = React.useMemo(() => StyleSheet.create({
+        modalRoot: { justifyContent: "center", alignItems: "center" },
+        scroll: { borderRadius: 10, backgroundColor: colors.background, gap: 12 },
+        scrollContent: { paddingBottom: 16 },
+    }), [colors]);
 
     const [email, setEmail] = React.useState("");
     const [name, setName] = React.useState("");
@@ -89,24 +97,15 @@ const MembersModal: React.FC<MembersModalProps> = ({
                     onDismiss={() => {
                         handleModalClose();
                     }}
-                    style={{
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
+                    style={layoutStyles.modalRoot}
                 >
                     <View style={styles.modalContent}>
                         <Text style={styles.title}>Add Member</Text>
                         <Text style={styles.subtitle}>You can add members from here</Text>
                         <View style={styles.modalInputContainer}>
                             <ScrollView
-                                style={{
-                                    borderRadius: 10,
-                                    backgroundColor: Colors(theme).background,
-                                    gap: 12,
-                                }}
-                                contentContainerStyle={{
-                                    paddingBottom: 16,
-                                }}
+                                style={layoutStyles.scroll}
+                                contentContainerStyle={layoutStyles.scrollContent}
                             >
                                 <TextInput
                                     label="Email"
@@ -130,7 +129,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                                     onPress={addMember}
                                     style={styles.addButton}
                                 >
-                                    {loading ? <ActivityIndicator color="#fff" /> : "Add Member"}
+                                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : "Add Member"}
                                 </Button>
                             </ScrollView>
                         </View>

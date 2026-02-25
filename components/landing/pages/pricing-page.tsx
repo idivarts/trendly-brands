@@ -13,6 +13,7 @@ import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
@@ -22,7 +23,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
@@ -39,8 +39,8 @@ export default function PricingPage() {
     const [link, setlink] = useState<number | undefined>(undefined)
     const [planLinks, setPlanLinks] = useState(["", ""])
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
     const [submitting, setSubmitting] = useState(false);
 

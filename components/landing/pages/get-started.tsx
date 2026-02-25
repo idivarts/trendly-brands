@@ -4,6 +4,7 @@ import { useAuthContext } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import { useGoogleLogin } from "@/utils/use-google-login";
 import { UserCredential } from "firebase/auth";
 import React, { useEffect, useRef, useState } from "react";
@@ -17,7 +18,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View
 } from "react-native";
 
@@ -42,8 +42,8 @@ export default function TrendlyHero() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
     // ---- Animations ----
     const leftFade = useRef(new Animated.Value(0)).current; // opacity for left column

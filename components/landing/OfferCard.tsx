@@ -6,11 +6,11 @@ import {
     Platform,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View
 } from "react-native";
 
 import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -41,8 +41,8 @@ const WaitToRender = () => {
     const timerPulse = useRef(new Animated.Value(1)).current;
     const offerScale = useRef(new Animated.Value(0.9)).current;
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
 
     // End time persists for the session; fallback to 72h from first render
