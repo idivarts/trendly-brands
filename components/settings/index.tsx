@@ -1,5 +1,5 @@
 import { useColorScheme } from "@/components/theme/useColorScheme";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useThemeOverride } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";

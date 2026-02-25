@@ -19,6 +19,11 @@ export const stylesFn = (theme: Theme) =>
             justifyContent: "space-between",
             alignItems: "center",
         },
+        headerActionsRow: {
+            flexDirection: "row",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+        },
         collabName: {
             fontSize: 18,
             fontWeight: "bold",

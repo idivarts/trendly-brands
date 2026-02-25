@@ -34,3 +34,10 @@ Rule: styles in the same file as the component; no external stylesheets. For eac
 ## Done when
 
 - Each consumer either has styles in the same file or the exception is documented and the style module uses only `Colors(theme)`.
+
+## Executed
+
+- **Moved into component file:** onboarding-your-brand (useBrandStyles), onboarding-get-started (useGetStartedStyles), notifications (useNotificationStyles), menu (useMenuItemStyles), CollaborationHeader (useCollaborationHeaderStyles), PreSigninMobile (usePreSigninStyles), MembersModal (useMembersStyles), SearchComponent (useSearchComponentStyles in file; Searchbar.styles remains external).
+- **Documented exception (shared module):** signup.styles (auth screens), UploadModal.styles (ViewCollaborationMap + other modals), CollaborationDetails.styles (InvitedMemberTabContent + InvitationsTabContent), Searchbar.styles (SearchComponent + channel-list).
+- **Colors only:** Replaced `inputBackground` with `background` in onboarding-your-brand; CollaborationDetails.styles uses `Colors(theme).backdrop` for messageModalContainer.
+- **Removed unused style files:** brand.styles.tsx, get-started.styles.tsx, NotificationCard.styles.tsx, MenuItem.styles.tsx, CollaborationHeader.styles.tsx, tab1.styles.tsx, Members.tsx, SearchComponent.styles.tsx.

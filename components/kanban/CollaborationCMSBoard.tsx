@@ -267,15 +267,15 @@ export default function CollaborationCMSBoard() {
                                 style={{
                                     padding: 12,
                                     borderRadius: 8,
-                                    backgroundColor: "#fff",
-                                    boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
+                                    backgroundColor: colors.card,
+                                    boxShadow: `0px 8px 24px ${colors.cardShadow}`,
                                     width: 260,
                                     borderWidth: 1,
                                     borderColor: colors.border,
                                 }}
                             >
                                 <Text style={{ fontWeight: "700" }}>{activeCard.message || "Unknown Campaign"}</Text>
-                                <Text style={{ fontSize: 12, color: "#666", marginTop: 4 }}>ID: {activeCard.id}</Text>
+                                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>ID: {activeCard.id}</Text>
                             </View>
                         ) : null}
                     </DragOverlay>
@@ -367,7 +367,9 @@ const SortableCollaborationCard = ({
         isOver,
     } = useSortable({ id });
     const router = useRouter();
-    
+    const theme = useTheme();
+    const colors = Colors(theme);
+
     // Filter out web-specific attributes
     const { tabIndex, role, ...restAttributes } = attributes as any;
     
@@ -388,7 +390,7 @@ const SortableCollaborationCard = ({
                 {
                     marginBottom: 8,
                     borderRadius: 8,
-                    backgroundColor: "transparent", // Wrapper is transparent, card handling bg
+                    backgroundColor: colors.transparent, // Wrapper is transparent, card handling bg
                     position: "relative",
                     opacity: isOver ? 0.5 : 1, // Simple visual feedback for source
                     // touchAction: "none" <-- OMITTED to enable scrolling
@@ -405,7 +407,7 @@ const SortableCollaborationCard = ({
                         left: 0,
                         right: 0,
                         height: 3,
-                        backgroundColor: "#2563EB",
+                        backgroundColor: colors.primary,
                         borderRadius: 2,
                         zIndex: 10,
                     }}

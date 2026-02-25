@@ -13,26 +13,26 @@ import React, { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 
-// Expanded Social Universe
-const SOCIAL_ORBS = [
-    { icon: "youtube", color: "#FF0000", size: 90, x: -280, y: -150, depth: 0.2 }, // Moved further left/up (was blocking text)
-    { icon: "instagram", color: "#C13584", size: 80, x: 250, y: -50, depth: 0.15 },
-    { icon: "linkedin", color: "#0077B5", size: 70, x: -100, y: 180, depth: 0.1 },
-    { icon: "facebook", color: "#1877F2", size: 60, x: 180, y: 120, depth: 0.25 },
-
-    // New Icons for Density
-    { icon: "twitter", color: "#1DA1F2", size: 50, x: 50, y: -340, depth: 0.08 },
-    { icon: "music-note", color: "#000000", size: 65, x: 300, y: -200, depth: 0.12 }, // TikTok-ish
-    { icon: "snapchat", color: "#FFFC00", size: 60, x: -380, y: -45, depth: 0.18 },
-    { icon: "pinterest", color: "#E60023", size: 45, x: 30, y: -140, depth: 0.05 },
-    { icon: "whatsapp", color: "#25D366", size: 48, x: -300, y: -280, depth: 0.1 },
-];
-
 const LetsStartWeb = () => {
     const theme = useTheme();
     const brandColors = Colors(theme);
     const { width } = useBreakpoints();
     const isMobileWeb = width < 900;
+
+    const SOCIAL_ORBS = React.useMemo(
+        () => [
+            { icon: "youtube", color: brandColors.socialYoutube, size: 90, x: -280, y: -150, depth: 0.2 },
+            { icon: "instagram", color: brandColors.socialInstagram, size: 80, x: 250, y: -50, depth: 0.15 },
+            { icon: "linkedin", color: brandColors.socialLinkedin, size: 70, x: -100, y: 180, depth: 0.1 },
+            { icon: "facebook", color: brandColors.socialFacebook, size: 60, x: 180, y: 120, depth: 0.25 },
+            { icon: "twitter", color: brandColors.socialTwitter, size: 50, x: 50, y: -340, depth: 0.08 },
+            { icon: "music-note", color: brandColors.socialTiktok, size: 65, x: 300, y: -200, depth: 0.12 },
+            { icon: "snapchat", color: brandColors.socialSnapchat, size: 60, x: -380, y: -45, depth: 0.18 },
+            { icon: "pinterest", color: brandColors.socialPinterest, size: 45, x: 30, y: -140, depth: 0.05 },
+            { icon: "whatsapp", color: brandColors.socialWhatsapp, size: 48, x: -300, y: -280, depth: 0.1 },
+        ],
+        [brandColors]
+    );
 
     const [showSplash, setShowSplash] = useState(true);
     const [showContent, setShowContent] = useState(false);
@@ -77,7 +77,7 @@ const LetsStartWeb = () => {
                 gsap.to(textRef.current, {
                     scale: 1.05,
                     textShadowRadius: 20,
-                    textShadowColor: 'rgba(0,0,0,0.2)',
+                    textShadowColor: brandColors.heroTextShadowLight,
                     duration: 3,
                     yoyo: true,
                     repeat: -1,
@@ -177,7 +177,7 @@ const LetsStartWeb = () => {
                                     {
                                         color: brandColors.primary,
                                         // @ts-ignore - textShadowColor is supported on web
-                                        textShadowColor: 'rgba(0, 0, 0, 0.3)', // Dark shadow for elevation
+                                        textShadowColor: brandColors.heroTextShadow,
                                         textShadowRadius: 25,
                                         textShadowOffset: { width: 0, height: 15 },
                                     },
@@ -201,7 +201,7 @@ const LetsStartWeb = () => {
                                 <ActionCard
                                     title="Join as Brand / Agency"
                                     description="Connect with creators. Amplify your reach."
-                                    colors={['#0F2027', '#203A43', '#2C5364']}
+                                    colors={[brandColors.actionCardBrand1, brandColors.actionCardBrand2, brandColors.actionCardBrand3]}
                                     onPress={() => router.push("/pre-signin")}
                                     onPressWithAnimation={(layout, colors) => {
                                         if (Platform.OS === 'web') {
@@ -223,7 +223,7 @@ const LetsStartWeb = () => {
                                 <ActionCard
                                     title="Join as Influencer"
                                     description="Monetize your content. Grow your community."
-                                    colors={['#FF512F', '#DD2476']}
+                                    colors={[brandColors.actionCardInfluencer1, brandColors.actionCardInfluencer2]}
                                     onPress={() => {
                                         if (Platform.OS === "web")
                                             window.open(CREATORS_FE_URL, "_blank");

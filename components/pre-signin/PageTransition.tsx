@@ -1,8 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import gsap from 'gsap';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
+
+import { getConstrainedHeight, getConstrainedWidth } from '@/shared-libs/contexts/mobile-layout-context.provider';
 
 export interface PageTransitionRef {
     triggerTransition: (
@@ -12,7 +14,8 @@ export interface PageTransitionRef {
     ) => void;
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SCREEN_WIDTH = getConstrainedWidth();
+const SCREEN_HEIGHT = getConstrainedHeight();
 
 const PageTransition = forwardRef<PageTransitionRef>((props, ref) => {
     const overlayRef = useRef<View>(null);

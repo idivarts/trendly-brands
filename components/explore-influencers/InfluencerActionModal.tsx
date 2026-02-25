@@ -4,14 +4,23 @@ import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
 import Toaster from '@/shared-uis/components/toaster/Toaster';
 import * as Clipboard from "expo-clipboard";
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { List } from 'react-native-paper';
 import BottomSheetContainer from "../ui/bottom-sheet/BottomSheet";
+
+const listStyles = StyleSheet.create({
+    section: { paddingBottom: 28 },
+});
 
 interface IProps {
     influencerId: string | undefined,
     isModalVisible: boolean, toggleModal: () => void, openProfile: Function,
     applicationCopy?: { collaborationId: string, applicationId: string }
 }
+
+const listSectionStyle = StyleSheet.create({
+    section: { paddingBottom: 28 },
+}).section;
 
 const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible, toggleModal, openProfile, applicationCopy }) => {
     const { manager, updateManager } = useAuthContext()
@@ -56,7 +65,7 @@ const InfluencerActionModal: React.FC<IProps> = ({ influencerId, isModalVisible,
                     snapPointsRange={applicationCopy ? ["45%", "50%"] : ["35%", "50%"]}
                     onClose={toggleModal}
                 >
-                    <List.Section style={{ paddingBottom: 28 }}>
+                    <List.Section style={listStyles.section}>
                         {applicationCopy && <List.Item title="Copy Application Link" onPress={async () => {
                             await Clipboard.setStringAsync(
                                 `${BRANDS_FE_URL}/collaboration-application?collaborationId=${applicationCopy.collaborationId}&applicationId=${applicationCopy.applicationId}`

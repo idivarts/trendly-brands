@@ -241,7 +241,7 @@ const stylesFn = (theme: Theme) => {
         justifyContent: 'center',
     },
     headerIconWrapTint: { backgroundColor: colors.card, opacity: 0.2 },
-    headerFlex: { flex: 1 },
+    headerFlex: { flex: 1, backgroundColor: 'transparent'},
     headerTitle: { fontWeight: '600' },
     headerSubtitle: { opacity: 0.7 },
     dividerVertical: { marginVertical: 16 },
@@ -264,7 +264,7 @@ const stylesFn = (theme: Theme) => {
         flex: 1,
     },
     ribbonBadge: {
-        backgroundColor: colors.tag,
+        // backgroundColor: Colors(theme).tag,
         color: colors.onPrimary,
     },
     muted: { opacity: 0.85, marginVertical: 16 },

@@ -4,14 +4,14 @@ import {
     Modal,
     Platform,
     ScrollView,
-    useWindowDimensions,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button, Text, TextInput } from 'react-native-paper'
 
 import { ISocials } from '@/shared-libs/firestore/trendly-pro/models/bq-socials'
 import { View } from '@/shared-uis/components/theme/Themed'
-import Colors from '@/constants/Colors'
+import Colors from '@/shared-uis/constants/Colors'
+import { useBreakpoints } from '@/hooks'
 import { useTheme } from '@react-navigation/native'
 
 interface EditSocialMetricsModalProps {
@@ -37,7 +37,7 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
     isSaving,
     hasChanges,
 }) => {
-    const { width, height } = useWindowDimensions()
+    const { width, height } = useBreakpoints()
     const insets = useSafeAreaInsets()
     const horizontalInset = 16
     const maxWidth = 680
@@ -57,7 +57,7 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
             <View
                 style={{
                     flex: 1,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: colors.backdrop,
                     paddingTop: insets.top + 16,
                     paddingBottom: insets.bottom + 16,
                     paddingHorizontal: horizontalInset,
@@ -85,8 +85,8 @@ const EditSocialMetricsModal: React.FC<EditSocialMetricsModalProps> = ({
                         </View>
 
                         {saveError && (
-                            <View style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#ffebee', borderBottomWidth: 1, borderBottomColor: '#ffcdd2' }}>
-                                <Text style={{ color: '#c62828', fontSize: 14 }}>
+                            <View style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: colors.errorBannerBg, borderBottomWidth: 1, borderBottomColor: colors.errorBannerBorder }}>
+                                <Text style={{ color: colors.errorBannerText, fontSize: 14 }}>
                                     {saveError}
                                 </Text>
                             </View>

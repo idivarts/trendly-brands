@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { NotficationTypesToHandle } from "@/contexts/notification-context.provider";
 import { Theme, useTheme } from "@react-navigation/native";
 import { Href, useRouter } from "expo-router";
@@ -98,7 +98,7 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
                         }
                     </Text>
                 </View>
-                {loading && <ActivityIndicator size="small" color={Colors(theme).primary} style={{ paddingHorizontal: 8 }} />}
+                {loading && <ActivityIndicator size="small" color={Colors(theme).primary} style={styles.loader} />}
             </Pressable>
         </Card>
     );
@@ -150,6 +150,9 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
         rowGap: 10,
         columnGap: 10,
         marginTop: 10,
+    },
+    loader: {
+        paddingHorizontal: 8,
     },
 });
 

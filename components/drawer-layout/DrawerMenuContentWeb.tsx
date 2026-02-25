@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -27,7 +27,7 @@ import {
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Linking,
     Platform,
@@ -43,7 +43,8 @@ import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
 const BOTTOM_MENU_ITEMS = (
     theme: Theme,
     name?: string,
-    profileImage?: string
+    profileImage?: string,
+    styles: { profileImageSize: { width: number; height: number } }
 ): Tab[] => [
         {
             href: "/onboarding-your-brand",
@@ -59,7 +60,7 @@ const BOTTOM_MENU_ITEMS = (
                     shape="circle"
                     size="small"
                     altText="Image"
-                    style={{ width: 24, height: 24 }}
+                    style={styles.profileImageSize}
                 />
             ),
             label: name || "Profile",
@@ -182,6 +183,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const router = useMyNavigation();
     const { bottom } = useSafeAreaInsets();
     const theme = useTheme();
+    const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
     const { selectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
 
@@ -200,37 +202,17 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const [isAdminHovered, setIsAdminHovered] = useState(false);
 
     return (
-        <View
-            style={{
-                flex: 1,
-                paddingTop: Platform.OS === "web" ? 8 : 64,
-                backgroundColor: Colors(theme).background,
-            }}
-        >
+        <View style={styles.root}>
             {/* Header */}
-            <View
-                style={{
-                    paddingHorizontal: 12,
-                    paddingBottom: 12,
-                    borderBottomColor: Colors(theme).border,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-
-                }}
-            >
+            <View style={styles.header}>
                 <Pressable
                     onPress={() => {
                         OpenBrandSwitcher.next(undefined);
                     }}
                 >
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View style={styles.headerRow}>
                         <Text
-                            style={{
-                                fontSize: 18,
-                                fontWeight: "700",
-                                paddingVertical: 10,
-                                flex: 1,
-                                color: Colors(theme).text,
-                            }}
+                            style={styles.brandName}
                         >
                             {selectedBrand?.name ?? "Brand"}
                         </Text>
@@ -242,29 +224,17 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
 
             {/* Content */}
             <ScrollView
-                contentContainerStyle={{
-                    paddingVertical: 12,
-                    paddingHorizontal: 8, //MarkerBYJ
-                    gap: 8,
-
-                }}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Campaigns Section */}
-                <View style={{ gap: 8, }}>
+                <View style={styles.section}>
                     <Text
-                        style={{
-                            fontSize: 12,
-                            fontWeight: "600",
-                            opacity: 0.7,
-                            paddingHorizontal: 8,
-                            color: Colors(theme).text,
-
-                        }}
+                        style={styles.sectionTitle}
                     >
                         Connect
                     </Text>
-                    <View style={{ rowGap: 2 }}>
+                    <View style={styles.campaignItems}>
                         {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
                             <DrawerMenuItem
                                 key={`campaign-${idx}`}
@@ -310,7 +280,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                 )}
 
                 {/* Brand Details Section */}
-                <View style={{ marginTop: 16, gap: 8 }}>
+                <View style={styles.brandDetailsSection}>
                     <Pressable
                         onPress={() => {
                             router.push("/menu");
@@ -320,27 +290,12 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     >
                         <View
                             style={[
-                                {
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 8,
-                                    marginBottom: -10,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 12,
-                                },
-                                isBrandHovered && {
-                                    borderWidth: StyleSheet.hairlineWidth,
-                                    borderColor: Colors(theme).border,
-                                },
+                                styles.sectionHeaderRow,
+                                isBrandHovered && styles.sectionHeaderRowHover,
                             ]}
                         >
                             <Text
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: "600",
-                                    opacity: 0.7,
-                                    color: Colors(theme).text,
-                                }}
+                                style={styles.sectionTitle}
                             >
                                 Brand Details
                             </Text>
@@ -348,42 +303,25 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         </View>
                     </Pressable>
 
-                    <View
-                        style={{
-                            borderTopColor: Colors(theme).border,
-                            borderTopWidth: StyleSheet.hairlineWidth,
-                        }}
-                    />
-                    <View style={{ gap: 0 }}>
+                    <View style={styles.divider} />
+                    <View style={styles.menuItems}>
                         {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
                             <DrawerMenuItem key={`brand-details-${idx}`} tab={tab} />
                         ))}
                     </View>
                 </View>
                 {/* Showcase Section */}
-                <View style={{ marginTop: 16, gap: 8 }}>
+                <View style={styles.brandDetailsSection}>
                     <Pressable
                         onPress={() => {
                             router.push("/menu");
                         }}
                     >
                         <View
-                            style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 8,
-                                marginBottom: -10,
-                                paddingHorizontal: 8,
-                                paddingVertical: 12,
-                            }}
+                            style={styles.sectionHeaderRow}
                         >
                             <Text
-                                style={{
-                                    fontSize: 12,
-                                    fontWeight: "600",
-                                    opacity: 0.7,
-                                    color: Colors(theme).text,
-                                }}
+                                style={styles.sectionTitle}
                             >
                                 Showcase (Already Joined)
                             </Text>
@@ -391,13 +329,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         </View>
                     </Pressable>
 
-                    <View
-                        style={{
-                            borderTopColor: Colors(theme).border,
-                            borderTopWidth: StyleSheet.hairlineWidth,
-                        }}
-                    />
-                    <View style={{ gap: 0 }}>
+                    <View style={styles.divider} />
+                    <View style={styles.menuItems}>
                         {SHOWCASE_MENU_ITEMS(theme).map((tab, idx) => (
                             <DrawerMenuItem key={`showcase-${idx}`} tab={tab} />
                         ))}
@@ -406,7 +339,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
 
                 {/* Admin Section */}
                 {manager?.isAdmin && (
-                    <View style={{ marginTop: 16, gap: 8 }}>
+                    <View style={styles.brandDetailsSection}>
                         <Pressable
                             onPress={() => {
                                 console.log("🛡️ Admin Portal clicked");
@@ -416,27 +349,12 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         >
                             <View
                                 style={[
-                                    {
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        marginBottom: -10,
-                                        paddingHorizontal: 8,
-                                        paddingVertical: 12,
-                                    },
-                                    isAdminHovered && {
-                                        borderWidth: StyleSheet.hairlineWidth,
-                                        borderColor: Colors(theme).border,
-                                    },
+                                    styles.sectionHeaderRow,
+                                    isAdminHovered && styles.sectionHeaderRowHover,
                                 ]}
                             >
                                 <Text
-                                    style={{
-                                        fontSize: 12,
-                                        fontWeight: "600",
-                                        opacity: 0.7,
-                                        color: Colors(theme).text,
-                                    }}
+                                    style={styles.sectionTitle}
                                 >
                                     Admin Portal
                                 </Text>
@@ -444,13 +362,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             </View>
                         </Pressable>
 
-                        <View
-                            style={{
-                                borderTopColor: Colors(theme).border,
-                                borderTopWidth: StyleSheet.hairlineWidth,
-                            }}
-                        />
-                        <View style={{ gap: 0 }}>
+                        <View style={styles.divider} />
+                        <View style={styles.menuItems}>
                             {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
                                 <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
                             ))}
@@ -460,17 +373,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             </ScrollView>
 
             {/* Bottom Actions */}
-            <View
-                style={{
-                    paddingHorizontal: 8,
-                    paddingTop: 4,
-                    paddingBottom: bottom,
-                    borderTopColor: Colors(theme).border,
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                    gap: 4,
-                }}
-            >
-                {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage).map(
+            <View style={styles.bottomActions}>
+                {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
                     (tab, idx) => (
                         <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
                     )
@@ -486,36 +390,19 @@ const RenderBanner = (props: {
     buttonText: string;
     customUrl?: string;
 }) => {
+    const theme = useTheme();
+    const bannerStyles = useMemo(() => createBannerStyles(theme), [theme]);
     return (
         <LinearGradient
-            colors={["#3b82f6", "#8b5cf6"]}
+            colors={[Colors(theme).primary, Colors(theme).primaryMid]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={{
-                borderRadius: 12,
-                padding: 16,
-                marginHorizontal: 8,
-                marginBottom: 12,
-                justifyContent: "center",
-            }}
+            style={bannerStyles.gradient}
         >
-            <Text
-                style={{
-                    color: "white",
-                    fontWeight: "bold",
-                    fontSize: 14,
-                    marginBottom: 4,
-                }}
-            >
+            <Text style={bannerStyles.bannerTitle}>
                 {props.title}
             </Text>
-            <Text
-                style={{
-                    color: "rgba(255,255,255,0.85)",
-                    fontSize: 12,
-                    marginBottom: 12,
-                }}
-            >
+            <Text style={bannerStyles.bannerDescription}>
                 {props.description}
             </Text>
             <Pressable
@@ -523,28 +410,138 @@ const RenderBanner = (props: {
                     if (props.customUrl) Linking.openURL(props.customUrl);
                     else router.push("/billing");
                 }}
-                style={({ pressed }) => ({
-                    backgroundColor: pressed
-                        ? "rgba(255,255,255,0.3)"
-                        : "rgba(255,255,255,0.4)",
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    borderRadius: 20,
-                    alignSelf: "flex-start",
-                })}
+                style={({ pressed }) => [
+                    bannerStyles.bannerButton,
+                    pressed && bannerStyles.bannerButtonPressed,
+                ]}
             >
-                <Text
-                    style={{
-                        color: "white",
-                        fontWeight: "600",
-                        fontSize: 13,
-                    }}
-                >
+                <Text style={bannerStyles.bannerButtonText}>
                     {props.buttonText}
                 </Text>
             </Pressable>
         </LinearGradient>
     );
+};
+
+const createStyles = (theme: Theme, bottom: number = 0) => {
+    const colors = Colors(theme);
+    return StyleSheet.create({
+        root: {
+            flex: 1,
+            paddingTop: Platform.OS === "web" ? 8 : 64,
+            backgroundColor: colors.background,
+        },
+        header: {
+            paddingHorizontal: 12,
+            paddingBottom: 12,
+            borderBottomColor: colors.border,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+        },
+        headerRow: {
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        brandName: {
+            fontSize: 18,
+            fontWeight: "700",
+            paddingVertical: 10,
+            flex: 1,
+            color: colors.text,
+        },
+        scrollContent: {
+            paddingVertical: 12,
+            paddingHorizontal: 8,
+            gap: 8,
+        },
+        section: {
+            gap: 8,
+        },
+        sectionTitle: {
+            fontSize: 12,
+            fontWeight: "600",
+            opacity: 0.7,
+            paddingHorizontal: 8,
+            color: colors.text,
+        },
+        campaignItems: {
+            rowGap: 2,
+        },
+        brandDetailsSection: {
+            marginTop: 16,
+            gap: 8,
+        },
+        sectionHeaderRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: -10,
+            paddingHorizontal: 8,
+            paddingVertical: 12,
+        },
+        sectionHeaderRowHover: {
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.border,
+        },
+        divider: {
+            borderTopColor: colors.border,
+            borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        menuItems: {
+            gap: 0,
+        },
+        bottomActions: {
+            paddingHorizontal: 8,
+            paddingTop: 4,
+            paddingBottom: bottom,
+            borderTopColor: colors.border,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            gap: 4,
+        },
+        profileImageSize: {
+            width: 24,
+            height: 24,
+        },
+    });
+};
+
+const createBannerStyles = (theme: Theme) => {
+    const colors = Colors(theme);
+    return StyleSheet.create({
+        gradient: {
+            borderRadius: 12,
+            padding: 16,
+            marginHorizontal: 8,
+            marginBottom: 12,
+            justifyContent: "center",
+        },
+        bannerTitle: {
+            color: colors.white,
+            fontWeight: "bold",
+            fontSize: 14,
+            marginBottom: 4,
+        },
+        bannerDescription: {
+            color: colors.white,
+            fontSize: 12,
+            marginBottom: 12,
+            opacity: 0.85,
+        },
+        bannerButton: {
+            backgroundColor: colors.drawerBannerButtonBg,
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            borderRadius: 20,
+            alignSelf: "flex-start",
+        },
+        bannerButtonPressed: {
+            backgroundColor: colors.drawerBannerButtonPressed,
+        },
+        bannerButtonText: {
+            color: colors.white,
+            fontWeight: "600",
+            fontSize: 13,
+        },
+    });
 };
 
 export default DrawerMenuContentWeb;

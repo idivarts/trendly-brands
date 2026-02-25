@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/theme/Themed';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { CURRENCY_SYMBOL } from '@/constants/Unit';
 
 type CardMetaDataProps = {

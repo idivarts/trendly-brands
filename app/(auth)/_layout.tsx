@@ -3,7 +3,11 @@ import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
 import { Stack, usePathname } from "expo-router";
 import { useMemo } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
+
+const layoutStyles = StyleSheet.create({
+    flex1: { flex: 1 },
+});
 
 const FULL_BLEED_AUTH_ROUTES = [
     "/pre-signin",
@@ -35,7 +39,7 @@ const AuthLayout = () => {
                                 : Colors(theme).aliceBlue
                             : theme.dark
                                 ? Colors(theme).background
-                                : "#F7F9FC",
+                                : Colors(theme).aliceBlue,
                 }
                 : undefined,
         [isFullBleedAuth, theme, pathname]
@@ -43,11 +47,7 @@ const AuthLayout = () => {
 
     return (
         <AppLayout {...layoutProps}>
-            <View
-                style={{
-                    flex: 1,
-                }}
-            >
+            <View style={layoutStyles.flex1}>
                 <Stack
                     screenOptions={{
                         headerShown: false,

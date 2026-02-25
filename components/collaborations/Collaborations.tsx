@@ -1,6 +1,6 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -24,12 +24,13 @@ import {
     query,
     where,
 } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
     Pressable,
-    RefreshControl
+    RefreshControl,
+    StyleSheet,
 } from "react-native";
 import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
 import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
@@ -51,13 +52,13 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     const closeBottomSheet = () => setIsVisible(false);
 
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const { xl } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme, xl), [theme, xl]);
+    const stylesFromFn = stylesFn(theme);
     const user = AuthApp.currentUser;
 
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-
-    const { xl } = useBreakpoints();
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -154,7 +155,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     if (isLoading) {
         return (
             <AppLayout>
-                <View style={styles.container}>
+                <View style={stylesFromFn.container}>
                     <ActivityIndicator size="large" color={Colors(theme).primary} />
                 </View>
             </AppLayout>
@@ -162,13 +163,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     }
 
     return (
-        <View
-            style={{
-                width: "100%",
-                flex: 1,
-                position: "relative",
-            }}
-        >
+        <View style={styles.root}>
             {filteredProposals.length === 0 ? (
                 <EmptyState
                     image={require("@/assets/images/illustration6.png")}
@@ -178,40 +173,14 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                     actionLabel="Create Collaboration"
                 />
             ) : (
-                <View style={{ flex: 1 }}>
+                <View style={styles.listWrapper}>
                     <FlatList
                         data={filteredProposals}
                         showsVerticalScrollIndicator={false}
                         renderItem={({ item }) => (
-                            <View style={{
-                                flex: xl ? 1 : undefined,
-                                width: xl ? undefined : "100%",
-                                backgroundColor: Colors(theme).primary,
-                                borderRadius: 14,
-                                shadowColor: Colors(theme).primary,
-                                shadowOffset: { width: 2, height: 4 },
-                                shadowOpacity: 0.25,
-                                shadowRadius: 8,
-                                elevation: 5,
-
-                            }}>
-                                <View style={{
-                                    flex: 1,
-                                    borderWidth: 2,
-                                    borderColor: Colors(theme).primary,
-                                    borderRadius: 12,
-                                    backgroundColor: Colors(theme).card,
-                                    borderStyle: item.status === "draft" ? "dashed" : "solid",
-
-                                }}>
-                                    <View
-                                        key={item.id}
-                                        style={{
-                                            flex: 1,
-                                            gap: 8,
-                                            overflow: "hidden",
-                                            borderRadius: 10,
-                                        }}>
+                            <View style={styles.cardOuter}>
+                                <View style={[styles.cardInner, item.status === "draft" && styles.cardInnerDraft]}>
+                                    <View key={item.id} style={styles.cardContent}>
 
 
                                         {item.attachments && item.attachments?.length > 0 && (
@@ -226,27 +195,17 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                                 xl={xl}
                                             />
                                         )}
-                                        <Pressable style={{ borderRadius: 10, overflow: "hidden", flex: 1, justifyContent: "space-between" }} onPress={() =>
+                                        <Pressable style={styles.cardPressable} onPress={() =>
                                             router.push(`/collaboration-details/${item.id}`)
                                         }>
 
                                             {item.status === "draft" && (
-                                                <View
-                                                    style={{
-                                                        position: "absolute",
-                                                        right: 10,
-                                                        top: 28,
-                                                        backgroundColor: Colors(theme).backdrop,
-                                                        padding: 4,
-                                                        borderRadius: 4,
-                                                        zIndex: 1,
-                                                    }}
-                                                >
-                                                    <Text style={{ color: Colors(theme).white }}>Draft</Text>
+                                                <View style={styles.draftBadge}>
+                                                    <Text style={styles.draftBadgeText}>Draft</Text>
                                                 </View>
                                             )}
 
-                                            <View style={{ flex: 1 }}>
+                                            <View style={styles.detailsWrapper}>
                                                 <CollaborationDetails
                                                     collabDescription={item.description || ""}
                                                     name={item.name || ""}
@@ -275,16 +234,8 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                             </View>
                         )}
                         keyExtractor={(item, index) => index.toString()}
-                        style={{
-                            flexGrow: 1,
-                            paddingBottom: 16,
-                            paddingHorizontal: 16,
-                            paddingTop: 8,
-                        }}
-                        contentContainerStyle={{
-                            gap: 16,
-                            paddingBottom: 64,
-                        }}
+                        style={styles.flatList}
+                        contentContainerStyle={styles.flatListContent}
                         refreshControl={
                             <RefreshControl
                                 refreshing={refreshing}
@@ -294,10 +245,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                         }
                         numColumns={xl ? 2 : 1}
                         {...(xl && {
-                            columnWrapperStyle: {
-                                justifyContent: "space-between",
-                                gap: 16,
-                            },
+                            columnWrapperStyle: styles.columnWrapper,
                         })}
                     />
                 </View>
@@ -313,16 +261,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 />
             )}
             {filteredProposals.length !== 0 && !xl && (
-                <View
-                    style={{
-                        position: "absolute",
-                        bottom: 0,
-                        right: 0,
-                        left: 0,
-                        paddingTop: 16,
-                        paddingHorizontal: 16,
-                    }}
-                >
+                <View style={styles.fabContainer}>
                     <Button
                         onPress={() => {
                             router.push({
@@ -344,5 +283,89 @@ const CollaborationList = ({ active }: { active: boolean }) => {
         </View>
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>, xl: boolean) {
+    return StyleSheet.create({
+        root: {
+            width: "100%",
+            flex: 1,
+            position: "relative",
+        },
+        listWrapper: {
+            flex: 1,
+        },
+        cardOuter: {
+            flex: xl ? 1 : undefined,
+            width: xl ? undefined : "100%",
+            backgroundColor: Colors(theme).primary,
+            borderRadius: 14,
+            shadowColor: Colors(theme).primary,
+            shadowOffset: { width: 2, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 8,
+            elevation: 5,
+        },
+        cardInner: {
+            flex: 1,
+            borderWidth: 2,
+            borderColor: Colors(theme).primary,
+            borderRadius: 12,
+            backgroundColor: Colors(theme).card,
+            borderStyle: "solid",
+        },
+        cardInnerDraft: {
+            borderStyle: "dashed",
+        },
+        cardContent: {
+            flex: 1,
+            gap: 8,
+            overflow: "hidden",
+            borderRadius: 10,
+        },
+        cardPressable: {
+            borderRadius: 10,
+            overflow: "hidden",
+            flex: 1,
+            justifyContent: "space-between",
+        },
+        draftBadge: {
+            position: "absolute",
+            right: 10,
+            top: 28,
+            backgroundColor: Colors(theme).backdrop,
+            padding: 4,
+            borderRadius: 4,
+            zIndex: 1,
+        },
+        draftBadgeText: {
+            color: Colors(theme).white,
+        },
+        detailsWrapper: {
+            flex: 1,
+        },
+        flatList: {
+            flexGrow: 1,
+            paddingBottom: 16,
+            paddingHorizontal: 16,
+            paddingTop: 8,
+        },
+        flatListContent: {
+            gap: 16,
+            paddingBottom: 64,
+        },
+        columnWrapper: {
+            justifyContent: "space-between",
+            gap: 16,
+        },
+        fabContainer: {
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            left: 0,
+            paddingTop: 16,
+            paddingHorizontal: 16,
+        },
+    });
+}
 
 export default CollaborationList;

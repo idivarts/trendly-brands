@@ -2,6 +2,10 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
+/**
+ * EXCEPTION: External stylesheet kept shared by auth screens (create-new-account, login, forgot-password).
+ * Uses only Colors(theme); no hardcoded colors.
+ */
 const fnStyles = (theme: Theme) =>
     StyleSheet.create({
         container: {
@@ -53,6 +57,9 @@ const fnStyles = (theme: Theme) =>
         },
         loginLink: {
             color: Colors(theme).primary,
+            fontWeight: "bold",
+        },
+        bold: {
             fontWeight: "bold",
         },
     });

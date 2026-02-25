@@ -5,13 +5,12 @@ import BottomSheet, {
     BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
-import { useTheme } from "@react-navigation/native";
+import { Theme, useTheme } from "@react-navigation/native";
 import React, { useMemo, useRef, useState } from "react";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Chip, Text } from "react-native-paper";
 
-import Colors from "@/constants/Colors";
-import { stylesFn } from "@/styles/FilterModal.styles";
+import Colors from "@/shared-uis/constants/Colors";
 import Button from "./ui/button";
 
 interface CollaborationFilterProps {
@@ -78,7 +77,7 @@ const CollaborationFilter = ({
     };
 
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     const snapPoints = useMemo(() => ["25%", "50%", "75%", "100%"], []);
 
@@ -119,12 +118,8 @@ const CollaborationFilter = ({
                         </TouchableOpacity>
                     </View>
                     <ScrollView
-                        style={{
-                            flex: 1,
-                        }}
-                        contentContainerStyle={{
-                            padding: 16,
-                        }}
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
                     >
                         {/* Categories Section */}
@@ -240,12 +235,7 @@ const CollaborationFilter = ({
                                 </Chip>
                             ))}
                         </View>
-                        <View
-                            style={{
-                                width: "100%",
-                                padding: 20,
-                            }}
-                        >
+                        <View style={styles.bottomPadding}>
                             <Button
                                 mode="contained"
                                 onPress={applyFilters}
@@ -259,5 +249,64 @@ const CollaborationFilter = ({
         </>
     );
 };
+
+const useStyles = (theme: Theme) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            paddingHorizontal: 20,
+            paddingVertical: 16,
+            backgroundColor: Colors(theme).background,
+        },
+        header: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+        },
+        title: {
+            fontSize: 24,
+            color: Colors(theme).text,
+            fontWeight: "bold",
+        },
+        sectionTitle: {
+            fontSize: 18,
+            fontWeight: "bold",
+            color: Colors(theme).text,
+            marginVertical: 10,
+        },
+        chipContainer: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+        },
+        backdrop: {
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: Colors(theme).backdrop,
+        },
+        chip: {
+            margin: 5,
+        },
+        salaryContainer: {
+            marginVertical: 10,
+        },
+        salaryLabel: {
+            fontSize: 16,
+            color: Colors(theme).text,
+            marginBottom: 5,
+        },
+        scrollView: {
+            flex: 1,
+        },
+        scrollContent: {
+            padding: 16,
+        },
+        bottomPadding: {
+            width: "100%",
+            padding: 20,
+        },
+    });
 
 export default CollaborationFilter;

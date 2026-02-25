@@ -1,6 +1,6 @@
 ---
 name: UI rule – Colors import (app, layouts, screens, hooks)
-overview: "Replace `@/constants/Colors` with `@/shared-uis/constants/Colors` in app/, layouts/, screens/, and hooks/. Part of UI rule violation audit (split); implement first (Phase 1)."
+overview: Replace `@/constants/Colors` with `@/shared-uis/constants/Colors` in app/, layouts/, screens/, and hooks/. Part of UI rule violation audit (split); implement first (Phase 1).
 todos: []
 isProject: false
 ---
@@ -18,6 +18,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 ## Files in scope (15)
 
 **app/**
+
 - app/index.tsx
 - app/(auth)/_layout.tsx
 - app/(auth)/login.tsx
@@ -30,13 +31,16 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - app/(main)/(onboarding)/onboarding-your-brand.tsx
 
 **layouts/**
+
 - layouts/app-layout/index.tsx
 - layouts/protected/brand-protected-screen.tsx
 
 **screens/**
+
 - screens/PreSigninScreen.tsx
 
 **hooks/**
+
 - hooks/use-stream-theme.web.tsx
 - hooks/use-stream-theme.native.tsx
 
@@ -44,3 +48,4 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 
 - Each file imports `Colors` from `@/shared-uis/constants/Colors`.
 - No behavior change; UI and themes should look the same.
+

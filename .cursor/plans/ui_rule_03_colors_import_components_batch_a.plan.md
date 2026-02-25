@@ -1,6 +1,6 @@
 ---
 name: UI rule – Colors import (components batch A)
-overview: "Replace `@/constants/Colors` with `@/shared-uis/constants/Colors` in components/channel, components/card, components/collaboration*, components/contracts, components/contract-card. Part of UI rule violation audit (split); implement after Plan 02 (Phase 1)."
+overview: Replace `@/constants/Colors` with `@/shared-uis/constants/Colors` in components/channel, components/card, components/collaboration*, components/contracts, components/contract-card. Part of UI rule violation audit (split); implement after Plan 02 (Phase 1).
 todos: []
 isProject: false
 ---
@@ -18,6 +18,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 ## Files in scope (32)
 
 **components/channel**
+
 - components/channel/add-modal.tsx
 - components/channel/channel-list.tsx
 - components/channel/channel-list.web.tsx
@@ -31,10 +32,12 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - components/channel/components/commands-button.tsx
 
 **components/card**
+
 - components/card/collaboration-details/invitation-card.tsx
 - components/card/profile-modal/invitation-card.tsx
 
 **components/collaboration**
+
 - components/collaboration/collaboration-details/modal/ManagerModal.tsx
 - components/collaboration/collaboration-details/index.tsx
 - components/collaboration/collaboration-details/InvitedMemberTabContent.tsx
@@ -48,6 +51,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - components/collaboration/InviteToCampaignButton.tsx
 
 **components/contracts**
+
 - components/contracts/AddMemberModal.tsx
 - components/contracts/ContractDetailContent.tsx
 - components/contracts/active.tsx
@@ -56,6 +60,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - components/contracts/FeedbackModal.tsx
 
 **components/contract-card**
+
 - components/contract-card/ContractDetails.tsx
 - components/contract-card/ContractHeader.tsx
 
@@ -63,3 +68,4 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 
 - Each file imports `Colors` from `@/shared-uis/constants/Colors`.
 - No behavior change.
+

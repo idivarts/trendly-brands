@@ -2,6 +2,10 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
+/**
+ * EXCEPTION: External stylesheet shared by InvitationsTabContent and InvitedMemberTabContent.
+ * Uses only Colors(theme); no hardcoded colors.
+ */
 export const stylesFn = (theme: Theme) =>
     StyleSheet.create({
         scrollContainer: {
@@ -65,7 +69,7 @@ export const stylesFn = (theme: Theme) =>
             flex: 1,
             justifyContent: "center",
             alignItems: "center",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: Colors(theme).backdrop,
         },
         messageModalContent: {
             width: "80%",

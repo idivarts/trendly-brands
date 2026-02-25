@@ -1,7 +1,8 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { IS_MONETIZATION_DONE } from '@/shared-constants/app'
 import { View } from '@/shared-uis/components/theme/Themed'
-import React from 'react'
+import React, { useMemo } from 'react'
+import { StyleSheet } from 'react-native'
 import { PremiumActionTag } from '../discover/components/PremiumActionTag'
 
 interface IProps {
@@ -9,6 +10,12 @@ interface IProps {
 }
 const InfluencerConnects: React.FC<IProps> = () => {
     const { selectedBrand } = useBrandContext()
+    const styles = useMemo(() => StyleSheet.create({
+        row: {
+            paddingHorizontal: 8,
+            flexDirection: "row",
+        },
+    }), []);
 
     const planKey = selectedBrand?.billing?.planKey || "";
     const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
@@ -17,7 +24,7 @@ const InfluencerConnects: React.FC<IProps> = () => {
 
     return (
 
-        <View style={{ paddingHorizontal: 8, flexDirection: "row" }}>
+        <View style={styles.row}>
             <PremiumActionTag
                 label="Influencers remaining"
                 tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}

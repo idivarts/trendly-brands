@@ -16,7 +16,7 @@ import { useMyNavigation } from "@/shared-libs/utils/router";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { collection, doc, onSnapshot } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -25,6 +25,8 @@ import {
     Text,
     View
 } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/shared-uis/constants/Colors";
 import { ActivityIndicator } from "react-native-paper";
 import { ExplainerDynamic } from "../ExplainerDynamic";
 
@@ -33,6 +35,8 @@ export default function PricingPage() {
     const { selectedBrand, updateBrand, brands } = useBrandContext()
     const router = useMyNavigation()
     const { features: { trialDays, moneyBackGuarantee, limitedTimeDiscount, pricingPage, businessFeatures, growthFeatures }, discountPercentage } = useMyGrowthBook()
+    const theme = useTheme();
+    const colors = Colors(theme);
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
     const [loading, setLoading] = useState(false)
@@ -154,6 +158,8 @@ export default function PricingPage() {
         title: `Chose your {plan} for <BRAND_NAME>`
     }
     explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
+
+    const styles = useMemo(() => useStyles(colors), [colors]);
 
     return (
         <AppLayout>
@@ -286,15 +292,15 @@ export default function PricingPage() {
                         height: '100%',
                         width: '100%',
                         justifyContent: 'center',
-                        backgroundColor: "white",
+                        backgroundColor: colors.background,
                         alignItems: 'center',
                         zIndex: 1000,
                         padding: 16,
                         gap: 16
                     }}>
-                        <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>Return Back here once Payment is done</Text>
+                        <Text style={{ fontSize: 32, lineHeight: 32 * 1.5, fontWeight: 600, marginBottom: 16, textAlign: "center", color: colors.text }}>Return Back here once Payment is done</Text>
                         <ActivityIndicator size={"large"} />
-                        <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center" }}>
+                        <Text style={{ fontSize: 18, lineHeight: 18 * 1.5, marginTop: 24, textAlign: "center", color: colors.text }}>
                             Redirecting you to the payment page. Please wait...
                         </Text>
 
@@ -304,7 +310,7 @@ export default function PricingPage() {
                                     If you didn’t redirect automatically
                                 </Text>
                                 <Text
-                                    style={{ fontSize: 16, color: 'blue', textDecorationLine: 'underline' }}
+                                    style={{ fontSize: 16, color: colors.primary, textDecorationLine: 'underline' }}
                                     onPress={() => {
                                         if (Platform.OS === 'web') {
                                             window.open(planLinks[link], '_blank')
@@ -323,29 +329,24 @@ export default function PricingPage() {
 }
 
 /* --------- Styles --------- */
-const BLUE = "#254F7A";
-const BLUE_DARK = "#1A3B5C";
-const BLUE_LIGHT = "#6C91BA";
-const TEXT = "#243A53";
-
-const styles = StyleSheet.create({
+function useStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
     page: {
         paddingHorizontal: 24,
         paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: colors.background,
         maxWidth: 1300,
         alignSelf: "center",
         width: "100%",
     },
 
-    /* Hero layout */
     hero: {
         borderRadius: 24,
         marginTop: 0,
     },
     heroRow: {
-        backgroundColor: "#F8FBFF",
+        backgroundColor: colors.formBg,
         padding: 28,
         flexDirection: "row",
         alignItems: "center",
@@ -354,35 +355,34 @@ const styles = StyleSheet.create({
         flexDirection: "column",
     },
 
-    /* Left */
     left: {
         flex: 1.3,
         alignSelf: "flex-start"
     },
     kicker: {
-        color: BLUE_LIGHT,
+        color: colors.primaryMid,
         fontSize: 12,
         letterSpacing: 1.4,
         fontWeight: "700",
         marginBottom: 8,
     },
     title: {
-        color: TEXT,
+        color: colors.text,
         fontSize: 48,
         lineHeight: 62,
         fontWeight: "600",
         marginTop: 4,
     },
     titleAccent: {
-        color: BLUE,
+        color: colors.primary,
         textDecorationLine: "underline",
-        textDecorationColor: "#CFE2F7",
+        textDecorationColor: colors.textDecorationLight,
         textDecorationStyle: "solid",
     },
     subtitle: {
         marginTop: 18,
         marginBottom: 14,
-        color: "#53657A",
+        color: colors.subtitleGray,
         fontSize: 16,
         lineHeight: 24,
         maxWidth: 640,
@@ -390,9 +390,8 @@ const styles = StyleSheet.create({
     points: { marginTop: 8, gap: 10 },
     pointItem: { flexDirection: "row", alignItems: "center" },
     pointIcon: { fontSize: 18, marginRight: 10 },
-    pointText: { color: TEXT, fontSize: 14 },
+    pointText: { color: colors.text, fontSize: 14 },
 
-    /* Visual under explainer */
     visual: {
         width: "100%",
         aspectRatio: 16 / 9,
@@ -400,8 +399,8 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         justifyContent: "flex-end",
         marginTop: 18,
-        backgroundColor: "#E7F0F9",
-        shadowColor: "#000",
+        backgroundColor: colors.visualBg,
+        shadowColor: colors.black,
         shadowOpacity: 0.12,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
@@ -411,46 +410,44 @@ const styles = StyleSheet.create({
     playBadge: {
         alignSelf: "flex-start",
         margin: 12,
-        backgroundColor: "rgba(255,255,255,0.9)",
+        backgroundColor: colors.playBadgeBg,
         borderRadius: 999,
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
-    playBadgeText: { color: BLUE_DARK, fontWeight: "800" },
+    playBadgeText: { color: colors.primaryDark, fontWeight: "800" },
 
-    /* Form */
     formCard: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: colors.background,
         borderRadius: 16,
         paddingVertical: 22,
         paddingHorizontal: 22,
         marginTop: 18,
         ...Platform.select({ web: { maxWidth: 520 } }),
-        shadowColor: "#000",
+        shadowColor: colors.black,
         shadowOpacity: 0.08,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 },
         ...Platform.select({ android: { elevation: 4 } }),
     },
-    formHeading: { fontSize: 24, fontWeight: "800", color: TEXT },
-    formSub: { marginTop: 6, color: "#6C7A89", fontSize: 13 },
+    formHeading: { fontSize: 24, fontWeight: "800", color: colors.text },
+    formSub: { marginTop: 6, color: colors.formLabel, fontSize: 13 },
     field: { marginTop: 16 },
-    label: { color: TEXT, fontSize: 13, fontWeight: "700", marginBottom: 6 },
+    label: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 6 },
     input: {
         height: 48,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
+        borderColor: colors.formBorder,
         paddingHorizontal: 14,
-        backgroundColor: "#FAFCFF",
-        color: TEXT,
+        backgroundColor: colors.formBgInput,
+        color: colors.text,
     },
-    inputError: { borderColor: "#E87070" },
-    error: { color: "#D64545", marginTop: 6, fontSize: 12 },
-    disclaimer: { color: "#6C7A89", marginTop: 12, fontSize: 12 },
+    inputError: { borderColor: colors.errorBorder },
+    error: { color: colors.red, marginTop: 6, fontSize: 12 },
+    disclaimer: { color: colors.formLabel, marginTop: 12, fontSize: 12 },
 
-    /* CTA reused */
     cta: {
         marginTop: 18,
         alignSelf: "flex-start",
@@ -459,57 +456,54 @@ const styles = StyleSheet.create({
         paddingHorizontal: 22,
         height: 48,
         borderRadius: 999,
-        backgroundColor: BLUE,
-        shadowColor: "#2B5C8F",
+        backgroundColor: colors.primary,
+        shadowColor: colors.primaryShadow,
         shadowOpacity: 0.25,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 8 },
         ...Platform.select({ android: { elevation: 6 } }),
     },
     ctaText: {
-        color: "#FFFFFF",
+        color: colors.onPrimary,
         fontSize: 16,
         fontWeight: "700",
     },
     ctaArrow: {
-        color: "#FFFFFF",
+        color: colors.onPrimary,
         fontSize: 22,
         marginLeft: 10,
         marginTop: -2,
     },
 
-    /* Reasons / discount */
-    reasonsBox: { marginTop: 8, backgroundColor: '#F8FBFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E6EEF8' },
-    discountPill: { alignSelf: 'flex-start', backgroundColor: '#1f3f73', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
-    discountText: { color: '#fff', fontWeight: '800', fontSize: 12 },
+    reasonsBox: { marginTop: 8, backgroundColor: colors.formBg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.reasonsBoxBorder },
+    discountPill: { alignSelf: 'flex-start', backgroundColor: colors.discountPillBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
+    discountText: { color: colors.white, fontWeight: '800', fontSize: 12 },
     reasonItem: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 8 },
-    reasonText: { color: TEXT, fontSize: 13, lineHeight: 18, flex: 1 },
+    reasonText: { color: colors.text, fontSize: 13, lineHeight: 18, flex: 1 },
     noticeRow: { marginTop: 10 },
-    noticeText: { color: '#D64545', fontSize: 14, fontWeight: '700' },
+    noticeText: { color: colors.red, fontSize: 14, fontWeight: '700' },
 
-    /* Plans */
     plansWrap: { marginTop: 16, gap: 16 },
-    planCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E1E6EE', padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, ...Platform.select({ android: { elevation: 1 } }) },
-    planPreferred: { borderColor: BLUE, shadowOpacity: 0.08, ...Platform.select({ android: { elevation: 2 } }) },
-    planTagPreferred: { position: 'absolute', top: 12, right: 12, backgroundColor: BLUE, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-    planTagText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-    planName: { color: TEXT, fontSize: 18, fontWeight: '800', marginTop: 2 },
+    planCard: { backgroundColor: colors.background, borderRadius: 16, borderWidth: 1, borderColor: colors.formBorder, padding: 16, shadowColor: colors.black, shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, ...Platform.select({ android: { elevation: 1 } }) },
+    planPreferred: { borderColor: colors.primary, shadowOpacity: 0.08, ...Platform.select({ android: { elevation: 2 } }) },
+    planTagPreferred: { position: 'absolute', top: 12, right: 12, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+    planTagText: { color: colors.white, fontSize: 11, fontWeight: '800' },
+    planName: { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 2 },
     priceRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 6 },
-    priceMain: { color: TEXT, fontSize: 28, fontWeight: '900' },
-    priceSlash: { color: '#8AA0BA', textDecorationLine: 'line-through', marginLeft: 8, marginBottom: 2 },
-    pricePer: { color: '#6C7A89', marginLeft: 6, marginBottom: 2 },
-    savingsText: { color: '#1A7F37', fontWeight: '700', fontSize: 12, marginTop: 4 },
-    divider: { height: 1, backgroundColor: '#EEF3F9', marginVertical: 12 },
+    priceMain: { color: colors.text, fontSize: 28, fontWeight: '900' },
+    priceSlash: { color: colors.priceSlashColor, textDecorationLine: 'line-through', marginLeft: 8, marginBottom: 2 },
+    pricePer: { color: colors.formLabel, marginLeft: 6, marginBottom: 2 },
+    savingsText: { color: colors.savingsGreen, fontWeight: '700', fontSize: 12, marginTop: 4 },
+    divider: { height: 1, backgroundColor: colors.planCardDivider, marginVertical: 12 },
     featureRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
     featureTick: { fontSize: 16, marginRight: 10 },
-    featureCopy: { color: TEXT, fontSize: 13 },
-    buyBtn: { marginTop: 14, backgroundColor: BLUE, height: 46, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-    buyText: { color: '#fff', fontWeight: '800' },
-    buyBtnAlt: { marginTop: 14, backgroundColor: '#EEF4FB', height: 46, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-    buyTextAlt: { color: TEXT, fontWeight: '800' },
+    featureCopy: { color: colors.text, fontSize: 13 },
+    buyBtn: { marginTop: 14, backgroundColor: colors.primary, height: 46, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    buyText: { color: colors.white, fontWeight: '800' },
+    buyBtnAlt: { marginTop: 14, backgroundColor: colors.surface, height: 46, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+    buyTextAlt: { color: colors.text, fontWeight: '800' },
 
-    /* Compare hint */
-    compareHint: { marginTop: 12, color: '#6C7A89', fontSize: 12 },
+    compareHint: { marginTop: 12, color: colors.formLabel, fontSize: 12 },
 
     brandDropdown: {
         flexDirection: 'row',
@@ -519,9 +513,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#E1E6EE',
-        backgroundColor: '#FFFFFF',
-        shadowColor: '#000',
+        borderColor: colors.formBorder,
+        backgroundColor: colors.background,
+        shadowColor: colors.black,
         shadowOpacity: 0.06,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 4 },
@@ -532,6 +526,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         paddingVertical: 6,
         marginRight: 6,
-        color: TEXT,
+        color: colors.text,
     },
 });
+}

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext, useCollaborationContext } from "@/contexts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -45,7 +45,30 @@ const BottomSheetActions = ({
     const { openModal } = useConfirmationModel()
     const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
-    const actionTextStyle = { color: Colors(theme).black };
+    const colors = Colors(theme);
+    const styles = React.useMemo(
+        () =>
+            StyleSheet.create({
+                overlay: {
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: colors.backdrop,
+                },
+                bottomSheetContainer: {
+                    flex: 1,
+                    justifyContent: "flex-end",
+                    zIndex: 2,
+                },
+                bottomSheet: {
+                    zIndex: 9999,
+                },
+            }),
+        [colors]
+    );
+    const actionTextStyle = { color: colors.text };
 
     const { connectUser } = useChatContext();
 
@@ -384,24 +407,5 @@ const BottomSheetActions = ({
         </Modal>
     );
 };
-
-const styles = StyleSheet.create({
-    overlay: {
-        position: "absolute",
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-    },
-    bottomSheetContainer: {
-        flex: 1,
-        justifyContent: "flex-end",
-        zIndex: 2,
-    },
-    bottomSheet: {
-        zIndex: 9999,
-    },
-});
 
 export default BottomSheetActions;

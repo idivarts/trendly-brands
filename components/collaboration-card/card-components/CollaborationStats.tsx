@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { CURRENCY } from "@/constants/Unit";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
@@ -7,7 +7,8 @@ import { stylesFn } from "@/styles/CollaborationCardStats.styles";
 import { convertToKUnits } from "@/utils/conversion";
 import { useTheme } from "@react-navigation/native";
 import { collection, getDocs } from "firebase/firestore";
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
+import { StyleSheet } from "react-native";
 
 interface CollaborationStatsProps {
     influencerCount: number;
@@ -24,7 +25,13 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
     const [appliedCount, setAppliedCount] = useState<number>(0);
     const [invitedCount, setInvitedCount] = useState<number>(0);
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const stylesFromFn = stylesFn(theme);
+    const localStyles = useMemo(() => StyleSheet.create({
+        container: {
+            padding: 16,
+            backgroundColor: Colors(theme).aliceBlue,
+        },
+    }), [theme]);
 
     const formatBudgetValue = (value: number) => {
         const millionValue = convertToMUnits(value);
@@ -61,28 +68,22 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
     }, []);
 
     return (
-        <View
-            style={{
-                padding: 16,
-backgroundColor: Colors(theme).aliceBlue,
-
-            }}
-        >
-            <View style={styles.infoRow}>
-                <Text style={styles.infoText}>
+        <View style={localStyles.container}>
+            <View style={stylesFromFn.infoRow}>
+                <Text style={stylesFromFn.infoText}>
                     Influencers Needed: {props.influencerCount}
                 </Text>
-                <Text style={styles.infoText}>
+                <Text style={stylesFromFn.infoText}>
                     Budget:{" "}
                     {props.budget.min === props.budget.max
                         ? `${CURRENCY}. ${formatBudgetValue(props.budget.min)}`
                         : `${CURRENCY}. ${formatBudgetValue(props.budget.min)} - ${CURRENCY}. ${formatBudgetValue(props.budget.max)}`}
                 </Text>
             </View>
-            <View style={styles.infoRow}>
-                <Text style={styles.infoText}>Applied: {appliedCount || 0}</Text>
+            <View style={stylesFromFn.infoRow}>
+                <Text style={stylesFromFn.infoText}>Applied: {appliedCount || 0}</Text>
 
-                <Text style={styles.infoText}>Invited: {invitedCount || 0}</Text>
+                <Text style={stylesFromFn.infoText}>Invited: {invitedCount || 0}</Text>
             </View>
         </View>
     );

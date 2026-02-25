@@ -6,8 +6,8 @@ import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
-import { default as React, useEffect, useState } from 'react'
-import { ScrollView } from 'react-native'
+import { default as React, useEffect, useMemo, useState } from 'react'
+import { ScrollView, StyleSheet } from 'react-native'
 import { Text, useTheme } from 'react-native-paper'
 import CancelPlanModal from './CancelPlanModal'
 import PlanWrapper from './plans/PlanWrapper'
@@ -17,6 +17,7 @@ const PayWallComponent = () => {
     const theme = useTheme()
     const { xl } = useBreakpoints()
     const isMobile = !xl
+    const styles = useMemo(() => createStyles(theme, isMobile), [theme, isMobile])
 
     const router = useMyNavigation()
     const { selectedBrand, setSelectedBrand } = useBrandContext()
@@ -40,30 +41,30 @@ const PayWallComponent = () => {
     }, [selectedBrand?.id])
 
 
-    const Header = <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        <Text variant="headlineMedium" style={{ fontWeight: 'bold', marginBottom: 8 }}>Our Pricing</Text>
-        <Text style={{ opacity: 0.8, textAlign: 'center', maxWidth: 680 }}>
+    const Header = <View style={styles.header}>
+        <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
+        <Text style={styles.headerSubtitle}>
             Explore our flexible pricing designed to fit every brand’s budget and objectives.
         </Text>
     </View>
 
     return (
         <>
-            <ScrollView contentContainerStyle={{ padding: isMobile ? 20 : 40, backgroundColor: theme.colors.background, alignSelf: 'center' }}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
                 {Header}
 
                 <PlanWrapper />
 
                 {/* Contact Support */}
-                <View style={{ marginTop: 40, alignItems: 'center' }}>
+                <View style={styles.contactSection}>
                     <Text variant="titleLarge">Need help?</Text>
-                    <Text style={{ marginTop: 10, fontSize: 16, textAlign: 'center' }}>
+                    <Text style={styles.contactText}>
                         If you have any query or faced any issues, please email at support@trendly.now
                     </Text>
                 </View>
 
                 {selectedBrand?.billing?.status == ModelStatus.Accepted &&
-                    <View style={{ marginTop: 40, alignItems: 'center' }}>
+                    <View style={styles.cancelSection}>
                         <Text variant="bodyLarge" onPress={() => setCancelPlan(true)}>Need to Cancel Plan? Click Here</Text>
                         {/* <Text style={{ marginTop: 10, fontSize: 16, textAlign: 'center' }} >
                         Click here to cancel
@@ -74,5 +75,40 @@ const PayWallComponent = () => {
         </>
     )
 }
+
+const createStyles = (theme: ReturnType<typeof useTheme>, isMobile: boolean) =>
+    StyleSheet.create({
+        header: {
+            alignItems: 'center',
+            marginBottom: 24,
+        },
+        headerTitle: {
+            fontWeight: 'bold',
+            marginBottom: 8,
+        },
+        headerSubtitle: {
+            opacity: 0.8,
+            textAlign: 'center',
+            maxWidth: 680,
+        },
+        scrollContent: {
+            padding: isMobile ? 20 : 40,
+            backgroundColor: theme.colors.background,
+            alignSelf: 'center',
+        },
+        contactSection: {
+            marginTop: 40,
+            alignItems: 'center',
+        },
+        contactText: {
+            marginTop: 10,
+            fontSize: 16,
+            textAlign: 'center',
+        },
+        cancelSection: {
+            marginTop: 40,
+            alignItems: 'center',
+        },
+    })
 
 export default PayWallComponent

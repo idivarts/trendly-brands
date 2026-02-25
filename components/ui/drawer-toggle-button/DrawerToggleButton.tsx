@@ -2,7 +2,7 @@ import { useTheme } from '@react-navigation/native';
 import { Pressable } from 'react-native';
 
 import { View } from '@/components/theme/Themed';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { OpenDrawerSubject } from '@/shared-uis/components/CustomDrawer';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';

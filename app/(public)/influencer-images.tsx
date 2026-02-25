@@ -1,15 +1,27 @@
 import AppLayout from '@/layouts/app-layout';
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users';
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore';
+import Colors from '@/shared-uis/constants/Colors';
+import { useTheme } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { Image, Platform, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { ActivityIndicator } from 'react-native-paper';
 
+const useStyles = (theme: ReturnType<typeof useTheme>) =>
+    StyleSheet.create({
+        title: { fontSize: 22, fontWeight: '700', paddingHorizontal: 16, marginBottom: 8 },
+        scroll: { flex: 1, height: "100%" },
+        itemText: { padding: 16 },
+        thumb: { width: 150, height: 300, borderRadius: 8, marginRight: 16, borderWidth: 1, borderColor: Colors(theme).outline },
+    });
+
 interface InfluencerInterface { id: string, images: { imageUrl: string, id: string }[], totalImages: number, user?: IUsers }
 const InfluencerList = () => {
+    const theme = useTheme();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     const [influencerList, setInfluencerList] = useState<InfluencerInterface[]>([])
     const [loading, setLoading] = useState(true)
@@ -50,29 +62,28 @@ const InfluencerList = () => {
     }
     return (
         <AppLayout>
-            <Text style={{ fontSize: 22, fontWeight: '700', paddingHorizontal: 16, marginBottom: 8 }}>Influencer List - {influencerList.length}</Text>
-            <ScrollView style={{ flex: 1, height: "100%" }}>
+            <Text style={styles.title}>Influencer List - {influencerList.length}</Text>
+            <ScrollView style={styles.scroll}>
                 <FlashList
                     data={influencerList}
                     renderItem={({ item, index }) => {
                         return <View>
                             <Text
                                 onPress={() => window.open(`/influencer/${item.id}`, "_blank")}
-                                style={{ padding: 16 }}
+                                style={styles.itemText}
                             >{index}. {item.user?.name} : {item.id} - {item.images.length} / {item.totalImages}</Text>
                             <FlashList
                                 data={item.images}
                                 renderItem={({ item }) => {
                                     return <Image
                                         source={{ uri: item.imageUrl }}
-                                        style={{ width: 150, height: 300, borderRadius: 8, marginRight: 16, borderWidth: 1 }}
+                                        style={styles.thumb}
                                     />
                                 }}
                                 horizontal={true} />
                         </View>
                     }}
                 />
-
             </ScrollView>
         </AppLayout >
 

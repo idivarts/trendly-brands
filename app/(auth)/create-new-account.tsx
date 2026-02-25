@@ -47,7 +47,7 @@ const SignUpScreen = () => {
                     </Text>
                     <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
                         We've sent a verification email to{" "}
-                        <Text style={{ fontWeight: "bold" }}>{email}</Text>.
+                        <Text style={styles.bold}>{email}</Text>.
                         {"\n\n"}
                         Please open your inbox and click the verification link to activate your account.
                     </Text>

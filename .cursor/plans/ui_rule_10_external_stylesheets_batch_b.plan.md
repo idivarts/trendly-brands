@@ -29,3 +29,14 @@ Same as batch A: either move style logic into the consuming component file or ke
 ## Done when
 
 - Each consumer either has styles in the same file or the exception is documented and the style module uses only `Colors(theme)`.
+
+## Completed (batch B)
+
+- **ImagePicker**: Styles inlined into `shared-uis/components/image-picker/ImagePicker.tsx`; removed external stylesheet.
+- **SearchInput**: Styles inlined into `shared-uis/components/search-input/SearchInput.tsx`; removed external stylesheet.
+- **Tag** (shared-uis): Styles inlined into `shared-uis/components/tag/index.tsx`; removed external stylesheet.
+- **DragAndDropNative**: Exception documented in `DraggableGrid.styles.tsx` (shared by DragAndDropNative, DraggableItem, AssetRender); uses only `Colors(theme)`.
+- **SelectGroup** (selector): Styles inlined into `shared-uis/components/select/select-group.tsx`; removed external stylesheet.
+- **NotificationCard**: Replaced inline style with `styles.loader`.
+- **BottomSheet** (components/ui): Replaced hardcoded overlay with `Colors(theme).backdrop`.
+- **FilterModal**: Styles inlined into `components/FilterModal.tsx`; removed external stylesheet.

@@ -5,6 +5,7 @@ import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users'
 import { Console } from '@/shared-libs/utils/console'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import ProfileBottomSheet from '@/shared-uis/components/ProfileModal/Profile-Modal'
+import Colors from '@/shared-uis/constants/Colors'
 import { View } from '@/shared-uis/components/theme/Themed'
 import { User } from '@/types/User'
 import { useTheme } from '@react-navigation/native'
@@ -23,6 +24,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
     const theme = useTheme()
+    const colors = Colors(theme)
     const { isOnFreeTrial } = useBrandContext()
 
     const [influencer, setInfluencer] = useState<User | undefined>(undefined)
@@ -109,7 +111,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     }
     if (error || !influencer) {
         return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: "red", fontSize: 16 }}>Something went wrong. Unable to load application details.</Text>
+            <Text style={{ color: colors.red, fontSize: 16 }}>Something went wrong. Unable to load application details.</Text>
         </View>
     }
     return (
@@ -146,7 +148,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
                                 ))}
                             </View>
 
-                            <View style={{ borderTopWidth: 1, borderColor: '#ddd', marginTop: 24, paddingTop: 20 }}>
+                            <View style={{ borderTopWidth: 1, borderColor: colors.border, marginTop: 24, paddingTop: 20 }}>
                                 <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 12, lineHeight: 26 }}>
                                     {influencer.name}'s Profile
                                 </Text>

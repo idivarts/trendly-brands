@@ -34,12 +34,54 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
-import { Platform, Pressable } from "react-native";
+import { Platform, Pressable, StyleSheet } from "react-native";
 import { Badge } from "react-native-paper";
+
+const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
+    StyleSheet.create({
+        headerRightRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            justifyContent: "space-between",
+        },
+        headerRightRowSimple: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        discoverTagsRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            paddingRight: 8,
+        },
+        filterButton: {
+            marginLeft: 12,
+        },
+        menuHeaderRow: {
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        copyButton: {
+            paddingHorizontal: 16,
+        },
+        profileAvatar: {
+            width: 40,
+            height: 40,
+        },
+        badge: {
+            backgroundColor: Colors(theme).red,
+            zIndex: 1,
+            position: "absolute",
+            top: 0,
+            right: 20,
+        },
+    });
 
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
+    const styles = React.useMemo(() => useStyles(theme, xl), [theme, xl]);
     const { unreadCount } = useChatContext()
     const { manager } = useAuthContext();
     const { selectedBrand } = useBrandContext()
@@ -120,14 +162,7 @@ const TabLayout = () => {
                         return <Header />;
                     },
                     headerRight: () => (
-                        <View
-                            style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 8,
-                                justifyContent: "space-between",
-                            }}
-                        >
+                        <View style={styles.headerRightRow}>
                             <PremiumActionTag
                                 label="Influencers remaining"
                                 tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}
@@ -155,13 +190,7 @@ const TabLayout = () => {
                                     visible={true}
                                     size={16}
                                     selectionColor={Colors(theme).red}
-                                    style={{
-                                        backgroundColor: Colors(theme).red,
-                                        zIndex: 1,
-                                        position: "absolute",
-                                        top: 0,
-                                        right: 20,
-                                    }}
+                                    style={styles.badge}
                                 >
                                     {unreadCount}
                                 </Badge>
@@ -170,13 +199,7 @@ const TabLayout = () => {
                     ),
                     title: "Messages",
                     headerTitleAlign: "left",
-                    headerRight: () => <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                        }}
-                    >
+                    headerRight: () => <View style={styles.headerRightRowSimple}>
                         <NotificationIcon />
                     </View>,
                 }}
@@ -194,14 +217,8 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
-                    headerRight: () => <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                        }}
-                    >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 8, }}>
+                    headerRight: () => <View style={styles.headerRightRowSimple}>
+                        <View style={styles.discoverTagsRow}>
                             <PremiumActionTag
                                 label="Discovery remaining"
                                 tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
@@ -220,7 +237,7 @@ const TabLayout = () => {
                                 onPress={() => {
                                     OpenFilterRightPanel.next();
                                 }}
-                                style={{ marginLeft: 12 }}
+                                style={styles.filterButton}
                             >
                                 <FontAwesomeIcon
                                     color={Colors(theme).text}
@@ -243,13 +260,7 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
-                    headerRight: () => <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                        }}
-                    >
+                    headerRight: () => <View style={styles.headerRightRowSimple}>
                         <NotificationIcon />
                     </View>,
                 }}
@@ -259,24 +270,24 @@ const TabLayout = () => {
                 options={{
                     title: "My Brand",
                     tabBarIcon: () => <ProfileIcon />,
-                    headerRight: () => (<View style={{ flexDirection: "row", alignItems: "center", }}>
+                    headerRight: () => (<View style={styles.menuHeaderRow}>
                         {xl && <InfluencerConnects />}
                         <Pressable
-                            style={{ paddingHorizontal: 16, }}
+                            style={styles.copyButton}
                             onPress={() => {
                                 copyBrandId();
                             }}
                         >
                             <FontAwesomeIcon icon={faCopy} size={20} color={Colors(theme).text} />
                         </Pressable>
-                        {!xl && <Pressable style={{ paddingHorizontal: 16 }} onPress={() => router.push('/profile')}>
+                        {!xl && <Pressable style={styles.copyButton} onPress={() => router.push('/profile')}>
                             <ImageComponent
                                 url={manager?.profileImage || ""}
                                 initials={manager?.name}
                                 shape="circle"
                                 size="small"
                                 altText="Image"
-                                style={{ width: 40, height: 40 }}
+                                style={styles.profileAvatar}
                             />
                         </Pressable>}
                     </View>)

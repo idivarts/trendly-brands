@@ -1,11 +1,12 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { Theme, useTheme } from "@react-navigation/native";
 import React from "react";
-import { Dimensions, Linking, ScrollView, StyleSheet, Text } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text } from "react-native";
 import {
     Card,
     Divider,
@@ -51,6 +52,7 @@ export const InfluencerStatsModal: React.FC<{
 }> = ({ visible, item, onClose, selectedDb }) => {
     const theme = useTheme();
     const styles = useStatsModalStyles(theme);
+    const { width, height } = useBreakpoints();
     const { selectedBrand } = useBrandContext();
     const { openModal } = useConfirmationModel();
 
@@ -116,7 +118,7 @@ export const InfluencerStatsModal: React.FC<{
                                         fontWeight: "600",
                                         fontSize: 16,
                                         color: Colors(theme).text,
-                                        maxWidth: Dimensions.get("window").width * 0.2,
+                                        maxWidth: width * 0.2,
                                     }}
                                 >
                                     {item?.name}
@@ -146,7 +148,7 @@ export const InfluencerStatsModal: React.FC<{
                     </View>
                     <Divider style={{ marginBottom: 16 }} />
                     <ScrollView
-                        style={{ maxHeight: Dimensions.get("window").height * 0.8 }}
+                        style={{ maxHeight: height * 0.8 }}
                         contentContainerStyle={{ flex: 1, marginBottom: 24 }}
                     >
                         {selectedDb == "trendly" && item && selectedBrand && (

@@ -2,7 +2,7 @@ import { faGift, faHandHoldingDollar } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     CONTENT_FORMATS,
     INITIAL_CONTENT_FORMATS, INITIAL_LANGUAGES, LANGUAGES
@@ -24,6 +24,7 @@ import { View } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
+import { StyleSheet } from "react-native";
 
 interface ScreenOneProps {
     attachments: any[];
@@ -53,6 +54,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
     type,
 }) => {
     const theme = useTheme();
+    const styles = useMemo(() => createStyles(theme), [theme]);
     const [onAssetUpload, setOnAssetUpload] = useState(false);
 
     const budgetText = useMemo(() => {
@@ -102,11 +104,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                     }}
                 />
 
-                <View
-                    style={{
-                        gap: 8,
-                    }}
-                >
+                <View style={styles.formSection}>
                     <TextInput
                         label="Collaboration Name"
                         mode="outlined"
@@ -129,9 +127,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                         mode="outlined"
                         multiline
                         numberOfLines={4}
-                        style={{
-                            minHeight: 100,
-                        }}
+                        style={styles.textInputMinHeight}
                         onChangeText={(text) => {
                             setCollaboration({
                                 ...collaboration,
@@ -144,9 +140,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                 <ContentWrapper
                     theme={theme}
                     title="Promotion Type"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <Selector
                         options={[
@@ -181,12 +175,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                                 fontSize: 16,
                             }}
                         >
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    gap: 8,
-                                }}
-                            >
+                            <View style={styles.budgetRow}>
                                 <TextInput
                                     keyboardType="number-pad"
                                     label="Min (Rs)"
@@ -200,9 +189,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                                             },
                                         });
                                     }}
-                                    style={{
-                                        flex: 1,
-                                    }}
+                                    style={styles.textInputFlex}
                                     value={collaboration.budget?.min === 0 ? '0' : collaboration.budget?.min ? collaboration.budget?.min.toString() : ''}
                                 />
                                 <TextInput
@@ -218,9 +205,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                                             },
                                         });
                                     }}
-                                    style={{
-                                        flex: 1,
-                                    }}
+                                    style={styles.textInputFlex}
                                     value={collaboration.budget?.max === 0 ? '0' : collaboration.budget?.max ? collaboration.budget?.max.toString() : ''}
                                 />
                             </View>
@@ -230,9 +215,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                 <ContentWrapper
                     theme={theme}
                     title="Language"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <MultiSelectExtendable
                         buttonLabel="Add Language"
@@ -254,9 +237,7 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
                     theme={theme}
                     title="Content Format"
                     description="Which content format are you willing to post on your social media account for promotions."
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <MultiSelectExtendable
                         buttonIcon={
@@ -317,5 +298,14 @@ const ScreenOne: React.FC<ScreenOneProps> = ({
         </>
     );
 };
+
+const createStyles = (_theme: ReturnType<typeof useTheme>) =>
+    StyleSheet.create({
+        formSection: { gap: 8 },
+        textInputMinHeight: { minHeight: 100 },
+        sectionTitle: { fontSize: 16 },
+        budgetRow: { flexDirection: "row" as const, gap: 8 },
+        textInputFlex: { flex: 1 },
+    });
 
 export default ScreenOne;

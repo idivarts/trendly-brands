@@ -1,5 +1,6 @@
 import type { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import Colors from "@/shared-uis/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef } from "react";
 import {
@@ -8,7 +9,6 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    useWindowDimensions,
     View,
 } from "react-native";
 import { IconButton, Text } from "react-native-paper";
@@ -37,7 +37,7 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const { width } = useWindowDimensions();
+    const { width } = useBreakpoints();
     const isMobile = width < MOBILE_BREAKPOINT;
     const panelOffset = isMobile ? width : PANEL_WIDTH;
     const translateXAnim = useRef(new Animated.Value(panelOffset)).current;
@@ -175,10 +175,10 @@ const createStyles = (
             overflow: "hidden",
             ...Platform.select({
                 web: {
-                    boxShadow: "-8px 0 24px rgba(0, 0, 0, 0.18)",
+                    boxShadow: `-8px 0 24px ${colors.panelShadow}`,
                 } as any,
                 default: {
-                    shadowColor: "#000",
+                    shadowColor: colors.black,
                     shadowOffset: { width: -4, height: 0 },
                     shadowOpacity: 0.18,
                     shadowRadius: 24,

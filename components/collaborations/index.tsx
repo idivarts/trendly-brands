@@ -2,6 +2,8 @@ import CollaborationList from "@/components/collaborations/Collaborations";
 import { View } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import React, { useMemo } from "react";
+import { StyleSheet } from "react-native";
 import { Href } from "expo-router";
 import TopTabNavigation from "../ui/top-tab-navigation";
 
@@ -31,15 +33,16 @@ const tabs = (xl: boolean) => [
 ];
 
 const Collaborations = () => {
-    const { xl } = useBreakpoints()
+    const { xl } = useBreakpoints();
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            paddingVertical: 16,
+        },
+    }), []);
     return (
         <AppLayout safeAreaEdges={["left", "right"]}>
-            <View
-                style={{
-                    flex: 1,
-                    paddingVertical: 16,
-                }}
-            >
+            <View style={styles.container}>
                 <TopTabNavigation
                     tabs={tabs(xl)}
                     splitTwoColumns={true}

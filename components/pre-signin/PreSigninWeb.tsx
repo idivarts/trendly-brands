@@ -17,6 +17,7 @@ import SocialButton from "../ui/button/social-button";
 
 const PreSignInWeb = () => {
     const theme = useTheme();
+    const colors = Colors(theme);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false)
     const router = useRouter();
@@ -94,7 +95,7 @@ const PreSignInWeb = () => {
                             </Text>
                         </View>
                         {error && (
-                            <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+                            <Text style={{ color: colors.red, marginTop: 10, textAlign: "center" }}>
                                 {error}
                             </Text>
                         )}

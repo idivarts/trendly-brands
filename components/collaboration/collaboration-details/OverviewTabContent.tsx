@@ -1,7 +1,7 @@
 import ChipCard from "@/components/collaboration-card/card-components/ChipComponent";
 import Button from "@/components/ui/button";
 import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { CURRENCY } from "@/constants/Unit";
 import { useContractContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
@@ -39,8 +39,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
-import { Linking, Pressable, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { Card, Portal, Text } from "react-native-paper";
 import { CollaborationDetail } from ".";
 import BrandModal from "./modal/BrandModal";
@@ -52,7 +52,8 @@ interface CollaborationDetailsContentProps {
 
 const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const stylesFromFn = stylesFn(theme);
+    const s = useMemo(() => useLocalStyles(theme), [theme]);
     const [status, setStatus] = React.useState("pending");
     const [managerDetails, setManagerDetails] = React.useState<any>();
     const [brandModalVisible, setBrandModalVisible] = useState(false);
@@ -163,9 +164,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     }, []);
 
     return (
-        <IOScroll contentContainerStyle={styles.scrollContainer}>
-            {/* Collaboration Details */}
-            <View style={[styles.profileCard, { alignItems: "center" }]}>
+        <IOScroll contentContainerStyle={stylesFromFn.scrollContainer}>
+            <View style={[stylesFromFn.profileCard, s.profileCardCenter]}>
                 {props?.collaboration?.attachments &&
                     props?.collaboration?.attachments.length > 0 && (
                         // !xl ? 
@@ -191,87 +191,37 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         //     }}
                         //     theme={theme} />
                     )}
-                <Card.Content style={styles.profileContent}>
-                    <View
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            width: "100%",
-                        }}
-                    >
-                        <View
-                            style={{
-                                display: "flex",
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                width: "100%",
-                                gap: 8,
-                                alignItems: "center",
-                            }}
-                        >
-                            <Text variant="headlineMedium" style={styles.name}>
+                <Card.Content style={stylesFromFn.profileContent}>
+                    <View style={s.columnFull}>
+                        <View style={s.rowBetween}>
+                            <Text variant="headlineMedium" style={stylesFromFn.name}>
                                 {props.collaboration.name}
                             </Text>
                             {props.collaboration.timeStamp ? (
-                                <Text
-                                    style={{
-                                        fontSize: 12,
-                                        color: Colors(theme).text,
-                                        paddingRight: 8,
-                                    }}
-                                >
+                                <Text style={s.timeText}>
                                     {formatTimeToNow(props.collaboration.timeStamp)}
                                 </Text>
                             ) : null}
                         </View>
-                        <View
-                            style={{
-                                width: "100%",
-                            }}
-                        >
-                            <ReadMore style={styles.shortDescription} text={props.collaboration.description || ""} />
+                        <View style={s.fullWidth}>
+                            <ReadMore style={stylesFromFn.shortDescription} text={props.collaboration.description || ""} />
                         </View>
                     </View>
 
-                    <View
-                        style={{
-                            width: "100%",
-                            borderWidth: 0.3,
-                            paddingVertical: 16,
-                            borderRadius: 10,
-                            borderColor: Colors(theme).gray300,
-                        }}
-                    >
+                    <View style={s.statsCard}>
                         <Card.Content>
                             <RatingSection feedbacks={getFeedbacks(contracts)} />
-                            <View
-                                style={{ flex: 1, flexDirection: "column", gap: 16 }}
-                                // onPress={() => setBrandModalVisible(true)}
-                            >
-                                <View
-                                    style={{
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        gap: 8,
-                                        flexGrow: 1,
-                                     
-                                    }}
-                                >
+                            <View style={s.gapColumn}                            >
+                                <View style={s.brandRow}>
                                     <ImageComponent
                                         url={props.collaboration.logo}
                                         altText="Brand Logo"
                                         shape="square"
                                         size="small"
-                                        style={{ width: 40, height: 40, borderRadius: 5 }}
+                                        style={s.brandLogo}
                                     />
-                                    <View style={{ flex: 1 }}>
-                                        <Text
-                                            style={{
-                                                fontSize: 16,
-                                                fontWeight: "bold",
-                                                color: Colors(theme).text,
-                                            }}
-                                        >
+                                    <View style={s.flex1}>
+                                        <Text style={s.boldText}>
                                             {props.collaboration.brandName}{" "}
                                             {props.collaboration.paymentVerified && (
                                                 <FontAwesomeIcon
@@ -280,15 +230,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                                 />
                                             )}
                                         </Text>
-                                        <Text
-                                            style={{
-                                                fontSize: 16,
-                                                flexWrap: "wrap",
-                                                overflow: "hidden",
-                                                color: Colors(theme).text,
-                                                lineHeight: 22,
-                                            }}
-                                        >
+                                        <Text style={s.descriptionText}>
                                             {truncateText(props.collaboration.brandDescription, 60)}
                                         </Text>
                                     </View>
@@ -299,24 +241,12 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
 
                     {props.collaboration?.externalLinks &&
                         props.collaboration?.externalLinks.length > 0 && (
-                            <View
-                                style={{
-                                    flexDirection: "row",
-                                    flexWrap: "wrap",
-                                    gap: 16,
-                                    justifyContent: "space-between",
-                                }}
-                            >
+                            <View style={s.linksRow}>
                                 {props.collaboration?.externalLinks?.map((item, index) => (
                                     <Button
                                         key={index}
                                         mode="contained"
-                                        style={{
-                                            flexBasis: 1,
-                                            flexGrow: 1,
-                                            borderColor: Colors(theme).primary,
-                                            borderWidth: 0.3,
-                                        }}
+                                        style={s.linkButton}
                                         buttonColor={Colors(theme).background}
                                         textColor={Colors(theme).primary}
                                         onPress={() => {
@@ -329,49 +259,19 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                             </View>
                         )}
 
-                    <View
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            width: "100%",
-                            gap: 8,
-                            borderWidth: 0.3,
-                            borderRadius: 10,
-                            padding: 16,
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: Colors(theme).text,
-                            }}
-                        >
+                    <View style={s.statsBlock}>
+                        <Text style={s.bodyText}>
                             Influencer Needed: {props.collaboration.numberOfInfluencersNeeded}
                         </Text>
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: Colors(theme).text,
-                            }}
-                        >
+                        <Text style={s.bodyText}>
                             Influencer Applied: {applicationCount}
                         </Text>
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: Colors(theme).text,
-                            }}
-                        >
+                        <Text style={s.bodyText}>
                             Invitations Sent: {invitationCount}
                         </Text>
                         {props.collaboration.promotionType ===
                             PromotionType.PAID_COLLAB && (
-                                <Text
-                                    style={{
-                                        fontSize: 16,
-                                        color: Colors(theme).text,
-                                    }}
-                                >
+                                <Text style={s.bodyText}>
                                     Budget: {props.collaboration?.budget?.min ===
                                         props.collaboration?.budget?.max
                                         ? `${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.min)}`
@@ -379,14 +279,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                 </Text>
                             )}
                     </View>
-                    <View
-                        style={{
-                            flexDirection: "row",
-                            flexWrap: "wrap",
-                            width: "100%",
-                            rowGap: 10,
-                        }}
-                    >
+                    <View style={s.chipsRow}>
                         <ChipCard
                             chipText={
                                 props.collaboration.promotionType === PromotionType.PAID_COLLAB
@@ -442,19 +335,8 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     </View>
 
                     {props.collaboration.location.type === "On-Site" && (
-                        <View
-                            style={{
-                                width: "100%",
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    color: Colors(theme).text,
-                                    fontWeight: "bold",
-                                    marginBottom: 16,
-                                }}
-                            >
+                        <View style={s.fullWidth}>
+                            <Text style={s.sectionTitle}>
                                 Location
                             </Text>
                             <ViewCollaborationMap
@@ -467,31 +349,15 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                 onMapRegionChange={(region) => { }}
                                 onFormattedAddressChange={(address) => { }}
                             />
-                            <Text style={{ fontSize: 16, color: Colors(theme).text }}>
+                            <Text style={s.bodyText}>
                                 {props.collaboration.location.name}
                             </Text>
                         </View>
                     )}
                     {props?.collaboration?.questionsToInfluencers &&
                         props?.collaboration?.questionsToInfluencers.length > 0 && (
-                            <View
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    width: "100%",
-                                    gap: 8,
-                                    borderWidth: 0.3,
-                                    borderRadius: 10,
-                                    padding: 16,
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        fontSize: 16,
-                                        color: Colors(theme).text,
-                                        fontWeight: "bold",
-                                    }}
-                                >
+                            <View style={s.questionsBlock}>
+                                <Text style={s.sectionTitle}>
                                     Questions asked on application
                                 </Text>
 
@@ -499,10 +365,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                     (question, index) => (
                                         <Text
                                             key={index}
-                                            style={{
-                                                fontSize: 16,
-                                                color: Colors(theme).text,
-                                            }}
+                                            style={s.bodyText}
                                         >
                                             {question}
                                         </Text>
@@ -510,62 +373,25 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                                 )}
                             </View>
                         )}
-                    <View style={{ width: "100%", gap: 16 }}>
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: Colors(theme).text,
-                                fontWeight: "bold",
-                            }}
-                        >
+                    <View style={s.postedByBlock}>
+                        <Text style={s.sectionTitle}>
                             Posted by
                         </Text>
-                        <View
-                        // onPress={() => setManagerModalVisible(true)}
-                            >
-                            <View
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 10,
-                                }}
-                            >
+                        <View>
+                            <View style={s.managerRow}>
                                 <ImageComponent
                                     url={managerDetails?.profileImage}
                                     size="small"
                                     altText="Manager Profile Image"
                                     initials={managerDetails?.name}
                                     initialsSize={16}
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 20,
-                                    }}
+                                    style={s.managerAvatar}
                                 />
-                                <View
-                                    style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        justifyContent: "center",
-                                        gap: 2,
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            fontSize: 16,
-                                            fontWeight: "bold",
-                                            color: Colors(theme).text,
-                                        }}
-                                    >
+                                <View style={s.managerInfo}>
+                                    <Text style={s.boldText}>
                                         {managerDetails?.name}
                                     </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 16,
-                                            color: Colors(theme).gray100,
-                                        }}
-                                    >
+                                    <Text style={s.grayText}>
                                         {managerDetails?.role} - {props.collaboration.brandName}
                                     </Text>
                                 </View>
@@ -599,5 +425,143 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
         </IOScroll>
     );
 };
+
+function useLocalStyles(theme: ReturnType<typeof useTheme>) {
+    return StyleSheet.create({
+        profileCardCenter: {
+            alignItems: "center",
+        },
+        columnFull: {
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+        },
+        rowBetween: {
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            width: "100%",
+            gap: 8,
+            alignItems: "center",
+        },
+        timeText: {
+            fontSize: 12,
+            color: Colors(theme).text,
+            paddingRight: 8,
+        },
+        fullWidth: {
+            width: "100%",
+        },
+        statsCard: {
+            width: "100%",
+            borderWidth: 0.3,
+            paddingVertical: 16,
+            borderRadius: 10,
+            borderColor: Colors(theme).gray300,
+        },
+        gapColumn: {
+            flex: 1,
+            flexDirection: "column",
+            gap: 16,
+        },
+        brandRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flexGrow: 1,
+        },
+        brandLogo: {
+            width: 40,
+            height: 40,
+            borderRadius: 5,
+        },
+        flex1: {
+            flex: 1,
+        },
+        boldText: {
+            fontSize: 16,
+            fontWeight: "bold",
+            color: Colors(theme).text,
+        },
+        descriptionText: {
+            fontSize: 16,
+            flexWrap: "wrap",
+            overflow: "hidden",
+            color: Colors(theme).text,
+            lineHeight: 22,
+        },
+        linksRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 16,
+            justifyContent: "space-between",
+        },
+        linkButton: {
+            flexBasis: 1,
+            flexGrow: 1,
+            borderColor: Colors(theme).primary,
+            borderWidth: 0.3,
+        },
+        statsBlock: {
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            gap: 8,
+            borderWidth: 0.3,
+            borderRadius: 10,
+            padding: 16,
+        },
+        bodyText: {
+            fontSize: 16,
+            color: Colors(theme).text,
+        },
+        chipsRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            width: "100%",
+            rowGap: 10,
+        },
+        sectionTitle: {
+            fontSize: 16,
+            color: Colors(theme).text,
+            fontWeight: "bold",
+            marginBottom: 16,
+        },
+        questionsBlock: {
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            gap: 8,
+            borderWidth: 0.3,
+            borderRadius: 10,
+            padding: 16,
+        },
+        postedByBlock: {
+            width: "100%",
+            gap: 16,
+        },
+        managerRow: {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+        },
+        managerAvatar: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+        },
+        managerInfo: {
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 2,
+        },
+        grayText: {
+            fontSize: 16,
+            color: Colors(theme).gray100,
+        },
+    });
+}
 
 export default OverviewTabContent;

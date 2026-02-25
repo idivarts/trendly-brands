@@ -5,7 +5,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 import { View } from "../theme/Themed";
 
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import ConfirmationModal from "@/shared-uis/components/ConfirmationModal";
 import { resetAndNavigate } from "@/utils/router";
 import { useRouter } from "expo-router";

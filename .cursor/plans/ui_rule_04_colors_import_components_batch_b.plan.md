@@ -1,6 +1,6 @@
 ---
 name: UI rule – Colors import (components batch B)
-overview: "Replace `@/constants/Colors` with `@/shared-uis/constants/Colors` in remaining components (ui, drawer-layout, create-collaboration, menu, notifications, explore-influencers, discover, collaboration-card, brand-profile, profile, theme, FilterModal, SearchComponent, NotificationCard, ProfileItemCard, BottomSheetActions, paywall, settings, collaborations). Part of UI rule violation audit (split); implement after Plan 03 (Phase 1)."
+overview: Replace `@/constants/Colors` with `@/shared-uis/constants/Colors` in remaining components (ui, drawer-layout, create-collaboration, menu, notifications, explore-influencers, discover, collaboration-card, brand-profile, profile, theme, FilterModal, SearchComponent, NotificationCard, ProfileItemCard, BottomSheetActions, paywall, settings, collaborations). Part of UI rule violation audit (split); implement after Plan 03 (Phase 1).
 todos: []
 isProject: false
 ---
@@ -18,6 +18,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 ## Files in scope (48)
 
 **components/create-collaboration**
+
 - components/create-collaboration/index.tsx
 - components/create-collaboration/screen-one.tsx
 - components/create-collaboration/screen-two.tsx
@@ -27,6 +28,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - components/create-collaboration/screen-layout.tsx
 
 **components/drawer-layout**
+
 - components/drawer-layout/DrawerMenuContent.tsx
 - components/drawer-layout/DrawerMenuContentWeb.tsx
 - components/drawer-layout/DrawerMenuItem.tsx
@@ -34,6 +36,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - components/drawer-layout/BrandItem.tsx
 
 **components/ui**
+
 - components/ui/back-button/BackButton.tsx
 - components/ui/brand-switcher/index.tsx
 - components/ui/button/social-button.tsx
@@ -55,6 +58,7 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 - components/ui/top-tab-navigation/index.tsx
 
 **Other components**
+
 - components/FilterModal.tsx
 - components/NotificationCard.tsx
 - components/SearchComponent.tsx
@@ -85,3 +89,4 @@ Replace every import from `@/constants/Colors` with `@/shared-uis/constants/Colo
 
 - Each file imports `Colors` from `@/shared-uis/constants/Colors`.
 - No behavior change.
+

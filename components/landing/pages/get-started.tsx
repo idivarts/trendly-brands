@@ -125,7 +125,7 @@ export default function TrendlyHero() {
                     {/* Left copy */}
                     <Animated.View style={[
                         isWide && styles.left,
-                        isWide ? { paddingRight: 90 } : {},
+                        isWide ? styles.leftPaddingWide : null,
                         { opacity: leftFade, transform: [{ translateY: leftTranslateY }] },
                     ]}
                     >
@@ -149,11 +149,11 @@ export default function TrendlyHero() {
                                 disabled={loading}
                                 style={({ pressed }) => [
                                     styles.cta,
-                                    (pressed || ctaHovered) && { transform: [{ scale: 0.98 }] },
+                                    (pressed || ctaHovered) && styles.ctaPressed,
                                 ]}
                             >
                                 {actionType != "demo" && (
-                                    <FontAwesome name="google" size={20} color="#fff" style={{ marginRight: 8 }} />
+                                    <FontAwesome name="google" size={20} color="#fff" style={styles.ctaIcon} />
                                 )}
                                 <Text style={styles.ctaText}>{!loading ? (getStarted?.action || "Join Now to claim Offer") : "Please wait..."}</Text>
                                 {actionType == "demo" &&
@@ -166,7 +166,7 @@ export default function TrendlyHero() {
                     {/* Right video */}
                     <Animated.View style={[
                         styles.videoWrap,
-                        !isWide && { marginTop: 28 },
+                        !isWide && styles.videoWrapNarrow,
                         { opacity: videoOpacity, transform: [{ scale: videoScale }] },
                     ]}>
                         <VideoPlayer videoLink={features.videoUrl} thumbnail={getStarted?.image || VIDEO_THUMB} />
@@ -219,6 +219,9 @@ const styles = StyleSheet.create({
     left: {
         flex: 1.3,
     },
+    leftPaddingWide: {
+        paddingRight: 90,
+    },
     kicker: {
         color: BLUE_LIGHT,
         fontSize: 12,
@@ -262,6 +265,12 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 8 },
         ...Platform.select({ android: { elevation: 6 } }),
     },
+    ctaPressed: {
+        transform: [{ scale: 0.98 }],
+    },
+    ctaIcon: {
+        marginRight: 8,
+    },
     ctaText: {
         color: "#FFFFFF",
         fontSize: 16,
@@ -277,5 +286,8 @@ const styles = StyleSheet.create({
     /* Right / Video */
     videoWrap: {
         flex: 1,
+    },
+    videoWrapNarrow: {
+        marginTop: 28,
     },
 });
