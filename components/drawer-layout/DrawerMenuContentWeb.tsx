@@ -31,7 +31,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     Linking,
     Platform,
@@ -44,6 +44,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Brand } from "@/types/Brand";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
+import CreditsCoachMark, { CreditsCoachMarkLayout } from "./CreditsCoachMark";
 //  import BrandActionItem from "./BrandActionItem";
 // Bottom menu items factory
 const BOTTOM_MENU_ITEMS = (
@@ -209,6 +210,28 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const [isBrandHovered, setIsBrandHovered] = useState(false);
     const [isAdminHovered, setIsAdminHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
+    const [showCreditsCoachMark, setShowCreditsCoachMark] = useState(false);
+    const [creditsCoachMarkLayout, setCreditsCoachMarkLayout] =
+        useState<CreditsCoachMarkLayout | null>(null);
+
+    const creditsCardRef = React.useRef<RNView>(null);
+    const hasCreditsCard = Boolean(
+        selectedBrand && !selectedBrand.isBillingDisabled
+    );
+
+    const measureCreditsCard = useCallback(() => {
+        if (!hasCreditsCard || !creditsCardRef.current) return;
+        creditsCardRef.current.measureInWindow((x, y, width, height) => {
+            setCreditsCoachMarkLayout({ x, y, width, height });
+            setShowCreditsCoachMark(true);
+        });
+    }, [hasCreditsCard]);
+
+    React.useEffect(() => {
+        if (!hasCreditsCard) return;
+        const t = setTimeout(measureCreditsCard, 400);
+        return () => clearTimeout(t);
+    }, [hasCreditsCard, measureCreditsCard]);
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
@@ -216,8 +239,9 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     };
 
     return (
-        <DrawerColorsContext.Provider value={drawerColors}>
-            <View style={styles.root}>
+        <>
+            <DrawerColorsContext.Provider value={drawerColors}>
+                <View style={styles.root}>
                 <View style={styles.header}>
                     <Pressable
                         onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
@@ -289,7 +313,11 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     </View>
 
                     {selectedBrand && !selectedBrand.isBillingDisabled && (
-                        <View style={styles.creditsCard}>
+                        <RNView
+                            ref={creditsCardRef}
+                            style={styles.creditsCard}
+                            collapsable={false}
+                        >
                             <Pressable
                                 onPress={() => nav.push("/billing")}
                                 style={styles.creditsRow}
@@ -325,7 +353,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                 </Text>
                                 <Text style={styles.creditsMonthly}>Monthly</Text>
                             </View>
-                        </View>
+                        </RNView>
                     )}
                 {selectedBrand && !selectedBrand.isBillingDisabled && (
                     <>
@@ -438,8 +466,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         )
                     )}
                 </View>
-            </View>
-        </DrawerColorsContext.Provider>
+                </View>
+            </DrawerColorsContext.Provider>
+            <CreditsCoachMark
+                visible={showCreditsCoachMark}
+                highlightLayout={creditsCoachMarkLayout}
+                onDismiss={() => setShowCreditsCoachMark(false)}
+            />
+        </>
     );
 };
 
