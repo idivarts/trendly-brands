@@ -1,6 +1,7 @@
 import AdvancedFilterOverlay from "@/components/discover/AdvancedFilterOverlay";
 import type { DB_TYPE } from "@/components/discover/discover-types";
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
+import DiscoverScreenHeader from "@/components/discover/DiscoverScreenHeader";
 import DiscoverSurvey from "@/components/discover/DiscoverSurvey";
 import {
     DiscoveryProvider,
@@ -53,6 +54,8 @@ const DiscoverComponent = ({
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
+    const [headerTotalCount, setHeaderTotalCount] = useState<string>("0");
+    const [headerCurrentSort, setHeaderCurrentSort] = useState<string>("followers");
     const discoverCommunication =
         useRef<((action: DiscoverCommunication) => any) | undefined>(undefined);
     const pageSortCommunication =
@@ -188,11 +191,17 @@ const DiscoverComponent = ({
                 showTopPanel:
                     typeof showTopPanel === "boolean" ? showTopPanel : topPanel,
                 setIsCollapsed,
+                totalCount: headerTotalCount,
+                currentSort: headerCurrentSort,
+                setTotalCount: setHeaderTotalCount,
+                setCurrentSort: setHeaderCurrentSort,
             }}
         >
-            <AppLayout safeAreaEdges={["left", "right"]}>
-                <View style={{ width: "100%", flexDirection: "row", height: "100%", }}>
-                    <DiscoverInfluencer
+            <AppLayout safeAreaEdges={["top", "left", "right"]}>
+                <View style={{ width: "100%", flex: 1 }}>
+                    <DiscoverScreenHeader />
+                    <View style={{ width: "100%", flexDirection: "row", flex: 1 }}>
+                        <DiscoverInfluencer
                         advanceFilter={advanceFilter}
                         statusFilter={statusFilter}
                         onStatusChange={onStatusChange}
@@ -210,6 +219,7 @@ const DiscoverComponent = ({
                         onFiltersApplied={() => {}}
                     />
                 )}
+                </View>
             </AppLayout>
         </DiscoveryProvider>
     );

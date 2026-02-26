@@ -1,9 +1,7 @@
 import { router, Tabs } from "expo-router";
 import React from "react";
 
-import DiscoverHeader from "@/components/discover/DiscoverHeader";
 import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
-import { OpenFilterRightPanel } from "@/components/discover/discovery-context";
 import Header from "@/components/explore-influencers/header";
 import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
@@ -202,27 +200,13 @@ const TabLayout = () => {
                 name="discover"
                 options={{
                     title: xl ? "Discover Influencers" : "Discover",
-                    headerTitle: () => <DiscoverHeader />,
+                    headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
                             icon={focused ? faGemSolid : faGem}
                             size={22}
                         />
-                    ),
-                    headerRight: () => (
-                        <View style={styles.headerRightRowSimple}>
-                            <Pressable
-                                onPress={() => OpenFilterRightPanel.next()}
-                                style={styles.filterButton}
-                            >
-                                <FontAwesomeIcon
-                                    color={Colors(theme).text}
-                                    icon={faFilter}
-                                    size={24}
-                                />
-                            </Pressable>
-                        </View>
                     ),
                 }}
             />
