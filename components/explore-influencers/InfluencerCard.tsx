@@ -3,8 +3,8 @@ import { FacebookImageComponent } from "@/shared-uis/components/image-component"
 import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import Colors from "@/shared-uis/constants/Colors";
 import { maskHandle } from "@/shared-uis/utils/masks";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Card, Checkbox } from "react-native-paper";
