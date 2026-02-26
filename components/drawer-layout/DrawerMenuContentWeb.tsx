@@ -1,9 +1,9 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     faAddressCard,
     faComment,
@@ -44,7 +44,7 @@ const BOTTOM_MENU_ITEMS = (
     theme: Theme,
     name?: string,
     profileImage?: string,
-    styles: { profileImageSize: { width: number; height: number } }
+    styles?: { profileImageSize: { width: number; height: number } }
 ): Tab[] => [
         {
             href: "/onboarding-your-brand",
@@ -60,7 +60,7 @@ const BOTTOM_MENU_ITEMS = (
                     shape="circle"
                     size="small"
                     altText="Image"
-                    style={styles.profileImageSize}
+                    style={styles?.profileImageSize}
                 />
             ),
             label: name || "Profile",
