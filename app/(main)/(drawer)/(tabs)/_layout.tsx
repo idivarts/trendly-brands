@@ -50,11 +50,6 @@ const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
             alignItems: "center",
             justifyContent: "space-between",
         },
-        discoverTagsRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            paddingRight: 8,
-        },
         filterButton: {
             marginLeft: 12,
         },
@@ -85,8 +80,6 @@ const TabLayout = () => {
     const { unreadCount } = useChatContext()
     const { manager } = useAuthContext();
     const { selectedBrand } = useBrandContext()
-    const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
-    const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
     const influencerCredits = selectedBrand?.credits?.influencer || (IS_MONETIZATION_DONE ? 0 : 1000)
 
     const copyBrandId = async () => {
@@ -217,26 +210,10 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
-                    headerRight: () => <View style={styles.headerRightRowSimple}>
-                        <View style={styles.discoverTagsRow}>
-                            <PremiumActionTag
-                                label="Discovery remaining"
-                                tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
-                                icon="diamond-stone"
-                                variant="gold"
-                                count={discoverCoinsLeft}
-                            />
-                            <PremiumActionTag
-                                label="Invites remaining"
-                                tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you invite any influencer.\n\nLimit recharges every month depending on what plan you are on"}
-                                icon="lightning-bolt"
-                                variant="purple"
-                                count={connectionCreditsLeft}
-                            />
+                    headerRight: () => (
+                        <View style={styles.headerRightRowSimple}>
                             <Pressable
-                                onPress={() => {
-                                    OpenFilterRightPanel.next();
-                                }}
+                                onPress={() => OpenFilterRightPanel.next()}
                                 style={styles.filterButton}
                             >
                                 <FontAwesomeIcon
@@ -246,7 +223,7 @@ const TabLayout = () => {
                                 />
                             </Pressable>
                         </View>
-                    </View>,
+                    ),
                 }}
             />
             <Tabs.Screen

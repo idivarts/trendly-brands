@@ -14,16 +14,20 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import {
     faChevronRight,
+    faChevronDown,
+    faChevronUp,
     faComment as faCommentSolid,
     faCreditCard,
     faDiagramProject,
     faGem as faGemSolid,
+    faBolt,
     faPlus,
     faSliders,
     faStar as faStarSolid,
     faUsers,
     faUserShield
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -34,9 +38,11 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
+    View as RNView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import BrandSwitcher, { OpenBrandSwitcher } from "../ui/brand-switcher";
+import { Brand } from "@/types/Brand";
+import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
 //  import BrandActionItem from "./BrandActionItem";
 // Bottom menu items factory
@@ -180,75 +186,150 @@ const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
 ];
 
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
-    const router = useMyNavigation();
+    const nav = useMyNavigation();
     const { bottom } = useSafeAreaInsets();
     const theme = useTheme();
+    const colors = Colors(theme);
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
 
-    // const [isAdmin, setIsAdmin] = useState<boolean>(false);
-    // React.useEffect(() => {
-    //   if (manager) {
-    //     setIsAdmin(!!manager.isAdmin);
-    //     console.log("🛡️ isAdmin flag:", manager.isAdmin);
-    //     console.log("👤 Manager object:", manager);
-    //   }
-    // }, [manager]);
-
     const planKey = selectedBrand?.billing?.planKey || "";
+    const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
+    const connectionCreditsLeft = Number(selectedBrand?.credits?.connection ?? 0);
+    const discoveryLimit = 1000;
+    const discoveryProgress = Math.min(1, discoverCoinsLeft / discoveryLimit);
+    const hasMultipleBrands = brands.length > 1;
+
+    const drawerColors = useMemo(
+        () => ({ inactiveColor: colors.drawerText, activeColor: colors.white }),
+        [colors.drawerText, colors.white]
+    );
 
     const [isBrandHovered, setIsBrandHovered] = useState(false);
     const [isAdminHovered, setIsAdminHovered] = useState(false);
+    const [brandListExpanded, setBrandListExpanded] = useState(false);
+
+    const handleBrandSelect = (brand: Brand) => {
+        setSelectedBrand(brand);
+        setBrandListExpanded(false);
+    };
 
     return (
-        <View style={styles.root}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Pressable
-                    onPress={() => {
-                        OpenBrandSwitcher.next(undefined);
-                    }}
-                >
-                    <View style={styles.headerRow}>
-                        <Text
-                            style={styles.brandName}
-                        >
-                            {selectedBrand?.name ?? "Brand"}
-                        </Text>
-                        {/* Quick switcher (if available on layout) */}
-                        <BrandSwitcher />
-                    </View>
-                </Pressable>
-            </View>
-
-            {/* Content */}
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Campaigns Section */}
-                <View style={styles.section}>
-                    <Text
-                        style={styles.sectionTitle}
+        <DrawerColorsContext.Provider value={drawerColors}>
+            <View style={styles.root}>
+                <View style={styles.header}>
+                    <Pressable
+                        onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
+                        style={styles.headerPressable}
                     >
-                        Connect
-                    </Text>
-                    <View style={styles.campaignItems}>
-                        {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-                            <DrawerMenuItem
-                                key={`campaign-${idx}`}
-                                tab={tab}
-                                proLock={tab.pro && planKey != "pro" && planKey != "enterprise"}
-                            />
-                        ))}
-                    </View>
+                        <View style={styles.headerRow}>
+                            <View style={styles.logoCircle}>
+                                <Text style={styles.logoText}>T</Text>
+                            </View>
+                            <View style={styles.headerBrand}>
+                                <Text style={styles.brandName} numberOfLines={1}>
+                                    {selectedBrand?.name ?? "Brand"}
+                                </Text>
+                                <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
+                            </View>
+                            {hasMultipleBrands ? (
+                                <FontAwesomeIcon
+                                    icon={brandListExpanded ? faChevronUp : faChevronDown}
+                                    size={14}
+                                    color={colors.drawerTextMuted}
+                                />
+                            ) : null}
+                        </View>
+                    </Pressable>
+                    {hasMultipleBrands && brandListExpanded && (
+                        <View style={styles.brandListContainer}>
+                            {brands.map((brand) => {
+                                const isSelected = brand.id === selectedBrand?.id;
+                                return (
+                                    <Pressable
+                                        key={brand.id}
+                                        onPress={() => handleBrandSelect(brand)}
+                                        style={[
+                                            styles.brandListItem,
+                                            isSelected && styles.brandListItemSelected,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.brandListItemText,
+                                                isSelected && styles.brandListItemTextSelected,
+                                            ]}
+                                            numberOfLines={1}
+                                        >
+                                            {brand.name}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    )}
                 </View>
 
-                {/* Promotional Banner */}
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>CONNECT</Text>
+                        <View style={styles.campaignItems}>
+                            {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
+                                <DrawerMenuItem
+                                    key={`campaign-${idx}`}
+                                    tab={tab}
+                                    proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
+                                />
+                            ))}
+                        </View>
+                    </View>
+
+                    {selectedBrand && !selectedBrand.isBillingDisabled && (
+                        <View style={styles.creditsCard}>
+                            <Pressable
+                                onPress={() => nav.push("/billing")}
+                                style={styles.creditsRow}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faGemSolid}
+                                    size={18}
+                                    color={colors.gold}
+                                    style={styles.creditsIcon}
+                                />
+                                <Text style={styles.creditsDiscoveryText}>
+                                    {discoverCoinsLeft} Discovery
+                                </Text>
+                                <Text style={styles.refillLink}>REFILL</Text>
+                            </Pressable>
+                            <RNView style={styles.progressTrack}>
+                                <RNView
+                                    style={[
+                                        styles.progressFill,
+                                        { width: `${discoveryProgress * 100}%` },
+                                    ]}
+                                />
+                            </RNView>
+                            <View style={styles.creditsRow}>
+                                <FontAwesomeIcon
+                                    icon={faBolt}
+                                    size={18}
+                                    color={colors.drawerInvitesIcon}
+                                    style={styles.creditsIcon}
+                                />
+                                <Text style={styles.creditsInvitesText}>
+                                    {connectionCreditsLeft} Invites
+                                </Text>
+                                <Text style={styles.creditsMonthly}>Monthly</Text>
+                            </View>
+                        </View>
+                    )}
                 {selectedBrand && !selectedBrand.isBillingDisabled && (
                     <>
-                        {!selectedBrand.billing || selectedBrand?.billing?.planKey == "starter" && (
+                        {(!selectedBrand.billing || selectedBrand?.billing?.planKey === "starter") && (
                             <RenderBanner
                                 title="You’re on a Free Plan"
                                 description="Upgrade now to enjoy all the premium features and grow your brand."
@@ -279,12 +360,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     </>
                 )}
 
-                {/* Brand Details Section */}
+                {/* BRAND MANAGEMENT */}
                 <View style={styles.brandDetailsSection}>
                     <Pressable
-                        onPress={() => {
-                            router.push("/menu");
-                        }}
+                        onPress={() => nav.push("/menu")}
                         onHoverIn={() => setIsBrandHovered(true)}
                         onHoverOut={() => setIsBrandHovered(false)}
                     >
@@ -294,11 +373,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                 isBrandHovered && styles.sectionHeaderRowHover,
                             ]}
                         >
-                            <Text
-                                style={styles.sectionTitle}
-                            >
-                                Brand Details
-                            </Text>
+                            <Text style={styles.sectionTitle}>BRAND MANAGEMENT</Text>
                             <DrawerIcon icon={faChevronRight} size={12} />
                         </View>
                     </Pressable>
@@ -310,21 +385,11 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         ))}
                     </View>
                 </View>
-                {/* Showcase Section */}
+                {/* INSIGHTS */}
                 <View style={styles.brandDetailsSection}>
-                    <Pressable
-                        onPress={() => {
-                            router.push("/menu");
-                        }}
-                    >
-                        <View
-                            style={styles.sectionHeaderRow}
-                        >
-                            <Text
-                                style={styles.sectionTitle}
-                            >
-                                Showcase (Already Joined)
-                            </Text>
+                    <Pressable onPress={() => nav.push("/menu")}>
+                        <View style={styles.sectionHeaderRow}>
+                            <Text style={styles.sectionTitle}>INSIGHTS</Text>
                             <DrawerIcon icon={faChevronRight} size={12} />
                         </View>
                     </Pressable>
@@ -341,9 +406,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                 {manager?.isAdmin && (
                     <View style={styles.brandDetailsSection}>
                         <Pressable
-                            onPress={() => {
-                                console.log("🛡️ Admin Portal clicked");
-                            }}
+                            onPress={() => {}}
                             onHoverIn={() => setIsAdminHovered(true)}
                             onHoverOut={() => setIsAdminHovered(false)}
                         >
@@ -353,11 +416,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                     isAdminHovered && styles.sectionHeaderRowHover,
                                 ]}
                             >
-                                <Text
-                                    style={styles.sectionTitle}
-                                >
-                                    Admin Portal
-                                </Text>
+                                <Text style={styles.sectionTitle}>Admin Portal</Text>
                                 <DrawerIcon icon={faChevronRight} size={12} />
                             </View>
                         </Pressable>
@@ -372,15 +431,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                 )}
             </ScrollView>
 
-            {/* Bottom Actions */}
-            <View style={styles.bottomActions}>
-                {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
-                    (tab, idx) => (
-                        <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
-                    )
-                )}
+                <View style={styles.bottomActions}>
+                    {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
+                        (tab, idx) => (
+                            <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
+                        )
+                    )}
+                </View>
             </View>
-        </View>
+        </DrawerColorsContext.Provider>
     );
 };
 
@@ -429,46 +488,155 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         root: {
             flex: 1,
             paddingTop: Platform.OS === "web" ? 8 : 64,
-            backgroundColor: colors.background,
+            backgroundColor: colors.drawerBackground,
         },
         header: {
             paddingHorizontal: 12,
-            paddingBottom: 12,
-            borderBottomColor: colors.border,
-            borderBottomWidth: StyleSheet.hairlineWidth,
+            paddingVertical: 12,
+            backgroundColor: colors.drawerHeaderBg,
+            borderBottomLeftRadius: 12,
+            borderBottomRightRadius: 12,
+            marginHorizontal: 8,
+            marginBottom: 4,
+        },
+        headerPressable: {
+            flex: 1,
         },
         headerRow: {
             flexDirection: "row",
             alignItems: "center",
+            backgroundColor: "transparent",
         },
-        brandName: {
+        logoCircle: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 10,
+        },
+        logoText: {
+            color: colors.white,
             fontSize: 18,
             fontWeight: "700",
-            paddingVertical: 10,
+        },
+        headerBrand: {
             flex: 1,
-            color: colors.text,
+            minWidth: 0,
+            backgroundColor: "transparent",
+        },
+        brandName: {
+            fontSize: 16,
+            fontWeight: "700",
+            color: colors.drawerText,
+        },
+        brandSubtitle: {
+            fontSize: 11,
+            color: colors.drawerTextMuted,
+            marginTop: 2,
+        },
+        brandListContainer: {
+            marginTop: 8,
+            paddingTop: 8,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.drawerBorder,
+            gap: 0,
+            backgroundColor: "transparent",
+        },
+        brandListItem: {
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            marginBottom: 2,
+            
+        },
+        brandListItemSelected: {
+            backgroundColor: colors.primary,
+            
+        },
+        brandListItemText: {
+            fontSize: 14,
+            color: colors.drawerText,
+            fontWeight: "500",
+            
+        },
+        brandListItemTextSelected: {
+            color: colors.white,
+            fontWeight: "600",
         },
         scrollContent: {
             paddingVertical: 12,
             paddingHorizontal: 8,
             gap: 8,
+            backgroundColor: colors.drawerBackground,
         },
         section: {
             gap: 8,
+            backgroundColor: "transparent",
         },
         sectionTitle: {
             fontSize: 12,
             fontWeight: "600",
-            opacity: 0.7,
             paddingHorizontal: 8,
-            color: colors.text,
+            color: colors.drawerTextMuted,
+            backgroundColor: "transparent",
         },
         campaignItems: {
             rowGap: 2,
+            backgroundColor: "transparent",
+        },
+        creditsCard: {
+            backgroundColor: colors.drawerCardBg,
+            borderRadius: 12,
+            padding: 12,
+            marginHorizontal: 8,
+            gap: 8,
+        },
+        creditsRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "transparent",
+        },
+        creditsIcon: {
+            marginRight: 8,
+        },
+        creditsDiscoveryText: {
+            flex: 1,
+            fontSize: 14,
+            color: colors.drawerText,
+            fontWeight: "500",
+        },
+        refillLink: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.aliceBlue,
+        },
+        progressTrack: {
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: colors.drawerProgressTrack,
+            overflow: "hidden",
+        },
+        progressFill: {
+            height: "100%",
+            backgroundColor: colors.drawerProgressFill,
+            borderRadius: 3,
+        },
+        creditsInvitesText: {
+            flex: 1,
+            fontSize: 14,
+            color: colors.drawerText,
+            fontWeight: "500",
+        },
+        creditsMonthly: {
+            fontSize: 11,
+            color: colors.drawerTextMuted,
         },
         brandDetailsSection: {
             marginTop: 16,
             gap: 8,
+            backgroundColor: "transparent",
         },
         sectionHeaderRow: {
             flexDirection: "row",
@@ -477,23 +645,27 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             marginBottom: -10,
             paddingHorizontal: 8,
             paddingVertical: 12,
+            backgroundColor: "transparent",
         },
         sectionHeaderRowHover: {
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.border,
+            // borderWidth: StyleSheet.hairlineWidth,z
+            // borderColor: colors.drawerBorder,
+            
         },
         divider: {
-            borderTopColor: colors.border,
+            borderTopColor: colors.drawerBorder,
             borderTopWidth: StyleSheet.hairlineWidth,
         },
         menuItems: {
             gap: 0,
+            backgroundColor: "transparent"
         },
         bottomActions: {
             paddingHorizontal: 8,
-            paddingTop: 4,
+            paddingTop: 12,
             paddingBottom: bottom,
-            borderTopColor: colors.border,
+            backgroundColor: colors.drawerHeaderBg,
+            borderTopColor: colors.drawerBorder,
             borderTopWidth: StyleSheet.hairlineWidth,
             gap: 4,
         },

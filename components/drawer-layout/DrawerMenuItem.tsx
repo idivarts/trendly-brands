@@ -1,5 +1,6 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext } from "@/contexts";
+import { useDrawerColors } from "@/components/drawer-layout/drawer-colors-context";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -32,11 +33,16 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     const pathname = usePathname();
     const theme = useTheme();
     const { unreadCount } = useChatContext();
+    const drawerColors = useDrawerColors();
     const [hovered, setHovered] = useState(false);
 
     // Avoid marking blank href items as active
     const isActive = !!tab.href && pathname.startsWith(tab.href.toString());
     const colorSet = Colors(theme);
+    const inactiveBg = drawerColors ? colorSet.drawerBackground : colorSet.background;
+    const inactiveText = drawerColors ? drawerColors.inactiveColor : colorSet.text;
+    const activeBg = colorSet.primary;
+    const activeText = drawerColors ? drawerColors.activeColor : colorSet.onPrimary;
 
     return (
         <Pressable
@@ -49,18 +55,13 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
             style={({ pressed }) => [
                 styles.wrapper,
                 {
-                    // Backgrounds
                     backgroundColor: isActive
-                        ? colorSet.primary
+                        ? activeBg
                         : pressed || hovered
-                            ? colorSet.background + "F2"
-                            : colorSet.background,
-                    // Borders: only on active or hover
+                            ? inactiveBg + "F2"
+                            : inactiveBg,
                     borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
-                    borderColor: isActive ? colorSet.primary : colorSet.border,
-                    // Active accent on the left
-                    // borderLeftWidth: isActive ? 3 : 0,
-                    // borderLeftColor: isActive ? colorSet.white : "transparent",
+                    borderColor: isActive ? colorSet.primary : (drawerColors ? colorSet.drawerBorder : colorSet.border),
                 },
             ]}
             accessibilityRole="button"
@@ -72,7 +73,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                 <Text
                     style={[
                         styles.label,
-                        { color: isActive ? colorSet.white : colorSet.text, fontWeight: isActive ? "600" : "500" },
+                        { color: isActive ? activeText : inactiveText, fontWeight: isActive ? "600" : "500" },
                     ]}
                     numberOfLines={1}
                 >
@@ -145,13 +146,17 @@ interface DrawerIconProps {
 const DrawerIcon: React.FC<DrawerIconProps> = ({ href, icon, size = 20 }) => {
     const theme = useTheme();
     const pathname = usePathname();
+    const drawerColors = useDrawerColors();
 
     const active = !!href && pathname.startsWith(href);
+    const color = active
+        ? (drawerColors ? drawerColors.activeColor : Colors(theme).white)
+        : (drawerColors ? drawerColors.inactiveColor : Colors(theme).text);
 
     return (
         <FontAwesomeIcon
             icon={icon}
-            color={active ? Colors(theme).white : Colors(theme).text}
+            color={color}
             size={size}
         />
     );

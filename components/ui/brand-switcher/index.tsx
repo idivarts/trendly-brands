@@ -45,7 +45,7 @@ const BrandSwitcher = () => {
             anchor={
                 <Pressable onPress={openMenu}>
                     <FontAwesomeIcon
-                        color={Colors(theme).text}
+                        color={Colors(theme).white}
                         icon={faChevronDown}
                         size={16}
                         style={{
