@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -8,7 +8,6 @@ import { Href } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
     Animated,
-    Dimensions,
     Pressable,
     ScrollView,
     Text,
@@ -45,6 +44,8 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
     const scrollViewRef = useRef<ScrollView>(null);
     const theme = useTheme();
     const styles = stylesFn(theme);
+    const { xl: xlRaw, height } = useBreakpoints();
+    const xl = splitTwoColumns && xlRaw;
 
     const collapseAnim = useRef(new Animated.Value(1)).current;
     const autoCollapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,9 +78,6 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
             }
         };
     }, []);
-    const { xl: xlRaw } = useBreakpoints();
-    const xl = splitTwoColumns && xlRaw;
-
     useEffect(() => {
         setActiveTab(tabs[defaultSelection]);
     }, [tabs, defaultSelection]);
@@ -160,7 +158,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
                                 alignSelf: "stretch",
                                 justifyContent: "flex-start",
                                 paddingTop: 16,
-                                minHeight: Dimensions.get("window").height * 0.8,
+                                minHeight: height * 0.8,
                                 paddingHorizontal: 16,
                                 opacity: collapseAnim,
                             },

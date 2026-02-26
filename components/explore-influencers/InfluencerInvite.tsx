@@ -12,7 +12,8 @@ import { Collaboration } from '@/types/Collaboration'
 import { User } from '@/types/User'
 import { collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
 import { useTheme } from '@react-navigation/native'
-import React, { useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
+import { StyleSheet } from 'react-native'
 import { Button, Card, Checkbox } from 'react-native-paper'
 
 interface IProps {
@@ -25,6 +26,7 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const theme = useTheme();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     const fetchCollaborations = async () => {
         const collaborationCol = collection(FirestoreDB, "collaborations");
@@ -98,16 +100,16 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
         return null
     }
     return (
-        <Card style={{ margin: 8, paddingVertical: 16 }}>
+        <Card style={styles.card}>
             <Card.Title title="You can invite this influencer to any of the below listed active campaign" />
             <Card.Content>
                 {collaborations.map(collab => (
-                    <View key={collab.id} style={{ flexDirection: "row-reverse", alignItems: 'center', marginBottom: 8, borderWidth: 0.5, borderRadius: 12, paddingHorizontal: 4, borderColor: Colors(theme).aliceBlue, justifyContent:"space-between" }}>
+                    <View key={collab.id} style={styles.collabRow}>
                         <Checkbox
                             status={selectedIds.includes(collab.id) ? 'checked' : 'unchecked'}
                             onPress={() => toggleSelection(collab.id)}
                         />
-                        <Text style={{ fontSize: 16 }}>{collab.name}</Text>x
+                        <Text style={styles.collabName}>{collab.name}</Text>x
                     </View>
                 ))}
             </Card.Content>
@@ -118,6 +120,28 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
             </Card.Actions>
         </Card>
     )
+}
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    return StyleSheet.create({
+        card: {
+            margin: 8,
+            paddingVertical: 16,
+        },
+        collabRow: {
+            flexDirection: "row-reverse",
+            alignItems: "center",
+            marginBottom: 8,
+            borderWidth: 0.5,
+            borderRadius: 12,
+            paddingHorizontal: 4,
+            borderColor: Colors(theme).aliceBlue,
+            justifyContent: "space-between",
+        },
+        collabName: {
+            fontSize: 16,
+        },
+    });
 }
 
 export default InfluencerInvite

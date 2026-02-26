@@ -1,4 +1,5 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
@@ -15,7 +16,6 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
     type ViewStyle,
 } from "react-native";
@@ -53,7 +53,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
     const effectiveBrandId = brandId ?? selectedBrand?.id;
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { width, height } = useWindowDimensions();
+    const { width, height } = useBreakpoints();
     const isWeb = Platform.OS === "web";
     const horizontalInset = isWeb ? 0 : 16;
     const maxModalWidth = 700;
@@ -204,11 +204,11 @@ const InviteToCampaignModal: React.FC<Props> = ({
                     </Text>
 
                     {loading ? (
-                        <Text style={{ textAlign: "center", marginVertical: 20 }}>
+                        <Text style={styles.loadingText}>
                             Loading...
                         </Text>
                     ) : collaborations.length === 0 ? (
-                        <Text style={{ textAlign: "center", marginVertical: 20 }}>
+                        <Text style={styles.loadingText}>
                             No collaborations found
                         </Text>
                     ) : (
@@ -270,6 +270,10 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             fontSize: 18,
             fontWeight: "600",
             marginBottom: 10,
+        },
+        loadingText: {
+            textAlign: "center",
+            marginVertical: 20,
         },
         listContent: {
             paddingBottom: 80,

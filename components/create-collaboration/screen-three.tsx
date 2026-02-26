@@ -10,7 +10,7 @@ import React, { useState } from "react";
 import { Keyboard, Pressable, ScrollView } from "react-native";
 import { HelperText, Modal, ProgressBar } from "react-native-paper";
 
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import stylesFn from "@/styles/create-collaboration/Screen.styles";
@@ -131,17 +131,8 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 setScreen={setScreen}
                 type={type}
             >
-                <View
-                    style={{
-                        flexGrow: 1,
-                        gap: 16,
-                    }}
-                >
-                    <View
-                        style={{
-                            gap: 16,
-                        }}
-                    >
+                <View style={styles.mainSection}>
+                    <View style={styles.section}>
                         <ContentWrapper
                             description="You can use this to add links like your website of any product link or any document links."
                             rightAction={
@@ -154,51 +145,29 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                                         icon={faPlus}
                                         size={12}
                                         color={Colors(theme).primary}
-                                        style={{
-                                            marginTop: -2,
-                                            marginRight: 8,
-                                        }}
+                                        style={styles.addLinkIcon}
                                     />
                                     Add Link
                                 </Button>
                             }
                             theme={theme}
                             title="External Links"
-                            titleStyle={{
-                                fontSize: 16,
-                            }}
+                            titleStyle={styles.sectionTitle}
                         >
                             <></>
                         </ContentWrapper>
-                        <View
-                            style={{
-                                gap: 8,
-                            }}
-                        >
+                        <View style={styles.sectionGap8}>
                             {collaboration.externalLinks?.map((link, index) => (
                                 <View
                                     key={link.link}
-                                    style={{
-                                        alignItems: "center",
-                                        flexDirection: "row",
-                                        gap: 12,
-                                        padding: 8,
-                                        borderColor: Colors(theme).text,
-                                        borderWidth: 1,
-                                        borderRadius: 10,
-                                    }}
+                                    style={styles.linkItem}
                                 >
                                     <FontAwesomeIcon
                                         color={Colors(theme).text}
                                         icon={faLink}
                                         size={16}
                                     />
-                                    <Text
-                                        style={{
-                                            textDecorationLine: "underline",
-                                            flex: 1,
-                                        }}
-                                    >
+                                    <Text style={styles.linkText}>
                                         {link.name}
                                     </Text>
                                     <Pressable onPress={() => handleRemoveExternalLink(index)}>
@@ -229,36 +198,20 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                                         icon={faPlus}
                                         size={12}
                                         color={Colors(theme).primary}
-                                        style={{
-                                            marginTop: -2,
-                                            marginRight: 8,
-                                        }}
+                                        style={styles.addLinkIcon}
                                     />
                                     Edit Questions
                                 </Button>
                             }
                             theme={theme}
                             title="Questions to Influencers"
-                            titleStyle={{
-                                fontSize: 16,
-                            }}
+                            titleStyle={styles.sectionTitle}
                         >
                             <></>
                         </ContentWrapper>
-                        <View
-                            style={{
-                                gap: 8,
-                            }}
-                        >
+                        <View style={styles.sectionGap8}>
                             {collaboration.questionsToInfluencers?.map((question) => (
-                                <View
-                                    key={question}
-                                    style={{
-                                        alignItems: "center",
-                                        flexDirection: "row",
-                                        gap: 8,
-                                    }}
-                                >
+                                <View key={question} style={styles.questionRow}>
                                     <FontAwesomeIcon
                                         color={Colors(theme).text}
                                         icon={faCircle}
@@ -278,10 +231,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                     {processMessage && (
                         <HelperText
                             type="info"
-                            style={{
-                                color: Colors(theme).primary,
-                                textAlign: "center",
-                            }}
+                            style={styles.helperText}
                         >
                             {processMessage} - {processPercentage}% done
                         </HelperText>
@@ -290,9 +240,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                     <ProgressBar
                         progress={processPercentage / 100}
                         color={Colors(theme).primary}
-                        style={{
-                            backgroundColor: Colors(theme).transparent,
-                        }}
+                        style={styles.progressBar}
                     />
                 </View>
 
@@ -341,27 +289,18 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                     }}
                     value={externalLink.link}
                 />
-                <View
-                    style={{
-                        flexDirection: "row",
-                        gap: 8,
-                    }}
-                >
+                <View style={styles.modalButtonsRow}>
                     <Button
                         mode="outlined"
                         onPress={() => setIsExternalLinkModalVisible(false)}
-                        style={{
-                            flex: 1,
-                        }}
+                        style={styles.modalButtonFlex}
                     >
                         Cancel
                     </Button>
                     <Button
                         mode="contained"
                         onPress={handleAddExternalLink}
-                        style={{
-                            flex: 1,
-                        }}
+                        style={styles.modalButtonFlex}
                     >
                         Add Link
                     </Button>
@@ -378,39 +317,19 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 visible={isQuestionsModalVisible}
             >
                 <Pressable
-                    style={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        left: 0,
-                        bottom: 0,
-                    }}
+                    style={styles.pressableDismiss}
                     onPress={() => {
                         Keyboard.dismiss();
                     }}
                 />
-                <View
-                    style={{
-                        gap: 8,
-                    }}
-                >
+                <View style={styles.sectionGap8}>
                     <Pressable
-                        style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 16,
-                        }}
+                        style={styles.questionsHeader}
                         onPress={() => {
                             Keyboard.dismiss();
                         }}
                     >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                fontWeight: "bold",
-                            }}
-                        >
+                        <Text style={styles.questionsTitle}>
                             Questions
                         </Text>
                         <Pressable
@@ -428,28 +347,15 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                     </Pressable>
                     <ScrollView
                         showsVerticalScrollIndicator={false}
-                        style={{
-                            maxHeight: 180,
-                        }}
-                        contentContainerStyle={{
-                            gap: 8,
-                        }}
+                        style={styles.questionsScroll}
+                        contentContainerStyle={styles.questionsScrollContent}
                     >
                         {questions.map((question, index) => (
-                            <View
-                                key={index}
-                                style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 16,
-                                }}
-                            >
+                            <View key={index} style={styles.questionInputRow}>
                                 <TextInput
                                     label="Question"
                                     mode="outlined"
-                                    style={{
-                                        flex: 1,
-                                    }}
+                                    style={styles.questionInputFlex}
                                     value={questions[index]}
                                     onChangeText={(text) => {
                                         const newQuestions = [...questions];
@@ -463,9 +369,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                                         icon={faTrashCan}
                                         size={20}
                                         color={Colors(theme).primary}
-                                        style={{
-                                            marginTop: 4,
-                                        }}
+                                        style={styles.trashIconMargin}
                                     />
                                 </Pressable>
                             </View>

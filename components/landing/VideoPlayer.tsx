@@ -1,13 +1,15 @@
 import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics';
-import React, { useEffect, useRef, useState } from 'react';
+import Colors from '@/shared-uis/constants/Colors';
+import { useTheme } from '@react-navigation/native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, ImageBackground, Platform, Pressable, StyleSheet, Text } from 'react-native';
-import { BLUE_DARK } from './const';
 
 const VideoPlayer: React.FC<{ videoLink: string, thumbnail?: string }> = ({ videoLink, thumbnail }) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const [videoHovered, setVideoHovered] = useState(false);
-    // subtle pulsing for play button
     const playPulse = useRef(new Animated.Value(1)).current;
-
     const [showPlayer, setShowPlayer] = useState(false)
 
     useEffect(() => {
@@ -50,7 +52,8 @@ const VideoPlayer: React.FC<{ videoLink: string, thumbnail?: string }> = ({ vide
                 onHoverIn={() => setVideoHovered(true)}
                 onHoverOut={() => setVideoHovered(false)}
                 style={({ pressed }) => [
-                    videoHovered || pressed ? { transform: [{ scale: 0.995 }] } : null,
+                    styles.videoPressable,
+                    (videoHovered || pressed) && styles.videoPressablePressed,
                 ]}
             >
                 <ImageBackground
@@ -69,35 +72,39 @@ const VideoPlayer: React.FC<{ videoLink: string, thumbnail?: string }> = ({ vide
 
 export default VideoPlayer
 
-const styles = StyleSheet.create({
-    video: {
-        width: "100%",
-        aspectRatio: 16 / 9,
-        borderRadius: 20,
-        overflow: "hidden",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#E7F0F9",
-        shadowColor: "#000",
-        shadowOpacity: 0.12,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-        ...Platform.select({ android: { elevation: 6 } }),
-    },
-    videoImg: {
-        resizeMode: "cover",
-    },
-    playCircle: {
-        width: 96,
-        height: 96,
-        borderRadius: 999,
-        backgroundColor: "rgba(255,255,255,0.9)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    playIcon: {
-        fontSize: 48,
-        color: BLUE_DARK,
-        marginLeft: 6, // optical centering for the triangle glyph
-    },
-})
+function makeStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
+        videoPressable: {},
+        videoPressablePressed: { transform: [{ scale: 0.995 }] },
+        video: {
+            width: "100%",
+            aspectRatio: 16 / 9,
+            borderRadius: 20,
+            overflow: "hidden",
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: colors.surface || colors.card,
+            shadowColor: colors.text,
+            shadowOpacity: 0.12,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            ...Platform.select({ android: { elevation: 6 } }),
+        },
+        videoImg: {
+            resizeMode: "cover",
+        },
+        playCircle: {
+            width: 96,
+            height: 96,
+            borderRadius: 999,
+            backgroundColor: colors.card,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        playIcon: {
+            fontSize: 48,
+            color: colors.primaryDark || colors.primary,
+            marginLeft: 6,
+        },
+    });
+}

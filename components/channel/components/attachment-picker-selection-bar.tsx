@@ -1,4 +1,4 @@
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { faFolderOpen } from '@fortawesome/free-regular-svg-icons';
 import { faCameraRetro, faImages, faSquarePollVertical } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';

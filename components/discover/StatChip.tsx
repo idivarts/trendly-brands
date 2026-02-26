@@ -1,6 +1,8 @@
-import React from "react";
-import { ColorValue, Text } from "react-native";
+import React, { useMemo } from "react";
+import { ColorValue, StyleSheet, Text } from "react-native";
 import { Chip } from "react-native-paper";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/shared-uis/constants/Colors";
 
 const formatNumber = (n: number | string | undefined) => {
     if (n == null) return "-";
@@ -22,26 +24,44 @@ export const StatChip = ({
     value?: number | string;
     textColor?: ColorValue | null;
 }) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const resolvedTextColor: ColorValue | undefined = textColor ?? undefined;
 
     return (
         <Chip
             mode="flat"
             compact
-            style={{
-                marginRight: 6,
-                marginBottom: 6,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.2,
-                shadowRadius: 1,
-                flexDirection: "column",
-            }}
+            style={styles.chip}
         >
-            <Text style={{ fontWeight: "600", color: resolvedTextColor }}>
+            <Text style={[styles.valueText, resolvedTextColor != null && { color: resolvedTextColor }]}>
                 {formatNumber(value)}
             </Text>
-            <Text style={{ color: resolvedTextColor }}> {label}</Text>
+            <Text style={[styles.labelText, resolvedTextColor != null && { color: resolvedTextColor }]}>
+                {label}
+            </Text>
         </Chip>
     );
 };
+
+function makeStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
+        chip: {
+            marginRight: 6,
+            marginBottom: 6,
+            shadowColor: colors.text,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.2,
+            shadowRadius: 1,
+            flexDirection: "column",
+        },
+        valueText: {
+            fontWeight: "600",
+            color: colors.text,
+        },
+        labelText: {
+            color: colors.text,
+        },
+    });
+}

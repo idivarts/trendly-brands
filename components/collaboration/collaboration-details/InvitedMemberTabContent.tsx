@@ -1,31 +1,30 @@
 import type { InfluencerInviteUnit } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import useInvitedInfluencers from "@/hooks/request/use-invited-influencers";
 import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { useTheme } from "@react-navigation/native";
-import React from "react";
-import { Dimensions, FlatList, RefreshControl, View } from "react-native";
+import React, { useMemo } from "react";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Chip, Menu } from "react-native-paper";
 //  import Discover from "@/components/discover/Discover"; // unused
 
 const InvitedMemberTabContent = (props: any) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = stylesFn(theme);
+    const stylesFromFn = stylesFn(theme);
+    const { isCollapsed } = useCollapseContext();
+    const { xl, width: bpWidth } = useBreakpoints();
+    const styles = useMemo(() => useLocalStyles(isCollapsed, xl), [isCollapsed, xl]);
 
-    const { isCollapsed, setIsCollapsed } = useCollapseContext();
     const collaborationId = props.pageID;
     const { influencers: rawInfluencers, loading: isLoading, refresh, loadMore, nextAvailable, setStatusFilter } = useInvitedInfluencers({
         collaborationId,
     });
-
-    const { xl } = useBreakpoints();
-
 
     const influencers = (rawInfluencers || []) as InfluencerInviteUnit[];
 
@@ -48,8 +47,7 @@ const InvitedMemberTabContent = (props: any) => {
     //   );
     // }
 
-    const width = Math.min(MAX_WIDTH_WEB, Dimensions.get("window").width);
-
+    const width = Math.min(MAX_WIDTH_WEB, bpWidth);
 
     const statusOptions = [
         { label: "All", value: undefined },
@@ -64,7 +62,7 @@ const InvitedMemberTabContent = (props: any) => {
     };
 
     const renderItem = ({ item }: { item: InfluencerInviteUnit }) => (
-        <View style={{ paddingHorizontal: isCollapsed ? 12 : 8, paddingVertical: isCollapsed ? 12 : 8, flex: 1, maxWidth: xl ? "50%" : "100%" }}>
+        <View style={styles.itemWrapper}>
             <InfluencerCard
                 item={item}
                 isCollapsed={isCollapsed}
@@ -75,16 +73,8 @@ const InvitedMemberTabContent = (props: any) => {
     );
 
     return (
-        <View style={{ flex: 1, minWidth: 0 }}>
-            <View
-                style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                }}
-            >
+        <View style={styles.root}>
+            <View style={styles.filterRow}>
                 <Menu
                     visible={statusMenuVisible}
                     onDismiss={() => setStatusMenuVisible(false)}
@@ -108,13 +98,7 @@ const InvitedMemberTabContent = (props: any) => {
                 onEndReached={() => loadMore()}
                 onEndReachedThreshold={0.5}
                 refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} />}
-                contentContainerStyle={{
-                    paddingTop: 12,
-                    paddingBottom: 24,
-                    paddingRight: isCollapsed ? 120 : 16,
-                    paddingLeft: isCollapsed ? 120 : 4,
-                    flexGrow: influencers.length === 0 ? 1 : undefined,
-                }}
+                contentContainerStyle={[styles.listContent, influencers.length === 0 && { flexGrow: 1 }]}
                 ListEmptyComponent={
                     !isLoading ? (
                         <EmptyState
@@ -126,7 +110,7 @@ const InvitedMemberTabContent = (props: any) => {
                 }
                 ListFooterComponent={
                     isLoading ? (
-                        <View style={{ paddingVertical: 20 }}>
+                        <View style={styles.listFooter}>
                             <ActivityIndicator />
                         </View>
                     ) : null
@@ -135,5 +119,36 @@ const InvitedMemberTabContent = (props: any) => {
         </View>
     );
 };
+
+function useLocalStyles(isCollapsed: boolean, xl: boolean) {
+    return StyleSheet.create({
+        root: {
+            flex: 1,
+            minWidth: 0,
+        },
+        filterRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+        },
+        itemWrapper: {
+            paddingHorizontal: isCollapsed ? 12 : 8,
+            paddingVertical: isCollapsed ? 12 : 8,
+            flex: 1,
+            maxWidth: xl ? "50%" : "100%",
+        },
+        listContent: {
+            paddingTop: 12,
+            paddingBottom: 24,
+            paddingRight: isCollapsed ? 120 : 16,
+            paddingLeft: isCollapsed ? 120 : 4,
+        },
+        listFooter: {
+            paddingVertical: 20,
+        },
+    });
+}
 
 export default InvitedMemberTabContent;

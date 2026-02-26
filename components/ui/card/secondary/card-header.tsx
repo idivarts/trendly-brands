@@ -1,5 +1,5 @@
 import { Text, View } from '@/components/theme/Themed';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { imageUrl } from '@/utils/url';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -57,14 +57,7 @@ export const CardHeader = ({
                 </View>
             </Pressable>
             {(rightAction || timestamp) &&
-                <View
-                    style={{
-                        gap: 12,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: Colors(theme).transparent,
-                    }}
-                >
+                <View style={styles.rightActions}>
                     {timestamp && <Text style={styles.timestamp}>{timestamp}</Text>}
                     {rightAction &&
                         <Pressable
@@ -136,5 +129,11 @@ const stylesFn = (theme: Theme) => StyleSheet.create({
     },
     timestamp: {
         fontSize: 14,
+    },
+    rightActions: {
+        gap: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors(theme).transparent,
     },
 });

@@ -2,7 +2,7 @@ import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
@@ -16,7 +16,8 @@ import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal"
 import { useTheme } from "@react-navigation/native";
 import { Href } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
@@ -47,6 +48,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const theme = useTheme();
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme), [theme]);
     const { isOnFreeTrial } = useBrandContext();
     const { openModal } = useConfirmationModel();
     const router = useMyNavigation();
@@ -254,13 +256,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
     if (loading)
         return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                }}
-            >
+            <View style={styles.loadingContainer}>
                 <ActivityIndicator />
             </View>
         );
@@ -277,32 +273,11 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     }
 
     return (
-        <View
-            style={{
-                flex: 1,
-                flexDirection: "column",
-            }}
-        >
-            {/* <View
-        style={{
-          zIndex: 1000,
-        }}
-      >
-        <Toast />
-      </View> */}
+        <View style={styles.column}>
             <CollaborationHeader collaboration={collaboration} />
 
             {collaboration.status === "draft" && (
-                <View
-                    style={{
-                        flexDirection: "row",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        paddingHorizontal: 16,
-                        gap: 16,
-                        marginBottom: 16,
-                    }}
-                >
+                <View style={styles.draftActionsRow}>
                     <Button
                         mode="contained"
                         onPress={() => {
@@ -313,12 +288,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                                 },
                             });
                         }}
-                        style={{
-                            flex: 1,
-                            backgroundColor: Colors(theme).background,
-                            borderWidth: 0.3,
-                            borderColor: Colors(theme).outline,
-                        }}
+                        style={styles.editDraftButton}
                         textColor={Colors(theme).text}
                     >
                         Edit Draft
@@ -326,9 +296,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     <Button
                         mode="contained"
                         onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
-                        style={{
-                            flex: 1,
-                        }}
+                        style={styles.publishButton}
                     >
                         Publish Now
                     </Button>
@@ -341,7 +309,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 console.log("[CollaborationDetails] Rendering TopTabNavigation for status:", collaboration.status);
                 return (
                     <CollapseProvider>
-                        <View style={{ flex: 1, width: "100%", minHeight: 0 }}>
+                        <View style={styles.tabContainer}>
                             <TopTabNavigation
                                 tabs={tabs(xl)}
                                 size="compact"
@@ -355,5 +323,41 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         </View>
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    return StyleSheet.create({
+        loadingContainer: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        column: {
+            flex: 1,
+            flexDirection: "column",
+        },
+        draftActionsRow: {
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 16,
+            gap: 16,
+            marginBottom: 16,
+        },
+        editDraftButton: {
+            flex: 1,
+            backgroundColor: Colors(theme).background,
+            borderWidth: 0.3,
+            borderColor: Colors(theme).outline,
+        },
+        publishButton: {
+            flex: 1,
+        },
+        tabContainer: {
+            flex: 1,
+            width: "100%",
+            minHeight: 0,
+        },
+    });
+}
 
 export default CollaborationDetails;

@@ -4,6 +4,12 @@ import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import AppLayout from "@/layouts/app-layout";
+import React from "react";
+import { StyleSheet } from "react-native";
+
+const styles = StyleSheet.create({
+    flex1: { flex: 1 },
+});
 
 const tabs = [
     {
@@ -22,12 +28,7 @@ const Contracts = () => {
     return (
         <AppLayout>
             <ScreenHeader title="Contracts" />
-            <View
-                style={{
-                    flex: 1,
-                    // paddingTop: 16,
-                }}
-            >
+            <View style={styles.flex1}>
                 <TopTabNavigation tabs={tabs} />
             </View>
         </AppLayout>

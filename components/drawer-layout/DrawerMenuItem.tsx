@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext } from "@/contexts";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faLock } from "@fortawesome/free-solid-svg-icons";

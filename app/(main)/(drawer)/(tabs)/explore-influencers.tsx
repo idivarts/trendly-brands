@@ -6,8 +6,25 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+
+const styles = StyleSheet.create({
+    xlContainer: {
+        width: "100%",
+        flexDirection: "row",
+        gap: 24,
+        height: "100%",
+    },
+    main: {
+        flex: 1,
+        minWidth: 0,
+    },
+    rightPanel: {
+        width: 350,
+    },
+});
 
 const ExploreInfluencersScreen = () => {
     const { manager } = useAuthContext()
@@ -44,11 +61,11 @@ const ExploreInfluencersScreen = () => {
 
     if (xl) {
         return (
-            <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
-                <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={styles.xlContainer}>
+                <View style={styles.main}>
                     <ExploreInfluencers key={connectedInfluencer ? "connected" : "explore"} connectedInfluencers={connectedInfluencer} />
                 </View>
-                <View style={{ width: 350 }} >
+                <View style={styles.rightPanel} >
                     <RightPanel connectedInfluencers={connectedInfluencer} setConnectedInfluencers={setConnectedInfluencer} />
                 </View>
             </View>

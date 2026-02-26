@@ -4,7 +4,7 @@ import Button from '@/components/ui/button';
 import { Card } from '@/components/ui/card/tertiary';
 import { CardFooter } from '@/components/ui/card/tertiary/card-footer';
 import { CardHeader } from '@/components/ui/card/tertiary/card-header';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import useInvitation from '@/hooks/use-invitation';
 import { useTheme } from '@react-navigation/native';
 

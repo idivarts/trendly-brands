@@ -1,7 +1,7 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
@@ -47,7 +47,7 @@ const SignUpScreen = () => {
                     </Text>
                     <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
                         We've sent a verification email to{" "}
-                        <Text style={{ fontWeight: "bold" }}>{email}</Text>.
+                        <Text style={styles.bold}>{email}</Text>.
                         {"\n\n"}
                         Please open your inbox and click the verification link to activate your account.
                     </Text>

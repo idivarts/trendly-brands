@@ -1,5 +1,7 @@
 import React, { useRef } from "react";
 import { Animated, StyleProp, StyleSheet, Text, TouchableOpacity, ViewStyle } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/shared-uis/constants/Colors";
 
 type GlassButtonVariant = "primary" | "secondary";
 
@@ -22,10 +24,6 @@ const PRESS_SCALE = 0.98;
 const PRESS_OPACITY = 0.9;
 const DEFAULT_OPACITY = 1;
 const PRESS_DURATION = 120;
-const SECONDARY_SURFACE = "rgba(15, 23, 42, 0.16)";
-const SECONDARY_BORDER = "rgba(15, 23, 42, 0.28)";
-const SECONDARY_TEXT = "#0F172A";
-const PRIMARY_TEXT = "#FFFFFF";
 
 const GlassButton = ({
     label,
@@ -35,9 +33,40 @@ const GlassButton = ({
     disabled,
     style,
 }: GlassButtonProps) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
     const isPrimary = variant === "primary";
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(1)).current;
+
+    const styles = React.useMemo(
+        () =>
+            StyleSheet.create({
+                base: {
+                    height: BUTTON_HEIGHT,
+                    borderRadius: BUTTON_RADIUS,
+                    borderWidth: BUTTON_BORDER_WIDTH,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: BUTTON_PADDING_HORIZONTAL,
+                },
+                label: {
+                    fontSize: LABEL_FONT_SIZE,
+                    fontWeight: "600",
+                    letterSpacing: LABEL_LETTER_SPACING,
+                },
+                primaryLabel: {
+                    color: colors.onPrimary,
+                },
+                secondaryLabel: {
+                    color: colors.secondaryText,
+                },
+                disabled: {
+                    opacity: 0.6,
+                },
+            }),
+        [colors]
+    );
 
     const handlePressIn = () => {
         Animated.parallel([
@@ -86,7 +115,7 @@ const GlassButton = ({
                     styles.base,
                     isPrimary
                         ? { backgroundColor: accentColor, borderColor: accentColor }
-                        : { backgroundColor: SECONDARY_SURFACE, borderColor: SECONDARY_BORDER },
+                        : { backgroundColor: colors.secondarySurface, borderColor: colors.secondaryBorder },
                     disabled && styles.disabled,
                     style,
                     {
@@ -95,34 +124,12 @@ const GlassButton = ({
                     },
                 ]}
             >
-                <Text style={[styles.label, isPrimary ? styles.primaryLabel : { color: SECONDARY_TEXT }]}>
+                <Text style={[styles.label, isPrimary ? styles.primaryLabel : styles.secondaryLabel]}>
                     {label}
                 </Text>
             </Animated.View>
         </TouchableOpacity>
     );
 };
-
-const styles = StyleSheet.create({
-    base: {
-        height: BUTTON_HEIGHT,
-        borderRadius: BUTTON_RADIUS,
-        borderWidth: BUTTON_BORDER_WIDTH,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: BUTTON_PADDING_HORIZONTAL,
-    },
-    label: {
-        fontSize: LABEL_FONT_SIZE,
-        fontWeight: "600",
-        letterSpacing: LABEL_LETTER_SPACING,
-    },
-    primaryLabel: {
-        color: PRIMARY_TEXT,
-    },
-    disabled: {
-        opacity: 0.6,
-    },
-});
 
 export default GlassButton;

@@ -1,15 +1,16 @@
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { Animated, ScrollView, StyleSheet, View } from "react-native";
 import { Surface } from "react-native-paper";
 
 import Colors from "@/shared-uis/constants/Colors";
+import { getConstrainedHeight } from "@/shared-libs/contexts/mobile-layout-context.provider";
 import { Brand } from "@/types/Brand";
 import BrandAge from "./BrandAge";
 import BrandDetails from "./BrandDetails";
 import BrandIndustry from "./BrandIndustry";
 
-const { height: screenHeight } = Dimensions.get("window");
+const screenHeight = getConstrainedHeight();
 const CARD_MAX_WIDTH = 480;
 const CARD_MIN_HEIGHT = Math.min(screenHeight * 0.6, 520);
 const STEP_ANIM_DURATION = 280;
@@ -88,6 +89,58 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     useEffect(() => {
         if (webOnboarding && onStepChange) onStepChange(currentStep);
     }, [webOnboarding, currentStep, onStepChange]);
+
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                stepRow: {
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 20,
+                },
+                stepDot: {
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: colors.stepDotInactive,
+                },
+                stepDotActive: {
+                    width: 24,
+                    backgroundColor: colors.stepDotActive,
+                },
+                stepDotDone: {
+                    backgroundColor: colors.stepDotDone,
+                },
+                cardOuter: {
+                    flex: 1,
+                    width: "100%",
+                    alignSelf: "center",
+                },
+                cardOuterPlain: {
+                    alignSelf: "flex-start",
+                },
+                cardWrap: {
+                    width: "100%",
+                    paddingHorizontal: 16,
+                },
+                cardWrapPlain: {
+                    paddingHorizontal: 0,
+                },
+                actionSurface: {
+                    borderRadius: 16,
+                    padding: 16,
+                    marginTop: 24,
+                },
+                actionSurfacePlain: {
+                    borderRadius: 0,
+                    paddingHorizontal: 0,
+                    paddingVertical: 0,
+                },
+            }),
+        [colors]
+    );
 
     return (
         <ScrollView
@@ -180,53 +233,5 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         </ScrollView>
     );
 };
-
-const styles = StyleSheet.create({
-    stepRow: {
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 20,
-    },
-    stepDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: "rgba(128,128,128,0.35)",
-    },
-    stepDotActive: {
-        width: 24,
-        backgroundColor: "rgba(128,128,128,0.7)",
-    },
-    stepDotDone: {
-        backgroundColor: "rgba(128,128,128,0.55)",
-    },
-    cardOuter: {
-        flex: 1,
-        width: "100%",
-        alignSelf: "center",
-    },
-    cardOuterPlain: {
-        alignSelf: "flex-start",
-    },
-    cardWrap: {
-        width: "100%",
-        paddingHorizontal: 16,
-    },
-    cardWrapPlain: {
-        paddingHorizontal: 0,
-    },
-    actionSurface: {
-        borderRadius: 16,
-        padding: 16,
-        marginTop: 24,
-    },
-    actionSurfacePlain: {
-        borderRadius: 0,
-        paddingHorizontal: 0,
-        paddingVertical: 0,
-    },
-});
 
 export default BrandProfile;

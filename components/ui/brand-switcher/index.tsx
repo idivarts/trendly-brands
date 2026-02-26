@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";

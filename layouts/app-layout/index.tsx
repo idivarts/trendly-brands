@@ -3,7 +3,7 @@ import React, { PropsWithChildren, useMemo } from "react";
 import { Platform, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import { useTheme } from "@react-navigation/native";
 interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> {

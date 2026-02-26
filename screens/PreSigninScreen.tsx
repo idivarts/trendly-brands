@@ -1,6 +1,6 @@
 import TermsAndCondition from "@/components/TermsAndCondition";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import { useAppleLogin } from "@/utils/use-apple-login";
 import { useGoogleLogin } from "@/utils/use-google-login";

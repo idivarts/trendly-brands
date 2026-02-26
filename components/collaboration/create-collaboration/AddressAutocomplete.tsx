@@ -1,6 +1,6 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import GooglePlacesAutocomplete from 'react-google-autocomplete';
 import { Platform } from "react-native";
 import {
@@ -36,6 +36,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     mapRegion,
 }) => {
     const theme = useTheme();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     const mapInputRefNative = useRef<GooglePlacesAutocompleteRefNative>(null);
 
@@ -82,16 +83,9 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                             latitudeDelta: delta.latitudeDelta,
                             longitudeDelta: delta.longitudeDelta,
                         });
-                    });
-                }}
-                style={{
-                    backgroundColor: Colors(theme).background,
-                    padding: 10,
-                    borderRadius: 4,
-                    borderColor: Colors(theme).primary,
-                    borderWidth: 1,
-                    color: Colors(theme).text,
-                }}
+                        });
+                    }}
+                style={styles.webInput}
             />
         );
     }
@@ -134,24 +128,38 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                 key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY!,
                 language: 'en',
             }}
-            styles={{
-                container: {
-                    flex: 0,
-                    zIndex: 100,
-                },
-                textInput: {
-                    backgroundColor: Colors(theme).background,
-                    color: Colors(theme).text,
-                    borderColor: Colors(theme).primary,
-                    borderWidth: 1,
-                    borderRadius: 4,
-                },
-                listView: {
-                    backgroundColor: Colors(theme).background,
-                },
-            }}
+            styles={styles.nativeInputs}
         />
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    return {
+        webInput: {
+            backgroundColor: Colors(theme).background,
+            padding: 10,
+            borderRadius: 4,
+            borderColor: Colors(theme).primary,
+            borderWidth: 1,
+            color: Colors(theme).text,
+        },
+        nativeInputs: {
+            container: {
+                flex: 0,
+                zIndex: 100,
+            },
+            textInput: {
+                backgroundColor: Colors(theme).background,
+                color: Colors(theme).text,
+                borderColor: Colors(theme).primary,
+                borderWidth: 1,
+                borderRadius: 4,
+            },
+            listView: {
+                backgroundColor: Colors(theme).background,
+            },
+        },
+    };
+}
 
 export default AddressAutocomplete;

@@ -6,11 +6,12 @@ import {
     Platform,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View
 } from "react-native";
-
+import { useTheme } from "@react-navigation/native";
 import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
+import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -35,14 +36,16 @@ const OfferCard = () => {
 }
 
 const WaitToRender = () => {
+    const theme = useTheme();
+    const colors = Colors(theme);
     const { features: { discountTimer, limitedTimeDiscount }, discountEndTime } = useMyGrowthBook()
 
     // heartbeat pulse for countdown timer
     const timerPulse = useRef(new Animated.Value(1)).current;
     const offerScale = useRef(new Animated.Value(0.9)).current;
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
 
     // End time persists for the session; fallback to 72h from first render
@@ -83,47 +86,47 @@ const WaitToRender = () => {
     const timerTheme = useMemo(() => {
         if (isExpired) {
             return {
-                bg: 'rgba(255,255,255,0.08)',
-                border: 'rgba(255,255,255,0.18)',
-                num: '#E5ECF5',
-                lbl: '#C7D2FE',
-                sep: '#C7D2FE',
+                bg: colors.offerTimerExpiredBg,
+                border: colors.offerTimerExpiredBorder,
+                num: colors.offerTimerExpiredNum,
+                lbl: colors.offerTimerExpiredNum,
+                sep: colors.offerTimerExpiredNum,
                 pulseTo: 1,
                 pulseDur: 600,
             };
         }
         if (isDanger) {
             return {
-                bg: 'rgba(244,67,54,0.25)',
-                border: 'rgba(244,67,54,0.8)',
-                num: '#FFFFFF',
-                lbl: '#FFECEC',
-                sep: '#FFECEC',
+                bg: colors.offerTimerDangerBg,
+                border: colors.offerTimerDangerBorder,
+                num: colors.white,
+                lbl: colors.offerTimerDangerLbl,
+                sep: colors.offerTimerDangerLbl,
                 pulseTo: 1.12,
                 pulseDur: 450,
             };
         }
         if (isWarn) {
             return {
-                bg: 'rgba(255,193,7,0.22)',
-                border: 'rgba(255,193,7,0.75)',
-                num: '#FFF8E1',
-                lbl: '#FFE082',
-                sep: '#FFE082',
+                bg: colors.offerTimerWarnBg,
+                border: colors.offerTimerWarnBorder,
+                num: colors.offerTimerWarnNum,
+                lbl: colors.offerTimerWarnLbl,
+                sep: colors.offerTimerWarnLbl,
                 pulseTo: 1.08,
                 pulseDur: 500,
             };
         }
         return {
-            bg: 'rgba(255,255,255,0.15)',
-            border: 'rgba(255,255,255,0.35)',
-            num: '#FFFFFF',
-            lbl: '#E5ECF5',
-            sep: '#E5ECF5',
+            bg: colors.offerTimerDefaultBg,
+            border: colors.offerTimerDefaultBorder,
+            num: colors.offerTimerNum,
+            lbl: colors.offerTimerLbl,
+            sep: colors.offerTimerLbl,
             pulseTo: 1.06,
             pulseDur: 550,
         };
-    }, [isWarn, isDanger, isExpired]);
+    }, [isWarn, isDanger, isExpired, colors]);
 
     // dynamic heartbeat intensity based on urgency
     useEffect(() => {
@@ -153,6 +156,94 @@ const WaitToRender = () => {
 
     const parts = useMemo(() => getCountdownParts(Math.max(0, remaining)), [remaining]);
 
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                offerWrap: {
+                    marginTop: 0,
+                    marginBottom: 16,
+                    borderRadius: 16,
+                    paddingVertical: 4,
+                    paddingHorizontal: 18,
+                    alignItems: 'center',
+                    shadowColor: colors.offerShadow,
+                    shadowOpacity: 0.18,
+                    shadowRadius: 16,
+                    shadowOffset: { width: 0, height: 10 },
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap-reverse',
+                    ...Platform.select({ android: { elevation: 4 } }),
+                },
+                offerCard: {
+                    borderRadius: 16,
+                    paddingVertical: 10,
+                    paddingHorizontal: 18,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap-reverse',
+                    width: '100%',
+                },
+                offerClose: {
+                    position: 'absolute',
+                    right: 10,
+                    top: 10,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                },
+                offerCloseText: { color: colors.formLabel, fontSize: 16 },
+                offerHeading: { fontSize: 16, fontWeight: '700', color: colors.white, marginTop: 2 },
+                offerTitle: { fontSize: 28, fontWeight: '800', color: colors.white, marginTop: 2 },
+                timerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
+                timerBox: {
+                    backgroundColor: colors.offerTimerDefaultBg,
+                    borderRadius: 12,
+                    paddingVertical: 10,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    minWidth: 64,
+                    borderWidth: 1,
+                    borderColor: colors.offerTimerDefaultBorder,
+                },
+                timerNum: { fontSize: 28, fontWeight: '900', color: colors.white },
+                timerLbl: { fontSize: 12, color: colors.offerTimerLbl, marginTop: 2 },
+                timerSep: { fontSize: 24, color: colors.offerTimerLbl, marginHorizontal: 8, marginBottom: 10 },
+                offerCta: {
+                    marginTop: 16,
+                    backgroundColor: colors.offerCtaBg,
+                    borderRadius: 999,
+                    paddingHorizontal: 28,
+                    height: 48,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    ...Platform.select({ android: { elevation: 2 } }),
+                },
+                offerCtaText: { color: colors.white, fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+                offerFoot: { marginTop: 10, color: colors.formLabel, fontSize: 12 },
+                expiredPill: {
+                    marginVertical: 16,
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    backgroundColor: colors.offerExpiredPillBg,
+                    borderWidth: 1,
+                    borderColor: colors.offerExpiredPillBorder,
+                    alignSelf: 'center'
+                },
+                expiredPillText: { color: colors.offerExpiredPillText, fontWeight: '800', letterSpacing: 0.5 },
+                offerEndedNote: { marginTop: 6, color: colors.offerExpiredPillText, fontSize: 12 }
+            }),
+        [colors]
+    );
+
+    const gradientColors = isExpired
+        ? [colors.offerGradientExpired1, colors.offerGradientExpired2, colors.offerGradientExpired3]
+        : [colors.offerGradientActive1, colors.offerGradientActive2, colors.offerGradientActive3];
+
     if (limitedTimeDiscount == 0)
         return null
 
@@ -163,7 +254,7 @@ const WaitToRender = () => {
             ]}
         >
             <LinearGradient
-                colors={isExpired ? ["#434343", "#2C3E50", "#1F2937"] : ["#8E2DE2", "#E94057", "#F27121"]}
+                colors={gradientColors}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.offerWrap,
@@ -209,84 +300,3 @@ const WaitToRender = () => {
 }
 
 export default OfferCard
-
-const styles = StyleSheet.create({
-    // ---- Discount offer styles ----
-    offerWrap: {
-        marginTop: 0,
-        marginBottom: 16,
-        borderRadius: 16,
-        paddingVertical: 4,
-        paddingHorizontal: 18,
-        alignItems: 'center',
-        shadowColor: '#2667B8',
-        shadowOpacity: 0.18,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: 10 },
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap-reverse',
-        ...Platform.select({ android: { elevation: 4 } }),
-    },
-    offerCard: {
-        borderRadius: 16,
-        paddingVertical: 10,
-        paddingHorizontal: 18,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap-reverse',
-        width: '100%',
-    },
-    offerClose: {
-        position: 'absolute',
-        right: 10,
-        top: 10,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    offerCloseText: { color: '#8a8a8a', fontSize: 16 },
-    offerHeading: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginTop: 2 },
-    offerTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginTop: 2 },
-    timerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
-    timerBox: {
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        borderRadius: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        minWidth: 64,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.35)',
-    },
-    timerNum: { fontSize: 28, fontWeight: '900', color: '#FFFFFF' },
-    timerLbl: { fontSize: 12, color: '#E5ECF5', marginTop: 2 },
-    timerSep: { fontSize: 24, color: '#E5ECF5', marginHorizontal: 8, marginBottom: 10 },
-    offerCta: {
-        marginTop: 16,
-        backgroundColor: '#EA4E5A',
-        borderRadius: 999,
-        paddingHorizontal: 28,
-        height: 48,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Platform.select({ android: { elevation: 2 } }),
-    },
-    offerCtaText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
-    offerFoot: { marginTop: 10, color: '#6C7A89', fontSize: 12 },
-    expiredPill: {
-        marginVertical: 16,
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderRadius: 999,
-        backgroundColor: 'rgba(255,255,255,0.12)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.22)',
-        alignSelf: 'center'
-    },
-    expiredPillText: { color: '#E5ECF5', fontWeight: '800', letterSpacing: 0.5 },
-    offerEndedNote: { marginTop: 6, color: '#E5ECF5', fontSize: 12 }
-})

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     INITIAL_PLATFORMS,
     PLATFORMS,
@@ -18,7 +18,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
 import React, { useMemo } from "react";
-import { Alert, Text, useWindowDimensions } from "react-native";
+import { Alert, StyleSheet, Text } from "react-native";
 import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import { View } from "../theme/Themed";
@@ -79,7 +79,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
     type,
 }) => {
     const theme = useTheme();
-    const dimensions = useWindowDimensions();
+    const styles = useMemo(() => createStyles(theme), [theme]);
 
     const numberOfInfluencersNeededText = useMemo(() => {
         if (
@@ -145,9 +145,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     description="Which platforms would you like to post content on?"
                     theme={theme}
                     title="Platform"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <MultiSelectExtendable
                         buttonIcon={
@@ -178,9 +176,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     rightText={numberOfInfluencersNeededText}
                     theme={theme}
                     title="Influencers Needed"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <TextInput
                         label="Number of Influencers"
@@ -212,15 +208,13 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 ? collaboration.numberOfInfluencersNeeded.toString()
                                 : ""
                         }
-                        style={{
-                            width: "100%",
-                        }}
+                        style={styles.textInputFullWidth}
                     />
                 </ContentWrapper>
                 <ContentWrapper
                     theme={theme}
                     title="What are you promoting?"
-                    titleStyle={{ fontSize: 16 }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <Selector
                         options={[
@@ -251,12 +245,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     />
                 </ContentWrapper>
                 {collaboration.promotionSubject && (
-                    <View
-                        style={{
-                            gap: 12,
-                            marginTop: 12,
-                        }}
-                    >
+                    <View style={styles.productSection}>
                         <TextInput
                             label="About Product"
                             mode="outlined"
@@ -308,13 +297,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 });
                             }}
                         />
-                        <Text
-                            style={{
-                                fontSize: 12,
-                                color: "#6B7280",
-                                marginTop: -6,
-                            }}
-                        >
+                            <Text style={styles.productCostHint}>
                             This cost would be incurred by the brand and not
                             influencers
                         </Text>
@@ -323,9 +306,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 <ContentWrapper
                     theme={theme}
                     title="Collaboration Fulfillment Type"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <Selector
                         options={[
@@ -368,11 +349,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     />
                 </ContentWrapper>
                 {(collaboration.location?.type === LOCATION_TYPES.ON_SITE) && (
-                    <View
-                        style={{
-                            gap: 16,
-                        }}
-                    >
+                    <View style={styles.locationSection}>
                         {collaboration.location?.type === LOCATION_TYPES.ON_SITE && (
                             <>
                                 <AddressAutocomplete
@@ -401,6 +378,21 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
             </ScreenLayout>
         </>
     );
+};
+
+const createStyles = (theme: ReturnType<typeof useTheme>) => {
+    const colors = Colors(theme);
+    return StyleSheet.create({
+        sectionTitle: { fontSize: 16 },
+        textInputFullWidth: { width: "100%" },
+        productSection: { gap: 12, marginTop: 12 },
+        productCostHint: {
+            fontSize: 12,
+            color: colors.gray300 || "#6B7280",
+            marginTop: -6,
+        },
+        locationSection: { gap: 16 },
+    });
 };
 
 export default ScreenTwo;

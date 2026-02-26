@@ -1,9 +1,9 @@
-import { useTheme } from "@react-navigation/native";
+import { useTheme, type Theme } from "@react-navigation/native";
 import { faArrowLeft, faCheck } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useLocalSearchParams } from "expo-router";
 import { useNavigation } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Platform,
@@ -18,7 +18,7 @@ import { Text } from "react-native-paper";
 import BrandProfile from "@/components/brand-profile";
 import Button from "@/components/ui/button";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -27,7 +27,6 @@ import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import fnStyles from "@/styles/onboarding/brand.styles";
 import { Brand } from "@/types/Brand";
 
 const ONBOARDING_STEPS = [
@@ -64,7 +63,8 @@ const OnboardingScreen = () => {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const theme = useTheme();
-    const styles = fnStyles(theme);
+    const styles = useMemo(() => useBrandStyles(theme), [theme]);
+    const webStyles = useMemo(() => useWebStyles(theme), [theme]);
     const { firstBrand } = useLocalSearchParams();
     const {
         uploadFileUri,
@@ -221,9 +221,9 @@ const OnboardingScreen = () => {
                                             ]}
                                         >
                                             {isDone ? (
-                                                <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
+                                                <FontAwesomeIcon icon={faCheck} size={12} color={Colors(theme).white} />
                                             ) : (
-                                                <Text variant="labelMedium" style={[webStyles.stepNum, { color: isActive ? "#fff" : Colors(theme).secondary }]}>
+                                                <Text variant="labelMedium" style={[webStyles.stepNum, { color: isActive ? Colors(theme).white : Colors(theme).secondary }]}>
                                                     {step}
                                                 </Text>
                                             )}
@@ -232,7 +232,7 @@ const OnboardingScreen = () => {
                                             <Text variant="bodyMedium" style={[webStyles.stepTitle, { color: Colors(theme).text }]}>
                                                 {title}
                                             </Text>
-                                            <Text variant="bodySmall" style={{ color: Colors(theme).secondary }}>
+                                            <Text variant="bodySmall" style={webStyles.stepSubtitle}>
                                                 {subtitle}
                                             </Text>
                                         </View>
@@ -267,18 +267,7 @@ const OnboardingScreen = () => {
             )}
             {isSubmitting && (
                 <Portal>
-                    <View
-                        style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            backgroundColor: Colors(theme).backdrop,
-                        }}
-                    >
+                    <View style={styles.overlay}>
                         <ActivityIndicator color={Colors(theme).primary} />
                     </View>
                 </Portal>
@@ -287,78 +276,128 @@ const OnboardingScreen = () => {
     );
 };
 
-const webStyles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    row: {
-        flex: 1,
-        flexDirection: "row",
-        maxWidth: Platform.OS == "web" ? 1400 : 1200,
-        alignSelf: "center",
-        width: "100%",
-    },
-    rowPadding: {
-        // paddingHorizontal: 40,
-    },
-    main: {
-        flex: 1,
-        minWidth: 0,
-        paddingRight: 48,
-        paddingTop: 8,
-    },
-    headerRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 24,
-        gap: 12,
-    },
-    backButton: {
-        padding: 8,
-        marginLeft: -8,
-    },
-    title: {
-        fontWeight: "700",
-    },
-    scroll: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 48,
-    },
-    sidebar: {
-        width: 280,
-        paddingLeft: 32,
-        paddingTop: 24,
-        borderLeftWidth: 1,
-    },
-    sidebarTitle: {
-        marginBottom: 20,
-        fontWeight: "600",
-    },
-    stepItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 20,
-        gap: 12,
-    },
-    stepCircle: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: "rgba(128,128,128,0.25)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    stepNum: {
-        fontWeight: "700",
-    },
-    stepTextWrap: {
-        flex: 1,
-    },
-    stepTitle: {
-        fontWeight: "600",
-    },
-});
+function useWebStyles(theme: Theme) {
+    const colors = Colors(theme);
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+        },
+        row: {
+            flex: 1,
+            flexDirection: "row",
+            maxWidth: Platform.OS == "web" ? 1400 : 1200,
+            alignSelf: "center",
+            width: "100%",
+        },
+        rowPadding: {},
+        main: {
+            flex: 1,
+            minWidth: 0,
+            paddingRight: 48,
+            paddingTop: 8,
+        },
+        headerRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 24,
+            gap: 12,
+        },
+        backButton: {
+            padding: 8,
+            marginLeft: -8,
+        },
+        title: {
+            fontWeight: "700",
+        },
+        scroll: {
+            flex: 1,
+        },
+        scrollContent: {
+            paddingBottom: 48,
+        },
+        sidebar: {
+            width: 280,
+            paddingLeft: 32,
+            paddingTop: 24,
+            borderLeftWidth: 1,
+        },
+        sidebarTitle: {
+            marginBottom: 20,
+            fontWeight: "600",
+        },
+        stepItem: {
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 20,
+            gap: 12,
+        },
+        stepCircle: {
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: colors.onboardingStepCircle,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        stepNum: {
+            fontWeight: "700",
+        },
+        stepTextWrap: {
+            flex: 1,
+        },
+        stepTitle: {
+            fontWeight: "600",
+        },
+        stepSubtitle: {
+            color: colors.secondary,
+        },
+    });
+}
+
+function useBrandStyles(theme: Theme) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: Colors(theme).background,
+        },
+        overlay: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: Colors(theme).backdrop,
+        },
+        autocompleteContainer: {
+            marginBottom: 20,
+            zIndex: 1,
+            backgroundColor: Colors(theme).background,
+        },
+        autocompleteInputContainer: {
+            borderWidth: 1,
+            borderColor: Colors(theme).primary,
+            borderRadius: 5,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            zIndex: 1,
+        },
+        autocompleteListContainer: {
+            borderWidth: 1,
+            borderColor: Colors(theme).border,
+            borderTopWidth: 0,
+        },
+        itemText: {
+            fontSize: 16,
+            padding: 10,
+            color: Colors(theme).text,
+        },
+        input: {
+            marginBottom: 20,
+            backgroundColor: Colors(theme).background,
+        },
+    });
+}
 
 export default OnboardingScreen;

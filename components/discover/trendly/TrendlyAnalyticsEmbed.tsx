@@ -1,10 +1,11 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import {
     ISocialAnalytics,
     ISocials,
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useBreakpoints } from "@/hooks";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
@@ -12,7 +13,7 @@ import { Brand } from "@/types/Brand";
 import { getTrustabilityLevel } from "@/utils/trustability";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
+import { Image, Linking, Platform, ScrollView } from "react-native";
 import {
     ActivityIndicator,
     Card,
@@ -37,7 +38,7 @@ interface IProps {
 const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
     ({ influencer, selectedBrand, initialSocial, initialAnalytics, onLoadingChange }, ref) => {
         const { manager } = useAuthContext();
-        const { width } = useWindowDimensions();
+        const { width } = useBreakpoints();
         const [loading, setLoading] = useState(false);
         const [social, setSocial] = useState<ISocials | null>(null);
         const [analytics, setAnalytics] = useState<ISocialAnalytics | null>(null);

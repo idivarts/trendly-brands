@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleSheet, ViewStyle, DimensionValue } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/shared-uis/constants/Colors";
 
 type CustomDividerProps = {
   thickness?: number;
@@ -15,7 +17,7 @@ type CustomDividerProps = {
 
 const CustomDivider = ({
   thickness = 1,
-  color = "#E0E0E0",
+  color,
   length = "100%",
   orientation = "horizontal",
   margin = 0,
@@ -24,13 +26,15 @@ const CustomDivider = ({
   dashed = false,
   style,
 }: CustomDividerProps) => {
+  const theme = useTheme();
+  const colors = Colors(theme);
+  const resolvedColor = color ?? colors.border;
   const isHorizontal = orientation === "horizontal";
-
-  return (
-    <View
-      style={[
-        {
-          backgroundColor: color,
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        root: {
+          backgroundColor: resolvedColor,
           opacity,
           borderRadius: radius,
           marginVertical: isHorizontal ? margin : 0,
@@ -39,19 +43,14 @@ const CustomDivider = ({
           height: isHorizontal ? thickness : length,
           borderStyle: dashed ? "dashed" : "solid",
           borderWidth: dashed ? thickness : 0,
-          borderColor: color,
+          borderColor: resolvedColor,
         },
-        style,
-      ]}
-    />
+      }),
+    [resolvedColor, opacity, radius, isHorizontal, margin, length, thickness, dashed]
   );
-};
 
-const styles = StyleSheet.create({
-  divider: {
-    width: '100%',
-  },
-});
+  return <View style={[styles.root, style]} />;
+};
 
 
 export default CustomDivider;

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -29,8 +29,19 @@ import {
     query,
     where,
 } from "firebase/firestore";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 import { Button } from "react-native-paper";
+
+const styles = StyleSheet.create({
+    loadingCenter: {
+        flex: 1,
+        alignItems: "center",
+        padding: 20,
+    },
+    viewProfileButton: {
+        marginHorizontal: 16,
+    },
+});
 
 interface ICollaborationCard extends IContracts {
     userData: IUsers;
@@ -115,8 +126,7 @@ const ContractScreen = () => {
     if (isLoading || !contract) {
         return (
             <AppLayout>
-                <View style={{ flex: 1, alignItems: "center", padding: 20 }}>
-                    {/* <Text>Status is here: {isLoading} & {JSON.stringify(contract)}</Text> */}
+                <View style={styles.loadingCenter}>
                     <ActivityIndicator size="large" color={Colors(theme).primary} />
                 </View>
             </AppLayout>
@@ -129,7 +139,7 @@ const ContractScreen = () => {
                 title="Contract Details"
                 rightAction
                 rightActionButton={
-                    <Button mode="outlined" style={{ marginHorizontal: 16 }} onPress={() => setOpenProfileModal(true)}>View Profile</Button>
+                    <Button mode="outlined" style={styles.viewProfileButton} onPress={() => setOpenProfileModal(true)}>View Profile</Button>
                 }
             />
             <ContractDetailsContent

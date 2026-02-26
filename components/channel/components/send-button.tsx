@@ -2,7 +2,7 @@ import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React from 'react';
 
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import {
     useTheme as useAppTheme,
 } from '@react-navigation/native';

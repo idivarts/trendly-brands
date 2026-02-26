@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { MENU_ITEMS } from "@/constants/Menu";
 import stylesFn from "@/styles/profile/ProfileItemCard.styles";
 import { faChevronRight } from "@fortawesome/free-solid-svg-icons";

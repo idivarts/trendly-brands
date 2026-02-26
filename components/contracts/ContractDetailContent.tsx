@@ -1,5 +1,5 @@
 import UserResponse from "@/components/contract-card/UserResponse";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import {
     IApplications,

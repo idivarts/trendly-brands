@@ -2,14 +2,41 @@ import AppLayout from '@/layouts/app-layout';
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users';
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore';
 import { View } from '@/shared-uis/components/theme/Themed';
+import Colors from '@/shared-uis/constants/Colors';
+import { useTheme } from '@react-navigation/native';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { Image, Platform, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { ActivityIndicator } from 'react-native-paper';
 
+const useStyles = (theme: ReturnType<typeof useTheme>) =>
+    StyleSheet.create({
+        title: { fontSize: 22, fontWeight: '700', paddingHorizontal: 16, marginBottom: 8 },
+        scroll: { flex: 1, height: "100%" },
+        row: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: Colors(theme).background,
+            borderRadius: 12,
+            padding: 12,
+            shadowColor: Colors(theme).eerieBlack,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+        },
+        avatar: { width: 60, height: 60, borderRadius: 8, marginRight: 16 },
+        flex1: { flex: 1 },
+        name: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+        email: { fontSize: 14, color: Colors(theme).gray100 },
+        count: { fontSize: 18, fontWeight: 'bold' },
+    });
+
 interface InfluencerInterface { id: string, images: { imageUrl: string, id: string }[], totalImages: number, user?: IUsers }
 const InfluencerList = () => {
+    const theme = useTheme();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     const [influencerList, setInfluencerList] = useState<InfluencerInterface[]>([])
     const [loading, setLoading] = useState(true)
@@ -47,34 +74,23 @@ const InfluencerList = () => {
     }
     return (
         <AppLayout>
-            <Text style={{ fontSize: 22, fontWeight: '700', paddingHorizontal: 16, marginBottom: 8 }}>Influencer List - {influencerList.length}</Text>
-            <ScrollView style={{ flex: 1, height: "100%" }}>
+            <Text style={styles.title}>Influencer List - {influencerList.length}</Text>
+            <ScrollView style={styles.scroll}>
                 {influencerList.map((influencer, index) => (
                     <TouchableOpacity
                         key={index}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: '#fff',
-                            borderRadius: 12,
-                            padding: 12,
-                            shadowColor: '#000',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 4,
-                            elevation: 3,
-                        }}
+                        style={styles.row}
                         onPress={() => window.open(`/influencer/${influencer.id}`, "_blank")}
                     >
                         <Image
                             source={{ uri: influencer.user?.profileImage }}
-                            style={{ width: 60, height: 60, borderRadius: 8, marginRight: 16 }}
+                            style={styles.avatar}
                         />
-                        <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 4 }}>{influencer.user?.name}</Text>
-                            <Text style={{ fontSize: 14, color: 'gray' }}>{influencer.user?.email}</Text>
+                        <View style={styles.flex1}>
+                            <Text style={styles.name}>{influencer.user?.name}</Text>
+                            <Text style={styles.email}>{influencer.user?.email}</Text>
                         </View>
-                        <Text style={{ fontSize: 18, fontWeight: 'bold' }}>{influencer.images?.length + " / " + influencer.totalImages}</Text>
+                        <Text style={styles.count}>{influencer.images?.length + " / " + influencer.totalImages}</Text>
                     </TouchableOpacity>
                 ))}
             </ScrollView>
