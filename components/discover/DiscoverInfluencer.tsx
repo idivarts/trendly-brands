@@ -40,6 +40,7 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import type { InfluencerItem } from "./discover-types";
+import NoDiscoveryCreditModal from "./NoDiscoveryCreditModal";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
@@ -188,6 +189,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         null
     );
     const { openModal } = useConfirmationModel();
+    const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
     const { xl } = useBreakpoints();
 
@@ -198,15 +200,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             data &&
             !selectedBrand?.discoveredInfluencers?.includes(data.id)
         ) {
-            openModal({
-                title: "No Discovery Credit",
-                description:
-                    "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
-                confirmText: "Contact Support",
-                confirmAction: () => {
-                    Linking.openURL("mailto:support@idiv.in");
-                },
-            });
+            setShowNoCreditModal(true);
             return;
         }
 
@@ -786,6 +780,10 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     )}
                 </BottomSheetScrollContainer>
             </View>
+            <NoDiscoveryCreditModal
+                visible={showNoCreditModal}
+                onClose={() => setShowNoCreditModal(false)}
+            />
         </View>
     );
 };
