@@ -1,47 +1,31 @@
-import ChipCard from "@/components/collaboration-card/card-components/ChipComponent";
 import Button from "@/components/ui/button";
-import ViewCollaborationMap from "@/components/view-collaboration/ViewCollaborationMap";
 import Colors from "@/shared-uis/constants/Colors";
-import { CURRENCY } from "@/constants/Unit";
-import { useContractContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import Carousel from "@/shared-uis/components/carousel/carousel";
 import ImageComponent from "@/shared-uis/components/image-component";
-import RatingSection from "@/shared-uis/components/rating-section";
 import ReadMore from "@/shared-uis/components/ReadMore";
-import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
-import { stylesFn } from "@/styles/CollaborationDetails.styles";
-import { Contract } from "@/types/Contract";
-import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
-import { truncateText } from "@/utils/text";
-import { convertToKUnits } from "@/utils/conversion";
 import {
-    faFacebook,
-    faInstagram,
-    faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
-import { faHeart } from "@fortawesome/free-regular-svg-icons";
-import {
-    faCheckCircle,
+    faBuilding,
+    faBullhorn,
+    faCircleInfo,
     faDollarSign,
-    faFilm,
+    faEnvelope,
     faHouseLaptop,
     faLocationDot,
-    faPanorama,
-    faRecordVinyl,
-    faStarHalfStroke,
+    faPaperPlane,
+    faUser,
+    faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
-import { Card, Portal, Text } from "react-native-paper";
+import { StyleSheet, View } from "react-native";
+import { Portal, Text } from "react-native-paper";
 import { CollaborationDetail } from ".";
 import BrandModal from "./modal/BrandModal";
 import ManagerModal from "./modal/ManagerModal";
@@ -52,354 +36,316 @@ interface CollaborationDetailsContentProps {
 
 const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const theme = useTheme();
-    const stylesFromFn = stylesFn(theme);
-    const s = useMemo(() => useLocalStyles(theme), [theme]);
-    const [status, setStatus] = React.useState("pending");
-    const [managerDetails, setManagerDetails] = React.useState<any>();
-    const [brandModalVisible, setBrandModalVisible] = useState(false);
+    const colors = Colors(theme);
+    const { xl, width } = useBreakpoints();
+    const styles = useMemo(
+        () => createStyles(colors, xl, width),
+        [colors, xl, width]
+    );
+
+    const [managerDetails, setManagerDetails] = useState<{
+        name?: string;
+        email?: string;
+        profileImage?: string;
+        role?: string;
+    }>();
     const [managerModalVisible, setManagerModalVisible] = useState(false);
-    const [contracts, setContracts] = useState<Contract[]>([]);
-    const [applicationCount, setApplicationCount] = useState(0)
-    const [invitationCount, setInvitationCount] = useState(0)
-    const { xl } = useBreakpoints();
+    const [brandModalVisible, setBrandModalVisible] = useState(false);
+    const [applicationCount, setApplicationCount] = useState(0);
+    const [invitationCount, setInvitationCount] = useState(0);
+    const [totalCampaigns, setTotalCampaigns] = useState<number | null>(null);
+    const [activeCollaborations, setActiveCollaborations] = useState<number | null>(null);
 
-    const { getContractsByCollaborationId } = useContractContext();
-    const formatBudgetValue = (value?: number) => {
-        if (value == null) {
-            return "-";
-        }
-        const millionValue = convertToMUnits(value);
-        if (typeof millionValue === "number") {
-            return convertToKUnits(millionValue);
-        }
-        return millionValue;
-    };
-
+    const isDraft = props.collaboration.status === "draft";
     const fetchManagerDetails = async () => {
-        if (!props.collaboration.managerId) {
-            return;
-        }
-        if (!props.collaboration.brandId) {
-            return;
-        }
+        if (!props.collaboration.managerId || !props.collaboration.brandId) return;
         const managerRef = doc(
             FirestoreDB,
             "managers",
             props.collaboration.managerId
         );
-        const managerDoc = await getDoc(managerRef);
-
-        const managerBrandref = doc(
+        const managerBrandRef = doc(
             FirestoreDB,
             "brands",
             props.collaboration.brandId,
             "members",
             props.collaboration.managerId
         );
-
-        const managerBrandDoc = await getDoc(managerBrandref);
-
+        const [managerDoc, managerBrandDoc] = await Promise.all([
+            getDoc(managerRef),
+            getDoc(managerBrandRef),
+        ]);
         const managerData = managerDoc.data() as IManagers;
         const managerBrandData = managerBrandDoc.data();
-
         setManagerDetails({
-            name: managerData.name,
-            email: managerData.email,
-            profileImage: managerData.profileImage,
+            name: managerData?.name,
+            email: managerData?.email,
+            profileImage: managerData?.profileImage,
             role: managerBrandData?.role,
         });
     };
 
     const fetchCollaboration = async () => {
-        if (!props.collaboration.id) {
-            return;
-        }
-        const fetchedContracts = await getContractsByCollaborationId(
-            props.collaboration.id
-        );
-        setContracts(fetchedContracts);
-
-        getDocs(collection(FirestoreDB, "collaborations", props.collaboration.id, "applications")).then(applications => {
-            const applicationCount = applications.size
-            setApplicationCount(applicationCount)
-        })
-        getDocs(collection(FirestoreDB, "collaborations", props.collaboration.id, "invitations")).then(invites => {
-            const inviteCount = invites.size
-            setInvitationCount(inviteCount)
-        })
-
+        if (!props.collaboration.id) return;
+        const [applicationsSnap, invitationsSnap] = await Promise.all([
+            getDocs(
+                collection(FirestoreDB, "collaborations", props.collaboration.id, "applications")
+            ),
+            getDocs(
+                collection(FirestoreDB, "collaborations", props.collaboration.id, "invitations")
+            ),
+        ]);
+        setApplicationCount(applicationsSnap.size);
+        setInvitationCount(invitationsSnap.size);
     };
 
-    const getFeedbacks = (contract: Contract[]) => {
-        let feedbacks: {
-            ratings?: number;
-            review?: string;
-        }[] = [];
-
-        contract.forEach((contract) => {
-            if (contract.feedbackFromInfluencer) {
-                feedbacks.push({
-                    ratings: contract.feedbackFromInfluencer.ratings,
-                    review: contract.feedbackFromInfluencer.feedbackReview,
-                });
-            }
-
-            if (contract.feedbackFromBrand) {
-                feedbacks.push({
-                    ratings: contract.feedbackFromBrand.ratings,
-                    review: contract.feedbackFromBrand.feedbackReview,
-                });
-            }
-        });
-
-        return feedbacks;
+    const fetchBrandStats = async () => {
+        if (!props.collaboration.brandId) return;
+        try {
+            const collabRef = collection(FirestoreDB, "collaborations");
+            const totalQ = query(
+                collabRef,
+                where("brandId", "==", props.collaboration.brandId)
+            );
+            const activeQ = query(
+                collabRef,
+                where("brandId", "==", props.collaboration.brandId),
+                where("status", "==", "active")
+            );
+            const [totalSnap, activeSnap] = await Promise.all([
+                getDocs(totalQ),
+                getDocs(activeQ),
+            ]);
+            setTotalCampaigns(totalSnap.size);
+            setActiveCollaborations(activeSnap.size);
+        } catch {
+            setTotalCampaigns(null);
+            setActiveCollaborations(null);
+        }
     };
 
     useEffect(() => {
         fetchManagerDetails();
-    }, []);
+    }, [props.collaboration.managerId, props.collaboration.brandId]);
 
     useEffect(() => {
         fetchCollaboration();
-    }, []);
+    }, [props.collaboration.id]);
+
+    useEffect(() => {
+        fetchBrandStats();
+    }, [props.collaboration.brandId]);
+
+    const paymentLabel =
+        props.collaboration.promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid";
+    const locationLabel = props.collaboration.location?.type ?? "Remote";
+    const locationIcon =
+        locationLabel === "On-Site" ? faLocationDot : faHouseLaptop;
+
+    const renderDetailsCard = () => (
+        <View style={styles.card}>
+            <View style={styles.detailsHeaderRow}>
+                <Text variant="headlineMedium" style={styles.title} numberOfLines={1}>
+                    {props.collaboration.name}
+                </Text>
+                {props.collaboration.timeStamp ? (
+                    <Text style={styles.timestamp}>
+                        {formatTimeToNow(props.collaboration.timeStamp)}
+                    </Text>
+                ) : null}
+            </View>
+            <View style={styles.pillsRow}>
+                <View style={styles.pill}>
+                    <FontAwesomeIcon
+                        icon={faDollarSign}
+                        size={12}
+                        color={colors.text}
+                    />
+                    <Text style={styles.pillText}>{paymentLabel}</Text>
+                </View>
+                <View style={styles.pill}>
+                    <FontAwesomeIcon
+                        icon={locationIcon}
+                        size={12}
+                        color={colors.text}
+                    />
+                    <Text style={styles.pillText}>{locationLabel}</Text>
+                </View>
+            </View>
+            <View style={styles.descriptionWrap}>
+                <ReadMore
+                    style={styles.description}
+                    text={props.collaboration.description || ""}
+                    lineCount={4}
+                    showReadMore={true}
+                />
+            </View>
+            <View style={styles.metricsRow}>
+                <View style={styles.metricBlock}>
+                    <FontAwesomeIcon
+                        icon={faUser}
+                        size={18}
+                        color={colors.textSecondary}
+                    />
+                    <Text style={styles.metricLabel}>Influencers Needed</Text>
+                    <Text style={styles.metricValue}>
+                        {props.collaboration.numberOfInfluencersNeeded ?? 0}
+                    </Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricBlock}>
+                    <FontAwesomeIcon
+                        icon={faUsers}
+                        size={18}
+                        color={colors.textSecondary}
+                    />
+                    <Text style={styles.metricLabel}>Influencers Applied</Text>
+                    <Text style={styles.metricValue}>{applicationCount}</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricBlock}>
+                    <FontAwesomeIcon
+                        icon={faPaperPlane}
+                        size={18}
+                        color={colors.textSecondary}
+                    />
+                    <Text style={styles.metricLabel}>Invitations Sent</Text>
+                    <Text style={styles.metricValue}>{invitationCount}</Text>
+                </View>
+            </View>
+        </View>
+    );
+
+    const renderReadyToLaunchCard = () =>
+        isDraft ? (
+            <View style={styles.card}>
+                <View style={styles.readyToLaunchContent}>
+                    <FontAwesomeIcon
+                        icon={faBullhorn}
+                        size={40}
+                        color={colors.primary}
+                    />
+                    <Text style={styles.readyToLaunchTitle}>Ready to launch?</Text>
+                    <Text style={styles.readyToLaunchSubtext}>
+                        Once you publish this collaboration, influencers will be
+                        able to discover and apply to work with you.
+                    </Text>
+                </View>
+            </View>
+        ) : null;
+
+    const renderPostedByCard = () => (
+        <View style={styles.card}>
+            <Text style={styles.sidebarLabel}>POSTED BY</Text>
+            <View style={styles.managerRow}>
+                <ImageComponent
+                    url={managerDetails?.profileImage ?? ""}
+                    size="small"
+                    altText="Manager"
+                    initials={managerDetails?.name}
+                    initialsSize={16}
+                    style={styles.managerAvatar}
+                />
+                <View style={styles.managerInfo}>
+                    <Text style={styles.managerName} numberOfLines={1}>
+                        {managerDetails?.name ?? "—"}
+                    </Text>
+                    <Text style={styles.managerRole}>Manager</Text>
+                    <Text style={styles.managerBrand} numberOfLines={1}>
+                        {props.collaboration.brandName}
+                    </Text>
+                </View>
+            </View>
+            <Button
+                mode="outlined"
+                onPress={() => setManagerModalVisible(true)}
+                style={styles.contactButton}
+                textColor={colors.text}
+                icon={() => (
+                    <FontAwesomeIcon
+                        icon={faEnvelope}
+                        size={14}
+                        color={colors.text}
+                    />
+                )}
+            >
+                Contact Manager
+            </Button>
+        </View>
+    );
+
+    const renderAccountCard = () => (
+        <View style={styles.card}>
+            <View style={styles.accountHeader}>
+                <FontAwesomeIcon
+                    icon={faBuilding}
+                    size={18}
+                    color={colors.text}
+                />
+                <Text style={styles.accountBrandName} numberOfLines={1}>
+                    {props.collaboration.brandName}
+                </Text>
+            </View>
+            <View style={styles.accountStatRow}>
+                <Text style={styles.accountStatLabel}>Total Campaigns</Text>
+                <Text style={styles.accountStatValue}>
+                    {totalCampaigns !== null ? totalCampaigns : "—"}
+                </Text>
+            </View>
+            <View style={styles.accountStatRow}>
+                <Text style={styles.accountStatLabel}>Active Collaborations</Text>
+                <Text style={styles.accountStatValue}>
+                    {activeCollaborations !== null ? activeCollaborations : "—"}
+                </Text>
+            </View>
+        </View>
+    );
+
+    const renderProTipCard = () => (
+        <View style={styles.card}>
+            <View style={styles.proTipHeader}>
+                <FontAwesomeIcon
+                    icon={faCircleInfo}
+                    size={18}
+                    color={colors.text}
+                />
+                <Text style={styles.proTipTitle}>Pro Tip</Text>
+            </View>
+            <Text style={styles.proTipText}>
+                Adding specific deliverables and timeline expectations helps
+                attract higher-quality influencer applications.
+            </Text>
+        </View>
+    );
+
+    const renderMainColumn = () => (
+        <View style={styles.leftColumn}>
+            {renderDetailsCard()}
+            {renderReadyToLaunchCard()}
+        </View>
+    );
+
+    const renderSidebar = () => (
+        <View style={styles.rightColumn}>
+            {renderPostedByCard()}
+            {renderAccountCard()}
+            {renderProTipCard()}
+        </View>
+    );
 
     return (
-        <IOScroll contentContainerStyle={stylesFromFn.scrollContainer}>
-            <View style={[stylesFromFn.profileCard, s.profileCardCenter]}>
-                {props?.collaboration?.attachments &&
-                    props?.collaboration?.attachments.length > 0 && (
-                        // !xl ? 
-                        <Carousel
-                            theme={theme}
-                            data={
-                                props?.collaboration?.attachments?.map((attachment) =>
-                                    processRawAttachment(attachment)
-                                ) || []
-                            }
-                        />
-                        // :<ScrollMedia
-                        //     MAX_WIDTH_WEB={"100%"}
-                        //     media={
-                        //       props?.collaboration?.attachments?.map((attachment) =>
-                        //         processRawAttachment(attachment)
-                        //       ) || []
-                        //     }
-                        //     xl={xl}
-                        //     mediaRes={{
-                        //       height: 200,
-                        //       width: 200,
-                        //     }}
-                        //     theme={theme} />
-                    )}
-                <Card.Content style={stylesFromFn.profileContent}>
-                    <View style={s.columnFull}>
-                        <View style={s.rowBetween}>
-                            <Text variant="headlineMedium" style={stylesFromFn.name}>
-                                {props.collaboration.name}
-                            </Text>
-                            {props.collaboration.timeStamp ? (
-                                <Text style={s.timeText}>
-                                    {formatTimeToNow(props.collaboration.timeStamp)}
-                                </Text>
-                            ) : null}
-                        </View>
-                        <View style={s.fullWidth}>
-                            <ReadMore style={stylesFromFn.shortDescription} text={props.collaboration.description || ""} />
-                        </View>
-                    </View>
-
-                    <View style={s.statsCard}>
-                        <Card.Content>
-                            <RatingSection feedbacks={getFeedbacks(contracts)} />
-                            <View style={s.gapColumn}                            >
-                                <View style={s.brandRow}>
-                                    <ImageComponent
-                                        url={props.collaboration.logo}
-                                        altText="Brand Logo"
-                                        shape="square"
-                                        size="small"
-                                        style={s.brandLogo}
-                                    />
-                                    <View style={s.flex1}>
-                                        <Text style={s.boldText}>
-                                            {props.collaboration.brandName}{" "}
-                                            {props.collaboration.paymentVerified && (
-                                                <FontAwesomeIcon
-                                                    icon={faCheckCircle}
-                                                    color={Colors(theme).primary}
-                                                />
-                                            )}
-                                        </Text>
-                                        <Text style={s.descriptionText}>
-                                            {truncateText(props.collaboration.brandDescription, 60)}
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </Card.Content>
-                    </View>
-
-                    {props.collaboration?.externalLinks &&
-                        props.collaboration?.externalLinks.length > 0 && (
-                            <View style={s.linksRow}>
-                                {props.collaboration?.externalLinks?.map((item, index) => (
-                                    <Button
-                                        key={index}
-                                        mode="contained"
-                                        style={s.linkButton}
-                                        buttonColor={Colors(theme).background}
-                                        textColor={Colors(theme).primary}
-                                        onPress={() => {
-                                            Linking.openURL(item.link);
-                                        }}
-                                    >
-                                        {item.name}
-                                    </Button>
-                                ))}
-                            </View>
-                        )}
-
-                    <View style={s.statsBlock}>
-                        <Text style={s.bodyText}>
-                            Influencer Needed: {props.collaboration.numberOfInfluencersNeeded}
-                        </Text>
-                        <Text style={s.bodyText}>
-                            Influencer Applied: {applicationCount}
-                        </Text>
-                        <Text style={s.bodyText}>
-                            Invitations Sent: {invitationCount}
-                        </Text>
-                        {props.collaboration.promotionType ===
-                            PromotionType.PAID_COLLAB && (
-                                <Text style={s.bodyText}>
-                                    Budget: {props.collaboration?.budget?.min ===
-                                        props.collaboration?.budget?.max
-                                        ? `${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.min)}`
-                                        : `${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.min)} - ${CURRENCY}. ${formatBudgetValue(props.collaboration?.budget?.max)}`}
-                                </Text>
-                            )}
-                    </View>
-                    <View style={s.chipsRow}>
-                        <ChipCard
-                            chipText={
-                                props.collaboration.promotionType === PromotionType.PAID_COLLAB
-                                    ? "Paid"
-                                    : "Unpaid"
-                            }
-                            chipIcon={faDollarSign}
-                        />
-                        <ChipCard
-                            chipText={props.collaboration.location.type}
-                            chipIcon={
-                                props.collaboration.location.type === "On-Site"
-                                    ? faLocationDot
-                                    : faHouseLaptop
-                            }
-                        />
-                        {props.collaboration.platform &&
-                            props.collaboration.platform.map((content, index) => (
-                                <ChipCard
-                                    key={index}
-                                    chipText={content}
-                                    chipIcon={
-                                        content === "Instagram"
-                                            ? faInstagram
-                                            : content === "Facebook"
-                                                ? faFacebook
-                                                : content === "Youtube"
-                                                    ? faYoutube
-                                                    : faInstagram
-                                    }
-                                />
-                            ))}
-                        {props.collaboration.contentFormat &&
-                            props.collaboration.contentFormat.map((content, index) => (
-                                <ChipCard
-                                    key={index}
-                                    chipText={content}
-                                    chipIcon={
-                                        content === "Posts"
-                                            ? faPanorama
-                                            : content === "Reels"
-                                                ? faFilm
-                                                : content === "Stories"
-                                                    ? faHeart
-                                                    : content === "Live"
-                                                        ? faRecordVinyl
-                                                        : content === "Product Reviews"
-                                                            ? faStarHalfStroke
-                                                            : faPanorama
-                                    }
-                                />
-                            ))}
-                    </View>
-
-                    {props.collaboration.location.type === "On-Site" && (
-                        <View style={s.fullWidth}>
-                            <Text style={s.sectionTitle}>
-                                Location
-                            </Text>
-                            <ViewCollaborationMap
-                                mapRegion={{
-                                    latitude: props.collaboration?.location?.latlong?.lat,
-                                    longitude: props.collaboration?.location?.latlong?.long,
-                                    latitudeDelta: 0.0922,
-                                    longitudeDelta: 0.042,
-                                }}
-                                onMapRegionChange={(region) => { }}
-                                onFormattedAddressChange={(address) => { }}
-                            />
-                            <Text style={s.bodyText}>
-                                {props.collaboration.location.name}
-                            </Text>
-                        </View>
-                    )}
-                    {props?.collaboration?.questionsToInfluencers &&
-                        props?.collaboration?.questionsToInfluencers.length > 0 && (
-                            <View style={s.questionsBlock}>
-                                <Text style={s.sectionTitle}>
-                                    Questions asked on application
-                                </Text>
-
-                                {props?.collaboration?.questionsToInfluencers?.map(
-                                    (question, index) => (
-                                        <Text
-                                            key={index}
-                                            style={s.bodyText}
-                                        >
-                                            {question}
-                                        </Text>
-                                    )
-                                )}
-                            </View>
-                        )}
-                    <View style={s.postedByBlock}>
-                        <Text style={s.sectionTitle}>
-                            Posted by
-                        </Text>
-                        <View>
-                            <View style={s.managerRow}>
-                                <ImageComponent
-                                    url={managerDetails?.profileImage}
-                                    size="small"
-                                    altText="Manager Profile Image"
-                                    initials={managerDetails?.name}
-                                    initialsSize={16}
-                                    style={s.managerAvatar}
-                                />
-                                <View style={s.managerInfo}>
-                                    <Text style={s.boldText}>
-                                        {managerDetails?.name}
-                                    </Text>
-                                    <Text style={s.grayText}>
-                                        {managerDetails?.role} - {props.collaboration.brandName}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                </Card.Content>
-            </View>
+        <IOScroll contentContainerStyle={styles.scrollContainer}>
+            {xl ? (
+                <View style={styles.twoColumnWrap}>
+                    {renderMainColumn()}
+                    {renderSidebar()}
+                </View>
+            ) : (
+                <>
+                    {renderMainColumn()}
+                    {renderSidebar()}
+                </>
+            )}
             <Portal>
                 <BrandModal
                     brand={{
@@ -414,9 +360,9 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     setVisibility={setBrandModalVisible}
                 />
                 <ManagerModal
-                    managerEmail={managerDetails?.email}
-                    managerImage={managerDetails?.profileImage}
-                    managerName={managerDetails?.name}
+                    managerEmail={managerDetails?.email ?? ""}
+                    managerImage={managerDetails?.profileImage ?? ""}
+                    managerName={managerDetails?.name ?? ""}
                     brandDescription={props.collaboration.brandDescription}
                     visible={managerModalVisible}
                     setVisibility={setManagerModalVisible}
@@ -426,140 +372,220 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     );
 };
 
-function useLocalStyles(theme: ReturnType<typeof useTheme>) {
+const CARD_BORDER_RADIUS = 12;
+const DESKTOP_GAP = 24;
+const SIDEBAR_WIDTH_PCT = "30%";
+
+function createStyles(
+    colors: ReturnType<typeof Colors>,
+    xl: boolean,
+    _width: number
+) {
     return StyleSheet.create({
-        profileCardCenter: {
-            alignItems: "center",
+        scrollContainer: {
+            gap: DESKTOP_GAP,
+            paddingBottom: 24,
+            paddingHorizontal: xl ? 32 : 16,
         },
-        columnFull: {
-            display: "flex",
-            flexDirection: "column",
+        twoColumnWrap: {
+            flexDirection: "row",
+            gap: DESKTOP_GAP,
             width: "100%",
+            alignSelf: "center",
         },
-        rowBetween: {
-            display: "flex",
+        leftColumn: {
+            flex: 1,
+            minWidth: 0,
+            gap: DESKTOP_GAP,
+        },
+        rightColumn: {
+            width: xl ? SIDEBAR_WIDTH_PCT : "100%",
+            minWidth: 0,
+            gap: DESKTOP_GAP,
+        },
+        card: {
+            backgroundColor: colors.card,
+            borderRadius: CARD_BORDER_RADIUS,
+            padding: 20,
+            shadowColor: colors.cardShadow ?? colors.transparent,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 2,
+        },
+        detailsHeaderRow: {
             flexDirection: "row",
             justifyContent: "space-between",
-            width: "100%",
-            gap: 8,
             alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
         },
-        timeText: {
+        title: {
+            fontWeight: "bold",
+            fontSize: 22,
+            color: colors.text,
+            flex: 1,
+        },
+        timestamp: {
             fontSize: 12,
-            color: Colors(theme).text,
-            paddingRight: 8,
+            color: colors.textSecondary,
         },
-        fullWidth: {
-            width: "100%",
-        },
-        statsCard: {
-            width: "100%",
-            borderWidth: 0.3,
-            paddingVertical: 16,
-            borderRadius: 10,
-            borderColor: Colors(theme).gray300,
-        },
-        gapColumn: {
-            flex: 1,
-            flexDirection: "column",
-            gap: 16,
-        },
-        brandRow: {
+        pillsRow: {
             flexDirection: "row",
-            alignItems: "center",
+            flexWrap: "wrap",
             gap: 8,
-            flexGrow: 1,
-        },
-        brandLogo: {
-            width: 40,
-            height: 40,
-            borderRadius: 5,
-        },
-        flex1: {
-            flex: 1,
-        },
-        boldText: {
-            fontSize: 16,
-            fontWeight: "bold",
-            color: Colors(theme).text,
-        },
-        descriptionText: {
-            fontSize: 16,
-            flexWrap: "wrap",
-            overflow: "hidden",
-            color: Colors(theme).text,
-            lineHeight: 22,
-        },
-        linksRow: {
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 16,
-            justifyContent: "space-between",
-        },
-        linkButton: {
-            flexBasis: 1,
-            flexGrow: 1,
-            borderColor: Colors(theme).primary,
-            borderWidth: 0.3,
-        },
-        statsBlock: {
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            gap: 8,
-            borderWidth: 0.3,
-            borderRadius: 10,
-            padding: 16,
-        },
-        bodyText: {
-            fontSize: 16,
-            color: Colors(theme).text,
-        },
-        chipsRow: {
-            flexDirection: "row",
-            flexWrap: "wrap",
-            width: "100%",
-            rowGap: 10,
-        },
-        sectionTitle: {
-            fontSize: 16,
-            color: Colors(theme).text,
-            fontWeight: "bold",
             marginBottom: 16,
         },
-        questionsBlock: {
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            gap: 8,
-            borderWidth: 0.3,
-            borderRadius: 10,
-            padding: 16,
-        },
-        postedByBlock: {
-            width: "100%",
-            gap: 16,
-        },
-        managerRow: {
-            display: "flex",
+        pill: {
             flexDirection: "row",
             alignItems: "center",
-            gap: 10,
+            gap: 6,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 8,
+            backgroundColor: colors.tag ?? colors.gray200,
+        },
+        pillText: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.tagForeground ?? colors.text,
+        },
+        descriptionWrap: {
+            width: "100%",
+            marginBottom: 16,
+        },
+        description: {
+            fontSize: 14,
+            color: colors.text,
+            lineHeight: 22,
+        },
+        metricsRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.outline,
+            paddingTop: 16,
+        },
+        metricBlock: {
+            flex: 1,
+            alignItems: "center",
+            gap: 4,
+        },
+        metricDivider: {
+            width: StyleSheet.hairlineWidth,
+            alignSelf: "stretch",
+            backgroundColor: colors.outline,
+        },
+        metricLabel: {
+            fontSize: 12,
+            color: colors.textSecondary,
+        },
+        metricValue: {
+            fontSize: 18,
+            fontWeight: "bold",
+            color: colors.text,
+        },
+        readyToLaunchContent: {
+            alignItems: "center",
+            justifyContent: "center",
+            paddingVertical: 24,
+            gap: 12,
+        },
+        readyToLaunchTitle: {
+            fontSize: 18,
+            fontWeight: "bold",
+            color: colors.text,
+        },
+        readyToLaunchSubtext: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            textAlign: "center",
+            lineHeight: 22,
+        },
+        sidebarLabel: {
+            fontSize: 11,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+            marginBottom: 12,
+        },
+        managerRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 16,
         },
         managerAvatar: {
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
         },
         managerInfo: {
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
+            flex: 1,
+            minWidth: 0,
             gap: 2,
         },
-        grayText: {
+        managerName: {
             fontSize: 16,
-            color: Colors(theme).gray100,
+            fontWeight: "bold",
+            color: colors.text,
+        },
+        managerRole: {
+            fontSize: 13,
+            color: colors.textSecondary,
+        },
+        managerBrand: {
+            fontSize: 13,
+            color: colors.textSecondary,
+        },
+        contactButton: {
+            borderColor: colors.outline,
+            borderWidth: StyleSheet.hairlineWidth,
+        },
+        accountHeader: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 16,
+        },
+        accountBrandName: {
+            fontSize: 16,
+            fontWeight: "bold",
+            color: colors.text,
+            flex: 1,
+        },
+        accountStatRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingVertical: 8,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.outline,
+        },
+        accountStatLabel: {
+            fontSize: 14,
+            color: colors.textSecondary,
+        },
+        accountStatValue: {
+            fontSize: 14,
+            fontWeight: "600",
+            color: colors.text,
+        },
+        proTipHeader: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+        },
+        proTipTitle: {
+            fontSize: 16,
+            fontWeight: "bold",
+            color: colors.text,
+        },
+        proTipText: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            lineHeight: 22,
         },
     });
 }

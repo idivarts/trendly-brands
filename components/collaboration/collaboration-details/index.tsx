@@ -1,8 +1,6 @@
 import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
-import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
-import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
@@ -274,34 +272,18 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
     return (
         <View style={styles.column}>
-            <CollaborationHeader collaboration={collaboration} />
+            <CollaborationHeader
+                collaboration={collaboration}
+                isDraft={collaboration.status === "draft"}
+                onEditDraft={() => {
+                    router.push({
+                        pathname: "/edit-collaboration",
+                        params: { id: pageID },
+                    });
+                }}
+                onPublish={() => publish(pageID, { onSuccess: fetchCollaboration })}
+            />
 
-            {collaboration.status === "draft" && (
-                <View style={styles.draftActionsRow}>
-                    <Button
-                        mode="contained"
-                        onPress={() => {
-                            router.push({
-                                pathname: "/edit-collaboration",
-                                params: {
-                                    id: pageID,
-                                },
-                            });
-                        }}
-                        style={styles.editDraftButton}
-                        textColor={Colors(theme).text}
-                    >
-                        Edit Draft
-                    </Button>
-                    <Button
-                        mode="contained"
-                        onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
-                        style={styles.publishButton}
-                    >
-                        Publish Now
-                    </Button>
-                </View>
-            )}
             {collaboration.status === "draft" && (
                 <OverviewTabContent collaboration={collaboration} />
             )}
@@ -334,23 +316,6 @@ function useStyles(theme: ReturnType<typeof useTheme>) {
         column: {
             flex: 1,
             flexDirection: "column",
-        },
-        draftActionsRow: {
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: 16,
-            gap: 16,
-            marginBottom: 16,
-        },
-        editDraftButton: {
-            flex: 1,
-            backgroundColor: Colors(theme).background,
-            borderWidth: 0.3,
-            borderColor: Colors(theme).outline,
-        },
-        publishButton: {
-            flex: 1,
         },
         tabContainer: {
             flex: 1,
