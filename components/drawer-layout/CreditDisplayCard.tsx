@@ -12,10 +12,11 @@ export interface CreditDisplayCardProps {
     discoverCoinsLeft: number;
     connectionCreditsLeft: number;
     discoveryProgress: number;
+    hideRefill?: boolean;
 }
 
 const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
-    ({ discoverCoinsLeft, connectionCreditsLeft, discoveryProgress }, ref) => {
+    ({ discoverCoinsLeft, connectionCreditsLeft, discoveryProgress, hideRefill = false }, ref) => {
         const theme = useTheme();
         const colors = Colors(theme);
         const nav = useMyNavigation();
@@ -60,16 +61,18 @@ const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
                                 {discoverCoinsLeft} Discovery
                             </Text>
                         </Pressable>
-                        <Pressable
-                            onPress={handleRefillPress}
-                            hitSlop={8}
-                            style={({ pressed: refillPressed }) => [
-                                styles.refillButton,
-                                refillPressed && styles.refillButtonPressed,
-                            ]}
-                        >
-                            <Text style={styles.refillLink}>REFILL</Text>
-                        </Pressable>
+                        {!hideRefill && (
+                            <Pressable
+                                onPress={handleRefillPress}
+                                hitSlop={8}
+                                style={({ pressed: refillPressed }) => [
+                                    styles.refillButton,
+                                    refillPressed && styles.refillButtonPressed,
+                                ]}
+                            >
+                                <Text style={styles.refillLink}>REFILL</Text>
+                            </Pressable>
+                        )}
                     </RNView>
                     <Pressable onPress={handleCardPress}>
                         <RNView style={styles.progressTrack}>
@@ -101,6 +104,7 @@ const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
             <CreditUsageModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
+                hideRefill={hideRefill}
             />
             </>
         );

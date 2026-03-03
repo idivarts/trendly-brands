@@ -19,6 +19,7 @@ import {
 interface CreditUsageModalProps {
     visible: boolean;
     onClose: () => void;
+    hideRefill?: boolean;
 }
 
 const CreditProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
@@ -56,6 +57,7 @@ const CreditProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
 const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
     visible,
     onClose,
+    hideRefill = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -178,24 +180,26 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
                             </View>
                         ))}
 
-                        <Pressable
-                            onPress={() => {
-                                onClose();
-                                router.push("/billing");
-                            }}
-                            style={({ pressed }) => [
-                                styles.refillButton,
-                                pressed && styles.refillButtonPressed,
-                            ]}
-                        >
-                            <FontAwesomeIcon
-                                icon={faGem}
-                                size={16}
-                                color={colors.onPrimary}
-                                style={styles.refillIcon}
-                            />
-                            <Text style={styles.refillButtonText}>Refill</Text>
-                        </Pressable>
+                        {!hideRefill && (
+                            <Pressable
+                                onPress={() => {
+                                    onClose();
+                                    router.push("/billing");
+                                }}
+                                style={({ pressed }) => [
+                                    styles.refillButton,
+                                    pressed && styles.refillButtonPressed,
+                                ]}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faGem}
+                                    size={16}
+                                    color={colors.onPrimary}
+                                    style={styles.refillIcon}
+                                />
+                                <Text style={styles.refillButtonText}>Refill</Text>
+                            </Pressable>
+                        )}
                     </ScrollView>
                 </Pressable>
             </Pressable>
