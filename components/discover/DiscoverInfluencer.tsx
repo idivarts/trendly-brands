@@ -34,6 +34,7 @@ import {
     Chip,
     Divider,
     IconButton,
+    Menu,
     Portal
 } from "react-native-paper";
 import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
@@ -171,6 +172,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
+    const [adminMenuVisible, setAdminMenuVisible] = useState(false);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
     const [isRescraping, setIsRescraping] = useState(false);
@@ -740,25 +742,37 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerIds={[selectedInfluencer.id]}
                                             influencerName={selectedInfluencer.name}
                                         />
-                                        {manager?.isAdmin ? (
-                                            <>
-                                                <Button
-                                                    mode="contained"
-                                                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
-                                                    icon="pencil"
-                                                >
-                                                    Edit Metrics
-                                                </Button>
-                                                <Button
-                                                    mode="contained"
-                                                    onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
-                                                    loading={isRescraping}
+                                        {manager?.isAdmin && (
+                                            <Menu
+                                                visible={adminMenuVisible}
+                                                onDismiss={() => setAdminMenuVisible(false)}
+                                                anchor={
+                                                    <IconButton
+                                                        icon="dots-vertical"
+                                                        onPress={() => setAdminMenuVisible(true)}
+                                                        accessibilityLabel="Admin actions"
+                                                    />
+                                                }
+                                                contentStyle={{ zIndex: 99999, elevation: 99999 }}
+                                            >
+                                                <Menu.Item
+                                                    onPress={() => {
+                                                        setAdminMenuVisible(false);
+                                                        trendlyAnalyticsRef.current?.openEditModal();
+                                                    }}
+                                                    title="Edit Metrics"
+                                                    leadingIcon="pencil"
+                                                />
+                                                <Menu.Item
+                                                    onPress={() => {
+                                                        setAdminMenuVisible(false);
+                                                        trendlyAnalyticsRef.current?.handleRescrape();
+                                                    }}
+                                                    title="Re-scrape"
                                                     disabled={isRescraping}
-                                                >
-                                                    Re-scrape
-                                                </Button>
-                                            </>
-                                        ) : null}
+                                                />
+                                            </Menu>
+                                        )}
                                     </View>
                                 }
                                 FireStoreDB={FirestoreDB}
