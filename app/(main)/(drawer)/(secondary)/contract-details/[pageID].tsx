@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
 import { Text, View } from "@/components/theme/Themed";
-import ScreenHeader from "@/components/ui/screen-header";
+import PageHeader from "@/components/ui/page-header";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import { useAuthContext } from "@/contexts";
@@ -144,14 +144,27 @@ const ContractScreen = () => {
         );
     }
 
+    const contractSubtitle =
+        contract.collaborationData?.name ||
+        contract.userData?.name ||
+        "Contract";
+
     return (
         <AppLayout withWebPadding={false}>
-            <ScreenHeader
+            <PageHeader
                 title="Contract Details"
-                rightAction
-                rightActionButton={
-                    <Button mode="outlined" style={styles.viewProfileButton} onPress={() => setOpenProfileModal(true)}>View Profile</Button>
-                }
+                subtitle={contractSubtitle}
+                showBackButton
+                actionButtons={[
+                    <Button
+                        key="view-profile"
+                        mode="outlined"
+                        style={styles.viewProfileButton}
+                        onPress={() => setOpenProfileModal(true)}
+                    >
+                        View Profile
+                    </Button>,
+                ]}
             />
             <ContractDetailsContent
                 applicationData={contract?.applications[0]}

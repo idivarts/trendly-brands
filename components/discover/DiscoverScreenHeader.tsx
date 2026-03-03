@@ -1,12 +1,12 @@
 import { OpenFilterRightPanel, useDiscovery } from "@/components/discover/discovery-context";
-import { View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { useTheme } from "@react-navigation/native";
-import { faFilter, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Menu } from "react-native-paper";
 
 const SORT_OPTIONS = [
@@ -18,72 +18,6 @@ const SORT_OPTIONS = [
 
 const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
     StyleSheet.create({
-        container: {
-            backgroundColor: colors.background,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: colors.border,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            marginHorizontal: 16,
-            marginVertical: 8,
-        },
-        topRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-        },
-        title: {
-            fontSize: 22,
-            fontWeight: "600",
-            color: colors.text,
-        },
-        filterButton: {
-            backgroundColor: colors.primary,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: 8,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-        },
-        filterButtonText: {
-            color: colors.onPrimary,
-            fontSize: 14,
-            fontWeight: "600",
-        },
-        divider: {
-            height: 1,
-            backgroundColor: colors.border,
-            marginVertical: 12,
-        },
-        bottomRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-        },
-        totalWrap: {
-            flexDirection: "row",
-            alignItems: "center",
-            flex: 1,
-        },
-        totalLabel: {
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.textSecondary,
-            marginRight: 4,
-        },
-        totalCount: {
-            fontSize: 14,
-            fontWeight: "700",
-            color: colors.primary,
-            marginRight: 4,
-        },
-        resultsFound: {
-            fontSize: 14,
-            color: colors.textSecondary,
-            fontWeight: "400",
-        },
         sortByLabel: {
             fontSize: 14,
             color: colors.textSecondary,
@@ -105,6 +39,20 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             fontWeight: "500",
             color: colors.text,
             maxWidth: xl ? 220 : 160,
+        },
+        filterButton: {
+            backgroundColor: colors.primary,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            borderRadius: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        filterButtonText: {
+            color: colors.onPrimary,
+            fontSize: 14,
+            fontWeight: "600",
         },
     });
 
@@ -138,68 +86,66 @@ const DiscoverScreenHeader: React.FC = () => {
         });
     };
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.topRow}>
-                <Text style={styles.title}>Discover Influencers</Text>
-                <Pressable
-                    onPress={() => OpenFilterRightPanel.next()}
-                    style={styles.filterButton}
-                >
-                    <FontAwesomeIcon
-                        color={colors.onPrimary}
-                        icon={faFilter}
-                        size={16}
-                    />
-                    <Text style={styles.filterButtonText}>Filters</Text>
-                </Pressable>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.bottomRow}>
-                <View style={styles.totalWrap}>
-                    <Text style={styles.totalLabel}>Total</Text>
-                    <Text style={styles.totalCount}>{totalCount}</Text>
-                    <Text style={styles.resultsFound}>Results found</Text>
-                </View>
-
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={styles.sortByLabel}>Sort by:</Text>
-                    <Menu
-                        visible={sortMenuVisible}
-                        onDismiss={() => setSortMenuVisible(false)}
-                        anchor={
-                            <Pressable
-                                onPress={() => setSortMenuVisible(true)}
-                                style={styles.sortChip}
-                            >
-                                <Text
-                                    numberOfLines={1}
-                                    style={styles.sortChipText}
-                                >
-                                    {sortDisplayLabel}
-                                </Text>
-                                <FontAwesomeIcon
-                                    color={colors.text}
-                                    icon={faChevronDown}
-                                    size={12}
-                                />
-                            </Pressable>
-                        }
-                        contentStyle={{ backgroundColor: colors.background }}
+    const sortComponent = (
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text style={styles.sortByLabel}>Sort by:</Text>
+            <Menu
+                visible={sortMenuVisible}
+                onDismiss={() => setSortMenuVisible(false)}
+                anchor={
+                    <Pressable
+                        onPress={() => setSortMenuVisible(true)}
+                        style={styles.sortChip}
                     >
-                        {SORT_OPTIONS.map((opt) => (
-                            <Menu.Item
-                                key={opt.value}
-                                onPress={() => onSelectSort(opt.value)}
-                                title={`${opt.label} (${opt.sublabel})`}
-                            />
-                        ))}
-                    </Menu>
-                </View>
-            </View>
+                        <Text
+                            numberOfLines={1}
+                            style={styles.sortChipText}
+                        >
+                            {sortDisplayLabel}
+                        </Text>
+                        <FontAwesomeIcon
+                            color={colors.text}
+                            icon={faChevronDown}
+                            size={12}
+                        />
+                    </Pressable>
+                }
+                contentStyle={{ backgroundColor: colors.background }}
+            >
+                {SORT_OPTIONS.map((opt) => (
+                    <Menu.Item
+                        key={opt.value}
+                        onPress={() => onSelectSort(opt.value)}
+                        title={`${opt.label} (${opt.sublabel})`}
+                    />
+                ))}
+            </Menu>
         </View>
+    );
+
+    const filterButton = (
+        <Pressable
+            onPress={() => OpenFilterRightPanel.next()}
+            style={styles.filterButton}
+        >
+            <FontAwesomeIcon
+                color={colors.onPrimary}
+                icon={faFilter}
+                size={16}
+            />
+            <Text style={styles.filterButtonText}>Filters</Text>
+        </Pressable>
+    );
+
+    return (
+        <PageHeader
+            title="Discover Influencer"
+            subtitle={`Total ${totalCount}+ found`}
+            showBackButton={false}
+            mobileActions="all"
+            actionButtons={[filterButton]}
+            rightComponent={sortComponent}
+        />
     );
 };
 

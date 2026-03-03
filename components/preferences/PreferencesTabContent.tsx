@@ -31,7 +31,6 @@ import {
     faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
 import {
-    faArrowLeft,
     faCheck,
     faLightbulb,
     faPlus,
@@ -50,6 +49,7 @@ import {
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import Button from "../ui/button";
+import PageHeader from "../ui/page-header";
 import { Text } from "../theme/Themed";
 
 interface PreferencesTabContentProps {
@@ -161,14 +161,6 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
         expoRouter.back();
     };
 
-    const handleBack = () => {
-        if (expoRouter.canGoBack()) {
-            expoRouter.back();
-        } else {
-            router.resetAndNavigate("/discover");
-        }
-    };
-
     if (!selectedBrand || !preferences)
         return (
             <View style={styles.loadingContainer}>
@@ -197,39 +189,31 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
 
     return (
         <>
-            <View style={styles.header}>
-                <Pressable onPress={handleBack} style={styles.headerBack}>
-                    <FontAwesomeIcon
-                        icon={faArrowLeft}
-                        size={20}
-                        color={colors.text}
-                    />
-                </Pressable>
-                <View style={styles.headerTitleBlock}>
-                    <Text style={styles.headerTitle}>Brand Preferences</Text>
-                    <Text style={styles.headerSubtitle}>
-                        SETTINGS & CONFIGURATION
-                    </Text>
-                </View>
-                <View style={styles.headerActions}>
+            <PageHeader
+                title="Brand Preferences"
+                subtitle="SETTINGS & CONFIGURATION"
+                showBackButton={false}
+                actionButtons={[
                     <Button
+                        key="cancel"
                         mode="outlined"
                         onPress={handleCancel}
                         style={styles.cancelButton}
                         labelStyle={styles.cancelButtonLabel}
                     >
                         Cancel
-                    </Button>
+                    </Button>,
                     <Button
+                        key="save"
                         mode="contained"
                         onPress={updatePreference}
                         loading={loading}
                         style={styles.saveButton}
                     >
                         Save Changes
-                    </Button>
-                </View>
-            </View>
+                    </Button>,
+                ]}
+            />
 
             <ScrollView
                 style={styles.scrollView}
@@ -652,41 +636,6 @@ function useStyles(
                     flex: 1,
                     justifyContent: "center",
                     alignItems: "center",
-                },
-                header: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
-                    backgroundColor: colors.background,
-                },
-                headerBack: {
-                    padding: 8,
-                    marginRight: 8,
-                },
-                headerTitleBlock: {
-                    flex: 1,
-                    flexShrink: 1,
-                    minWidth: 0,
-                },
-                headerTitle: {
-                    fontSize: 22,
-                    fontWeight: "700",
-                    color: colors.text,
-                },
-                headerSubtitle: {
-                    fontSize: 12,
-                    color: colors.textSecondary,
-                    marginTop: 2,
-                    letterSpacing: 1,
-                },
-                headerActions: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 12,
-                    flexShrink: 0,
                 },
                 cancelButton: {
                     borderColor: colors.outline,

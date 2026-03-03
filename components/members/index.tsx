@@ -23,7 +23,12 @@ export interface ManagerCard extends IManagers {
     status: number;
 }
 
-const Members = () => {
+interface MembersProps {
+    showMemberModal?: boolean;
+    onCloseMemberModal?: () => void;
+}
+
+const Members = ({ showMemberModal: externalShowModal, onCloseMemberModal }: MembersProps = {}) => {
     const theme = useTheme();
     const { xl, width } = useBreakpoints();
     const { selectedBrand } = useBrandContext();
@@ -32,7 +37,11 @@ const Members = () => {
 
     const [members, setMembers] = useState<ManagerCard[]>([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [showMemberModal, setShowMemberModal] = useState(false);
+    const [internalShowModal, setInternalShowModal] = useState(false);
+
+    const isControlled = onCloseMemberModal !== undefined;
+    const showMemberModal = isControlled ? (externalShowModal ?? false) : internalShowModal;
+    const handleModalClose = isControlled ? onCloseMemberModal : () => setInternalShowModal(false);
 
     const fetchMembers = async () => {
         if (!selectedBrand) return;
@@ -95,15 +104,6 @@ const Members = () => {
 
     return (
         <View style={styles.container}>
-            {xl && (
-                <View style={styles.header}>
-                    <Text style={styles.title}>Members</Text>
-                    <Button onPress={() => setShowMemberModal(true)}>
-                        Add Member
-                    </Button>
-                </View>
-            )}
-
             <FlatList
                 data={members}
                 renderItem={({ item }) => (
@@ -129,15 +129,9 @@ const Members = () => {
                 }
             />
 
-            {!xl && (
-                <Button onPress={() => setShowMemberModal(true)} style={styles.addButton}>
-                    Add Member
-                </Button>
-            )}
-
             <MembersModal
                 visible={showMemberModal}
-                handleModalClose={() => setShowMemberModal(false)}
+                handleModalClose={handleModalClose}
                 refresh={fetchMembers}
                 theme={theme}
             />
@@ -161,18 +155,6 @@ function createStyles(
             backgroundColor: colors.background,
             ...(xl && { maxWidth: contentMaxWidth, alignSelf: "center", width: "100%" }),
         },
-        header: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 20,
-            paddingVertical: 8,
-        },
-        title: {
-            fontSize: 24,
-            fontWeight: "700",
-            color: colors.text,
-        },
         list: {
             flex: 1,
         },
@@ -186,9 +168,6 @@ function createStyles(
         cardWrapper: {
             flex: 1,
             minWidth: 0,
-        },
-        addButton: {
-            marginTop: 12,
         },
     });
 }
