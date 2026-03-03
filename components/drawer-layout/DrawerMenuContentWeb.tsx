@@ -14,7 +14,6 @@ import {
     faStar
 } from "@fortawesome/free-regular-svg-icons";
 import {
-    faBolt,
     faChevronDown,
     faChevronRight,
     faChevronUp,
@@ -42,6 +41,7 @@ import {
     StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CreditDisplayCard from "./CreditDisplayCard";
 import CreditsCoachMark, { CreditsCoachMarkLayout } from "./CreditsCoachMark";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
@@ -324,47 +324,12 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         </View>
 
                         {selectedBrand && !selectedBrand.isBillingDisabled && (
-                            <RNView
+                            <CreditDisplayCard
                                 ref={creditsCardRef}
-                                style={styles.creditsCard}
-                                collapsable={false}
-                            >
-                                <Pressable
-                                    onPress={() => nav.push("/billing")}
-                                    style={styles.creditsRow}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faGemSolid}
-                                        size={18}
-                                        color={colors.gold}
-                                        style={styles.creditsIcon}
-                                    />
-                                    <Text style={styles.creditsDiscoveryText}>
-                                        {discoverCoinsLeft} Discovery
-                                    </Text>
-                                    <Text style={styles.refillLink}>REFILL</Text>
-                                </Pressable>
-                                <RNView style={styles.progressTrack}>
-                                    <RNView
-                                        style={[
-                                            styles.progressFill,
-                                            { width: `${discoveryProgress * 100}%` },
-                                        ]}
-                                    />
-                                </RNView>
-                                <View style={styles.creditsRow}>
-                                    <FontAwesomeIcon
-                                        icon={faBolt}
-                                        size={18}
-                                        color={colors.drawerInvitesIcon}
-                                        style={styles.creditsIcon}
-                                    />
-                                    <Text style={styles.creditsInvitesText}>
-                                        {connectionCreditsLeft} Invites
-                                    </Text>
-                                    <Text style={styles.creditsMonthly}>Monthly</Text>
-                                </View>
-                            </RNView>
+                                discoverCoinsLeft={discoverCoinsLeft}
+                                connectionCreditsLeft={connectionCreditsLeft}
+                                discoveryProgress={discoveryProgress}
+                            />
                         )}
                         {selectedBrand && !selectedBrand.isBillingDisabled && (
                             <>
@@ -653,53 +618,6 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         campaignItems: {
             rowGap: 2,
             backgroundColor: "transparent",
-        },
-        creditsCard: {
-            backgroundColor: colors.drawerCardBg,
-            borderRadius: 12,
-            padding: 12,
-            marginHorizontal: 8,
-            gap: 8,
-        },
-        creditsRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "transparent",
-        },
-        creditsIcon: {
-            marginRight: 8,
-        },
-        creditsDiscoveryText: {
-            flex: 1,
-            fontSize: 14,
-            color: colors.drawerText,
-            fontWeight: "500",
-        },
-        refillLink: {
-            fontSize: 12,
-            fontWeight: "600",
-            color: colors.aliceBlue,
-        },
-        progressTrack: {
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: colors.drawerProgressTrack,
-            overflow: "hidden",
-        },
-        progressFill: {
-            height: "100%",
-            backgroundColor: colors.drawerProgressFill,
-            borderRadius: 3,
-        },
-        creditsInvitesText: {
-            flex: 1,
-            fontSize: 14,
-            color: colors.drawerText,
-            fontWeight: "500",
-        },
-        creditsMonthly: {
-            fontSize: 11,
-            color: colors.drawerTextMuted,
         },
         brandDetailsSection: {
             marginTop: 16,

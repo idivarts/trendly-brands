@@ -154,13 +154,13 @@ const TabLayout = () => {
                     },
                     headerRight: () => (
                         <View style={styles.headerRightRow}>
-                            <PremiumActionTag
+                            {/* <PremiumActionTag
                                 label="Influencers remaining"
                                 tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}
                                 icon="star-four-points"
                                 variant="gold"
                                 count={influencerCredits}
-                            />
+                            /> */}
                             <NotificationIcon />
                         </View>
                     ),
