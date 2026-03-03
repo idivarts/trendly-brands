@@ -3,6 +3,7 @@ import React from "react";
 export type DrawerColors = {
     inactiveColor: string;
     activeColor: string;
+    inactiveBg?: string;
 };
 
 export const DrawerColorsContext = React.createContext<DrawerColors | null>(null);

@@ -39,10 +39,11 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     // Avoid marking blank href items as active
     const isActive = !!tab.href && pathname.startsWith(tab.href.toString());
     const colorSet = Colors(theme);
-    const inactiveBg = drawerColors ? colorSet.drawerBackground : colorSet.background;
+    const inactiveBg = drawerColors?.inactiveBg ?? (drawerColors ? colorSet.drawerBackground : colorSet.background);
     const inactiveText = drawerColors ? drawerColors.inactiveColor : colorSet.text;
     const activeBg = colorSet.primary;
     const activeText = drawerColors ? drawerColors.activeColor : colorSet.onPrimary;
+    const hoverBg = inactiveBg === "transparent" ? colorSet.primary + "22" : inactiveBg + "F2";
 
     return (
         <Pressable
@@ -58,7 +59,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                     backgroundColor: isActive
                         ? activeBg
                         : pressed || hovered
-                            ? inactiveBg + "F2"
+                            ? hoverBg
                             : inactiveBg,
                     borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
                     borderColor: isActive ? colorSet.primary : (drawerColors ? colorSet.drawerBorder : colorSet.border),
@@ -69,11 +70,11 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
             hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
         >
             <View style={styles.innerContainer}>
-                {tab.icon({ focused: isActive })}
+                {tab.icon({ focused: isActive || hovered })}
                 <Text
                     style={[
                         styles.label,
-                        { color: isActive ? activeText : inactiveText, fontWeight: isActive ? "600" : "500" },
+                        { color: isActive || hovered ? activeText : inactiveText, fontWeight: isActive ? "600" : "500" },
                     ]}
                     numberOfLines={1}
                 >
@@ -140,15 +141,16 @@ const styles = StyleSheet.create({
 interface DrawerIconProps {
     href?: string;
     icon: IconProp;
-    size?: number
+    size?: number;
+    focused?: boolean;
 }
 
-const DrawerIcon: React.FC<DrawerIconProps> = ({ href, icon, size = 20 }) => {
+const DrawerIcon: React.FC<DrawerIconProps> = ({ href, icon, size = 20, focused: focusedProp }) => {
     const theme = useTheme();
     const pathname = usePathname();
     const drawerColors = useDrawerColors();
 
-    const active = !!href && pathname.startsWith(href);
+    const active = focusedProp !== undefined ? focusedProp : (!!href && pathname.startsWith(href));
     const color = active
         ? (drawerColors ? drawerColors.activeColor : Colors(theme).white)
         : (drawerColors ? drawerColors.inactiveColor : Colors(theme).text);
