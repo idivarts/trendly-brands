@@ -4,8 +4,9 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faBolt, faGem as faGemSolid } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
-import React, { forwardRef, useMemo } from "react";
+import React, { forwardRef, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View as RNView } from "react-native";
+import CreditUsageModal from "./CreditUsageModal";
 
 export interface CreditDisplayCardProps {
     discoverCoinsLeft: number;
@@ -13,7 +14,7 @@ export interface CreditDisplayCardProps {
     discoveryProgress: number;
 }
 
-const CreditDisplayCard = forwardRef<RNView, CreditDisplayCardProps>(
+const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
     ({ discoverCoinsLeft, connectionCreditsLeft, discoveryProgress }, ref) => {
         const theme = useTheme();
         const colors = Colors(theme);
@@ -27,8 +28,10 @@ const CreditDisplayCard = forwardRef<RNView, CreditDisplayCardProps>(
             [discoveryProgress]
         );
 
+        const [modalVisible, setModalVisible] = useState(false);
+
         const handleCardPress = () => {
-            nav.push("/credit-usage");
+            setModalVisible(true);
         };
 
         const handleRefillPress = () => {
@@ -36,6 +39,7 @@ const CreditDisplayCard = forwardRef<RNView, CreditDisplayCardProps>(
         };
 
         return (
+            <>
             <RNView ref={ref} collapsable={false}>
                 <RNView style={styles.creditsCard}>
                     <RNView style={styles.creditsRow}>
@@ -94,6 +98,11 @@ const CreditDisplayCard = forwardRef<RNView, CreditDisplayCardProps>(
                     </Pressable>
                 </RNView>
             </RNView>
+            <CreditUsageModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+            />
+            </>
         );
     }
 );
