@@ -416,7 +416,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                         width: columns === 2 ? "50%" : "100%",
                         paddingHorizontal: isCollapsed ? 12 : 8,
                         paddingVertical: isCollapsed ? 12 : 8,
-
                     }}
                 >
                     <InfluencerCard
@@ -534,8 +533,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 style={{
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" ? 120 : 16,
-
+                    paddingHorizontal: Platform.OS === "web" && xl ? 120 : 16,
                 }}
             >
                 <FlatList
