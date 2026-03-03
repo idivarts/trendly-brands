@@ -19,6 +19,7 @@ import { router } from "expo-router";
 import {
     collection,
     getDocs,
+    limit,
     onSnapshot,
     orderBy,
     query,
@@ -145,10 +146,22 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     }, [user, selectedBrand]);
 
     useEffect(() => {
-        if (!isLoading && proposals.length === 0) {
-            router.replace("/create-collaboration");
-        }
-    }, [isLoading, proposals]);
+        const checkAndRedirectIfNoCampaigns = async () => {
+            if (!isLoading && proposals.length === 0 && selectedBrand) {
+                const collaborationCol = collection(FirestoreDB, "collaborations");
+                const countQuery = query(
+                    collaborationCol,
+                    where("brandId", "==", selectedBrand.id),
+                    limit(1)
+                );
+                const snapshot = await getDocs(countQuery);
+                if (snapshot.empty) {
+                    router.replace("/create-collaboration");
+                }
+            }
+        };
+        checkAndRedirectIfNoCampaigns();
+    }, [isLoading, proposals, selectedBrand]);
 
     const filteredProposals = proposals;
 
