@@ -12,6 +12,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 export interface PageHeaderProps {
     title: string;
     subtitle?: string;
+    /** Show back button. On mobile (!xl), defaults to true unless explicitly false. */
     showBackButton?: boolean;
     onBackPress?: () => void;
     actionButtons?: React.ReactNode[];
@@ -23,7 +24,7 @@ export interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({
     title,
     subtitle,
-    showBackButton = false,
+    showBackButton,
     onBackPress,
     actionButtons = [],
     rightComponent,
@@ -46,7 +47,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({
         }
     };
 
-    const showBack = showBackButton;
+    // On mobile, show back button by default unless explicitly disabled
+    const showBack =
+        showBackButton === true || (showBackButton !== false && !xl);
     const showActions =
         xl ||
         mobileActions === "all" ||

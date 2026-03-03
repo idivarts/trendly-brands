@@ -6,10 +6,7 @@ import React from "react";
 const AdminInvites = () => {
     return (
         <AppLayout>
-            <PageHeader
-                title="Brands CRM"
-                showBackButton={false}
-            />
+            <PageHeader title="Brands CRM" />
             <BrandCRMBoard />
         </AppLayout>
     );

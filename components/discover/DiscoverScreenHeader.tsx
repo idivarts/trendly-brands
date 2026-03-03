@@ -1,4 +1,5 @@
 import { OpenFilterRightPanel, useDiscovery } from "@/components/discover/discovery-context";
+import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
@@ -6,7 +7,7 @@ import { faChevronDown, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Menu } from "react-native-paper";
 
 const SORT_OPTIONS = [
@@ -19,40 +20,78 @@ const SORT_OPTIONS = [
 const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
     StyleSheet.create({
         sortByLabel: {
-            fontSize: 14,
+            fontSize: xl ? 14 : 12,
             color: colors.textSecondary,
-            marginRight: 8,
+            marginRight: xl ? 8 : 4,
         },
         sortChip: {
             backgroundColor: colors.tag,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
+            paddingHorizontal: xl ? 12 : 8,
+            paddingVertical: xl ? 8 : 6,
             borderRadius: 8,
             borderWidth: 1,
             borderColor: colors.border,
             flexDirection: "row",
             alignItems: "center",
-            gap: 6,
+            gap: 4,
+            flex: xl ? undefined : 1,
+            minWidth: 0,
         },
         sortChipText: {
-            fontSize: 14,
+            fontSize: xl ? 14 : 12,
             fontWeight: "500",
             color: colors.text,
-            maxWidth: xl ? 220 : 160,
+            maxWidth: xl ? 220 : 100,
         },
         filterButton: {
             backgroundColor: colors.primary,
-            paddingHorizontal: 16,
-            paddingVertical: 10,
+            paddingHorizontal: xl ? 16 : 10,
+            paddingVertical: xl ? 10 : 6,
             borderRadius: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: xl ? 8 : 4,
+        },
+        filterButtonText: {
+            color: colors.onPrimary,
+            fontSize: xl ? 14 : 12,
+            fontWeight: "600",
+        },
+        mobileStackedContainer: {
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.background,
+        },
+        mobileTitleRow: {
+            marginBottom: 12,
+        },
+        mobileTitle: {
+            fontSize: 22,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        mobileSubtitle: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            marginTop: 2,
+            letterSpacing: 1,
+        },
+        mobileActionsRow: {
             flexDirection: "row",
             alignItems: "center",
             gap: 8,
         },
-        filterButtonText: {
-            color: colors.onPrimary,
-            fontSize: 14,
-            fontWeight: "600",
+        mobileFilterButton: {
+            flexShrink: 0,
+        },
+        mobileSortWrap: {
+            flex: 1,
+            minWidth: 0,
+            flexDirection: "row",
+            alignItems: "center",
         },
     });
 
@@ -87,7 +126,7 @@ const DiscoverScreenHeader: React.FC = () => {
     };
 
     const sortComponent = (
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={[!xl && styles.mobileSortWrap, { flexDirection: "row", alignItems: "center" }]}>
             <Text style={styles.sortByLabel}>Sort by:</Text>
             <Menu
                 visible={sortMenuVisible}
@@ -126,23 +165,40 @@ const DiscoverScreenHeader: React.FC = () => {
     const filterButton = (
         <Pressable
             onPress={() => OpenFilterRightPanel.next()}
-            style={styles.filterButton}
+            style={[styles.filterButton, !xl && styles.mobileFilterButton]}
         >
             <FontAwesomeIcon
                 color={colors.onPrimary}
                 icon={faFilter}
-                size={16}
+                size={xl ? 16 : 14}
             />
             <Text style={styles.filterButtonText}>Filters</Text>
         </Pressable>
     );
 
+    if (!xl) {
+        return (
+            <View style={styles.mobileStackedContainer}>
+                <View style={styles.mobileTitleRow}>
+                    <Text style={styles.mobileTitle}>Discover Influencer</Text>
+                    <Text style={styles.mobileSubtitle}>
+                        Total {totalCount}+ found
+                    </Text>
+                </View>
+                <View style={styles.mobileActionsRow}>
+                    {filterButton}
+                    <View style={styles.mobileSortWrap}>
+                        {sortComponent}
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
     return (
         <PageHeader
             title="Discover Influencer"
             subtitle={`Total ${totalCount}+ found`}
-            showBackButton={false}
-            mobileActions="all"
             actionButtons={[filterButton]}
             rightComponent={sortComponent}
         />

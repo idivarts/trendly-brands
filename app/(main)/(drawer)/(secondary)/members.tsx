@@ -14,7 +14,6 @@ const PreferencesScreen = () => {
             <PageHeader
                 title="Members"
                 subtitle={selectedBrand?.name}
-                showBackButton={false}
                 actionButtons={[
                     <Button
                         key="add-member"

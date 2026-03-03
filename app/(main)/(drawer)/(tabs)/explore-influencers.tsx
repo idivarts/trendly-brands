@@ -65,7 +65,6 @@ const ExploreInfluencersScreen = () => {
         <PageHeader
             title="Influencer Spotlights"
             subtitle="Discover featured creators"
-            showBackButton={false}
             rightComponent={<NotificationIcon />}
             mobileActions="notification-only"
         />

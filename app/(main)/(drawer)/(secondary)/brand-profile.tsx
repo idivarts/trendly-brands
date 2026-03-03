@@ -77,7 +77,6 @@ const BrandProfileScreen = () => {
             <PageHeader
                 title="Brand Profile"
                 subtitle={selectedBrand?.name}
-                showBackButton={false}
                 actionButtons={[
                     <Button
                         key="save"

@@ -6,10 +6,7 @@ import React from "react";
 const AdminInvites = () => {
     return (
         <AppLayout>
-            <PageHeader
-                title="Collaboration CMS"
-                showBackButton={false}
-            />
+            <PageHeader title="Collaboration CMS" />
             <CollaborationCMSBoard />
         </AppLayout>
     );

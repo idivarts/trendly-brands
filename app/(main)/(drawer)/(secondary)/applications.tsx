@@ -22,10 +22,7 @@ const ApplicationsScreen = () => {
 
     return (
         <AppLayout withWebPadding={false}>
-            <PageHeader
-                title="All Applications"
-                showBackButton={false}
-            />
+            <PageHeader title="All Applications" />
             <View style={styles.container}>
                 <ApplicationsTabContent
                     isApplicationConcised={true}

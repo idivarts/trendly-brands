@@ -32,7 +32,6 @@ const Contracts = () => {
             <PageHeader
                 title="Contracts"
                 subtitle={selectedBrand?.name}
-                showBackButton={false}
             />
             <View style={styles.flex1}>
                 <TopTabNavigation tabs={tabs} />

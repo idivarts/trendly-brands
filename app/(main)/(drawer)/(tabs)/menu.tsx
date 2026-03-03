@@ -30,7 +30,6 @@ const MenuScreen = () => {
             <PageHeader
                 title="My Brand"
                 subtitle={selectedBrand?.name}
-                showBackButton={false}
                 actionButtons={[
                     <Button key="copy" mode="outlined" onPress={copyBrandId} size="small">
                         Copy Brand ID

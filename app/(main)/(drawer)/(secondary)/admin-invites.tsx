@@ -6,10 +6,7 @@ import React from "react";
 const AdminInvites = () => {
     return (
         <AppLayout>
-            <PageHeader
-                title="Invites Management"
-                showBackButton={false}
-            />
+            <PageHeader title="Invites Management" />
             <InviteManagementBoard />
         </AppLayout>
     );

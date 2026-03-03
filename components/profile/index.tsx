@@ -148,7 +148,6 @@ const Profile = () => {
             <PageHeader
                 title="Profile"
                 subtitle="Manage your account and preferences"
-                showBackButton={false}
             />
             <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <ScrollView

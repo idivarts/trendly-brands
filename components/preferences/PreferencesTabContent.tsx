@@ -192,7 +192,6 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
             <PageHeader
                 title="Brand Preferences"
                 subtitle="SETTINGS & CONFIGURATION"
-                showBackButton={false}
                 actionButtons={[
                     <Button
                         key="cancel"
