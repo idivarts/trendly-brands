@@ -19,7 +19,6 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
-import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -252,36 +251,35 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         if (influencerMatch) {
             openProfile(influencerMatch);
             setAutoOpenedId(initialInfluencerId);
-        } else if (!loading && data.length > 0) {
+        } else if (!loading && data.length > 0 && selectedBrand?.id) {
             (async () => {
                 try {
-                    const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
-                    const docSnap = await getDoc(docRef);
+                    const res = await HttpWrapper.fetch(
+                        `/discovery/brands/${selectedBrand.id}/influencers/${initialInfluencerId}`,
+                        { method: "GET" }
+                    );
+                    const body = await res.json();
 
-                    if (docSnap.exists()) {
-                        const body = docSnap.data();
-
-                        if (body?.id) {
-                            const influencerItem: InfluencerItem = {
-                                id: body.id,
-                                name: body.name || "Unknown",
-                                username: body.username || "unknown",
-                                profile_pic: body.profile_pic || "",
-                                follower_count: body.follower_count || 0,
-                                engagement_count: body.engagement_count || 0,
-                                views_count: body.views_count || 0,
-                                engagement_rate: body.engagement_rate || 0,
-                            };
-                            openProfile(influencerItem);
-                            setAutoOpenedId(initialInfluencerId);
-                        }
+                    if (body?.id) {
+                        const influencerItem: InfluencerItem = {
+                            id: body.id,
+                            name: body.name || "Unknown",
+                            username: body.username || "unknown",
+                            profile_pic: body.profile_pic || "",
+                            follower_count: body.follower_count || 0,
+                            engagement_count: body.engagement_count || 0,
+                            views_count: body.views_count || 0,
+                            engagement_rate: body.engagement_rate || 0,
+                        };
+                        openProfile(influencerItem);
+                        setAutoOpenedId(initialInfluencerId);
                     }
                 } catch (error) {
                     console.error("[DiscoverInfluencer] Error fetching influencer:", error);
                 }
             })();
         }
-    }, [initialInfluencerId, data, loading, openProfile]);
+    }, [initialInfluencerId, data, loading, openProfile, selectedBrand?.id]);
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(20);
