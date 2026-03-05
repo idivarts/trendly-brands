@@ -48,6 +48,7 @@ const Collaborations = () => {
             <PageHeader
                 title="Campaigns"
                 subtitle={selectedBrand?.name}
+                showBackButton={false}
             />
             <View style={styles.container}>
                 <TopTabNavigation

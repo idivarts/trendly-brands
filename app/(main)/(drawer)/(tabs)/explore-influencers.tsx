@@ -67,6 +67,7 @@ const ExploreInfluencersScreen = () => {
             subtitle="Discover featured creators"
             rightComponent={<NotificationIcon />}
             mobileActions="notification-only"
+            showBackButton={false}
         />
     );
 
