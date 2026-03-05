@@ -7,7 +7,8 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faChevronDown, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Menu } from "react-native-paper";
 
@@ -100,6 +101,23 @@ const DiscoverScreenHeader: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    const guideTour = useGuideTourOptional();
+    const filterButtonRef = useRef<View>(null);
+    const headerRef = useRef<View>(null);
+
+    useEffect(() => {
+        if (guideTour?.isTourActive && guideTour.currentStep === 1) {
+            guideTour.registerMeasureTarget("step-1", filterButtonRef);
+        }
+        return () => guideTour?.registerMeasureTarget("step-1", null);
+    }, [guideTour]);
+
+    useEffect(() => {
+        if (guideTour?.isTourActive && guideTour.currentStep === 4) {
+            guideTour.registerMeasureTarget("step-4", headerRef);
+        }
+        return () => guideTour?.registerMeasureTarget("step-4", null);
+    }, [guideTour]);
     const {
         totalCount,
         currentSort,
@@ -164,22 +182,24 @@ const DiscoverScreenHeader: React.FC = () => {
     );
 
     const filterButton = (
-        <Pressable
-            onPress={() => OpenFilterRightPanel.next()}
-            style={[styles.filterButton, !xl && styles.mobileFilterButton]}
-        >
-            <FontAwesomeIcon
-                color={colors.onPrimary}
-                icon={faFilter}
-                size={xl ? 16 : 14}
-            />
-            <Text style={styles.filterButtonText}>Filters</Text>
-        </Pressable>
+        <View ref={filterButtonRef} collapsable={false}>
+            <Pressable
+                onPress={() => OpenFilterRightPanel.next()}
+                style={[styles.filterButton, !xl && styles.mobileFilterButton]}
+            >
+                <FontAwesomeIcon
+                    color={colors.onPrimary}
+                    icon={faFilter}
+                    size={xl ? 16 : 14}
+                />
+                <Text style={styles.filterButtonText}>Filters</Text>
+            </Pressable>
+        </View>
     );
 
     if (!xl) {
         return (
-            <View style={styles.mobileStackedContainer}>
+            <View ref={headerRef} collapsable={false} style={styles.mobileStackedContainer}>
                 <Pressable
                     style={styles.mobileTitleRow}
                     onPress={() => OpenDrawerSubject.next(true)}
@@ -200,12 +220,14 @@ const DiscoverScreenHeader: React.FC = () => {
     }
 
     return (
-        <PageHeader
-            title="Discover Influencer"
-            subtitle={`Total ${totalCount}+ found`}
-            actionButtons={[filterButton]}
-            rightComponent={sortComponent}
-        />
+        <View ref={headerRef} collapsable={false}>
+            <PageHeader
+                title="Discover Influencer"
+                subtitle={`Total ${totalCount}+ found`}
+                actionButtons={[filterButton]}
+                rightComponent={sortComponent}
+            />
+        </View>
     );
 };
 

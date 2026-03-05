@@ -13,6 +13,7 @@ import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -51,6 +52,7 @@ const DiscoverComponent = ({
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
+    const guideTour = useGuideTourOptional();
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
@@ -145,7 +147,16 @@ const DiscoverComponent = ({
         }
 
         setShowSurvey(false);
+        if (guideTour && !guideTour.hasCompletedTour) {
+            guideTour.startTour();
+        }
     };
+
+    useEffect(() => {
+        if (__DEV__ && guideTour && !guideTour.isTourActive && !guideTour.hasCompletedTour && !showSurvey && manager && selectedBrand?.id) {
+            guideTour.startTour();
+        }
+    }, [guideTour?.isTourActive, guideTour?.hasCompletedTour, guideTour, showSurvey, manager, selectedBrand?.id]);
 
     if (!surveyCheckDone)
         return (

@@ -1,6 +1,7 @@
 import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
@@ -31,7 +32,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Linking,
     Platform,
@@ -41,6 +42,7 @@ import {
     StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBreakpoints } from "@/hooks";
 import CreditDisplayCard from "./CreditDisplayCard";
 import CreditsCoachMark, { CreditsCoachMarkLayout } from "./CreditsCoachMark";
 import { DrawerColorsContext } from "./drawer-colors-context";
@@ -194,6 +196,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
     const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
+    const guideTour = useGuideTourOptional();
+    const { xl } = useBreakpoints();
 
     const planKey = selectedBrand?.billing?.planKey || "";
     const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
@@ -218,7 +222,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const [creditsCoachMarkLayout, setCreditsCoachMarkLayout] =
         useState<CreditsCoachMarkLayout | null>(null);
 
-    const creditsCardRef = React.useRef<RNView>(null);
+    const creditsCardRef = useRef<RNView>(null);
+    const campaignsMenuItemRef = useRef<RNView>(null);
     const hasCreditsCard = Boolean(
         selectedBrand && !selectedBrand.isBillingDisabled
     );
@@ -231,11 +236,27 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
         });
     }, [hasCreditsCard]);
 
-    React.useEffect(() => {
-        if (!hasCreditsCard) return;
-        const t = setTimeout(measureCreditsCard, 400);
-        return () => clearTimeout(t);
-    }, [hasCreditsCard, measureCreditsCard]);
+    const isStep3Web = xl && guideTour?.isTourActive && guideTour.currentStep === 3;
+
+    useEffect(() => {
+        if (isStep3Web && hasCreditsCard) {
+            const t = setTimeout(measureCreditsCard, 150);
+            return () => clearTimeout(t);
+        }
+    }, [isStep3Web, hasCreditsCard, measureCreditsCard]);
+
+    useEffect(() => {
+        if (guideTour?.isTourActive && guideTour.currentStep === 2 && xl) {
+            guideTour.registerMeasureTarget("step-2-web", campaignsMenuItemRef);
+        }
+        return () => guideTour?.registerMeasureTarget("step-2-web", null);
+    }, [guideTour, xl]);
+
+    useEffect(() => {
+        if (!isStep3Web) {
+            setShowCreditsCoachMark(false);
+        }
+    }, [isStep3Web]);
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
@@ -314,11 +335,20 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             <Text style={styles.sectionTitle}>CONNECT</Text>
                             <View style={styles.campaignItems}>
                                 {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-                                    <DrawerMenuItem
-                                        key={`campaign-${idx}`}
-                                        tab={tab}
-                                        proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
-                                    />
+                                    idx === 1 ? (
+                                        <RNView key={`campaign-${idx}`} ref={campaignsMenuItemRef} collapsable={false}>
+                                            <DrawerMenuItem
+                                                tab={tab}
+                                                proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
+                                            />
+                                        </RNView>
+                                    ) : (
+                                        <DrawerMenuItem
+                                            key={`campaign-${idx}`}
+                                            tab={tab}
+                                            proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
+                                        />
+                                    )
                                 ))}
                             </View>
                         </View>
@@ -447,7 +477,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
             <CreditsCoachMark
                 visible={showCreditsCoachMark}
                 highlightLayout={creditsCoachMarkLayout}
-                onDismiss={() => setShowCreditsCoachMark(false)}
+                onDismiss={() => {
+                    setShowCreditsCoachMark(false);
+                    if (isStep3Web && guideTour) {
+                        guideTour.nextStep();
+                    }
+                }}
+                buttonLabel={isStep3Web ? "Next" : "Ok"}
             />
         </>
     );

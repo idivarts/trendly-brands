@@ -4,6 +4,7 @@ import {
 } from "@/components/discover/discovery-context";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -19,7 +20,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import { doc, getDoc } from "firebase/firestore";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -27,7 +28,8 @@ import {
     ListRenderItemInfo,
     Platform,
     StyleSheet,
-    Text
+    Text,
+    View as RNView,
 } from "react-native";
 import {
     Button,
@@ -194,6 +196,17 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
     const { xl } = useBreakpoints();
+    const guideTour = useGuideTourOptional();
+    const firstCardRef = useRef<RNView>(null);
+
+    useEffect(() => {
+        if (guideTour?.isTourActive && guideTour.currentStep === 0) {
+            guideTour.registerMeasureTarget("step-0", firstCardRef);
+        }
+        return () => {
+            guideTour?.registerMeasureTarget("step-0", null);
+        };
+    }, [guideTour]);
 
     // collaborations are fetched inside InviteToCampaignModal when it mounts
     const openProfile = (data: InfluencerItem | null) => {
@@ -409,9 +422,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     };
 
     const renderItem = useCallback(
-        ({ item }: ListRenderItemInfo<InfluencerItem>) => {
+        ({ item, index }: ListRenderItemInfo<InfluencerItem>) => {
             return (
-                <View
+                <RNView
+                    ref={index === 0 ? firstCardRef : undefined}
+                    collapsable={index === 0 ? false : undefined}
                     style={{
                         width: columns === 2 ? "50%" : "100%",
                         paddingHorizontal: isCollapsed ? 12 : 8,
@@ -427,7 +442,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                         onToggleSelect={() => toggleSelect(item.id)}
                         isStatusCard={isStatusCard}
                     />
-                </View>
+                </RNView>
             );
         },
         [isCollapsed, openModal, openProfile, selectedIds]

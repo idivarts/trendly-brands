@@ -1,5 +1,5 @@
 import { router, Tabs } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
@@ -22,7 +22,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View as RNView } from "react-native";
+import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
 import { Badge } from "react-native-paper";
 
 const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
@@ -46,6 +47,23 @@ const TabLayout = () => {
     const theme = useTheme();
     const styles = React.useMemo(() => useStyles(theme, xl), [theme, xl]);
     const { unreadCount } = useChatContext();
+    const guideTour = useGuideTourOptional();
+    const campaignsTabRef = useRef<RNView>(null);
+    const menuTabRef = useRef<RNView>(null);
+
+    useEffect(() => {
+        if (guideTour?.isTourActive && guideTour.currentStep === 2 && !xl) {
+            guideTour.registerMeasureTarget("step-2-mobile", campaignsTabRef);
+        }
+        return () => guideTour?.registerMeasureTarget("step-2-mobile", null);
+    }, [guideTour, xl]);
+
+    useEffect(() => {
+        if (guideTour?.isTourActive && guideTour.currentStep === 3 && !xl) {
+            guideTour.registerMeasureTarget("step-3-mobile", menuTabRef);
+        }
+        return () => guideTour?.registerMeasureTarget("step-3-mobile", null);
+    }, [guideTour, xl]);
 
     return (
         <Tabs
@@ -154,6 +172,11 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
+                    tabBarButton: (props) => (
+                        <RNView ref={campaignsTabRef} collapsable={false} style={{ flex: 1 }}>
+                            <Pressable {...(props as any)} />
+                        </RNView>
+                    ),
                 }}
             />
             <Tabs.Screen
@@ -162,6 +185,11 @@ const TabLayout = () => {
                     title: "My Brand",
                     headerShown: false,
                     tabBarIcon: () => <ProfileIcon />,
+                    tabBarButton: (props) => (
+                        <RNView ref={menuTabRef} collapsable={false} style={{ flex: 1 }}>
+                            <Pressable {...(props as any)} />
+                        </RNView>
+                    ),
                 }}
             />
         </Tabs>
