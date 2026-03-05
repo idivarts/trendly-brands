@@ -1,4 +1,5 @@
 import { OpenFilterRightPanel, useDiscovery } from "@/components/discover/discovery-context";
+import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
@@ -179,12 +180,15 @@ const DiscoverScreenHeader: React.FC = () => {
     if (!xl) {
         return (
             <View style={styles.mobileStackedContainer}>
-                <View style={styles.mobileTitleRow}>
+                <Pressable
+                    style={styles.mobileTitleRow}
+                    onPress={() => OpenDrawerSubject.next(true)}
+                >
                     <Text style={styles.mobileTitle}>Discover Influencer</Text>
                     <Text style={styles.mobileSubtitle}>
                         Total {totalCount}+ found
                     </Text>
-                </View>
+                </Pressable>
                 <View style={styles.mobileActionsRow}>
                     {filterButton}
                     <View style={styles.mobileSortWrap}>
