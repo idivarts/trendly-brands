@@ -13,7 +13,11 @@ import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
+import {
+    GUIDE_TOUR_MOBILE,
+    GUIDE_TOUR_WEB,
+} from "@/components/guide-tour/guide-tour-config";
+import { useCoachmark } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -52,7 +56,8 @@ const DiscoverComponent = ({
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
-    const guideTour = useGuideTourOptional();
+    const { start: startCoachmark, isActive } = useCoachmark();
+    const hasStartedTourRef = useRef(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
@@ -147,16 +152,31 @@ const DiscoverComponent = ({
         }
 
         setShowSurvey(false);
-        if (guideTour && !guideTour.hasCompletedTour) {
-            guideTour.startTour();
-        }
+        hasStartedTourRef.current = true;
+        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
     };
 
     useEffect(() => {
-        if (__DEV__ && guideTour && !guideTour.isTourActive && !guideTour.hasCompletedTour && !showSurvey && manager && selectedBrand?.id) {
-            guideTour.startTour();
+        if (
+            surveyCheckDone &&
+            !showSurvey &&
+            manager &&
+            selectedBrand?.id &&
+            !isActive &&
+            !hasStartedTourRef.current
+        ) {
+            hasStartedTourRef.current = true;
+            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
         }
-    }, [guideTour?.isTourActive, guideTour?.hasCompletedTour, guideTour, showSurvey, manager, selectedBrand?.id]);
+    }, [
+        surveyCheckDone,
+        showSurvey,
+        manager,
+        selectedBrand?.id,
+        xl,
+        isActive,
+        startCoachmark,
+    ]);
 
     if (!surveyCheckDone)
         return (

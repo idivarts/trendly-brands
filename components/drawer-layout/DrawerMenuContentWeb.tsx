@@ -1,7 +1,7 @@
 import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
@@ -32,7 +32,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Linking,
     Platform,
@@ -44,7 +44,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBreakpoints } from "@/hooks";
 import CreditDisplayCard from "./CreditDisplayCard";
-import CreditsCoachMark, { CreditsCoachMarkLayout } from "./CreditsCoachMark";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
 //  import BrandActionItem from "./BrandActionItem";
@@ -196,7 +195,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
     const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
-    const guideTour = useGuideTourOptional();
     const { xl } = useBreakpoints();
 
     const planKey = selectedBrand?.billing?.planKey || "";
@@ -218,45 +216,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const [isBrandHovered, setIsBrandHovered] = useState(false);
     const [isAdminHovered, setIsAdminHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
-    const [showCreditsCoachMark, setShowCreditsCoachMark] = useState(false);
-    const [creditsCoachMarkLayout, setCreditsCoachMarkLayout] =
-        useState<CreditsCoachMarkLayout | null>(null);
-
-    const creditsCardRef = useRef<RNView>(null);
-    const campaignsMenuItemRef = useRef<RNView>(null);
-    const hasCreditsCard = Boolean(
-        selectedBrand && !selectedBrand.isBillingDisabled
-    );
-
-    const measureCreditsCard = useCallback(() => {
-        if (!hasCreditsCard || !creditsCardRef.current) return;
-        creditsCardRef.current.measureInWindow((x, y, width, height) => {
-            setCreditsCoachMarkLayout({ x, y, width, height });
-            setShowCreditsCoachMark(true);
-        });
-    }, [hasCreditsCard]);
-
-    const isStep3Web = xl && guideTour?.isTourActive && guideTour.currentStep === 3;
-
-    useEffect(() => {
-        if (isStep3Web && hasCreditsCard) {
-            const t = setTimeout(measureCreditsCard, 150);
-            return () => clearTimeout(t);
-        }
-    }, [isStep3Web, hasCreditsCard, measureCreditsCard]);
-
-    useEffect(() => {
-        if (guideTour?.isTourActive && guideTour.currentStep === 2 && xl) {
-            guideTour.registerMeasureTarget("step-2-web", campaignsMenuItemRef);
-        }
-        return () => guideTour?.registerMeasureTarget("step-2-web", null);
-    }, [guideTour, xl]);
-
-    useEffect(() => {
-        if (!isStep3Web) {
-            setShowCreditsCoachMark(false);
-        }
-    }, [isStep3Web]);
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
@@ -267,65 +226,132 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
         <>
             <DrawerColorsContext.Provider value={drawerColors}>
                 <View style={styles.root}>
-                    <View style={styles.header}>
-                        <Pressable
-                            onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
-                            style={styles.headerPressable}
+                    {xl ? (
+                        <CoachmarkAnchor
+                            id="guide-tour-brand-switcher-web"
+                            shape="rect"
                         >
-                            <View style={styles.headerRow}>
-                                <View style={styles.logoCircle}>
-                                    <Text style={styles.logoText}>T</Text>
-                                </View>
-                                <View style={styles.headerBrand}>
-                                    <Text style={styles.brandName} numberOfLines={1}>
-                                        {selectedBrand?.name ?? "Brand"}
-                                    </Text>
-                                    <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
-                                </View>
-                                {hasMultipleBrands ? (
-                                    <FontAwesomeIcon
-                                        icon={brandListExpanded ? faChevronUp : faChevronDown}
-                                        size={14}
-                                        color={colors.drawerTextMuted}
-                                    />
-                                ) : null}
-                            </View>
-                        </Pressable>
-                        {hasMultipleBrands && brandListExpanded && (
-                            <RNView style={styles.brandListDropdown} pointerEvents="box-none">
-                                <ScrollView
-                                    style={styles.brandListScroll}
-                                    contentContainerStyle={styles.brandListContent}
-                                    showsVerticalScrollIndicator={true}
-                                    keyboardShouldPersistTaps="handled"
+                            <View style={styles.header}>
+                                <Pressable
+                                    onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
+                                    style={styles.headerPressable}
                                 >
-                                    {brands.map((brand) => {
-                                        const isSelected = brand.id === selectedBrand?.id;
-                                        return (
-                                            <Pressable
-                                                key={brand.id}
-                                                onPress={() => handleBrandSelect(brand)}
-                                                style={[
-                                                    styles.brandListItem,
-                                                    isSelected && styles.brandListItemSelectedInDropdown,
-                                                ]}
-                                            >
-                                                <Text
+                                    <View style={styles.headerRow}>
+                                        <View style={styles.logoCircle}>
+                                            <Text style={styles.logoText}>T</Text>
+                                        </View>
+                                        <View style={styles.headerBrand}>
+                                            <Text style={styles.brandName} numberOfLines={1}>
+                                                {selectedBrand?.name ?? "Brand"}
+                                            </Text>
+                                            <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
+                                        </View>
+                                        {hasMultipleBrands ? (
+                                            <FontAwesomeIcon
+                                                icon={brandListExpanded ? faChevronUp : faChevronDown}
+                                                size={14}
+                                                color={colors.drawerTextMuted}
+                                            />
+                                        ) : null}
+                                    </View>
+                                </Pressable>
+                                {hasMultipleBrands && brandListExpanded && (
+                                    <RNView style={styles.brandListDropdown} pointerEvents="box-none">
+                                        <ScrollView
+                                            style={styles.brandListScroll}
+                                            contentContainerStyle={styles.brandListContent}
+                                            showsVerticalScrollIndicator={true}
+                                            keyboardShouldPersistTaps="handled"
+                                        >
+                                            {brands.map((brand) => {
+                                                const isSelected = brand.id === selectedBrand?.id;
+                                                return (
+                                                    <Pressable
+                                                        key={brand.id}
+                                                        onPress={() => handleBrandSelect(brand)}
+                                                        style={[
+                                                            styles.brandListItem,
+                                                            isSelected && styles.brandListItemSelectedInDropdown,
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.brandListItemText,
+                                                                isSelected && styles.brandListItemTextSelected,
+                                                            ]}
+                                                            numberOfLines={1}
+                                                        >
+                                                            {brand.name}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </ScrollView>
+                                    </RNView>
+                                )}
+                            </View>
+                        </CoachmarkAnchor>
+                    ) : (
+                        <View style={styles.header}>
+                            <Pressable
+                                onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
+                                style={styles.headerPressable}
+                            >
+                                <View style={styles.headerRow}>
+                                    <View style={styles.logoCircle}>
+                                        <Text style={styles.logoText}>T</Text>
+                                    </View>
+                                    <View style={styles.headerBrand}>
+                                        <Text style={styles.brandName} numberOfLines={1}>
+                                            {selectedBrand?.name ?? "Brand"}
+                                        </Text>
+                                        <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
+                                    </View>
+                                    {hasMultipleBrands ? (
+                                        <FontAwesomeIcon
+                                            icon={brandListExpanded ? faChevronUp : faChevronDown}
+                                            size={14}
+                                            color={colors.drawerTextMuted}
+                                        />
+                                    ) : null}
+                                </View>
+                            </Pressable>
+                            {hasMultipleBrands && brandListExpanded && (
+                                <RNView style={styles.brandListDropdown} pointerEvents="box-none">
+                                    <ScrollView
+                                        style={styles.brandListScroll}
+                                        contentContainerStyle={styles.brandListContent}
+                                        showsVerticalScrollIndicator={true}
+                                        keyboardShouldPersistTaps="handled"
+                                    >
+                                        {brands.map((brand) => {
+                                            const isSelected = brand.id === selectedBrand?.id;
+                                            return (
+                                                <Pressable
+                                                    key={brand.id}
+                                                    onPress={() => handleBrandSelect(brand)}
                                                     style={[
-                                                        styles.brandListItemText,
-                                                        isSelected && styles.brandListItemTextSelected,
+                                                        styles.brandListItem,
+                                                        isSelected && styles.brandListItemSelectedInDropdown,
                                                     ]}
-                                                    numberOfLines={1}
                                                 >
-                                                    {brand.name}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
-                                </ScrollView>
-                            </RNView>
-                        )}
-                    </View>
+                                                    <Text
+                                                        style={[
+                                                            styles.brandListItemText,
+                                                            isSelected && styles.brandListItemTextSelected,
+                                                        ]}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {brand.name}
+                                                    </Text>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                </RNView>
+                            )}
+                        </View>
+                    )}
 
                     <ScrollView
                         contentContainerStyle={styles.scrollContent}
@@ -334,14 +360,18 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>CONNECT</Text>
                             <View style={styles.campaignItems}>
-                                {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-                                    idx === 1 ? (
-                                        <RNView key={`campaign-${idx}`} ref={campaignsMenuItemRef} collapsable={false}>
+                                {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) =>
+                                    idx === 1 && xl ? (
+                                        <CoachmarkAnchor
+                                            key={`campaign-${idx}`}
+                                            id="guide-tour-campaigns-web"
+                                            shape="rect"
+                                        >
                                             <DrawerMenuItem
                                                 tab={tab}
                                                 proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
                                             />
-                                        </RNView>
+                                        </CoachmarkAnchor>
                                     ) : (
                                         <DrawerMenuItem
                                             key={`campaign-${idx}`}
@@ -349,17 +379,29 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                             proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
                                         />
                                     )
-                                ))}
+                                )}
                             </View>
                         </View>
 
-                        {selectedBrand && !selectedBrand.isBillingDisabled && (
-                            <CreditDisplayCard
-                                ref={creditsCardRef}
-                                discoverCoinsLeft={discoverCoinsLeft}
-                                connectionCreditsLeft={connectionCreditsLeft}
-                                discoveryProgress={discoveryProgress}
-                            />
+                        {selectedBrand && !selectedBrand.isBillingDisabled &&
+                            (xl ? (
+                                <CoachmarkAnchor
+                                    id="guide-tour-credits-web"
+                                    shape="rect"
+                                >
+                                    <CreditDisplayCard
+                                        discoverCoinsLeft={discoverCoinsLeft}
+                                        connectionCreditsLeft={connectionCreditsLeft}
+                                        discoveryProgress={discoveryProgress}
+                                    />
+                                </CoachmarkAnchor>
+                            ) : (
+                                <CreditDisplayCard
+                                    discoverCoinsLeft={discoverCoinsLeft}
+                                    connectionCreditsLeft={connectionCreditsLeft}
+                                    discoveryProgress={discoveryProgress}
+                                />
+                            )
                         )}
                         {selectedBrand && !selectedBrand.isBillingDisabled && (
                             <>
@@ -474,17 +516,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     </View>
                 </View>
             </DrawerColorsContext.Provider>
-            <CreditsCoachMark
-                visible={showCreditsCoachMark}
-                highlightLayout={creditsCoachMarkLayout}
-                onDismiss={() => {
-                    setShowCreditsCoachMark(false);
-                    if (isStep3Web && guideTour) {
-                        guideTour.nextStep();
-                    }
-                }}
-                buttonLabel={isStep3Web ? "Next" : "Ok"}
-            />
         </>
     );
 };

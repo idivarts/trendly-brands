@@ -4,7 +4,7 @@ import {
 } from "@/components/discover/discovery-context";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -29,6 +29,7 @@ import {
     StyleSheet,
     Text,
     View as RNView,
+    type ViewStyle,
 } from "react-native";
 import {
     Button,
@@ -195,17 +196,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
     const { xl } = useBreakpoints();
-    const guideTour = useGuideTourOptional();
-    const firstCardRef = useRef<RNView>(null);
-
-    useEffect(() => {
-        if (guideTour?.isTourActive && guideTour.currentStep === 0) {
-            guideTour.registerMeasureTarget("step-0", firstCardRef);
-        }
-        return () => {
-            guideTour?.registerMeasureTarget("step-0", null);
-        };
-    }, [guideTour]);
 
     // collaborations are fetched inside InviteToCampaignModal when it mounts
     const openProfile = (data: InfluencerItem | null) => {
@@ -421,25 +411,36 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     const renderItem = useCallback(
         ({ item, index }: ListRenderItemInfo<InfluencerItem>) => {
+            const cardStyle: ViewStyle = {
+                width: (columns === 2 ? "50%" : "100%") as ViewStyle["width"],
+                paddingHorizontal: isCollapsed ? 12 : 8,
+                paddingVertical: isCollapsed ? 12 : 8,
+            };
+            const card = (
+                <InfluencerCard
+                    item={item}
+                    isCollapsed={isCollapsed}
+                    onPress={() => openProfile(item)}
+                    openModal={openModal}
+                    isSelected={selectedIds.includes(item.id)}
+                    onToggleSelect={() => toggleSelect(item.id)}
+                    isStatusCard={isStatusCard}
+                />
+            );
+            if (index === 0) {
+                return (
+                    <CoachmarkAnchor
+                        id="guide-tour-influencer-card"
+                        shape="rect"
+                        style={cardStyle}
+                    >
+                        {card}
+                    </CoachmarkAnchor>
+                );
+            }
             return (
-                <RNView
-                    ref={index === 0 ? firstCardRef : undefined}
-                    collapsable={index === 0 ? false : undefined}
-                    style={{
-                        width: columns === 2 ? "50%" : "100%",
-                        paddingHorizontal: isCollapsed ? 12 : 8,
-                        paddingVertical: isCollapsed ? 12 : 8,
-                    }}
-                >
-                    <InfluencerCard
-                        item={item}
-                        isCollapsed={isCollapsed}
-                        onPress={() => openProfile(item)}
-                        openModal={openModal}
-                        isSelected={selectedIds.includes(item.id)}
-                        onToggleSelect={() => toggleSelect(item.id)}
-                        isStatusCard={isStatusCard}
-                    />
+                <RNView style={cardStyle}>
+                    {card}
                 </RNView>
             );
         },

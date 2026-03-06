@@ -1,61 +1,63 @@
 import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NicheProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
-import { GuideTourProvider } from "@/contexts/guide-tour-context.provider";
+import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
 import { streamClient } from "@/contexts/chat-context.provider";
-import GuideTourOverlay from "@/components/guide-tour/GuideTourOverlay";
 import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
+import {
+    CoachmarkOverlay,
+    CoachmarkProvider,
+    defaultTheme,
+} from "@edwardloopez/react-native-coachmark";
 import { Stack } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
 
-
 const MainLayout = () => {
-    const { manager, updateManager } = useAuthContext()
+    const { manager, updateManager } = useAuthContext();
+    const storage = React.useMemo(
+        () => createGuideTourStorageAdapter(manager?.id),
+        [manager?.id]
+    );
+
     return (
-        // <AWSContextProvider>
         <TrackingProvider>
             <NicheProvider>
                 <ConfirmationModalProvider>
                     <FirebaseStorageContextProvider>
                         <NotificationContextProvider>
-                            <CloudMessagingContextProvider userOrmanager={manager} updateUserOrManager={updateManager} streamClient={streamClient}>
+                            <CloudMessagingContextProvider
+                                userOrmanager={manager}
+                                updateUserOrManager={updateManager}
+                                streamClient={streamClient}
+                            >
                                 <BrandContextProvider>
-                                    <GuideTourProvider>
-                                    <View style={{ flex: 1 }}>
-                                    <CollaborationContextProvider>
-                                        <ContractContextProvider>
-                                            <AutocompleteDropdownContextProvider>
-                                                <ChatContextProvider>
-                                                    <ScrollProvider>
-                                                        <Stack
-                                                            screenOptions={{
-                                                                headerShown: false,
-                                                            }}
-                                                        >
-                                                            {/* <Stack.Screen
-                              name="(drawer)"
-                              options={{
-                                headerShown: false,
-                              }}
-                            />
-                            <Stack.Screen
-                              name="(onboarding)"
-                              options={{
-                                headerShown: false,
-                              }}
-                            /> */}
-                                                        </Stack>
-                                                    </ScrollProvider>
-                                                </ChatContextProvider>
-                                            </AutocompleteDropdownContextProvider>
-                                        </ContractContextProvider>
-                                    </CollaborationContextProvider>
-                                    <GuideTourOverlay />
-                                    </View>
-                                    </GuideTourProvider>
+                                    <CoachmarkProvider
+                                        storage={storage}
+                                        theme={defaultTheme}
+                                    >
+                                        <View style={{ flex: 1 }}>
+                                            <CollaborationContextProvider>
+                                                <ContractContextProvider>
+                                                    <AutocompleteDropdownContextProvider>
+                                                        <ChatContextProvider>
+                                                            <ScrollProvider>
+                                                                <Stack
+                                                                    screenOptions={{
+                                                                        headerShown:
+                                                                            false,
+                                                                    }}
+                                                                />
+                                                            </ScrollProvider>
+                                                        </ChatContextProvider>
+                                                    </AutocompleteDropdownContextProvider>
+                                                </ContractContextProvider>
+                                            </CollaborationContextProvider>
+                                            <CoachmarkOverlay />
+                                        </View>
+                                    </CoachmarkProvider>
                                 </BrandContextProvider>
                             </CloudMessagingContextProvider>
                         </NotificationContextProvider>
@@ -63,7 +65,6 @@ const MainLayout = () => {
                 </ConfirmationModalProvider>
             </NicheProvider>
         </TrackingProvider>
-        // </AWSContextProvider>
     );
 };
 

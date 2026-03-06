@@ -4,11 +4,15 @@ import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronDown, faFilter } from "@fortawesome/free-solid-svg-icons";
+import {
+    faChevronDown,
+    faFilter,
+    faSort,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useGuideTourOptional } from "@/contexts/guide-tour-context.provider";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
+import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Menu } from "react-native-paper";
 
@@ -67,7 +71,14 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             backgroundColor: colors.background,
         },
         mobileTitleRow: {
-            marginBottom: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flex: 1,
+            minWidth: 0,
+        },
+        mobileIconButton: {
+            padding: 8,
         },
         mobileTitle: {
             fontSize: 22,
@@ -81,43 +92,12 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             marginTop: 2,
             letterSpacing: 1,
         },
-        mobileActionsRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-        },
-        mobileFilterButton: {
-            flexShrink: 0,
-        },
-        mobileSortWrap: {
-            flex: 1,
-            minWidth: 0,
-            flexDirection: "row",
-            alignItems: "center",
-        },
     });
 
 const DiscoverScreenHeader: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const guideTour = useGuideTourOptional();
-    const filterButtonRef = useRef<View>(null);
-    const headerRef = useRef<View>(null);
-
-    useEffect(() => {
-        if (guideTour?.isTourActive && guideTour.currentStep === 1) {
-            guideTour.registerMeasureTarget("step-1", filterButtonRef);
-        }
-        return () => guideTour?.registerMeasureTarget("step-1", null);
-    }, [guideTour]);
-
-    useEffect(() => {
-        if (guideTour?.isTourActive && guideTour.currentStep === 4) {
-            guideTour.registerMeasureTarget("step-4", headerRef);
-        }
-        return () => guideTour?.registerMeasureTarget("step-4", null);
-    }, [guideTour]);
     const {
         totalCount,
         currentSort,
@@ -144,8 +124,8 @@ const DiscoverScreenHeader: React.FC = () => {
         });
     };
 
-    const sortComponent = (
-        <View style={[!xl && styles.mobileSortWrap, { flexDirection: "row", alignItems: "center" }]}>
+    const sortComponent = xl ? (
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={styles.sortByLabel}>Sort by:</Text>
             <Menu
                 visible={sortMenuVisible}
@@ -179,39 +159,69 @@ const DiscoverScreenHeader: React.FC = () => {
                 ))}
             </Menu>
         </View>
+    ) : (
+        <Menu
+            visible={sortMenuVisible}
+            onDismiss={() => setSortMenuVisible(false)}
+            anchor={
+                <Pressable
+                    onPress={() => setSortMenuVisible(true)}
+                    style={styles.mobileIconButton}
+                >
+                    <FontAwesomeIcon
+                        color={colors.text}
+                        icon={faSort}
+                        size={18}
+                    />
+                </Pressable>
+            }
+            contentStyle={{ backgroundColor: colors.background }}
+        >
+            {SORT_OPTIONS.map((opt) => (
+                <Menu.Item
+                    key={opt.value}
+                    onPress={() => onSelectSort(opt.value)}
+                    title={`${opt.label} (${opt.sublabel})`}
+                />
+            ))}
+        </Menu>
     );
 
-    const filterButton = (
-        <View ref={filterButtonRef} collapsable={false}>
-            <Pressable
-                onPress={() => OpenFilterRightPanel.next()}
-                style={[styles.filterButton, !xl && styles.mobileFilterButton]}
-            >
-                <FontAwesomeIcon
-                    color={colors.onPrimary}
-                    icon={faFilter}
-                    size={xl ? 16 : 14}
-                />
+    const filterButton = xl ? (
+        <CoachmarkAnchor id="guide-tour-filter" shape="rect">
+            <Pressable onPress={() => OpenFilterRightPanel.next()} style={styles.filterButton}>
+                <FontAwesomeIcon color={colors.onPrimary} icon={faFilter} size={16} />
                 <Text style={styles.filterButtonText}>Filters</Text>
             </Pressable>
-        </View>
+        </CoachmarkAnchor>
+    ) : (
+        <CoachmarkAnchor id="guide-tour-filter" shape="rect">
+            <Pressable
+                onPress={() => OpenFilterRightPanel.next()}
+                style={styles.mobileIconButton}
+            >
+                <FontAwesomeIcon color={colors.text} icon={faFilter} size={18} />
+            </Pressable>
+        </CoachmarkAnchor>
     );
 
     if (!xl) {
         return (
-            <View ref={headerRef} collapsable={false} style={styles.mobileStackedContainer}>
-                <Pressable
-                    style={styles.mobileTitleRow}
-                    onPress={() => OpenDrawerSubject.next(true)}
-                >
-                    <Text style={styles.mobileTitle}>Discover Influencer</Text>
-                    <Text style={styles.mobileSubtitle}>
-                        Total {totalCount}+ found
-                    </Text>
-                </Pressable>
-                <View style={styles.mobileActionsRow}>
-                    {filterButton}
-                    <View style={styles.mobileSortWrap}>
+            <View style={styles.mobileStackedContainer}>
+                <View style={styles.mobileTitleRow}>
+                    <CoachmarkAnchor id="guide-tour-header" shape="rect">
+                        <Pressable
+                            onPress={() => OpenDrawerSubject.next(true)}
+                            style={{ flex: 1, minWidth: 0 }}
+                        >
+                            <Text style={styles.mobileTitle}>Discover Influencer</Text>
+                            <Text style={styles.mobileSubtitle}>
+                                Total {totalCount}+ found
+                            </Text>
+                        </Pressable>
+                    </CoachmarkAnchor>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        {filterButton}
                         {sortComponent}
                     </View>
                 </View>
@@ -220,14 +230,12 @@ const DiscoverScreenHeader: React.FC = () => {
     }
 
     return (
-        <View ref={headerRef} collapsable={false}>
-            <PageHeader
-                title="Discover Influencer"
-                subtitle={`Total ${totalCount}+ found`}
-                actionButtons={[filterButton]}
-                rightComponent={sortComponent}
-            />
-        </View>
+        <PageHeader
+            title="Discover Influencer"
+            subtitle={`Total ${totalCount}+ found`}
+            actionButtons={[filterButton]}
+            rightComponent={sortComponent}
+        />
     );
 };
 
