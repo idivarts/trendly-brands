@@ -346,7 +346,18 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             />
 
             {collaboration.status === "draft" && (
-                <OverviewTabContent collaboration={collaboration} />
+                <OverviewTabContent
+                    collaboration={collaboration}
+                    onEditPress={() => {
+                        nav.push({
+                            pathname: "/edit-collaboration",
+                            params: { id: pageID },
+                        });
+                    }}
+                    onPublishPress={() =>
+                        publish(pageID, { onSuccess: fetchCollaboration })
+                    }
+                />
             )}
             {collaboration.status !== "draft" && (() => {
                 console.log("[CollaborationDetails] Rendering TopTabNavigation for status:", collaboration.status);

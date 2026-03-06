@@ -32,6 +32,9 @@ import ManagerModal from "./modal/ManagerModal";
 
 interface CollaborationDetailsContentProps {
     collaboration: CollaborationDetail;
+    /** When provided and draft + !xl, Edit and Publish buttons are shown below Ready to Launch */
+    onEditPress?: () => void;
+    onPublishPress?: () => void;
 }
 
 const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
@@ -231,6 +234,31 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         able to discover and apply to work with you.
                     </Text>
                 </View>
+                {!xl && (props.onEditPress != null || props.onPublishPress != null) ? (
+                    <View style={styles.readyToLaunchActions}>
+                        {props.onEditPress != null ? (
+                            <Button
+                                mode="contained"
+                                onPress={props.onEditPress}
+                                size="small"
+                                style={styles.draftActionButton}
+                                textColor={colors.text}
+                            >
+                                Edit
+                            </Button>
+                        ) : null}
+                        {props.onPublishPress != null ? (
+                            <Button
+                                mode="contained"
+                                onPress={props.onPublishPress}
+                                size="small"
+                                style={styles.publishActionButton}
+                            >
+                                Publish
+                            </Button>
+                        ) : null}
+                    </View>
+                ) : null}
             </View>
         ) : null;
 
@@ -501,6 +529,31 @@ function createStyles(
             color: colors.textSecondary,
             textAlign: "center",
             lineHeight: 22,
+        },
+        readyToLaunchActions: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            paddingTop: 8,
+            width: xl ? undefined : "100%",
+        },
+        draftActionButton: {
+            backgroundColor: colors.background,
+            borderWidth: 0.3,
+            borderColor: colors.outline,
+            borderRadius: 16,
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            minHeight: 32,
+            ...(xl ? {} : { flex: 1 }),
+        },
+        publishActionButton: {
+            borderRadius: 16,
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            minHeight: 32,
+            ...(xl ? {} : { flex: 1 }),
         },
         sidebarLabel: {
             fontSize: 11,
