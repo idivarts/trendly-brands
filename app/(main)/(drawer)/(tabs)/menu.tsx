@@ -26,7 +26,7 @@ const MenuScreen = () => {
     };
 
     return (
-        <AppLayout withWebPadding={true} safeAreaEdges={["left", "right"]}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["left", "right"]}>
             <PageHeader
                 title="My Brand"
                 subtitle={selectedBrand?.name}
