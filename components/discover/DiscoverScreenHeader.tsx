@@ -230,12 +230,14 @@ const DiscoverScreenHeader: React.FC = () => {
     }
 
     return (
-        <PageHeader
-            title="Discover Influencer"
-            subtitle={`Total ${totalCount}+ found`}
-            actionButtons={[filterButton]}
-            rightComponent={sortComponent}
-        />
+        <>
+            <PageHeader
+                title="Discover Influencer"
+                subtitle={`Total ${totalCount}+ found`}
+                actionButtons={[filterButton]}
+                rightComponent={sortComponent}
+            />
+        </>
     );
 };
 
