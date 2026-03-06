@@ -545,10 +545,9 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             paddingHorizontal: 12,
             paddingVertical: 12,
             backgroundColor: colors.primary,
-            borderBottomLeftRadius: 12,
-            borderBottomRightRadius: 12,
             marginHorizontal: 8,
             marginBottom: 4,
+            borderRadius: 12,
         },
         headerPressable: {
             flex: 1,

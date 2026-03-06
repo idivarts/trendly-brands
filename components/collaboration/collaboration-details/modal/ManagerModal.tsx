@@ -1,6 +1,7 @@
+import { useBreakpoints } from "@/hooks";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
@@ -16,6 +17,8 @@ interface ManagerModalProps {
     setVisibility: (visible: boolean) => void;
 }
 
+const MAX_MODAL_WIDTH = 420;
+
 const ManagerModal: React.FC<ManagerModalProps> = ({
     managerName,
     managerEmail,
@@ -25,7 +28,8 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
     setVisibility,
 }) => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const { xl, width } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme, xl, width), [theme, xl, width]);
 
     return (
         <Modal
@@ -62,13 +66,24 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
     );
 };
 
-function useStyles(theme: ReturnType<typeof useTheme>) {
+function useStyles(
+    theme: ReturnType<typeof useTheme>,
+    xl: boolean,
+    bpWidth: number
+) {
+    const isWeb = Platform.OS === "web";
+    const modalWidth = isWeb
+        ? Math.min(MAX_MODAL_WIDTH, bpWidth - 48)
+        : Math.max(0, bpWidth - 40);
     return StyleSheet.create({
         modalContent: {
             backgroundColor: Colors(theme).background,
             borderRadius: 10,
             padding: 20,
-            marginHorizontal: 20,
+            marginHorizontal: xl ? 24 : 20,
+            maxWidth: MAX_MODAL_WIDTH,
+            width: modalWidth,
+            alignSelf: "center",
         },
         centerColumn: {
             alignItems: "center",
