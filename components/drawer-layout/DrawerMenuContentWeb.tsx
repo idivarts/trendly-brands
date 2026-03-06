@@ -222,136 +222,104 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
         setBrandListExpanded(false);
     };
 
+    const brandHeaderContent = (
+        <View style={styles.header}>
+            {xl ? (
+                <CoachmarkAnchor
+                    id="guide-tour-brand-switcher-web"
+                    shape="rect"
+                >
+                    <Pressable
+                        onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
+                        style={styles.headerPressable}
+                    >
+                        <View style={styles.headerRow}>
+                            <View style={styles.logoCircle}>
+                                <Text style={styles.logoText}>T</Text>
+                            </View>
+                            <View style={styles.headerBrand}>
+                                <Text style={styles.brandName} numberOfLines={1}>
+                                    {selectedBrand?.name ?? "Brand"}
+                                </Text>
+                                <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
+                            </View>
+                            {hasMultipleBrands ? (
+                                <FontAwesomeIcon
+                                    icon={brandListExpanded ? faChevronUp : faChevronDown}
+                                    size={14}
+                                    color={colors.drawerTextMuted}
+                                />
+                            ) : null}
+                        </View>
+                    </Pressable>
+                </CoachmarkAnchor>
+            ) : (
+                <Pressable
+                    onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
+                    style={styles.headerPressable}
+                >
+                    <View style={styles.headerRow}>
+                        <View style={styles.logoCircle}>
+                            <Text style={styles.logoText}>T</Text>
+                        </View>
+                        <View style={styles.headerBrand}>
+                            <Text style={styles.brandName} numberOfLines={1}>
+                                {selectedBrand?.name ?? "Brand"}
+                            </Text>
+                            <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
+                        </View>
+                        {hasMultipleBrands ? (
+                            <FontAwesomeIcon
+                                icon={brandListExpanded ? faChevronUp : faChevronDown}
+                                size={14}
+                                color={colors.drawerTextMuted}
+                            />
+                        ) : null}
+                    </View>
+                </Pressable>
+            )}
+            {hasMultipleBrands && brandListExpanded && (
+                <RNView style={styles.brandListDropdown} pointerEvents="box-none">
+                    <ScrollView
+                        style={styles.brandListScroll}
+                        contentContainerStyle={styles.brandListContent}
+                        showsVerticalScrollIndicator={true}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {brands.map((brand) => {
+                            const isSelected = brand.id === selectedBrand?.id;
+                            return (
+                                <Pressable
+                                    key={brand.id}
+                                    onPress={() => handleBrandSelect(brand)}
+                                    style={[
+                                        styles.brandListItem,
+                                        isSelected && styles.brandListItemSelectedInDropdown,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.brandListItemText,
+                                            isSelected && styles.brandListItemTextSelected,
+                                        ]}
+                                        numberOfLines={1}
+                                    >
+                                        {brand.name}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </RNView>
+            )}
+        </View>
+    );
+
     return (
         <>
             <DrawerColorsContext.Provider value={drawerColors}>
                 <View style={styles.root}>
-                    {xl ? (
-                        <CoachmarkAnchor
-                            id="guide-tour-brand-switcher-web"
-                            shape="rect"
-                        >
-                            <View style={styles.header}>
-                                <Pressable
-                                    onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
-                                    style={styles.headerPressable}
-                                >
-                                    <View style={styles.headerRow}>
-                                        <View style={styles.logoCircle}>
-                                            <Text style={styles.logoText}>T</Text>
-                                        </View>
-                                        <View style={styles.headerBrand}>
-                                            <Text style={styles.brandName} numberOfLines={1}>
-                                                {selectedBrand?.name ?? "Brand"}
-                                            </Text>
-                                            <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
-                                        </View>
-                                        {hasMultipleBrands ? (
-                                            <FontAwesomeIcon
-                                                icon={brandListExpanded ? faChevronUp : faChevronDown}
-                                                size={14}
-                                                color={colors.drawerTextMuted}
-                                            />
-                                        ) : null}
-                                    </View>
-                                </Pressable>
-                                {hasMultipleBrands && brandListExpanded && (
-                                    <RNView style={styles.brandListDropdown} pointerEvents="box-none">
-                                        <ScrollView
-                                            style={styles.brandListScroll}
-                                            contentContainerStyle={styles.brandListContent}
-                                            showsVerticalScrollIndicator={true}
-                                            keyboardShouldPersistTaps="handled"
-                                        >
-                                            {brands.map((brand) => {
-                                                const isSelected = brand.id === selectedBrand?.id;
-                                                return (
-                                                    <Pressable
-                                                        key={brand.id}
-                                                        onPress={() => handleBrandSelect(brand)}
-                                                        style={[
-                                                            styles.brandListItem,
-                                                            isSelected && styles.brandListItemSelectedInDropdown,
-                                                        ]}
-                                                    >
-                                                        <Text
-                                                            style={[
-                                                                styles.brandListItemText,
-                                                                isSelected && styles.brandListItemTextSelected,
-                                                            ]}
-                                                            numberOfLines={1}
-                                                        >
-                                                            {brand.name}
-                                                        </Text>
-                                                    </Pressable>
-                                                );
-                                            })}
-                                        </ScrollView>
-                                    </RNView>
-                                )}
-                            </View>
-                        </CoachmarkAnchor>
-                    ) : (
-                        <View style={styles.header}>
-                            <Pressable
-                                onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
-                                style={styles.headerPressable}
-                            >
-                                <View style={styles.headerRow}>
-                                    <View style={styles.logoCircle}>
-                                        <Text style={styles.logoText}>T</Text>
-                                    </View>
-                                    <View style={styles.headerBrand}>
-                                        <Text style={styles.brandName} numberOfLines={1}>
-                                            {selectedBrand?.name ?? "Brand"}
-                                        </Text>
-                                        <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
-                                    </View>
-                                    {hasMultipleBrands ? (
-                                        <FontAwesomeIcon
-                                            icon={brandListExpanded ? faChevronUp : faChevronDown}
-                                            size={14}
-                                            color={colors.drawerTextMuted}
-                                        />
-                                    ) : null}
-                                </View>
-                            </Pressable>
-                            {hasMultipleBrands && brandListExpanded && (
-                                <RNView style={styles.brandListDropdown} pointerEvents="box-none">
-                                    <ScrollView
-                                        style={styles.brandListScroll}
-                                        contentContainerStyle={styles.brandListContent}
-                                        showsVerticalScrollIndicator={true}
-                                        keyboardShouldPersistTaps="handled"
-                                    >
-                                        {brands.map((brand) => {
-                                            const isSelected = brand.id === selectedBrand?.id;
-                                            return (
-                                                <Pressable
-                                                    key={brand.id}
-                                                    onPress={() => handleBrandSelect(brand)}
-                                                    style={[
-                                                        styles.brandListItem,
-                                                        isSelected && styles.brandListItemSelectedInDropdown,
-                                                    ]}
-                                                >
-                                                    <Text
-                                                        style={[
-                                                            styles.brandListItemText,
-                                                            isSelected && styles.brandListItemTextSelected,
-                                                        ]}
-                                                        numberOfLines={1}
-                                                    >
-                                                        {brand.name}
-                                                    </Text>
-                                                </Pressable>
-                                            );
-                                        })}
-                                    </ScrollView>
-                                </RNView>
-                            )}
-                        </View>
-                    )}
+                    {brandHeaderContent}
 
                     <ScrollView
                         contentContainerStyle={styles.scrollContent}
