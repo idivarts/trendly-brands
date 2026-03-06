@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -180,7 +181,7 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
                             </View>
                         ))}
 
-                        {!hideRefill && (
+                        {!hideRefill && Platform.OS === "web" && (
                             <Pressable
                                 onPress={() => {
                                     onClose();

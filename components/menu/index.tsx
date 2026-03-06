@@ -82,7 +82,6 @@ const Menu = () => {
                                 discoverCoinsLeft={discoverCoinsLeft}
                                 connectionCreditsLeft={connectionCreditsLeft}
                                 discoveryProgress={discoveryProgress}
-                                hideRefill={true}
                             />
                         )}
                     <View style={styles.middleRow}>

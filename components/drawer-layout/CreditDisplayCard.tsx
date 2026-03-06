@@ -5,7 +5,12 @@ import { faBolt, faGem as faGemSolid } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { forwardRef, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View as RNView } from "react-native";
+import {
+    Platform,
+    Pressable,
+    StyleSheet,
+    View as RNView,
+} from "react-native";
 import CreditUsageModal from "./CreditUsageModal";
 
 export interface CreditDisplayCardProps {
@@ -61,7 +66,7 @@ const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
                                 {discoverCoinsLeft} Discovery
                             </Text>
                         </Pressable>
-                        {!hideRefill && (
+                        {!hideRefill && Platform.OS === "web" && (
                             <Pressable
                                 onPress={handleRefillPress}
                                 hitSlop={8}
