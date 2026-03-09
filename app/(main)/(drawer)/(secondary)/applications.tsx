@@ -1,6 +1,6 @@
 import ApplicationsTabContent from "@/components/collaboration/collaboration-details/ApplicationsTabContent";
 import { View } from "@/components/theme/Themed";
-import ScreenHeader from "@/components/ui/screen-header";
+import PageHeader from "@/components/ui/page-header";
 import Colors from "@/shared-uis/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
 import { useTheme } from "@react-navigation/native";
@@ -22,9 +22,7 @@ const ApplicationsScreen = () => {
 
     return (
         <AppLayout withWebPadding={false}>
-            <ScreenHeader
-                title="All Applications"
-            />
+            <PageHeader title="All Applications" />
             <View style={styles.container}>
                 <ApplicationsTabContent
                     isApplicationConcised={true}

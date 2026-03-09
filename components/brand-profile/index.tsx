@@ -1,18 +1,15 @@
+import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
+import { Brand } from "@/types/Brand";
 import { useTheme } from "@react-navigation/native";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, ScrollView, StyleSheet, View } from "react-native";
 import { Surface } from "react-native-paper";
 
-import Colors from "@/shared-uis/constants/Colors";
-import { getConstrainedHeight } from "@/shared-libs/contexts/mobile-layout-context.provider";
-import { Brand } from "@/types/Brand";
 import BrandAge from "./BrandAge";
 import BrandDetails from "./BrandDetails";
 import BrandIndustry from "./BrandIndustry";
 
-const screenHeight = getConstrainedHeight();
-const CARD_MAX_WIDTH = 480;
-const CARD_MIN_HEIGHT = Math.min(screenHeight * 0.6, 520);
 const STEP_ANIM_DURATION = 280;
 
 interface BrandProfileProps {
@@ -36,7 +33,10 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     onStepChange,
 }) => {
     const theme = useTheme();
-    const colors = Colors(theme);
+    const { xl, width } = useBreakpoints();
+    const colors = useMemo(() => Colors(theme), [theme]);
+    const styles = useMemo(() => createStyles(colors, xl, width), [colors, xl, width]);
+
     const [currentStep, setCurrentStep] = useState(1);
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const slideAnim = useRef(new Animated.Value(0)).current;
@@ -85,69 +85,71 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     const isCreate = type === "create";
     const showSection = (step: number) => !isCreate || currentStep === step;
     const usePlainLayout = isCreate && webOnboarding;
+    const useTwoColumnForm = xl;
 
     useEffect(() => {
         if (webOnboarding && onStepChange) onStepChange(currentStep);
     }, [webOnboarding, currentStep, onStepChange]);
 
-    const styles = useMemo(
-        () =>
-            StyleSheet.create({
-                stepRow: {
-                    flexDirection: "row",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 20,
-                },
-                stepDot: {
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: colors.stepDotInactive,
-                },
-                stepDotActive: {
-                    width: 24,
-                    backgroundColor: colors.stepDotActive,
-                },
-                stepDotDone: {
-                    backgroundColor: colors.stepDotDone,
-                },
-                cardOuter: {
-                    flex: 1,
-                    width: "100%",
-                    alignSelf: "center",
-                },
-                cardOuterPlain: {
-                    alignSelf: "flex-start",
-                },
-                cardWrap: {
-                    width: "100%",
-                    paddingHorizontal: 16,
-                },
-                cardWrapPlain: {
-                    paddingHorizontal: 0,
-                },
-                actionSurface: {
-                    borderRadius: 16,
-                    padding: 16,
-                    marginTop: 24,
-                },
-                actionSurfacePlain: {
-                    borderRadius: 0,
-                    paddingHorizontal: 0,
-                    paddingVertical: 0,
-                },
-            }),
-        [colors]
-    );
+    const sectionProps = {
+        brandData,
+        setBrandData,
+        setBrandWebImage,
+        plainSection: usePlainLayout || useTwoColumnForm,
+        compactLayout: useTwoColumnForm,
+    };
+
+    if (useTwoColumnForm) {
+        const smallAction =
+            action && isValidElement(action)
+                ? cloneElement(action as React.ReactElement<{ size?: "small" | "medium" | "large" }>, { size: "small" })
+                : action;
+
+        return (
+            <ScrollView
+                contentContainerStyle={styles.scrollContentTwoCol}
+                showsVerticalScrollIndicator={false}
+            >
+                {action && (
+                    <View style={styles.actionTopBar}>
+                        {smallAction}
+                    </View>
+                )}
+                <View style={styles.twoColRow}>
+                    <View style={styles.twoColLeft}>
+                        <BrandDetails
+                            {...sectionProps}
+                            onNext={isCreate ? handleNext : undefined}
+                        />
+                    </View>
+                    <View style={styles.twoColRight}>
+                        <BrandAge
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onNext={isCreate ? handleNext : undefined}
+                            onBack={isCreate ? handleBack : undefined}
+                            plainSection
+                            compactLayout
+                        />
+                        <BrandIndustry
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onBack={isCreate ? handleBack : undefined}
+                            plainSection
+                            compactLayout
+                        />
+                    </View>
+                </View>
+            </ScrollView>
+        );
+    }
 
     return (
         <ScrollView
             contentContainerStyle={
                 isCreate
-                    ? { flexGrow: 1, paddingVertical: 24, paddingHorizontal: webOnboarding ? 0 : 16 }
-                    : { paddingVertical: 40, paddingHorizontal: 16, alignItems: "center" as const }
+                    ? (usePlainLayout ? styles.scrollContentCreatePlain : styles.scrollContentCreate)
+                    : styles.scrollContentUpdate
             }
             showsVerticalScrollIndicator={false}
         >
@@ -171,30 +173,27 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                     isCreate
                         ? [
                             styles.cardOuter,
-                            { maxWidth: webOnboarding ? "100%" : CARD_MAX_WIDTH },
+                            usePlainLayout ? styles.cardOuterCreateFullWidth : styles.cardOuterCreateMaxWidth,
                             usePlainLayout && styles.cardOuterPlain,
                         ]
-                        : { width: "100%", maxWidth: CARD_MAX_WIDTH, gap: 24 }
+                        : styles.cardOuterUpdate
                 }
             >
                 <Animated.View
-                    style={
-                        isCreate
-                            ? [
-                                styles.cardWrap,
-                                { minHeight: webOnboarding ? undefined : CARD_MIN_HEIGHT, opacity: fadeAnim, transform: [{ translateX: slideAnim }] },
-                                usePlainLayout && styles.cardWrapPlain,
-                            ]
-                            : [styles.cardWrap, { gap: 24 }]
-                    }
+                    style={[
+                        styles.cardWrap,
+                        isCreate && {
+                            opacity: fadeAnim,
+                            transform: [{ translateX: slideAnim }],
+                        },
+                        !isCreate && styles.cardWrapUpdate,
+                        usePlainLayout && styles.cardWrapPlain,
+                    ]}
                 >
                     {showSection(1) && (
                         <BrandDetails
-                            brandData={brandData}
-                            setBrandData={setBrandData}
-                            setBrandWebImage={setBrandWebImage}
+                            {...sectionProps}
                             onNext={isCreate ? handleNext : undefined}
-                            plainSection={usePlainLayout}
                         />
                     )}
                     {showSection(2) && (
@@ -216,12 +215,16 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                     )}
                     {showSection(3) && action && (
                         usePlainLayout ? (
-                            <View style={[styles.actionSurface, styles.actionSurfacePlain, { marginTop: 24 }]}>
+                            <View style={[styles.actionSurface, styles.actionSurfacePlain, styles.actionSurfaceMarginTop]}>
                                 {action}
                             </View>
                         ) : (
                             <Surface
-                                style={[styles.actionSurface, { backgroundColor: colors.card, marginTop: isCreate ? 24 : 8 }]}
+                                style={[
+                                    styles.actionSurface,
+                                    styles.actionSurfaceCard,
+                                    isCreate ? styles.actionSurfaceMarginTop : styles.actionSurfaceMarginTopUpdate,
+                                ]}
                                 elevation={1}
                             >
                                 {action}
@@ -233,5 +236,135 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         </ScrollView>
     );
 };
+
+function createStyles(
+    colors: ReturnType<typeof Colors>,
+    xl: boolean,
+    width: number
+) {
+    const horizontalPadding = xl ? 32 : 16;
+    const verticalPaddingCreate = xl ? 32 : 24;
+    const verticalPaddingUpdate = xl ? 48 : 40;
+    const cardMaxWidth = 480;
+    const twoColGap = 24;
+    const contentMaxWidth = Math.min(width - 48, 1000);
+
+    return StyleSheet.create({
+        stepRow: {
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 20,
+        },
+        stepDot: {
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: colors.stepDotInactive,
+        },
+        stepDotActive: {
+            width: 24,
+            backgroundColor: colors.stepDotActive,
+        },
+        stepDotDone: {
+            backgroundColor: colors.stepDotDone,
+        },
+        scrollContentCreate: {
+            flexGrow: 1,
+            paddingVertical: verticalPaddingCreate,
+            paddingHorizontal: horizontalPadding,
+        },
+        scrollContentCreatePlain: {
+            flexGrow: 1,
+            paddingVertical: verticalPaddingCreate,
+            paddingHorizontal: 0,
+        },
+        scrollContentUpdate: {
+            paddingVertical: verticalPaddingUpdate,
+            paddingHorizontal: horizontalPadding,
+            alignItems: "center",
+        },
+        scrollContentTwoCol: {
+            paddingVertical: 24,
+            paddingHorizontal: horizontalPadding,
+            maxWidth: contentMaxWidth,
+            alignSelf: "center",
+            width: "100%",
+        },
+        twoColRow: {
+            flexDirection: "row",
+            gap: twoColGap,
+            alignItems: "flex-start",
+        },
+        twoColLeft: {
+            flex: 1,
+            minWidth: 0,
+            gap: 20,
+        },
+        twoColRight: {
+            flex: 1,
+            minWidth: 0,
+            gap: 100,
+        },
+        actionTopBar: {
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            marginBottom: 16,
+            width: "100%",
+        },
+        actionWrap: {
+            marginTop: 8,
+        },
+        cardOuter: {
+            flex: 1,
+            width: "100%",
+            alignSelf: "center",
+        },
+        cardOuterCreateMaxWidth: {
+            maxWidth: cardMaxWidth,
+        },
+        cardOuterPlain: {
+            alignSelf: "flex-start",
+        },
+        cardOuterCreateFullWidth: {
+            maxWidth: "100%",
+        },
+        cardOuterUpdate: {
+            width: "100%",
+            maxWidth: cardMaxWidth,
+            gap: 24,
+        },
+        cardWrap: {
+            width: "100%",
+            paddingHorizontal: horizontalPadding,
+        },
+        cardWrapUpdate: {
+            gap: 24,
+        },
+        cardWrapPlain: {
+            paddingHorizontal: 0,
+        },
+        actionSurface: {
+            borderRadius: 16,
+            padding: 16,
+            marginTop: 24,
+        },
+        actionSurfacePlain: {
+            borderRadius: 0,
+            paddingHorizontal: 0,
+            paddingVertical: 0,
+        },
+        actionSurfaceCard: {
+            backgroundColor: colors.card,
+        },
+        actionSurfaceMarginTop: {
+            marginTop: 24,
+        },
+        actionSurfaceMarginTopUpdate: {
+            marginTop: 8,
+        },
+    });
+}
 
 export default BrandProfile;

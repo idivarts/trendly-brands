@@ -1,6 +1,8 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { MENU_ITEMS } from "@/constants/Menu";
+import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { truncateText } from "@/utils/text";
 import { imageUrl } from "@/utils/url";
 import { useTheme, type Theme } from "@react-navigation/native";
@@ -15,8 +17,18 @@ const Menu = () => {
     const theme = useTheme();
     const styles = useMemo(() => useMenuItemStyles(theme), [theme]);
     const router = useRouter();
-
+    const { xl } = useBreakpoints();
     const { selectedBrand } = useBrandContext();
+
+    const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
+    const connectionCreditsLeft = Number(
+        selectedBrand?.credits?.connection ?? 0
+    );
+    const discoveryLimit = 1000;
+    const discoveryProgress = Math.min(
+        1,
+        discoverCoinsLeft / discoveryLimit
+    );
 
 
     return (
@@ -63,6 +75,15 @@ const Menu = () => {
                             </Button>
                         </View>
                     </View>
+                    {!xl &&
+                        selectedBrand &&
+                        !selectedBrand.isBillingDisabled && (
+                            <CreditDisplayCard
+                                discoverCoinsLeft={discoverCoinsLeft}
+                                connectionCreditsLeft={connectionCreditsLeft}
+                                discoveryProgress={discoveryProgress}
+                            />
+                        )}
                     <View style={styles.middleRow}>
                         {MENU_ITEMS.map((item, index) => (
                             <ProfileItemCard

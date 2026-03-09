@@ -8,6 +8,7 @@ import React, { useEffect, useMemo } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     Text,
     View,
 } from "react-native";
@@ -50,6 +51,7 @@ const SHOWCASE_SPLIT_INDEX = 3;
 const SHOWCASE_TEXT_GAP = 16;
 const SHOWCASE_CARD_OPACITY = 0.6;
 const SHOWCASE_TEXT_BLOCK_HEIGHT = 72;
+const RIGHT_PANE_TOP_OFFSET = 24;
 const SHOWCASE_TITLE_SHADOW_RADIUS = 10;
 const FLOATING_CARD_SHADOW_OPACITY = 0.35;
 const FLOATING_CARD_SHADOW_RADIUS = 30;
@@ -295,11 +297,30 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         style={[
                             stylesWithTheme.rightPane,
                             !isWideLayout && stylesWithTheme.rightPaneStacked,
-                            isWideLayout && { paddingTop: SHOWCASE_TEXT_BLOCK_HEIGHT },
+                            isWideLayout && { paddingTop: RIGHT_PANE_TOP_OFFSET },
+                            {
+                                maxHeight:
+                                    windowHeight -
+                                    CONTENT_PADDING_VERTICAL * 2 -
+                                    (isWideLayout ? RIGHT_PANE_TOP_OFFSET : 0) -
+                                    16,
+                            },
                         ]}
                     >
-                        <View style={stylesWithTheme.floatingCard}>
-                            {children}
+                        <View
+                            style={[
+                                stylesWithTheme.floatingCard,
+                                authLayoutStyles.floatingCardConstrain,
+                            ]}
+                        >
+                            <ScrollView
+                                style={authLayoutStyles.floatingCardScroll}
+                                contentContainerStyle={authLayoutStyles.floatingCardScrollContent}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                {children}
+                            </ScrollView>
                         </View>
                     </View>
                 </View>
@@ -346,6 +367,7 @@ export const authLayoutStyles = {
         justifyContent: "flex-start",
         alignItems: "center",
         alignSelf: "flex-start" as const,
+        flexDirection: "column" as const,
     },
     rightPaneStacked: {
         alignItems: "stretch" as const,
@@ -390,6 +412,18 @@ export const authLayoutStyles = {
         shadowOpacity: FLOATING_CARD_SHADOW_OPACITY,
         shadowRadius: FLOATING_CARD_SHADOW_RADIUS,
         shadowOffset: { width: 0, height: FLOATING_CARD_SHADOW_OFFSET_Y },
+    },
+    /** When right pane is height-constrained, card fills it and content scrolls (avoids bottom cut-off on smaller windows) */
+    floatingCardConstrain: {
+        flex: 1,
+        minHeight: 0,
+        overflow: "hidden" as const,
+    },
+    floatingCardScroll: {
+        flex: 1,
+    },
+    floatingCardScrollContent: {
+        flexGrow: 1,
     },
     formTitle: {
         textAlign: "center" as const,

@@ -1,8 +1,7 @@
+import BottomSheetActions from "@/components/BottomSheetActions";
 import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
-import Button from "@/components/ui/button";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
-import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
@@ -13,13 +12,17 @@ import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
-import { Href } from "expo-router";
+import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
-import CollaborationHeader from "../CollaborationHeader";
+import Button from "@/components/ui/button";
+import PageHeader from "@/components/ui/page-header";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import InvitedMemberTabContent from "./InvitedMemberTabContent";
@@ -45,13 +48,17 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const [collaboration, setCollaboration] = useState<
         CollaborationDetail | undefined
     >(undefined);
+    const [actionsVisible, setActionsVisible] = useState(false);
     const theme = useTheme();
+    const colors = Colors(theme);
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
     const styles = useMemo(() => useStyles(theme), [theme]);
     const { isOnFreeTrial } = useBrandContext();
     const { openModal } = useConfirmationModel();
-    const router = useMyNavigation();
+    const nav = useMyNavigation();
+    const expoRouter = useRouter();
+    const { pageID: paramPageID } = useLocalSearchParams<{ pageID?: string }>();
 
     const { publish } = usePublishCollaboration();
 
@@ -232,6 +239,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                         setIsCollapsed: () => { },
                         discoverCommunication: { current: undefined },
                         pageSortCommunication: { current: undefined },
+                        totalCount: "0",
+                        currentSort: "followers",
+                        setTotalCount: () => { },
+                        setCurrentSort: () => { },
                     }}
                 >
                     <InvitationsTabContent key={"invitations"} pageID={pageID} />
@@ -272,38 +283,81 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         return null;
     }
 
+    const isDraft = collaboration.status === "draft";
+    const campaignHeaderActions = isDraft
+        ? [
+              <Button
+                  key="edit"
+                  mode="contained"
+                  onPress={() => {
+                      nav.push({
+                          pathname: "/edit-collaboration",
+                          params: { id: pageID },
+                      });
+                  }}
+                  size="small"
+                  style={styles.draftActionButton}
+                  textColor={colors.text}
+              >
+                  Edit
+              </Button>,
+              <Button
+                  key="publish"
+                  mode="contained"
+                  onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
+                  size="small"
+                  style={styles.publishActionButton}
+              >
+                  Publish
+              </Button>,
+          ]
+        : [];
+
     return (
         <View style={styles.column}>
-            <CollaborationHeader collaboration={collaboration} />
+            <PageHeader
+                title="Campaign Details"
+                subtitle={collaboration.name}
+                showBackButton
+                onBackPress={() => {
+                    if (expoRouter.canGoBack()) expoRouter.back();
+                    else nav.push("/collaborations");
+                }}
+                actionButtons={campaignHeaderActions}
+                rightComponent={
+                    <Pressable
+                        onPress={() => setActionsVisible(true)}
+                        style={styles.iconButton}
+                    >
+                        <FontAwesomeIcon
+                            icon={faEllipsisH}
+                            size={24}
+                            color={colors.text}
+                        />
+                    </Pressable>
+                }
+            />
+            <BottomSheetActions
+                cardId={(paramPageID || pageID) as string}
+                cardType="activeCollab"
+                isVisible={actionsVisible}
+                snapPointsRange={["20%", "50%"]}
+                onClose={() => setActionsVisible(false)}
+            />
 
             {collaboration.status === "draft" && (
-                <View style={styles.draftActionsRow}>
-                    <Button
-                        mode="contained"
-                        onPress={() => {
-                            router.push({
-                                pathname: "/edit-collaboration",
-                                params: {
-                                    id: pageID,
-                                },
-                            });
-                        }}
-                        style={styles.editDraftButton}
-                        textColor={Colors(theme).text}
-                    >
-                        Edit Draft
-                    </Button>
-                    <Button
-                        mode="contained"
-                        onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
-                        style={styles.publishButton}
-                    >
-                        Publish Now
-                    </Button>
-                </View>
-            )}
-            {collaboration.status === "draft" && (
-                <OverviewTabContent collaboration={collaboration} />
+                <OverviewTabContent
+                    collaboration={collaboration}
+                    onEditPress={() => {
+                        nav.push({
+                            pathname: "/edit-collaboration",
+                            params: { id: pageID },
+                        });
+                    }}
+                    onPublishPress={() =>
+                        publish(pageID, { onSuccess: fetchCollaboration })
+                    }
+                />
             )}
             {collaboration.status !== "draft" && (() => {
                 console.log("[CollaborationDetails] Rendering TopTabNavigation for status:", collaboration.status);
@@ -325,6 +379,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 };
 
 function useStyles(theme: ReturnType<typeof useTheme>) {
+    const colors = Colors(theme);
     return StyleSheet.create({
         loadingContainer: {
             flex: 1,
@@ -335,27 +390,28 @@ function useStyles(theme: ReturnType<typeof useTheme>) {
             flex: 1,
             flexDirection: "column",
         },
-        draftActionsRow: {
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: 16,
-            gap: 16,
-            marginBottom: 16,
-        },
-        editDraftButton: {
-            flex: 1,
-            backgroundColor: Colors(theme).background,
-            borderWidth: 0.3,
-            borderColor: Colors(theme).outline,
-        },
-        publishButton: {
-            flex: 1,
-        },
         tabContainer: {
             flex: 1,
             width: "100%",
             minHeight: 0,
+        },
+        iconButton: {
+            padding: 8,
+        },
+        draftActionButton: {
+            backgroundColor: colors.background,
+            borderWidth: 0.3,
+            borderColor: colors.outline,
+            borderRadius: 16,
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            minHeight: 32,
+        },
+        publishActionButton: {
+            borderRadius: 16,
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            minHeight: 32,
         },
     });
 }

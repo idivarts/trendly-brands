@@ -1,14 +1,33 @@
 import Members from "@/components/members";
-import ScreenHeader from "@/components/ui/screen-header";
+import PageHeader from "@/components/ui/page-header";
+import Button from "@/components/ui/button";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
-import React from "react";
+import React, { useState } from "react";
 
 const PreferencesScreen = () => {
+    const { selectedBrand } = useBrandContext();
+    const [showMemberModal, setShowMemberModal] = useState(false);
+
     return (
         <AppLayout withWebPadding={false}>
-            <ScreenHeader title="Members" />
+            <PageHeader
+                title="Members"
+                subtitle={selectedBrand?.name}
+                actionButtons={[
+                    <Button
+                        key="add-member"
+                        onPress={() => setShowMemberModal(true)}
+                    >
+                        Add Member
+                    </Button>,
+                ]}
+            />
             <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
-                <Members />
+                <Members
+                    showMemberModal={showMemberModal}
+                    onCloseMemberModal={() => setShowMemberModal(false)}
+                />
             </AppLayout>
         </AppLayout>
     );

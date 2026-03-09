@@ -3,6 +3,7 @@ import { useAuthContext } from "@/contexts/auth-context.provider";
 import { CRMStatus } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { CRMColumnId, moveCardBetweenColumns } from "@/shared-libs/kanban";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     DndContext,
@@ -193,14 +194,14 @@ export default function BrandCRMBoard() {
         setIsModalVisible(true);
 
         // Fetch discovered influencers and campaigns
-        fetchDiscoveredInfluencers(brand.discoveredInfluencers);
+        fetchDiscoveredInfluencers(brand.id, brand.discoveredInfluencers);
         fetchCampaigns(brand.id);
         fetchMembers(brand.id);
         fetchSubscription(brand.id);
     }, []);
 
-    const fetchDiscoveredInfluencers = async (influencerIds?: string[]) => {
-        if (!influencerIds || influencerIds.length === 0) {
+    const fetchDiscoveredInfluencers = async (brandId?: string, influencerIds?: string[]) => {
+        if (!brandId || !influencerIds || influencerIds.length === 0) {
             setDiscoveredInfluencers([]);
             return;
         }
@@ -209,17 +210,15 @@ export default function BrandCRMBoard() {
         try {
             const influencers: any[] = [];
 
-            // Fetch each influencer from scrapped-socials collection
             for (const influencerId of influencerIds) {
                 try {
-                    const docRef = doc(FirestoreDB, "scrapped-socials", influencerId);
-                    const docSnap = await getDoc(docRef);
-
-                    if (docSnap.exists()) {
-                        influencers.push({
-                            id: influencerId,
-                            ...docSnap.data()
-                        });
+                    const res = await HttpWrapper.fetch(
+                        `/discovery/brands/${brandId}/influencers/${influencerId}`,
+                        { method: "GET" }
+                    );
+                    const body = await res.json();
+                    if (body?.id) {
+                        influencers.push({ id: influencerId, ...body });
                     }
                 } catch (err) {
                     console.warn(`Failed to fetch influencer ${influencerId}`, err);

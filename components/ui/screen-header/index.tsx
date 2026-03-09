@@ -8,6 +8,11 @@ import { useNavigation } from "expo-router";
 import { Platform, Pressable } from "react-native";
 import { Appbar } from "react-native-paper";
 
+/**
+ * @deprecated Use PageHeader from @/components/ui/page-header instead.
+ * PageHeader supports title, subtitle, optional back button, action buttons, and right component
+ * with platform-aware behavior for web and mobile.
+ */
 interface ScreenHeaderProps {
     action?: () => void;
     hideAction?: boolean;

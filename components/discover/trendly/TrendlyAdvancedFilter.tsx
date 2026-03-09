@@ -2,7 +2,7 @@ import {
     PageSortCommunication,
     useDiscovery,
 } from "@/components/discover/discovery-context";
-import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
+import { cleanFilters, cleanFiltersForStorage, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import Select from "@/components/ui/select";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints, useNicheSearch } from "@/hooks";
@@ -266,16 +266,19 @@ const TrendlyAdvancedFilter = ({
     useEffect(() => {
         if (hasMeaningfulFilters(defaultAdvanceFilters)) {
             // Use collaboration preferences (never overridden by brand preferences)
-            setFieldsFromFilters(defaultAdvanceFilters as Partial<IAdvanceFilters>);
+            setFieldsFromFilters(cleanFiltersForStorage(defaultAdvanceFilters as Record<string, any>) as Partial<IAdvanceFilters>);
+            setOffset(0);
             return;
         }
 
-        // Otherwise load from brand's discoverPreferences (stored in Firestore)
+        // Otherwise load from brand's discoverPreferences (stored in Firestore).
+        // Strip offset/limit so we never use them from storage; always start at 0.
         if (
             selectedBrand?.discoverPreferences &&
             hasMeaningfulFilters(selectedBrand.discoverPreferences)
         ) {
-            setFieldsFromFilters(selectedBrand.discoverPreferences as Partial<IAdvanceFilters>);
+            setFieldsFromFilters(cleanFiltersForStorage(selectedBrand.discoverPreferences as Record<string, any>) as Partial<IAdvanceFilters>);
+            setOffset(0);
         }
     }, [selectedBrand, defaultAdvanceFilters]);
 

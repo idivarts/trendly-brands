@@ -1,0 +1,9 @@
+export { default as CreateNewBrandForm } from "./CreateNewBrandForm";
+export { default as CreateNewBrandHeader } from "./CreateNewBrandHeader";
+export { default as BrandLogoUpload } from "./BrandLogoUpload";
+export { default as WhyCompleteProfileBlock } from "./WhyCompleteProfileBlock";
+export { default as SectionHeading } from "./SectionHeading";
+export { default as BrandDetailsForm } from "./BrandDetailsForm";
+export { default as BrandAgeSelect } from "./BrandAgeSelect";
+export { default as BrandIndustrySelect } from "./BrandIndustrySelect";
+export { default as CreateBrandFooter } from "./CreateBrandFooter";

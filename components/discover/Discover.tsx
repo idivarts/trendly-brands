@@ -1,6 +1,7 @@
 import AdvancedFilterOverlay from "@/components/discover/AdvancedFilterOverlay";
 import type { DB_TYPE } from "@/components/discover/discover-types";
 import DiscoverInfluencer from "@/components/discover/DiscoverInfluencer";
+import DiscoverScreenHeader from "@/components/discover/DiscoverScreenHeader";
 import DiscoverSurvey from "@/components/discover/DiscoverSurvey";
 import {
     DiscoveryProvider,
@@ -12,6 +13,11 @@ import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import {
+    GUIDE_TOUR_MOBILE,
+    GUIDE_TOUR_WEB,
+} from "@/components/guide-tour/guide-tour-config";
+import { useCoachmark } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -50,9 +56,13 @@ const DiscoverComponent = ({
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
+    const { start: startCoachmark, isActive } = useCoachmark();
+    const hasStartedTourRef = useRef(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
+    const [headerTotalCount, setHeaderTotalCount] = useState<string>("0");
+    const [headerCurrentSort, setHeaderCurrentSort] = useState<string>("followers");
     const discoverCommunication =
         useRef<((action: DiscoverCommunication) => any) | undefined>(undefined);
     const pageSortCommunication =
@@ -142,7 +152,31 @@ const DiscoverComponent = ({
         }
 
         setShowSurvey(false);
+        hasStartedTourRef.current = true;
+        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
     };
+
+    useEffect(() => {
+        if (
+            surveyCheckDone &&
+            !showSurvey &&
+            manager &&
+            selectedBrand?.id &&
+            !isActive &&
+            !hasStartedTourRef.current
+        ) {
+            hasStartedTourRef.current = true;
+            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        }
+    }, [
+        surveyCheckDone,
+        showSurvey,
+        manager,
+        selectedBrand?.id,
+        xl,
+        isActive,
+        startCoachmark,
+    ]);
 
     if (!surveyCheckDone)
         return (
@@ -188,11 +222,17 @@ const DiscoverComponent = ({
                 showTopPanel:
                     typeof showTopPanel === "boolean" ? showTopPanel : topPanel,
                 setIsCollapsed,
+                totalCount: headerTotalCount,
+                currentSort: headerCurrentSort,
+                setTotalCount: setHeaderTotalCount,
+                setCurrentSort: setHeaderCurrentSort,
             }}
         >
-            <AppLayout safeAreaEdges={["left", "right"]}>
-                <View style={{ width: "100%", flexDirection: "row", height: "100%", }}>
-                    <DiscoverInfluencer
+            <AppLayout safeAreaEdges={["top", "left", "right"]}>
+                <View style={{ width: "100%", flex: 1 }}>
+                    <DiscoverScreenHeader />
+                    <View style={{ width: "100%", flexDirection: "row", flex: 1 }}>
+                        <DiscoverInfluencer
                         advanceFilter={advanceFilter}
                         statusFilter={statusFilter}
                         onStatusChange={onStatusChange}
@@ -210,6 +250,7 @@ const DiscoverComponent = ({
                         onFiltersApplied={() => {}}
                     />
                 )}
+                </View>
             </AppLayout>
         </DiscoveryProvider>
     );

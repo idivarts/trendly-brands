@@ -1,22 +1,13 @@
 import { router, Tabs } from "expo-router";
 import React from "react";
 
-import DiscoverHeader from "@/components/discover/DiscoverHeader";
-import { PremiumActionTag } from "@/components/discover/components/PremiumActionTag";
-import { OpenFilterRightPanel } from "@/components/discover/discovery-context";
-import Header from "@/components/explore-influencers/header";
-import InfluencerConnects from "@/components/explore-influencers/InfluencerConnects";
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import Colors from "@/shared-uis/constants/Colors";
-import { useAuthContext, useChatContext } from "@/contexts";
-import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useChatContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
-import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
-import ImageComponent from "@/shared-uis/components/image-component";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     faComment,
     faGem,
@@ -25,49 +16,22 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import {
     faComment as faCommentSolid,
-    faCopy,
-    faFilter,
     faGem as faGemSolid,
     faHeart as faHeartSolid,
     faStar as faStarSolid
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import * as Clipboard from "expo-clipboard";
-import { Platform, Pressable, StyleSheet } from "react-native";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
+import { Pressable, StyleSheet } from "react-native";
 import { Badge } from "react-native-paper";
 
 const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
     StyleSheet.create({
-        headerRightRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            justifyContent: "space-between",
-        },
         headerRightRowSimple: {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-        },
-        discoverTagsRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            paddingRight: 8,
-        },
-        filterButton: {
-            marginLeft: 12,
-        },
-        menuHeaderRow: {
-            flexDirection: "row",
-            alignItems: "center",
-        },
-        copyButton: {
-            paddingHorizontal: 16,
-        },
-        profileAvatar: {
-            width: 40,
-            height: 40,
         },
         badge: {
             backgroundColor: Colors(theme).red,
@@ -82,33 +46,33 @@ const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
     const styles = React.useMemo(() => useStyles(theme, xl), [theme, xl]);
-    const { unreadCount } = useChatContext()
-    const { manager } = useAuthContext();
-    const { selectedBrand } = useBrandContext()
-    const discoverCoinsLeft = Number((selectedBrand)?.credits?.discovery ?? 0)
-    const connectionCreditsLeft = Number((selectedBrand)?.credits?.connection ?? 0)
-    const influencerCredits = selectedBrand?.credits?.influencer || (IS_MONETIZATION_DONE ? 0 : 1000)
+    const { unreadCount } = useChatContext();
 
-    const copyBrandId = async () => {
-        if (!selectedBrand?.id) {
-            return;
-        }
+    const campaignsTabButton = (props: any) =>
+        !xl ? (
+            <CoachmarkAnchor
+                id="guide-tour-campaigns-mobile"
+                shape="pill"
+                style={{ flex: 1 }}
+            >
+                <Pressable {...props} />
+            </CoachmarkAnchor>
+        ) : (
+            <Pressable {...props} style={{ flex: 1 }} />
+        );
 
-        try {
-            if (Platform.OS === "web") {
-                if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-                    await navigator.clipboard.writeText(selectedBrand.id);
-                } else {
-                    await Clipboard.setStringAsync(selectedBrand.id);
-                }
-            } else {
-                await Clipboard.setStringAsync(selectedBrand.id);
-            }
-            Toaster.success("Brand ID copied!", "Share this with customer support if asked for");
-        } catch {
-            Toaster.error("Failed to copy Brand ID");
-        }
-    };
+    const menuTabButton = (props: any) =>
+        !xl ? (
+            <CoachmarkAnchor
+                id="guide-tour-menu-mobile"
+                shape="pill"
+                style={{ flex: 1 }}
+            >
+                <Pressable {...props} />
+            </CoachmarkAnchor>
+        ) : (
+            <Pressable {...props} style={{ flex: 1 }} />
+        );
 
     return (
         <Tabs
@@ -151,27 +115,13 @@ const TabLayout = () => {
                 name="explore-influencers"
                 options={{
                     title: xl ? "Influencer Spotlights" : "Spotlights",
+                    headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
                             icon={focused ? faHeartSolid : faHeart}
                             size={22}
                         />
-                    ),
-                    headerTitle() {
-                        return <Header />;
-                    },
-                    headerRight: () => (
-                        <View style={styles.headerRightRow}>
-                            <PremiumActionTag
-                                label="Influencers remaining"
-                                tooltip={"This means how many influencers you can unlock from the explore influencers page. Please upgrade if you have exhausted the limit here.\n\nLimit recharges every month depending on what plan you are on"}
-                                icon="star-four-points"
-                                variant="gold"
-                                count={influencerCredits}
-                            />
-                            <NotificationIcon />
-                        </View>
                     ),
                 }}
             />
@@ -199,9 +149,11 @@ const TabLayout = () => {
                     ),
                     title: "Messages",
                     headerTitleAlign: "left",
-                    headerRight: () => <View style={styles.headerRightRowSimple}>
-                        <NotificationIcon />
-                    </View>,
+                    headerRight: () => (
+                        <View style={styles.headerRightRowSimple}>
+                            <NotificationIcon />
+                        </View>
+                    ),
                 }}
             />
 
@@ -209,7 +161,7 @@ const TabLayout = () => {
                 name="discover"
                 options={{
                     title: xl ? "Discover Influencers" : "Discover",
-                    headerTitle: () => <DiscoverHeader />,
+                    headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
@@ -217,42 +169,13 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
-                    headerRight: () => <View style={styles.headerRightRowSimple}>
-                        <View style={styles.discoverTagsRow}>
-                            <PremiumActionTag
-                                label="Discovery remaining"
-                                tooltip={"Open deep statistics for any influencer on the discover page. Uses 1 coin each time you open a unique profile on the discover page.\n\nLimit recharges every month depending on what plan you are on"}
-                                icon="diamond-stone"
-                                variant="gold"
-                                count={discoverCoinsLeft}
-                            />
-                            <PremiumActionTag
-                                label="Invites remaining"
-                                tooltip={"We reach out to the influencer on your behalf and connect you directly. Uses 1 coin whenever you invite any influencer.\n\nLimit recharges every month depending on what plan you are on"}
-                                icon="lightning-bolt"
-                                variant="purple"
-                                count={connectionCreditsLeft}
-                            />
-                            <Pressable
-                                onPress={() => {
-                                    OpenFilterRightPanel.next();
-                                }}
-                                style={styles.filterButton}
-                            >
-                                <FontAwesomeIcon
-                                    color={Colors(theme).text}
-                                    icon={faFilter}
-                                    size={24}
-                                />
-                            </Pressable>
-                        </View>
-                    </View>,
                 }}
             />
             <Tabs.Screen
                 name="collaborations"
                 options={{
                     title: "Campaigns",
+                    headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
@@ -260,37 +183,16 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
-                    headerRight: () => <View style={styles.headerRightRowSimple}>
-                        <NotificationIcon />
-                    </View>,
+                    tabBarButton: campaignsTabButton,
                 }}
             />
             <Tabs.Screen
                 name="menu"
                 options={{
                     title: "My Brand",
+                    headerShown: false,
                     tabBarIcon: () => <ProfileIcon />,
-                    headerRight: () => (<View style={styles.menuHeaderRow}>
-                        {xl && <InfluencerConnects />}
-                        <Pressable
-                            style={styles.copyButton}
-                            onPress={() => {
-                                copyBrandId();
-                            }}
-                        >
-                            <FontAwesomeIcon icon={faCopy} size={20} color={Colors(theme).text} />
-                        </Pressable>
-                        {!xl && <Pressable style={styles.copyButton} onPress={() => router.push('/profile')}>
-                            <ImageComponent
-                                url={manager?.profileImage || ""}
-                                initials={manager?.name}
-                                shape="circle"
-                                size="small"
-                                altText="Image"
-                                style={styles.profileAvatar}
-                            />
-                        </Pressable>}
-                    </View>)
+                    tabBarButton: menuTabButton,
                 }}
             />
         </Tabs>

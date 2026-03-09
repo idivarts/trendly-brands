@@ -1,7 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import { Image, Pressable, StyleSheet } from "react-native";
+import { Image, StyleSheet } from "react-native";
 import React, { useMemo } from "react";
 
 import Colors from "@/shared-uis/constants/Colors";
@@ -12,14 +11,10 @@ import { View } from "../theme/Themed";
 
 const ProfileIcon = () => {
     const theme = useTheme();
-    const {
-        selectedBrand,
-    } = useBrandContext();
-    const router = useRouter();
+    const { selectedBrand } = useBrandContext();
     const styles = useMemo(() => useStyles(), []);
     return (
-        <Pressable onPress={() => router.push("/menu")}>
-            <View style={styles.wrapper}>
+        <View style={styles.wrapper}>
                 <FontAwesomeIcon
                     color={Colors(theme).primary}
                     icon={faCircleNotch}
@@ -31,8 +26,7 @@ const ProfileIcon = () => {
                     style={styles.avatar}
                 />
             </View>
-        </Pressable>
-    )
+    );
 };
 
 function useStyles() {

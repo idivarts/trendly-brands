@@ -7,7 +7,7 @@ import stylesFn from "@/styles/create-collaboration/AICampaignCreation.styles";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { resetAndNavigate } from "@/utils/router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -25,11 +25,10 @@ interface AICampaignCreationProps {
 }
 
 export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCreationProps) {
-    const router = useRouter();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = stylesFn(colors);
-    const { lg } = useBreakpoints();
+    const { lg, xl } = useBreakpoints();
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -59,6 +58,10 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
     const handleQuickAction = (actionPrompt: string) => {
         setPrompt(actionPrompt);
         // handleGenerate(actionPrompt);
+    };
+
+    const handleBack = () => {
+        resetAndNavigate("/discover");
     };
 
     const handleGenerate = async (text?: string) => {
@@ -127,17 +130,32 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                 ]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Skip Button */}
-                <Pressable
-                    onPress={onSkip}
-                    style={({ pressed }) => [
-                        styles.skipButton,
-                        pressed && styles.skipButtonPressed,
-                    ]}
-                >
-                    <Text style={styles.skipButtonText}>Skip</Text>
-                    <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} />
-                </Pressable>
+                {/* Top Row: Back (mobile only) + Skip */}
+                <View style={styles.topRow}>
+                    {!xl ? (
+                        <Pressable
+                            onPress={handleBack}
+                            style={({ pressed }) => [
+                                styles.backButton,
+                                pressed && styles.backButtonPressed,
+                            ]}
+                        >
+                            <Ionicons name="arrow-back" size={24} color={colors.text} />
+                        </Pressable>
+                    ) : (
+                        <View style={styles.topRowSpacer} />
+                    )}
+                    <Pressable
+                        onPress={onSkip}
+                        style={({ pressed }) => [
+                            styles.skipButton,
+                            pressed && styles.skipButtonPressed,
+                        ]}
+                    >
+                        <Text style={styles.skipButtonText}>Skip</Text>
+                        <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} />
+                    </Pressable>
+                </View>
 
                 {/* Header */}
                 <View style={styles.header}>

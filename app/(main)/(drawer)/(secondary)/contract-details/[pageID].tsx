@@ -2,9 +2,10 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
-import { View } from "@/components/theme/Themed";
-import ScreenHeader from "@/components/ui/screen-header";
+import { Text, View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
 import Colors from "@/shared-uis/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -41,6 +42,14 @@ const styles = StyleSheet.create({
     viewProfileButton: {
         marginHorizontal: 16,
     },
+    footer: {
+        paddingVertical: 16,
+        alignItems: "center",
+    },
+    footerText: {
+        fontSize: 12,
+        opacity: 0.7,
+    },
 });
 
 interface ICollaborationCard extends IContracts {
@@ -51,6 +60,8 @@ interface ICollaborationCard extends IContracts {
 
 const ContractScreen = () => {
     const theme = useTheme();
+    const colors = Colors(theme);
+    const { xl } = useBreakpoints();
     const [isVisible, setIsVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -133,14 +144,27 @@ const ContractScreen = () => {
         );
     }
 
+    const contractSubtitle =
+        contract.collaborationData?.name ||
+        contract.userData?.name ||
+        "Contract";
+
     return (
         <AppLayout withWebPadding={false}>
-            <ScreenHeader
+            <PageHeader
                 title="Contract Details"
-                rightAction
-                rightActionButton={
-                    <Button mode="outlined" style={styles.viewProfileButton} onPress={() => setOpenProfileModal(true)}>View Profile</Button>
-                }
+                subtitle={contractSubtitle}
+                showBackButton
+                actionButtons={[
+                    <Button
+                        key="view-profile"
+                        mode="outlined"
+                        style={styles.viewProfileButton}
+                        onPress={() => setOpenProfileModal(true)}
+                    >
+                        View Profile
+                    </Button>,
+                ]}
             />
             <ContractDetailsContent
                 applicationData={contract?.applications[0]}
@@ -149,6 +173,13 @@ const ContractScreen = () => {
                 contractData={contract}
                 refreshData={fetchProposals}
             />
+            {xl && (
+                <View style={styles.footer}>
+                    <Text style={[styles.footerText, { color: colors.text }]}>
+                        © {new Date().getFullYear()} Trendly Influencer Management Platform
+                    </Text>
+                </View>
+            )}
             <BottomSheetScrollContainer
                 isVisible={openProfileModal}
                 snapPointsRange={["90%", "90%"]}

@@ -19,6 +19,23 @@ const stylesFn = (colors: any) =>
             paddingHorizontal: 40,
         },
 
+        // Top Row (Back + Skip)
+        topRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        backButton: {
+            padding: 8,
+            marginLeft: -8,
+        },
+        backButtonPressed: {
+            opacity: 0.7,
+        },
+        topRowSpacer: {
+            flex: 1,
+        },
+
         // Skip Button
         skipButton: {
             flexDirection: "row",

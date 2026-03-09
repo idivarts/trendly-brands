@@ -4,6 +4,7 @@ import {
 } from "@/components/discover/discovery-context";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -18,9 +19,7 @@ import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -28,7 +27,9 @@ import {
     ListRenderItemInfo,
     Platform,
     StyleSheet,
-    Text
+    Text,
+    View as RNView,
+    type ViewStyle,
 } from "react-native";
 import {
     Button,
@@ -42,6 +43,7 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import type { InfluencerItem } from "./discover-types";
+import NoDiscoveryCreditModal from "./NoDiscoveryCreditModal";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
@@ -67,13 +69,6 @@ import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 // 	LastUpdateTime int64 `db:"last_update_time" bigquery:"last_update_time" json:"last_update_time" firestore:"last_update_time"`
 // }
 // Types
-
-const sortOptions = [
-    { label: "Followers", value: "followers" },
-    { label: "Engagements", value: "engagement" },
-    { label: "ER %", value: "engagement_rate" },
-    { label: "Views", value: "views" },
-];
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
@@ -167,7 +162,10 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         rightPanel,
         setSelectedDb,
         isCollapsed,
-        showTopPanel,
+        setTotalCount,
+        setCurrentSort,
+        currentSort,
+        pageSortCommunication,
     } = useDiscovery();
     const { manager } = useAuthContext();
     const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
@@ -176,6 +174,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
+    const [adminMenuVisible, setAdminMenuVisible] = useState(false);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
     const [isRescraping, setIsRescraping] = useState(false);
@@ -194,6 +193,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         null
     );
     const { openModal } = useConfirmationModel();
+    const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
     const { xl } = useBreakpoints();
 
@@ -204,15 +204,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             data &&
             !selectedBrand?.discoveredInfluencers?.includes(data.id)
         ) {
-            openModal({
-                title: "No Discovery Credit",
-                description:
-                    "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
-                confirmText: "Contact Support",
-                confirmAction: () => {
-                    Linking.openURL("mailto:support@idiv.in");
-                },
-            });
+            setShowNoCreditModal(true);
             return;
         }
 
@@ -249,45 +241,40 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         if (influencerMatch) {
             openProfile(influencerMatch);
             setAutoOpenedId(initialInfluencerId);
-        } else if (!loading && data.length > 0) {
+        } else if (!loading && data.length > 0 && selectedBrand?.id) {
             (async () => {
                 try {
-                    const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
-                    const docSnap = await getDoc(docRef);
+                    const res = await HttpWrapper.fetch(
+                        `/discovery/brands/${selectedBrand.id}/influencers/${initialInfluencerId}`,
+                        { method: "GET" }
+                    );
+                    const body = await res.json();
 
-                    if (docSnap.exists()) {
-                        const body = docSnap.data();
-
-                        if (body?.id) {
-                            const influencerItem: InfluencerItem = {
-                                id: body.id,
-                                name: body.name || "Unknown",
-                                username: body.username || "unknown",
-                                profile_pic: body.profile_pic || "",
-                                follower_count: body.follower_count || 0,
-                                engagement_count: body.engagement_count || 0,
-                                views_count: body.views_count || 0,
-                                engagement_rate: body.engagement_rate || 0,
-                            };
-                            openProfile(influencerItem);
-                            setAutoOpenedId(initialInfluencerId);
-                        }
+                    if (body?.id) {
+                        const influencerItem: InfluencerItem = {
+                            id: body.id,
+                            name: body.name || "Unknown",
+                            username: body.username || "unknown",
+                            profile_pic: body.profile_pic || "",
+                            follower_count: body.follower_count || 0,
+                            engagement_count: body.engagement_count || 0,
+                            views_count: body.views_count || 0,
+                            engagement_rate: body.engagement_rate || 0,
+                        };
+                        openProfile(influencerItem);
+                        setAutoOpenedId(initialInfluencerId);
                     }
                 } catch (error) {
                     console.error("[DiscoverInfluencer] Error fetching influencer:", error);
                 }
             })();
         }
-    }, [initialInfluencerId, data, loading, openProfile]);
+    }, [initialInfluencerId, data, loading, openProfile, selectedBrand?.id]);
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(20);
     const [totalResults, setTotalResults] = useState<number>(0);
 
-    const [sortMenuVisible, setSortMenuVisible] = useState(false);
-    const [currentSort, setCurrentSort] = useState<string>("followers");
-    const [statusMenuVisible, setStatusMenuVisible] = useState(false);
-    const [currentStatus, setCurrentStatus] = useState<string>("pending");
     const { discoverCommunication } = useDiscovery();
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
@@ -303,24 +290,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         return result;
     }, []);
 
-    const statusOptions = [
-        { label: "Pending", value: "pending" },
-        { label: "Accepted", value: "accepted" },
-        { label: "Denied", value: "denied" },
-    ];
-
     discoverCommunication.current = useCallback(
         ({ loading, data, page, sort }: DiscoverCommunication) => {
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
+            setTotalCount(
+                nextData.length < 15 ? String(nextData.length) : "500+"
+            );
             if (!xl) {
                 setRightPanel(false);
             }
             if (page) setCurrentPage(page);
-            if (sort) setCurrentSort(sort);
+            if (sort) {
+                setCurrentSort(sort);
+            }
         },
-        [dedupeById, xl, setRightPanel]
+        [dedupeById, xl, setRightPanel, setTotalCount, setCurrentSort]
     );
 
     // Trigger first discover API call when we have a brand. Run when filters are set OR when
@@ -424,26 +410,38 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     };
 
     const renderItem = useCallback(
-        ({ item }: ListRenderItemInfo<InfluencerItem>) => {
+        ({ item, index }: ListRenderItemInfo<InfluencerItem>) => {
+            const cardStyle: ViewStyle = {
+                width: (columns === 2 ? "50%" : "100%") as ViewStyle["width"],
+                paddingHorizontal: isCollapsed ? 12 : 8,
+                paddingVertical: isCollapsed ? 12 : 8,
+            };
+            const card = (
+                <InfluencerCard
+                    item={item}
+                    isCollapsed={isCollapsed}
+                    onPress={() => openProfile(item)}
+                    openModal={openModal}
+                    isSelected={selectedIds.includes(item.id)}
+                    onToggleSelect={() => toggleSelect(item.id)}
+                    isStatusCard={isStatusCard}
+                />
+            );
+            if (index === 0) {
+                return (
+                    <CoachmarkAnchor
+                        id="guide-tour-influencer-card"
+                        shape="rect"
+                        style={cardStyle}
+                    >
+                        {card}
+                    </CoachmarkAnchor>
+                );
+            }
             return (
-                <View
-                    style={{
-                        width: columns === 2 ? "50%" : "100%",
-                        paddingHorizontal: isCollapsed ? 12 : 8,
-                        paddingVertical: isCollapsed ? 12 : 8,
-
-                    }}
-                >
-                    <InfluencerCard
-                        item={item}
-                        isCollapsed={isCollapsed}
-                        onPress={() => openProfile(item)}
-                        openModal={openModal}
-                        isSelected={selectedIds.includes(item.id)}
-                        onToggleSelect={() => toggleSelect(item.id)}
-                        isStatusCard={isStatusCard}
-                    />
-                </View>
+                <RNView style={cardStyle}>
+                    {card}
+                </RNView>
             );
         },
         [isCollapsed, openModal, openProfile, selectedIds]
@@ -478,7 +476,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         return pages;
     }, [currentPage, pageCount]);
 
-    const { pageSortCommunication } = useDiscovery();
     const onSelectPage = useCallback(
         (p: number) => {
             if (p < 1 || p > pageCount || p === currentPage) return;
@@ -493,28 +490,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             });
         },
         [currentPage, pageCount, xl, setRightPanel]
-    );
-
-    const onSelectSort = useCallback((val: string) => {
-        setCurrentSort(val);
-        setSortMenuVisible(false);
-        // Close right panel on mobile when changing sort
-        if (!xl) {
-            setRightPanel(false);
-        }
-        pageSortCommunication.current?.({
-            page: currentPage,
-            sort: val,
-        });
-    }, [xl, setRightPanel, currentPage]);
-
-    const onSelectStatus = useCallback(
-        (val: string) => {
-            setCurrentStatus(val);
-            setStatusMenuVisible(false);
-            onStatusChange?.(val);
-        },
-        [onStatusChange]
     );
 
     if (loading && data.length === 0) {
@@ -568,200 +543,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 !xl && rightPanel && { display: "none" },
             ]}
         >
-            {showTopPanel !== false && (
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderBottomEndRadius: 12,
-                        borderBottomStartRadius: 12,
-                        zIndex: 999,
-                        width: isCollapsed ? "90%" : undefined,
-                    }}
-                >
-                    {xl ? (
-                        <>
-                            <View style={{ width: 80 }} />
-                            {/* Centered Total on desktop */}
-                            <View
-                                style={{
-                                    position: "absolute",
-                                    left: 0,
-                                    right: 0,
-                                    alignItems: "center",
-                                }}
-                            >
-                                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                    <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
-                                        Total
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            opacity: 0.8,
-                                            color: Colors(theme).primary,
-                                            fontWeight: "500",
-                                            marginLeft: 4,
-                                        }}
-                                    >
-                                        {data.length < 15 ? data.length : "500+"} Results found
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Right: keep existing right-side controls */}
-                            {advanceFilter ? (
-                                <Button
-                                    mode="contained"
-                                    onPress={() => router.push("/discover")}
-                                    style={{
-                                        marginLeft: "auto",
-                                        backgroundColor: Colors(theme).aliceBlue,
-                                    }}
-                                    textColor={Colors(theme).black}
-                                    icon={"filter"}
-                                >
-                                    Advanced Filters
-                                </Button>
-                            ) : statusFilter ? (
-                                <Menu
-                                    visible={statusMenuVisible}
-                                    onDismiss={() => setStatusMenuVisible(false)}
-                                    anchor={
-                                        <Chip
-                                            compact
-                                            onPress={() => setStatusMenuVisible(true)}
-                                            icon="filter"
-                                            style={{ marginLeft: "auto" }}
-                                        >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                {statusOptions.find((o) => o.value === currentStatus)
-                                                    ?.label || "Status"}
-                                            </Text>
-                                        </Chip>
-                                    }
-                                    style={{ backgroundColor: Colors(theme).background }}
-                                >
-                                    {statusOptions.map((opt) => (
-                                        <Menu.Item
-                                            key={opt.value}
-                                            onPress={() => onSelectStatus(opt.value)}
-                                            title={opt.label}
-                                        />
-                                    ))}
-                                </Menu>
-                            ) : (
-                                <Menu
-                                    visible={sortMenuVisible}
-                                    onDismiss={() => setSortMenuVisible(false)}
-                                    anchor={
-                                        <Chip
-                                            compact
-                                            onPress={() => setSortMenuVisible(true)}
-                                            icon="sort"
-                                            style={{ marginLeft: "auto" }}
-                                        >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                {sortOptions.find((o) => o.value === currentSort)?.label ||
-                                                    "Relevance"}
-                                            </Text>
-                                        </Chip>
-                                    }
-                                    style={{ backgroundColor: Colors(theme).background }}
-                                >
-                                    {sortOptions.map((opt) => (
-                                        <Menu.Item
-                                            key={opt.value}
-                                            onPress={() => onSelectSort(opt.value)}
-                                            title={opt.label}
-                                        />
-                                    ))}
-                                </Menu>
-                            )}
-                        </>
-                    ) : (
-                        // Mobile layout: Total on left, sort/filter on right
-                        <>
-                            <View>
-                                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                    <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
-                                        Total
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            opacity: 0.8,
-                                            color: Colors(theme).primary,
-                                            fontWeight: "500",
-                                            marginLeft: 6,
-                                        }}
-                                    >
-                                        {data.length < 15 ? data.length : "500+"}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View>
-                                {advanceFilter ? (
-                                    <Button
-                                        mode="contained"
-                                        onPress={() => router.push("/discover")}
-                                        style={{ backgroundColor: Colors(theme).aliceBlue }}
-                                        textColor={Colors(theme).black}
-                                        icon={"filter"}
-                                    >
-                                        Advanced Filters
-                                    </Button>
-                                ) : statusFilter ? (
-                                    <Menu
-                                        visible={statusMenuVisible}
-                                        onDismiss={() => setStatusMenuVisible(false)}
-                                        anchor={
-                                            <Chip compact onPress={() => setStatusMenuVisible(true)} icon="filter">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                    {statusOptions.find((o) => o.value === currentStatus)?.label || "Status"}
-                                                </Text>
-                                            </Chip>
-                                        }
-                                        style={{ backgroundColor: Colors(theme).background }}
-                                    >
-                                        {statusOptions.map((opt) => (
-                                            <Menu.Item key={opt.value} onPress={() => onSelectStatus(opt.value)} title={opt.label} />
-                                        ))}
-                                    </Menu>
-                                ) : (
-                                    <Menu
-                                        visible={sortMenuVisible}
-                                        onDismiss={() => setSortMenuVisible(false)}
-                                        anchor={
-                                            <Chip compact onPress={() => setSortMenuVisible(true)} icon="sort">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                    {sortOptions.find((o) => o.value === currentSort)?.label || "Relevance"}
-                                                </Text>
-                                            </Chip>
-                                        }
-                                        style={{ backgroundColor: Colors(theme).background }}
-                                    >
-                                        {sortOptions.map((opt) => (
-                                            <Menu.Item key={opt.value} onPress={() => onSelectSort(opt.value)} title={opt.label} />
-                                        ))}
-                                    </Menu>
-                                )}
-                            </View>
-                        </>
-                    )}
-                </View>
-            )}
-
             <View
                 style={{
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" ? 120 : 16,
-
+                    paddingHorizontal: Platform.OS === "web" && xl ? 120 : 16,
                 }}
             >
                 <FlatList
@@ -968,25 +754,37 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerIds={[selectedInfluencer.id]}
                                             influencerName={selectedInfluencer.name}
                                         />
-                                        {manager?.isAdmin ? (
-                                            <>
-                                                <Button
-                                                    mode="contained"
-                                                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
-                                                    icon="pencil"
-                                                >
-                                                    Edit Metrics
-                                                </Button>
-                                                <Button
-                                                    mode="contained"
-                                                    onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
-                                                    loading={isRescraping}
+                                        {manager?.isAdmin && (
+                                            <Menu
+                                                visible={adminMenuVisible}
+                                                onDismiss={() => setAdminMenuVisible(false)}
+                                                anchor={
+                                                    <IconButton
+                                                        icon="dots-vertical"
+                                                        onPress={() => setAdminMenuVisible(true)}
+                                                        accessibilityLabel="Admin actions"
+                                                    />
+                                                }
+                                                contentStyle={{ zIndex: 99999, elevation: 99999 }}
+                                            >
+                                                <Menu.Item
+                                                    onPress={() => {
+                                                        setAdminMenuVisible(false);
+                                                        trendlyAnalyticsRef.current?.openEditModal();
+                                                    }}
+                                                    title="Edit Metrics"
+                                                    leadingIcon="pencil"
+                                                />
+                                                <Menu.Item
+                                                    onPress={() => {
+                                                        setAdminMenuVisible(false);
+                                                        trendlyAnalyticsRef.current?.handleRescrape();
+                                                    }}
+                                                    title="Re-scrape"
                                                     disabled={isRescraping}
-                                                >
-                                                    Re-scrape
-                                                </Button>
-                                            </>
-                                        ) : null}
+                                                />
+                                            </Menu>
+                                        )}
                                     </View>
                                 }
                                 FireStoreDB={FirestoreDB}
@@ -1008,6 +806,10 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     )}
                 </BottomSheetScrollContainer>
             </View>
+            <NoDiscoveryCreditModal
+                visible={showNoCreditModal}
+                onClose={() => setShowNoCreditModal(false)}
+            />
         </View>
     );
 };

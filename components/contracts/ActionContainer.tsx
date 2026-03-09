@@ -17,8 +17,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import React, { FC, useEffect, useState } from "react";
-import { Platform } from "react-native";
+import React, { FC, useEffect, useMemo, useState } from "react";
+import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 
@@ -27,6 +27,7 @@ interface ActionContainerProps {
     refreshData: () => void;
     feedbackModalVisible: () => void;
     userData: IUsers;
+    slot?: "all" | "buttons" | "feedback-and-info";
 }
 
 const ActionContainer: FC<ActionContainerProps> = ({
@@ -34,6 +35,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     refreshData,
     feedbackModalVisible,
     userData,
+    slot = "all",
 }) => {
     const theme = useTheme();
     const [manager, setManager] = useState<IManagers>();
@@ -96,33 +98,22 @@ const ActionContainer: FC<ActionContainerProps> = ({
         fetchManager();
     }, [contract.feedbackFromBrand?.managerId]);
 
-    const { openModal } = useConfirmationModel()
+    const { openModal } = useConfirmationModel();
+    const colors = Colors(theme);
+    const styles = useMemo(() => createStyles(colors, contract.status), [colors, contract.status]);
+
+    const showButtons = slot === "all" || slot === "buttons";
+    const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
 
     return (
-        <View
-            style={{
-                width: "100%",
-                flexDirection: "column",
-                gap: 16,
-                backgroundColor: "transparent",
-            }}
-        >
-            {contract.status < 2 && (
-                <View
-                    style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        gap: 16,
-                        backgroundColor: "transparent",
-                    }}
-                >
+        <View style={styles.root}>
+            {showButtons && contract.status < 2 && (
+                <View style={styles.buttonsRow}>
                     {contract.status === 0 && (
                         <>
                             <Button
                                 mode="outlined"
-                                style={{
-                                    flex: 1,
-                                }}
+                                style={styles.buttonFlex}
                                 onPress={() => {
                                     HttpWrapper.fetch(`/api/collabs/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
                                         method: "POST",
@@ -135,9 +126,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             </Button>
                             <Button
                                 mode="contained"
-                                style={{
-                                    flex: 1,
-                                }}
+                                style={styles.buttonFlex}
                                 onPress={() => {
                                     openModal({
                                         confirmAction: startContract,
@@ -155,9 +144,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         <>
                             <Button
                                 mode="contained-tonal"
-                                style={{
-                                    flex: 1,
-                                }}
+                                style={styles.buttonFlex}
                                 onPress={() => {
                                     openModal({
                                         confirmAction: feedbackModalVisible,
@@ -171,9 +158,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             </Button>
                             <Button
                                 mode="contained"
-                                style={{
-                                    flex: 1,
-                                }}
+                                style={styles.buttonFlex}
                                 onPress={async () => {
 
                                     if (Platform.OS == "web")
@@ -190,158 +175,139 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             </Button>
                         </>
                     )}
-                    {/* {contract.status === 2 && !contract.feedbackFromBrand && (
-            <>
-              <Button
-                mode="contained"
-                style={{
-                  flex: 1,
-                }}
-                onPress={feedbackModalVisible}
-              >
-                Give Feedback
-              </Button>
-            </>
-          )} */}
                 </View>
             )}
-            {contract.feedbackFromBrand && (
-                <View
-                    style={{
-                        width: "100%",
-                        borderWidth: 0.3,
-                        padding: 10,
-                        borderRadius: 10,
-                        gap: 10,
-                        borderColor: Colors(theme).gray300,
-                    }}
-                >
-                    <View style={{ flexDirection: "row" }}>
+            {showFeedbackAndInfo && (
+                <View style={styles.infoBox}>
+                    <FontAwesomeIcon icon={faCircleInfo} size={20} />
+                    <Text style={styles.infoText}>
+                        {contract.status === 0
+                            ? "Please make sure to use this chat to first understand the the influencer. Post that, you can start your collaboration here"
+                            : contract.status === 1
+                                ? "Please note, if your collaboration is done, we would need you to close the collaboration here. Having open collaborations idle for a long time can end up reducing the rating"
+                                : contract.status === 2
+                                    ? "Feedbacks are important for us. Our platform works on what people give feedback to each other. You see that other persons feedback only if you give your feedback"
+                                    : "You can create new collaboration and invite user to collaboration"}
+                    </Text>
+                </View>
+            )}
+            {showFeedbackAndInfo && (contract.feedbackFromBrand || contract.feedbackFromInfluencer) && (
+                <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
+            )}
+            {showFeedbackAndInfo && contract.feedbackFromBrand && (
+                <View style={styles.feedbackCard}>
+                    <View style={styles.starsRow}>
                         {renderStars(contract.feedbackFromBrand.ratings || 0)}
                     </View>
-                    <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                            flexGrow: 1,
-                        }}
-                    >
+                    <View style={styles.feedbackInner}>
                         <ImageComponent
                             url={manager?.profileImage || ""}
                             altText={manager?.name || ""}
                             initials={manager?.name || ""}
                             shape="circle"
                             size="small"
-                            style={{ width: 40, height: 40, borderRadius: 20 }}
+                            style={styles.avatar}
                         />
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    fontWeight: "bold",
-                                    color: Colors(theme).text,
-                                }}
-                            >
+                        <View style={styles.feedbackTextWrap}>
+                            <Text style={styles.feedbackLabel}>
                                 From Brand ({manager?.name})
                             </Text>
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    flexWrap: "wrap",
-                                    overflow: "hidden",
-                                    lineHeight: 22,
-                                    color: Colors(theme).text,
-                                }}
-                            >
+                            <Text style={styles.feedbackReview}>
                                 {contract.feedbackFromBrand.feedbackReview}
                             </Text>
                         </View>
                     </View>
                 </View>
             )}
-            {contract.feedbackFromInfluencer && (
-                <View
-                    style={{
-                        borderWidth: 0.3,
-                        padding: 10,
-                        borderRadius: 10,
-                        gap: 10,
-                        borderColor: Colors(theme).gray300,
-                    }}
-                >
-                    <View style={{ flexDirection: "row" }}>
+            {showFeedbackAndInfo && contract.feedbackFromInfluencer && (
+                <View style={styles.feedbackCard}>
+                    <View style={styles.starsRow}>
                         {renderStars(contract.feedbackFromInfluencer.ratings || 0)}
                     </View>
-                    <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                            flexGrow: 1,
-                        }}
-                    >
+                    <View style={styles.feedbackInner}>
                         <ImageComponent
                             url={userData.profileImage || ""}
                             altText={userData.name}
                             initials={userData.name}
                             shape="circle"
                             size="small"
-                            style={{ width: 40, height: 40, borderRadius: 20 }}
+                            style={styles.avatar}
                         />
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    fontWeight: "bold",
-                                    color: Colors(theme).text,
-                                }}
-                            >
+                        <View style={styles.feedbackTextWrap}>
+                            <Text style={styles.feedbackLabel}>
                                 From Influencer ({userData.name})
                             </Text>
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    flexWrap: "wrap",
-                                    overflow: "hidden",
-                                    lineHeight: 22,
-                                    color: Colors(theme).text,
-                                }}
-                            >
+                            <Text style={styles.feedbackReview}>
                                 {contract.feedbackFromInfluencer?.feedbackReview}
                             </Text>
                         </View>
                     </View>
                 </View>
             )}
-            <View
-                style={{
-                    backgroundColor:
-                        contract.status === 0 ||
-                            contract.status === 1 ||
-                            contract.status === 2
-                            ? Colors(theme).gold
-                            : Colors(theme).green,
-                    padding: 16,
-                    borderRadius: 5,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                }}
-            >
-                <FontAwesomeIcon icon={faCircleInfo} size={20} />
-                <Text style={{ fontSize: 16, width: "95%" }}>
-                    {contract.status === 0
-                        ? "Please make sure to use this chat to first understand the the influencer. Post that, you can start your collaboration here"
-                        : contract.status === 1
-                            ? "Please note, if your collaboration is done, we would need you to close the collaboration here. Having open collaborations idle for a long time can end up reducing the rating"
-                            : contract.status === 2
-                                ? "Feedbacks are important for us. Our platform works on what people give feedback to each other. You see that other persons feedback only if you give your feedback"
-                                : "You can create new collaboration and invite user to collaboration"}
-                </Text>
-            </View>
         </View>
     );
-};
+}
+
+function createStyles(colors: ReturnType<typeof Colors>, status: number) {
+    const infoBoxBg = status === 0 || status === 1 || status === 2 ? colors.gold : colors.green;
+    return StyleSheet.create({
+        root: {
+            width: "100%",
+            flexDirection: "column",
+            gap: 16,
+            backgroundColor: "transparent",
+        },
+        buttonsRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 16,
+            backgroundColor: "transparent",
+        },
+        buttonFlex: { flex: 1 },
+        reviewsHeading: {
+            fontSize: 16,
+            fontWeight: "bold",
+            color: colors.text,
+        },
+        feedbackCard: {
+            width: "100%",
+            borderWidth: 0.3,
+            padding: 10,
+            borderRadius: 10,
+            gap: 10,
+            borderColor: colors.gray300,
+        },
+        starsRow: { flexDirection: "row" },
+        feedbackInner: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flexGrow: 1,
+        },
+        avatar: { width: 40, height: 40, borderRadius: 20 },
+        feedbackTextWrap: { flex: 1 },
+        feedbackLabel: {
+            fontSize: 16,
+            fontWeight: "bold",
+            color: colors.text,
+        },
+        feedbackReview: {
+            fontSize: 16,
+            flexWrap: "wrap",
+            overflow: "hidden",
+            lineHeight: 22,
+            color: colors.text,
+        },
+        infoBox: {
+            backgroundColor: infoBoxBg,
+            padding: 16,
+            borderRadius: 5,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+        },
+        infoText: { fontSize: 16, width: "95%" },
+    });
+}
 
 export default ActionContainer;
