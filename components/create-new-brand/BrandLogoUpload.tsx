@@ -1,4 +1,5 @@
 import { Text } from "@/components/theme/Themed";
+import { useBreakpoints } from "@/hooks";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { imageUrl } from "@/shared-uis/utils/url";
@@ -30,7 +31,8 @@ const BrandLogoUpload: React.FC<BrandLogoUploadProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const { xl } = useBreakpoints();
+    const styles = useMemo(() => createStyles(colors, xl), [colors, xl]);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const triggerUpload = () => {
@@ -135,16 +137,18 @@ const BrandLogoUpload: React.FC<BrandLogoUploadProps> = ({
     );
 };
 
-function createStyles(colors: ReturnType<typeof Colors>) {
+function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         wrapper: {
             width: "100%",
             position: "relative",
+            alignItems: xl ? undefined : "center",
         },
         dashedBox: {
-            width: "100%",
+            width: xl ? "100%" : 240,
             aspectRatio: 1,
             maxWidth: 320,
+            alignSelf: xl ? undefined : "center",
             borderWidth: 2,
             borderStyle: "dashed",
             borderColor: colors.formBorder,
@@ -187,8 +191,8 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         cameraButton: {
             position: "absolute",
-            right: 16,
-            bottom: 16,
+            right: 8,
+            bottom: 8,
             width: 44,
             height: 44,
             borderRadius: 22,

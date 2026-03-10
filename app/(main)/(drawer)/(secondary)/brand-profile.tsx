@@ -77,6 +77,7 @@ const BrandProfileScreen = () => {
             <PageHeader
                 title="Brand Profile"
                 subtitle={selectedBrand?.name}
+                mobileActions="all"
                 actionButtons={[
                     <Button
                         key="save"

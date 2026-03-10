@@ -9,8 +9,8 @@ import { Brand } from "@/types/Brand";
 import {
     faPlus
 } from "@fortawesome/free-solid-svg-icons";
-import { DrawerActions, useTheme } from "@react-navigation/native";
-import { useNavigation, useRouter } from "expo-router";
+import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { Platform, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BrandActionItem from "./BrandActionItem";
@@ -20,7 +20,6 @@ import DrawerMenuContentWeb from "./DrawerMenuContentWeb";
 interface DrawerMenuContentProps { }
 
 const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
-    const navigation = useNavigation();
     const router = useRouter();
     const { xl } = useBreakpoints()
     const { bottom } = useSafeAreaInsets();
@@ -123,7 +122,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
                         router.push({
                             pathname: "/onboarding-your-brand",
                         });
-                        navigation.dispatch(DrawerActions.closeDrawer());
+                        OpenDrawerSubject.next(false);
                     }}
                     title="Create New Brand"
                     removeTopBorder={true}
@@ -144,7 +143,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
                         router.push({
                             pathname: "/profile",
                         });
-                        navigation.dispatch(DrawerActions.closeDrawer());
+                        OpenDrawerSubject.next(false);
                     }}
                     title={manager?.name || "My Profile"}
                     removeTopBorder={true}

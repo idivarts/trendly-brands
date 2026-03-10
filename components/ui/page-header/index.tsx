@@ -37,7 +37,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     const router = useRouter();
     const nav = useMyNavigation();
     const insets = useSafeAreaInsets();
-    const styles = useStyles(colors, insets.top);
+    const styles = useStyles(colors, insets.top, xl);
 
     const handleBack = () => {
         if (onBackPress) {
@@ -87,7 +87,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>, topInset: number) {
+function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: boolean) {
     return useMemo(
         () =>
             StyleSheet.create({
@@ -95,7 +95,7 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number) {
                     flexDirection: "row",
                     alignItems: "center",
                     paddingHorizontal: 16,
-                    paddingTop: 12 + topInset,
+                    paddingTop: xl ? 12 + topInset : topInset,
                     paddingBottom: 12,
                     borderBottomWidth: 1,
                     borderBottomColor: colors.border,
@@ -129,7 +129,7 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number) {
                     flexShrink: 0,
                 },
             }),
-        [colors, topInset]
+        [colors, topInset, xl]
     );
 }
 
