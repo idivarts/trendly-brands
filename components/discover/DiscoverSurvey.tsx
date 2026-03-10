@@ -207,6 +207,14 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
     const selectedNiches = (answers.selectedNiches || []) as string[];
     const nicheOtherSelections = selectedNiches.filter((n) => !topNiches.includes(n));
 
+    // Other niches list for the sheet: search results minus top niches so we don't duplicate
+    const nicheSheetOptions = useMemo(
+        () => nicheSearchResults.filter((n) => !topNiches.includes(n)),
+        [nicheSearchResults, topNiches]
+    );
+
+    const nicheSheetSnapPoints = useMemo(() => ["50%", "75%", "100%"], []);
+
     const selectedLocations = (answers.selectedLocations || []) as string[];
     const locationOtherCities = selectedLocations.filter((c) => !POPULAR_CITIES.includes(c));
     const locationSheetCities = useMemo(
@@ -235,24 +243,21 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
         setNicheOthersSheetVisible(false);
     };
 
-    // Debounced search for niche Others sheet
+    // Debounced search for niche Others sheet + load initial list when sheet opens
     useEffect(() => {
         if (!nicheOthersSheetVisible) return;
-        if (!nicheSearchText.trim()) {
-            setNicheSearchResults([]);
-            return;
-        }
+        const query = nicheSearchText.trim();
         const t = setTimeout(async () => {
             setNicheSearchLoading(true);
             try {
-                const results = await searchNiches(nicheSearchText.trim());
+                const results = await searchNiches(query || "");
                 setNicheSearchResults(results.map((item) => item.niche));
             } catch {
                 setNicheSearchResults([]);
             } finally {
                 setNicheSearchLoading(false);
             }
-        }, 300);
+        }, query ? 300 : 0);
         return () => clearTimeout(t);
     }, [nicheOthersSheetVisible, nicheSearchText, searchNiches]);
 
@@ -335,8 +340,8 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                     }}
                                     useBottomSheetView={false}
                                     enablePanDownToClose
-                                    index={2}
-                                    snapPoints={["50%", "75%", "100%"]}
+                                    index={0}
+                                    snapPoints={nicheSheetSnapPoints}
                                     topInset={insets.top}
                                     backgroundStyle={{
                                         backgroundColor: Colors(theme).background,
@@ -369,41 +374,53 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                                 style={styles.locationSheetList}
                                                 keyboardShouldPersistTaps="handled"
                                             >
-                                                {nicheSearchResults.map((niche) => {
-                                                    const isSelected = selectedNiches.includes(niche);
-                                                    return (
-                                                        <Pressable
-                                                            key={niche}
-                                                            style={[
-                                                                styles.locationSheetItem,
-                                                                isSelected && {
-                                                                    backgroundColor: primaryColor,
-                                                                },
-                                                            ]}
-                                                            onPress={() => handleNicheOtherSelect(niche)}
-                                                        >
-                                                            <Text
-                                                                style={[
-                                                                    styles.locationSheetItemText,
-                                                                    {
-                                                                        color: isSelected
-                                                                            ? colors.white
-                                                                            : Colors(theme).text,
-                                                                    },
-                                                                ]}
-                                                            >
-                                                                {niche}
-                                                            </Text>
-                                                            {isSelected && (
-                                                                <Ionicons
-                                                                    name="checkmark"
-                                                                    size={20}
-                                                                    color={colors.white}
-                                                                />
-                                                            )}
-                                                        </Pressable>
-                                                    );
-                                                })}
+                                                {nicheSheetOptions.length === 0 ? (
+                                                    <View style={{ padding: 24, alignItems: "center" }}>
+                                                        <Text style={{ color: Colors(theme).textSecondary, textAlign: "center" }}>
+                                                            {nicheSearchText.trim()
+                                                                ? "No niches found. Try a different search."
+                                                                : "Loading other niches…"}
+                                                        </Text>
+                                                    </View>
+                                                ) : (
+                                                    <>
+                                                        {nicheSheetOptions.map((niche) => {
+                                                            const isSelected = selectedNiches.includes(niche);
+                                                            return (
+                                                                <Pressable
+                                                                    key={niche}
+                                                                    style={[
+                                                                        styles.locationSheetItem,
+                                                                        isSelected && {
+                                                                            backgroundColor: primaryColor,
+                                                                        },
+                                                                    ]}
+                                                                    onPress={() => handleNicheOtherSelect(niche)}
+                                                                >
+                                                                    <Text
+                                                                        style={[
+                                                                            styles.locationSheetItemText,
+                                                                            {
+                                                                                color: isSelected
+                                                                                    ? colors.white
+                                                                                    : Colors(theme).text,
+                                                                            },
+                                                                        ]}
+                                                                    >
+                                                                        {niche}
+                                                                    </Text>
+                                                                    {isSelected && (
+                                                                        <Ionicons
+                                                                            name="checkmark"
+                                                                            size={20}
+                                                                            color={colors.white}
+                                                                        />
+                                                                    )}
+                                                                </Pressable>
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
                                             </BottomSheetScrollView>
                                         )}
                                     </View>
@@ -878,18 +895,17 @@ const createDiscoverSurveyStyles = (colors: ReturnType<typeof Colors>) =>
 
     },
     singleSelectOption: {
-        backgroundColor: colors.surveyBgSubtle,
+        backgroundColor: colors.background,
         borderRadius: 12,
         padding: 16,
-        borderWidth: 2,
-        borderColor: colors.transparent,
+        borderWidth: 1,
+        borderColor: colors.surveyOutlineLight,
     },
     radioContainer: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        backgroundColor: colors.surveyBgSubtle,
-
+        backgroundColor: "transparent",
     },
     radioOuter: {
         width: 20,
@@ -908,6 +924,7 @@ const createDiscoverSurveyStyles = (colors: ReturnType<typeof Colors>) =>
     optionText: {
         fontSize: 16,
         fontWeight: "500",
+        color: colors.text,
     },
     starRatingRow: {
         flexDirection: "row",

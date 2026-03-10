@@ -8,6 +8,8 @@ import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -417,6 +419,15 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                     if (wantedStatus === "active") {
                         await publish(newId);
                         router.push("/collaborations");
+                        // Backend evaluation sometimes sets status to "deleted" after create; restore to active so the campaign stays visible.
+                        setTimeout(() => {
+                            const ref = doc(FirestoreDB, "collaborations", newId);
+                            getDoc(ref).then((snap) => {
+                                if ((snap.data() as { status?: string })?.status === "deleted") {
+                                    updateCollaboration(newId, { status: "active" }, { skipEvaluation: true });
+                                }
+                            }).catch(() => {});
+                        }, 3000);
                     } else {
                         shouldNavigateToCollaborations = true;
                     }
