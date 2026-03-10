@@ -14,6 +14,7 @@ import { useTheme } from "@react-navigation/native";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Menu } from "react-native-paper";
 
 const SORT_OPTIONS = [
@@ -23,7 +24,7 @@ const SORT_OPTIONS = [
     { label: "Views", value: "views", sublabel: "High to Low" },
 ];
 
-const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
+const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean, topInset: number) =>
     StyleSheet.create({
         sortByLabel: {
             fontSize: xl ? 14 : 12,
@@ -65,7 +66,8 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
         },
         mobileStackedContainer: {
             paddingHorizontal: 16,
-            paddingVertical: 12,
+            paddingTop: 12 + topInset,
+            paddingBottom: 12,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
@@ -74,7 +76,6 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-            flex: 1,
             minWidth: 0,
         },
         mobileIconButton: {
@@ -98,6 +99,7 @@ const DiscoverScreenHeader: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    const insets = useSafeAreaInsets();
     const {
         totalCount,
         currentSort,
@@ -107,7 +109,7 @@ const DiscoverScreenHeader: React.FC = () => {
     } = useDiscovery();
 
     const [sortMenuVisible, setSortMenuVisible] = useState(false);
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useMemo(() => useStyles(colors, xl, insets.top), [colors, xl, insets.top]);
 
     const currentOption = SORT_OPTIONS.find((o) => o.value === currentSort);
     const sortDisplayLabel = currentOption

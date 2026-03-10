@@ -290,7 +290,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const labelVariant = isTiny ? "labelSmall" : isNarrow ? "labelMedium" : "labelLarge";
         const valueVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "displaySmall";
         const rangeVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "headlineLarge";
-        const contentPadding = isNarrow ? 12 : 16;
+        const contentPadding = isNarrow ? 10 : 16;
         const cardSpacing = isNarrow ? 10 : 12;
 
         const CIRCLE_R = 32;
@@ -309,6 +309,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         flexDirection: "row",
                         flexWrap: "wrap",
                         gap: cardSpacing,
+                        alignItems: "flex-start",
                     }}
                 >
                     <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>

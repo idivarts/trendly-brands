@@ -228,9 +228,11 @@ const DiscoverComponent = ({
                 setCurrentSort: setHeaderCurrentSort,
             }}
         >
-            <AppLayout safeAreaEdges={["top", "left", "right"]}>
+            <AppLayout safeAreaEdges={["left", "right"]}>
                 <View style={{ width: "100%", flex: 1 }}>
-                    <DiscoverScreenHeader />
+                    <View style={{ flexShrink: 0 }}>
+                        <DiscoverScreenHeader />
+                    </View>
                     <View style={{ width: "100%", flexDirection: "row", flex: 1 }}>
                         <DiscoverInfluencer
                         advanceFilter={advanceFilter}
