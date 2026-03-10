@@ -2,7 +2,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
-import { faBolt, faGem, faStar, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faDiagramProject, faGem, faStar, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -72,9 +72,17 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
     const connectionCreditsLeft = Number(
         selectedBrand?.credits?.connection ?? 0
     );
+    const collaborationCredits = Number(
+        selectedBrand?.credits?.collaboration ?? 0
+    );
 
     const discoveryLimit = 1000;
+    const collaborationLimit = 1000;
     const discoveryProgress = Math.min(1, discoverCoinsLeft / discoveryLimit);
+    const collaborationProgress = Math.min(
+        1,
+        collaborationCredits / collaborationLimit
+    );
 
     const styles = useMemo(
         () => createStyles(theme, colors, xl, width),
@@ -108,12 +116,23 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
                 icon: faBolt,
                 iconColor: colors.drawerInvitesIcon,
             },
+            {
+                key: "campaign-creation",
+                label: "Campaign creation",
+                hint: "Create and publish campaigns",
+                count: collaborationCredits,
+                icon: faDiagramProject,
+                iconColor: colors.gold,
+                progress: collaborationProgress,
+            },
         ],
         [
             influencerCredits,
             discoverCoinsLeft,
             connectionCreditsLeft,
+            collaborationCredits,
             discoveryProgress,
+            collaborationProgress,
             colors.gold,
             colors.drawerInvitesIcon,
         ]

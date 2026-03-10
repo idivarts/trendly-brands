@@ -198,10 +198,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const { xl } = useBreakpoints();
 
     const planKey = selectedBrand?.billing?.planKey || "";
-    const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
-    const connectionCreditsLeft = Number(selectedBrand?.credits?.connection ?? 0);
-    const discoveryLimit = 1000;
-    const discoveryProgress = Math.min(1, discoverCoinsLeft / discoveryLimit);
     const hasMultipleBrands = brands.length > 1;
 
     const drawerColors = useMemo(
@@ -367,18 +363,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                     id="guide-tour-credits-web"
                                     shape="rect"
                                 >
-                                    <CreditDisplayCard
-                                        discoverCoinsLeft={discoverCoinsLeft}
-                                        connectionCreditsLeft={connectionCreditsLeft}
-                                        discoveryProgress={discoveryProgress}
-                                    />
+                                    <CreditDisplayCard />
                                 </CoachmarkAnchor>
                             ) : (
-                                <CreditDisplayCard
-                                    discoverCoinsLeft={discoverCoinsLeft}
-                                    connectionCreditsLeft={connectionCreditsLeft}
-                                    discoveryProgress={discoveryProgress}
-                                />
+                                <CreditDisplayCard />
                             )
                         )}
                         {selectedBrand && !selectedBrand.isBillingDisabled && (

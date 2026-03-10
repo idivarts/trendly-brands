@@ -1,10 +1,17 @@
-import { Text, View } from "@/components/theme/Themed";
+import { Text } from "@/components/theme/Themed";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Colors from "@/shared-uis/constants/Colors";
-import { faBolt, faGem as faGemSolid } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBolt,
+    faDiagramProject,
+    faGem as faGemSolid,
+    faStar,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { usePathname } from "expo-router";
 import { Theme, useTheme } from "@react-navigation/native";
-import React, { forwardRef, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -13,79 +20,203 @@ import {
 } from "react-native";
 import CreditUsageModal from "./CreditUsageModal";
 
+const DISCOVERY_LIMIT = 1000;
+const INFLUENCER_LIMIT = 1000;
+const COLLABORATION_LIMIT = 1000;
+
+type CreditContext = "discovery" | "campaigns" | "influencer-spotlight";
+
+function getCreditContext(pathname: string): CreditContext {
+    if (pathname.includes("explore-influencers")) return "influencer-spotlight";
+    if (pathname.includes("collaboration") || pathname === "/collaborations")
+        return "campaigns";
+    return "discovery";
+}
+
 export interface CreditDisplayCardProps {
-    discoverCoinsLeft: number;
-    connectionCreditsLeft: number;
-    discoveryProgress: number;
     hideRefill?: boolean;
 }
 
-const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
-    ({ discoverCoinsLeft, connectionCreditsLeft, discoveryProgress, hideRefill = false }, ref) => {
+const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
+    ({ hideRefill = false }, ref) => {
         const theme = useTheme();
         const colors = Colors(theme);
+        const pathname = usePathname();
+        const { selectedBrand } = useBrandContext();
         const nav = useMyNavigation();
-        const styles = useMemo(
-            () => createStyles(theme),
-            [theme]
-        );
-        const progressFillStyle = useMemo(
-            () => ({ width: `${discoveryProgress * 100}%` }),
-            [discoveryProgress]
+
+        const creditContext = useMemo(
+            () => getCreditContext(pathname),
+            [pathname]
         );
 
+        const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
+        const connectionCreditsLeft = Number(
+            selectedBrand?.credits?.connection ?? 0
+        );
+        const influencerCredits = Number(
+            selectedBrand?.credits?.influencer ?? 0
+        );
+        const collaborationCredits = Number(
+            selectedBrand?.credits?.collaboration ?? 0
+        );
+
+        const discoveryProgress = useMemo(
+            () => Math.min(1, discoverCoinsLeft / DISCOVERY_LIMIT),
+            [discoverCoinsLeft]
+        );
+        const influencerProgress = useMemo(
+            () => Math.min(1, influencerCredits / INFLUENCER_LIMIT),
+            [influencerCredits]
+        );
+        const collaborationProgress = useMemo(
+            () => Math.min(1, collaborationCredits / COLLABORATION_LIMIT),
+            [collaborationCredits]
+        );
+
+        const styles = useMemo(() => createStyles(theme), [theme]);
         const [modalVisible, setModalVisible] = useState(false);
 
-        const handleCardPress = () => {
-            setModalVisible(true);
-        };
+        const handleCardPress = () => setModalVisible(true);
+        const handleRefillPress = () => nav.push("/billing");
 
-        const handleRefillPress = () => {
-            nav.push("/billing");
-        };
+        const progressFillStyle = useMemo(() => {
+            const progress =
+                creditContext === "discovery"
+                    ? discoveryProgress
+                    : creditContext === "influencer-spotlight"
+                      ? influencerProgress
+                      : collaborationProgress;
+            return { width: `${progress * 100}%` };
+        }, [
+            creditContext,
+            discoveryProgress,
+            influencerProgress,
+            collaborationProgress,
+        ]);
 
-        return (
-            <>
-            <RNView ref={ref} collapsable={false}>
-                <RNView style={styles.creditsCard}>
-                    <RNView style={styles.creditsRow}>
+        const renderCardContent = () => {
+            if (creditContext === "discovery") {
+                return (
+                    <>
+                        <RNView style={styles.creditsRow}>
+                            <Pressable
+                                onPress={handleCardPress}
+                                style={({ pressed }) => [
+                                    styles.creditsMainPressable,
+                                    pressed && styles.creditsCardPressed,
+                                ]}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faGemSolid}
+                                    size={18}
+                                    color={colors.gold}
+                                    style={styles.creditsIcon}
+                                />
+                                <Text style={styles.creditsDiscoveryText}>
+                                    {discoverCoinsLeft} Discovery
+                                </Text>
+                            </Pressable>
+                            {!hideRefill && Platform.OS === "web" && (
+                                <Pressable
+                                    onPress={handleRefillPress}
+                                    hitSlop={8}
+                                    style={({ pressed: refillPressed }) => [
+                                        styles.refillButton,
+                                        refillPressed &&
+                                            styles.refillButtonPressed,
+                                    ]}
+                                >
+                                    <Text style={styles.refillLink}>
+                                        REFILL
+                                    </Text>
+                                </Pressable>
+                            )}
+                        </RNView>
+                        <Pressable onPress={handleCardPress}>
+                            <RNView style={styles.progressTrack}>
+                                <RNView
+                                    style={[
+                                        styles.progressFill,
+                                        progressFillStyle,
+                                    ]}
+                                />
+                            </RNView>
+                        </Pressable>
                         <Pressable
                             onPress={handleCardPress}
                             style={({ pressed }) => [
-                                styles.creditsMainPressable,
+                                styles.creditsRow,
                                 pressed && styles.creditsCardPressed,
                             ]}
                         >
                             <FontAwesomeIcon
-                                icon={faGemSolid}
+                                icon={faBolt}
+                                size={18}
+                                color={colors.drawerInvitesIcon}
+                                style={styles.creditsIcon}
+                            />
+                            <Text style={styles.creditsInvitesText}>
+                                {connectionCreditsLeft} Invites
+                            </Text>
+                            <Text style={styles.creditsMonthly}>Monthly</Text>
+                        </Pressable>
+                    </>
+                );
+            }
+
+            if (creditContext === "influencer-spotlight") {
+                return (
+                    <>
+                        <Pressable
+                            onPress={handleCardPress}
+                            style={({ pressed }) => [
+                                styles.creditsRow,
+                                pressed && styles.creditsCardPressed,
+                            ]}
+                        >
+                            <FontAwesomeIcon
+                                icon={faStar}
                                 size={18}
                                 color={colors.gold}
                                 style={styles.creditsIcon}
                             />
                             <Text style={styles.creditsDiscoveryText}>
-                                {discoverCoinsLeft} Discovery
+                                {influencerCredits} Influencer Spotlights
                             </Text>
+                            {!hideRefill && Platform.OS === "web" && (
+                                <Pressable
+                                    onPress={handleRefillPress}
+                                    hitSlop={8}
+                                    style={({ pressed: refillPressed }) => [
+                                        styles.refillButton,
+                                        refillPressed &&
+                                            styles.refillButtonPressed,
+                                    ]}
+                                >
+                                    <Text style={styles.refillLink}>
+                                        REFILL
+                                    </Text>
+                                </Pressable>
+                            )}
                         </Pressable>
-                        {!hideRefill && Platform.OS === "web" && (
-                            <Pressable
-                                onPress={handleRefillPress}
-                                hitSlop={8}
-                                style={({ pressed: refillPressed }) => [
-                                    styles.refillButton,
-                                    refillPressed && styles.refillButtonPressed,
-                                ]}
-                            >
-                                <Text style={styles.refillLink}>REFILL</Text>
-                            </Pressable>
-                        )}
-                    </RNView>
-                    <Pressable onPress={handleCardPress}>
-                        <RNView style={styles.progressTrack}>
-                            <RNView
-                                style={[styles.progressFill, progressFillStyle]}
-                            />
-                        </RNView>
-                    </Pressable>
+                        <Pressable onPress={handleCardPress}>
+                            <RNView style={styles.progressTrack}>
+                                <RNView
+                                    style={[
+                                        styles.progressFill,
+                                        progressFillStyle,
+                                    ]}
+                                />
+                            </RNView>
+                        </Pressable>
+                    </>
+                );
+            }
+
+            // campaigns
+            return (
+                <>
                     <Pressable
                         onPress={handleCardPress}
                         style={({ pressed }) => [
@@ -94,23 +225,54 @@ const CreditDisplayCard = React.forwardRef<any, CreditDisplayCardProps>(
                         ]}
                     >
                         <FontAwesomeIcon
-                            icon={faBolt}
+                            icon={faDiagramProject}
                             size={18}
-                            color={colors.drawerInvitesIcon}
+                            color={colors.gold}
                             style={styles.creditsIcon}
                         />
-                        <Text style={styles.creditsInvitesText}>
-                            {connectionCreditsLeft} Invites
+                        <Text style={styles.creditsDiscoveryText}>
+                            {collaborationCredits} Create campaign
                         </Text>
-                        <Text style={styles.creditsMonthly}>Monthly</Text>
+                        {!hideRefill && Platform.OS === "web" && (
+                            <Pressable
+                                onPress={handleRefillPress}
+                                hitSlop={8}
+                                style={({ pressed: refillPressed }) => [
+                                    styles.refillButton,
+                                    refillPressed &&
+                                        styles.refillButtonPressed,
+                                ]}
+                            >
+                                <Text style={styles.refillLink}>REFILL</Text>
+                            </Pressable>
+                        )}
                     </Pressable>
+                    <Pressable onPress={handleCardPress}>
+                        <RNView style={styles.progressTrack}>
+                            <RNView
+                                style={[
+                                    styles.progressFill,
+                                    progressFillStyle,
+                                ]}
+                            />
+                        </RNView>
+                    </Pressable>
+                </>
+            );
+        };
+
+        return (
+            <>
+                <RNView ref={ref} collapsable={false}>
+                    <RNView style={styles.creditsCard} key={creditContext}>
+                        {renderCardContent()}
+                    </RNView>
                 </RNView>
-            </RNView>
-            <CreditUsageModal
-                visible={modalVisible}
-                onClose={() => setModalVisible(false)}
-                hideRefill={hideRefill}
-            />
+                <CreditUsageModal
+                    visible={modalVisible}
+                    onClose={() => setModalVisible(false)}
+                    hideRefill={hideRefill}
+                />
             </>
         );
     }
