@@ -233,10 +233,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
                         style={styles.headerPressable}
                     >
-                        <View style={styles.headerRow}>
-                            <View style={styles.logoCircle}>
-                                <Text style={styles.logoText}>T</Text>
-                            </View>
+                            <View style={styles.headerRow}>
+                                <ImageComponent
+                                    url={selectedBrand?.image || ""}
+                                    initials={selectedBrand?.name?.[0] ?? ""}
+                                    shape="circle"
+                                    size="small"
+                                    altText={selectedBrand?.name || "Brand"}
+                                    style={styles.logoCircle}
+                                />
                             <View style={styles.headerBrand}>
                                 <Text style={styles.brandName} numberOfLines={1}>
                                     {selectedBrand?.name ?? "Brand"}
@@ -259,9 +264,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     style={styles.headerPressable}
                 >
                     <View style={styles.headerRow}>
-                        <View style={styles.logoCircle}>
-                            <Text style={styles.logoText}>T</Text>
-                        </View>
+                        <ImageComponent
+                            url={selectedBrand?.image || ""}
+                            initials={selectedBrand?.name?.[0] ?? ""}
+                            shape="circle"
+                            size="small"
+                            altText={selectedBrand?.name || "Brand"}
+                            style={styles.logoCircle}
+                        />
                         <View style={styles.headerBrand}>
                             <Text style={styles.brandName} numberOfLines={1}>
                                 {selectedBrand?.name ?? "Brand"}

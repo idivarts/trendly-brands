@@ -303,7 +303,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             const strokeDashLength = (trustPercent / 100) * CIRCLE_CIRCUMFERENCE;
 
             return (
-            <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
+            <View style={{ marginHorizontal: 12, marginBottom: 12, marginTop: 12}}>
                 <View
                     style={{
                         flexDirection: "row",
