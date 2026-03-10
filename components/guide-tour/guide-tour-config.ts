@@ -8,6 +8,7 @@ const WEB_STEPS = [
             "This is an influencer card. Tap to view their profile and invite them to your campaign.",
         placement: "bottom" as const,
         shape: "rect" as const,
+        autoFocus: "ifNeeded" as const,
     },
     {
         id: "guide-tour-filter",
@@ -51,6 +52,7 @@ const MOBILE_STEPS = [
             "This is an influencer card. Tap to view their profile and invite them to your campaign.",
         placement: "bottom" as const,
         shape: "rect" as const,
+        autoFocus: "ifNeeded" as const,
     },
     {
         id: "guide-tour-filter",
@@ -88,10 +90,10 @@ const MOBILE_STEPS = [
 
 export const GUIDE_TOUR_WEB = createTour("guide-tour-web", WEB_STEPS, {
     showOnce: true,
-    delay: 800,
+    delay: 1200,
 });
 
 export const GUIDE_TOUR_MOBILE = createTour("guide-tour-mobile", MOBILE_STEPS, {
     showOnce: true,
-    delay: 800,
+    delay: 1200,
 });

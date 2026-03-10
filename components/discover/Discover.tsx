@@ -58,6 +58,7 @@ const DiscoverComponent = ({
     const { selectedBrand, updateBrand } = useBrandContext();
     const { start: startCoachmark, isActive } = useCoachmark();
     const hasStartedTourRef = useRef(false);
+    const [firstInfluencerCardReady, setFirstInfluencerCardReady] = useState(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
@@ -163,7 +164,8 @@ const DiscoverComponent = ({
             manager &&
             selectedBrand?.id &&
             !isActive &&
-            !hasStartedTourRef.current
+            !hasStartedTourRef.current &&
+            firstInfluencerCardReady
         ) {
             hasStartedTourRef.current = true;
             startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
@@ -175,6 +177,36 @@ const DiscoverComponent = ({
         selectedBrand?.id,
         xl,
         isActive,
+        firstInfluencerCardReady,
+        startCoachmark,
+    ]);
+
+    // Fallback: start tour after delay if first card never reports (e.g. empty list)
+    useEffect(() => {
+        if (
+            surveyCheckDone &&
+            !showSurvey &&
+            manager &&
+            selectedBrand?.id &&
+            !isActive &&
+            !hasStartedTourRef.current &&
+            !firstInfluencerCardReady
+        ) {
+            const t = setTimeout(() => {
+                if (hasStartedTourRef.current) return;
+                hasStartedTourRef.current = true;
+                startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+            }, 2500);
+            return () => clearTimeout(t);
+        }
+    }, [
+        surveyCheckDone,
+        showSurvey,
+        manager,
+        selectedBrand?.id,
+        xl,
+        isActive,
+        firstInfluencerCardReady,
         startCoachmark,
     ]);
 
@@ -241,6 +273,7 @@ const DiscoverComponent = ({
                         isStatusCard={isStatusCard}
                         defaultAdvanceFilters={filtersToUse}
                         initialInfluencerId={initialInfluencerId}
+                        onFirstInfluencerCardLayout={() => setFirstInfluencerCardReady(true)}
                     />
                 </View>
                 {showRightPanel && (

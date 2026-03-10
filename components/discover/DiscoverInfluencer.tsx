@@ -146,6 +146,8 @@ interface DiscoverInfluencerProps {
     onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     initialInfluencerId?: string;
+    /** Called once when the first influencer card has laid out (for guided tour). */
+    onFirstInfluencerCardLayout?: () => void;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -155,6 +157,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     onStatusChange,
     defaultAdvanceFilters,
     initialInfluencerId,
+    onFirstInfluencerCardLayout,
 }) => {
     const {
         selectedDb,
@@ -185,6 +188,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [shadowSocial, setShadowSocial] = useState<IShadowSocial | null>(null);
     const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
     const trendlyAnalyticsRef = React.useRef<any>(null);
+    const flatListRef = useRef<FlatList>(null);
+    const firstCardLayoutFiredRef = useRef(false);
 
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<InfluencerItem[]>([]);
@@ -429,13 +434,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             );
             if (index === 0) {
                 return (
-                    <CoachmarkAnchor
-                        id="guide-tour-influencer-card"
-                        shape="rect"
+                    <RNView
                         style={cardStyle}
+                        onLayout={() => {
+                            if (!firstCardLayoutFiredRef.current && onFirstInfluencerCardLayout) {
+                                firstCardLayoutFiredRef.current = true;
+                                onFirstInfluencerCardLayout();
+                            }
+                        }}
                     >
-                        {card}
-                    </CoachmarkAnchor>
+                        <CoachmarkAnchor
+                            id="guide-tour-influencer-card"
+                            shape="rect"
+                            scrollRef={flatListRef}
+                        >
+                            {card}
+                        </CoachmarkAnchor>
+                    </RNView>
                 );
             }
             return (
@@ -444,7 +459,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 </RNView>
             );
         },
-        [isCollapsed, openModal, openProfile, selectedIds]
+        [isCollapsed, openModal, openProfile, selectedIds, onFirstInfluencerCardLayout]
     );
 
     const keyExtractor = useCallback((i: InfluencerItem) => i.id, []);
@@ -551,6 +566,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 }}
             >
                 <FlatList
+                    ref={flatListRef}
                     data={data}
                     keyExtractor={keyExtractor}
                     renderItem={renderItem}
