@@ -2,6 +2,7 @@ import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignB
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import Colors from "@/shared-uis/constants/Colors";
+import { getPlaceholderImageForGender } from "@/shared-uis/utils/url";
 import { maskHandle } from "@/shared-uis/utils/masks";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -78,6 +79,7 @@ const Avatar = ({
             <FacebookImageComponent
                 url={item.profile_pic}
                 altText="Issue Loading image"
+                placeholder={getPlaceholderImageForGender(item.gender)}
                 style={[styles.avatarImage, avatarImageDynamicStyle]}
             />
         </View>
