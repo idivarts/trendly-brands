@@ -136,7 +136,7 @@ const ContractScreen = () => {
 
     if (isLoading || !contract) {
         return (
-            <AppLayout>
+            <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
                 <View style={styles.loadingCenter}>
                     <ActivityIndicator size="large" color={Colors(theme).primary} />
                 </View>

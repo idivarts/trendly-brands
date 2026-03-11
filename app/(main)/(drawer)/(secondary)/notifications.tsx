@@ -35,7 +35,7 @@ const NotificationsScreen = () => {
     };
 
     return (
-        <AppLayout withWebPadding={false}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
 
             <ScreenHeader
                 title="Notifications"

@@ -23,7 +23,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     const theme = useTheme();
     const isAndroid = useMemo(() => Platform.OS === "android", []);
     const { xl } = useBreakpoints()
-    const edges = safeAreaEdges ?? ["top", "right", "bottom", "left"];
+    const edges = safeAreaEdges ?? ["right", "bottom", "left"];
     const colors = Colors(theme);
     return (
         <SafeAreaView

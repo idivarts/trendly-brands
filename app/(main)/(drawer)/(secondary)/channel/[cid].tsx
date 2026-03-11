@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/app-layout";
 
 const ChannelScreen = () => {
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
             <ChannelNative />
         </AppLayout>
     );

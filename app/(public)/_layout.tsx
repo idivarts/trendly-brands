@@ -10,7 +10,7 @@ const layoutStyles = StyleSheet.create({
 const PublicLayout = () => {
     return (
         <PublicContextProvider>
-            <AppLayout>
+            <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
                 <View style={layoutStyles.flex1}>
                     <Stack
                         screenOptions={{
