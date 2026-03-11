@@ -3,13 +3,10 @@ import React, { useEffect, useRef, useState } from "react";
 
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
-import Colors from "@/shared-uis/constants/Colors";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { doc, getDoc } from "firebase/firestore";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -17,6 +14,7 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
@@ -419,15 +417,6 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                     if (wantedStatus === "active") {
                         await publish(newId);
                         router.push("/collaborations");
-                        // Backend evaluation sometimes sets status to "deleted" after create; restore to active so the campaign stays visible.
-                        setTimeout(() => {
-                            const ref = doc(FirestoreDB, "collaborations", newId);
-                            getDoc(ref).then((snap) => {
-                                if ((snap.data() as { status?: string })?.status === "deleted") {
-                                    updateCollaboration(newId, { status: "active" }, { skipEvaluation: true });
-                                }
-                            }).catch(() => {});
-                        }, 3000);
                     } else {
                         shouldNavigateToCollaborations = true;
                     }
