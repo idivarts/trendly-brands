@@ -214,7 +214,7 @@ const TrendlyAdvancedFilter = ({
     // Sorting & pagination state
     const [sort, setSort] = useState<
         "followers" | "views" | "engagement" | "engagement_rate"
-    >("followers");
+    >("engagement");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [offset, setOffset] = useState(0);
     const [limit, setLimit] = useState(16);
@@ -261,6 +261,10 @@ const TrendlyAdvancedFilter = ({
         setGenders(f?.genders || []);
         setSelectedNiches(f?.selectedNiches || []);
         setSelectedLocations(f?.selectedLocations || []);
+
+        if (f?.sort) {
+            setSort(f.sort as "followers" | "views" | "engagement" | "engagement_rate");
+        }
     };
 
     useEffect(() => {
@@ -578,7 +582,7 @@ const TrendlyAdvancedFilter = ({
         setSelectedLocations([]);
 
         // Sorting & pagination defaults
-        setSort("followers");
+        setSort("engagement");
         setSortDirection("desc");
         setOffset(0);
         setLimit(16);

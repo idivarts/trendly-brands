@@ -260,7 +260,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                         discoverCommunication: { current: undefined },
                         pageSortCommunication: { current: undefined },
                         totalCount: "0",
-                        currentSort: "followers",
+                        currentSort: "engagement",
                         setTotalCount: () => { },
                         setCurrentSort: () => { },
                     }}

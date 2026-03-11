@@ -39,13 +39,12 @@ export function cleanFilters(obj: Record<string, any>): Record<string, any> {
 const PAGINATION_AND_SORT_KEYS = new Set([
   "offset",
   "limit",
-  "sort",
   "sort_direction",
 ]);
 
 /**
- * Like cleanFilters but removes offset, limit, sort, sort_direction so that
- * only actual filter preferences are stored in brand.discoverPreferences.
+ * Like cleanFilters but removes offset, limit, sort_direction so that
+ * only actual filter preferences (including sort) are stored in brand.discoverPreferences.
  * Use when saving to Firestore and when reading from it so we never use stored offset/limit.
  */
 export function cleanFiltersForStorage(

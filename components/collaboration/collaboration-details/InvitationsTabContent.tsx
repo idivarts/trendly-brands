@@ -114,6 +114,7 @@ const InvitationsTabContent = (props: any) => {
                 collaborationId,
                 status: "pending",
                 message: message,
+                timeStamp: Date.now(),
             };
 
             // Invitation Id as influencer id
@@ -172,7 +173,7 @@ const InvitationsTabContent = (props: any) => {
     //   );
     // }
 
-    if (influencers.length === 0 && !isLoading) {
+    if (viewMode === "invitations" && influencers.length === 0 && !isLoading) {
         return (
             <EmptyState
                 subtitle="No invitations yet. Check back later."
@@ -240,6 +241,7 @@ const InvitationsTabContent = (props: any) => {
                             isStatusCard={false}
                             defaultAdvanceFilters={collaboration?.preferences}
                             useStoredFilters={false}
+                            skipGuideTour={true}
                         />
                     </View>
                 ) : (

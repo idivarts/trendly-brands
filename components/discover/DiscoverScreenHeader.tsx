@@ -2,6 +2,7 @@ import { OpenFilterRightPanel, useDiscovery } from "@/components/discover/discov
 import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -100,6 +101,7 @@ const DiscoverScreenHeader: React.FC = () => {
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const insets = useSafeAreaInsets();
+    const { selectedBrand, updateBrand } = useBrandContext();
     const {
         totalCount,
         currentSort,
@@ -124,6 +126,14 @@ const DiscoverScreenHeader: React.FC = () => {
             page: 1,
             sort: value,
         });
+        if (selectedBrand?.id) {
+            updateBrand(selectedBrand.id, {
+                discoverPreferences: {
+                    ...selectedBrand.discoverPreferences,
+                    sort: value,
+                },
+            });
+        }
     };
 
     const sortComponent = xl ? (

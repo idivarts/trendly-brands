@@ -327,11 +327,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             loading: true,
             data: [],
             page: 1,
-            sort: "followers",
+            sort: currentSort,
         });
         pageSortCommunication.current?.({
             page: 1,
-            sort: "followers",
+            sort: currentSort,
         });
     }, [defaultAdvanceFilters, selectedBrand?.id]);
 

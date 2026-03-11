@@ -42,6 +42,8 @@ const DiscoverComponent = ({
      */
     useStoredFilters = true,
     initialInfluencerId,
+    /** When true, the guided tour (coach marks) is not started. Use when embedding Discover (e.g. Send Invitations tab). */
+    skipGuideTour = false,
 }: {
     showRightPanel?: boolean;
     topPanel?: boolean;
@@ -53,6 +55,7 @@ const DiscoverComponent = ({
     defaultAdvanceFilters?: IAdvanceFilters;
     useStoredFilters?: boolean;
     initialInfluencerId?: string;
+    skipGuideTour?: boolean;
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
@@ -63,7 +66,7 @@ const DiscoverComponent = ({
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
     const [headerTotalCount, setHeaderTotalCount] = useState<string>("0");
-    const [headerCurrentSort, setHeaderCurrentSort] = useState<string>("followers");
+    const [headerCurrentSort, setHeaderCurrentSort] = useState<string>("engagement");
     const discoverCommunication =
         useRef<((action: DiscoverCommunication) => any) | undefined>(undefined);
     const pageSortCommunication =
@@ -76,6 +79,14 @@ const DiscoverComponent = ({
 
         setRightPanel(Boolean(xl));
     }, [xl]);
+
+    // Sync header sort from stored discoverPreferences when brand loads
+    useEffect(() => {
+        const storedSort = selectedBrand?.discoverPreferences?.sort;
+        if (storedSort) {
+            setHeaderCurrentSort(storedSort);
+        }
+    }, [selectedBrand?.discoverPreferences?.sort]);
 
     const [selectedDb, setSelectedDb] = useState<DB_TYPE>("trendly");
 
@@ -154,23 +165,28 @@ const DiscoverComponent = ({
 
         setShowSurvey(false);
         hasStartedTourRef.current = true;
-        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        if (!skipGuideTour) {
+            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        }
     };
 
     useEffect(() => {
         if (
-            surveyCheckDone &&
-            !showSurvey &&
-            manager &&
-            selectedBrand?.id &&
-            !isActive &&
-            !hasStartedTourRef.current &&
-            firstInfluencerCardReady
+            skipGuideTour ||
+            !surveyCheckDone ||
+            showSurvey ||
+            !manager ||
+            !selectedBrand?.id ||
+            isActive ||
+            hasStartedTourRef.current ||
+            !firstInfluencerCardReady
         ) {
-            hasStartedTourRef.current = true;
-            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+            return;
         }
+        hasStartedTourRef.current = true;
+        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
     }, [
+        skipGuideTour,
         surveyCheckDone,
         showSurvey,
         manager,
@@ -184,22 +200,25 @@ const DiscoverComponent = ({
     // Fallback: start tour after delay if first card never reports (e.g. empty list)
     useEffect(() => {
         if (
-            surveyCheckDone &&
-            !showSurvey &&
-            manager &&
-            selectedBrand?.id &&
-            !isActive &&
-            !hasStartedTourRef.current &&
-            !firstInfluencerCardReady
+            skipGuideTour ||
+            !surveyCheckDone ||
+            showSurvey ||
+            !manager ||
+            !selectedBrand?.id ||
+            isActive ||
+            hasStartedTourRef.current ||
+            firstInfluencerCardReady
         ) {
-            const t = setTimeout(() => {
-                if (hasStartedTourRef.current) return;
-                hasStartedTourRef.current = true;
-                startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-            }, 2500);
-            return () => clearTimeout(t);
+            return;
         }
+        const t = setTimeout(() => {
+            if (hasStartedTourRef.current) return;
+            hasStartedTourRef.current = true;
+            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        }, 2500);
+        return () => clearTimeout(t);
     }, [
+        skipGuideTour,
         surveyCheckDone,
         showSurvey,
         manager,
@@ -273,7 +292,7 @@ const DiscoverComponent = ({
                         isStatusCard={isStatusCard}
                         defaultAdvanceFilters={filtersToUse}
                         initialInfluencerId={initialInfluencerId}
-                        onFirstInfluencerCardLayout={() => setFirstInfluencerCardReady(true)}
+                        onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
                     />
                 </View>
                 {showRightPanel && (
