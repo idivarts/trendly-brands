@@ -43,7 +43,7 @@ export function ErrorBoundary({
     retry,
 }: {
     error: Error;
-    retry: () => void;
+    retry: () => Promise<void>;
 }) {
     return <GlobalErrorFallback error={error} retry={retry} />;
 }
