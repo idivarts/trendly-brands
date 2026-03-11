@@ -309,6 +309,7 @@ function useStyles(theme: ReturnType<typeof useTheme>, xl: boolean) {
         },
         cardOuter: {
             flex: xl ? 1 : undefined,
+            maxWidth: xl ? "50%" : undefined,
             width: xl ? undefined : "100%",
             backgroundColor: Colors(theme).primary,
             borderRadius: 14,
