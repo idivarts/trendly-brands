@@ -31,16 +31,22 @@ import {
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
+import { GlobalErrorFallback } from "@/shared-uis/components/GlobalErrorFallback";
 import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
 import Toast from "react-native-toast-message";
 
-export {
-    // Catch any errors thrown by the Layout component.
-    ErrorBoundary
-} from "expo-router";
+export function ErrorBoundary({
+    error,
+    retry,
+}: {
+    error: Error;
+    retry: () => void;
+}) {
+    return <GlobalErrorFallback error={error} retry={retry} />;
+}
 
 export const unstable_settings = {
     initialRouteName: "index",
