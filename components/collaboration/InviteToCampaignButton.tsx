@@ -1,14 +1,11 @@
-import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { AuthApp } from "@/shared-libs/utils/firebase/auth";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { Linking } from "react-native";
 import { Button } from "react-native-paper";
-import { collection, doc, setDoc } from "firebase/firestore";
 import InviteToCampaignModal from "./InviteToCampaignModal";
 
 interface InviteButtonProps {
@@ -98,38 +95,6 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                     headers: { "Content-Type": "application/json" },
                 }
             );
-
-            // Write each invitation to Firestore so Invited Members tab shows them
-            const managerId = AuthApp.currentUser?.uid;
-            if (managerId) {
-                for (const collaborationId of selectedIds || []) {
-                    for (const influencerId of influencers) {
-                        const invitationColRef = collection(
-                            FirestoreDB,
-                            "collaborations",
-                            collaborationId,
-                            "invitations"
-                        );
-                        const invitationDocRef = doc(invitationColRef, influencerId);
-                        await setDoc(invitationDocRef, {
-                            userId: influencerId,
-                            managerId,
-                            collaborationId,
-                            status: "pending",
-                            message: "",
-                            timeStamp: Date.now(),
-                        }).catch((e) => console.warn("Firestore invite write failed", e));
-                        try {
-                            await HttpWrapper.fetch(
-                                `/api/collabs/collaborations/${collaborationId}/invitations/${influencerId}`,
-                                { method: "POST" }
-                            );
-                        } catch (_) {
-                            // Firestore is source of truth for Invited Members; API is best-effort
-                        }
-                    }
-                }
-            }
 
             Toaster.success("Invite sent");
             return true;
