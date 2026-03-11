@@ -79,7 +79,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             </View>
             {showActions && (hasActionButtons || hasRightComponent) && (
                 <View style={styles.headerActions}>
-                    {hasActionButtons && actionButtons}
+                    {hasActionButtons && actionButtons.map((btn, index) => (
+                        <React.Fragment key={index}>{btn}</React.Fragment>
+                    ))}
                     {hasRightComponent && rightComponent}
                 </View>
             )}

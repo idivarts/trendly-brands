@@ -228,7 +228,7 @@ const DiscoverScreenHeader: React.FC = () => {
                         >
                             <Text style={styles.mobileTitle}>Discover Influencer</Text>
                             <Text style={styles.mobileSubtitle}>
-                                Total {totalCount}+ found
+                                {`Total ${String(totalCount ?? "0").trim()}+ found`}
                             </Text>
                         </Pressable>
                     </CoachmarkAnchor>
@@ -245,7 +245,7 @@ const DiscoverScreenHeader: React.FC = () => {
         <>
             <PageHeader
                 title="Discover Influencer"
-                subtitle={`Total ${totalCount}+ found`}
+                subtitle={`Total ${String(totalCount ?? "0").trim()}+ found`}
                 actionButtons={[filterButton]}
                 rightComponent={sortComponent}
             />

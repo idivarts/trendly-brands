@@ -272,6 +272,7 @@ const DiscoverComponent = ({
                 isCollapsed,
                 showTopPanel:
                     typeof showTopPanel === "boolean" ? showTopPanel : topPanel,
+                showRightPanel,
                 setIsCollapsed,
                 totalCount: headerTotalCount,
                 currentSort: headerCurrentSort,
