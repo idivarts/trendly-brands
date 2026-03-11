@@ -7,7 +7,6 @@ import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheet
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
@@ -28,6 +27,7 @@ import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Mod
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
@@ -173,7 +173,7 @@ const InvitationsTabContent = (props: any) => {
     //   );
     // }
 
-    if (viewMode === "invitations" && influencers.length === 0 && !isLoading) {
+    if (influencers.length === 0 && !isLoading) {
         return (
             <EmptyState
                 subtitle="No invitations yet. Check back later."
