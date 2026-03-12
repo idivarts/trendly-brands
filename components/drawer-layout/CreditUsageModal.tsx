@@ -268,7 +268,7 @@ const createStyles = (
             padding: 4,
         },
         scrollView: {
-            maxHeight: 400,
+            maxHeight: 520,
         },
         scrollContent: {
             padding: 4,
