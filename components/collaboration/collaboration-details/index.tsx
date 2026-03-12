@@ -3,7 +3,6 @@ import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { CollapseProvider, useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
@@ -40,26 +39,6 @@ export interface CollaborationDetail extends ICollaboration {
 
 interface CollaborationDetailsProps {
     pageID: string;
-}
-
-function CampaignDetailsHeader({
-    isDraft,
-    onNavigateBack,
-    ...headerProps
-}: React.ComponentProps<typeof PageHeader> & {
-    isDraft: boolean;
-    onNavigateBack: () => void;
-}) {
-    const { xl } = useBreakpoints();
-    const { isCollapsed, toggleCollapse } = useCollapseContext();
-    const handleBack = () => {
-        if (xl && !isDraft && isCollapsed) {
-            toggleCollapse();
-        } else {
-            onNavigateBack();
-        }
-    };
-    return <PageHeader {...headerProps} onBackPress={handleBack} />;
 }
 
 const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
@@ -335,30 +314,25 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
     return (
         <View style={styles.column}>
-            <CollapseProvider>
-                <CampaignDetailsHeader
-                    title="Campaign Details"
-                    subtitle={collaboration.name}
-                    showBackButton
-                    isDraft={isDraft}
-                    onNavigateBack={() => {
-                        if (expoRouter.canGoBack()) expoRouter.back();
-                        else nav.push("/collaborations");
-                    }}
-                    actionButtons={campaignHeaderActions}
-                    rightComponent={
-                        <Pressable
-                            onPress={() => setActionsVisible(true)}
-                            style={styles.iconButton}
-                        >
-                            <FontAwesomeIcon
-                                icon={faEllipsisH}
-                                size={24}
-                                color={colors.text}
-                            />
-                        </Pressable>
-                    }
-                />
+            <PageHeader
+                title="Campaign Details"
+                subtitle={collaboration.name}
+                showBackButton
+                onBackPress={() => expoRouter.replace("/(main)/(drawer)/(tabs)/collaborations")}
+                actionButtons={campaignHeaderActions}
+                rightComponent={
+                    <Pressable
+                        onPress={() => setActionsVisible(true)}
+                        style={styles.iconButton}
+                    >
+                        <FontAwesomeIcon
+                            icon={faEllipsisH}
+                            size={24}
+                            color={colors.text}
+                        />
+                    </Pressable>
+                }
+            />
             {collaboration.status !== "draft" && (
                 <View style={styles.tabContainer}>
                     <TopTabNavigation
@@ -366,10 +340,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                         size="compact"
                         mobileFullWidth={true}
                         splitTwoColumns={true}
+                        collapsible={false}
                     />
                 </View>
             )}
-            </CollapseProvider>
             <BottomSheetActions
                 cardId={(paramPageID || pageID) as string}
                 cardType="activeCollab"
