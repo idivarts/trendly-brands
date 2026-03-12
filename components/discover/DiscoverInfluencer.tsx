@@ -658,7 +658,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 style={{
                     flex: 1,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" && xl ? 120 : 16,
+                    paddingHorizontal: Platform.OS === "web" && xl ? 140 : 16,
                 }}
             >
                 <FlatList
