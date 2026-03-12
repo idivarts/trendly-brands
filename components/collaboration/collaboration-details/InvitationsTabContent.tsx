@@ -235,7 +235,7 @@ const InvitationsTabContent = (props: any) => {
                     <View style={styles.discoverWrapper}>
                         <Discover
                             showRightPanel={false}
-                            showTopPanel={true}
+                            showTopPanel={false}
                             advanceFilter={true}
                             onStatusChange={handleStatusChange}
                             isStatusCard={false}
