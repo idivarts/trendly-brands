@@ -115,6 +115,50 @@ const isSameRange = (
     b?: { min?: number; max?: number }
 ) => a?.min === b?.min && a?.max === b?.max;
 
+const buildFiltersFromAnswers = (answers: Record<string, any>): IAdvanceFilters => {
+    const filters: IAdvanceFilters = {};
+
+    // Handle follower range (multiselect: combine selected ranges into min/max)
+    const followerRanges = answers.followerRange as Array<{ min?: number; max?: number }> | undefined;
+    if (followerRanges && followerRanges.length > 0) {
+        const mins = followerRanges.map((r) => r.min).filter((m): m is number => m != null);
+        const maxes = followerRanges.map((r) => r.max).filter((m): m is number => m != null);
+        const hasUnboundedMax = followerRanges.some((r) => r.max == null);
+        filters.followerMin = mins.length > 0 ? Math.min(...mins) : undefined;
+        filters.followerMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
+    }
+
+    // Handle cost-to-avg-views range (multiselect: combine selected ranges into min/max)
+    const avgViewsRanges = answers.avgViewsRange as Array<{ min?: number; max?: number }> | undefined;
+    if (avgViewsRanges && avgViewsRanges.length > 0) {
+        const mins = avgViewsRanges.map((r) => r.min).filter((m): m is number => m != null);
+        const maxes = avgViewsRanges.map((r) => r.max).filter((m): m is number => m != null);
+        const hasUnboundedMax = avgViewsRanges.some((r) => r.max == null);
+        filters.avgViewsMin = mins.length > 0 ? Math.min(...mins) : undefined;
+        filters.avgViewsMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
+    }
+
+    if (answers.selectedNiches?.length > 0) {
+        filters.selectedNiches = answers.selectedNiches;
+    }
+
+    const selectedLocations = (answers.selectedLocations || []).filter(
+        (location: string) => location !== PAN_INDIA_VALUE
+    );
+    if (selectedLocations.length > 0) {
+        filters.selectedLocations = selectedLocations;
+    }
+
+    const selectedGenders = (answers.genders || []).filter(
+        (gender: string) => gender !== ALL_GENDERS_VALUE
+    );
+    if (selectedGenders.length > 0) {
+        filters.genders = selectedGenders;
+    }
+
+    return filters;
+};
+
 const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -139,54 +183,12 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
         if (currentStep < SURVEY_QUESTIONS.length - 1) {
             setCurrentStep((prev) => prev + 1);
         } else {
-            // Survey complete, convert answers to IAdvanceFilters
-            const filters: IAdvanceFilters = {};
-
-            // Handle follower range (multiselect: combine selected ranges into min/max)
-            const followerRanges = answers.followerRange as Array<{ min?: number; max?: number }> | undefined;
-            if (followerRanges && followerRanges.length > 0) {
-                const mins = followerRanges.map((r) => r.min).filter((m): m is number => m != null);
-                const maxes = followerRanges.map((r) => r.max).filter((m): m is number => m != null);
-                const hasUnboundedMax = followerRanges.some((r) => r.max == null);
-                filters.followerMin = mins.length > 0 ? Math.min(...mins) : undefined;
-                filters.followerMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
-            }
-
-            // Handle cost-to-avg-views range (multiselect: combine selected ranges into min/max)
-            const avgViewsRanges = answers.avgViewsRange as Array<{ min?: number; max?: number }> | undefined;
-            if (avgViewsRanges && avgViewsRanges.length > 0) {
-                const mins = avgViewsRanges.map((r) => r.min).filter((m): m is number => m != null);
-                const maxes = avgViewsRanges.map((r) => r.max).filter((m): m is number => m != null);
-                const hasUnboundedMax = avgViewsRanges.some((r) => r.max == null);
-                filters.avgViewsMin = mins.length > 0 ? Math.min(...mins) : undefined;
-                filters.avgViewsMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
-            }
-
-            // Handle multi-selects
-            if (answers.selectedNiches?.length > 0) {
-                filters.selectedNiches = answers.selectedNiches;
-            }
-
-            const selectedLocations = (answers.selectedLocations || []).filter(
-                (location: string) => location !== PAN_INDIA_VALUE
-            );
-            if (selectedLocations.length > 0) {
-                filters.selectedLocations = selectedLocations;
-            }
-
-            const selectedGenders = (answers.genders || []).filter(
-                (gender: string) => gender !== ALL_GENDERS_VALUE
-            );
-            if (selectedGenders.length > 0) {
-                filters.genders = selectedGenders;
-            }
-
-            onComplete(filters);
+            onComplete(buildFiltersFromAnswers(answers));
         }
     };
 
     const handleSkip = () => {
-        handleNext();
+        onComplete(buildFiltersFromAnswers(answers));
     };
 
     const handleBack = () => {
@@ -368,7 +370,6 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
     };
 
     const canProceed = () => {
-        if (currentQuestion.skippable) return true;
         const answer = answers[currentQuestion.field];
         if (currentQuestion.type === "multiselect") {
             return answer && answer.length > 0;
@@ -408,16 +409,14 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
 
             <View style={styles.footer}>
                 <View style={styles.buttonContainer}>
-                    {currentQuestion.skippable && (
-                        <Button
-                            mode="text"
-                            onPress={handleSkip}
-                            style={styles.skipButton}
-                            textColor={textColor}
-                        >
-                            Skip
-                        </Button>
-                    )}
+                    <Button
+                        mode="text"
+                        onPress={handleSkip}
+                        style={styles.skipButton}
+                        textColor={textColor}
+                    >
+                        Skip All
+                    </Button>
                     <Button
                         mode="contained"
                         onPress={handleNext}
