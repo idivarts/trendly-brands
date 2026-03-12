@@ -31,6 +31,11 @@ interface SurveyQuestion {
     skippable?: boolean;
 }
 
+const ALL_GENDERS_VALUE = "__all_genders__";
+const ALL_GENDERS_LABEL = "All Genders";
+const PAN_INDIA_VALUE = "__pan_india__";
+const PAN_INDIA_LABEL = "PAN India";
+
 const SURVEY_QUESTIONS: SurveyQuestion[] = [
     {
         id: "niches",
@@ -63,10 +68,13 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
         subtitle: "Select preferred locations",
         type: "multiselect",
         field: "selectedLocations",
-        options: POPULAR_CITIES.map((city) => ({
-            label: city,
-            value: city,
-        })),
+        options: [
+            { label: PAN_INDIA_LABEL, value: PAN_INDIA_VALUE },
+            ...POPULAR_CITIES.map((city) => ({
+                label: city,
+                value: city,
+            })),
+        ],
         skippable: true,
     },
     {
@@ -91,10 +99,13 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
         subtitle: "Select the gender(s) you'd like to work with",
         type: "multiselect",
         field: "genders",
-        options: GENDER_SELECT.map((g) => ({
-            label: g.label,
-            value: g.value,
-        })),
+        options: [
+            { label: ALL_GENDERS_LABEL, value: ALL_GENDERS_VALUE },
+            ...GENDER_SELECT.map((g) => ({
+                label: g.label,
+                value: g.value,
+            })),
+        ],
         skippable: true,
     },
 ];
@@ -156,12 +167,18 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                 filters.selectedNiches = answers.selectedNiches;
             }
 
-            if (answers.selectedLocations?.length > 0) {
-                filters.selectedLocations = answers.selectedLocations;
+            const selectedLocations = (answers.selectedLocations || []).filter(
+                (location: string) => location !== PAN_INDIA_VALUE
+            );
+            if (selectedLocations.length > 0) {
+                filters.selectedLocations = selectedLocations;
             }
 
-            if (answers.genders?.length > 0) {
-                filters.genders = answers.genders;
+            const selectedGenders = (answers.genders || []).filter(
+                (gender: string) => gender !== ALL_GENDERS_VALUE
+            );
+            if (selectedGenders.length > 0) {
+                filters.genders = selectedGenders;
             }
 
             onComplete(filters);
@@ -204,14 +221,33 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
 
                 if (currentQuestion.field === "selectedLocations") {
                     const selectedLocations = (answers.selectedLocations || []) as string[];
+                    const selectedLocationLabels = selectedLocations.map((location) =>
+                        location === PAN_INDIA_VALUE ? PAN_INDIA_LABEL : location
+                    );
                     return (
                         <View style={styles.optionsContainer}>
                             <MultiSelectExtendable
                                 buttonLabel="Others"
-                                initialItemsList={includeSelectedItems(CITIES, selectedLocations)}
-                                initialMultiselectItemsList={includeSelectedItems(POPULAR_CITIES, selectedLocations)}
-                                onSelectedItemsChange={handleAnswer}
-                                selectedItems={selectedLocations}
+                                initialItemsList={[
+                                    PAN_INDIA_LABEL,
+                                    ...includeSelectedItems(CITIES, selectedLocations).filter(
+                                        (city) => city !== PAN_INDIA_VALUE
+                                    ),
+                                ]}
+                                initialMultiselectItemsList={[
+                                    PAN_INDIA_LABEL,
+                                    ...includeSelectedItems(POPULAR_CITIES, selectedLocations).filter(
+                                        (city) => city !== PAN_INDIA_VALUE
+                                    ),
+                                ]}
+                                onSelectedItemsChange={(labels) => {
+                                    if (labels.includes(PAN_INDIA_LABEL)) {
+                                        handleAnswer([PAN_INDIA_VALUE]);
+                                        return;
+                                    }
+                                    handleAnswer(labels);
+                                }}
+                                selectedItems={selectedLocationLabels}
                                 theme={theme}
                             />
                         </View>
@@ -284,10 +320,16 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
 
                 if (currentQuestion.field === "genders") {
                     const genderLabelByValue = new Map(
-                        GENDER_SELECT.map((gender) => [gender.value, gender.label])
+                        [
+                            [ALL_GENDERS_VALUE, ALL_GENDERS_LABEL] as const,
+                            ...GENDER_SELECT.map((gender) => [gender.value, gender.label] as const),
+                        ]
                     );
                     const genderValueByLabel = new Map(
-                        GENDER_SELECT.map((gender) => [gender.label, gender.value])
+                        [
+                            [ALL_GENDERS_LABEL, ALL_GENDERS_VALUE] as const,
+                            ...GENDER_SELECT.map((gender) => [gender.label, gender.value] as const),
+                        ]
                     );
                     const selectedGenderValues = (answers.genders || []) as string[];
                     const selectedGenderLabels = selectedGenderValues.map(
@@ -298,12 +340,19 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                         <View style={styles.optionsContainer}>
                             <MultiSelectExtendable
                                 initialItemsList={GENDER_SELECT.map((gender) => gender.label)}
-                                initialMultiselectItemsList={GENDER_SELECT.map((gender) => gender.label)}
-                                onSelectedItemsChange={(labels) =>
+                                initialMultiselectItemsList={[
+                                    ALL_GENDERS_LABEL,
+                                    ...GENDER_SELECT.map((gender) => gender.label),
+                                ]}
+                                onSelectedItemsChange={(labels) => {
+                                    if (labels.includes(ALL_GENDERS_LABEL)) {
+                                        handleAnswer([ALL_GENDERS_VALUE]);
+                                        return;
+                                    }
                                     handleAnswer(
                                         labels.map((label) => genderValueByLabel.get(label) || label)
-                                    )
-                                }
+                                    );
+                                }}
                                 selectedItems={selectedGenderLabels}
                                 theme={theme}
                             />
