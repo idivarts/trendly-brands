@@ -25,7 +25,7 @@ interface SurveyQuestion {
     question: string;
     subtitle?: string;
     type: "multiselect";
-    field: keyof IAdvanceFilters | "followerRange";
+    field: keyof IAdvanceFilters | "followerRange" | "avgViewsRange";
     options?: Array<{ label: string; value: any }>;
     rangeOptions?: { min: number; max: number; step: number; prefix?: string; suffix?: string };
     skippable?: boolean;
@@ -67,6 +67,22 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
             label: city,
             value: city,
         })),
+        skippable: true,
+    },
+    {
+        id: "collaboration-cost",
+        question: "How much are you okay spending per collaboration?",
+        subtitle: "Select budget bands to target creators with matching average views",
+        type: "multiselect",
+        field: "avgViewsRange",
+        options: [
+            { label: "Up to 5K", value: { min: undefined, max: 15000 } },
+            { label: "5K - 15K", value: { min: 15000, max: 50000 } },
+            { label: "15K - 30K", value: { min: 50000, max: 150000 } },
+            { label: "30K - 60K", value: { min: 150000, max: 300000 } },
+            { label: "60K+", value: { min: 300000, max: undefined } },
+            { label: "Any Budget", value: { min: undefined, max: undefined } },
+        ],
         skippable: true,
     },
     {
@@ -123,6 +139,16 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                 const hasUnboundedMax = followerRanges.some((r) => r.max == null);
                 filters.followerMin = mins.length > 0 ? Math.min(...mins) : undefined;
                 filters.followerMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
+            }
+
+            // Handle cost-to-avg-views range (multiselect: combine selected ranges into min/max)
+            const avgViewsRanges = answers.avgViewsRange as Array<{ min?: number; max?: number }> | undefined;
+            if (avgViewsRanges && avgViewsRanges.length > 0) {
+                const mins = avgViewsRanges.map((r) => r.min).filter((m): m is number => m != null);
+                const maxes = avgViewsRanges.map((r) => r.max).filter((m): m is number => m != null);
+                const hasUnboundedMax = avgViewsRanges.some((r) => r.max == null);
+                filters.avgViewsMin = mins.length > 0 ? Math.min(...mins) : undefined;
+                filters.avgViewsMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
             }
 
             // Handle multi-selects
@@ -218,6 +244,38 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                                     handleAnswer(nextRanges);
                                 }}
                                 selectedItems={selectedFollowerLabels}
+                                theme={theme}
+                            />
+                        </View>
+                    );
+                }
+
+                if (currentQuestion.field === "avgViewsRange") {
+                    const avgViewsOptions = currentQuestion.options || [];
+                    const selectedAvgViewsRanges = (answers.avgViewsRange || []) as Array<{
+                        min?: number;
+                        max?: number;
+                    }>;
+                    const selectedAvgViewsLabels = avgViewsOptions
+                        .filter((option) =>
+                            selectedAvgViewsRanges.some((range) =>
+                                isSameRange(range, option.value)
+                            )
+                        )
+                        .map((option) => option.label);
+
+                    return (
+                        <View style={styles.optionsContainer}>
+                            <MultiSelectExtendable
+                                initialItemsList={avgViewsOptions.map((option) => option.label)}
+                                initialMultiselectItemsList={avgViewsOptions.map((option) => option.label)}
+                                onSelectedItemsChange={(labels) => {
+                                    const nextRanges = avgViewsOptions
+                                        .filter((option) => labels.includes(option.label))
+                                        .map((option) => option.value);
+                                    handleAnswer(nextRanges);
+                                }}
+                                selectedItems={selectedAvgViewsLabels}
                                 theme={theme}
                             />
                         </View>
