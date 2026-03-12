@@ -15,7 +15,9 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     GUIDE_TOUR_MOBILE,
+    GUIDE_TOUR_MOBILE_SKIP_FIRST,
     GUIDE_TOUR_WEB,
+    GUIDE_TOUR_WEB_SKIP_FIRST,
 } from "@/components/guide-tour/guide-tour-config";
 import { useCoachmark } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
@@ -178,44 +180,23 @@ const DiscoverComponent = ({
             !manager ||
             !selectedBrand?.id ||
             isActive ||
-            hasStartedTourRef.current ||
-            !firstInfluencerCardReady
+            hasStartedTourRef.current
         ) {
             return;
         }
-        hasStartedTourRef.current = true;
-        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-    }, [
-        skipGuideTour,
-        surveyCheckDone,
-        showSurvey,
-        manager,
-        selectedBrand?.id,
-        xl,
-        isActive,
-        firstInfluencerCardReady,
-        startCoachmark,
-    ]);
-
-    // Fallback: start tour after delay if first card never reports (e.g. empty list)
-    useEffect(() => {
-        if (
-            skipGuideTour ||
-            !surveyCheckDone ||
-            showSurvey ||
-            !manager ||
-            !selectedBrand?.id ||
-            isActive ||
-            hasStartedTourRef.current ||
-            firstInfluencerCardReady
-        ) {
+        if (firstInfluencerCardReady) {
+            hasStartedTourRef.current = true;
+            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
             return;
         }
+        // No card yet (e.g. empty list): start tour without first step after a short delay
         const t = setTimeout(() => {
             if (hasStartedTourRef.current) return;
             hasStartedTourRef.current = true;
-            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-        }, 2500);
+            startCoachmark(
+                xl ? GUIDE_TOUR_WEB_SKIP_FIRST : GUIDE_TOUR_MOBILE_SKIP_FIRST
+            );
+        }, 1000);
         return () => clearTimeout(t);
     }, [
         skipGuideTour,

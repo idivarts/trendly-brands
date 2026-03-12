@@ -97,3 +97,16 @@ export const GUIDE_TOUR_MOBILE = createTour("guide-tour-mobile", MOBILE_STEPS, {
     showOnce: true,
     delay: 1200,
 });
+
+/** Tour without the first step (influencer card). Used when there are no results so the first card never mounts. */
+export const GUIDE_TOUR_WEB_SKIP_FIRST = createTour(
+    "guide-tour-web-skip-first",
+    WEB_STEPS.slice(1),
+    { showOnce: true, delay: 1200 }
+);
+
+export const GUIDE_TOUR_MOBILE_SKIP_FIRST = createTour(
+    "guide-tour-mobile-skip-first",
+    MOBILE_STEPS.slice(1),
+    { showOnce: true, delay: 1200 }
+);
