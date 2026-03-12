@@ -251,7 +251,6 @@ export const NoDiscoveryCreditModal: React.FC<NoDiscoveryCreditModalProps> = ({
                                 mode="contained"
                                 onPress={handleGoToBilling}
                                 style={styles.primaryButton}
-                                contentStyle={styles.primaryButtonText}
                                 labelStyle={styles.primaryButtonText}
                             >
                                 Go to Billing & Upgrade
