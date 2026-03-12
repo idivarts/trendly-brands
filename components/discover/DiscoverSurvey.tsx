@@ -20,8 +20,8 @@ import {
     StyleSheet,
     TextInput,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Chip, ProgressBar } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface DiscoverSurveyProps {
     onComplete: (filters: IAdvanceFilters) => void;
@@ -31,11 +31,10 @@ interface SurveyQuestion {
     id: string;
     question: string;
     subtitle?: string;
-    type: "multiselect" | "range" | "single-select" | "slider" | "star-rating";
-    field: keyof IAdvanceFilters | "followerRange" | "budgetRange";
+    type: "multiselect" | "range" | "slider";
+    field: keyof IAdvanceFilters | "followerRange";
     options?: Array<{ label: string; value: any }>;
     rangeOptions?: { min: number; max: number; step: number; prefix?: string; suffix?: string };
-    starRatingOptions?: { min: number; max: number; step: number };
     skippable?: boolean;
 }
 
@@ -78,20 +77,6 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
         skippable: true,
     },
     {
-        id: "engagement",
-        question: "What level of engagement are you targeting?",
-        subtitle: "Higher engagement rates often mean better campaign performance",
-        type: "single-select",
-        field: "budgetRange",
-        options: [
-            { label: "High Engagement (5%+)", value: { min: 5, max: undefined } },
-            { label: "Good Engagement (2% - 5%)", value: { min: 2, max: 5 } },
-            { label: "Standard Engagement (1% - 2%)", value: { min: 1, max: 2 } },
-            { label: "Any Engagement", value: { min: undefined, max: undefined } },
-        ],
-        skippable: true,
-    },
-    {
         id: "gender",
         question: "Any gender preference?",
         subtitle: "Select the gender(s) you'd like to work with",
@@ -101,15 +86,6 @@ const SURVEY_QUESTIONS: SurveyQuestion[] = [
             label: g.label,
             value: g.value,
         })),
-        skippable: true,
-    },
-    {
-        id: "quality",
-        question: "What content quality are you looking for?",
-        subtitle: "Rate from 0 to 5 stars (tap half-star for 0.5)",
-        type: "star-rating",
-        field: "qualityMin",
-        starRatingOptions: { min: 0, max: 5, step: 0.5 },
         skippable: true,
     },
 ];
@@ -156,17 +132,6 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                 const hasUnboundedMax = followerRanges.some((r) => r.max == null);
                 filters.followerMin = mins.length > 0 ? Math.min(...mins) : undefined;
                 filters.followerMax = hasUnboundedMax ? undefined : (maxes.length > 0 ? Math.max(...maxes) : undefined);
-            }
-
-            // Handle engagement rate (budgetRange field temporarily)
-            if (answers.budgetRange) {
-                filters.erMin = answers.budgetRange.min;
-                filters.erMax = answers.budgetRange.max;
-            }
-
-            // Handle quality
-            if (answers.qualityMin !== undefined) {
-                filters.qualityMin = answers.qualityMin;
             }
 
             // Handle multi-selects
@@ -610,113 +575,6 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
                     </ScrollView>
                 );
 
-            case "single-select":
-                return (
-                    <ScrollView style={styles.optionsContainer}>
-                        <View style={styles.singleSelectContainer}>
-                            {currentQuestion.options?.map((option) => {
-                                const isSelected =
-                                    JSON.stringify(answers[currentQuestion.field]) ===
-                                    JSON.stringify(option.value);
-                                return (
-                                    <Pressable
-                                        key={option.label}
-                                        onPress={() => handleAnswer(option.value)}
-                                        style={[
-                                            styles.singleSelectOption,
-                                        ]}
-                                    >
-                                        <View style={styles.radioContainer}>
-                                            <View
-                                                style={[
-                                                    styles.radioOuter,
-                                                    isSelected && {
-                                                        borderColor: primaryColor,
-                                                    },
-                                                ]}
-                                            >
-                                                {isSelected && (
-                                                    <View
-                                                        style={[
-                                                            styles.radioInner,
-                                                            { backgroundColor: primaryColor },
-                                                        ]}
-                                                    />
-                                                )}
-                                            </View>
-                                            <Text
-                                                style={[
-                                                    styles.optionText,
-                                                    isSelected && {
-                                                        fontWeight: "600",
-                                                    },
-                                                ]}
-                                            >
-                                                {option.label}
-                                            </Text>
-                                        </View>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    </ScrollView>
-                );
-
-            case "star-rating": {
-                const allowedValues = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5] as const;
-                const value = answers[currentQuestion.field] as number | undefined;
-                const starCount = 5;
-                return (
-                    <View style={styles.optionsContainer}>
-                        <View style={styles.starRatingRow}>
-                            {Array.from({ length: starCount }, (_, i) => {
-                                const halfValue = allowedValues[i * 2]; // 0.5, 1.5, 2.5, 3.5, 4.5
-                                const fullValue = allowedValues[i * 2 + 1]; // 1, 2, 3, 4, 5
-                                const isHalfFilled = value !== undefined && value >= halfValue && value < fullValue;
-                                const isFullFilled = value !== undefined && value >= fullValue;
-                                return (
-                                    <View key={i} style={styles.starCell}>
-                                        <View style={styles.starIconWrap} pointerEvents="none">
-                                            {isFullFilled ? (
-                                                <Ionicons name="star" size={40} color={primaryColor} />
-                                            ) : isHalfFilled ? (
-                                                <Ionicons name="star-half" size={40} color={primaryColor} />
-                                            ) : (
-                                                <Ionicons name="star-outline" size={40} color={primaryColor} />
-                                            )}
-                                        </View>
-                                        <Pressable
-                                            style={styles.starHalfTouchRight}
-                                            onPress={() => handleAnswer(fullValue)}
-                                        />
-                                        <Pressable
-                                            style={styles.starHalfTouchLeft}
-                                            onPress={() => handleAnswer(halfValue)}
-                                        />
-                                    </View>
-                                );
-                            })}
-                        </View>
-                        <Pressable
-                            onPress={() => handleAnswer(undefined)}
-                            style={[
-                                styles.anyQualityChip,
-                                value === undefined && { backgroundColor: primaryColor },
-                            ]}
-                        >
-                            <Text style={[styles.anyQualityText, value === undefined && { color: colors.white }]}>
-                                Any quality
-                            </Text>
-                        </Pressable>
-                        {value !== undefined && (
-                            <Text style={styles.starValueLabel}>
-                                {Number(value) === 1 ? "1 star" : `${Number(value)} stars`}
-                            </Text>
-                        )}
-                    </View>
-                );
-            }
-
             default:
                 return null;
         }
@@ -795,205 +653,121 @@ const DiscoverSurvey: React.FC<DiscoverSurveyProps> = ({ onComplete }) => {
 
 const createDiscoverSurveyStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
-    container: {
-        flex: 1,
-        width: "100%",
-        maxWidth: 800,
-        alignSelf: "center",
-        padding: 24,
-    },
-    header: {
-        marginBottom: 32,
-    },
-    progressSection: {
-        marginBottom: 24,
-    },
-    progressHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    stepText: {
-        fontSize: 14,
-        fontWeight: "500",
-        opacity: 0.7,
-    },
-    backButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
-    backText: {
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    progressBar: {
-        height: 6,
-        borderRadius: 3,
-    },
-    question: {
-        fontSize: 28,
-        fontWeight: "700",
-        marginBottom: 8,
-        lineHeight: 36,
-    },
-    subtitle: {
-        fontSize: 16,
-        opacity: 0.7,
-        lineHeight: 22,
-    },
-    optionsContainer: {
-        flex: 1,
-        marginBottom: 20,
-    },
-    chipsContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12,
-    },
-    chip: {
-        marginBottom: 0,
-    },
-    chipText: {
-        fontSize: 14,
-    },
-    othersChip: {
-        borderWidth: 1,
-        borderColor: colors.surveyOutline,
-    },
-    locationSheetContent: {
-        padding: 16,
-        paddingTop: Platform.OS === "web" ? 30 : 16,
-        paddingBottom: 20,
-    },
-    locationSearchInput: {
-        borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        marginBottom: 16,
-        fontSize: 16,
-    },
-    locationSheetList: {
-        maxHeight: 400,
-    },
-    locationSheetItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.surveyOutlineLight,
-    },
-    locationSheetItemText: {
-        fontSize: 16,
-        fontWeight: "500",
-    },
-    singleSelectContainer: {
-        gap: 12,
-
-    },
-    singleSelectOption: {
-        backgroundColor: colors.background,
-        borderRadius: 12,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: colors.surveyOutlineLight,
-    },
-    radioContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        backgroundColor: "transparent",
-    },
-    radioOuter: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: colors.surveyRadioBorder,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    radioInner: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-    },
-    optionText: {
-        fontSize: 16,
-        fontWeight: "500",
-        color: colors.text,
-    },
-    starRatingRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 16,
-    },
-    starCell: {
-        width: 44,
-        height: 44,
-        position: "relative",
-    },
-    starHalfTouchLeft: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        bottom: 0,
-        width: "50%",
-    },
-    starHalfTouchRight: {
-        position: "absolute",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: "50%",
-    },
-    starIconWrap: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    anyQualityChip: {
-        alignSelf: "center",
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 20,
-        borderWidth: 2,
-        borderColor: colors.surveyBorder,
-    },
-    anyQualityText: {
-        fontSize: 15,
-        fontWeight: "600",
-    },
-    starValueLabel: {
-        fontSize: 14,
-        opacity: 0.8,
-        textAlign: "center",
-        marginTop: 8,
-    },
-    footer: {
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: colors.surveyBorderTop,
-    },
-    buttonContainer: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-    },
-    skipButton: {
-        flex: 1,
-    },
-    nextButton: {
-        flex: 2,
-    },
-    nextButtonContent: {
-        paddingVertical: 8,
-    },
-});
+        container: {
+            flex: 1,
+            width: "100%",
+            maxWidth: 800,
+            alignSelf: "center",
+            padding: 24,
+        },
+        header: {
+            marginBottom: 32,
+        },
+        progressSection: {
+            marginBottom: 24,
+        },
+        progressHeader: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+        },
+        stepText: {
+            fontSize: 14,
+            fontWeight: "500",
+            opacity: 0.7,
+        },
+        backButton: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+        },
+        backText: {
+            fontSize: 14,
+            fontWeight: "500",
+        },
+        progressBar: {
+            height: 6,
+            borderRadius: 3,
+        },
+        question: {
+            fontSize: 28,
+            fontWeight: "700",
+            marginBottom: 8,
+            lineHeight: 36,
+        },
+        subtitle: {
+            fontSize: 16,
+            opacity: 0.7,
+            lineHeight: 22,
+        },
+        optionsContainer: {
+            flex: 1,
+            marginBottom: 20,
+        },
+        chipsContainer: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 12,
+        },
+        chip: {
+            marginBottom: 0,
+        },
+        chipText: {
+            fontSize: 14,
+        },
+        othersChip: {
+            borderWidth: 1,
+            borderColor: colors.surveyOutline,
+        },
+        locationSheetContent: {
+            padding: 16,
+            paddingTop: Platform.OS === "web" ? 30 : 16,
+            paddingBottom: 20,
+        },
+        locationSearchInput: {
+            borderWidth: 1,
+            borderRadius: 10,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            marginBottom: 16,
+            fontSize: 16,
+        },
+        locationSheetList: {
+            maxHeight: 400,
+        },
+        locationSheetItem: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.surveyOutlineLight,
+        },
+        locationSheetItemText: {
+            fontSize: 16,
+            fontWeight: "500",
+        },
+        footer: {
+            paddingTop: 20,
+            borderTopWidth: 1,
+            borderTopColor: colors.surveyBorderTop,
+        },
+        buttonContainer: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+        },
+        skipButton: {
+            flex: 1,
+        },
+        nextButton: {
+            flex: 2,
+        },
+        nextButtonContent: {
+            paddingVertical: 8,
+        },
+    });
 
 export default DiscoverSurvey;
