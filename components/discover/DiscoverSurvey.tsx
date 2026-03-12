@@ -31,7 +31,7 @@ interface SurveyQuestion {
     id: string;
     question: string;
     subtitle?: string;
-    type: "multiselect" | "range" | "slider";
+    type: "multiselect";
     field: keyof IAdvanceFilters | "followerRange";
     options?: Array<{ label: string; value: any }>;
     rangeOptions?: { min: number; max: number; step: number; prefix?: string; suffix?: string };
