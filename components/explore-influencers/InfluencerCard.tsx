@@ -2,12 +2,12 @@ import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignB
 import { FacebookImageComponent } from "@/shared-uis/components/image-component";
 import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import Colors from "@/shared-uis/constants/Colors";
-import { getPlaceholderImageForGender } from "@/shared-uis/utils/url";
 import { maskHandle } from "@/shared-uis/utils/masks";
+import { getPlaceholderImageForGender } from "@/shared-uis/utils/url";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ImageSourcePropType, StyleSheet, Text, View } from "react-native";
 import { Card, Checkbox } from "react-native-paper";
 import type { InfluencerItem } from "../discover/discover-types";
 
@@ -79,7 +79,7 @@ const Avatar = ({
             <FacebookImageComponent
                 url={item.profile_pic}
                 altText="Issue Loading image"
-                placeholder={getPlaceholderImageForGender(item.gender)}
+                placeholder={getPlaceholderImageForGender(item.gender) as ImageSourcePropType}
                 style={[styles.avatarImage, avatarImageDynamicStyle]}
             />
         </View>
@@ -358,6 +358,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         cardContent: {
             paddingRight: 0,
+            paddingBottom:36
         },
         timeAgoText: {
             color: colors.textSecondary,

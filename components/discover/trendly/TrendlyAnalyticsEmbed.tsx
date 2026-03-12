@@ -1,28 +1,17 @@
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useBreakpoints } from "@/hooks";
 import {
     ISocialAnalytics,
     ISocials,
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { useBreakpoints } from "@/hooks";
+import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { Brand } from "@/types/Brand";
 import { getTrustabilityLevel } from "@/utils/trustability";
-import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useState } from "react";
-import { Image, Linking, Platform, ScrollView, StyleSheet, View as RNView } from "react-native";
-import Svg, { Circle } from "react-native-svg";
-import {
-    ActivityIndicator,
-    Card,
-    Chip,
-    Divider,
-    List,
-    Text,
-} from "react-native-paper";
 import {
     faArrowDown,
     faArrowTrendDown,
@@ -32,7 +21,18 @@ import {
     faIndianRupee,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
+import { useTheme } from "@react-navigation/native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Image, Linking, Platform, View as RNView, ScrollView, StyleSheet } from "react-native";
+import {
+    ActivityIndicator,
+    Card,
+    Chip,
+    Divider,
+    List,
+    Text,
+} from "react-native-paper";
+import Svg, { Circle } from "react-native-svg";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
 
@@ -303,237 +303,241 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             const strokeDashLength = (trustPercent / 100) * CIRCLE_CIRCUMFERENCE;
 
             return (
-            <View style={{ marginHorizontal: 12, marginBottom: 12, marginTop: 12}}>
-                <View
-                    style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        gap: cardSpacing,
-                        alignItems: "flex-start",
-                    }}
-                >
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding, alignItems: "center" }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 8 }}
-                            >
-                                TRUSTABILITY
-                            </Text>
-                            <RNView style={{ position: "relative", width: 80, height: 80, alignItems: "center", justifyContent: "center" }}>
-                                <Svg width={80} height={80} viewBox="0 0 80 80" style={{ position: "absolute" }}>
-                                    <Circle
-                                        cx={40}
-                                        cy={40}
-                                        r={CIRCLE_R}
-                                        stroke={colors.tag}
-                                        strokeWidth={6}
-                                        fill="none"
-                                    />
-                                    <Circle
-                                        cx={40}
-                                        cy={40}
-                                        r={CIRCLE_R}
-                                        stroke={trustColor}
-                                        strokeWidth={6}
-                                        fill="none"
-                                        strokeDasharray={`${strokeDashLength} ${CIRCLE_CIRCUMFERENCE}`}
-                                        strokeLinecap="round"
-                                        transform="rotate(-90 40 40)"
-                                    />
-                                </Svg>
-                                <RNView style={{ alignItems: "center", justifyContent: "center" }}>
-                                    <Text variant="titleLarge" style={{ fontWeight: "bold", color: trustColor }}>
-                                        {trustPercent}%
-                                    </Text>
-                                </RNView>
-                            </RNView>
-                            <Text variant="labelMedium" style={{ fontWeight: "600", marginTop: 8, color: trustColor }}>
-                                {trustLevel?.label || "—"}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 4 }}>
-                                Based on engagement quality
-                            </Text>
-                        </Card.Content>
-                    </Card>
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                CPM
-                            </Text>
-                            <Text variant={valueVariant}>
-                                {formatCurrency(analytics.cpm)}{" "}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Cost per Mille (1000 views)
-                            </Text>
-                        </Card.Content>
-                    </Card>
-
-                    <Card
-                        style={[
-                            { width: wideCardWidth, marginBottom: cardSpacing },
-                            {
-                                backgroundColor: colors.budgetCardBg,
-                                borderWidth: 1,
-                                borderColor: colors.budgetCardBorder,
-                                borderRadius: 12,
-                            },
-                        ]}
+                <View style={{ marginHorizontal: 12, marginBottom: 12, marginTop: 12 }}>
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            gap: cardSpacing,
+                            alignItems: "stretch",
+                        }}
                     >
-                        <Card.Content style={{ padding: contentPadding, flexDirection: "row" }}>
-                            <RNView
-                                style={{
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 10,
-                                    backgroundColor: colors.white,
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    marginRight: 12,
-                                }}
-                            >
-                                <FontAwesomeIcon
-                                    icon={faIndianRupee}
-                                    size={22}
-                                    color={colors.primary}
-                                />
-                            </RNView>
-                            <RNView style={{ flex: 1 }}>
+                        <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                            <Card.Content style={{ padding: contentPadding, flex: 1, justifyContent: "flex-start" }}>
                                 <Text
-                                    variant="labelSmall"
-                                    style={{
-                                        color: colors.primary,
-                                        opacity: 0.85,
-                                        marginBottom: 4,
-                                        letterSpacing: 0.5,
-                                    }}
+                                    variant={labelVariant}
+                                    style={{ opacity: 0.7, marginBottom: 8 }}
                                 >
-                                    ESTIMATED BUDGET
+                                    TRUSTABILITY
                                 </Text>
-                                <Text
-                                    variant={rangeVariant}
-                                    style={{
-                                        fontWeight: "bold",
-                                        color: colors.text,
-                                        marginBottom: 8,
-                                    }}
-                                >
-                                    {analytics.estimatedBudget
-                                        ? formatCurrency(
-                                              (analytics.estimatedBudget.min + analytics.estimatedBudget.max) / 2
-                                          )
-                                        : "—"}
-                                </Text>
-                                <RNView style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
-                                    <FontAwesomeIcon icon={faArrowDown} size={10} color={colors.textSecondary} />
-                                    <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
-                                        {analytics.estimatedBudget
-                                            ? formatCurrency(analytics.estimatedBudget.min) + " min"
-                                            : "—"}
-                                    </Text>
-                                    <Text variant="bodySmall" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
-                                        •
-                                    </Text>
-                                    <FontAwesomeIcon icon={faArrowUp} size={10} color={colors.textSecondary} />
-                                    <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
-                                        {analytics.estimatedBudget
-                                            ? formatCurrency(analytics.estimatedBudget.max) + " max"
-                                            : "—"}
-                                    </Text>
+                                <RNView style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <RNView style={{ position: "relative", width: 80, height: 80, alignItems: "center", justifyContent: "center" }}>
+                                        <Svg width={80} height={80} viewBox="0 0 80 80" style={{ position: "absolute" }}>
+                                            <Circle
+                                                cx={40}
+                                                cy={40}
+                                                r={CIRCLE_R}
+                                                stroke={colors.tag}
+                                                strokeWidth={6}
+                                                fill="none"
+                                            />
+                                            <Circle
+                                                cx={40}
+                                                cy={40}
+                                                r={CIRCLE_R}
+                                                stroke={trustColor}
+                                                strokeWidth={6}
+                                                fill="none"
+                                                strokeDasharray={`${strokeDashLength} ${CIRCLE_CIRCUMFERENCE}`}
+                                                strokeLinecap="round"
+                                                transform="rotate(-90 40 40)"
+                                            />
+                                        </Svg>
+                                        <RNView style={{ alignItems: "center", justifyContent: "center" }}>
+                                            <Text variant="titleLarge" style={{ fontWeight: "bold", color: trustColor }}>
+                                                {trustPercent}%
+                                            </Text>
+                                        </RNView>
+                                    </RNView>
+                                    <RNView style={{ marginLeft: 12, flex: 1 }}>
+                                        <Text variant={valueVariant} style={{ fontWeight: "600", color: trustColor }}>
+                                            {trustLevel?.label || "—"}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 4 }}>
+                                            Based on engagement quality
+                                        </Text>
+                                    </RNView>
                                 </RNView>
-                            </RNView>
-                        </Card.Content>
-                    </Card>
+                            </Card.Content>
+                        </Card>
+                        <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                            <Card.Content style={{ padding: contentPadding, flex: 1, justifyContent: "flex-start" }}>
+                                <Text
+                                    variant={labelVariant}
+                                    style={{ opacity: 0.7, marginBottom: 6 }}
+                                >
+                                    CPM
+                                </Text>
+                                <Text variant={valueVariant}>
+                                    {formatCurrency(analytics.cpm)}{" "}
+                                </Text>
+                                <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
+                                    Cost per Mille (1000 views)
+                                </Text>
+                            </Card.Content>
+                        </Card>
 
-                    <Card
-                        style={[
-                            { width: wideCardWidth, marginBottom: cardSpacing },
-                            {
-                                backgroundColor: colors.reachCardBg,
-                                borderWidth: 1,
-                                borderColor: colors.reachCardBorder,
-                                borderRadius: 12,
-                            },
-                        ]}
-                    >
-                        <Card.Content style={{ padding: contentPadding, flexDirection: "row" }}>
-                            <RNView
-                                style={{
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 10,
-                                    backgroundColor: colors.white,
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    marginRight: 12,
-                                }}
-                            >
-                                <FontAwesomeIcon
-                                    icon={faChartLine}
-                                    size={22}
-                                    color={colors.green}
-                                />
-                            </RNView>
-                            <RNView style={{ flex: 1 }}>
-                                <Text
-                                    variant="labelSmall"
+                        <Card
+                            style={[
+                                { width: wideCardWidth, marginBottom: cardSpacing },
+                                {
+                                    backgroundColor: colors.budgetCardBg,
+                                    borderWidth: 1,
+                                    borderColor: colors.budgetCardBorder,
+                                    borderRadius: 12,
+                                },
+                            ]}
+                        >
+                            <Card.Content style={{ padding: contentPadding, flexDirection: "row" }}>
+                                <RNView
                                     style={{
-                                        color: colors.green,
-                                        opacity: 0.85,
-                                        marginBottom: 4,
-                                        letterSpacing: 0.5,
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 10,
+                                        backgroundColor: colors.white,
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 12,
                                     }}
                                 >
-                                    ESTIMATED REACH
-                                </Text>
-                                <Text
-                                    variant={rangeVariant}
-                                    style={{
-                                        fontWeight: "bold",
-                                        color: colors.text,
-                                        marginBottom: 8,
-                                    }}
-                                >
-                                    {analytics.estimatedReach
-                                        ? formatNumber(
-                                              (analytics.estimatedReach.min + analytics.estimatedReach.max) / 2
-                                          )
-                                        : "—"}
-                                </Text>
-                                <RNView style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
                                     <FontAwesomeIcon
-                                        icon={faArrowTrendDown}
-                                        size={10}
-                                        color={colors.textSecondary}
+                                        icon={faIndianRupee}
+                                        size={22}
+                                        color={colors.primary}
                                     />
-                                    <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
-                                        {analytics.estimatedReach
-                                            ? formatNumber(analytics.estimatedReach.min) + " min"
-                                            : "—"}
-                                    </Text>
-                                    <Text variant="bodySmall" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
-                                        •
-                                    </Text>
-                                    <FontAwesomeIcon
-                                        icon={faArrowTrendUp}
-                                        size={10}
-                                        color={colors.textSecondary}
-                                    />
-                                    <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
-                                        {analytics.estimatedReach
-                                            ? formatNumber(analytics.estimatedReach.max) + " max"
-                                            : "—"}
-                                    </Text>
                                 </RNView>
-                            </RNView>
-                        </Card.Content>
-                    </Card>
+                                <RNView style={{ flex: 1 }}>
+                                    <Text
+                                        variant="labelSmall"
+                                        style={{
+                                            color: colors.primary,
+                                            opacity: 0.85,
+                                            marginBottom: 4,
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
+                                        ESTIMATED BUDGET
+                                    </Text>
+                                    <Text
+                                        variant={rangeVariant}
+                                        style={{
+                                            fontWeight: "bold",
+                                            color: colors.text,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        {analytics.estimatedBudget
+                                            ? formatCurrency(
+                                                (analytics.estimatedBudget.min + analytics.estimatedBudget.max) / 2
+                                            )
+                                            : "—"}
+                                    </Text>
+                                    <RNView style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+                                        <FontAwesomeIcon icon={faArrowDown} size={10} color={colors.textSecondary} />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedBudget
+                                                ? formatCurrency(analytics.estimatedBudget.min) + " min"
+                                                : "—"}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
+                                            •
+                                        </Text>
+                                        <FontAwesomeIcon icon={faArrowUp} size={10} color={colors.textSecondary} />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedBudget
+                                                ? formatCurrency(analytics.estimatedBudget.max) + " max"
+                                                : "—"}
+                                        </Text>
+                                    </RNView>
+                                </RNView>
+                            </Card.Content>
+                        </Card>
+
+                        <Card
+                            style={[
+                                { width: wideCardWidth, marginBottom: cardSpacing },
+                                {
+                                    backgroundColor: colors.reachCardBg,
+                                    borderWidth: 1,
+                                    borderColor: colors.reachCardBorder,
+                                    borderRadius: 12,
+                                },
+                            ]}
+                        >
+                            <Card.Content style={{ padding: contentPadding, flexDirection: "row" }}>
+                                <RNView
+                                    style={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 10,
+                                        backgroundColor: colors.white,
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 12,
+                                    }}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faChartLine}
+                                        size={22}
+                                        color={colors.green}
+                                    />
+                                </RNView>
+                                <RNView style={{ flex: 1 }}>
+                                    <Text
+                                        variant="labelSmall"
+                                        style={{
+                                            color: colors.green,
+                                            opacity: 0.85,
+                                            marginBottom: 4,
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
+                                        ESTIMATED REACH
+                                    </Text>
+                                    <Text
+                                        variant={rangeVariant}
+                                        style={{
+                                            fontWeight: "bold",
+                                            color: colors.text,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        {analytics.estimatedReach
+                                            ? formatNumber(
+                                                (analytics.estimatedReach.min + analytics.estimatedReach.max) / 2
+                                            )
+                                            : "—"}
+                                    </Text>
+                                    <RNView style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+                                        <FontAwesomeIcon
+                                            icon={faArrowTrendDown}
+                                            size={10}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedReach
+                                                ? formatNumber(analytics.estimatedReach.min) + " min"
+                                                : "—"}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
+                                            •
+                                        </Text>
+                                        <FontAwesomeIcon
+                                            icon={faArrowTrendUp}
+                                            size={10}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedReach
+                                                ? formatNumber(analytics.estimatedReach.max) + " max"
+                                                : "—"}
+                                        </Text>
+                                    </RNView>
+                                </RNView>
+                            </Card.Content>
+                        </Card>
+                    </View>
                 </View>
-            </View>
             );
         };
 
