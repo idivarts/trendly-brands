@@ -64,7 +64,7 @@ const CreateCollaborationScreen = () => {
     );
 
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
             <CreateCollaboration headerRight={askAiButton} aiData={generatedAiData} />
         </AppLayout>
     );

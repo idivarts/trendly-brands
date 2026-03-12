@@ -88,7 +88,7 @@ const GetStartedScreen = () => {
 
 
     return (
-        <AppLayout withWebPadding={true}>
+        <AppLayout withWebPadding={true} safeAreaEdges={["top", "right", "bottom", "left"]}>
             <View style={styles.container}>
                 {/* Heading */}
                 <View style={styles.headerContainer}>

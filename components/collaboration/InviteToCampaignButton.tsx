@@ -1,7 +1,7 @@
-import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { Linking } from "react-native";
@@ -95,6 +95,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                     headers: { "Content-Type": "application/json" },
                 }
             );
+
             Toaster.success("Invite sent");
             return true;
         } catch (err: any) {

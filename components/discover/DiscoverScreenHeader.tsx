@@ -2,6 +2,7 @@ import { OpenFilterRightPanel, useDiscovery } from "@/components/discover/discov
 import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -14,6 +15,7 @@ import { useTheme } from "@react-navigation/native";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Menu } from "react-native-paper";
 
 const SORT_OPTIONS = [
@@ -23,7 +25,7 @@ const SORT_OPTIONS = [
     { label: "Views", value: "views", sublabel: "High to Low" },
 ];
 
-const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
+const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean, topInset: number) =>
     StyleSheet.create({
         sortByLabel: {
             fontSize: xl ? 14 : 12,
@@ -65,7 +67,8 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
         },
         mobileStackedContainer: {
             paddingHorizontal: 16,
-            paddingVertical: 12,
+            paddingTop: 12 + topInset,
+            paddingBottom: 12,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
@@ -74,7 +77,6 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-            flex: 1,
             minWidth: 0,
         },
         mobileIconButton: {
@@ -98,6 +100,8 @@ const DiscoverScreenHeader: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    const insets = useSafeAreaInsets();
+    const { selectedBrand, updateBrand } = useBrandContext();
     const {
         totalCount,
         currentSort,
@@ -107,7 +111,7 @@ const DiscoverScreenHeader: React.FC = () => {
     } = useDiscovery();
 
     const [sortMenuVisible, setSortMenuVisible] = useState(false);
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useMemo(() => useStyles(colors, xl, insets.top), [colors, xl, insets.top]);
 
     const currentOption = SORT_OPTIONS.find((o) => o.value === currentSort);
     const sortDisplayLabel = currentOption
@@ -122,6 +126,14 @@ const DiscoverScreenHeader: React.FC = () => {
             page: 1,
             sort: value,
         });
+        if (selectedBrand?.id) {
+            updateBrand(selectedBrand.id, {
+                discoverPreferences: {
+                    ...selectedBrand.discoverPreferences,
+                    sort: value,
+                },
+            });
+        }
     };
 
     const sortComponent = xl ? (
@@ -216,7 +228,7 @@ const DiscoverScreenHeader: React.FC = () => {
                         >
                             <Text style={styles.mobileTitle}>Discover Influencer</Text>
                             <Text style={styles.mobileSubtitle}>
-                                Total {totalCount}+ found
+                                {`Total ${String(totalCount ?? "0").trim()}+ found`}
                             </Text>
                         </Pressable>
                     </CoachmarkAnchor>
@@ -233,7 +245,7 @@ const DiscoverScreenHeader: React.FC = () => {
         <>
             <PageHeader
                 title="Discover Influencer"
-                subtitle={`Total ${totalCount}+ found`}
+                subtitle={`Total ${String(totalCount ?? "0").trim()}+ found`}
                 actionButtons={[filterButton]}
                 rightComponent={sortComponent}
             />

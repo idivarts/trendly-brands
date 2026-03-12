@@ -4,7 +4,7 @@ import React from "react";
 
 const SettingsScreen = () => {
     return (
-        <AppLayout withWebPadding={false}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
             <Settings />
         </AppLayout>
     );

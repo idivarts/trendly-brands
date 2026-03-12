@@ -276,6 +276,13 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         stylesWithTheme.page,
                         stylesWithTheme.contentRow,
                         !isWideLayout && stylesWithTheme.contentColumn,
+                        isWideLayout && {
+                            maxHeight:
+                                windowHeight -
+                                PAGE_PADDING_TOP -
+                                CONTENT_PADDING_VERTICAL * 2 -
+                                16,
+                        },
                     ]}
                 >
                     {isWideLayout && (
@@ -298,6 +305,7 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                             stylesWithTheme.rightPane,
                             !isWideLayout && stylesWithTheme.rightPaneStacked,
                             isWideLayout && { paddingTop: RIGHT_PANE_TOP_OFFSET },
+                            isWideLayout && { minHeight: 0, alignSelf: "center" as const },
                             {
                                 maxHeight:
                                     windowHeight -

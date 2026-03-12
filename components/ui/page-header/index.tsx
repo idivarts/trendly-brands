@@ -8,6 +8,7 @@ import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface PageHeaderProps {
     title: string;
@@ -35,7 +36,8 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     const { xl } = useBreakpoints();
     const router = useRouter();
     const nav = useMyNavigation();
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const insets = useSafeAreaInsets();
+    const styles = useStyles(colors, insets.top, xl);
 
     const handleBack = () => {
         if (onBackPress) {
@@ -77,7 +79,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             </View>
             {showActions && (hasActionButtons || hasRightComponent) && (
                 <View style={styles.headerActions}>
-                    {hasActionButtons && actionButtons}
+                    {hasActionButtons && actionButtons.map((btn, index) => (
+                        <React.Fragment key={index}>{btn}</React.Fragment>
+                    ))}
                     {hasRightComponent && rightComponent}
                 </View>
             )}
@@ -85,7 +89,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>) {
+function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: boolean) {
     return useMemo(
         () =>
             StyleSheet.create({
@@ -93,7 +97,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     flexDirection: "row",
                     alignItems: "center",
                     paddingHorizontal: 16,
-                    paddingVertical: 12,
+                    paddingTop: xl ? 12 + topInset : topInset,
+                    paddingBottom: 12,
                     borderBottomWidth: 1,
                     borderBottomColor: colors.border,
                     backgroundColor: colors.background,
@@ -126,7 +131,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     flexShrink: 0,
                 },
             }),
-        [colors]
+        [colors, topInset, xl]
     );
 }
 

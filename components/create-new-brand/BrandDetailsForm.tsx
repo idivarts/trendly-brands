@@ -10,7 +10,7 @@ import { TextInput } from "react-native-paper";
 const HELPER_NAME = "This will be visible on your public profile.";
 const PLACEHOLDER_NAME = "Enter your brand name";
 const PLACEHOLDER_ABOUT = "Briefly describe what your brand does...";
-const PLACEHOLDER_PHONE = "+1 (555) 000-0000";
+const PLACEHOLDER_PHONE = "+91 98765 43210";
 const PLACEHOLDER_WEBSITE = "https://yourbrand.com";
 
 export interface BrandDetailsFormProps {
@@ -130,14 +130,18 @@ function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         form: {
             gap: 20,
+            width: "100%",
         },
         fieldGroup: {
             gap: 6,
+            minWidth: 0,
+            width: "100%",
         },
         phoneWebsiteRow: {
             flexDirection: xl ? "row" : "column",
             flexWrap: "wrap",
             gap: xl ? 16 : 20,
+            width: "100%",
         },
         phoneWebsiteField: {
             flex: 1,
@@ -150,6 +154,8 @@ function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         },
         input: {
             backgroundColor: colors.card,
+            width: "100%",
+            alignSelf: "stretch",
         },
         outline: {
             borderRadius: 12,

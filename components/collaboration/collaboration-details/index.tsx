@@ -3,7 +3,6 @@ import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
@@ -240,7 +239,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                         discoverCommunication: { current: undefined },
                         pageSortCommunication: { current: undefined },
                         totalCount: "0",
-                        currentSort: "followers",
+                        currentSort: "engagement",
                         setTotalCount: () => { },
                         setCurrentSort: () => { },
                     }}
@@ -319,10 +318,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 title="Campaign Details"
                 subtitle={collaboration.name}
                 showBackButton
-                onBackPress={() => {
-                    if (expoRouter.canGoBack()) expoRouter.back();
-                    else nav.push("/collaborations");
-                }}
+                onBackPress={() => expoRouter.replace("/(main)/(drawer)/(tabs)/collaborations")}
                 actionButtons={campaignHeaderActions}
                 rightComponent={
                     <Pressable
@@ -337,6 +333,17 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     </Pressable>
                 }
             />
+            {collaboration.status !== "draft" && (
+                <View style={styles.tabContainer}>
+                    <TopTabNavigation
+                        tabs={tabs(xl)}
+                        size="compact"
+                        mobileFullWidth={true}
+                        splitTwoColumns={true}
+                        collapsible={false}
+                    />
+                </View>
+            )}
             <BottomSheetActions
                 cardId={(paramPageID || pageID) as string}
                 cardType="activeCollab"
@@ -359,21 +366,6 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     }
                 />
             )}
-            {collaboration.status !== "draft" && (() => {
-                console.log("[CollaborationDetails] Rendering TopTabNavigation for status:", collaboration.status);
-                return (
-                    <CollapseProvider>
-                        <View style={styles.tabContainer}>
-                            <TopTabNavigation
-                                tabs={tabs(xl)}
-                                size="compact"
-                                mobileFullWidth={true}
-                                splitTwoColumns={true}
-                            />
-                        </View>
-                    </CollapseProvider>
-                );
-            })()}
         </View>
     );
 };

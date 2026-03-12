@@ -61,7 +61,7 @@ const InfluencerList = () => {
         <ActivityIndicator />
     }
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
             <Text style={styles.title}>Influencer List - {influencerList.length}</Text>
             <ScrollView style={styles.scroll}>
                 <FlashList

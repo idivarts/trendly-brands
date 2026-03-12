@@ -198,10 +198,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const { xl } = useBreakpoints();
 
     const planKey = selectedBrand?.billing?.planKey || "";
-    const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
-    const connectionCreditsLeft = Number(selectedBrand?.credits?.connection ?? 0);
-    const discoveryLimit = 1000;
-    const discoveryProgress = Math.min(1, discoverCoinsLeft / discoveryLimit);
     const hasMultipleBrands = brands.length > 1;
 
     const drawerColors = useMemo(
@@ -233,10 +229,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
                         style={styles.headerPressable}
                     >
-                        <View style={styles.headerRow}>
-                            <View style={styles.logoCircle}>
-                                <Text style={styles.logoText}>T</Text>
-                            </View>
+                            <View style={styles.headerRow}>
+                                <ImageComponent
+                                    url={selectedBrand?.image || ""}
+                                    initials={selectedBrand?.name?.[0] ?? ""}
+                                    shape="circle"
+                                    size="small"
+                                    altText={selectedBrand?.name || "Brand"}
+                                    style={styles.logoCircle}
+                                />
                             <View style={styles.headerBrand}>
                                 <Text style={styles.brandName} numberOfLines={1}>
                                     {selectedBrand?.name ?? "Brand"}
@@ -259,9 +260,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                     style={styles.headerPressable}
                 >
                     <View style={styles.headerRow}>
-                        <View style={styles.logoCircle}>
-                            <Text style={styles.logoText}>T</Text>
-                        </View>
+                        <ImageComponent
+                            url={selectedBrand?.image || ""}
+                            initials={selectedBrand?.name?.[0] ?? ""}
+                            shape="circle"
+                            size="small"
+                            altText={selectedBrand?.name || "Brand"}
+                            style={styles.logoCircle}
+                        />
                         <View style={styles.headerBrand}>
                             <Text style={styles.brandName} numberOfLines={1}>
                                 {selectedBrand?.name ?? "Brand"}
@@ -357,18 +363,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                     id="guide-tour-credits-web"
                                     shape="rect"
                                 >
-                                    <CreditDisplayCard
-                                        discoverCoinsLeft={discoverCoinsLeft}
-                                        connectionCreditsLeft={connectionCreditsLeft}
-                                        discoveryProgress={discoveryProgress}
-                                    />
+                                    <CreditDisplayCard />
                                 </CoachmarkAnchor>
                             ) : (
-                                <CreditDisplayCard
-                                    discoverCoinsLeft={discoverCoinsLeft}
-                                    connectionCreditsLeft={connectionCreditsLeft}
-                                    discoveryProgress={discoveryProgress}
-                                />
+                                <CreditDisplayCard />
                             )
                         )}
                         {selectedBrand && !selectedBrand.isBillingDisabled && (

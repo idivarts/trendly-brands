@@ -1,6 +1,5 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/shared-uis/constants/Colors";
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -9,6 +8,7 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
+import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/Proposal.styles";
 import { MediaItem } from "@/types/Media";
 import { processRawAttachment } from "@/utils/attachments";
@@ -309,6 +309,7 @@ function useStyles(theme: ReturnType<typeof useTheme>, xl: boolean) {
         },
         cardOuter: {
             flex: xl ? 1 : undefined,
+            maxWidth: xl ? "50%" : undefined,
             width: xl ? undefined : "100%",
             backgroundColor: Colors(theme).primary,
             borderRadius: 14,

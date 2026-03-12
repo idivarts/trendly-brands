@@ -119,8 +119,8 @@ function createStyles(
         scrollContent: {
             flexGrow: 1,
             paddingHorizontal: 24,
-            paddingVertical: 48,
-            paddingBottom: 48,
+            paddingVertical: xl ? 48 : 24,
+            paddingBottom: xl ? 48 : 24,
             maxWidth: xl ? maxWidth : undefined,
             alignSelf: "center",
             width: "100%",
@@ -133,6 +133,7 @@ function createStyles(
         },
         singleCol: {
             gap: 48,
+            width: "100%",
         },
         leftColumn: {
             width: xl ? "42%" : "100%",
@@ -142,6 +143,7 @@ function createStyles(
         rightColumn: {
             flex: 1,
             minWidth: 0,
+            width: "100%",
             gap: 40,
         },
         divider: {

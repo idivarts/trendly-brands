@@ -1,4 +1,4 @@
-import { InfluencerInviteUnit } from "@/components/discover/DiscoverInfluencer";
+import { InfluencerInviteUnit } from "@/components/discover/discover-types";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";

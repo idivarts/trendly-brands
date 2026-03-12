@@ -2,6 +2,7 @@ import {
     DiscoverCommunication,
     useDiscovery,
 } from "@/components/discover/discovery-context";
+import { buildDiscoveryPayload } from "@/components/discover/utils/filter-utils";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
@@ -12,9 +13,11 @@ import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/m
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { Console } from "@/shared-libs/utils/console";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { View } from "@/shared-uis/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
@@ -146,6 +149,8 @@ interface DiscoverInfluencerProps {
     onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     initialInfluencerId?: string;
+    /** Called once when the first influencer card has laid out (for guided tour). */
+    onFirstInfluencerCardLayout?: () => void;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -155,6 +160,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     onStatusChange,
     defaultAdvanceFilters,
     initialInfluencerId,
+    onFirstInfluencerCardLayout,
 }) => {
     const {
         selectedDb,
@@ -166,6 +172,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setCurrentSort,
         currentSort,
         pageSortCommunication,
+        showRightPanel,
     } = useDiscovery();
     const { manager } = useAuthContext();
     const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
@@ -185,6 +192,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [shadowSocial, setShadowSocial] = useState<IShadowSocial | null>(null);
     const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
     const trendlyAnalyticsRef = React.useRef<any>(null);
+    const flatListRef = useRef<FlatList>(null);
+    const firstCardLayoutFiredRef = useRef(false);
 
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<InfluencerItem[]>([]);
@@ -311,6 +320,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
     // Trigger first discover API call when we have a brand. Run when filters are set OR when
     // we're ready with no filters (defaultAdvanceFilters undefined) so the list still loads.
+    // When showRightPanel is false, the effect below performs the fetch; do not clear data here
+    // or we would overwrite the loaded list when this effect re-runs (e.g. new defaultAdvanceFilters ref).
     useEffect(() => {
         if (!selectedBrand?.id) return;
 
@@ -318,17 +329,107 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setAppliedFilters(defaultAdvanceFilters);
         }
 
+        if (showRightPanel !== false) {
+            discoverCommunication.current?.({
+                loading: true,
+                data: [],
+                page: 1,
+                sort: currentSort,
+            });
+            pageSortCommunication.current?.({
+                page: 1,
+                sort: currentSort,
+            });
+        }
+    }, [defaultAdvanceFilters, selectedBrand?.id, showRightPanel, currentSort]);
+
+    // When right panel is hidden (e.g. Send Invitations tab), this component must perform the
+    // discovery API call with defaultAdvanceFilters so the list loads; TrendlyAdvancedFilter
+    // is not mounted in that case. Use a stable key for filters so we don't re-run and cancel
+    // the request on every parent re-render (defaultAdvanceFilters is often a new object ref).
+    const defaultAdvanceFiltersKey = useMemo(
+        () => JSON.stringify(defaultAdvanceFilters ?? {}),
+        [defaultAdvanceFilters]
+    );
+
+    useEffect(() => {
+        if (showRightPanel !== false || !selectedBrand?.id) return;
+
+        const filters = defaultAdvanceFilters ?? undefined;
+        const sort = (filters?.sort || currentSort || "engagement") as string;
+        const payload = buildDiscoveryPayload(filters, {
+            sort,
+            sort_direction: "desc",
+            offset: 0,
+            limit: 16,
+        });
+
+        let isActive = true;
         discoverCommunication.current?.({
             loading: true,
             data: [],
             page: 1,
-            sort: "followers",
+            sort,
         });
-        pageSortCommunication.current?.({
-            page: 1,
-            sort: "followers",
-        });
-    }, [defaultAdvanceFilters, selectedBrand?.id]);
+
+        HttpWrapper.fetch(
+            `/discovery/brands/${selectedBrand.id}/influencers`,
+            {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(payload),
+            }
+        )
+            .then(async (res) => {
+                const rawText = await res.text();
+                const body = rawText ? JSON.parse(rawText) : {};
+                if (!isActive) return;
+                let list = (body?.data ?? body?.influencers ?? body?.results ?? (Array.isArray(body) ? body : [])) as InfluencerItem[];
+
+                if (list.length === 0) {
+                    Console.log(
+                        "[DiscoverInfluencer] No influencers matched – payload:",
+                        JSON.stringify(payload, null, 2)
+                    );
+                    Console.log(
+                        "[DiscoverInfluencer] Response: body.data =",
+                        Array.isArray(body?.data) ? `array(length=${body.data.length})` : body?.data,
+                        ", body.message =",
+                        body?.message
+                    );
+                } else {
+                    Console.log("[DiscoverInfluencer] Fetched list length (no-panel):", list.length);
+                }
+                discoverCommunication.current?.({
+                    loading: false,
+                    data: list,
+                    page: 1,
+                    sort,
+                });
+                setTotalCount(
+                    list.length < 15 ? String(list.length) : "500+"
+                );
+            })
+            .catch(async (err) => {
+                if (!isActive) return;
+                discoverCommunication.current?.({
+                    loading: false,
+                    data: [],
+                });
+                const message = await HttpWrapper.extractErrorMessage(err);
+                Toaster.error("Failed to load influencers", message ?? "Please try again.");
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [
+        showRightPanel,
+        selectedBrand?.id,
+        defaultAdvanceFiltersKey,
+        currentSort,
+        setTotalCount,
+    ]);
 
     useEffect(() => {
         if (
@@ -429,13 +530,23 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             );
             if (index === 0) {
                 return (
-                    <CoachmarkAnchor
-                        id="guide-tour-influencer-card"
-                        shape="rect"
+                    <RNView
                         style={cardStyle}
+                        onLayout={() => {
+                            if (!firstCardLayoutFiredRef.current && onFirstInfluencerCardLayout) {
+                                firstCardLayoutFiredRef.current = true;
+                                onFirstInfluencerCardLayout();
+                            }
+                        }}
                     >
-                        {card}
-                    </CoachmarkAnchor>
+                        <CoachmarkAnchor
+                            id="guide-tour-influencer-card"
+                            shape="rect"
+                            scrollRef={flatListRef}
+                        >
+                            {card}
+                        </CoachmarkAnchor>
+                    </RNView>
                 );
             }
             return (
@@ -444,7 +555,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 </RNView>
             );
         },
-        [isCollapsed, openModal, openProfile, selectedIds]
+        [isCollapsed, openModal, openProfile, selectedIds, onFirstInfluencerCardLayout]
     );
 
     const keyExtractor = useCallback((i: InfluencerItem) => i.id, []);
@@ -551,6 +662,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 }}
             >
                 <FlatList
+                    ref={flatListRef}
                     data={data}
                     keyExtractor={keyExtractor}
                     renderItem={renderItem}

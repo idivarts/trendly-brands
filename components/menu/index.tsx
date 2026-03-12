@@ -20,17 +20,6 @@ const Menu = () => {
     const { xl } = useBreakpoints();
     const { selectedBrand } = useBrandContext();
 
-    const discoverCoinsLeft = Number(selectedBrand?.credits?.discovery ?? 0);
-    const connectionCreditsLeft = Number(
-        selectedBrand?.credits?.connection ?? 0
-    );
-    const discoveryLimit = 1000;
-    const discoveryProgress = Math.min(
-        1,
-        discoverCoinsLeft / discoveryLimit
-    );
-
-
     return (
         <>
             <ScrollView
@@ -78,11 +67,7 @@ const Menu = () => {
                     {!xl &&
                         selectedBrand &&
                         !selectedBrand.isBillingDisabled && (
-                            <CreditDisplayCard
-                                discoverCoinsLeft={discoverCoinsLeft}
-                                connectionCreditsLeft={connectionCreditsLeft}
-                                discoveryProgress={discoveryProgress}
-                            />
+                            <CreditDisplayCard />
                         )}
                     <View style={styles.middleRow}>
                         {MENU_ITEMS.map((item, index) => (

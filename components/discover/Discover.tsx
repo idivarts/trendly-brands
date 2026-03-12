@@ -15,7 +15,9 @@ import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     GUIDE_TOUR_MOBILE,
+    GUIDE_TOUR_MOBILE_SKIP_FIRST,
     GUIDE_TOUR_WEB,
+    GUIDE_TOUR_WEB_SKIP_FIRST,
 } from "@/components/guide-tour/guide-tour-config";
 import { useCoachmark } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
@@ -42,6 +44,8 @@ const DiscoverComponent = ({
      */
     useStoredFilters = true,
     initialInfluencerId,
+    /** When true, the guided tour (coach marks) is not started. Use when embedding Discover (e.g. Send Invitations tab). */
+    skipGuideTour = false,
 }: {
     showRightPanel?: boolean;
     topPanel?: boolean;
@@ -53,16 +57,18 @@ const DiscoverComponent = ({
     defaultAdvanceFilters?: IAdvanceFilters;
     useStoredFilters?: boolean;
     initialInfluencerId?: string;
+    skipGuideTour?: boolean;
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
     const { start: startCoachmark, isActive } = useCoachmark();
     const hasStartedTourRef = useRef(false);
+    const [firstInfluencerCardReady, setFirstInfluencerCardReady] = useState(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
     const [headerTotalCount, setHeaderTotalCount] = useState<string>("0");
-    const [headerCurrentSort, setHeaderCurrentSort] = useState<string>("followers");
+    const [headerCurrentSort, setHeaderCurrentSort] = useState<string>("engagement");
     const discoverCommunication =
         useRef<((action: DiscoverCommunication) => any) | undefined>(undefined);
     const pageSortCommunication =
@@ -75,6 +81,14 @@ const DiscoverComponent = ({
 
         setRightPanel(Boolean(xl));
     }, [xl]);
+
+    // Sync header sort from stored discoverPreferences when brand loads
+    useEffect(() => {
+        const storedSort = selectedBrand?.discoverPreferences?.sort;
+        if (storedSort) {
+            setHeaderCurrentSort(storedSort);
+        }
+    }, [selectedBrand?.discoverPreferences?.sort]);
 
     const [selectedDb, setSelectedDb] = useState<DB_TYPE>("trendly");
 
@@ -153,28 +167,46 @@ const DiscoverComponent = ({
 
         setShowSurvey(false);
         hasStartedTourRef.current = true;
-        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        if (!skipGuideTour) {
+            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        }
     };
 
     useEffect(() => {
         if (
-            surveyCheckDone &&
-            !showSurvey &&
-            manager &&
-            selectedBrand?.id &&
-            !isActive &&
-            !hasStartedTourRef.current
+            skipGuideTour ||
+            !surveyCheckDone ||
+            showSurvey ||
+            !manager ||
+            !selectedBrand?.id ||
+            isActive ||
+            hasStartedTourRef.current
         ) {
+            return;
+        }
+        if (firstInfluencerCardReady) {
             hasStartedTourRef.current = true;
             startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+            return;
         }
+        // No card yet (e.g. empty list): start tour without first step after a short delay
+        const t = setTimeout(() => {
+            if (hasStartedTourRef.current) return;
+            hasStartedTourRef.current = true;
+            startCoachmark(
+                xl ? GUIDE_TOUR_WEB_SKIP_FIRST : GUIDE_TOUR_MOBILE_SKIP_FIRST
+            );
+        }, 1000);
+        return () => clearTimeout(t);
     }, [
+        skipGuideTour,
         surveyCheckDone,
         showSurvey,
         manager,
         selectedBrand?.id,
         xl,
         isActive,
+        firstInfluencerCardReady,
         startCoachmark,
     ]);
 
@@ -221,6 +253,7 @@ const DiscoverComponent = ({
                 isCollapsed,
                 showTopPanel:
                     typeof showTopPanel === "boolean" ? showTopPanel : topPanel,
+                showRightPanel,
                 setIsCollapsed,
                 totalCount: headerTotalCount,
                 currentSort: headerCurrentSort,
@@ -228,9 +261,11 @@ const DiscoverComponent = ({
                 setCurrentSort: setHeaderCurrentSort,
             }}
         >
-            <AppLayout safeAreaEdges={["top", "left", "right"]}>
+            <AppLayout safeAreaEdges={["left", "right"]}>
                 <View style={{ width: "100%", flex: 1 }}>
-                    <DiscoverScreenHeader />
+                    <View style={{ flexShrink: 0 }}>
+                        <DiscoverScreenHeader />
+                    </View>
                     <View style={{ width: "100%", flexDirection: "row", flex: 1 }}>
                         <DiscoverInfluencer
                         advanceFilter={advanceFilter}
@@ -239,6 +274,7 @@ const DiscoverComponent = ({
                         isStatusCard={isStatusCard}
                         defaultAdvanceFilters={filtersToUse}
                         initialInfluencerId={initialInfluencerId}
+                        onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
                     />
                 </View>
                 {showRightPanel && (

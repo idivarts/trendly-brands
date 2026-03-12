@@ -1,5 +1,6 @@
 import CollaborationList from "@/components/collaborations/Collaborations";
 import { View } from "@/components/theme/Themed";
+import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
@@ -51,11 +52,13 @@ const Collaborations = () => {
                 showBackButton={false}
             />
             <View style={styles.container}>
-                <TopTabNavigation
-                    tabs={tabs(xl)}
-                    splitTwoColumns={true}
-                    defaultSelection={xl ? 2 : 0}
-                />
+                <CollapseProvider>
+                    <TopTabNavigation
+                        tabs={tabs(xl)}
+                        splitTwoColumns={true}
+                        defaultSelection={xl ? 2 : 0}
+                    />
+                </CollapseProvider>
             </View>
         </AppLayout>
     );
