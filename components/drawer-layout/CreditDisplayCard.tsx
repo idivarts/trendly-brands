@@ -13,6 +13,7 @@ import { usePathname } from "expo-router";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import {
+    DimensionValue,
     Platform,
     Pressable,
     StyleSheet,
@@ -87,7 +88,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                     : creditContext === "influencer-spotlight"
                       ? influencerProgress
                       : collaborationProgress;
-            return { width: `${progress * 100}%` };
+            return { width: `${progress * 100}%` as DimensionValue };
         }, [
             creditContext,
             discoveryProgress,
