@@ -32,7 +32,6 @@ export interface DiscoveryProps {
     setShowFilters: Function;
     isCollapsed: boolean;
     showRightPanel?: boolean;
-    showTopPanel?: boolean;
     setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
     discoverCommunication: MutableRefObject<
         ((action: DiscoverCommunication) => any) | undefined

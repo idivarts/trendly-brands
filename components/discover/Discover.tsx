@@ -10,28 +10,27 @@ import {
     type PageSortCommunication,
 } from "@/components/discover/discovery-context";
 import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
-import { View } from "@/components/theme/Themed";
-import { useAuthContext } from "@/contexts";
-import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     GUIDE_TOUR_MOBILE,
     GUIDE_TOUR_MOBILE_SKIP_FIRST,
     GUIDE_TOUR_WEB,
     GUIDE_TOUR_WEB_SKIP_FIRST,
 } from "@/components/guide-tour/guide-tour-config";
-import { useCoachmark } from "@edwardloopez/react-native-coachmark";
+import { View } from "@/components/theme/Themed";
+import { useAuthContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { useCoachmark } from "@edwardloopez/react-native-coachmark";
 import React, { useEffect, useRef, useState } from "react";
 
 const DiscoverComponent = ({
     showRightPanel = true,
-    topPanel = true,
-    showTopPanel,
+    showTopPanel = true,
     advanceFilter = false,
     statusFilter = false,
     isStatusCard = false,
@@ -48,7 +47,6 @@ const DiscoverComponent = ({
     skipGuideTour = false,
 }: {
     showRightPanel?: boolean;
-    topPanel?: boolean;
     showTopPanel?: boolean;
     advanceFilter?: boolean;
     statusFilter?: boolean;
@@ -251,8 +249,6 @@ const DiscoverComponent = ({
                 discoverCommunication,
                 pageSortCommunication,
                 isCollapsed,
-                showTopPanel:
-                    typeof showTopPanel === "boolean" ? showTopPanel : topPanel,
                 showRightPanel,
                 setIsCollapsed,
                 totalCount: headerTotalCount,
@@ -263,29 +259,29 @@ const DiscoverComponent = ({
         >
             <AppLayout safeAreaEdges={["left", "right"]}>
                 <View style={{ width: "100%", flex: 1 }}>
-                    <View style={{ flexShrink: 0 }}>
+                    {showTopPanel && <View style={{ flexShrink: 0 }}>
                         <DiscoverScreenHeader />
-                    </View>
+                    </View>}
                     <View style={{ width: "100%", flexDirection: "row", flex: 1 }}>
                         <DiscoverInfluencer
-                        advanceFilter={advanceFilter}
-                        statusFilter={statusFilter}
-                        onStatusChange={onStatusChange}
-                        isStatusCard={isStatusCard}
-                        defaultAdvanceFilters={filtersToUse}
-                        initialInfluencerId={initialInfluencerId}
-                        onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
-                    />
-                </View>
-                {showRightPanel && (
-                    <AdvancedFilterOverlay
-                        visible={filterOverlayVisible}
-                        onClose={() => setFilterOverlayVisible(false)}
-                        defaultAdvanceFilters={filtersForChildren}
-                        onClearStoredFilters={() => {}}
-                        onFiltersApplied={() => {}}
-                    />
-                )}
+                            advanceFilter={advanceFilter}
+                            statusFilter={statusFilter}
+                            onStatusChange={onStatusChange}
+                            isStatusCard={isStatusCard}
+                            defaultAdvanceFilters={filtersToUse}
+                            initialInfluencerId={initialInfluencerId}
+                            onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
+                        />
+                    </View>
+                    {showRightPanel && (
+                        <AdvancedFilterOverlay
+                            visible={filterOverlayVisible}
+                            onClose={() => setFilterOverlayVisible(false)}
+                            defaultAdvanceFilters={filtersForChildren}
+                            onClearStoredFilters={() => { }}
+                            onFiltersApplied={() => { }}
+                        />
+                    )}
                 </View>
             </AppLayout>
         </DiscoveryProvider>

@@ -186,6 +186,9 @@ const InvitationsTabContent = (props: any) => {
     const width = Math.min(MAX_WIDTH_WEB, bpWidth);
     const height = Math.min(APPROX_CARD_HEIGHT, bpHeight);
 
+    console.log("Default Advance Filters", collaboration?.preferences);
+
+
     return (
         <View style={styles.root}>
             {/* Toggle Bar */}
@@ -235,7 +238,7 @@ const InvitationsTabContent = (props: any) => {
                     <View style={styles.discoverWrapper}>
                         <Discover
                             showRightPanel={false}
-                            showTopPanel={true}
+                            showTopPanel={false}
                             advanceFilter={true}
                             onStatusChange={handleStatusChange}
                             isStatusCard={false}
