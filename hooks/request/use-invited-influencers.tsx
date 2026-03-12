@@ -1,10 +1,7 @@
-import type { InfluencerInviteUnit } from "@/components/discover/discover-types";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { IInvitations } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { InfluencerInviteUnit } from "@/components/discover/discover-types";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { collection, doc, getDoc, getDocs, limit, query, where } from "firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useCallback, useEffect, useState } from "react";
 
 interface UseInvitedInfluencersProps {
@@ -12,165 +9,123 @@ interface UseInvitedInfluencersProps {
     limit?: number;
 }
 
+const DEFAULT_LIMIT = 16;
+
 const useInvitedInfluencers = ({
     collaborationId,
+    limit = DEFAULT_LIMIT,
 }: UseInvitedInfluencersProps) => {
     const { selectedBrand } = useBrandContext();
     const [influencers, setInfluencers] = useState<InfluencerInviteUnit[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(1);
     const [nextAvailable, setNextAvailable] = useState(false);
     const [filter, setFilter] = useState<string | undefined>(undefined);
 
-    const fetchFromFirestore = useCallback(
-        async (reset: boolean) => {
-            if (!collaborationId) return;
+    const fetchPage = useCallback(
+        async (pageNumber: number, reset = false) => {
+            if (!selectedBrand) return;
+            const brandId = selectedBrand.id;
             setLoading(true);
             try {
-                const invitationsRef = collection(
-                    FirestoreDB,
-                    "collaborations",
-                    collaborationId,
-                    "invitations"
-                );
-                const invitationsQuery = filter
-                    ? query(invitationsRef, where("status", "==", filter))
-                    : query(invitationsRef);
-                const invitationsSnap = await getDocs(invitationsQuery);
-                const invitations = invitationsSnap.docs.map((d) => ({
-                    ...d.data(),
-                    id: d.id,
-                })) as (IInvitations & { id: string })[];
+                const url = `/discovery/brands/${brandId}/collaborations/${collaborationId}/influencers`;
 
-                const units: InfluencerInviteUnit[] = await Promise.all(
-                    invitations.map(async (inv) => {
-                        const userId = inv.userId || inv.id;
-                        const invData = inv as IInvitations & { timeStamp?: number };
-                        const status = inv.status || "pending";
-                        const invitedAt = invData.timeStamp ?? 0;
+                const normalizedOffset = pageNumber < 1 ? 1 : pageNumber;
+                const bodyPayload: {
+                    Offset: number;
+                    Limit: number;
+                    Filter?: string;
+                    offset: number;
+                    limit: number;
+                    filter?: string;
+                } = {
+                    Offset: normalizedOffset,
+                    Limit: limit,
+                    offset: normalizedOffset,
+                    limit,
+                };
+                if (filter !== undefined) {
+                    bodyPayload.Filter = filter;
+                    bodyPayload.filter = filter;
+                }
+                console.debug("useInvitedInfluencers: request body", bodyPayload);
+                const res = await HttpWrapper.fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                    },
+                    body: JSON.stringify(bodyPayload),
+                });
+                const body = await res.json();
+                const newItems = (body?.influencers || []) as InfluencerInviteUnit[];
 
-                        // Prefer discovery API for full profile (profile_pic, followers, etc.)
-                        if (selectedBrand?.id) {
-                            try {
-                                const res = await HttpWrapper.fetch(
-                                    `/discovery/brands/${selectedBrand.id}/influencers/${userId}`,
-                                    { method: "GET" }
-                                );
-                                const body = await res.json();
-                                const inf = body?.influencer;
-                                const social = body?.social;
-                                const user = inf?.user;
-                                if (inf || social || body?.id) {
-                                    return {
-                                        id: userId,
-                                        name: user?.name ?? social?.name ?? body?.name ?? "Unknown",
-                                        username: social?.username ?? body?.username ?? "unknown",
-                                        profile_pic: user?.profileImage ?? social?.profile_pic ?? body?.profile_pic ?? "",
-                                        follower_count: social?.follower_count ?? body?.follower_count ?? 0,
-                                        engagement_count: social?.engagement_count ?? body?.engagement_count ?? 0,
-                                        views_count: social?.views_count ?? body?.views_count ?? 0,
-                                        engagement_rate: social?.engagement_rate ?? body?.engagement_rate ?? 0,
-                                        status,
-                                        invitedAt,
-                                    } as InfluencerInviteUnit;
-                                }
-                            } catch (_) {
-                                // Fall through to Firestore
-                            }
+                setInfluencers((prev) => {
+                    if (reset) return newItems;
+                    const seen = new Set(prev.map((p) => p.id));
+                    const merged = [...prev];
+                    newItems.forEach((n) => {
+                        if (!seen.has(n.id)) {
+                            seen.add(n.id);
+                            merged.push(n);
                         }
+                    });
+                    return merged;
+                });
 
-                        // Fallback: Firestore user + socials
-                        const userRef = doc(FirestoreDB, "users", userId);
-                        const userSnap = await getDoc(userRef);
-                        const userData = userSnap.data() as IUsers | undefined;
-
-                        let profile_pic = userData?.profileImage ?? (userData as any)?.profile_image ?? "";
-                        let name = userData?.name ?? "";
-                        let username = "";
-                        let follower_count = 0;
-                        let engagement_count = 0;
-                        let engagement_rate = 0;
-                        let views_count = 0;
-
-                        const socialsRef = collection(FirestoreDB, "users", userId, "socials");
-                        const socialsSnap = await getDocs(query(socialsRef, limit(5)));
-                        for (const socialDoc of socialsSnap.docs) {
-                            const socialData = socialDoc.data() as {
-                                instaProfile?: {
-                                    profilePictureUrl?: string;
-                                    name?: string;
-                                    username?: string;
-                                    followersCount?: number;
-                                    approxMetrics?: { views?: string; interactions?: string; followers?: string };
-                                };
-                                fbProfile?: {
-                                    picture?: { data?: { url?: string } };
-                                    name?: string;
-                                    followersCount?: number;
-                                };
-                            };
-                            const insta = socialData.instaProfile;
-                            const fb = socialData.fbProfile;
-                            if (insta && (insta.profilePictureUrl || insta.username)) {
-                                profile_pic = profile_pic || insta.profilePictureUrl || "";
-                                name = name || insta.name || "";
-                                username = username || insta.username || "";
-                                follower_count = follower_count || (insta.followersCount ?? 0);
-                                if (insta.approxMetrics?.views) views_count = parseInt(insta.approxMetrics.views.replace(/\D/g, ""), 10) || views_count;
-                                if (insta.approxMetrics?.interactions) engagement_count = parseInt(insta.approxMetrics.interactions.replace(/\D/g, ""), 10) || engagement_count;
-                                break;
-                            }
-                            if (fb && (fb.picture?.data?.url || fb.name)) {
-                                profile_pic = profile_pic || fb.picture?.data?.url || "";
-                                name = name || fb.name || "";
-                                username = username || fb.name || "";
-                                follower_count = follower_count || (fb.followersCount ?? 0);
-                                break;
-                            }
+                setNextAvailable(newItems.length >= limit);
+            } catch (e: any) {
+                console.warn("Failed to fetch invited influencers", e);
+                let message = "Failed to fetch invited members";
+                try {
+                    if (e instanceof Response) {
+                        const contentType = e.headers.get("content-type") || "";
+                        if (contentType.includes("application/json")) {
+                            const errBody = await e.json();
+                            message = errBody?.message || JSON.stringify(errBody) || message;
+                            console.debug("useInvitedInfluencers: server response", errBody);
+                        } else {
+                            const txt = await e.text();
+                            message = txt || message;
+                            console.debug("useInvitedInfluencers: server response text", txt);
                         }
-
-                        return {
-                            id: userId,
-                            name: name || "Unknown",
-                            username: username || name || "—",
-                            profile_pic,
-                            follower_count,
-                            engagement_count,
-                            engagement_rate,
-                            views_count,
-                            status,
-                            invitedAt,
-                        } as InfluencerInviteUnit;
-                    })
-                );
-
-                setInfluencers(reset ? units : units);
-                setNextAvailable(false);
-            } catch (e) {
-                console.warn("Failed to fetch invited influencers from Firestore", e);
-                setInfluencers((prev) => (reset ? [] : prev));
-                setNextAvailable(false);
+                    } else if (e?.json) {
+                        const errBody = await e.json();
+                        message = errBody?.message || message;
+                        console.debug("useInvitedInfluencers: server response", errBody);
+                    } else if (e?.message) {
+                        message = e.message;
+                    }
+                } catch (_err) { }
+                Toaster.error(message);
             } finally {
                 setLoading(false);
             }
         },
-        [collaborationId, filter, selectedBrand?.id]
+        [selectedBrand, collaborationId, filter, limit]
     );
 
     useEffect(() => {
-        fetchFromFirestore(true);
-    }, [fetchFromFirestore]);
+        // initial load
+        setPage(1);
+        fetchPage(1, true);
+    }, [selectedBrand, collaborationId, filter]);
 
     const loadMore = useCallback(() => {
-        // Firestore fetch is single-page; no pagination for now
-    }, []);
+        if (!nextAvailable || loading) return;
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchPage(nextPage);
+    }, [page, nextAvailable, loading, fetchPage]);
 
     const refresh = useCallback(() => {
-        fetchFromFirestore(true);
-    }, [fetchFromFirestore]);
+        setPage(1);
+        fetchPage(1, true);
+    }, [fetchPage]);
 
-    const setStatusFilter = useCallback((f?: string) => {
+    const setStatusFilter = (f?: string) => {
         setFilter(f || undefined);
-    }, []);
+    };
 
     return {
         influencers,

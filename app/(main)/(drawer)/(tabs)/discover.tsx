@@ -8,7 +8,6 @@ const DiscoverInfluencersScreen = () => {
     return (
         <DiscoverComponent
             showRightPanel={true}
-            topPanel={true}
             initialInfluencerId={influencerId?.toString()}
         />
     );
