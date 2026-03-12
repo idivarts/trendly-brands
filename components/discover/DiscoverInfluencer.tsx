@@ -755,9 +755,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                     shadowOpacity: 0.2,
                                     shadowRadius: 6,
                                     elevation: 6,
-                                    width: "90%",
-                                    maxWidth: 420,
-                                    alignItems: "center",
+                                    width: "95%",
+                                    maxWidth: 520,
                                 }}
                             >
                                 <View
@@ -766,35 +765,43 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         alignItems: "center",
                                         justifyContent: "space-between",
                                         width: "100%",
-                                        backgroundColor: "transparent"
+                                        backgroundColor: "transparent",
                                     }}
                                 >
-                                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.black }}>
+                                    <Text
+                                        style={{ fontSize: 14, fontWeight: "700", color: colors.black }}
+                                        numberOfLines={1}
+                                    >
                                         {selectedIds.length} {selectedIds.length === 1 ? "account" : "accounts"} selected
                                     </Text>
-                                    <IconButton
-                                        icon="close"
-                                        iconColor={colors.black}
-                                        size={20}
-                                        style={{ margin: 0, }}
-                                        onPress={() => setSelectedIds([])}
-
-                                    />
-                                </View>
-                                <View style={{ marginTop: 8, alignItems: "center", backgroundColor: "transparent", alignSelf: "center" }}>
-                                    <InviteToCampaignButton
-                                        label="Invite Now"
-                                        openModal={openModal}
-                                        influencerIds={selectedIds}
-                                        influencerName={
-                                            selectedIds.length === 1
-                                                ? data.find((i) => i.id === selectedIds[0])?.name
-                                                : undefined
-                                        }
-                                        brandId={selectedBrand?.id}
-                                        connectionCredits={selectedBrand?.credits?.connection}
-
-                                    />
+                                    <View
+                                        style={{
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: 8,
+                                            backgroundColor: "transparent",
+                                        }}
+                                    >
+                                        <InviteToCampaignButton
+                                            label="Invite Now"
+                                            openModal={openModal}
+                                            influencerIds={selectedIds}
+                                            influencerName={
+                                                selectedIds.length === 1
+                                                    ? data.find((i) => i.id === selectedIds[0])?.name
+                                                    : undefined
+                                            }
+                                            brandId={selectedBrand?.id}
+                                            connectionCredits={selectedBrand?.credits?.connection}
+                                        />
+                                        <IconButton
+                                            icon="close"
+                                            iconColor={colors.black}
+                                            size={20}
+                                            style={{ margin: 0 }}
+                                            onPress={() => setSelectedIds([])}
+                                        />
+                                    </View>
                                 </View>
                             </View>
                         </View>
