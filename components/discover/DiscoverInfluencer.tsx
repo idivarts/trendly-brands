@@ -5,37 +5,35 @@ import {
 import { buildDiscoveryPayload } from "@/components/discover/utils/filter-utils";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { Console } from "@/shared-libs/utils/console";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
-    Linking,
     ListRenderItemInfo,
     Platform,
+    View as RNView,
     StyleSheet,
     Text,
-    View as RNView,
-    type ViewStyle,
+    type ViewStyle
 } from "react-native";
 import {
-    Button,
     Chip,
     Divider,
     IconButton,
@@ -822,8 +820,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                     id: selectedInfluencer.id,
                                 } as User}
                                 theme={theme}
-                                isOnFreePlan={isOnFreeTrial}
-                                isPhoneMasked={false}
+                                isPhoneMasked={true}
                                 social={profileSocial}
                                 actionCard={
                                     <>
@@ -835,26 +832,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             initialAnalytics={trendlyAnalytics}
                                         />
                                         <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-                                            {/* TODO Need to get the Profile Meta rendered correctly */}
-                                            {/* <Title style={[styles.cardColor, { marginBottom: 8 }]}>
-                                                Profile Meta
-                                            </Title>
-                                            <View style={{ gap: 6 }}>
-                                                <Text style={styles.subTextHeading}>
-                                                    ID: {trendlySocial.id}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Platform: {trendlySocial.social_type || "—"}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Last Updated:{" "}
-                                                    {formatDate(
-                                                        trendlySocial.last_update_time
-                                                            ? trendlySocial.last_update_time / 1000000
-                                                            : undefined
-                                                    )}
-                                                </Text>
-                                            </View> */}
                                         </View>
                                     </>
                                 }

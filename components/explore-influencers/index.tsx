@@ -264,7 +264,6 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                 <ProfileBottomSheet
                     influencer={selectedInfluencer as User}
                     theme={theme}
-                    // isOnFreePlan={isOnFreeTrial}
                     isPhoneMasked={true}
                     actionCard={
                         <View style={styles.actionCardWrapper}>
@@ -273,7 +272,6 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                     }
                     FireStoreDB={FirestoreDB}
                     isBrandsApp={true}
-                    // lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
                     closeModal={() => setOpenProfileModal(false)}
                 />
             </BottomSheetScrollContainer>
