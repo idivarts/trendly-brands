@@ -1,13 +1,14 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import Colors from "@/shared-uis/constants/Colors";
 import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
+import Colors from "@/shared-uis/constants/Colors";
 import { faBolt, faDiagramProject, faGem, faStar, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
 import {
+    DimensionValue,
     Modal,
     Platform,
     Pressable,
@@ -44,8 +45,8 @@ const CreditProgressBar: React.FC<{ progress: number }> = ({ progress }) => {
             }),
         [colors]
     );
-    const fillStyle = useMemo(
-        () => ({ width: `${progress * 100}%` }),
+    const fillStyle = useMemo<{ width: DimensionValue }>(
+        () => ({ width: `${Math.max(0, Math.min(progress, 1)) * 100}%` as DimensionValue }),
         [progress]
     );
     return (
