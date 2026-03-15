@@ -6,7 +6,6 @@ import {
     faBolt,
     faDiagramProject,
     faGem as faGemSolid,
-    faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { usePathname } from "expo-router";
@@ -22,13 +21,11 @@ import {
 import CreditUsageModal from "./CreditUsageModal";
 
 const DISCOVERY_LIMIT = 1000;
-const INFLUENCER_LIMIT = 1000;
 const COLLABORATION_LIMIT = 1000;
 
-type CreditContext = "discovery" | "campaigns" | "influencer-spotlight";
+type CreditContext = "discovery" | "campaigns";
 
 function getCreditContext(pathname: string): CreditContext {
-    if (pathname.includes("explore-influencers")) return "influencer-spotlight";
     if (pathname.includes("collaboration") || pathname === "/collaborations")
         return "campaigns";
     return "discovery";
@@ -55,9 +52,6 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
         const connectionCreditsLeft = Number(
             selectedBrand?.credits?.connection ?? 0
         );
-        const influencerCredits = Number(
-            selectedBrand?.credits?.influencer ?? 0
-        );
         const collaborationCredits = Number(
             selectedBrand?.credits?.collaboration ?? 0
         );
@@ -65,10 +59,6 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
         const discoveryProgress = useMemo(
             () => Math.min(1, discoverCoinsLeft / DISCOVERY_LIMIT),
             [discoverCoinsLeft]
-        );
-        const influencerProgress = useMemo(
-            () => Math.min(1, influencerCredits / INFLUENCER_LIMIT),
-            [influencerCredits]
         );
         const collaborationProgress = useMemo(
             () => Math.min(1, collaborationCredits / COLLABORATION_LIMIT),
@@ -85,14 +75,11 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
             const progress =
                 creditContext === "discovery"
                     ? discoveryProgress
-                    : creditContext === "influencer-spotlight"
-                      ? influencerProgress
-                      : collaborationProgress;
+                    : collaborationProgress;
             return { width: `${progress * 100}%` as DimensionValue };
         }, [
             creditContext,
             discoveryProgress,
-            influencerProgress,
             collaborationProgress,
         ]);
 
@@ -161,55 +148,6 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                                 {connectionCreditsLeft} Invites
                             </Text>
                             <Text style={styles.creditsMonthly}>Monthly</Text>
-                        </Pressable>
-                    </>
-                );
-            }
-
-            if (creditContext === "influencer-spotlight") {
-                return (
-                    <>
-                        <Pressable
-                            onPress={handleCardPress}
-                            style={({ pressed }) => [
-                                styles.creditsRow,
-                                pressed && styles.creditsCardPressed,
-                            ]}
-                        >
-                            <FontAwesomeIcon
-                                icon={faStar}
-                                size={18}
-                                color={colors.gold}
-                                style={styles.creditsIcon}
-                            />
-                            <Text style={styles.creditsDiscoveryText}>
-                                {influencerCredits} Influencer Spotlights
-                            </Text>
-                            {!hideRefill && Platform.OS === "web" && (
-                                <Pressable
-                                    onPress={handleRefillPress}
-                                    hitSlop={8}
-                                    style={({ pressed: refillPressed }) => [
-                                        styles.refillButton,
-                                        refillPressed &&
-                                            styles.refillButtonPressed,
-                                    ]}
-                                >
-                                    <Text style={styles.refillLink}>
-                                        REFILL
-                                    </Text>
-                                </Pressable>
-                            )}
-                        </Pressable>
-                        <Pressable onPress={handleCardPress}>
-                            <RNView style={styles.progressTrack}>
-                                <RNView
-                                    style={[
-                                        styles.progressFill,
-                                        progressFillStyle,
-                                    ]}
-                                />
-                            </RNView>
                         </Pressable>
                     </>
                 );
