@@ -1,4 +1,3 @@
-import { useCollaborationContext } from '@/contexts'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
 import { Console } from '@/shared-libs/utils/console'
@@ -21,7 +20,6 @@ interface IProps {
     selectedInfluencer: User
 }
 const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
-    const { } = useCollaborationContext()
     const { selectedBrand } = useBrandContext()
     const [collaborations, setCollaborations] = useState<Collaboration[]>([])
     const [selectedIds, setSelectedIds] = useState<string[]>([])
