@@ -1,7 +1,7 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { faBolt, faDiagramProject, faGem, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faDiagramProject, faFileContract, faGem, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -22,7 +22,7 @@ interface CreditUsageModalProps {
     hideRefill?: boolean;
 }
 
-type CreditType = "discovery" | "invites" | "campaign-creation";
+type CreditType = "discovery" | "invites" | "campaign-creation" | "contracts";
 type CreditStatus = "normal" | "warning" | "critical";
 
 interface CreditThreshold {
@@ -34,12 +34,14 @@ const CREDIT_THRESHOLDS: Record<CreditType, CreditThreshold> = {
     discovery: { warning: 20, critical: 10 },
     invites: { warning: 10, critical: 5 },
     "campaign-creation": { warning: 5, critical: 2 },
+    contracts: { warning: 5, critical: 2 },
 };
 
 const CREDIT_WORKFLOW_COPY = [
     "Discovery credits are used every time you open a creator profile in Discover.",
     "Invite credits are spent when you send collaboration invites and refresh monthly.",
     "Campaign creation credits are consumed when you publish a new campaign.",
+    "Contract credits are consumed when you generate and finalize new contracts.",
 ];
 
 const STATUS_PRIORITY: Record<CreditStatus, number> = {
@@ -71,6 +73,7 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
     const collaborationCredits = Number(
         selectedBrand?.credits?.collaboration ?? 0
     );
+    const contractCredits = Number(selectedBrand?.credits?.contract ?? 0);
 
     const styles = useMemo(
         () => createStyles(colors, xl, width),
@@ -93,6 +96,19 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
                 ),
             },
             {
+                key: "campaign-creation" as CreditType,
+                label: "Campaign creation",
+                whereUsed: "Use in Collaborations while publishing campaign briefs.",
+                whenCharged: "Charged when a campaign is created and published.",
+                count: collaborationCredits,
+                icon: faDiagramProject,
+                iconColor: colors.gold,
+                status: getCreditStatus(
+                    collaborationCredits,
+                    CREDIT_THRESHOLDS["campaign-creation"]
+                ),
+            },
+            {
                 key: "invites" as CreditType,
                 label: "Invites",
                 whereUsed: "Use when sending collaboration invites to creators.",
@@ -106,16 +122,17 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
                 ),
             },
             {
-                key: "campaign-creation" as CreditType,
-                label: "Campaign creation",
-                whereUsed: "Use in Collaborations while publishing campaign briefs.",
-                whenCharged: "Charged when a campaign is created and published.",
-                count: collaborationCredits,
-                icon: faDiagramProject,
+                key: "contracts" as CreditType,
+                label: "Contracts",
+                whereUsed: "Use in Contracts when creating and sharing contract drafts.",
+                whenCharged:
+                    "Charged when a new contract is generated for a collaboration.",
+                count: contractCredits,
+                icon: faFileContract,
                 iconColor: colors.gold,
                 status: getCreditStatus(
-                    collaborationCredits,
-                    CREDIT_THRESHOLDS["campaign-creation"]
+                    contractCredits,
+                    CREDIT_THRESHOLDS.contracts
                 ),
             },
         ],
@@ -123,6 +140,7 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
             discoverCoinsLeft,
             connectionCreditsLeft,
             collaborationCredits,
+            contractCredits,
             colors.gold,
             colors.drawerInvitesIcon,
         ]

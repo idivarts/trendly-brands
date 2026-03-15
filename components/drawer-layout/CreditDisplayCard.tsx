@@ -5,6 +5,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
     faDiagramProject,
+    faFileContract,
     faGem as faGemSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -12,23 +13,44 @@ import { usePathname } from "expo-router";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import {
-    DimensionValue,
     Platform,
     Pressable,
     StyleSheet,
+    TextStyle,
     View as RNView,
 } from "react-native";
 import CreditUsageModal from "./CreditUsageModal";
 
-const DISCOVERY_LIMIT = 1000;
-const COLLABORATION_LIMIT = 1000;
+type CreditContext = "discovery" | "campaigns" | "contracts";
+type CreditStatus = "normal" | "warning" | "critical";
+type CreditKey = "discovery" | "invites" | "campaigns" | "contracts";
 
-type CreditContext = "discovery" | "campaigns";
+interface CreditThreshold {
+    warning: number;
+    critical: number;
+}
+
+const CREDIT_THRESHOLDS: Record<CreditKey, CreditThreshold> = {
+    discovery: { warning: 20, critical: 10 },
+    invites: { warning: 10, critical: 5 },
+    campaigns: { warning: 5, critical: 2 },
+    contracts: { warning: 5, critical: 2 },
+};
 
 function getCreditContext(pathname: string): CreditContext {
+    if (pathname.includes("contract")) return "contracts";
     if (pathname.includes("collaboration") || pathname === "/collaborations")
         return "campaigns";
     return "discovery";
+}
+
+function getCreditStatus(
+    value: number,
+    thresholds: CreditThreshold
+): CreditStatus {
+    if (value <= thresholds.critical) return "critical";
+    if (value <= thresholds.warning) return "warning";
+    return "normal";
 }
 
 export interface CreditDisplayCardProps {
@@ -55,15 +77,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
         const collaborationCredits = Number(
             selectedBrand?.credits?.collaboration ?? 0
         );
-
-        const discoveryProgress = useMemo(
-            () => Math.min(1, discoverCoinsLeft / DISCOVERY_LIMIT),
-            [discoverCoinsLeft]
-        );
-        const collaborationProgress = useMemo(
-            () => Math.min(1, collaborationCredits / COLLABORATION_LIMIT),
-            [collaborationCredits]
-        );
+        const contractCredits = Number(selectedBrand?.credits?.contract ?? 0);
 
         const styles = useMemo(() => createStyles(theme), [theme]);
         const [modalVisible, setModalVisible] = useState(false);
@@ -71,23 +85,40 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
         const handleCardPress = () => setModalVisible(true);
         const handleRefillPress = () => nav.push("/billing");
 
-        const progressFillStyle = useMemo(() => {
-            const progress =
-                creditContext === "discovery"
-                    ? discoveryProgress
-                    : collaborationProgress;
-            return { width: `${progress * 100}%` as DimensionValue };
-        }, [
-            creditContext,
-            discoveryProgress,
-            collaborationProgress,
-        ]);
+        const discoveryStatus = getCreditStatus(
+            discoverCoinsLeft,
+            CREDIT_THRESHOLDS.discovery
+        );
+        const inviteStatus = getCreditStatus(
+            connectionCreditsLeft,
+            CREDIT_THRESHOLDS.invites
+        );
+        const campaignStatus = getCreditStatus(
+            collaborationCredits,
+            CREDIT_THRESHOLDS.campaigns
+        );
+        const contractStatus = getCreditStatus(
+            contractCredits,
+            CREDIT_THRESHOLDS.contracts
+        );
+
+        const statusCopy: Record<CreditStatus, string> = {
+            normal: "Healthy",
+            warning: "Low",
+            critical: "Critical",
+        };
+
+        const statusStyleMap: Record<CreditStatus, TextStyle> = {
+            normal: styles.statusPillNormal,
+            warning: styles.statusPillWarning,
+            critical: styles.statusPillCritical,
+        };
 
         const renderCardContent = () => {
             if (creditContext === "discovery") {
                 return (
                     <>
-                        <RNView style={styles.creditsRow}>
+                        <RNView style={styles.creditsRowTop}>
                             <Pressable
                                 onPress={handleCardPress}
                                 style={({ pressed }) => [
@@ -103,6 +134,14 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                                 />
                                 <Text style={styles.creditsDiscoveryText}>
                                     {discoverCoinsLeft} Discovery
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.statusPill,
+                                        statusStyleMap[discoveryStatus],
+                                    ]}
+                                >
+                                    {statusCopy[discoveryStatus]}
                                 </Text>
                             </Pressable>
                             {!hideRefill && Platform.OS === "web" && (
@@ -121,16 +160,6 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                                 </Pressable>
                             )}
                         </RNView>
-                        <Pressable onPress={handleCardPress}>
-                            <RNView style={styles.progressTrack}>
-                                <RNView
-                                    style={[
-                                        styles.progressFill,
-                                        progressFillStyle,
-                                    ]}
-                                />
-                            </RNView>
-                        </Pressable>
                         <Pressable
                             onPress={handleCardPress}
                             style={({ pressed }) => [
@@ -147,30 +176,45 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                             <Text style={styles.creditsInvitesText}>
                                 {connectionCreditsLeft} Invites
                             </Text>
+                            <Text
+                                style={[
+                                    styles.statusPill,
+                                    statusStyleMap[inviteStatus],
+                                ]}
+                            >
+                                {statusCopy[inviteStatus]}
+                            </Text>
                             <Text style={styles.creditsMonthly}>Monthly</Text>
                         </Pressable>
                     </>
                 );
             }
 
-            // campaigns
-            return (
-                <>
+            if (creditContext === "contracts") {
+                return (
                     <Pressable
                         onPress={handleCardPress}
                         style={({ pressed }) => [
-                            styles.creditsRow,
+                            styles.creditsRowTop,
                             pressed && styles.creditsCardPressed,
                         ]}
                     >
                         <FontAwesomeIcon
-                            icon={faDiagramProject}
+                            icon={faFileContract}
                             size={18}
                             color={colors.gold}
                             style={styles.creditsIcon}
                         />
                         <Text style={styles.creditsDiscoveryText}>
-                            {collaborationCredits} Create campaign
+                            {contractCredits} Contracts
+                        </Text>
+                        <Text
+                            style={[
+                                styles.statusPill,
+                                statusStyleMap[contractStatus],
+                            ]}
+                        >
+                            {statusCopy[contractStatus]}
                         </Text>
                         {!hideRefill && Platform.OS === "web" && (
                             <Pressable
@@ -186,15 +230,49 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                             </Pressable>
                         )}
                     </Pressable>
-                    <Pressable onPress={handleCardPress}>
-                        <RNView style={styles.progressTrack}>
-                            <RNView
-                                style={[
-                                    styles.progressFill,
-                                    progressFillStyle,
+                );
+            }
+
+            // campaigns
+            return (
+                <>
+                    <Pressable
+                        onPress={handleCardPress}
+                        style={({ pressed }) => [
+                            styles.creditsRowTop,
+                            pressed && styles.creditsCardPressed,
+                        ]}
+                    >
+                        <FontAwesomeIcon
+                            icon={faDiagramProject}
+                            size={18}
+                            color={colors.gold}
+                            style={styles.creditsIcon}
+                        />
+                        <Text style={styles.creditsDiscoveryText}>
+                            {collaborationCredits} Create campaign
+                        </Text>
+                        <Text
+                            style={[
+                                styles.statusPill,
+                                statusStyleMap[campaignStatus],
+                            ]}
+                        >
+                            {statusCopy[campaignStatus]}
+                        </Text>
+                        {!hideRefill && Platform.OS === "web" && (
+                            <Pressable
+                                onPress={handleRefillPress}
+                                hitSlop={8}
+                                style={({ pressed: refillPressed }) => [
+                                    styles.refillButton,
+                                    refillPressed &&
+                                        styles.refillButtonPressed,
                                 ]}
-                            />
-                        </RNView>
+                            >
+                                <Text style={styles.refillLink}>REFILL</Text>
+                            </Pressable>
+                        )}
                     </Pressable>
                 </>
             );
@@ -237,6 +315,12 @@ const createStyles = (theme: Theme) => {
             alignItems: "center",
             backgroundColor: "transparent",
         },
+        creditsRowTop: {
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "transparent",
+            minHeight: 28,
+        },
         creditsMainPressable: {
             flex: 1,
             flexDirection: "row",
@@ -265,17 +349,6 @@ const createStyles = (theme: Theme) => {
             fontWeight: "600",
             color: colors.aliceBlue,
         },
-        progressTrack: {
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: colors.drawerProgressTrack,
-            overflow: "hidden",
-        },
-        progressFill: {
-            height: "100%",
-            backgroundColor: colors.drawerProgressFill,
-            borderRadius: 3,
-        },
         creditsInvitesText: {
             flex: 1,
             fontSize: 14,
@@ -285,6 +358,28 @@ const createStyles = (theme: Theme) => {
         creditsMonthly: {
             fontSize: 11,
             color: colors.drawerTextMuted,
+            marginLeft: 8,
+        },
+        statusPill: {
+            fontSize: 10,
+            fontWeight: "700",
+            paddingVertical: 2,
+            paddingHorizontal: 6,
+            borderRadius: 999,
+            overflow: "hidden",
+            marginLeft: 8,
+        },
+        statusPillNormal: {
+            color: colors.drawerText,
+            backgroundColor: colors.glassSurface,
+        },
+        statusPillWarning: {
+            color: colors.yellow,
+            backgroundColor: colors.planBadgeProBg,
+        },
+        statusPillCritical: {
+            color: colors.red,
+            backgroundColor: colors.errorBannerBg,
         },
     });
 };
