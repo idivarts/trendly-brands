@@ -31,9 +31,9 @@ interface CreditThreshold {
 }
 
 const CREDIT_THRESHOLDS: Record<CreditType, CreditThreshold> = {
-    discovery: { warning: 30, critical: 10 },
-    invites: { warning: 30, critical: 10 },
-    "campaign-creation": { warning: 30, critical: 10 },
+    discovery: { warning: 20, critical: 10 },
+    invites: { warning: 10, critical: 5 },
+    "campaign-creation": { warning: 5, critical: 2 },
 };
 
 const CREDIT_WORKFLOW_COPY = [
@@ -247,8 +247,8 @@ const CreditUsageModal: React.FC<CreditUsageModalProps> = ({
                                     style={[
                                         styles.creditTile,
                                         creditItems.length % 2 === 1 &&
-                                            index === creditItems.length - 1 &&
-                                            styles.creditTileFullWidth,
+                                        index === creditItems.length - 1 &&
+                                        styles.creditTileFullWidth,
                                         item.status === "critical" &&
                                         styles.creditTileCritical,
                                         item.status === "warning" &&
