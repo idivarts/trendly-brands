@@ -106,137 +106,116 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
             );
         };
 
+        const renderRefillFooter = () => {
+            if (hideRefill || Platform.OS !== "web") return null;
+            return (
+                <Pressable
+                    onPress={handleRefillPress}
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                        styles.refillFooterButton,
+                        pressed && styles.refillButtonPressed,
+                    ]}
+                >
+                    <Text style={styles.refillLink}>REFILL</Text>
+                </Pressable>
+            );
+        };
+
+        const renderCreditRow = ({
+            label,
+            count,
+            icon,
+            iconColor,
+            status,
+            meta,
+        }: {
+            label: string;
+            count: number;
+            icon: any;
+            iconColor: string;
+            status: CreditStatus;
+            meta?: string;
+        }) => (
+            <Pressable
+                onPress={handleCardPress}
+                style={({ pressed }) => [
+                    styles.creditRowCard,
+                    pressed && styles.creditsCardPressed,
+                ]}
+            >
+                <RNView style={styles.creditRowLeft}>
+                    <FontAwesomeIcon
+                        icon={icon}
+                        size={18}
+                        color={iconColor}
+                        style={styles.creditsIcon}
+                    />
+                    <RNView style={styles.creditTextWrap}>
+                        <Text style={styles.creditPrimaryText}>
+                            {count} {label}
+                        </Text>
+                        {!!meta && (
+                            <Text style={styles.creditSecondaryText}>
+                                {meta}
+                            </Text>
+                        )}
+                    </RNView>
+                </RNView>
+                {renderStatusIndicator(status)}
+            </Pressable>
+        );
+
         const renderCardContent = () => {
             if (creditContext === "discovery") {
                 return (
                     <>
-                        <RNView style={styles.creditsRowTop}>
-                            <Pressable
-                                onPress={handleCardPress}
-                                style={({ pressed }) => [
-                                    styles.creditsMainPressable,
-                                    pressed && styles.creditsCardPressed,
-                                ]}
-                            >
-                                <FontAwesomeIcon
-                                    icon={faGemSolid}
-                                    size={18}
-                                    color={colors.gold}
-                                    style={styles.creditsIcon}
-                                />
-                                <Text style={styles.creditsDiscoveryText}>
-                                    {discoverCoinsLeft} Discovery
-                                </Text>
-                                {renderStatusIndicator(discoveryStatus)}
-                            </Pressable>
-                            {!hideRefill && Platform.OS === "web" && (
-                                <Pressable
-                                    onPress={handleRefillPress}
-                                    hitSlop={8}
-                                    style={({ pressed: refillPressed }) => [
-                                        styles.refillButton,
-                                        refillPressed &&
-                                        styles.refillButtonPressed,
-                                    ]}
-                                >
-                                    <Text style={styles.refillLink}>
-                                        REFILL
-                                    </Text>
-                                </Pressable>
-                            )}
-                        </RNView>
-                        <Pressable
-                            onPress={handleCardPress}
-                            style={({ pressed }) => [
-                                styles.creditsRow,
-                                pressed && styles.creditsCardPressed,
-                            ]}
-                        >
-                            <FontAwesomeIcon
-                                icon={faBolt}
-                                size={18}
-                                color={colors.drawerInvitesIcon}
-                                style={styles.creditsIcon}
-                            />
-                            <Text style={styles.creditsInvitesText}>
-                                {connectionCreditsLeft} Invites
-                            </Text>
-                            {renderStatusIndicator(inviteStatus)}
-                        </Pressable>
+                        {renderCreditRow({
+                            label: "Discovery",
+                            count: discoverCoinsLeft,
+                            icon: faGemSolid,
+                            iconColor: colors.gold,
+                            status: discoveryStatus,
+                        })}
+                        {renderCreditRow({
+                            label: "Invites",
+                            count: connectionCreditsLeft,
+                            icon: faBolt,
+                            iconColor: colors.drawerInvitesIcon,
+                            status: inviteStatus,
+                            meta: "Monthly refresh",
+                        })}
+                        {renderRefillFooter()}
                     </>
                 );
             }
 
             if (creditContext === "contracts") {
                 return (
-                    <Pressable
-                        onPress={handleCardPress}
-                        style={({ pressed }) => [
-                            styles.creditsRowTop,
-                            pressed && styles.creditsCardPressed,
-                        ]}
-                    >
-                        <FontAwesomeIcon
-                            icon={faFileContract}
-                            size={18}
-                            color={colors.gold}
-                            style={styles.creditsIcon}
-                        />
-                        <Text style={styles.creditsDiscoveryText}>
-                            {contractCredits} Contracts
-                        </Text>
-                        {renderStatusIndicator(contractStatus)}
-                        {!hideRefill && Platform.OS === "web" && (
-                            <Pressable
-                                onPress={handleRefillPress}
-                                hitSlop={8}
-                                style={({ pressed: refillPressed }) => [
-                                    styles.refillButton,
-                                    refillPressed &&
-                                    styles.refillButtonPressed,
-                                ]}
-                            >
-                                <Text style={styles.refillLink}>REFILL</Text>
-                            </Pressable>
-                        )}
-                    </Pressable>
+                    <>
+                        {renderCreditRow({
+                            label: "Contracts",
+                            count: contractCredits,
+                            icon: faFileContract,
+                            iconColor: colors.gold,
+                            status: contractStatus,
+                        })}
+                        {renderRefillFooter()}
+                    </>
                 );
             }
 
             // campaigns
             return (
                 <>
-                    <Pressable
-                        onPress={handleCardPress}
-                        style={({ pressed }) => [
-                            styles.creditsRowTop,
-                            pressed && styles.creditsCardPressed,
-                        ]}
-                    >
-                        <FontAwesomeIcon
-                            icon={faDiagramProject}
-                            size={18}
-                            color={colors.gold}
-                            style={styles.creditsIcon}
-                        />
-                        <Text style={styles.creditsDiscoveryText}>
-                            {collaborationCredits} Create campaign
-                        </Text>
-                        {renderStatusIndicator(campaignStatus)}
-                        {!hideRefill && Platform.OS === "web" && (
-                            <Pressable
-                                onPress={handleRefillPress}
-                                hitSlop={8}
-                                style={({ pressed: refillPressed }) => [
-                                    styles.refillButton,
-                                    refillPressed &&
-                                    styles.refillButtonPressed,
-                                ]}
-                            >
-                                <Text style={styles.refillLink}>REFILL</Text>
-                            </Pressable>
-                        )}
-                    </Pressable>
+                    {renderCreditRow({
+                        label: "Create campaign",
+                        count: collaborationCredits,
+                        icon: faDiagramProject,
+                        iconColor: colors.gold,
+                        status: campaignStatus,
+                    })}
+                    {renderRefillFooter()}
                 </>
             );
         };
@@ -273,36 +252,45 @@ const createStyles = (theme: Theme) => {
         creditsCardPressed: {
             opacity: 0.9,
         },
-        creditsRow: {
+        creditRowCard: {
+            minHeight: 42,
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            backgroundColor: colors.glassSurface,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.drawerBorder,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "transparent",
+            justifyContent: "space-between",
         },
-        creditsRowTop: {
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "transparent",
-            minHeight: 28,
-        },
-        creditsMainPressable: {
+        creditRowLeft: {
             flex: 1,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "transparent",
+            marginRight: 8,
+        },
+        creditTextWrap: {
+            flex: 1,
         },
         creditsIcon: {
             marginRight: 8,
         },
-        creditsDiscoveryText: {
-            flex: 1,
+        creditPrimaryText: {
             fontSize: 14,
             color: colors.drawerText,
-            fontWeight: "500",
+            fontWeight: "600",
         },
-        refillButton: {
+        creditSecondaryText: {
+            marginTop: 2,
+            fontSize: 11,
+            color: colors.drawerTextMuted,
+        },
+        refillFooterButton: {
             paddingVertical: 4,
             paddingHorizontal: 8,
             borderRadius: 6,
+            alignSelf: "flex-end",
         },
         refillButtonPressed: {
             backgroundColor: colors.glassSurface,
@@ -311,17 +299,6 @@ const createStyles = (theme: Theme) => {
             fontSize: 12,
             fontWeight: "600",
             color: colors.aliceBlue,
-        },
-        creditsInvitesText: {
-            flex: 1,
-            fontSize: 14,
-            color: colors.drawerText,
-            fontWeight: "500",
-        },
-        creditsMonthly: {
-            fontSize: 11,
-            color: colors.drawerTextMuted,
-            marginLeft: 8,
         },
         statusDot: {
             width: 10,
