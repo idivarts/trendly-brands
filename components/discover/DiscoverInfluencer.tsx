@@ -205,7 +205,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const { xl } = useBreakpoints();
 
     // collaborations are fetched inside InviteToCampaignModal when it mounts
-    const openProfile = (data: InfluencerItem | null) => {
+    const openProfile = useCallback((data: InfluencerItem | null) => {
         if (
             (selectedBrand?.credits?.discovery || 0) <= 0 &&
             data &&
@@ -219,10 +219,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setTrendlySocial(null);
         setShadowUser(null);
         setShadowSocial(null);
-        setIsAnalyticsLoading(false);
+        // Start loader immediately to avoid transient error state/flicker.
+        setIsAnalyticsLoading(!!data);
         setSelectedInfluencer(data);
         setOpenProfileModal(!!data);
-    };
+    }, [selectedBrand?.credits?.discovery, selectedBrand?.discoveredInfluencers]);
 
     const closeProfileModal = () => {
         setOpenProfileModal(false);
@@ -601,7 +602,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         [currentPage, pageCount, xl, setRightPanel]
     );
 
-    if (loading && data.length === 0) {
+    if (!openProfileModal && loading && data.length === 0) {
         // Full screen loader when we're fetching the first page
         return (
             <View style={styles.fullScreenLoader}>
@@ -610,7 +611,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         );
     }
 
-    if (data.length == 0) {
+    if (!openProfileModal && data.length == 0) {
         return (
             <View
                 style={{
