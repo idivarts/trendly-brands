@@ -10,9 +10,9 @@ import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import { Collaboration } from '@/types/Collaboration'
 import { User } from '@/types/User'
-import { collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
 import { useTheme } from '@react-navigation/native'
-import React, { useMemo, useEffect, useState } from 'react'
+import { collection, doc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
+import React, { useEffect, useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
 import { Button, Card, Checkbox } from 'react-native-paper'
 
@@ -109,7 +109,7 @@ const InfluencerInvite: React.FC<IProps> = ({ selectedInfluencer }) => {
                             status={selectedIds.includes(collab.id) ? 'checked' : 'unchecked'}
                             onPress={() => toggleSelection(collab.id)}
                         />
-                        <Text style={styles.collabName}>{collab.name}</Text>x
+                        <Text style={styles.collabName}>{collab.name}</Text>
                     </View>
                 ))}
             </Card.Content>

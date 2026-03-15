@@ -1,6 +1,6 @@
-import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
@@ -206,8 +206,8 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                                 <InfluencerCard
                                     xl={xl}
                                     key={item.id}
-                                    isOnFreePlan={isOnFreeTrial}
-                                    lockProfile={isProfileLocked(item.id)}
+                                    // isOnFreePlan={isOnFreeTrial}
+                                    // lockProfile={isProfileLocked(item.id)}
                                     type="explore"
                                     ToggleModal={ToggleModal}
                                     influencer={item}
@@ -264,8 +264,8 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                 <ProfileBottomSheet
                     influencer={selectedInfluencer as User}
                     theme={theme}
-                    isOnFreePlan={isOnFreeTrial}
-                    isPhoneMasked={false}
+                    // isOnFreePlan={isOnFreeTrial}
+                    isPhoneMasked={true}
                     actionCard={
                         <View style={styles.actionCardWrapper}>
                             <InfluencerInvite selectedInfluencer={selectedInfluencer as User} />
@@ -273,7 +273,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                     }
                     FireStoreDB={FirestoreDB}
                     isBrandsApp={true}
-                    lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
+                    // lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
                     closeModal={() => setOpenProfileModal(false)}
                 />
             </BottomSheetScrollContainer>
