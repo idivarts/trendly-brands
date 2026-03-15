@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
+import { CREDIT_THRESHOLDS, CreditThreshold } from "./credit-thresholds";
 import {
     Modal,
     Platform,
@@ -24,18 +25,6 @@ interface CreditUsageModalProps {
 
 type CreditType = "discovery" | "invites" | "campaign-creation" | "contracts";
 type CreditStatus = "normal" | "warning" | "critical";
-
-interface CreditThreshold {
-    warning: number;
-    critical: number;
-}
-
-const CREDIT_THRESHOLDS: Record<CreditType, CreditThreshold> = {
-    discovery: { warning: 20, critical: 10 },
-    invites: { warning: 10, critical: 5 },
-    "campaign-creation": { warning: 5, critical: 2 },
-    contracts: { warning: 5, critical: 2 },
-};
 
 const CREDIT_WORKFLOW_COPY = [
     "Discovery credits are used every time you open a creator profile in Discover.",
