@@ -76,9 +76,9 @@ import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         list: {
-            flexGrow: 1,
+            flex: 1,
             alignSelf: "center",
-            width: "100%", // optional, you can even remove it
+            width: "100%",
         },
         row: { flexDirection: "row", alignItems: "center" },
         avatarCol: {
@@ -650,13 +650,14 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     return (
         <View
             style={[
-                { flex: 1, minWidth: 0, },
+                { flex: 1, minWidth: 0, minHeight: 0 },
                 !xl && rightPanel && { display: "none" },
             ]}
         >
             <View
                 style={{
                     flex: 1,
+                    minHeight: 0,
                     alignItems: isCollapsed ? "center" : "flex-start",
                     paddingHorizontal: Platform.OS === "web" && xl ? 140 : 16,
                 }}

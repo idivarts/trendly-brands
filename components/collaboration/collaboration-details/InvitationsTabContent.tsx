@@ -34,7 +34,7 @@ import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal, StyleSheet } from "react-native";
+import { Modal, Platform, ScrollView, StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -235,17 +235,39 @@ const InvitationsTabContent = (props: any) => {
 
             {viewMode === "discover" ? (
                 collaboration ? (
-                    <View style={styles.discoverWrapper}>
-                        <Discover
-                            showRightPanel={false}
-                            showTopPanel={false}
-                            advanceFilter={true}
-                            onStatusChange={handleStatusChange}
-                            isStatusCard={false}
-                            defaultAdvanceFilters={collaboration?.preferences}
-                            useStoredFilters={false}
-                            skipGuideTour={true}
-                        />
+                    <View
+                        style={[styles.discoverWrapper, Platform.OS === "web" && styles.discoverWrapperWeb]}
+                    >
+                        {Platform.OS === "web" ? (
+                            <ScrollView
+                                style={styles.webScrollView}
+                                contentContainerStyle={styles.webScrollContent}
+                                showsVerticalScrollIndicator={true}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                <Discover
+                                    showRightPanel={false}
+                                    showTopPanel={false}
+                                    advanceFilter={true}
+                                    onStatusChange={handleStatusChange}
+                                    isStatusCard={false}
+                                    defaultAdvanceFilters={collaboration?.preferences}
+                                    useStoredFilters={false}
+                                    skipGuideTour={true}
+                                />
+                            </ScrollView>
+                        ) : (
+                            <Discover
+                                showRightPanel={false}
+                                showTopPanel={false}
+                                advanceFilter={true}
+                                onStatusChange={handleStatusChange}
+                                isStatusCard={false}
+                                defaultAdvanceFilters={collaboration?.preferences}
+                                useStoredFilters={false}
+                                skipGuideTour={true}
+                            />
+                        )}
                     </View>
                 ) : (
                     <View style={styles.loadingCenter}>
@@ -372,10 +394,14 @@ function useLocalStyles(theme: ReturnType<typeof useTheme>, isCollapsed: boolean
     return StyleSheet.create({
         root: {
             alignSelf: "stretch",
+            flex: 1,
             height: "100%",
+            minHeight: 0,
+            ...(Platform.OS === "web" && { overflow: "hidden" as const }),
         },
         discoverWrapper: {
             flex: 1,
+            minHeight: 0,
             flexDirection: "row",
             flexWrap: "wrap",
             justifyContent: "flex-start",
@@ -384,6 +410,17 @@ function useLocalStyles(theme: ReturnType<typeof useTheme>, isCollapsed: boolean
             gap: isCollapsed ? 20 : 8,
             paddingRight: isCollapsed ? 120 : 16,
             paddingLeft: isCollapsed ? 120 : 4,
+        },
+        discoverWrapperWeb: {
+            flexDirection: "column" as const,
+            flexWrap: "nowrap" as const,
+        },
+        webScrollView: {
+            flex: 1,
+            minHeight: 0,
+        },
+        webScrollContent: {
+            flexGrow: 1,
         },
         loadingCenter: {
             flex: 1,
