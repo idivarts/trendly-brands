@@ -293,14 +293,16 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const contentPadding = isNarrow ? 10 : 16;
         const cardSpacing = isNarrow ? 10 : 12;
 
-        const CIRCLE_R = 32;
-        const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_R;
+        const circleR = xl ? 32 : 24;
+        const circleSize = xl ? 80 : 56;
+        const circleCircumference = 2 * Math.PI * circleR;
+        const circleStrokeWidth = xl ? 6 : 4;
 
         const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => {
             const trustLevel = getTrustabilityLevel(analytics.trustablity);
             const trustColor = trustLevel?.color || colors.primary;
             const trustPercent = analytics.trustablity ?? 0;
-            const strokeDashLength = (trustPercent / 100) * CIRCLE_CIRCUMFERENCE;
+            const strokeDashLength = (trustPercent / 100) * circleCircumference;
 
             return (
                 <View style={{ marginHorizontal: 12, marginBottom: 12, marginTop: 12 }}>
@@ -313,7 +315,14 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                         }}
                     >
                         <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                            <Card.Content style={{ padding: contentPadding, flex: 1, justifyContent: "flex-start" }}>
+                            <Card.Content
+                                style={{
+                                    padding: contentPadding,
+                                    paddingBottom: xl ? contentPadding : 18,
+                                    flex: 1,
+                                    justifyContent: xl ? "flex-start" : "space-between",
+                                }}
+                            >
                                 <Text
                                     variant={labelVariant}
                                     style={{ opacity: 0.7, marginBottom: 8 }}
@@ -321,47 +330,79 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                     TRUSTABILITY
                                 </Text>
                                 <RNView style={{ flexDirection: "row", alignItems: "center" }}>
-                                    <RNView style={{ position: "relative", width: 80, height: 80, alignItems: "center", justifyContent: "center" }}>
-                                        <Svg width={80} height={80} viewBox="0 0 80 80" style={{ position: "absolute" }}>
+                                    <RNView style={{ position: "relative", width: circleSize, height: circleSize }}>
+                                        <Svg width={circleSize} height={circleSize} viewBox="0 0 80 80" style={{ position: "absolute" }}>
                                             <Circle
                                                 cx={40}
                                                 cy={40}
-                                                r={CIRCLE_R}
+                                                r={circleR}
                                                 stroke={colors.tag}
-                                                strokeWidth={6}
+                                                strokeWidth={circleStrokeWidth}
                                                 fill="none"
                                             />
                                             <Circle
                                                 cx={40}
                                                 cy={40}
-                                                r={CIRCLE_R}
+                                                r={circleR}
                                                 stroke={trustColor}
-                                                strokeWidth={6}
+                                                strokeWidth={circleStrokeWidth}
                                                 fill="none"
-                                                strokeDasharray={`${strokeDashLength} ${CIRCLE_CIRCUMFERENCE}`}
+                                                strokeDasharray={`${strokeDashLength} ${circleCircumference}`}
                                                 strokeLinecap="round"
                                                 transform="rotate(-90 40 40)"
                                             />
                                         </Svg>
-                                        <RNView style={{ alignItems: "center", justifyContent: "center" }}>
-                                            <Text variant="titleLarge" style={{ fontWeight: "bold", color: trustColor }}>
+                                        <RNView
+                                            style={{
+                                                position: "absolute",
+                                                left: 0,
+                                                top: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                            }}
+                                            pointerEvents="none"
+                                        >
+                                            <Text
+                                                variant={xl ? "titleLarge" : "titleSmall"}
+                                                style={{ fontWeight: "bold", color: trustColor, textAlign: "center" }}
+                                            >
                                                 {trustPercent}%
                                             </Text>
                                         </RNView>
                                     </RNView>
-                                    <RNView style={{ marginLeft: 12, flex: 1 }}>
-                                        <Text variant={valueVariant} style={{ fontWeight: "600", color: trustColor }}>
+                                    <RNView style={{ marginLeft: xl ? 12 : 8, flex: 1 }}>
+                                        <Text
+                                            variant={xl ? valueVariant : "titleMedium"}
+                                            style={{ fontWeight: "600", color: trustColor }}
+                                        >
                                             {trustLevel?.label || "—"}
                                         </Text>
-                                        <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 4 }}>
-                                            Based on engagement quality
+                                        <Text
+                                            variant="bodySmall"
+                                            style={{
+                                                opacity: 0.7,
+                                                marginTop: xl ? 4 : 8,
+                                            }}
+                                            numberOfLines={2}
+                                        >
+                                            {xl
+                                                ? "Based on engagement quality"
+                                                : "Based on engagement\nquality"}
                                         </Text>
                                     </RNView>
                                 </RNView>
                             </Card.Content>
                         </Card>
                         <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                            <Card.Content style={{ padding: contentPadding, flex: 1, justifyContent: "flex-start" }}>
+                            <Card.Content
+                                style={{
+                                    padding: contentPadding,
+                                    flex: 1,
+                                    justifyContent: "flex-start",
+                                }}
+                            >
                                 <Text
                                     variant={labelVariant}
                                     style={{ opacity: 0.7, marginBottom: 6 }}

@@ -36,6 +36,7 @@ type Props = {
     // optional influencers being invited. If provided, the modal header should reflect it
     influencers?: { id: string; name?: string }[];
     brandId?: string;
+    onNavigateToCampaigns?: () => void;
 };
 
 const InviteToCampaignModal: React.FC<Props> = ({
@@ -43,6 +44,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
     onInvite,
     influencers,
     brandId,
+    onNavigateToCampaigns,
 }) => {
     const [selected, setSelected] = useState<string[]>([]);
     const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
@@ -204,13 +206,24 @@ const InviteToCampaignModal: React.FC<Props> = ({
                     </Text>
 
                     {loading ? (
-                        <Text style={styles.loadingText}>
-                            Loading...
-                        </Text>
+                        <Text style={styles.loadingText}>Loading...</Text>
                     ) : collaborations.length === 0 ? (
-                        <Text style={styles.loadingText}>
-                            No collaborations found
-                        </Text>
+                        <View style={styles.emptyStateContainer}>
+                            <Text style={styles.emptyStateTitle}>
+                                Create Campaigns to invite influencers.
+                            </Text>
+                            <Pressable
+                                style={styles.emptyStateButton}
+                                onPress={() => {
+                                    onNavigateToCampaigns?.();
+                                    onClose();
+                                }}
+                            >
+                                <Text style={styles.emptyStateButtonText}>
+                                    Create Now
+                                </Text>
+                            </Pressable>
+                        </View>
                     ) : (
                         <FlatList
                             data={collaborations}
@@ -274,6 +287,28 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         loadingText: {
             textAlign: "center",
             marginVertical: 20,
+        },
+        emptyStateContainer: {
+            alignItems: "center",
+            justifyContent: "center",
+            marginVertical: 24,
+            paddingHorizontal: 16,
+        },
+        emptyStateTitle: {
+            textAlign: "center",
+            fontSize: 14,
+            marginBottom: 16,
+            color: colors.text,
+        },
+        emptyStateButton: {
+            backgroundColor: colors.primary,
+            borderRadius: 8,
+            paddingVertical: 10,
+            paddingHorizontal: 18,
+        },
+        emptyStateButtonText: {
+            color: colors.white,
+            fontWeight: "600",
         },
         listContent: {
             paddingBottom: 80,
