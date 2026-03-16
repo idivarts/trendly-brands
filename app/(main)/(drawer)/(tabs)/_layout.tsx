@@ -1,13 +1,14 @@
-import { router, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import React from "react";
 
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faComment,
     faGem,
@@ -22,8 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
-import { Pressable, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 import { Badge } from "react-native-paper";
 
 const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
@@ -48,30 +48,38 @@ const TabLayout = () => {
     const styles = React.useMemo(() => useStyles(theme, xl), [theme, xl]);
     const { unreadCount } = useChatContext();
 
-    const campaignsTabButton = (props: any) =>
+    const campaignsTabButton = (color: string, focused: boolean) =>
         !xl ? (
             <CoachmarkAnchor
                 id="guide-tour-campaigns-mobile"
                 shape="pill"
                 style={{ flex: 1 }}
             >
-                <Pressable {...props} />
+                <FontAwesomeIcon
+                    color={color}
+                    icon={focused ? faStarSolid : faStar}
+                    size={22}
+                />
             </CoachmarkAnchor>
         ) : (
-            <Pressable {...props} style={{ flex: 1 }} />
+            <FontAwesomeIcon
+                color={color}
+                icon={focused ? faStarSolid : faStar}
+                size={22}
+            />
         );
 
-    const menuTabButton = (props: any) =>
+    const menuTabButton = (color: string, focused: boolean) =>
         !xl ? (
             <CoachmarkAnchor
                 id="guide-tour-menu-mobile"
                 shape="pill"
                 style={{ flex: 1 }}
             >
-                <Pressable {...props} />
+                <ProfileIcon />
             </CoachmarkAnchor>
         ) : (
-            <Pressable {...props} style={{ flex: 1 }} />
+            <ProfileIcon />
         );
 
     return (
@@ -176,14 +184,7 @@ const TabLayout = () => {
                 options={{
                     title: "Campaigns",
                     headerShown: false,
-                    tabBarIcon: ({ color, focused }) => (
-                        <FontAwesomeIcon
-                            color={color}
-                            icon={focused ? faStarSolid : faStar}
-                            size={22}
-                        />
-                    ),
-                    tabBarButton: campaignsTabButton,
+                    tabBarIcon: ({ color, focused }) => campaignsTabButton(color, focused),
                 }}
             />
             <Tabs.Screen
@@ -191,8 +192,7 @@ const TabLayout = () => {
                 options={{
                     title: "My Brand",
                     headerShown: false,
-                    tabBarIcon: () => <ProfileIcon />,
-                    tabBarButton: menuTabButton,
+                    tabBarIcon: ({ color, focused }) => menuTabButton(color, focused),
                 }}
             />
         </Tabs>
