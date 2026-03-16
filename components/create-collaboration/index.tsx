@@ -525,6 +525,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 collaboration={
                     {
                         ...collaboration,
+                        attachments,
                         brandName: selectedBrand?.name ?? "",
                         brandDescription: selectedBrand?.profile?.about ?? "",
                         brandCategory: selectedBrand?.profile?.industries ?? [],

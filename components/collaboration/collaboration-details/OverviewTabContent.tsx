@@ -24,7 +24,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Portal, Text } from "react-native-paper";
 import { CollaborationDetail } from ".";
 import BrandModal from "./modal/BrandModal";
@@ -60,6 +60,16 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const [activeCollaborations, setActiveCollaborations] = useState<number | null>(null);
 
     const isDraft = props.collaboration.status === "draft";
+    const imageAttachments =
+        props.collaboration.attachments
+            ?.filter(
+                (attachment) =>
+                    attachment.type === "image" &&
+                    (attachment.imageUrl ||
+                        attachment.appleUrl ||
+                        attachment.playUrl)
+            )
+            .slice(0, 6) || [];
     const fetchManagerDetails = async () => {
         if (!props.collaboration.managerId || !props.collaboration.brandId) return;
         const managerRef = doc(
@@ -145,8 +155,61 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const locationIcon =
         locationLabel === "On-Site" ? faLocationDot : faHouseLaptop;
 
+    const primaryAttachment = props.collaboration.attachments?.find(
+        (attachment) =>
+            attachment.type === "image" &&
+            (attachment.imageUrl || attachment.appleUrl || attachment.playUrl)
+    );
+
     const renderDetailsCard = () => (
         <View style={styles.card}>
+            {imageAttachments.length > 0 ? (
+                xl ? (
+                    <View style={styles.campaignImagesGrid}>
+                        {imageAttachments.map((attachment, index) => (
+                            <View style={styles.campaignImageItem} key={index}>
+                                <ImageComponent
+                                    shape="square"
+                                    size="large"
+                                    url={
+                                        attachment.imageUrl ||
+                                        attachment.appleUrl ||
+                                        attachment.playUrl ||
+                                        ""
+                                    }
+                                    altText={props.collaboration.name || "Campaign image"}
+                                    style={styles.campaignImage}
+                                />
+                            </View>
+                        ))}
+                    </View>
+                ) : (
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.campaignImagesScrollContent}
+                    >
+                        <View style={styles.campaignImagesRow}>
+                            {imageAttachments.map((attachment, index) => (
+                                <View style={styles.campaignImageItemHorizontal} key={index}>
+                                    <ImageComponent
+                                        shape="square"
+                                        size="large"
+                                        url={
+                                            attachment.imageUrl ||
+                                            attachment.appleUrl ||
+                                            attachment.playUrl ||
+                                            ""
+                                        }
+                                        altText={props.collaboration.name || "Campaign image"}
+                                        style={styles.campaignImageHorizontal}
+                                    />
+                                </View>
+                            ))}
+                        </View>
+                    </ScrollView>
+                )
+            ) : null}
             <View style={styles.detailsHeaderRow}>
                 <Text variant="headlineMedium" style={styles.title} numberOfLines={1}>
                     {props.collaboration.name}
@@ -440,6 +503,42 @@ function createStyles(
             shadowOpacity: 0.08,
             shadowRadius: 8,
             elevation: 2,
+        },
+        campaignImagesGrid: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 16,
+        },
+        campaignImageItem: {
+            flexBasis: "32%",
+            maxWidth: "32%",
+            borderRadius: CARD_BORDER_RADIUS,
+            overflow: "hidden",
+        },
+        campaignImage: {
+            width: "100%",
+            aspectRatio: 4 / 3,
+            borderRadius: CARD_BORDER_RADIUS,
+        },
+        campaignImagesScrollContent: {
+            paddingVertical: 4,
+            paddingRight: 4,
+        },
+        campaignImagesRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        campaignImageItemHorizontal: {
+            width: 140,
+            borderRadius: CARD_BORDER_RADIUS,
+            overflow: "hidden",
+        },
+        campaignImageHorizontal: {
+            width: "100%",
+            aspectRatio: 4 / 3,
+            borderRadius: CARD_BORDER_RADIUS,
         },
         detailsHeaderRow: {
             flexDirection: "row",
