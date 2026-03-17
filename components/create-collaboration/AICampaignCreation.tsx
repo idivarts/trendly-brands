@@ -2,6 +2,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import SlowLoader from "@/shared-uis/components/SlowLoader";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import stylesFn from "@/styles/create-collaboration/AICampaignCreation.styles";
@@ -12,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
+    Modal,
     Pressable,
     ScrollView,
     Text,
@@ -33,6 +35,13 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const { selectedBrand } = useBrandContext();
+    const generatingMessages = [
+        "Understanding your campaign brief...",
+        "Drafting a campaign strategy...",
+        "Matching goals with ideal creators...",
+        "Refining deliverables and budget...",
+        "Finalizing your campaign draft...",
+    ];
 
     const quickActions = [
         {
@@ -251,6 +260,14 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                     </View>
                 </View>
             </ScrollView>
+            <Modal
+                visible={isGenerating}
+                transparent={false}
+                animationType="fade"
+                onRequestClose={() => { }}
+            >
+                <SlowLoader messages={generatingMessages} />
+            </Modal>
         </SafeAreaView>
     );
 }
