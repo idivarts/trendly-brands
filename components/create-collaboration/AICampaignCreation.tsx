@@ -1,13 +1,14 @@
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import stylesFn from "@/styles/create-collaboration/AICampaignCreation.styles";
+import { resetAndNavigate } from "@/utils/router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { resetAndNavigate } from "@/utils/router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -31,6 +32,7 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
     const { lg, xl } = useBreakpoints();
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
+    const { selectedBrand } = useBrandContext();
 
     const quickActions = [
         {
@@ -80,6 +82,7 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                 },
                 body: JSON.stringify({
                     prompt: promptText,
+                    brandId: selectedBrand?.id,
                 }),
             });
 
