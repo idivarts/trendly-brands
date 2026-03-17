@@ -30,6 +30,8 @@ interface ChatContextProps {
         channel: string,
         member: string
     ) => Promise<boolean>;
+    /** Send a text message to a contract/messaging channel (e.g. nudge for address). */
+    sendMessageToChannel: (channelId: string, text: string) => Promise<void>;
     hasError?: boolean;
     deregisterTokens?: Function;
     unreadCount: number;
@@ -45,6 +47,7 @@ const ChatContext = createContext<ChatContextProps>({
     // sendSystemMessage: async () => { },
     fetchChannelCid: async () => "",
     removeMemberFromChannel: async () => false,
+    sendMessageToChannel: async () => {},
     hasError: false,
     deregisterTokens: () => { Console.log("No deregister function provided") },
     unreadCount: 0,
@@ -224,6 +227,12 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         return channel.cid;
     };
 
+    const sendMessageToChannel = async (channelId: string, text: string) => {
+        const channel = streamClient.channel("messaging", channelId);
+        await channel.watch();
+        await channel.sendMessage({ text });
+    };
+
     return (
         <ChatContext.Provider
             value={{
@@ -234,6 +243,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
                 addMemberToChannel,
                 fetchChannelCid,
                 removeMemberFromChannel,
+                sendMessageToChannel,
                 hasError,
                 deregisterTokens: updatedTokens,
                 unreadCount,

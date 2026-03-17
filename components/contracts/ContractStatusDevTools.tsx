@@ -13,20 +13,17 @@ import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 const ALL_STATES = [
-    ContractStatus.KYC_VERIFICATION,
-    ContractStatus.CONTRACT_PENDING,
-    ContractStatus.PAYMENT_PENDING,
-    ContractStatus.PAYMENT_FAILED,
-    ContractStatus.PAYMENT_SUCCESSFUL,
-    ContractStatus.SHIPPING_PENDING,
-    ContractStatus.DELIVERY_PENDING,
-    ContractStatus.VIDEO_PENDING,
-    ContractStatus.REVIEW_PENDING,
-    ContractStatus.REVISION_PENDING,
-    ContractStatus.RELEASE_PLANNING,
-    ContractStatus.RELEASE_SCHEDULED,
-    ContractStatus.VIDEO_POSTED,
-    ContractStatus.SETTLEMENT_DONE,
+    ContractStatus.Pending,
+    ContractStatus.Started,
+    ContractStatus.PaymentFailed,
+    ContractStatus.Paid,
+    ContractStatus.Shipped,
+    ContractStatus.Delivered,
+    ContractStatus.Received,
+    ContractStatus.DeliverableSent,
+    ContractStatus.PostScheduled,
+    ContractStatus.PostDone,
+    ContractStatus.Settled,
 ] as const;
 
 export interface ContractStatusDevToolsProps {
@@ -57,7 +54,7 @@ function ContractStatusDevToolsInner({
 
     const handleWriteToFirestore = async () => {
         const statusToWrite = overrideStatus ?? realStatus;
-        if (statusToWrite < 1 || statusToWrite > 14) return;
+        if (statusToWrite < 0 || statusToWrite > 10) return;
         setWriting(true);
         try {
             const contractRef = doc(FirestoreDB, "contracts", contractId);

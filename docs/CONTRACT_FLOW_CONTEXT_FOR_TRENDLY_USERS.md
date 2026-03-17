@@ -10,38 +10,38 @@ After reading this document, implement or verify the following in **Trendly-User
 
 1. **Contract details (or equivalent) screen**
    - Ensure the screen loads the contract from Firestore (`contracts/<streamChannelId>`) and the collaboration doc (for product vs digital). Use `streamChannelId` from the route or context.
-   - Add or reuse a `normalizeStatus(contract.status)` helper (Section 3) and use it everywhere you derive status for UI or actions.
+   - Add or reuse a `normalizeStatus(contract.status)` helper (Section 3) for 0–10 and use it everywhere you derive status for UI or actions.
 
-2. **Status display**
-   - On the contract details screen, render **ContractStatusView** from `@/shared-uis/components/contract-status` with `status={normalizedStatus}`, `actor="influencer"`, `scheduledReleaseAt={contract.releasePlan?.scheduledReleaseAt}`, and `showDescription`. Do not build a custom status badge/label; use this shared component.
+2. **KYC gate (not a state)**
+   - Use **`isContractBlockedByKYC(userData)`** from shared-constants. When status is Pending (0) and `isContractBlockedByKYC(userData)` is true, show “Complete KYC to start the contract” and do **not** show Make Payment / Start Contract or other contract actions. Navigate to KYC when the user taps “Complete KYC”. Do not write any contract status for KYC.
 
-3. **Influencer actions by status**
-   - For each normalized status (1–14), show the correct influencer action(s) as in the table in Section 4. Implement at least:
-     - **KYC_VERIFICATION (1):** “Complete KYC” → navigate to existing KYC/verification flow (no Firestore write).
-     - **PAYMENT_PENDING (3):** “Nudge Brand for Payment” → send a predefined message to channel `contract.streamChannelId` via your chat API (no contract write).
-     - **DELIVERY_PENDING (7):** “Mark as Received” (only if collaboration is product: `promotionSubject === "physical_product"`) → `updateDoc(contractRef, { status: ContractStatus.VIDEO_PENDING })`; optionally send a chat message. Refresh contract data after update.
-     - **VIDEO_PENDING (8):** “Upload Video” → after your upload flow completes → `updateDoc(contractRef, { status: ContractStatus.REVIEW_PENDING })`. Refresh contract data.
-     - **REVISION_PENDING (10):** “Re-upload Video” → after re-upload → `updateDoc(contractRef, { status: ContractStatus.REVIEW_PENDING })`. Refresh contract data.
-   - For all other statuses (2, 5, 6, 9, 11, 12, 13, 14), show informational copy only (no write). Do not show PAYMENT_FAILED (4) to the influencer.
+3. **Status display**
+   - On the contract details screen, render **ContractStatusView** from `@/shared-uis/components/contract-status` with `status={normalizedStatus}`, `actor="influencer"`, `scheduledReleaseAt={contract.posting?.scheduledDate}`, and `showDescription`. Do not build a custom status badge/label; use this shared component.
 
-4. **Firestore and types**
-   - Use `doc(FirestoreDB, "contracts", contract.streamChannelId)` and `updateDoc(contractRef, { ... })` for any contract update. Type the contract as `IContracts` and use `ContractStatus` from shared-constants for status values. Do not add new fields to the contract doc that the Brands app does not expect.
+4. **Influencer actions by status (0–10)**
+   - For each normalized status, show the correct influencer action(s) as in the table in Section 4. Implement at least:
+     - **Pending (0) and KYC not done:** “Complete KYC” → navigate to KYC (no contract write).
+     - **Pending (0):** “Nudge Brand for Payment” → send a message to channel `contract.streamChannelId` (no contract write).
+     - **Delivered (5):** “Mark as Received” (product only) → `updateDoc(contractRef, { status: ContractStatus.Received })`.
+     - **Received (6) / DeliverableSent (7):** “Upload Video” or “Re-upload Video” → after upload → `updateDoc(contractRef, { status: ContractStatus.DeliverableSent })`. Refresh contract data.
+   - For all other statuses, show informational copy only (no write). Do not show PaymentFailed (2) to the influencer.
 
-5. **Sync and consistency**
-   - After every contract update, refresh the contract (and any derived state) so the UI reflects the latest status and stays in sync with Trendly-Brands. Use the same channel id (`streamChannelId`) for all chat/nudge actions so messages appear in the same thread for both apps.
+5. **Firestore and types**
+   - Use `doc(FirestoreDB, "contracts", contract.streamChannelId)` and `updateDoc(contractRef, { ... })` for any contract update. Type the contract as `IContracts` and use `ContractStatus` (0–10) from shared-constants. Do not add new fields that the Brands app does not expect.
 
-6. **Optional**
-   - For SHIPPING_PENDING (6), add an optional “Nudge for shipment” that sends a message to the channel. For DELIVERY_PENDING (7), optionally send a chat message when the influencer marks as received (e.g. “Marked as received”) so the brand sees it in the thread.
+6. **Sync and consistency**
+   - After every contract update, refresh the contract so the UI stays in sync with Trendly-Brands. Use the same channel id (`streamChannelId`) for all chat/nudge actions.
 
-**Done when:** The influencer can see the correct status and description for every state, and can perform Complete KYC, Nudge Brand for Payment, Mark as Received (product only), Upload Video, and Re-upload Video with the correct Firestore updates and no duplicate constants or state logic outside the shared modules.
+**Done when:** The influencer sees the correct status for every state (0–10), the KYC gate blocks contract start until KYC is done, and they can perform Complete KYC, Nudge Brand for Payment, Mark as Received (product only), Upload Video, and Re-upload Video with the correct Firestore updates.
 
 ---
 
 ## 1. Single source of truth
 
 - **Firestore path:** `contracts/<streamChannelId>` (one doc per contract; `streamChannelId` is the chat channel id).
-- **Key fields:** `status` (1–14), `paymentStatus?`, `shippingDetails?`, `releasePlan?`, `contractTimestamp`, plus existing fields (`userId`, `brandId`, `collaborationId`, etc.).
-- **Do not duplicate:** State machine, labels, descriptions, or contract types. They live in shared modules; both apps must use the same imports.
+- **Key fields:** `status` (0–10), `payment?`, `shipment?`, `deliverable?`, `posting?` (e.g. `posting.scheduledDate`), `contractTimestamp`, plus existing fields (`userId`, `brandId`, `collaborationId`, etc.).
+- **KYC is a gate, not a state:** Do not allow starting the campaign/contract until influencer KYC is done; use `isContractBlockedByKYC(user)` in the UI. The contract status is never set to a “KYC” value.
+- **Do not duplicate:** State machine (0–10), labels, descriptions, or contract types. They live in shared modules; both apps must use the same imports.
 
 ---
 
@@ -53,16 +53,17 @@ After reading this document, implement or verify the following in **Trendly-User
 
 **Import and use:**
 
-- **`ContractStatus`** — enum 1–14 (e.g. `ContractStatus.VIDEO_PENDING`, `ContractStatus.REVISION_PENDING`).
+- **`ContractStatus`** — enum 0–10 (e.g. `ContractStatus.Pending`, `ContractStatus.DeliverableSent`, `ContractStatus.Received`).
+- **`isContractBlockedByKYC(user)`** — returns true if contract actions should be blocked because influencer KYC is not done (gate only; not a contract state).
 - **`CONTRACT_STATUS_LABELS`** — human-readable label per status (for any custom UI; primary use is via ContractStatusView).
 - **`getContractStatusDescription(status, actor)`** — description string for **influencer** when `actor === "influencer"`. Use for subtitles or helper text.
 - **`ContractStatusActor`** — type `"brand" | "influencer"`; always pass `"influencer"` in this app.
 - **`RELEASE_DATE_MAX_DAYS`** — 30 (if you need to validate or show max release date).
-- **`ReleasePlanOption`** — type for `releasePlan.option` (read-only on influencer side).
+- **`ReleasePlanOption`** — type for posting scenario (read-only on influencer side).
 
-**Status enum (1–14):**  
-KYC_VERIFICATION(1), CONTRACT_PENDING(2), PAYMENT_PENDING(3), PAYMENT_FAILED(4), PAYMENT_SUCCESSFUL(5), SHIPPING_PENDING(6), DELIVERY_PENDING(7), VIDEO_PENDING(8), REVIEW_PENDING(9), REVISION_PENDING(10), RELEASE_PLANNING(11), RELEASE_SCHEDULED(12), VIDEO_POSTED(13), SETTLEMENT_DONE(14).  
-Note: **PAYMENT_FAILED** has no influencer description (brand-only state).
+**Status enum (0–10):**  
+Pending(0), Started(1), PaymentFailed(2), Paid(3), Shipped(4), Delivered(5), Received(6), DeliverableSent(7), PostScheduled(8), PostDone(9), Settled(10).  
+Note: **PaymentFailed (2)** has no influencer description (brand-only state). **KYC is not a state** — use `isContractBlockedByKYC` to block actions until KYC is done.
 
 ### 2.2 `shared-uis` (contract-status)
 
@@ -76,15 +77,15 @@ Note: **PAYMENT_FAILED** has no influencer description (brand-only state).
 <ContractStatusView
   status={normalizedStatus}
   actor="influencer"
-  scheduledReleaseAt={contract.releasePlan?.scheduledReleaseAt}
+  scheduledReleaseAt={contract.posting?.scheduledDate}
   showDescription
 />
 ```
 
-- **normalizedStatus:** Use the same `normalizeStatus(contract.status)` as below so legacy 0–3 map correctly.
+- **normalizedStatus:** Use the same `normalizeStatus(contract.status)` as below (0–10).
 - **actor:** Always `"influencer"` in this app.
-- **scheduledReleaseAt:** From `contract.releasePlan?.scheduledReleaseAt` for RELEASE_SCHEDULED (12); the component shows “Video scheduled for release on: [date]”.
-- No need for `overrideLabel` / `overrideDescription` unless you have a legacy influencer flow (same idea as Brands’ legacy handling).
+- **scheduledReleaseAt:** From `contract.posting?.scheduledDate` for PostScheduled (8); the component shows “Video scheduled for release on: [date]”.
+- No need for `overrideLabel` / `overrideDescription` unless you have a legacy influencer flow.
 
 ContractStatusView is theme-aware (useTheme, Colors); no layout or color changes needed in shared-uis for influencer.
 
@@ -94,29 +95,27 @@ ContractStatusView is theme-aware (useTheme, Colors); no layout or color changes
 
 **Import and use:**
 
-- **`IContracts`** — full contract document type.
-- **`ContractShippingDetails`**, **`ContractReleasePlan`**, **ReleasePlanOption** — for typing; influencer mostly reads these.
+- **`IContracts`** — full contract document type (`status` 0–10, `payment?`, `shipment?`, `deliverable?`, `posting?`).
+- **`Shipment`**, **`Posting`**, etc. — for typing; influencer mostly reads these.
 - **Firestore:** Use the same `FirestoreDB` and `doc`/`updateDoc` (or your app’s Firestore wrapper) so you write to `contracts/<streamChannelId>`.
 
 **Collaboration type (product vs digital):**  
-From **collaboration** doc (e.g. `ICollaboration` from `@/shared-libs/.../collaborations`): `promotionSubject === "physical_product"` means product shipping (states 6–7 apply). Influencer app uses this only to show the right copy/actions (e.g. “Mark as Received” only for product collaborations).
+From **collaboration** doc (e.g. `ICollaboration` from `@/shared-libs/.../collaborations`): `promotionSubject === "physical_product"` means product shipping (Shipped/Delivered/Received apply). Use this to show “Mark as Received” only for product collaborations.
 
 ---
 
 ## 3. Normalize legacy status (same as Brands)
 
-Use this in Trendly-Users so status 0–3 from the old flow still map to the new state machine for display and actions:
+Use this in Trendly-Users so status 0–10 is used for display and actions (legacy 2/3 map to 7/10 if needed):
 
 ```ts
 import { ContractStatus } from "@/shared-constants/contract-status";
 
 function normalizeStatus(status: number): number {
-  if (status >= 1 && status <= 14) return status;
-  if (status === 0) return ContractStatus.CONTRACT_PENDING;
-  if (status === 1) return ContractStatus.CONTRACT_PENDING;
-  if (status === 2) return ContractStatus.REVIEW_PENDING;
-  if (status === 3) return ContractStatus.SETTLEMENT_DONE;
-  return ContractStatus.CONTRACT_PENDING;
+  if (status >= 0 && status <= 10) return status;
+  if (status === 2) return ContractStatus.DeliverableSent;
+  if (status === 3) return ContractStatus.Settled;
+  return ContractStatus.Pending;
 }
 ```
 
@@ -127,28 +126,25 @@ Use **normalized status** for:
 
 ---
 
-## 4. Influencer-side actions by status (what to implement)
+## 4. Influencer-side actions by status (0–10, what to implement)
 
-Below: status → what the **influencer** can do and what to **write to Firestore** so both apps stay in sync. Same `contracts/<streamChannelId>` doc; only update the fields listed.
+Below: status → what the **influencer** can do and what to **write to Firestore** so both apps stay in sync. Same `contracts/<streamChannelId>` doc; only update the fields listed. **KYC is a gate:** when status is Pending (0) and `isContractBlockedByKYC(user)` is true, show “Complete KYC” and do not allow other contract actions (no contract write).
 
 | Status | Name | Influencer action | Firestore update (from Trendly-Users) |
 |--------|------|-------------------|--------------------------------------|
-| 1 | KYC_VERIFICATION | “Complete KYC” → navigate to existing KYC/verification flow | No contract write; gate is KYC completion (already in your app). |
-| 2 | CONTRACT_PENDING | Show “Waiting for brand to confirm” / no primary action | Read-only. |
-| 3 | PAYMENT_PENDING | “Nudge Brand for Payment” → send message in channel `streamChannelId` | No contract write; use chat API to send a predefined message. |
-| 4 | PAYMENT_FAILED | — | Influencer does not see this state (brand-only). |
-| 5 | PAYMENT_SUCCESSFUL | Informational only | Read-only. |
-| 6 | SHIPPING_PENDING | Show “Shipment is pending from the brand.” Optional: “Nudge for shipment” via chat | Read-only (brand adds `shippingDetails` and moves to 7). |
-| 7 | DELIVERY_PENDING | “Mark as Received” / “Upload Delivery Proof” | `updateDoc(contractRef, { status: ContractStatus.VIDEO_PENDING })`. Optionally send a chat message (e.g. “Marked as received”) so brand sees it. |
-| 8 | VIDEO_PENDING | “Upload Video” → your upload flow | After upload + any backend processing: `updateDoc(contractRef, { status: ContractStatus.REVIEW_PENDING })`. |
-| 9 | REVIEW_PENDING | “Video is under review.” No primary action | Read-only (brand approves or requests revision). |
-| 10 | REVISION_PENDING | “Re-upload Video” → upload flow | After re-upload: `updateDoc(contractRef, { status: ContractStatus.REVIEW_PENDING })`. |
-| 11 | RELEASE_PLANNING | “Release will be scheduled by the brand.” | Read-only. |
-| 12 | RELEASE_SCHEDULED | Show release date (ContractStatusView shows it) | Read-only; optional “Change date” is brand-only. |
-| 13 | VIDEO_POSTED | “Video has been posted.” | Read-only. |
-| 14 | SETTLEMENT_DONE | “Contract closed. Settlement complete.” | Read-only. |
+| 0 | Pending | If KYC not done: “Complete KYC” → navigate to KYC. Else: “Nudge Brand for Payment” via chat | No contract write for KYC or nudge. |
+| 1 | Started | Informational | Read-only. |
+| 2 | PaymentFailed | — | Influencer does not see this state (brand-only). |
+| 3 | Paid | Informational | Read-only. |
+| 4 | Shipped | Show “Shipment is pending from the brand.” Optional: “Nudge for shipment” via chat | Read-only. |
+| 5 | Delivered | “Mark as Received” (product only) | `updateDoc(contractRef, { status: ContractStatus.Received })`. Optionally send chat message. |
+| 6 | Received | “Upload Video” / “Nudge” / “Go to Messages” | After upload: `updateDoc(contractRef, { status: ContractStatus.DeliverableSent })`. |
+| 7 | DeliverableSent | “Re-upload Video” or “Video is under review.” | After re-upload: `updateDoc(contractRef, { status: ContractStatus.DeliverableSent })`. |
+| 8 | PostScheduled | Show release date (ContractStatusView shows it) | Read-only. |
+| 9 | PostDone | “Video has been posted.” | Read-only. |
+| 10 | Settled | “Contract closed. Settlement complete.” | Read-only. |
 
-**Chat / nudge:** Use the same channel id `contract.streamChannelId` for all “Nudge” or “Send message” actions so the brand sees them in the same thread (Trendly-Brands uses the same channel for “Nudge Influencer” and messages).
+**Chat / nudge:** Use the same channel id `contract.streamChannelId` for all “Nudge” or “Send message” actions so the brand sees them in the same thread.
 
 ---
 
@@ -156,9 +152,10 @@ Below: status → what the **influencer** can do and what to **write to Firestor
 
 - [ ] Load contract from Firestore: `contracts/<streamChannelId>` (streamChannelId from route/context).
 - [ ] Load collaboration (and optionally user/brand) so you have `IContracts` + `ICollaboration` (for product vs digital).
-- [ ] Compute `normalizedStatus = normalizeStatus(contract.status)`.
-- [ ] Render **ContractStatusView** with `status={normalizedStatus}`, `actor="influencer"`, `scheduledReleaseAt={contract.releasePlan?.scheduledReleaseAt}`, `showDescription`.
-- [ ] Per normalized status, show the influencer actions from the table above (Complete KYC, Nudge Brand, Mark as Received, Upload Video, Re-upload Video, etc.).
+- [ ] Compute `normalizedStatus = normalizeStatus(contract.status)` (0–10).
+- [ ] **KYC gate:** When `isContractBlockedByKYC(userData)` and status is Pending (0), show “Complete KYC to start the contract” and do not show Make Payment / Start Contract or other contract actions.
+- [ ] Render **ContractStatusView** with `status={normalizedStatus}`, `actor="influencer"`, `scheduledReleaseAt={contract.posting?.scheduledDate}`, `showDescription`.
+- [ ] Per normalized status, show the influencer actions from the table above (Complete KYC when blocked, Nudge Brand, Mark as Received, Upload Video, Re-upload Video, etc.).
 - [ ] All Firestore updates: `doc(FirestoreDB, "contracts", contract.streamChannelId)` and `updateDoc(contractRef, { ... })` with only the fields that change (e.g. `status`).
 - [ ] After any update, refresh contract data so UI and status stay in real time with the Brands app.
 
@@ -166,8 +163,9 @@ Below: status → what the **influencer** can do and what to **write to Firestor
 
 ## 6. Keeping both apps in sync
 
-- **Same doc, same field names:** Both apps use `status` (1–14), `shippingDetails`, `releasePlan`, `contractTimestamp` from `shared-libs` models. Do not rename or add app-specific state fields that the other app must interpret.
-- **Same normalization:** Use the same `normalizeStatus` logic so legacy 0–3 behave identically in both apps.
+- **Same doc, same field names:** Both apps use `status` (0–10), `payment`, `shipment`, `deliverable`, `posting`, `contractTimestamp` from `shared-libs` models. Do not rename or add app-specific state fields that the other app must interpret.
+- **KYC as gate only:** Both apps use `isContractBlockedByKYC(user)` to block starting the campaign/contract until influencer KYC is done; KYC is not a contract state.
+- **Same normalization:** Use the same `normalizeStatus` logic (0–10, with legacy mapping if needed) so both apps behave identically.
 - **Same channel:** All chat/nudge actions use `contract.streamChannelId` so messages appear in the same thread for both parties.
 - **No duplicate constants:** Labels and descriptions come from `shared-constants` and `ContractStatusView`; do not redefine them in Trendly-Users.
 
@@ -176,9 +174,10 @@ Below: status → what the **influencer** can do and what to **write to Firestor
 ## 7. Quick reference — imports (Trendly-Users)
 
 ```ts
-// Status and copy
+// Status and copy (0–10, KYC gate)
 import {
   ContractStatus,
+  isContractBlockedByKYC,
   CONTRACT_STATUS_LABELS,
   getContractStatusDescription,
   type ContractStatusActor,
@@ -192,8 +191,8 @@ import { ContractStatusView } from "@/shared-uis/components/contract-status";
 // Contract document and types
 import {
   IContracts,
-  type ContractShippingDetails,
-  type ContractReleasePlan,
+  type Shipment,
+  type Posting,
 } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 
 // Optional: collaboration type (product vs digital)

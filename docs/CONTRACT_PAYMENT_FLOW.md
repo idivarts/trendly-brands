@@ -6,28 +6,25 @@ This document explains the entire contract-with-payment flow, every file involve
 
 ## 1. High-Level Flow (State Machine)
 
-The contract is driven by a **14-state machine**. Progress happens in the **message thread** (created when the brand accepts the influencer) and on the **contract details screen** in each app.
+The contract is driven by a **10-state machine** (status 0–10 in Firestore). Progress happens in the **message thread** (created when the brand accepts the influencer) and on the **contract details screen** in each app.
+
+**KYC is a gate, not a state:** The brand and influencer must not start the campaign/contract until the influencer has completed KYC. This is enforced in the UI (e.g. block “Make Payment” / “Start Contract” when `isContractBlockedByKYC(user)` is true); the contract status is never set to a “KYC” state.
 
 ```
-STATE 1  → KYC Verification (gate: influencer must complete KYC)
-STATE 2  → Contract Pending (contract created, no payment yet)
-STATE 3  → Payment Pending (brand must pay via Razorpay)
-STATE 4  → Payment Failed (brand only; retry payment)
-STATE 5  → Payment Successful → branch:
-           • Product/Service Shipping → STATE 6
-           • Otherwise → STATE 8 (skip shipping)
-STATE 6  → Shipping Pending (brand adds courier, tracking)
-STATE 7  → Delivery Pending (influencer marks received / uploads proof)
-STATE 8  → Video Pending (influencer uploads video)
-STATE 9  → Review Pending (brand approves or requests revision)
-STATE 10 → Revision Pending (influencer re-uploads; loop back to 9 until approved)
-STATE 11 → Release Planning (brand picks: brand+influencer / influencer alone / brand alone + date)
-STATE 12 → Release Scheduled (show date; brand can change date)
-STATE 13 → Video Posted (when scheduled date passes; auto or manual)
-STATE 14 → Settlement Done (contract closed; escrow released)
+STATE 0  → Pending (contract created, no payment yet; KYC gate blocks start until influencer KYC done)
+STATE 1  → Started (legacy)
+STATE 2  → Payment Failed (brand only; retry payment)
+STATE 3  → Paid → branch: Product shipping → STATE 4, else → STATE 7 (DeliverableSent)
+STATE 4  → Shipped (brand adds shipment details)
+STATE 5  → Delivered (brand marked as shipped)
+STATE 6  → Received (influencer marked received; next: upload video)
+STATE 7  → DeliverableSent (video submitted; brand approves or requests revision)
+STATE 8  → Post Scheduled (brand set release date; show date, can change)
+STATE 9  → Post Done (video posted)
+STATE 10 → Settled (contract closed)
 ```
 
-**Single source of truth:** The `contracts` document in Firestore. Its `status` field holds a number **1–14** (or legacy 0–3). Optional fields: `paymentStatus`, `shippingDetails`, `releasePlan`.
+**Single source of truth:** The `contracts` document in Firestore. Its `status` field holds a number **0–10**. Optional fields: `payment`, `shipment`, `deliverable`, `posting`, `contractTimestamp`.
 
 ---
 
@@ -51,9 +48,10 @@ Both apps read the **same** Firestore `contracts` doc and **same** collaboration
 
 **Role:** Single source of truth for the state machine and copy. No UI, no Firestore.
 
-- **`ContractStatus`** (enum 1–14): KYC_VERIFICATION, CONTRACT_PENDING, PAYMENT_PENDING, … SETTLEMENT_DONE.
-- **`CONTRACT_STATUS_LABELS`**: Human-readable label per status (e.g. "Payment Pending", "Shipping Pending").
-- **`getContractStatusDescription(status, actor)`**: Returns the short description string for that status for **brand** or **influencer** (e.g. brand: "Deposit the collaboration payment to proceed.", influencer: "Payment from the brand is pending."). PAYMENT_FAILED returns `null` for influencer (they never see that state).
+- **`ContractStatus`** (enum 0–10): Pending, Started, PaymentFailed, Paid, Shipped, Delivered, Received, DeliverableSent, PostScheduled, PostDone, Settled.
+- **`isContractBlockedByKYC(user)`**: Returns true if contract actions should be blocked because influencer KYC is not done (gate only; not a contract state).
+- **`CONTRACT_STATUS_LABELS`**: Human-readable label per status (e.g. "Pending", "Shipped", "Post Scheduled").
+- **`getContractStatusDescription(status, actor)`**: Returns the short description for **brand** or **influencer**. PaymentFailed returns `null` for influencer.
 - **Types:** `PaymentStatusType`, `FulfillmentType`, `ReleasePlanOption`, `ContractStatusActor` (`"brand" | "influencer"`).
 - **`RELEASE_DATE_MAX_DAYS`**: 30 (max release date from today).
 
@@ -68,16 +66,16 @@ Both apps read the **same** Firestore `contracts` doc and **same** collaboration
 **Role:** Shared presentational component that shows the **current contract status** in both apps.
 
 - **Props:**  
-  - `status` (number 1–14; legacy 0 → shown as Contract Pending),  
+  - `status` (number 0–10),  
   - `actor` (`"brand"` | `"influencer"`),  
-  - `scheduledReleaseAt?` (timestamp for state 12),  
+  - `scheduledReleaseAt?` (timestamp for PostScheduled; e.g. from `contract.posting?.scheduledDate`),  
   - `showDescription?`,  
   - `overrideLabel?` / `overrideDescription?` (e.g. legacy “Active” in Brands app).
 - **Behavior:**  
   - Renders a **badge** with the status label (from `CONTRACT_STATUS_LABELS` or override).  
   - If `showDescription`, shows the line from `getContractStatusDescription(status, actor)`.  
-  - For RELEASE_SCHEDULED + `scheduledReleaseAt`, shows “Release scheduled for: [date]” (brand) or “Video scheduled for release on: [date]” (influencer).  
-  - PAYMENT_FAILED uses error-style (e.g. red) for the badge.
+  - For PostScheduled (8) + `scheduledReleaseAt`, shows “Release scheduled for: [date]” (brand) or “Video scheduled for release on: [date]” (influencer).  
+  - PaymentFailed (2) uses error-style (e.g. red) for the badge.
 - **Styling:** Uses `useTheme()`, `Colors(theme)`, `StyleSheet` at bottom (no hardcoded colors, per workspace rules).
 
 **Used by:**  
@@ -100,12 +98,9 @@ Both apps read the **same** Firestore `contracts` doc and **same** collaboration
 
 **Role:** Firestore contract document shape; used by both apps when reading/writing `contracts` and when typing API payloads.
 
-- **New / updated:**
-  - Comment that `status` follows shared-constants (1–14); legacy 0 still allowed.
-  - **`paymentStatus?`**: `"pending" | "processing" | "completed" | "failed"` (from Razorpay/escrow).
-  - **`shippingDetails?`**: `ContractShippingDetails` (courierName, trackingNumber, shipmentLink, shippedAt).
-  - **`releasePlan?`**: `ContractReleasePlan` (option + scheduledReleaseAt).
-- **Types:** `ContractStatusNumber`, `PaymentStatusFromProvider`, `ContractShippingDetails`, `ContractReleasePlan`, `ReleasePlanOption`.
+- **Contract status:** `status` is 0–10 (enum ContractStatus: Pending, Started, PaymentFailed, Paid, Shipped, Delivered, Received, DeliverableSent, PostScheduled, PostDone, Settled).
+- **Nested objects:** `payment?`, `shipment?`, `deliverable?`, `posting?` (e.g. `posting.scheduledDate`, `posting.postingScenario`), `analytics?`, `activity?`.
+- **Types:** `Payment`, `Shipment`, `Deliverable`, `Posting`, etc. (see shared-libs contracts.ts).
 
 **Used by:**  
 - **Trendly Brands:** Contract screen fetches contract; ActionContainer reads `contract.status`, `contract.paymentStatus`, `contract.releasePlan` and writes status + timestamps + shipping/release when the brand does actions.  
@@ -118,24 +113,26 @@ Both apps read the **same** Firestore `contracts` doc and **same** collaboration
 **Role:** Brand-side contract actions and status display on the contract details screen.
 
 - **New inputs:**  
-  - `collaborationData` (ICollaboration): used to know if collaboration is product shipping (`promotionSubject === "physical_product"`) so after payment we go to state 6 or 8.  
+  - `collaborationData` (ICollaboration): used to know if collaboration is product shipping (`promotionSubject === "physical_product"`) so after payment we go to Shipped (4) or DeliverableSent (7).  
   - `paymentStatus`: from contract (or payments collection); used for payment states.
+- **KYC gate:** **`kycBlocked = (status === Pending) && isContractBlockedByKYC(userData)`**. When true, show “The influencer must complete KYC before the contract can start” and do not show “Make Payment” or “Start Contract”. KYC is not a contract state.
 - **Status handling:**  
-  - **`normalizeStatus(contract.status)`:** Maps legacy 0–3 to display status 2 / 9 / 14 so the new state labels still make sense.  
+  - **`normalizeStatus(contract.status)`:** Pass-through 0–10; legacy 2/3 map to DeliverableSent/Settled if needed.  
   - **`isLegacyFlow`:** When `contract.status` is 0 or 1 and `collaborationData` is not passed, keeps old “Start Contract” / “End Contract” / “Go to Messages” behavior and uses override label “Active” for status 1.
 - **Rendering:**  
-  - Always shows **ContractStatusView** with `actor="brand"`, `status`, `scheduledReleaseAt`, and optional overrides for legacy.  
-  - Then, per **normalized status**, shows the right **brand** buttons (with placeholder toasts where backend/Razorpay/modals are not wired yet):
-    - PAYMENT_PENDING → “Make Payment”
-    - PAYMENT_FAILED → “Retry Payment”
-    - PAYMENT_SUCCESSFUL → “Start Contract” (calls `startContractAfterPayment` → status 6 or 8)
-    - SHIPPING_PENDING → “View Influencer Address”, “Add Shipment Details”
-    - VIDEO_PENDING / REVISION_PENDING → “Nudge Influencer”, “Go to Messages”
-    - REVIEW_PENDING → “Request Revision”, “Approve Video”
-    - RELEASE_PLANNING → “Plan Release”
-    - RELEASE_SCHEDULED → “Change Release Date”
+  - Always shows **ContractStatusView** with `actor="brand"`, `status` (0–10), `scheduledReleaseAt={contract.posting?.scheduledDate}`, and optional overrides for legacy.  
+  - When **kycBlocked**, show only the KYC message (no Make Payment / Start Contract).  
+  - Then, per **normalized status**, shows the right **brand** buttons:
+    - Pending (0) and !kycBlocked → “Make Payment”
+    - PaymentFailed (2) → “Retry Payment”
+    - Paid (3) → “Start Contract” (calls `startContractAfterPayment` → status Shipped 4 or DeliverableSent 7)
+    - Shipped (4) → “View Influencer Address”, “Add Shipment Details”
+    - Delivered (5) → “Mark as Delivered” → status Received (6)
+    - Received (6) → “Nudge Influencer”, “Go to Messages”
+    - DeliverableSent (7) → “Request Revision”, “Approve Video”
+    - PostScheduled (8) → “Plan Release”, “Change Release Date” (if date set)
   - Still shows the same feedback/reviews block and info box when `slot` is `"all"` or `"feedback-and-info"`.
-- **New helper:** **`startContractAfterPayment`**: writes Firestore status to SHIPPING_PENDING (6) or VIDEO_PENDING (8) and calls the same contract-start API.
+- **Helper:** **`startContractAfterPayment`**: writes Firestore status to Shipped (4) or DeliverableSent (7) and calls the same contract-start API.
 
 **Interactions:**  
 - Reads/writes Firestore `contracts/<streamChannelId>`.  
@@ -174,41 +171,39 @@ Trendly-users will use the **same** shared modules and **same** Firestore docume
 ### 5.1 Shared pieces (no duplication)
 
 - **shared-constants/contract-status.ts**  
-  - Import: `ContractStatus`, `CONTRACT_STATUS_LABELS`, `getContractStatusDescription`, `ContractStatusActor`, `RELEASE_DATE_MAX_DAYS`, `ReleasePlanOption`.  
-  - Use: Decide what to show and what actions are allowed; get label and description for `actor="influencer"`.
+  - Import: `ContractStatus`, `isContractBlockedByKYC`, `CONTRACT_STATUS_LABELS`, `getContractStatusDescription`, `ContractStatusActor`, `RELEASE_DATE_MAX_DAYS`, `ReleasePlanOption`.  
+  - Use: Decide what to show and what actions are allowed; get label and description for `actor="influencer"`. Use **isContractBlockedByKYC(user)** as a gate (do not allow starting contract until KYC done); KYC is not a state.
 
 - **shared-uis/components/contract-status**  
   - Import: `ContractStatusView`.  
   - Use: On the influencer’s contract details (or equivalent) screen, render:  
-    `<ContractStatusView status={contract.status} actor="influencer" scheduledReleaseAt={contract.releasePlan?.scheduledReleaseAt} showDescription />`  
+    `<ContractStatusView status={normalizedStatus} actor="influencer" scheduledReleaseAt={contract.posting?.scheduledDate} showDescription />`  
   - No changes needed inside shared-uis; the same component shows influencer copy because of `actor="influencer"`.
 
 - **shared-libs**  
-  - Same `IContracts`, `ContractShippingDetails`, `ContractReleasePlan`, etc.  
+  - Same `IContracts`, `payment`, `shipment`, `deliverable`, `posting`, etc.  
   - Same Firestore path: `contracts/<streamChannelId>`.  
-  - Influencer app will **read** the same doc and **update** only the fields the influencer changes (e.g. delivery proof, video upload, re-upload after revision).
+  - Influencer app will **read** the same doc and **update** only the fields the influencer changes (e.g. mark received, video upload, re-upload after revision).
 
 ### 5.2 Trendly-users-specific (to implement there)
 
 - **Contract details (or equivalent) screen**  
   - Load the same contract doc (and collaboration, user) as in Brands.  
-  - Render **ContractStatusView** with `actor="influencer"`.
+  - Render **ContractStatusView** with `actor="influencer"`. When **isContractBlockedByKYC(user)** is true and status is Pending, show “Complete KYC to start the contract” and do not show other contract actions.
 
-- **Influencer-only actions** (by status), for example:
-  - **KYC_VERIFICATION (1):** “Complete KYC” → navigate to KYC screen; disable other contract actions until KYC is done.
-  - **PAYMENT_PENDING (3):** “Nudge Brand for Payment” → send a predefined chat message.
-  - **SHIPPING_PENDING (6):** Message only: “Shipment is pending from the brand.”
-  - **DELIVERY_PENDING (7):** “Upload Delivery Proof” / “Mark as Received” → update contract (e.g. status → VIDEO_PENDING).
-  - **VIDEO_PENDING (8):** “Upload Video” → upload flow then set status to REVIEW_PENDING.
-  - **REVIEW_PENDING (9):** Message only: “Video is under review.”
-  - **REVISION_PENDING (10):** “Re-upload Video” → upload then status back to REVIEW_PENDING.
-  - **RELEASE_SCHEDULED (12):** Show date only (ContractStatusView already shows “Video scheduled for release on: [date]”).
-  - **VIDEO_POSTED / SETTLEMENT_DONE:** Message or “Contract closed.”
+- **Influencer-only actions** (by status 0–10), for example:
+  - **Pending (0) and KYC not done:** “Complete KYC” → navigate to KYC screen (gate; no contract write).
+  - **Pending (0):** “Nudge Brand for Payment” → send a predefined chat message (no contract write).
+  - **Shipped (4):** Message only: “Shipment is pending from the brand.”
+  - **Delivered (5):** “Mark as Received” (product only) → `updateDoc(contractRef, { status: ContractStatus.Received })`.
+  - **Received (6) / DeliverableSent (7):** “Upload Video” or “Re-upload Video” → upload flow then `updateDoc(contractRef, { status: ContractStatus.DeliverableSent })`.
+  - **PostScheduled (8):** Show date only (ContractStatusView shows “Video scheduled for release on: [date]”).
+  - **PostDone (9) / Settled (10):** “Contract closed.”
 
 - **Chat thread**  
   - Same channel (`streamChannelId`); “Nudge” actions send messages in this thread (same as in Brands for “Nudge Influencer”).
 
-So: **one state machine, one contract document, one shared UI component, two apps** — each app passes its `actor` and implements its own action handlers.
+So: **one 10-state machine, one contract document, one shared UI component, KYC as gate** — each app passes its `actor` and implements its own action handlers.
 
 ---
 
@@ -216,10 +211,8 @@ So: **one state machine, one contract document, one shared UI component, two app
 
 ```
 Firestore: contracts/<streamChannelId>
-  ├── status (1–14 or legacy 0–3)
-  ├── paymentStatus?
-  ├── shippingDetails?
-  ├── releasePlan?
+  ├── status (0–10)
+  ├── payment?, shipment?, deliverable?, posting?
   ├── contractTimestamp, feedbackFromBrand, feedbackFromInfluencer, ...
   └── collaborationId, userId, brandId, streamChannelId, ...
 
@@ -229,16 +222,18 @@ Trendly Brands (contract-details/[pageID])
   ├── Fetches contract + user + collaboration + applications
   ├── ContractDetailContent
   │     └── ActionContainer (actor="brand")
-  │           ├── ContractStatusView (status, actor="brand", ...)
+  │           ├── KYC gate: block Make Payment / Start Contract if !userData.isKYCDone
+  │           ├── ContractStatusView (status 0–10, actor="brand", scheduledReleaseAt=posting?.scheduledDate)
   │           └── Brand buttons per status (Make Payment, Add Shipment, Approve, Plan Release, ...)
-  └── Writes: status, contractTimestamp, shippingDetails, releasePlan (and later paymentStatus via backend)
+  └── Writes: status, contractTimestamp, shipment, posting (and payment via backend)
 
          │
          ▼ (same contract doc)
 Trendly Users (contract details screen – to be built)
   ├── Fetches same contract + collaboration + user
-  ├── ContractStatusView (status, actor="influencer", ...)
-  └── Influencer buttons per status (Complete KYC, Nudge Brand, Upload Video, Re-upload, Mark Received, ...)
+  ├── KYC gate: block contract actions until influencer KYC done (gate only; not a state)
+  ├── ContractStatusView (status 0–10, actor="influencer", scheduledReleaseAt=posting?.scheduledDate)
+  └── Influencer buttons per status (Complete KYC when blocked, Nudge Brand, Mark Received, Upload Video, Re-upload, ...)
 ```
 
 ---
@@ -247,12 +242,12 @@ Trendly Users (contract details screen – to be built)
 
 | File | App | Purpose |
 |------|-----|--------|
-| `shared-constants/contract-status.ts` | Both | Enum 1–14, labels, getContractStatusDescription(status, actor), types |
+| `shared-constants/contract-status.ts` | Both | Enum 0–10, isContractBlockedByKYC, labels, getContractStatusDescription(status, actor), types |
 | `shared-uis/.../contract-status/ContractStatusView.tsx` | Both | Status badge + description + release date; theme-aware |
 | `shared-uis/.../contract-status/index.ts` | Both | Re-export |
-| `shared-libs/.../models/contracts.ts` | Both | IContracts, paymentStatus, shippingDetails, releasePlan |
-| `components/contracts/ActionContainer.tsx` | Brands | Status display + brand actions; Firestore updates |
+| `shared-libs/.../models/contracts.ts` | Both | IContracts, ContractStatus 0–10, payment, shipment, deliverable, posting |
+| `components/contracts/ActionContainer.tsx` | Brands | KYC gate + status display + brand actions; Firestore updates |
 | `components/contracts/ContractDetailContent.tsx` | Brands | Passes collaborationData + paymentStatus to ActionContainer |
 | `app/.../contract-details/[pageID].tsx` | Brands | Screen: fetch contract + collaboration, render ContractDetailContent |
 
-This is the full picture of the contract-with-payment flow and how it is shared with Trendly-users.
+This is the full picture of the contract-with-payment flow (10 states, KYC as gate) and how it is shared with Trendly-users.

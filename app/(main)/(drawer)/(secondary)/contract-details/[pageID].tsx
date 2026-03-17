@@ -2,6 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
+import ContractStatusDevTools from "@/components/contracts/ContractStatusDevTools";
 import { Text, View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import Colors from "@/shared-uis/constants/Colors";
@@ -69,8 +70,9 @@ const ContractScreen = () => {
     const { isOnFreeTrial, isProfileLocked } = useBrandContext()
     const { pageID } = useLocalSearchParams();
     const [contract, setContract] = useState<ICollaborationCard>();
-    const [openProfileModal, setOpenProfileModal] = useState(false)
-    const [selectedInfluencer, setSelectedInfluencer] = useState<User | undefined>(undefined)
+    const [openProfileModal, setOpenProfileModal] = useState(false);
+    const [selectedInfluencer, setSelectedInfluencer] = useState<User | undefined>(undefined);
+    const [devOverrideStatus, setDevOverrideStatus] = useState<number | null>(null);
 
     const fetchProposals = async () => {
         try {
@@ -166,12 +168,22 @@ const ContractScreen = () => {
                     </Button>,
                 ]}
             />
+            {__DEV__ && (
+                <ContractStatusDevTools
+                    realStatus={contract.status}
+                    overrideStatus={devOverrideStatus}
+                    onOverrideChange={setDevOverrideStatus}
+                    contractId={contract.streamChannelId}
+                    onWriteSuccess={fetchProposals}
+                />
+            )}
             <ContractDetailsContent
                 applicationData={contract?.applications[0]}
                 collaborationDetail={contract?.collaborationData}
                 userData={contract.userData}
                 contractData={contract}
                 refreshData={fetchProposals}
+                devOverrideStatus={devOverrideStatus}
             />
             {xl && (
                 <View style={styles.footer}>

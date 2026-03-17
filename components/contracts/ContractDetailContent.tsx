@@ -34,6 +34,8 @@ interface CollaborationDetailsContentProps {
     userData: IUsers;
     contractData: IContracts;
     refreshData: () => void;
+    /** Dev only: override contract status for UI testing */
+    devOverrideStatus?: number | null;
 }
 
 const CONTENT_MAX_WIDTH = 720;
@@ -152,7 +154,10 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         setFeedbackModalVisible(true)
                     }
                     userData={props.userData}
+                    collaborationData={props.collaborationDetail}
+                    paymentStatus={props.contractData.paymentStatus}
                     slot="buttons"
+                    devOverrideStatus={props.devOverrideStatus}
                 />
             ) : null}
 
@@ -236,7 +241,10 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     setFeedbackModalVisible(true)
                 }
                 userData={props.userData}
+                collaborationData={props.collaborationDetail}
+                paymentStatus={props.contractData.paymentStatus}
                 slot="feedback-and-info"
+                devOverrideStatus={props.devOverrideStatus}
             />
         </View>
     );
@@ -274,6 +282,9 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         setFeedbackModalVisible(true)
                     }
                     userData={props.userData}
+                    collaborationData={props.collaborationDetail}
+                    paymentStatus={props.contractData.paymentStatus}
+                    devOverrideStatus={props.devOverrideStatus}
                 />
 
                 <MemberContainer

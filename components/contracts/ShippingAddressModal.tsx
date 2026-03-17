@@ -1,4 +1,4 @@
-import { ContractShippingDetails } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { type ShipmentFormInput } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
@@ -24,7 +24,7 @@ import TextInput from "../ui/text-input";
 export interface ShippingAddressModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (data: Omit<ContractShippingDetails, "shippedAt">) => void;
+    onSubmit: (data: ShipmentFormInput) => void;
 }
 
 const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
