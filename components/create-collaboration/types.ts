@@ -1,3 +1,5 @@
+import { ExternalLink } from "@/shared-libs/firestore/trendly-pro/constants/external-link";
+
 export interface AICampaignDraft {
     name?: string;
     description?: string;
@@ -20,6 +22,8 @@ export interface AICampaignDraft {
     };
     questionsToInfluencers?: string[];
     preferences?: Record<string, unknown>;
+    relevantImages?: string[];
+    externalLinks?: ExternalLink[];
 }
 
 export type AIGeneratedCampaignData =

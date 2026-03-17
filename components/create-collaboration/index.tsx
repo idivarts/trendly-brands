@@ -209,6 +209,30 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                         name: "",
                         latlong: { lat: 0, long: 0 },
                     };
+                const mappedAttachments: Attachment[] = Array.isArray(collaborationData.relevantImages)
+                    ? collaborationData.relevantImages
+                        .filter((url): url is string => typeof url === "string" && !!url.trim())
+                        .map((url) => ({
+                            type: "image",
+                            imageUrl: url.trim(),
+                        }))
+                    : [];
+
+                const mappedExternalLinks = Array.isArray(collaborationData.externalLinks)
+                    ? collaborationData.externalLinks
+                        .filter(
+                            (link): link is { name: string; link: string } =>
+                                !!link &&
+                                typeof link.name === "string" &&
+                                !!link.name.trim() &&
+                                typeof link.link === "string" &&
+                                !!link.link.trim()
+                        )
+                        .map((link) => ({
+                            name: link.name.trim(),
+                            link: link.link.trim(),
+                        }))
+                    : [];
 
                 const updatedCollaboration: Partial<ICollaboration> = {
                     name: collaborationData.name ? String(collaborationData.name) : "",
@@ -235,10 +259,10 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                         ? collaborationData.questionsToInfluencers
                         : [],
                     preferences: collaborationData.preferences || {},
-                    attachments: [],
+                    attachments: mappedAttachments,
                     brandId: "",
                     managerId: "",
-                    externalLinks: [],
+                    externalLinks: mappedExternalLinks,
                     status: "",
                     timeStamp: 0,
                     viewsLastHour: 0,
