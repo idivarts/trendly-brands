@@ -20,6 +20,7 @@ import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
 import ScreenThree from "./screen-three";
+import { AICampaignDraft, AIGeneratedCampaignData } from "./types";
 
 // Mapping functions to convert API response to app format
 const mapPromotionType = (apiValue: string): PromotionType => {
@@ -70,7 +71,7 @@ const mapContentFormat = (apiValue: string): string => {
 
 interface CreateCollaborationProps {
     headerRight?: React.ReactNode;
-    aiData?: any;
+    aiData?: AIGeneratedCampaignData | null;
 }
 
 const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, aiData }) => {
@@ -169,7 +170,10 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 Console.log("Received AI Data:", aiData);
 
                 // Extract the collaboration data from the response
-                const collaborationData = aiData.collaboration || aiData;
+                const collaborationData: AICampaignDraft =
+                    "collaboration" in aiData
+                        ? aiData.collaboration ?? {}
+                        : (aiData as AICampaignDraft);
 
                 Console.log("Extracted collaboration data:", collaborationData);
                 Console.log("Raw Name:", collaborationData.name);
@@ -188,6 +192,23 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                     : [];
 
                 Console.log("Final mapped contentFormat:", mappedContentFormat);
+
+                const mappedLocation = collaborationData.location?.type
+                    ? {
+                        type: collaborationData.location.type,
+                        name: collaborationData.location.name || "",
+                        latlong: collaborationData.location.latlong
+                            ? {
+                                lat: Number(collaborationData.location.latlong.lat) || 0,
+                                long: Number(collaborationData.location.latlong.long) || 0,
+                            }
+                            : { lat: 0, long: 0 },
+                    }
+                    : {
+                        type: "Remote",
+                        name: "",
+                        latlong: { lat: 0, long: 0 },
+                    };
 
                 const updatedCollaboration: Partial<ICollaboration> = {
                     name: collaborationData.name ? String(collaborationData.name) : "",
@@ -209,11 +230,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                     preferredContentLanguage: Array.isArray(collaborationData.preferredContentLanguage)
                         ? collaborationData.preferredContentLanguage
                         : ["English", "Hindi"],
-                    location: collaborationData.location || {
-                        type: "Remote",
-                        name: "",
-                        latlong: { lat: 0, long: 0 },
-                    },
+                    location: mappedLocation,
                     questionsToInfluencers: Array.isArray(collaborationData.questionsToInfluencers)
                         ? collaborationData.questionsToInfluencers
                         : [],

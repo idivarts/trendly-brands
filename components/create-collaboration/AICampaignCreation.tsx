@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState } from "react";
+import { AIGeneratedCampaignData } from "./types";
 import {
     ActivityIndicator,
     Modal,
@@ -24,7 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 interface AICampaignCreationProps {
     onSkip: () => void;
-    onGenerated?: (aiData: any) => void;
+    onGenerated?: (aiData: AIGeneratedCampaignData) => void;
 }
 
 export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCreationProps) {
@@ -100,7 +101,7 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
             }
 
 
-            const aiData = await response.json();
+            const aiData = await response.json() as AIGeneratedCampaignData;
             Console.log("AI Generated Data:", aiData);
 
             // Navigate to create collaboration with AI-generated data
