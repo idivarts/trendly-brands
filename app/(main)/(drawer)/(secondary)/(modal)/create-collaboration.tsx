@@ -1,5 +1,6 @@
 import CreateCollaboration from "@/components/create-collaboration";
 import AICampaignCreation from "@/components/create-collaboration/AICampaignCreation";
+import { AIGeneratedCampaignData } from "@/components/create-collaboration/types";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,7 +15,7 @@ const CreateCollaborationScreen = () => {
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
     const [showAICreation, setShowAICreation] = useState(true);
-    const [generatedAiData, setGeneratedAiData] = useState<any>(null);
+    const [generatedAiData, setGeneratedAiData] = useState<AIGeneratedCampaignData | null>(null);
 
     const handleSkip = async () => {
         try {
