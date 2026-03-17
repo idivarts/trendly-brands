@@ -223,6 +223,38 @@ const stylesFn = (colors: any) =>
             color: colors.textSecondary,
             lineHeight: 20,
         },
+        loadingModalOverlay: {
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.backdrop,
+            paddingHorizontal: 20,
+        },
+        loadingModalCard: {
+            width: "100%",
+            maxWidth: 360,
+            borderRadius: 16,
+            backgroundColor: colors.card,
+            borderWidth: 1,
+            borderColor: colors.border,
+            paddingHorizontal: 20,
+            paddingVertical: 24,
+            alignItems: "center",
+            gap: 10,
+        },
+        loadingModalTitle: {
+            marginTop: 4,
+            fontSize: 18,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        loadingModalMessage: {
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.textSecondary,
+            textAlign: "center",
+            minHeight: 40,
+        },
     });
 
 export default stylesFn;
