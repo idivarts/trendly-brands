@@ -6,7 +6,6 @@ import ScreenTwo from "@/components/create-collaboration/screen-two";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
-import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -120,7 +119,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     const theme = useTheme();
     const params = useLocalSearchParams();
     const type = params.id ? "Edit" : "Add";
-    const { publish } = usePublishCollaboration();
+    // const { publish } = usePublishCollaboration();
     const isSavingRef = useRef(false);
 
     const {
@@ -311,16 +310,6 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
         });
     };
 
-    const handleCollaboration = async (
-        data: Partial<ICollaboration>
-    ): Promise<void> => {
-        if (params.id && typeof params.id === "string") {
-            await updateCollaboration(params.id, data);
-        } else {
-            await createCollaboration(data);
-        }
-    };
-
     const notifyUprade = () => {
         openModal({
             title: "Free Trial!",
@@ -338,7 +327,6 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 return;
             }
             isSavingRef.current = true;
-            let shouldNavigateToCollaborations = false;
             if (!AuthApp.currentUser || !selectedBrand) {
                 Console.error("User or brand not selected");
                 return;
@@ -398,25 +386,14 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                         status: wantedStatus,
                         timeStamp: collaboration.timeStamp || Date.now(),
                     });
-                    if (wantedStatus === "draft") {
-                        shouldNavigateToCollaborations = true;
-                    }
+                    router.push("/collaborations");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to update collaboration");
                 }
-                // If user wanted publish and we set wantedStatus active then call publish
-                if (wantedStatus === "active") {
-                    // params.id exists so we can publish by id
-                    await publish(params.id);
-                }
             } else {
-                // creating new collaboration
-                // IMPORTANT: your createCollaboration should return the newly created doc id.
-                let created: string | null = null;
-
                 try {
-                    created = await createCollaboration({
+                    await createCollaboration({
                         ...collaboration,
                         attachments,
                         brandId: selectedBrand ? selectedBrand.id : "",
@@ -429,42 +406,11 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                         status: wantedStatus,
                         timeStamp: Date.now(),
                     });
+                    router.push("/collaborations");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to create collaboration");
-                    created = null;
                 }
-
-                if (!created) {
-                    return;
-                }
-
-                // ASSUMPTION: createCollaboration returns the created doc id
-                // If it returns an object, adjust accordingly (e.g. created.id)
-                let newId: string | null = null;
-                if (typeof created === "string") {
-                    newId = created;
-                } else if (created && (created as any).id) {
-                    newId = (created as any).id;
-                }
-
-                if (!newId) {
-                    // fallback: if createCollaboration didn't return id, log and stop.
-                    Console.error(
-                        "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
-                    );
-                } else {
-                    // If wantedStatus is 'active', then call publish using shared hook
-                    if (wantedStatus === "active") {
-                        await publish(newId);
-                        router.push("/collaborations");
-                    } else {
-                        shouldNavigateToCollaborations = true;
-                    }
-                }
-            }
-            if (shouldNavigateToCollaborations) {
-                router.push("/collaborations");
             }
         } catch (error) {
             Console.error(error);
