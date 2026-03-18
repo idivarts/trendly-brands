@@ -151,6 +151,8 @@ interface DiscoverInfluencerProps {
     initialInfluencerId?: string;
     /** Called once when the first influencer card has laid out (for guided tour). */
     onFirstInfluencerCardLayout?: () => void;
+    /** When true (e.g. embedded in Send Invitations tab), use smaller horizontal padding so cards spread more. */
+    reduceHorizontalPadding?: boolean;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -161,6 +163,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     defaultAdvanceFilters,
     initialInfluencerId,
     onFirstInfluencerCardLayout,
+    reduceHorizontalPadding = false,
 }) => {
     const {
         selectedDb,
@@ -659,7 +662,12 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     flex: 1,
                     minHeight: 0,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" && xl ? 140 : 16,
+                    paddingHorizontal:
+                        Platform.OS === "web" && xl
+                            ? reduceHorizontalPadding
+                                ? 24
+                                : 140
+                            : 16,
                 }}
             >
                 <FlatList

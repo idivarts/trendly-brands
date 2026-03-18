@@ -97,7 +97,7 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     flexDirection: "row",
                     alignItems: "center",
                     paddingHorizontal: 16,
-                    paddingTop: xl ? 12 + topInset : topInset,
+                    paddingTop: 12 + topInset,
                     paddingBottom: 12,
                     borderBottomWidth: 1,
                     borderBottomColor: colors.border,

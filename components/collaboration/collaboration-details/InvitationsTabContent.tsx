@@ -19,10 +19,7 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import {
-    APPROX_CARD_HEIGHT,
-    MAX_WIDTH_WEB,
-} from "@/shared-uis/components/carousel/carousel-util";
+import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
@@ -183,7 +180,7 @@ const InvitationsTabContent = (props: any) => {
         );
     }
 
-    const width = Math.min(MAX_WIDTH_WEB, bpWidth);
+    const width = bpWidth;
     const height = Math.min(APPROX_CARD_HEIGHT, bpHeight);
 
     console.log("Default Advance Filters", collaboration?.preferences);
@@ -408,8 +405,8 @@ function useLocalStyles(theme: ReturnType<typeof useTheme>, isCollapsed: boolean
             paddingTop: 12,
             paddingBottom: 24,
             gap: isCollapsed ? 20 : 8,
-            paddingRight: isCollapsed ? 120 : 16,
-            paddingLeft: isCollapsed ? 120 : 4,
+            paddingRight: isCollapsed ? 120 : 8,
+            paddingLeft: isCollapsed ? 120 : 8,
         },
         discoverWrapperWeb: {
             flexDirection: "column" as const,

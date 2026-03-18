@@ -39,6 +39,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
                 xl={xl}
                 influencer={data}
                 type="invitation"
+                fullWidth
                 ToggleModal={bottomSheetAction}
                 fullHeight={true}
                 isOnFreePlan={isOnFreeTrial}

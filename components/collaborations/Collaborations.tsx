@@ -44,11 +44,13 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [proposals, setProposals] = useState<any[]>([]);
     const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
+    const [selectedCollabStatus, setSelectedCollabStatus] = useState<string | undefined>(undefined);
     const { selectedBrand } = useBrandContext();
 
-    const openBottomSheet = (id: string) => {
+    const openBottomSheet = (id: string, status?: string) => {
         setIsVisible(true);
         setSelectedCollabId(id);
+        setSelectedCollabStatus(status);
     };
     const closeBottomSheet = () => setIsVisible(false);
 
@@ -77,7 +79,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             const q = query(
                 collaborationCol,
                 where("brandId", "==", selectedBrand?.id),
-                (active ? where("status", "in", ["active", "draft"]) : where("status", "in", ["inactive", "stopped"])),
+                (active ? where("status", "in", ["active", "draft", "stopped"]) : where("status", "in", ["inactive"])),
                 orderBy("timeStamp", "desc")
             );
 
@@ -226,7 +228,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                                     location={item.location}
                                                     platform={item.platform}
                                                     promotionType={item.promotionType}
-                                                    onOpenBottomSheet={active ? openBottomSheet : undefined}
+                                                    onOpenBottomSheet={(id) => openBottomSheet(id, item.status)}
                                                     collabId={item.id}
                                                 />
                                             </View>
@@ -267,6 +269,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 <BottomSheetActions
                     cardId={selectedCollabId || ""}
                     cardType="activeCollab"
+                    data={{ status: selectedCollabStatus }}
                     isVisible={isVisible}
                     onClose={closeBottomSheet}
                     snapPointsRange={["25%", "50%"]}

@@ -285,7 +285,8 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const isNarrow = width < 520;
         const isTiny = width < 360;
-        const smallCardWidth = "48%";
+        // On compact layouts (!xl) stack these metric cards like the estimated boxes.
+        const smallCardWidth = xl ? "48%" : "100%";
         const wideCardWidth = isNarrow ? "100%" : "48%";
         const labelVariant = isTiny ? "labelSmall" : isNarrow ? "labelMedium" : "labelLarge";
         const valueVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "displaySmall";
@@ -293,8 +294,8 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const contentPadding = isNarrow ? 10 : 16;
         const cardSpacing = isNarrow ? 10 : 12;
 
-        const circleR = xl ? 32 : 24;
-        const circleSize = xl ? 80 : 56;
+        const circleR = xl ? 32 : 30;
+        const circleSize = xl ? 80 : 72;
         const circleCircumference = 2 * Math.PI * circleR;
         const circleStrokeWidth = xl ? 6 : 4;
 
