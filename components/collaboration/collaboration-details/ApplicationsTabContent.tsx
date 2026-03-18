@@ -11,7 +11,6 @@ import InfluencerActionModal from "@/components/explore-influencers/InfluencerAc
 import { View } from "@/components/theme/Themed";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
 import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -22,6 +21,7 @@ import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Mod
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import { Text } from "@/shared-uis/components/theme/Themed";
+import Colors from "@/shared-uis/constants/Colors";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
@@ -188,8 +188,6 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                 <ProfileBottomSheet
                     closeModal={() => setOpenProfileModal(false)}
                     isPhoneMasked={false}
-                    isOnFreePlan={isOnFreeTrial}
-                    lockProfile={false}
                     actionCard={
                         <View style={styles.actionCardWrapper}>
                             <ProfileApplicationCard

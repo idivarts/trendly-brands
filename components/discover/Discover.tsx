@@ -268,7 +268,8 @@ const DiscoverComponent = ({
             />
         );
 
-    if (showSurvey)
+    const alwaysOpenSurveyToTest = false;
+    if (showSurvey || alwaysOpenSurveyToTest)
         return (
             <AppLayout safeAreaEdges={["left", "right"]}>
                 <DiscoverSurvey onComplete={handleSurveyComplete} />

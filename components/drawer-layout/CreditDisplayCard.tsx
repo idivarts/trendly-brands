@@ -5,33 +5,39 @@ import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
     faDiagramProject,
+    faFileContract,
     faGem as faGemSolid,
-    faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { usePathname } from "expo-router";
 import { Theme, useTheme } from "@react-navigation/native";
+import { usePathname } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-    DimensionValue,
     Platform,
     Pressable,
-    StyleSheet,
     View as RNView,
+    StyleSheet,
 } from "react-native";
+import { CREDIT_THRESHOLDS, CreditThreshold } from "./credit-thresholds";
 import CreditUsageModal from "./CreditUsageModal";
 
-const DISCOVERY_LIMIT = 1000;
-const INFLUENCER_LIMIT = 1000;
-const COLLABORATION_LIMIT = 1000;
-
-type CreditContext = "discovery" | "campaigns" | "influencer-spotlight";
+type CreditContext = "discovery" | "campaigns" | "contracts";
+type CreditStatus = "normal" | "warning" | "critical";
 
 function getCreditContext(pathname: string): CreditContext {
-    if (pathname.includes("explore-influencers")) return "influencer-spotlight";
+    if (pathname.includes("contract")) return "contracts";
     if (pathname.includes("collaboration") || pathname === "/collaborations")
         return "campaigns";
     return "discovery";
+}
+
+function getCreditStatus(
+    value: number,
+    thresholds: CreditThreshold
+): CreditStatus {
+    if (value <= thresholds.critical) return "critical";
+    if (value <= thresholds.warning) return "warning";
+    return "normal";
 }
 
 export interface CreditDisplayCardProps {
@@ -55,25 +61,10 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
         const connectionCreditsLeft = Number(
             selectedBrand?.credits?.connection ?? 0
         );
-        const influencerCredits = Number(
-            selectedBrand?.credits?.influencer ?? 0
-        );
         const collaborationCredits = Number(
             selectedBrand?.credits?.collaboration ?? 0
         );
-
-        const discoveryProgress = useMemo(
-            () => Math.min(1, discoverCoinsLeft / DISCOVERY_LIMIT),
-            [discoverCoinsLeft]
-        );
-        const influencerProgress = useMemo(
-            () => Math.min(1, influencerCredits / INFLUENCER_LIMIT),
-            [influencerCredits]
-        );
-        const collaborationProgress = useMemo(
-            () => Math.min(1, collaborationCredits / COLLABORATION_LIMIT),
-            [collaborationCredits]
-        );
+        const contractCredits = Number(selectedBrand?.credits?.contract ?? 0);
 
         const styles = useMemo(() => createStyles(theme), [theme]);
         const [modalVisible, setModalVisible] = useState(false);
@@ -81,136 +72,135 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
         const handleCardPress = () => setModalVisible(true);
         const handleRefillPress = () => nav.push("/billing");
 
-        const progressFillStyle = useMemo(() => {
-            const progress =
-                creditContext === "discovery"
-                    ? discoveryProgress
-                    : creditContext === "influencer-spotlight"
-                      ? influencerProgress
-                      : collaborationProgress;
-            return { width: `${progress * 100}%` as DimensionValue };
-        }, [
-            creditContext,
-            discoveryProgress,
-            influencerProgress,
-            collaborationProgress,
-        ]);
+        const discoveryStatus = getCreditStatus(
+            discoverCoinsLeft,
+            CREDIT_THRESHOLDS.discovery
+        );
+        const inviteStatus = getCreditStatus(
+            connectionCreditsLeft,
+            CREDIT_THRESHOLDS.invites
+        );
+        const campaignStatus = getCreditStatus(
+            collaborationCredits,
+            CREDIT_THRESHOLDS.campaigns
+        );
+        const contractStatus = getCreditStatus(
+            contractCredits,
+            CREDIT_THRESHOLDS.contracts
+        );
+
+        const renderStatusIndicator = (status: CreditStatus) => {
+            if (status === "normal") return null;
+            return (
+                <RNView
+                    style={[
+                        styles.statusDot,
+                        status === "warning" && styles.statusDotWarning,
+                        status === "critical" && styles.statusDotCritical,
+                    ]}
+                >
+                    {status === "critical" && (
+                        <Text style={styles.statusDotCriticalText}>!</Text>
+                    )}
+                </RNView>
+            );
+        };
+
+        const renderRefillFooter = () => {
+            if (hideRefill || Platform.OS !== "web") return null;
+            return (
+                <Pressable
+                    onPress={handleRefillPress}
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                        styles.refillFooterButton,
+                        pressed && styles.refillButtonPressed,
+                    ]}
+                >
+                    <Text style={styles.refillLink}>REFILL</Text>
+                </Pressable>
+            );
+        };
+
+        const renderCreditRow = ({
+            label,
+            count,
+            icon,
+            iconColor,
+            status,
+            meta,
+        }: {
+            label: string;
+            count: number;
+            icon: any;
+            iconColor: string;
+            status: CreditStatus;
+            meta?: string;
+        }) => (
+            <Pressable
+                onPress={handleCardPress}
+                style={({ pressed }) => [
+                    styles.creditRowCard,
+                    pressed && styles.creditsCardPressed,
+                ]}
+            >
+                <RNView style={styles.creditRowLeft}>
+                    <FontAwesomeIcon
+                        icon={icon}
+                        size={18}
+                        color={iconColor}
+                        style={styles.creditsIcon}
+                    />
+                    <RNView style={styles.creditTextWrap}>
+                        <Text style={styles.creditPrimaryText}>
+                            {count} {label}
+                        </Text>
+                        {!!meta && (
+                            <Text style={styles.creditSecondaryText}>
+                                {meta}
+                            </Text>
+                        )}
+                    </RNView>
+                </RNView>
+                {renderStatusIndicator(status)}
+            </Pressable>
+        );
 
         const renderCardContent = () => {
             if (creditContext === "discovery") {
                 return (
                     <>
-                        <RNView style={styles.creditsRow}>
-                            <Pressable
-                                onPress={handleCardPress}
-                                style={({ pressed }) => [
-                                    styles.creditsMainPressable,
-                                    pressed && styles.creditsCardPressed,
-                                ]}
-                            >
-                                <FontAwesomeIcon
-                                    icon={faGemSolid}
-                                    size={18}
-                                    color={colors.gold}
-                                    style={styles.creditsIcon}
-                                />
-                                <Text style={styles.creditsDiscoveryText}>
-                                    {discoverCoinsLeft} Discovery
-                                </Text>
-                            </Pressable>
-                            {!hideRefill && Platform.OS === "web" && (
-                                <Pressable
-                                    onPress={handleRefillPress}
-                                    hitSlop={8}
-                                    style={({ pressed: refillPressed }) => [
-                                        styles.refillButton,
-                                        refillPressed &&
-                                            styles.refillButtonPressed,
-                                    ]}
-                                >
-                                    <Text style={styles.refillLink}>
-                                        REFILL
-                                    </Text>
-                                </Pressable>
-                            )}
-                        </RNView>
-                        <Pressable onPress={handleCardPress}>
-                            <RNView style={styles.progressTrack}>
-                                <RNView
-                                    style={[
-                                        styles.progressFill,
-                                        progressFillStyle,
-                                    ]}
-                                />
-                            </RNView>
-                        </Pressable>
-                        <Pressable
-                            onPress={handleCardPress}
-                            style={({ pressed }) => [
-                                styles.creditsRow,
-                                pressed && styles.creditsCardPressed,
-                            ]}
-                        >
-                            <FontAwesomeIcon
-                                icon={faBolt}
-                                size={18}
-                                color={colors.drawerInvitesIcon}
-                                style={styles.creditsIcon}
-                            />
-                            <Text style={styles.creditsInvitesText}>
-                                {connectionCreditsLeft} Invites
-                            </Text>
-                            <Text style={styles.creditsMonthly}>Monthly</Text>
-                        </Pressable>
+                        {renderCreditRow({
+                            label: "Discovery",
+                            count: discoverCoinsLeft,
+                            icon: faGemSolid,
+                            iconColor: colors.gold,
+                            status: discoveryStatus,
+                        })}
+                        {renderCreditRow({
+                            label: "Invites",
+                            count: connectionCreditsLeft,
+                            icon: faBolt,
+                            iconColor: colors.drawerInvitesIcon,
+                            status: inviteStatus,
+                            meta: "Monthly refresh",
+                        })}
+                        {renderRefillFooter()}
                     </>
                 );
             }
 
-            if (creditContext === "influencer-spotlight") {
+            if (creditContext === "contracts") {
                 return (
                     <>
-                        <Pressable
-                            onPress={handleCardPress}
-                            style={({ pressed }) => [
-                                styles.creditsRow,
-                                pressed && styles.creditsCardPressed,
-                            ]}
-                        >
-                            <FontAwesomeIcon
-                                icon={faStar}
-                                size={18}
-                                color={colors.gold}
-                                style={styles.creditsIcon}
-                            />
-                            <Text style={styles.creditsDiscoveryText}>
-                                {influencerCredits} Influencer Spotlights
-                            </Text>
-                            {!hideRefill && Platform.OS === "web" && (
-                                <Pressable
-                                    onPress={handleRefillPress}
-                                    hitSlop={8}
-                                    style={({ pressed: refillPressed }) => [
-                                        styles.refillButton,
-                                        refillPressed &&
-                                            styles.refillButtonPressed,
-                                    ]}
-                                >
-                                    <Text style={styles.refillLink}>
-                                        REFILL
-                                    </Text>
-                                </Pressable>
-                            )}
-                        </Pressable>
-                        <Pressable onPress={handleCardPress}>
-                            <RNView style={styles.progressTrack}>
-                                <RNView
-                                    style={[
-                                        styles.progressFill,
-                                        progressFillStyle,
-                                    ]}
-                                />
-                            </RNView>
-                        </Pressable>
+                        {renderCreditRow({
+                            label: "Contracts",
+                            count: contractCredits,
+                            icon: faFileContract,
+                            iconColor: colors.gold,
+                            status: contractStatus,
+                        })}
+                        {renderRefillFooter()}
                     </>
                 );
             }
@@ -218,46 +208,14 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
             // campaigns
             return (
                 <>
-                    <Pressable
-                        onPress={handleCardPress}
-                        style={({ pressed }) => [
-                            styles.creditsRow,
-                            pressed && styles.creditsCardPressed,
-                        ]}
-                    >
-                        <FontAwesomeIcon
-                            icon={faDiagramProject}
-                            size={18}
-                            color={colors.gold}
-                            style={styles.creditsIcon}
-                        />
-                        <Text style={styles.creditsDiscoveryText}>
-                            {collaborationCredits} Create campaign
-                        </Text>
-                        {!hideRefill && Platform.OS === "web" && (
-                            <Pressable
-                                onPress={handleRefillPress}
-                                hitSlop={8}
-                                style={({ pressed: refillPressed }) => [
-                                    styles.refillButton,
-                                    refillPressed &&
-                                        styles.refillButtonPressed,
-                                ]}
-                            >
-                                <Text style={styles.refillLink}>REFILL</Text>
-                            </Pressable>
-                        )}
-                    </Pressable>
-                    <Pressable onPress={handleCardPress}>
-                        <RNView style={styles.progressTrack}>
-                            <RNView
-                                style={[
-                                    styles.progressFill,
-                                    progressFillStyle,
-                                ]}
-                            />
-                        </RNView>
-                    </Pressable>
+                    {renderCreditRow({
+                        label: "Create campaign",
+                        count: collaborationCredits,
+                        icon: faDiagramProject,
+                        iconColor: colors.gold,
+                        status: campaignStatus,
+                    })}
+                    {renderRefillFooter()}
                 </>
             );
         };
@@ -294,30 +252,45 @@ const createStyles = (theme: Theme) => {
         creditsCardPressed: {
             opacity: 0.9,
         },
-        creditsRow: {
+        creditRowCard: {
+            minHeight: 42,
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            backgroundColor: colors.glassSurface,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.drawerBorder,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "transparent",
+            justifyContent: "space-between",
         },
-        creditsMainPressable: {
+        creditRowLeft: {
             flex: 1,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "transparent",
+            marginRight: 8,
+        },
+        creditTextWrap: {
+            flex: 1,
         },
         creditsIcon: {
             marginRight: 8,
         },
-        creditsDiscoveryText: {
-            flex: 1,
+        creditPrimaryText: {
             fontSize: 14,
             color: colors.drawerText,
-            fontWeight: "500",
+            fontWeight: "600",
         },
-        refillButton: {
+        creditSecondaryText: {
+            marginTop: 2,
+            fontSize: 11,
+            color: colors.drawerTextMuted,
+        },
+        refillFooterButton: {
             paddingVertical: 4,
             paddingHorizontal: 8,
             borderRadius: 6,
+            alignSelf: "flex-end",
         },
         refillButtonPressed: {
             backgroundColor: colors.glassSurface,
@@ -327,26 +300,29 @@ const createStyles = (theme: Theme) => {
             fontWeight: "600",
             color: colors.aliceBlue,
         },
-        progressTrack: {
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: colors.drawerProgressTrack,
-            overflow: "hidden",
+        statusDot: {
+            width: 10,
+            height: 10,
+            borderRadius: 999,
+            marginLeft: 8,
         },
-        progressFill: {
-            height: "100%",
-            backgroundColor: colors.drawerProgressFill,
-            borderRadius: 3,
+        statusDotWarning: {
+            backgroundColor: colors.planBadgeProBg,
+            borderWidth: 1,
+            borderColor: colors.yellow,
         },
-        creditsInvitesText: {
-            flex: 1,
-            fontSize: 14,
-            color: colors.drawerText,
-            fontWeight: "500",
+        statusDotCritical: {
+            backgroundColor: colors.errorBannerBg,
+            borderWidth: 1,
+            borderColor: colors.red,
+            alignItems: "center",
+            justifyContent: "center",
         },
-        creditsMonthly: {
-            fontSize: 11,
-            color: colors.drawerTextMuted,
+        statusDotCriticalText: {
+            color: colors.red,
+            fontSize: 8,
+            fontWeight: "800",
+            lineHeight: 8,
         },
     });
 };
