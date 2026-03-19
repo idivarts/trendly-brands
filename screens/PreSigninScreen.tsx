@@ -253,7 +253,7 @@ const PreSigninScreen = () => {
                                         {GOOGLE_LABEL}
                                     </Text>
                                 </Pressable>
-                                {showApple ? (
+                                {showApple && (
                                     <Pressable
                                         onPressIn={handleCardPressIn}
                                         onPressOut={handleCardPressOut}
@@ -282,45 +282,44 @@ const PreSigninScreen = () => {
                                             {APPLE_LABEL}
                                         </Text>
                                     </Pressable>
-                                ) : (
-                                    <Pressable
-                                        onPressIn={handleCardPressIn}
-                                        onPressOut={handleCardPressOut}
-                                        onPress={() =>
-                                            router.push("/create-new-account")
-                                        }
-                                        disabled={loading}
+                                )}
+                                <Pressable
+                                    onPressIn={handleCardPressIn}
+                                    onPressOut={handleCardPressOut}
+                                    onPress={() =>
+                                        router.push("/create-new-account")
+                                    }
+                                    disabled={loading}
+                                    style={[
+                                        styles.secondaryButton,
+                                        {
+                                            backgroundColor: colors.tag,
+                                            borderColor: colors.outline,
+                                            opacity: loading ? 0.6 : 1,
+                                        },
+                                    ]}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faEnvelope}
+                                        size={20}
+                                        color={colors.text}
+                                    />
+                                    <Text
                                         style={[
-                                            styles.secondaryButton,
-                                            {
-                                                backgroundColor: colors.tag,
-                                                borderColor: colors.outline,
-                                                opacity: loading ? 0.6 : 1,
-                                            },
+                                            styles.secondaryLabel,
+                                            { color: colors.text },
                                         ]}
                                     >
-                                        <FontAwesomeIcon
-                                            icon={faEnvelope}
-                                            size={20}
-                                            color={colors.text}
-                                        />
-                                        <Text
-                                            style={[
-                                                styles.secondaryLabel,
-                                                { color: colors.text },
-                                            ]}
-                                        >
-                                            {EMAIL_LABEL}
-                                        </Text>
-                                    </Pressable>
-                                )}
+                                        {EMAIL_LABEL}
+                                    </Text>
+                                </Pressable>
                             </View>
 
                             {error && (
                                 <Text
                                     style={[
                                         styles.errorText,
-                                        { color: colors.pinkForeground },
+                                        { color: colors.errorBannerText },
                                     ]}
                                 >
                                     {error}

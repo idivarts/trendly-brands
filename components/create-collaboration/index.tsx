@@ -512,6 +512,10 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 collaboration={
                     {
                         ...collaboration,
+                        attachments,
+                        // Ensure manager/brand details are present for preview
+                        managerId: AuthApp.currentUser?.uid as string,
+                        brandId: selectedBrand.id,
                         brandName: selectedBrand?.name ?? "",
                         brandDescription: selectedBrand?.profile?.about ?? "",
                         brandCategory: selectedBrand?.profile?.industries ?? [],

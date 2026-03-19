@@ -347,6 +347,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             <BottomSheetActions
                 cardId={(paramPageID || pageID) as string}
                 cardType="activeCollab"
+                data={{ status: collaboration?.status }}
                 isVisible={actionsVisible}
                 snapPointsRange={["20%", "50%"]}
                 onClose={() => setActionsVisible(false)}

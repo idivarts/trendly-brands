@@ -226,7 +226,23 @@ const DiscoverScreenHeader: React.FC = () => {
                             onPress={() => OpenDrawerSubject.next(true)}
                             style={{ flex: 1, minWidth: 0 }}
                         >
-                            <Text style={styles.mobileTitle}>Discover Influencer</Text>
+                            <View
+                                style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                }}
+                            >
+                                <Text style={styles.mobileTitle}>Discover Influencer</Text>
+                                <FontAwesomeIcon
+                                    color={colors.text}
+                                    icon={faChevronDown}
+                                    size={16}
+                                    style={{
+                                        marginLeft: 6,
+                                        marginBottom: -2,
+                                    }}
+                                />
+                            </View>
                             <Text style={styles.mobileSubtitle}>
                                 {`Total ${String(totalCount ?? "0").trim()}+ found`}
                             </Text>

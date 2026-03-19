@@ -3,6 +3,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Linking } from "react-native";
 import { Button } from "react-native-paper";
@@ -28,6 +29,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     connectionCredits,
 }) => {
     const theme = useTheme();
+    const router = useRouter();
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingInvite, setLoadingInvite] = useState(false);
 
@@ -144,11 +146,18 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
                     influencers={
                         influencerIds
                             ? influencerIds.map((id) => ({
-                                id,
-                                name: influencerIds.length === 1 ? influencerName : undefined,
-                            }))
+                                  id,
+                                  name:
+                                      influencerIds.length === 1
+                                          ? influencerName
+                                          : undefined,
+                              }))
                             : undefined
                     }
+                    onNavigateToCampaigns={() => {
+                        setModalVisible(false);
+                        router.push("/collaborations");
+                    }}
                 />
             )}
         </>

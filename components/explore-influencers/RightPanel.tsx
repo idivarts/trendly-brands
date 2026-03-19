@@ -7,7 +7,7 @@ import { Theme, useTheme } from '@react-navigation/native'
 import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
-import { Badge, Button, Divider, SegmentedButtons, Surface, Text } from 'react-native-paper'
+import { Badge, Button, Divider, Surface, Text } from 'react-native-paper'
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -42,7 +42,7 @@ interface IProps {
     connectedInfluencers: boolean,
     setConnectedInfluencers: Function
 }
-const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInfluencers }) => {
+const RightPanel: React.FC<IProps> = () => {
     const theme = useTheme()
     const styles = stylesFn(theme)
     const router = useMyNavigation()
@@ -87,7 +87,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                 </Block>
 
                 {/* Explore vs Connected switch */}
-                <Block>
+                {/* <Block>
                     <SectionHeader
                         icon={connectedInfluencers ? 'link' : 'compass'}
                         title={connectedInfluencers ? 'Connected influencers' : 'Explore influencers'}
@@ -113,7 +113,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                         density="regular"
                         style={styles.segmentGroup}
                     />
-                </Block>
+                </Block> */}
 
                 {/* Influencer Preference */}
                 <Block>
@@ -125,7 +125,7 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
                 </Block>
 
                 {/* Search helpers */}
-                    <Block style={styles.blockNoBorder}>
+                <Block style={styles.blockNoBorder}>
                     <LinearGradient
                         colors={[Colors(theme).secondary, Colors(theme).primary]}
                         start={{ x: 0, y: 0 }}
@@ -216,108 +216,108 @@ const RightPanel: React.FC<IProps> = ({ connectedInfluencers, setConnectedInflue
 const stylesFn = (theme: Theme) => {
     const colors = Colors(theme);
     return StyleSheet.create({
-    scroll: { flex: 1 },
-    scrollContent: { paddingVertical: 8 },
-    container: { padding: 12, gap: 10, flex: 1 },
-    surface: {
-        borderRadius: 14,
-        padding: 12,
-        overflow: 'hidden',
-        borderWidth: Platform.select({ web: 1, default: 0 }),
-        borderColor: colors.border,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 8,
-        backgroundColor: "transparent"
-    },
-    headerIconWrap: {
-        width: 28,
-        height: 28,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    headerIconWrapTint: { backgroundColor: colors.card, opacity: 0.2 },
-    headerFlex: { flex: 1, backgroundColor: 'transparent'},
-    headerTitle: { fontWeight: '600' },
-    headerSubtitle: { opacity: 0.7 },
-    dividerVertical: { marginVertical: 16 },
-    blockNoBorder: { padding: 0, borderWidth: 0 },
-    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-    divider: { marginVertical: 6, opacity: 0.25 },
-    ctaBtn: { alignSelf: 'flex-start' },
-    ribbon: {
-        paddingVertical: 8,
-        paddingHorizontal: 10,
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
-    },
-    ribbonText: {
-        color: colors.onPrimary,
-        fontWeight: '600',
-        flex: 1,
-    },
-    ribbonBadge: {
-        // backgroundColor: Colors(theme).tag,
-        color: colors.onPrimary,
-    },
-    muted: { opacity: 0.85, marginVertical: 16 },
-    listSection: { marginTop: 6, marginBottom: 2 },
-    listItem: { paddingHorizontal: 0, minHeight: 40 },
-    listTitle: { fontSize: 13 },
-    listIcon: { marginRight: 12, width: 18, textAlign: 'center' },
-    comingSoonCard: { borderRadius: 14, padding: 14, overflow: 'hidden' },
-    soonBadge: {
-        backgroundColor: colors.tag,
-        color: colors.onPrimary,
-    },
-    soonTitle: {
-        color: colors.onPrimary,
-        fontWeight: '700',
-    },
-    soonSubtitle: {
-        color: colors.onPrimary,
-        opacity: 0.85,
-    },
-    soonIconWrap: { backgroundColor: colors.tag, opacity: 0.5 },
-    soonList: { marginTop: 6, gap: 10, backgroundColor: "transparent" },
-    soonListItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: "transparent" },
-    soonListContent: { flex: 1, backgroundColor: 'transparent' },
-    soonBulletIcon: {
-        width: 26,
-        height: 26,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.tag,
-        opacity: 0.9,
-    },
-    soonListTitle: {
-        color: colors.onPrimary,
-        fontWeight: '600',
-    },
-    soonListDesc: {
-        color: colors.onPrimary,
-        opacity: 0.9,
-    },
-    soonCtaBtn: { alignSelf: 'flex-start', marginTop: 24 },
-    soonCtaLabel: { color: colors.primary, fontWeight: '600' },
-    soonFootnote: {
-        color: colors.onPrimary,
-        opacity: 0.85,
-        marginTop: 10,
-    },
-    segmentGroup: { marginTop: 4 },
-    segmentBtn: {},
-    segmentBtnActive: {
-        backgroundColor: colors.primary
-    },
+        scroll: { flex: 1 },
+        scrollContent: { paddingVertical: 8 },
+        container: { padding: 12, gap: 10, flex: 1 },
+        surface: {
+            borderRadius: 14,
+            padding: 12,
+            overflow: 'hidden',
+            borderWidth: Platform.select({ web: 1, default: 0 }),
+            borderColor: colors.border,
+        },
+        headerRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 8,
+            backgroundColor: "transparent"
+        },
+        headerIconWrap: {
+            width: 28,
+            height: 28,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        headerIconWrapTint: { backgroundColor: colors.card, opacity: 0.2 },
+        headerFlex: { flex: 1, backgroundColor: 'transparent' },
+        headerTitle: { fontWeight: '600' },
+        headerSubtitle: { opacity: 0.7 },
+        dividerVertical: { marginVertical: 16 },
+        blockNoBorder: { padding: 0, borderWidth: 0 },
+        chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+        divider: { marginVertical: 6, opacity: 0.25 },
+        ctaBtn: { alignSelf: 'flex-start' },
+        ribbon: {
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderRadius: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 8,
+        },
+        ribbonText: {
+            color: colors.onPrimary,
+            fontWeight: '600',
+            flex: 1,
+        },
+        ribbonBadge: {
+            // backgroundColor: Colors(theme).tag,
+            color: colors.onPrimary,
+        },
+        muted: { opacity: 0.85, marginVertical: 16 },
+        listSection: { marginTop: 6, marginBottom: 2 },
+        listItem: { paddingHorizontal: 0, minHeight: 40 },
+        listTitle: { fontSize: 13 },
+        listIcon: { marginRight: 12, width: 18, textAlign: 'center' },
+        comingSoonCard: { borderRadius: 14, padding: 14, overflow: 'hidden' },
+        soonBadge: {
+            backgroundColor: colors.tag,
+            color: colors.onPrimary,
+        },
+        soonTitle: {
+            color: colors.onPrimary,
+            fontWeight: '700',
+        },
+        soonSubtitle: {
+            color: colors.onPrimary,
+            opacity: 0.85,
+        },
+        soonIconWrap: { backgroundColor: colors.tag, opacity: 0.5 },
+        soonList: { marginTop: 6, gap: 10, backgroundColor: "transparent" },
+        soonListItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: "transparent" },
+        soonListContent: { flex: 1, backgroundColor: 'transparent' },
+        soonBulletIcon: {
+            width: 26,
+            height: 26,
+            borderRadius: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.tag,
+            opacity: 0.9,
+        },
+        soonListTitle: {
+            color: colors.onPrimary,
+            fontWeight: '600',
+        },
+        soonListDesc: {
+            color: colors.onPrimary,
+            opacity: 0.9,
+        },
+        soonCtaBtn: { alignSelf: 'flex-start', marginTop: 24 },
+        soonCtaLabel: { color: colors.primary, fontWeight: '600' },
+        soonFootnote: {
+            color: colors.onPrimary,
+            opacity: 0.85,
+            marginTop: 10,
+        },
+        segmentGroup: { marginTop: 4 },
+        segmentBtn: {},
+        segmentBtnActive: {
+            backgroundColor: colors.primary
+        },
     });
 }
 

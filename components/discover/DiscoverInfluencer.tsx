@@ -74,9 +74,9 @@ import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         list: {
-            flexGrow: 1,
+            flex: 1,
             alignSelf: "center",
-            width: "100%", // optional, you can even remove it
+            width: "100%",
         },
         row: { flexDirection: "row", alignItems: "center" },
         avatarCol: {
@@ -149,6 +149,8 @@ interface DiscoverInfluencerProps {
     initialInfluencerId?: string;
     /** Called once when the first influencer card has laid out (for guided tour). */
     onFirstInfluencerCardLayout?: () => void;
+    /** When true (e.g. embedded in Send Invitations tab), use smaller horizontal padding so cards spread more. */
+    reduceHorizontalPadding?: boolean;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -159,6 +161,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     defaultAdvanceFilters,
     initialInfluencerId,
     onFirstInfluencerCardLayout,
+    reduceHorizontalPadding = false,
 }) => {
     const {
         selectedDb,
@@ -649,15 +652,21 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     return (
         <View
             style={[
-                { flex: 1, minWidth: 0, },
+                { flex: 1, minWidth: 0, minHeight: 0 },
                 !xl && rightPanel && { display: "none" },
             ]}
         >
             <View
                 style={{
                     flex: 1,
+                    minHeight: 0,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" && xl ? 140 : 16,
+                    paddingHorizontal:
+                        Platform.OS === "web" && xl
+                            ? reduceHorizontalPadding
+                                ? 24
+                                : 140
+                            : 16,
                 }}
             >
                 <FlatList

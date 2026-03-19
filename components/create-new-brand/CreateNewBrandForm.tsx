@@ -2,7 +2,7 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
 import BrandAgeSelect from "./BrandAgeSelect";
@@ -37,12 +37,31 @@ const CreateNewBrandForm: React.FC<CreateNewBrandFormProps> = ({
         () => createStyles(colors, xl, width),
         [colors, xl, width]
     );
+    const blobUrlRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+            }
+        };
+    }, []);
 
     const handleImageUpload = (image: string | File) => {
         if (typeof image === "string") {
-            setBrandData({ ...brandData, image });
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+                blobUrlRef.current = null;
+            }
+            setBrandData((prev) => ({ ...prev, image }));
         } else {
+            if (blobUrlRef.current) {
+                URL.revokeObjectURL(blobUrlRef.current);
+            }
+            const blobUrl = URL.createObjectURL(image);
+            blobUrlRef.current = blobUrl;
             setBrandWebImage(image);
+            setBrandData((prev) => ({ ...prev, image: blobUrl }));
         }
     };
 

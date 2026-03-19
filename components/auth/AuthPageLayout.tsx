@@ -12,6 +12,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@react-navigation/native";
 import Animated, {
     Easing,
@@ -25,6 +26,9 @@ import Animated, {
 const FLOATING_CARD_MAX_WIDTH = 460;
 const FLOATING_CARD_RADIUS = 24;
 const FLOATING_CARD_PADDING = 12;
+const FLOATING_CARD_PADDING_NARROW = 20;
+const SCROLL_CONTENT_PADDING_BOTTOM_NARROW = 32;
+const PAGE_PADDING_HORIZONTAL_NARROW = 16;
 const FLOATING_CARD_BORDER = 1;
 const CONTENT_PADDING_HORIZONTAL = 24;
 const CONTENT_PADDING_VERTICAL = 30;
@@ -32,6 +36,9 @@ const PAGE_PADDING_TOP = 0;
 const GRID_GAP = 32;
 const LEFT_COLUMN_WIDTH = 0.52;
 const RIGHT_COLUMN_WIDTH = 0.48;
+/** When browser is not full screen (short viewport), give more space to the left panel. */
+const LEFT_COLUMN_WIDTH_SHORT_VIEWPORT = 0.58;
+const RIGHT_COLUMN_WIDTH_SHORT_VIEWPORT = 0.42;
 const SHOWCASE_CARD_HEIGHT = 260;
 const SHOWCASE_CARD_GAP = 60;
 const SHOWCASE_ANIMATION_DURATION = 26000;
@@ -65,6 +72,10 @@ export const BUTTON_RADIUS = 14;
 export const LOGIN_PROMPT_MARGIN = 12;
 export const SECONDARY_BUTTON_MARGIN = 6;
 export const BACK_TEXT_MARGIN = 10;
+
+/** Viewport height below this uses compact spacing so form fits without scrolling (e.g. browser not full screen). */
+export const SHORT_VIEWPORT_MAX_HEIGHT = 920;
+const FLOATING_CARD_PADDING_COMPACT = 12;
 
 const SAMPLE_INFLUENCERS: InfluencerItem[] = [
     {
@@ -217,8 +228,13 @@ const AutoScrollColumn = ({
 const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const insets = useSafeAreaInsets();
     const { width, height: windowHeight } = useBreakpoints();
     const isWideLayout = width >= WIDE_LAYOUT_MIN;
+    const narrowPagePaddingTop = Math.max(CONTENT_PADDING_VERTICAL, insets.top);
+    const narrowPagePaddingBottom = Math.max(CONTENT_PADDING_VERTICAL, insets.bottom);
+    const narrowMaxHeight =
+        windowHeight - narrowPagePaddingTop - narrowPagePaddingBottom;
     const showcaseHeight = Math.max(
         SHOWCASE_MIN_HEIGHT,
         windowHeight - SHOWCASE_VERTICAL_PADDING * 2 - SHOWCASE_TEXT_BLOCK_HEIGHT
@@ -251,9 +267,31 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 backgroundColor: colors.floatingCardBg,
                 borderColor: colors.floatingCardBorder,
                 shadowColor: colors.floatingCardShadow,
+                ...(!isWideLayout && {
+                    padding: FLOATING_CARD_PADDING_NARROW,
+                }),
+                ...(isWideLayout &&
+                    windowHeight < SHORT_VIEWPORT_MAX_HEIGHT && {
+                    padding: FLOATING_CARD_PADDING_COMPACT,
+                }),
             },
+            pageNarrow: {
+                paddingHorizontal: PAGE_PADDING_HORIZONTAL_NARROW,
+            },
+            floatingCardScrollContentNarrow: {
+                flexGrow: 0,
+                paddingBottom: SCROLL_CONTENT_PADDING_BOTTOM_NARROW,
+            },
+            leftPaneShortViewport:
+                isWideLayout && windowHeight < SHORT_VIEWPORT_MAX_HEIGHT
+                    ? { flex: LEFT_COLUMN_WIDTH_SHORT_VIEWPORT }
+                    : null,
+            rightPaneShortViewport:
+                isWideLayout && windowHeight < SHORT_VIEWPORT_MAX_HEIGHT
+                    ? { flex: RIGHT_COLUMN_WIDTH_SHORT_VIEWPORT }
+                    : null,
         }),
-        [colors]
+        [colors, isWideLayout, windowHeight]
     );
 
     const leftItems = useMemo(
@@ -265,73 +303,116 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
         []
     );
 
+    const pageContent = (
+        <>
+            {isWideLayout && (
+                <View
+                    style={[
+                        stylesWithTheme.leftPane,
+                        stylesWithTheme.leftPaneShortViewport,
+                        !isWideLayout && stylesWithTheme.leftPaneStacked,
+                    ]}
+                >
+                    <Text style={stylesWithTheme.showcaseTitle}>{SHOWCASE_TITLE}</Text>
+                    <Text style={stylesWithTheme.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
+                    <View style={[stylesWithTheme.showcaseContainer, { height: showcaseHeight }]}>
+                        <AutoScrollColumn items={rightItems} direction={-1} />
+                        <AutoScrollColumn items={leftItems} direction={1} />
+                    </View>
+                </View>
+            )}
+            <View
+                style={[
+                    stylesWithTheme.rightPane,
+                    stylesWithTheme.rightPaneShortViewport,
+                    !isWideLayout && stylesWithTheme.rightPaneStacked,
+                    !isWideLayout && {
+                        flex: 1,
+                        maxHeight: narrowMaxHeight,
+                        minHeight: 0,
+                    },
+                    isWideLayout && { paddingTop: RIGHT_PANE_TOP_OFFSET },
+                    isWideLayout && { minHeight: 0, alignSelf: "center" as const },
+                    isWideLayout && {
+                        maxHeight:
+                            windowHeight -
+                            CONTENT_PADDING_VERTICAL * 2 -
+                            RIGHT_PANE_TOP_OFFSET -
+                            16,
+                    },
+                ]}
+            >
+                <View
+                    style={[
+                        stylesWithTheme.floatingCard,
+                        authLayoutStyles.floatingCardConstrain,
+                    ]}
+                >
+                    {isWideLayout ? (
+                        <ScrollView
+                            style={authLayoutStyles.floatingCardScroll}
+                            contentContainerStyle={authLayoutStyles.floatingCardScrollContent}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {children}
+                        </ScrollView>
+                    ) : (
+                        <ScrollView
+                            style={authLayoutStyles.floatingCardScroll}
+                            contentContainerStyle={[
+                                authLayoutStyles.floatingCardScrollContent,
+                                stylesWithTheme.floatingCardScrollContentNarrow,
+                            ]}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {children}
+                        </ScrollView>
+                    )}
+                </View>
+            </View>
+        </>
+    );
+
     return (
         <LinearGradient colors={gradientColors} style={stylesWithTheme.background}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={stylesWithTheme.flex}
             >
-                <View
-                    style={[
-                        stylesWithTheme.page,
-                        stylesWithTheme.contentRow,
-                        !isWideLayout && stylesWithTheme.contentColumn,
-                        isWideLayout && {
-                            maxHeight:
-                                windowHeight -
-                                PAGE_PADDING_TOP -
-                                CONTENT_PADDING_VERTICAL * 2 -
-                                16,
-                        },
-                    ]}
-                >
-                    {isWideLayout && (
-                        <View
-                            style={[
-                                stylesWithTheme.leftPane,
-                                !isWideLayout && stylesWithTheme.leftPaneStacked,
-                            ]}
-                        >
-                            <Text style={stylesWithTheme.showcaseTitle}>{SHOWCASE_TITLE}</Text>
-                            <Text style={stylesWithTheme.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
-                            <View style={[stylesWithTheme.showcaseContainer, { height: showcaseHeight }]}>
-                                <AutoScrollColumn items={rightItems} direction={-1} />
-                                <AutoScrollColumn items={leftItems} direction={1} />
-                            </View>
-                        </View>
-                    )}
+                {isWideLayout ? (
                     <View
                         style={[
-                            stylesWithTheme.rightPane,
-                            !isWideLayout && stylesWithTheme.rightPaneStacked,
-                            isWideLayout && { paddingTop: RIGHT_PANE_TOP_OFFSET },
-                            isWideLayout && { minHeight: 0, alignSelf: "center" as const },
+                            stylesWithTheme.page,
+                            stylesWithTheme.contentRow,
                             {
                                 maxHeight:
                                     windowHeight -
+                                    PAGE_PADDING_TOP -
                                     CONTENT_PADDING_VERTICAL * 2 -
-                                    (isWideLayout ? RIGHT_PANE_TOP_OFFSET : 0) -
                                     16,
                             },
                         ]}
                     >
-                        <View
-                            style={[
-                                stylesWithTheme.floatingCard,
-                                authLayoutStyles.floatingCardConstrain,
-                            ]}
-                        >
-                            <ScrollView
-                                style={authLayoutStyles.floatingCardScroll}
-                                contentContainerStyle={authLayoutStyles.floatingCardScrollContent}
-                                showsVerticalScrollIndicator={false}
-                                keyboardShouldPersistTaps="handled"
-                            >
-                                {children}
-                            </ScrollView>
-                        </View>
+                        {pageContent}
                     </View>
-                </View>
+                ) : (
+                    <View
+                        style={[
+                            stylesWithTheme.page,
+                            stylesWithTheme.pageNarrow,
+                            stylesWithTheme.contentColumn,
+                            stylesWithTheme.flex,
+                            {
+                                paddingTop: narrowPagePaddingTop,
+                                paddingBottom: narrowPagePaddingBottom,
+                            },
+                        ]}
+                    >
+                        {pageContent}
+                    </View>
+                )}
             </KeyboardAvoidingView>
         </LinearGradient>
     );
@@ -379,6 +460,10 @@ export const authLayoutStyles = {
     },
     rightPaneStacked: {
         alignItems: "stretch" as const,
+    },
+    rightPaneNarrow: {
+        flex: 0,
+        maxHeight: undefined,
     },
     showcaseTitle: {
         fontSize: SHOWCASE_TITLE_SIZE,
@@ -429,6 +514,9 @@ export const authLayoutStyles = {
     },
     floatingCardScroll: {
         flex: 1,
+    },
+    floatingCardScrollNarrow: {
+        flex: 0,
     },
     floatingCardScrollContent: {
         flexGrow: 1,

@@ -74,6 +74,10 @@ const DiscoverComponent = ({
     const [isCollapsed, setIsCollapsed] = useState(false);
 
     const { xl } = useBreakpoints();
+    const guideTourShownKey =
+        manager?.id
+            ? `discover-guide-tour-shown-${manager.id}-${xl ? "web" : "mobile"}`
+            : null;
 
     useEffect(() => {
 
@@ -164,10 +168,13 @@ const DiscoverComponent = ({
         }
 
         setShowSurvey(false);
-        hasStartedTourRef.current = true;
-        if (!skipGuideTour) {
-            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        if (skipGuideTour) return;
+        if (guideTourShownKey) {
+            // Mark as shown immediately so refresh/dismiss doesn't re-trigger it.
+            await PersistentStorage.set(guideTourShownKey, "true");
         }
+        hasStartedTourRef.current = true;
+        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
     };
 
     useEffect(() => {
@@ -182,20 +189,61 @@ const DiscoverComponent = ({
         ) {
             return;
         }
-        if (firstInfluencerCardReady) {
-            hasStartedTourRef.current = true;
-            startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-            return;
-        }
-        // No card yet (e.g. empty list): start tour without first step after a short delay
-        const t = setTimeout(() => {
-            if (hasStartedTourRef.current) return;
-            hasStartedTourRef.current = true;
-            startCoachmark(
-                xl ? GUIDE_TOUR_WEB_SKIP_FIRST : GUIDE_TOUR_MOBILE_SKIP_FIRST
-            );
-        }, 1000);
-        return () => clearTimeout(t);
+        let cancelled = false;
+
+        const shouldSkipBecauseShown = async () => {
+            if (!guideTourShownKey) return false;
+            try {
+                const shown = await PersistentStorage.get(guideTourShownKey);
+                if (shown === "true") {
+                    hasStartedTourRef.current = true;
+                    return true;
+                }
+            } catch {
+                // If storage fails, fall back to showing once per session.
+            }
+            return false;
+        };
+
+        const markShown = async () => {
+            if (!guideTourShownKey) return;
+            try {
+                await PersistentStorage.set(guideTourShownKey, "true");
+            } catch {
+                // Ignore storage errors; showOnce-per-session still prevents loops.
+            }
+        };
+
+        (async () => {
+            if (await shouldSkipBecauseShown()) return;
+            if (cancelled) return;
+
+            if (firstInfluencerCardReady) {
+                await markShown();
+                if (cancelled) return;
+                hasStartedTourRef.current = true;
+                startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+                return;
+            }
+
+            // No card yet (e.g. empty list): start tour without first step after a short delay
+            const t = setTimeout(async () => {
+                if (cancelled || hasStartedTourRef.current) return;
+                if (await shouldSkipBecauseShown()) return;
+                await markShown();
+                if (cancelled || hasStartedTourRef.current) return;
+                hasStartedTourRef.current = true;
+                startCoachmark(
+                    xl ? GUIDE_TOUR_WEB_SKIP_FIRST : GUIDE_TOUR_MOBILE_SKIP_FIRST
+                );
+            }, 1000);
+
+            return () => clearTimeout(t);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
     }, [
         skipGuideTour,
         surveyCheckDone,
@@ -206,6 +254,7 @@ const DiscoverComponent = ({
         isActive,
         firstInfluencerCardReady,
         startCoachmark,
+        guideTourShownKey,
     ]);
 
     if (!surveyCheckDone)
@@ -259,11 +308,11 @@ const DiscoverComponent = ({
             }}
         >
             <AppLayout safeAreaEdges={["left", "right"]}>
-                <View style={{ width: "100%", flex: 1 }}>
+                <View style={{ width: "100%", flex: 1, minHeight: 0 }}>
                     {showTopPanel && <View style={{ flexShrink: 0 }}>
                         <DiscoverScreenHeader />
                     </View>}
-                    <View style={{ width: "100%", flexDirection: "row", flex: 1 }}>
+                    <View style={{ width: "100%", flexDirection: "row", flex: 1, minHeight: 0 }}>
                         <DiscoverInfluencer
                             advanceFilter={advanceFilter}
                             statusFilter={statusFilter}
@@ -272,6 +321,7 @@ const DiscoverComponent = ({
                             defaultAdvanceFilters={filtersToUse}
                             initialInfluencerId={initialInfluencerId}
                             onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
+                            reduceHorizontalPadding={!showRightPanel}
                         />
                     </View>
                     {showRightPanel && (
