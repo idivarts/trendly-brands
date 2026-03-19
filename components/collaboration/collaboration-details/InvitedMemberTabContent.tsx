@@ -1,11 +1,11 @@
 import type { InfluencerInviteUnit } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/shared-uis/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import useInvitedInfluencers from "@/hooks/request/use-invited-influencers";
 import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
@@ -61,38 +61,7 @@ const InvitedMemberTabContent = (props: any) => {
         setStatusFilter(val as string | undefined);
     };
 
-    const loggedRef = React.useRef<Set<string>>(new Set());
     const renderItem = ({ item }: { item: InfluencerInviteUnit }) => {
-        // #region agent log
-        try {
-            if (!loggedRef.current.has(item.id) && loggedRef.current.size < 12) {
-                loggedRef.current.add(item.id);
-                fetch("http://127.0.0.1:7635/ingest/35d7f708-ae10-4154-b612-6c5217b8dac1", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d1a82d" },
-                    body: JSON.stringify({
-                        sessionId: "d1a82d",
-                        location: "InvitedMemberTabContent.tsx:renderItem",
-                        message: "invited member rendered item fields",
-                        data: {
-                            id: item.id,
-                            name: item.name,
-                            username: item.username,
-                            profile_pic: item.profile_pic,
-                            follower_count: item.follower_count,
-                            views_count: item.views_count,
-                            engagement_count: item.engagement_count,
-                            engagement_rate: item.engagement_rate,
-                            status: item.status,
-                            invitedAt: item.invitedAt,
-                        },
-                        timestamp: Date.now(),
-                        hypothesisId: "H2",
-                    }),
-                }).catch(() => { });
-            }
-        } catch { }
-        // #endregion
         return (
             <View style={styles.itemWrapper}>
                 <InfluencerCard
