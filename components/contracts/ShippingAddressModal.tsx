@@ -13,10 +13,12 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Modal as PaperModal } from "react-native-paper";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
@@ -24,7 +26,7 @@ import TextInput from "../ui/text-input";
 export interface ShippingAddressModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (data: ShipmentFormInput) => void;
+    onSubmit: (data: ShipmentFormInput) => Promise<void> | void;
 }
 
 const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
@@ -40,21 +42,38 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
     const [courierName, setCourierName] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
     const [shipmentLink, setShipmentLink] = useState("");
+    const [expectedDate, setExpectedDate] = useState(() => {
+        const d = new Date();
+        // Default to +7 days so the API always receives a valid expectedDate.
+        d.setDate(d.getDate() + 7);
+        return d.getTime();
+    });
+    const [hasSelectedExpectedDate, setHasSelectedExpectedDate] = useState(false);
+    const [showExpectedDatePicker, setShowExpectedDatePicker] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!courierName.trim() || !trackingNumber.trim()) {
             Toaster.error("Courier name and tracking number are required");
             return;
         }
-        onSubmit({
-            courierName: courierName.trim(),
-            trackingNumber: trackingNumber.trim(),
-            shipmentLink: shipmentLink.trim() || undefined,
-        });
-        setCourierName("");
-        setTrackingNumber("");
-        setShipmentLink("");
-        onClose();
+        setSubmitting(true);
+        try {
+            await onSubmit({
+                courierName: courierName.trim(),
+                trackingNumber: trackingNumber.trim(),
+                shipmentLink: shipmentLink.trim() || undefined,
+                expectedDate,
+            });
+            setCourierName("");
+            setTrackingNumber("");
+            setShipmentLink("");
+            onClose();
+        } catch (e) {
+            // ActionContainer's onSubmit handler already toasts the real error.
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleClose = () => {
@@ -114,12 +133,61 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
                                 keyboardType="url"
                             />
                         </View>
+
+                        <View style={styles.expectedDateSection}>
+                            <Text style={styles.label}>Expected delivery date</Text>
+                            <TouchableOpacity
+                                style={styles.expectedDateButton}
+                                onPress={() => {
+                                    setHasSelectedExpectedDate(false);
+                                    setExpectedDatePickerVisibleAtLeastOnce(true);
+                                    setShowExpectedDatePicker(true);
+                                }}
+                            >
+                                <Text style={styles.expectedDateButtonText}>
+                                    Select expected date
+                                </Text>
+                            </TouchableOpacity>
+                            {hasSelectedExpectedDate && !showExpectedDatePicker ? (
+                                <Text style={styles.expectedDateSelectedText}>
+                                    {new Date(expectedDate).toLocaleDateString(undefined, {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                    })}
+                                </Text>
+                            ) : null}
+                            {showExpectedDatePicker && (
+                                <DateTimePicker
+                                    value={new Date(expectedDate)}
+                                    mode="date"
+                                    // Use spinner to reduce iOS double-tap / crash risk.
+                                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                                    minimumDate={new Date()}
+                                    onChange={(event, d) => {
+                                        if ((event as any)?.type === "set" && d) {
+                                            const prevMs = expectedDate;
+                                            const nextMs = d.getTime();
+                                            setExpectedDate(nextMs);
+                                            setHasSelectedExpectedDate(nextMs !== prevMs);
+                                        }
+                                        setShowExpectedDatePicker(false);
+                                    }}
+                                />
+                            )}
+                        </View>
+
                         <View style={styles.actions}>
                             <Button mode="outlined" style={styles.button} onPress={handleClose}>
                                 Cancel
                             </Button>
-                            <Button mode="contained" style={styles.button} onPress={handleSubmit}>
-                                Mark as Shipped
+                            <Button
+                                mode="contained"
+                                style={styles.button}
+                                onPress={handleSubmit}
+                                disabled={submitting}
+                            >
+                                {submitting ? "Updating…" : "Mark as Shipped"}
                             </Button>
                         </View>
                     </ScrollView>
@@ -206,6 +274,26 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         },
         inputRow: {
             marginBottom: 16,
+        },
+        expectedDateSection: {
+            marginBottom: 16,
+        },
+        expectedDateButton: {
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            backgroundColor: colors.tag ?? colors.gray200,
+            marginBottom: 8,
+        },
+        expectedDateButtonText: {
+            fontSize: 15,
+            color: colors.text,
+        },
+        expectedDateSelectedText: {
+            fontSize: 14,
+            fontWeight: "600",
+            color: colors.text,
+            marginBottom: 10,
         },
         actions: {
             flexDirection: "row",

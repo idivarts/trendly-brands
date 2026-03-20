@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { ContractStatus, isContractBlockedByKYC } from "@/shared-constants/contract-status";
+import { ContractStatus, isContractBlockedByKYC, type ReleasePlanOption } from "@/shared-constants/contract-status";
 import {
     ContractActionsWithMessage,
     type ContractActionButton,
@@ -24,28 +24,44 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import type { Posting, Shipment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import type { ShipmentFormInput } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import React, { FC, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ChangeReleaseDateSheet from "./ChangeReleaseDateSheet";
+import PlanReleaseBottomSheet from "./PlanReleaseBottomSheet";
 import ReleaseOptionsBottomSheet from "./ReleaseOptionsBottomSheet";
+import ApproveVideoReleaseBottomSheet from "./ApproveVideoReleaseBottomSheet";
+import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
+import MarkAsDeliveredModal from "./MarkAsDeliveredModal";
 import RequestRevisionModal from "./RequestRevisionModal";
 import ShippingAddressModal from "./ShippingAddressModal";
+import ViewInfluencerAddressBottomSheet from "./ViewInfluencerAddressBottomSheet";
 import ViewInfluencerAddressModal from "./ViewInfluencerAddressModal";
 import { Text, View } from "../theme/Themed";
+import { markShipmentShipped } from "./api/State_3_api";
+import { markShipmentDelivered } from "./api/State_4_api";
+import { requestVideoRevision, approveVideoRelease } from "./api/State_6_api";
+import {
+    scheduleReleaseFromPlan,
+    changeReleaseDate as changeReleaseDateState7,
+} from "./api/State_7_api";
+import {
+    scheduleRelease,
+    changeReleaseDate as changeReleaseDateState8,
+} from "./api/State_8_api";
 
-/** Pass through 0–10 (Firestore). Legacy: 2 = feedback → DeliverableSent, 3 = completed → Settled. */
+/** Pass through 0–10 (Firestore). Legacy: 2 = feedback → PlanRelease, 3 = completed → Settled. */
 function normalizeStatus(status: number): number {
     if (status >= 0 && status <= 10) return status;
-    if (status === 2) return ContractStatus.DeliverableSent;
+    if (status === 2) return ContractStatus.PlanRelease;
     if (status === 3) return ContractStatus.Settled;
     return ContractStatus.Pending;
 }
 
 /** True if collaboration requires product shipping (→ states 6, 7). */
 function isProductShipping(collab?: ICollaboration | null): boolean {
-    return collab?.promotionSubject === "physical_product" ?? false;
+    return collab?.promotionSubject === "physical_product";
 }
 
 interface ActionContainerProps {
@@ -78,7 +94,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showViewAddressModal, setShowViewAddressModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showReleaseSheet, setShowReleaseSheet] = useState(false);
+    const [showPlanReleaseSheet, setShowPlanReleaseSheet] = useState(false);
     const [showChangeDateSheet, setShowChangeDateSheet] = useState(false);
+    const [showViewAddressSheet, setShowViewAddressSheet] = useState(false);
+    const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
+    const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
 
     const status =
         devOverrideStatus != null ? normalizeStatus(devOverrideStatus) : normalizeStatus(contract.status);
@@ -134,11 +154,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
         refreshData();
     };
 
-    /** New flow: after payment success, move to Shipped (4) or DeliverableSent (7). */
+    /** New flow: after Start Contract, move to ShipmentPending (3) or VideoPending (5) for digital. */
     const startContractAfterPayment = async () => {
         const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
         const timeStarted = new Date().getTime();
-        const nextStatus = productShipping ? ContractStatus.Shipped : ContractStatus.DeliverableSent;
+        const nextStatus = productShipping ? ContractStatus.ShipmentPending : ContractStatus.VideoPending;
         await updateDoc(contractRef, {
             status: nextStatus,
             contractTimestamp: {
@@ -154,24 +174,51 @@ const ActionContainer: FC<ActionContainerProps> = ({
         refreshData();
     };
 
-    const handleShippingSubmit = async (data: Partial<Shipment>) => {
+    const handleShippingSubmit = async (data: ShipmentFormInput) => {
         try {
-            const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-            await updateDoc(contractRef, {
-                status: ContractStatus.Shipped,
-                shipment: { ...data, status: "shipped" },
+            const courierName = data.courierName?.trim();
+            const trackingNumber = data.trackingNumber?.trim();
+            const expectedDate = data.expectedDate ?? Date.now();
+
+            if (!courierName || !trackingNumber) {
+                Toaster.error("Courier name and tracking number are required");
+                return;
+            }
+
+            await markShipmentShipped({
+                contractId: contract.streamChannelId,
+                shipmentProvider: courierName,
+                trackingId: trackingNumber,
+                expectedDate,
             });
+
             Toaster.success("Shipment marked as shipped");
             refreshData();
         } catch (e) {
-            Toaster.error("Failed to update shipment");
+            // Helps us debug the exact Firestore failure (security rules vs invalid payload, etc.)
+            console.error("Failed to update shipment", e);
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to update shipment: ${message}` : "Failed to update shipment");
+            throw e;
         }
     };
 
-    const handleMarkAsDelivered = async () => {
+    const handleMarkAsDeliveredSubmit = async (data: {
+        proofOfDeliveryUrl?: string;
+        receivedNotes?: string;
+    }) => {
         try {
-            const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-            await updateDoc(contractRef, { status: ContractStatus.Received });
+            if (!data.proofOfDeliveryUrl) {
+                Toaster.error("Please upload proof of delivery.");
+                return;
+            }
+
+            await markShipmentDelivered({
+                contractId: contract.streamChannelId,
+                proofOfDeliveryUrl: data.proofOfDeliveryUrl,
+                receivedNotes: data.receivedNotes?.trim() || undefined,
+            });
+
             refreshData();
             Toaster.success("Marked as delivered.");
             sendMessageToChannel(
@@ -179,18 +226,53 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 "Product has been marked as delivered. You can now upload your collaboration video."
             ).catch(() => {});
         } catch (e) {
-            Toaster.error("Failed to update status");
+            console.error("Failed to update delivered status", e);
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to update status: ${message}` : "Failed to update status");
+            throw e;
         }
     };
 
     const handleRevisionSend = async (revisionNotes: string) => {
         try {
-            const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-            await updateDoc(contractRef, { status: ContractStatus.DeliverableSent });
-            Toaster.success("Revision request sent (notes can be sent via chat)");
+            await requestVideoRevision({
+                contractId: contract.streamChannelId,
+                revisionNotes,
+            });
+            await sendMessageToChannel(
+                contract.streamChannelId,
+                `Revision request from brand: ${revisionNotes}`
+            );
+            Toaster.success("Revision request sent in chat");
             refreshData();
         } catch (e) {
-            Toaster.error("Failed to send revision request");
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to send revision request: ${message}` : "Failed to send revision request");
+            throw e;
+        }
+    };
+
+    const handlePlanReleaseConfirm = async (
+        option: ReleasePlanOption,
+        trendlyBoost: boolean
+    ) => {
+        try {
+            const defaultDate = new Date();
+            defaultDate.setDate(defaultDate.getDate() + 7);
+
+            await scheduleReleaseFromPlan({
+                contractId: contract.streamChannelId,
+                option,
+                trendlyBoost,
+                scheduledReleaseAt: defaultDate.getTime(),
+            });
+
+            Toaster.success("Release planned");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to plan release: ${message}` : "Failed to plan release");
+            throw e;
         }
     };
 
@@ -199,35 +281,66 @@ const ActionContainer: FC<ActionContainerProps> = ({
         scheduledReleaseAt: number
     ) => {
         try {
-            const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-            const posting: Partial<Posting> = {
-                ...contract.posting,
-                scheduledDate: scheduledReleaseAt,
-                postingScenario: option,
-            };
-            await updateDoc(contractRef, {
-                status: ContractStatus.PostScheduled,
-                posting,
+            await scheduleRelease({
+                contractId: contract.streamChannelId,
+                scheduledReleaseAt,
+                option,
             });
+
             Toaster.success("Release scheduled");
             refreshData();
         } catch (e) {
-            Toaster.error("Failed to schedule release");
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to schedule release: ${message}` : "Failed to schedule release"
+            );
+            throw e;
         }
     };
 
     const handleChangeDateConfirm = async (scheduledReleaseAt: number) => {
         try {
-            const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-            const posting: Partial<Posting> = {
-                ...contract.posting,
-                scheduledDate: scheduledReleaseAt,
-            };
-            await updateDoc(contractRef, { posting });
+            if (status === ContractStatus.PlanRelease) {
+                await changeReleaseDateState7({
+                    contractId: contract.streamChannelId,
+                    scheduledReleaseAt,
+                });
+            } else {
+                await changeReleaseDateState8({
+                    contractId: contract.streamChannelId,
+                    scheduledReleaseAt,
+                });
+            }
             Toaster.success("Release date updated");
             refreshData();
         } catch (e) {
-            Toaster.error("Failed to update date");
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to update date: ${message}` : "Failed to update date");
+            throw e;
+        }
+    };
+
+    const handleApproveVideoReleaseConfirm = async (data: {
+        option: ReleasePlanOption;
+        scheduledReleaseAt?: number;
+        trendlyBoost: boolean;
+    }) => {
+        try {
+            await approveVideoRelease({
+                contractId: contract.streamChannelId,
+                option: data.option,
+                scheduledReleaseAt: data.scheduledReleaseAt,
+                trendlyBoost: data.trendlyBoost,
+            });
+
+            Toaster.success("Video approved");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to approve video: ${message}` : "Failed to approve video"
+            );
+            throw e;
         }
     };
 
@@ -280,6 +393,32 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     text: "Use the chat to align with the influencer, then proceed with payment and contract steps.",
                     icon: infoIcon,
                 };
+            if (status === ContractStatus.PaymentFailed)
+                return {
+                    variant: "error",
+                    text: "Payment failed. You can retry payment using the button above.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.PostDone)
+                return {
+                    variant: "info",
+                    text: "Contract closed. Please submit feedback to finish.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.PlanRelease) {
+                const scheduledText = contract.posting?.scheduledDate
+                    ? new Date(contract.posting.scheduledDate).toLocaleDateString(undefined, {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                      })
+                    : "the scheduled date";
+                return {
+                    variant: "warning",
+                    text: `Release pending until ${scheduledText}.`,
+                    icon: infoIcon,
+                };
+            }
             if (status <= ContractStatus.PostScheduled)
                 return {
                     variant: "warning",
@@ -297,32 +436,24 @@ const ActionContainer: FC<ActionContainerProps> = ({
             return {
                 buttons: [
                     {
-                        label: "Ask To Revise Quote",
+                        label: "Ask to Revise Quote",
                         variant: "outlined",
-                        onPress: () => {
-                            HttpWrapper.fetch(
-                                `/api/collabs/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`,
-                                { method: "POST" }
-                            ).then(() => {
-                                Toaster.success("Successfully notified influencer to revise quotation");
-                            });
-                        },
+                        onPress: goToMessages,
                     },
                     {
-                        label: "Start Contract",
+                        label: "Payment",
                         variant: "contained",
                         onPress: () => {
-                            openModal({
-                                confirmAction: startContract,
-                                confirmText: "Confirm",
-                                title: "Start this Contract?",
-                                description:
-                                    "Are you sure? Make sure you discuss the pricing and final deliverable before starting the contract",
-                            });
+                            // For UI testing: simulate successful payment and move to status 1 (Started).
+                            startContract();
                         },
                     },
                 ],
-                message: messageForStatus(),
+                message: {
+                    variant: "warning",
+                    text: "The contract is still not funded. Once you communicate with the influencer and everything aligns you can fund and start the contract.",
+                    icon: infoIcon,
+                },
             };
         }
         if (isLegacyFlow && contract.status === 1) {
@@ -353,12 +484,24 @@ const ActionContainer: FC<ActionContainerProps> = ({
             return {
                 buttons: [
                     {
-                        label: "Make Payment",
+                        label: "Ask to Revise Quote",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                    },
+                    {
+                        label: "Payment",
                         variant: "contained",
-                        onPress: () => Toaster.info("Razorpay integration: open checkout"),
+                        onPress: () => {
+                            // For UI testing: simulate successful payment and move to status 1 (Started).
+                            startContract();
+                        },
                     },
                 ],
-                message: messageForStatus(),
+                message: {
+                    variant: "warning",
+                    text: "The contract is still not funded. Once you communicate with the influencer and everything aligns you can fund and start the contract.",
+                    icon: infoIcon,
+                },
             };
         }
         if (!isLegacyFlow && status === ContractStatus.PaymentFailed) {
@@ -373,7 +516,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.Paid) {
+        if (!isLegacyFlow && status === ContractStatus.Started) {
             return {
                 buttons: [
                     {
@@ -386,7 +529,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                                 title: "Start contract?",
                                 description:
                                     "Next step: " +
-                                    (productShipping ? "add shipment details." : "influencer will upload video."),
+                                    (productShipping
+                                        ? "add shipment details and ship the product to the influencer."
+                                        : "influencer will upload video."),
                             });
                         },
                     },
@@ -394,7 +539,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.Shipped) {
+        if (!isLegacyFlow && status === ContractStatus.ShipmentPending) {
             return {
                 buttons: [
                     {
@@ -402,14 +547,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         variant: "outlined",
                         onPress: () => {
                             setShowShippingModal(false);
-                            setShowViewAddressModal(true);
+                            setShowViewAddressSheet(true);
                         },
                     },
                     {
                         label: "Add Shipment Details",
                         variant: "contained",
                         onPress: () => {
-                            setShowViewAddressModal(false);
+                            setShowViewAddressSheet(false);
                             setShowShippingModal(true);
                         },
                     },
@@ -421,29 +566,38 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 },
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.Delivered) {
+        if (!isLegacyFlow && status === ContractStatus.DeliveryPending) {
             return {
                 buttons: [
-                    { label: "Mark as Delivered", variant: "contained", onPress: handleMarkAsDelivered },
                     { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Mark as Delivered",
+                        variant: "contained",
+                        onPress: () => setShowMarkAsDeliveredModal(true),
+                    },
                 ],
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.Received) {
+        if (!isLegacyFlow && status === ContractStatus.VideoPending) {
             return {
                 buttons: [
                     {
-                        label: "Nudge Influencer",
-                        variant: "contained-tonal",
-                        onPress: () => Toaster.info("Send nudge message in chat"),
+                        label: "Request for Video",
+                        variant: "contained",
+                        onPress: () => {
+                            sendMessageToChannel(
+                                contract.streamChannelId,
+                                "The influencer is all set for the delivery of the content. Please coordinate with the influencer to get the video done."
+                            );
+                            Toaster.success("Message sent in chat");
+                        },
                     },
-                    { label: "Go to Messages", variant: "contained", onPress: goToMessages },
                 ],
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.DeliverableSent) {
+        if (!isLegacyFlow && status === ContractStatus.ReviewPending) {
             return {
                 buttons: [
                     {
@@ -454,54 +608,49 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Approve Video",
                         variant: "contained",
-                        onPress: () => {
-                            openModal({
-                                confirmAction: async () => {
-                                    const contractRef = doc(
-                                        FirestoreDB,
-                                        "contracts",
-                                        contract.streamChannelId
-                                    );
-                                    await updateDoc(contractRef, {
-                                        status: ContractStatus.PostScheduled,
-                                    });
-                                    Toaster.success("Video approved");
-                                    refreshData();
-                                },
-                                confirmText: "Approve",
-                                title: "Approve video?",
-                                description:
-                                    "The contract will move to Post Scheduled. You can then plan the release date.",
-                            });
-                        },
+                        onPress: () => setShowApproveVideoSheet(true),
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (!isLegacyFlow && status === ContractStatus.PlanRelease) {
+            return {
+                buttons: [
+                    {
+                        label: "Change Release Date",
+                        variant: "outlined",
+                        onPress: () => setShowChangeDateSheet(true),
                     },
                 ],
                 message: messageForStatus(),
             };
         }
         if (!isLegacyFlow && status === ContractStatus.PostScheduled) {
-            const postButtons: [ContractActionButton] | [ContractActionButton, ContractActionButton] =
-                contract.posting?.scheduledDate
+            return {
+                buttons: contract.posting?.scheduledDate
                     ? [
                           {
                               label: "Change Release Date",
                               variant: "outlined",
                               onPress: () => setShowChangeDateSheet(true),
                           },
-                          {
-                              label: "Plan Release",
-                              variant: "contained",
-                              onPress: () => setShowReleaseSheet(true),
-                          },
                       ]
-                    : [
-                          {
-                              label: "Plan Release",
-                              variant: "contained",
-                              onPress: () => setShowReleaseSheet(true),
-                          },
-                      ];
-            return { buttons: postButtons, message: messageForStatus() };
+                    : [],
+                message: messageForStatus(),
+            };
+        }
+        if (!isLegacyFlow && status === ContractStatus.PostDone) {
+            return {
+                buttons: [
+                    {
+                        label: "Give Feedback",
+                        variant: "contained",
+                        onPress: () => feedbackModalVisible(),
+                    },
+                ],
+                message: messageForStatus(),
+            };
         }
         return { buttons: [], message: messageForStatus() };
     }, [
@@ -520,8 +669,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
         startContractAfterPayment,
         feedbackModalVisible,
         goToMessages,
-        handleMarkAsDelivered,
+        handleMarkAsDeliveredSubmit,
         handleRevisionSend,
+        handlePlanReleaseConfirm,
+        contract.shipment,
+        contract.deliverable,
+        devOverrideStatus,
         refreshData,
     ]);
 
@@ -531,6 +684,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 <ContractActionsWithMessage
                     buttons={showButtons ? actionsConfig.buttons : []}
                     message={actionsConfig.message}
+                    customMessageContent={
+                        showButtons && status === ContractStatus.ReviewPending ? (
+                            <InfluencerUploadedVideo contract={contract} />
+                        ) : undefined
+                    }
                 />
             )}
             {showFeedbackAndInfo && (contract.feedbackFromBrand || contract.feedbackFromInfluencer) && (
@@ -601,6 +759,16 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     }
                 />
             )}
+            <BottomSheetScrollContainer
+                isVisible={showViewAddressSheet}
+                snapPointsRange={["35%", "50%"]}
+                onClose={() => setShowViewAddressSheet(false)}
+            >
+                <ViewInfluencerAddressBottomSheet
+                    influencerName={userData.name}
+                    address={userData.currentAddress}
+                />
+            </BottomSheetScrollContainer>
             {showShippingModal && (
                 <ShippingAddressModal
                     visible
@@ -608,11 +776,39 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     onSubmit={handleShippingSubmit}
                 />
             )}
+            {showMarkAsDeliveredModal && (
+                <MarkAsDeliveredModal
+                    visible
+                    onClose={() => setShowMarkAsDeliveredModal(false)}
+                    onSubmit={handleMarkAsDeliveredSubmit}
+                    contractId={contract.streamChannelId}
+                />
+            )}
             <RequestRevisionModal
                 visible={showRevisionModal}
                 onClose={() => setShowRevisionModal(false)}
                 onSend={handleRevisionSend}
             />
+            <BottomSheetScrollContainer
+                isVisible={showPlanReleaseSheet}
+                snapPointsRange={["55%", "90%"]}
+                onClose={() => setShowPlanReleaseSheet(false)}
+            >
+                <PlanReleaseBottomSheet
+                    onClose={() => setShowPlanReleaseSheet(false)}
+                    onConfirm={handlePlanReleaseConfirm}
+                />
+            </BottomSheetScrollContainer>
+            <BottomSheetScrollContainer
+                isVisible={showApproveVideoSheet}
+                snapPointsRange={["65%", "95%"]}
+                onClose={() => setShowApproveVideoSheet(false)}
+            >
+                <ApproveVideoReleaseBottomSheet
+                    onClose={() => setShowApproveVideoSheet(false)}
+                    onConfirm={handleApproveVideoReleaseConfirm}
+                />
+            </BottomSheetScrollContainer>
             <BottomSheetScrollContainer
                 isVisible={showReleaseSheet}
                 snapPointsRange={["50%", "90%"]}

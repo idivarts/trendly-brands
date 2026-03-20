@@ -24,7 +24,10 @@ const maxReleaseDate = () => {
 
 export interface ReleaseOptionsBottomSheetProps {
     onClose: () => void;
-    onConfirm: (option: ReleasePlanOption, scheduledReleaseAt: number) => void;
+    onConfirm: (
+        option: ReleasePlanOption,
+        scheduledReleaseAt: number
+    ) => Promise<void> | void;
 }
 
 const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
@@ -42,12 +45,18 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
         return d;
     });
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         if (!selectedOption) return;
         const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
-        onConfirm(selectedOption, ts);
-        onClose();
+        setSubmitting(true);
+        try {
+            await onConfirm(selectedOption, ts);
+            onClose();
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const maxDate = maxReleaseDate();
@@ -108,7 +117,7 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                     mode="contained"
                     style={styles.button}
                     onPress={handleConfirm}
-                    disabled={!selectedOption}
+                    disabled={!selectedOption || submitting}
                 >
                     Schedule Release
                 </Button>

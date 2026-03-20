@@ -1,6 +1,7 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useAWSContext } from "@/contexts";
+import { ContractStatus } from "@/shared-constants/contract-status";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -99,7 +100,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
             const date = new Date();
             await updateDoc(contractRef, {
-                status: 2,
+                status: ContractStatus.Settled,
                 contractTimestamp: {
                     ...contract.contractTimestamp,
                     endedOn: Date.now(),

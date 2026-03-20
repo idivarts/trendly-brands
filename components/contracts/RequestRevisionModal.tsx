@@ -23,7 +23,7 @@ import TextInput from "../ui/text-input";
 export interface RequestRevisionModalProps {
     visible: boolean;
     onClose: () => void;
-    onSend: (revisionNotes: string) => void;
+    onSend: (revisionNotes: string) => Promise<void> | void;
 }
 
 const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
@@ -36,15 +36,21 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
     const [notes, setNotes] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!notes.trim()) {
             Toaster.error("Please enter revision notes");
             return;
         }
-        onSend(notes.trim());
-        setNotes("");
-        onClose();
+        setSubmitting(true);
+        try {
+            await onSend(notes.trim());
+            setNotes("");
+            onClose();
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleClose = () => {
@@ -86,7 +92,12 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
                         <Button mode="outlined" style={styles.button} onPress={handleClose}>
                             Cancel
                         </Button>
-                        <Button mode="contained" style={styles.button} onPress={handleSend}>
+                        <Button
+                            mode="contained"
+                            style={styles.button}
+                            onPress={handleSend}
+                            disabled={submitting}
+                        >
                             Send Request
                         </Button>
                     </View>

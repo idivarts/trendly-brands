@@ -16,7 +16,7 @@ const maxReleaseDate = () => {
 export interface ChangeReleaseDateSheetProps {
     initialDate?: number;
     onClose: () => void;
-    onConfirm: (scheduledReleaseAt: number) => void;
+    onConfirm: (scheduledReleaseAt: number) => Promise<void> | void;
 }
 
 const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
@@ -36,11 +36,17 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
         })()
     );
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
         const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
-        onConfirm(ts);
-        onClose();
+        setSubmitting(true);
+        try {
+            await onConfirm(ts);
+            onClose();
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -75,7 +81,12 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
                 <Button mode="outlined" style={styles.button} onPress={onClose}>
                     Cancel
                 </Button>
-                <Button mode="contained" style={styles.button} onPress={handleConfirm}>
+                <Button
+                    mode="contained"
+                    style={styles.button}
+                    onPress={handleConfirm}
+                    disabled={submitting}
+                >
                     Update Date
                 </Button>
             </View>
