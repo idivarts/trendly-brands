@@ -29,7 +29,6 @@ import React, { FC, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ChangeReleaseDateSheet from "./ChangeReleaseDateSheet";
-import PlanReleaseBottomSheet from "./PlanReleaseBottomSheet";
 import ReleaseOptionsBottomSheet from "./ReleaseOptionsBottomSheet";
 import ApproveVideoReleaseBottomSheet from "./ApproveVideoReleaseBottomSheet";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
@@ -43,7 +42,6 @@ import { markShipmentShipped } from "./api/State_3_api";
 import { markShipmentDelivered } from "./api/State_4_api";
 import { requestVideoRevision, approveVideoRelease } from "./api/State_6_api";
 import {
-    scheduleReleaseFromPlan,
     changeReleaseDate as changeReleaseDateState7,
 } from "./api/State_7_api";
 import {
@@ -94,7 +92,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showViewAddressModal, setShowViewAddressModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showReleaseSheet, setShowReleaseSheet] = useState(false);
-    const [showPlanReleaseSheet, setShowPlanReleaseSheet] = useState(false);
     const [showChangeDateSheet, setShowChangeDateSheet] = useState(false);
     const [showViewAddressSheet, setShowViewAddressSheet] = useState(false);
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
@@ -215,8 +212,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
             await markShipmentDelivered({
                 contractId: contract.streamChannelId,
-                proofOfDeliveryUrl: data.proofOfDeliveryUrl,
-                receivedNotes: data.receivedNotes?.trim() || undefined,
+                screenshotUrl: data.proofOfDeliveryUrl,
+                notes: data.receivedNotes?.trim() || undefined,
             });
 
             refreshData();
@@ -237,7 +234,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         try {
             await requestVideoRevision({
                 contractId: contract.streamChannelId,
-                revisionNotes,
+                notes: revisionNotes,
             });
             await sendMessageToChannel(
                 contract.streamChannelId,
@@ -248,30 +245,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         } catch (e) {
             const message = e instanceof Error ? e.message : undefined;
             Toaster.error(message ? `Failed to send revision request: ${message}` : "Failed to send revision request");
-            throw e;
-        }
-    };
-
-    const handlePlanReleaseConfirm = async (
-        option: ReleasePlanOption,
-        trendlyBoost: boolean
-    ) => {
-        try {
-            const defaultDate = new Date();
-            defaultDate.setDate(defaultDate.getDate() + 7);
-
-            await scheduleReleaseFromPlan({
-                contractId: contract.streamChannelId,
-                option,
-                trendlyBoost,
-                scheduledReleaseAt: defaultDate.getTime(),
-            });
-
-            Toaster.success("Release planned");
-            refreshData();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(message ? `Failed to plan release: ${message}` : "Failed to plan release");
             throw e;
         }
     };
@@ -303,7 +276,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             if (status === ContractStatus.PlanRelease) {
                 await changeReleaseDateState7({
                     contractId: contract.streamChannelId,
-                    scheduledReleaseAt,
+                    newScheduledDate: scheduledReleaseAt,
                 });
             } else {
                 await changeReleaseDateState8({
@@ -330,7 +303,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 contractId: contract.streamChannelId,
                 option: data.option,
                 scheduledReleaseAt: data.scheduledReleaseAt,
-                trendlyBoost: data.trendlyBoost,
             });
 
             Toaster.success("Video approved");
@@ -671,7 +643,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         goToMessages,
         handleMarkAsDeliveredSubmit,
         handleRevisionSend,
-        handlePlanReleaseConfirm,
         contract.shipment,
         contract.deliverable,
         devOverrideStatus,
@@ -789,16 +760,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 onClose={() => setShowRevisionModal(false)}
                 onSend={handleRevisionSend}
             />
-            <BottomSheetScrollContainer
-                isVisible={showPlanReleaseSheet}
-                snapPointsRange={["55%", "90%"]}
-                onClose={() => setShowPlanReleaseSheet(false)}
-            >
-                <PlanReleaseBottomSheet
-                    onClose={() => setShowPlanReleaseSheet(false)}
-                    onConfirm={handlePlanReleaseConfirm}
-                />
-            </BottomSheetScrollContainer>
             <BottomSheetScrollContainer
                 isVisible={showApproveVideoSheet}
                 snapPointsRange={["65%", "95%"]}

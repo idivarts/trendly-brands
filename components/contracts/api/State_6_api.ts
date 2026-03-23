@@ -3,22 +3,20 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 
 export type RequestVideoRevisionPayload = {
     contractId: string;
-    revisionNotes: string;
+    notes: string;
 };
 
 export type ApproveVideoReleasePayload = {
     contractId: string;
     option: ReleasePlanOption;
     scheduledReleaseAt?: number;
-    trendlyBoost: boolean;
 };
 
 export async function requestVideoRevision(
     payload: RequestVideoRevisionPayload
 ): Promise<void> {
-    // TODO: replace URL path with the backend endpoint for "request revision".
-    const urlPath = `/api/collabs/contracts/${payload.contractId}/state-6/request-revision`;
-    const body = { revisionNotes: payload.revisionNotes };
+    const urlPath = `/monetize/brands/contracts/${payload.contractId}/deliverable/revision`;
+    const body = { notes: payload.notes };
 
     try {
         await HttpWrapper.fetch(urlPath, {
@@ -35,13 +33,20 @@ export async function requestVideoRevision(
 export async function approveVideoRelease(
     payload: ApproveVideoReleasePayload
 ): Promise<void> {
-    // TODO: replace URL path with the backend endpoint for "approve video + release scheduling".
-    const urlPath = `/api/collabs/contracts/${payload.contractId}/state-6/approve-video-release`;
-    const body = {
-        option: payload.option,
-        scheduledReleaseAt: payload.scheduledReleaseAt,
-        trendlyBoost: payload.trendlyBoost,
+    const urlPath = `/monetize/brands/contracts/${payload.contractId}/deliverable/approve`;
+    const postingScenario =
+        payload.option === "influencer_posts_alone"
+            ? 1
+            : payload.option === "brand_and_influencer_post"
+              ? 2
+              : 3;
+    const body: { postingScenario: 1 | 2 | 3; scheduledDate?: number } = {
+        postingScenario,
     };
+
+    if (postingScenario !== 3 && payload.scheduledReleaseAt != null) {
+        body.scheduledDate = payload.scheduledReleaseAt;
+    }
 
     try {
         await HttpWrapper.fetch(urlPath, {
@@ -51,7 +56,7 @@ export async function approveVideoRelease(
         });
     } catch (err) {
         const message = await HttpWrapper.extractErrorMessage(err);
-        throw new Error(message ?? "Failed to approve video release");
+        throw new Error(message ?? "Failed to approve deliverable");
     }
 }
 

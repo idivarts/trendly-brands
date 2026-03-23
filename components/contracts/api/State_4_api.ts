@@ -2,18 +2,17 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 
 export type MarkShipmentDeliveredPayload = {
     contractId: string;
-    proofOfDeliveryUrl: string;
-    receivedNotes?: string;
+    screenshotUrl: string;
+    notes?: string;
 };
 
 export async function markShipmentDelivered(
     payload: MarkShipmentDeliveredPayload
 ): Promise<void> {
-    // TODO: replace URL path with the backend endpoint for "mark shipment as delivered".
-    const urlPath = `/api/collabs/contracts/${payload.contractId}/state-4/mark-delivered`;
+    const urlPath = `/monetize/brands/contracts/${payload.contractId}/shipment/delivered`;
     const body = {
-        proofOfDeliveryUrl: payload.proofOfDeliveryUrl,
-        receivedNotes: payload.receivedNotes,
+        screenshotUrl: payload.screenshotUrl,
+        notes: payload.notes,
     };
 
     try {
