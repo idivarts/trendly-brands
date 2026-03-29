@@ -2,7 +2,7 @@ import { Channel as ChannelType } from "stream-chat";
 import { ChannelList } from "stream-chat-expo";
 
 import { View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useChatContext } from "@/contexts";
 import { Console } from "@/shared-libs/utils/console";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";

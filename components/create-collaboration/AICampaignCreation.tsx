@@ -1,16 +1,19 @@
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import stylesFn from "@/styles/create-collaboration/AICampaignCreation.styles";
+import { resetAndNavigate } from "@/utils/router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { AIGeneratedCampaignData } from "./types";
 import {
     ActivityIndicator,
+    Modal,
     Pressable,
     ScrollView,
     Text,
@@ -21,17 +24,43 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 interface AICampaignCreationProps {
     onSkip: () => void;
-    onGenerated?: (aiData: any) => void;
+    onGenerated?: (aiData: AIGeneratedCampaignData) => void;
 }
 
 export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCreationProps) {
-    const router = useRouter();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = stylesFn(colors);
-    const { lg } = useBreakpoints();
+    const styles = stylesFn(colors) as ReturnType<typeof stylesFn> & {
+        loadingModalOverlay: any;
+        loadingModalCard: any;
+        loadingModalTitle: any;
+        loadingModalMessage: any;
+    };
+    const { lg, xl } = useBreakpoints();
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
+    const [loaderMessageIndex, setLoaderMessageIndex] = useState(0);
+    const { selectedBrand } = useBrandContext();
+    const generatingMessages = [
+        "Understanding your campaign brief...",
+        "Drafting a campaign strategy...",
+        "Matching goals with ideal creators...",
+        "Refining deliverables and budget...",
+        "Finalizing your campaign draft...",
+    ];
+
+    useEffect(() => {
+        if (!isGenerating) {
+            setLoaderMessageIndex(0);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setLoaderMessageIndex((prev) => (prev + 1) % generatingMessages.length);
+        }, 2500);
+
+        return () => clearInterval(interval);
+    }, [isGenerating, generatingMessages.length]);
 
     const quickActions = [
         {
@@ -61,6 +90,10 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
         // handleGenerate(actionPrompt);
     };
 
+    const handleBack = () => {
+        resetAndNavigate("/discover");
+    };
+
     const handleGenerate = async (text?: string) => {
         const promptText = text || prompt;
         if (!promptText.trim()) return;
@@ -77,6 +110,7 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                 },
                 body: JSON.stringify({
                     prompt: promptText,
+                    brandId: selectedBrand?.id,
                 }),
             });
 
@@ -85,7 +119,7 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
             }
 
 
-            const aiData = await response.json();
+            const aiData = await response.json() as AIGeneratedCampaignData;
             Console.log("AI Generated Data:", aiData);
 
             // Navigate to create collaboration with AI-generated data
@@ -127,17 +161,32 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                 ]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Skip Button */}
-                <Pressable
-                    onPress={onSkip}
-                    style={({ pressed }) => [
-                        styles.skipButton,
-                        pressed && styles.skipButtonPressed,
-                    ]}
-                >
-                    <Text style={styles.skipButtonText}>Skip</Text>
-                    <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} />
-                </Pressable>
+                {/* Top Row: Back (mobile only) + Skip */}
+                <View style={styles.topRow}>
+                    {!xl ? (
+                        <Pressable
+                            onPress={handleBack}
+                            style={({ pressed }) => [
+                                styles.backButton,
+                                pressed && styles.backButtonPressed,
+                            ]}
+                        >
+                            <Ionicons name="arrow-back" size={24} color={colors.text} />
+                        </Pressable>
+                    ) : (
+                        <View style={styles.topRowSpacer} />
+                    )}
+                    <Pressable
+                        onPress={onSkip}
+                        style={({ pressed }) => [
+                            styles.skipButton,
+                            pressed && styles.skipButtonPressed,
+                        ]}
+                    >
+                        <Text style={styles.skipButtonText}>Skip</Text>
+                        <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} />
+                    </Pressable>
+                </View>
 
                 {/* Header */}
                 <View style={styles.header}>
@@ -230,6 +279,22 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                     </View>
                 </View>
             </ScrollView>
+            <Modal
+                visible={isGenerating}
+                transparent
+                animationType="fade"
+                onRequestClose={() => { }}
+            >
+                <View style={styles.loadingModalOverlay}>
+                    <View style={styles.loadingModalCard}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={styles.loadingModalTitle}>Generating campaign</Text>
+                        <Text style={styles.loadingModalMessage}>
+                            {generatingMessages[loaderMessageIndex]}
+                        </Text>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }

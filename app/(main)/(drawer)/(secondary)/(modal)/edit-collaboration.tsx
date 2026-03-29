@@ -4,7 +4,7 @@ import React from "react";
 
 const EditCollaborationScreen = () => {
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
             <CreateCollaboration />
         </AppLayout>
     );

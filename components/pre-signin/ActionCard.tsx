@@ -3,7 +3,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import gsap from "gsap";
 import React, { useRef } from "react";
 import { Animated, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useTheme } from "@react-navigation/native";
 import { Text } from "react-native-paper";
+import Colors from "@/shared-uis/constants/Colors";
 
 interface ActionCardProps {
     title: string;
@@ -14,6 +16,8 @@ interface ActionCardProps {
 }
 
 const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation }: ActionCardProps) => {
+    const theme = useTheme();
+    const themeColors = Colors(theme);
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const cardRef = useRef<View>(null);
 
@@ -99,6 +103,53 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
         }
     };
 
+    const styles = React.useMemo(
+        () =>
+            StyleSheet.create({
+                pressable: {
+                    width: '100%',
+                    marginVertical: 10,
+                    // @ts-ignore
+                    perspective: '1000px',
+                },
+                container: {
+                    width: '100%',
+                    borderRadius: 24,
+                    shadowColor: themeColors.black,
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 20,
+                    elevation: 8,
+                },
+                gradient: {
+                    padding: 32,
+                    borderRadius: 24,
+                    minHeight: 180,
+                    justifyContent: 'center',
+                },
+                content: {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                },
+                textContainer: { flex: 1, paddingRight: 20 },
+                title: {
+                    fontSize: 32,
+                    fontWeight: '800',
+                    color: themeColors.white,
+                    marginBottom: 8,
+                    lineHeight: 38,
+                },
+                description: {
+                    fontSize: 16,
+                    color: themeColors.cardTextOnGradient,
+                    lineHeight: 24,
+                },
+                icon: { opacity: 0.9 },
+            }),
+        [themeColors]
+    );
+
     return (
         <TouchableOpacity
             onPressIn={handlePressIn}
@@ -124,7 +175,7 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
                                 <Text style={styles.description}>{description}</Text>
                             </View>
                             <View>
-                                <MaterialCommunityIcons name="arrow-right" size={40} color="white" style={styles.icon} />
+                                <MaterialCommunityIcons name="arrow-right" size={40} color={themeColors.white} style={styles.icon} />
                             </View>
                         </View>
                     </LinearGradient>
@@ -133,53 +184,5 @@ const ActionCard = ({ title, description, colors, onPress, onPressWithAnimation 
         </TouchableOpacity>
     );
 };
-
-const styles = StyleSheet.create({
-    pressable: {
-        width: '100%',
-        marginVertical: 10,
-        // @ts-ignore
-        perspective: '1000px', // Important for 3D effect
-    },
-    container: {
-        width: '100%',
-        borderRadius: 24,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 8,
-    },
-    gradient: {
-        padding: 32,
-        borderRadius: 24,
-        minHeight: 180,
-        justifyContent: 'center',
-    },
-    content: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    textContainer: {
-        flex: 1,
-        paddingRight: 20,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: 'white',
-        marginBottom: 8,
-        lineHeight: 38,
-    },
-    description: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
-        lineHeight: 24,
-    },
-    icon: {
-        opacity: 0.9,
-    }
-});
 
 export default ActionCard;

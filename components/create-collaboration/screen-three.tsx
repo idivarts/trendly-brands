@@ -1,18 +1,19 @@
 import {
-    faCircle,
-    faClose,
     faLink,
+    faPen,
     faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useState } from "react";
-import { Keyboard, Pressable, ScrollView } from "react-native";
-import { HelperText, Modal, ProgressBar } from "react-native-paper";
+import React, { useMemo, useState } from "react";
+import { Pressable } from "react-native";
+import { HelperText, Modal, Portal, ProgressBar } from "react-native-paper";
 
-import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { isValidHttpUrl, normalizeHttpUrl } from "@/shared-libs/utils/http-url";
 import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
@@ -51,40 +52,61 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     type,
 }) => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const { xl, width } = useBreakpoints();
+    const styles = useMemo(
+        () => stylesFn(theme, { xl, width }),
+        [theme, xl, width],
+    );
     const [isExternalLinkModalVisible, setIsExternalLinkModalVisible] =
         useState(false);
-    const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
+    const [isQuestionModalVisible, setIsQuestionModalVisible] = useState(false);
+    const [questionDraft, setQuestionDraft] = useState("");
+    const [questionEditIndex, setQuestionEditIndex] = useState<number | null>(
+        null,
+    );
     const [externalLink, setExternalLink] = useState({
         name: "",
         link: "",
     });
-    const newQuestions = collaboration.questionsToInfluencers || [""];
-    const [questions, setQuestions] = useState(
-        newQuestions.length === 0 ? [""] : newQuestions
-    );
+    const [externalLinkUrlError, setExternalLinkUrlError] = useState("");
+    const questionsList = collaboration.questionsToInfluencers ?? [];
+
+    const closeExternalLinkModal = () => {
+        setIsExternalLinkModalVisible(false);
+        setExternalLink({
+            name: "",
+            link: "",
+        });
+        setExternalLinkUrlError("");
+    };
 
     const handleAddExternalLink = () => {
-        if (!externalLink.name || !externalLink.link) {
+        if (!externalLink.name?.trim() || !externalLink.link?.trim()) {
             Toaster.error("Please fill all fields");
             return;
         }
+
+        if (!isValidHttpUrl(externalLink.link)) {
+            setExternalLinkUrlError(
+                "Enter a valid URL using http or https (e.g. https://example.com).",
+            );
+            return;
+        }
+
+        setExternalLinkUrlError("");
+        const linkToStore = normalizeHttpUrl(externalLink.link);
 
         setCollaboration({
             ...collaboration,
             externalLinks: [
                 ...(collaboration.externalLinks || []),
                 {
-                    name: externalLink.name,
-                    link: externalLink.link,
+                    name: externalLink.name.trim(),
+                    link: linkToStore,
                 },
             ],
         });
-        setIsExternalLinkModalVisible(false);
-        setExternalLink({
-            name: "",
-            link: "",
-        });
+        closeExternalLinkModal();
     };
 
     const handleRemoveExternalLink = (index: number) => {
@@ -96,28 +118,58 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         });
     };
 
-    const handleAddQuestions = () => {
-        setQuestions([...questions, ""]);
+    const closeQuestionModal = () => {
+        setIsQuestionModalVisible(false);
+        setQuestionDraft("");
+        setQuestionEditIndex(null);
     };
 
-    const handleRemoveQuestion = (index: number) => {
-        setQuestions(questions.filter((question, i) => i !== index));
+    const openAddQuestionModal = () => {
+        setQuestionEditIndex(null);
+        setQuestionDraft("");
+        setIsQuestionModalVisible(true);
     };
 
-    const submitNewQuestions = () => {
-        const newQuestions = questions.filter((question) => question !== "");
+    const openEditQuestionModal = (index: number) => {
+        const q = questionsList[index];
+        if (q === undefined) {
+            return;
+        }
+        setQuestionEditIndex(index);
+        setQuestionDraft(q);
+        setIsQuestionModalVisible(true);
+    };
+
+    const saveQuestion = () => {
+        const trimmed = questionDraft.trim();
+        if (!trimmed) {
+            Toaster.error("Please enter a question");
+            return;
+        }
+
+        const current = collaboration.questionsToInfluencers ?? [];
+        if (questionEditIndex === null) {
+            setCollaboration({
+                ...collaboration,
+                questionsToInfluencers: [...current, trimmed],
+            });
+        } else {
+            const next = [...current];
+            next[questionEditIndex] = trimmed;
+            setCollaboration({
+                ...collaboration,
+                questionsToInfluencers: next,
+            });
+        }
+        closeQuestionModal();
+    };
+
+    const deleteQuestion = (index: number) => {
+        const current = collaboration.questionsToInfluencers ?? [];
         setCollaboration({
             ...collaboration,
-            questionsToInfluencers: newQuestions,
+            questionsToInfluencers: current.filter((_, i) => i !== index),
         });
-
-        setIsQuestionsModalVisible(false);
-
-        if (newQuestions.length === 0) {
-            setQuestions([...newQuestions, ""]);
-        } else {
-            setQuestions(newQuestions);
-        }
     };
 
     return (
@@ -131,74 +183,46 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 setScreen={setScreen}
                 type={type}
             >
-                <View
-                    style={{
-                        flexGrow: 1,
-                        gap: 16,
-                    }}
-                >
-                    <View
-                        style={{
-                            gap: 16,
-                        }}
-                    >
+                <View style={styles.mainSection}>
+                    <View style={styles.section}>
                         <ContentWrapper
                             description="You can use this to add links like your website of any product link or any document links."
                             rightAction={
                                 <Button
                                     mode="outlined"
-                                    onPress={() => setIsExternalLinkModalVisible(true)}
+                                    onPress={() => {
+                                        setExternalLinkUrlError("");
+                                        setIsExternalLinkModalVisible(true);
+                                    }}
                                     size="small"
                                 >
                                     <FontAwesomeIcon
                                         icon={faPlus}
                                         size={12}
                                         color={Colors(theme).primary}
-                                        style={{
-                                            marginTop: -2,
-                                            marginRight: 8,
-                                        }}
+                                        style={styles.addLinkIcon}
                                     />
                                     Add Link
                                 </Button>
                             }
                             theme={theme}
                             title="External Links"
-                            titleStyle={{
-                                fontSize: 16,
-                            }}
+                            titleStyle={styles.sectionTitle}
                         >
                             <></>
                         </ContentWrapper>
-                        <View
-                            style={{
-                                gap: 8,
-                            }}
-                        >
+                        <View style={styles.sectionGap8}>
                             {collaboration.externalLinks?.map((link, index) => (
                                 <View
                                     key={link.link}
-                                    style={{
-                                        alignItems: "center",
-                                        flexDirection: "row",
-                                        gap: 12,
-                                        padding: 8,
-                                        borderColor: Colors(theme).text,
-                                        borderWidth: 1,
-                                        borderRadius: 10,
-                                    }}
+                                    style={styles.linkItem}
                                 >
                                     <FontAwesomeIcon
                                         color={Colors(theme).text}
                                         icon={faLink}
                                         size={16}
                                     />
-                                    <Text
-                                        style={{
-                                            textDecorationLine: "underline",
-                                            flex: 1,
-                                        }}
-                                    >
+                                    <Text style={styles.linkText}>
                                         {link.name}
                                     </Text>
                                     <Pressable onPress={() => handleRemoveExternalLink(index)}>
@@ -222,49 +246,57 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                             rightAction={
                                 <Button
                                     mode="outlined"
-                                    onPress={() => setIsQuestionsModalVisible(true)}
+                                    onPress={openAddQuestionModal}
                                     size="small"
                                 >
                                     <FontAwesomeIcon
                                         icon={faPlus}
                                         size={12}
                                         color={Colors(theme).primary}
-                                        style={{
-                                            marginTop: -2,
-                                            marginRight: 8,
-                                        }}
+                                        style={styles.addLinkIcon}
                                     />
-                                    Edit Questions
+                                    Add Question
                                 </Button>
                             }
                             theme={theme}
                             title="Questions to Influencers"
-                            titleStyle={{
-                                fontSize: 16,
-                            }}
+                            titleStyle={styles.sectionTitle}
                         >
                             <></>
                         </ContentWrapper>
-                        <View
-                            style={{
-                                gap: 8,
-                            }}
-                        >
-                            {collaboration.questionsToInfluencers?.map((question) => (
+                        <View style={styles.sectionGap8}>
+                            {questionsList.map((question, index) => (
                                 <View
-                                    key={question}
-                                    style={{
-                                        alignItems: "center",
-                                        flexDirection: "row",
-                                        gap: 8,
-                                    }}
+                                    key={`q-${index}`}
+                                    style={styles.questionListItem}
                                 >
-                                    <FontAwesomeIcon
-                                        color={Colors(theme).text}
-                                        icon={faCircle}
-                                        size={6}
-                                    />
-                                    <Text>{question}</Text>
+                                    <Text style={styles.questionListText}>
+                                        {question}
+                                    </Text>
+                                    <View style={styles.questionListActions}>
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Edit question"
+                                            onPress={() => openEditQuestionModal(index)}
+                                        >
+                                            <FontAwesomeIcon
+                                                color={Colors(theme).primary}
+                                                icon={faPen}
+                                                size={16}
+                                            />
+                                        </Pressable>
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Delete question"
+                                            onPress={() => deleteQuestion(index)}
+                                        >
+                                            <FontAwesomeIcon
+                                                color={Colors(theme).text}
+                                                icon={faTrashCan}
+                                                size={16}
+                                            />
+                                        </Pressable>
+                                    </View>
                                 </View>
                             ))}
                         </View>
@@ -278,10 +310,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                     {processMessage && (
                         <HelperText
                             type="info"
-                            style={{
-                                color: Colors(theme).primary,
-                                textAlign: "center",
-                            }}
+                            style={styles.helperText}
                         >
                             {processMessage} - {processPercentage}% done
                         </HelperText>
@@ -290,9 +319,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                     <ProgressBar
                         progress={processPercentage / 100}
                         color={Colors(theme).primary}
-                        style={{
-                            backgroundColor: Colors(theme).transparent,
-                        }}
+                        style={styles.progressBar}
                     />
                 </View>
 
@@ -305,187 +332,105 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 </Button>
             </ScreenLayout>
 
-            <Modal
-                contentContainerStyle={styles.modalContainer}
-                onDismiss={() => {
-                    setIsExternalLinkModalVisible(false);
-                    setExternalLink({
-                        name: "",
-                        link: "",
-                    });
-                }}
-                visible={isExternalLinkModalVisible}
-            >
-                <TextInput
-                    label="Link Name"
-                    mode="outlined"
-                    onChangeText={(text) => {
-                        setExternalLink({
-                            ...externalLink,
-                            name: text,
-                        });
-                    }}
-                    value={externalLink.name}
-                />
-                <TextInput
-                    label="Link URL"
-                    keyboardType="url"
-                    textContentType="URL"
-                    autoCapitalize="none"
-                    mode="outlined"
-                    onChangeText={(text) => {
-                        setExternalLink({
-                            ...externalLink,
-                            link: text,
-                        });
-                    }}
-                    value={externalLink.link}
-                />
-                <View
-                    style={{
-                        flexDirection: "row",
-                        gap: 8,
-                    }}
+            <Portal>
+                <Modal
+                    contentContainerStyle={styles.modalContainer}
+                    onDismiss={closeExternalLinkModal}
+                    style={styles.modalRoot}
+                    visible={isExternalLinkModalVisible}
                 >
-                    <Button
+                    <TextInput
+                        label="Link Name"
                         mode="outlined"
-                        onPress={() => setIsExternalLinkModalVisible(false)}
-                        style={{
-                            flex: 1,
+                        onChangeText={(text) => {
+                            setExternalLink({
+                                ...externalLink,
+                                name: text,
+                            });
                         }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        mode="contained"
-                        onPress={handleAddExternalLink}
-                        style={{
-                            flex: 1,
-                        }}
-                    >
-                        Add Link
-                    </Button>
-                </View>
-            </Modal>
-
-            <Modal
-                contentContainerStyle={styles.modalContainer}
-                dismissable={false}
-                onDismiss={() => {
-                    setIsQuestionsModalVisible(false);
-                    setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
-                }}
-                visible={isQuestionsModalVisible}
-            >
-                <Pressable
-                    style={{
-                        position: "absolute",
-                        top: 0,
-                        right: 0,
-                        left: 0,
-                        bottom: 0,
-                    }}
-                    onPress={() => {
-                        Keyboard.dismiss();
-                    }}
-                />
-                <View
-                    style={{
-                        gap: 8,
-                    }}
-                >
-                    <Pressable
-                        style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 16,
-                        }}
-                        onPress={() => {
-                            Keyboard.dismiss();
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                fontWeight: "bold",
-                            }}
-                        >
-                            Questions
-                        </Text>
-                        <Pressable
-                            onPress={() => {
-                                setIsQuestionsModalVisible(false);
-                                setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
-                            }}
-                        >
-                            <FontAwesomeIcon
-                                icon={faClose}
-                                size={18}
-                                color={Colors(theme).primary}
-                            />
-                        </Pressable>
-                    </Pressable>
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        style={{
-                            maxHeight: 180,
-                        }}
-                        contentContainerStyle={{
-                            gap: 8,
-                        }}
-                    >
-                        {questions.map((question, index) => (
-                            <View
-                                key={index}
-                                style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 16,
-                                }}
-                            >
-                                <TextInput
-                                    label="Question"
-                                    mode="outlined"
-                                    style={{
-                                        flex: 1,
-                                    }}
-                                    value={questions[index]}
-                                    onChangeText={(text) => {
-                                        const newQuestions = [...questions];
-                                        newQuestions[index] = text;
-
-                                        setQuestions(newQuestions);
-                                    }}
-                                />
-                                <Pressable onPress={() => handleRemoveQuestion(index)}>
-                                    <FontAwesomeIcon
-                                        icon={faTrashCan}
-                                        size={20}
-                                        color={Colors(theme).primary}
-                                        style={{
-                                            marginTop: 4,
-                                        }}
-                                    />
-                                </Pressable>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
-                <Button mode="outlined" onPress={handleAddQuestions}>
-                    <FontAwesomeIcon
-                        icon={faPlus}
-                        size={12}
-                        color={Colors(theme).primary}
-                        style={{
-                            marginTop: -2,
-                            marginRight: 8,
-                        }}
+                        value={externalLink.name}
                     />
-                    Add Question
-                </Button>
-                <Button onPress={submitNewQuestions}>Done</Button>
-            </Modal>
+                    <View style={styles.linkUrlFieldGroup}>
+                        <TextInput
+                            error={Boolean(externalLinkUrlError)}
+                            label="Link URL"
+                            keyboardType="url"
+                            textContentType="URL"
+                            autoCapitalize="none"
+                            mode="outlined"
+                            onChangeText={(text) => {
+                                setExternalLinkUrlError("");
+                                setExternalLink({
+                                    ...externalLink,
+                                    link: text,
+                                });
+                            }}
+                            value={externalLink.link}
+                        />
+                        <HelperText
+                            padding="none"
+                            type="error"
+                            visible={Boolean(externalLinkUrlError)}
+                            style={styles.linkUrlErrorHelper}
+                        >
+                            {externalLinkUrlError}
+                        </HelperText>
+                    </View>
+                    <View style={styles.modalButtonsRow}>
+                        <Button
+                            mode="outlined"
+                            onPress={closeExternalLinkModal}
+                            style={styles.modalButtonFlex}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={handleAddExternalLink}
+                            style={styles.modalButtonFlex}
+                        >
+                            Add Link
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
+
+            <Portal>
+                <Modal
+                    contentContainerStyle={styles.modalContainer}
+                    onDismiss={closeQuestionModal}
+                    style={styles.modalRoot}
+                    visible={isQuestionModalVisible}
+                >
+                    <Text style={styles.questionModalTitle}>
+                        {questionEditIndex === null ? "Add question" : "Edit question"}
+                    </Text>
+                    <TextInput
+                        label="Question"
+                        mode="outlined"
+                        multiline
+                        numberOfLines={3}
+                        onChangeText={setQuestionDraft}
+                        value={questionDraft}
+                    />
+                    <View style={styles.modalButtonsRow}>
+                        <Button
+                            mode="outlined"
+                            onPress={closeQuestionModal}
+                            style={styles.modalButtonFlex}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={saveQuestion}
+                            style={styles.modalButtonFlex}
+                        >
+                            {questionEditIndex === null ? "Add" : "Save"}
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
         </>
     );
 };

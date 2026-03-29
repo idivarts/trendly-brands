@@ -1,5 +1,5 @@
 import { Text, View } from '@/components/theme/Themed';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { convertToKUnits } from '@/utils/conversion';
 import { faChartLine, faFaceSmile, faPeopleRoof } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';

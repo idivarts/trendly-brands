@@ -3,7 +3,7 @@ import { Animated, Easing, LayoutRectangle, Pressable, StyleSheet } from 'react-
 
 import { useChannelContext, useMessageInputContext, useMessagesContext, useOwnCapabilitiesContext, useTheme } from 'stream-chat-expo';
 
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { faFolderOpen } from '@fortawesome/free-regular-svg-icons';
 import { faCameraRetro, faImages, faSquarePollVertical } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';

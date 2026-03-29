@@ -1,11 +1,10 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import stylesFn from "@/styles/searchbar/Searchbar.styles";
-import searchComponentStylesFn from "@/styles/searchbar/SearchComponent.styles";
 import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useState } from "react";
-import { View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { Searchbar } from "react-native-paper";
 
 interface SearchComponentProps {
@@ -19,8 +18,8 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
 }) => {
     const [localQuery, setLocalQuery] = useState("");
     const theme = useTheme();
-    const styles = stylesFn(theme);
-    const searchComponentStyles = searchComponentStylesFn(theme);
+    const styles = useMemo(() => stylesFn(theme), [theme]);
+    const searchComponentStyles = useMemo(() => useSearchComponentStyles(), []);
 
     const handleChangeText = (query: string) => {
         setLocalQuery(query);
@@ -64,5 +63,16 @@ const SearchComponent: React.FC<SearchComponentProps> = ({
         </View>
     );
 };
+
+function useSearchComponentStyles() {
+    return StyleSheet.create({
+        searchContainer: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 16,
+            width: "100%",
+        },
+    });
+}
 
 export default SearchComponent;

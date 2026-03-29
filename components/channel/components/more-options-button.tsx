@@ -1,4 +1,4 @@
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { faChevronCircleRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { useTheme as useAppTheme } from '@react-navigation/native';

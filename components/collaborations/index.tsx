@@ -1,8 +1,13 @@
 import CollaborationList from "@/components/collaborations/Collaborations";
 import { View } from "@/components/theme/Themed";
+import { CollapseProvider } from "@/contexts/CollapseContext";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import React, { useMemo } from "react";
+import { StyleSheet } from "react-native";
 import { Href } from "expo-router";
+import PageHeader from "../ui/page-header";
 import TopTabNavigation from "../ui/top-tab-navigation";
 
 const tabs = (xl: boolean) => [
@@ -31,20 +36,29 @@ const tabs = (xl: boolean) => [
 ];
 
 const Collaborations = () => {
-    const { xl } = useBreakpoints()
+    const { xl } = useBreakpoints();
+    const { selectedBrand } = useBrandContext();
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            paddingVertical: 16,
+        },
+    }), []);
     return (
         <AppLayout safeAreaEdges={["left", "right"]}>
-            <View
-                style={{
-                    flex: 1,
-                    paddingVertical: 16,
-                }}
-            >
-                <TopTabNavigation
-                    tabs={tabs(xl)}
-                    splitTwoColumns={true}
-                    defaultSelection={xl ? 2 : 0}
-                />
+            <PageHeader
+                title="Campaigns"
+                subtitle={selectedBrand?.name}
+                showBackButton={false}
+            />
+            <View style={styles.container}>
+                <CollapseProvider>
+                    <TopTabNavigation
+                        tabs={tabs(xl)}
+                        splitTwoColumns={true}
+                        defaultSelection={xl ? 2 : 0}
+                    />
+                </CollapseProvider>
             </View>
         </AppLayout>
     );

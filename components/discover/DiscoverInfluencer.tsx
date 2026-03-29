@@ -2,6 +2,7 @@ import {
     DiscoverCommunication,
     useDiscovery,
 } from "@/components/discover/discovery-context";
+import { buildDiscoveryPayload } from "@/components/discover/utils/filter-utils";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -9,29 +10,30 @@ import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
-    Linking,
     ListRenderItemInfo,
     Platform,
+    View as RNView,
     StyleSheet,
-    Text
+    Text,
+    type ViewStyle
 } from "react-native";
 import {
-    Button,
     Chip,
     Divider,
     IconButton,
@@ -42,6 +44,7 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import type { InfluencerItem } from "./discover-types";
+import NoDiscoveryCreditModal from "./NoDiscoveryCreditModal";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
@@ -68,19 +71,12 @@ import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 // }
 // Types
 
-const sortOptions = [
-    { label: "Followers", value: "followers" },
-    { label: "Engagements", value: "engagement" },
-    { label: "ER %", value: "engagement_rate" },
-    { label: "Views", value: "views" },
-];
-
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         list: {
-            flexGrow: 1,
+            flex: 1,
             alignSelf: "center",
-            width: "100%", // optional, you can even remove it
+            width: "100%",
         },
         row: { flexDirection: "row", alignItems: "center" },
         avatarCol: {
@@ -151,6 +147,10 @@ interface DiscoverInfluencerProps {
     onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     initialInfluencerId?: string;
+    /** Called once when the first influencer card has laid out (for guided tour). */
+    onFirstInfluencerCardLayout?: () => void;
+    /** When true (e.g. embedded in Send Invitations tab), use smaller horizontal padding so cards spread more. */
+    reduceHorizontalPadding?: boolean;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -160,6 +160,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     onStatusChange,
     defaultAdvanceFilters,
     initialInfluencerId,
+    onFirstInfluencerCardLayout,
+    reduceHorizontalPadding = false,
 }) => {
     const {
         selectedDb,
@@ -167,7 +169,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         rightPanel,
         setSelectedDb,
         isCollapsed,
-        showTopPanel,
+        setTotalCount,
+        setCurrentSort,
+        currentSort,
+        pageSortCommunication,
+        showRightPanel,
     } = useDiscovery();
     const { manager } = useAuthContext();
     const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
@@ -176,6 +182,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
+    const [adminMenuVisible, setAdminMenuVisible] = useState(false);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
     const [isRescraping, setIsRescraping] = useState(false);
@@ -186,6 +193,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [shadowSocial, setShadowSocial] = useState<IShadowSocial | null>(null);
     const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
     const trendlyAnalyticsRef = React.useRef<any>(null);
+    const flatListRef = useRef<FlatList>(null);
+    const firstCardLayoutFiredRef = useRef(false);
 
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<InfluencerItem[]>([]);
@@ -194,25 +203,18 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         null
     );
     const { openModal } = useConfirmationModel();
+    const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
     const { xl } = useBreakpoints();
 
     // collaborations are fetched inside InviteToCampaignModal when it mounts
-    const openProfile = (data: InfluencerItem | null) => {
+    const openProfile = useCallback((data: InfluencerItem | null) => {
         if (
             (selectedBrand?.credits?.discovery || 0) <= 0 &&
             data &&
             !selectedBrand?.discoveredInfluencers?.includes(data.id)
         ) {
-            openModal({
-                title: "No Discovery Credit",
-                description:
-                    "You seem to have exhausted the discovery credit. Contact support for recharging the credits",
-                confirmText: "Contact Support",
-                confirmAction: () => {
-                    Linking.openURL("mailto:support@idiv.in");
-                },
-            });
+            setShowNoCreditModal(true);
             return;
         }
 
@@ -220,10 +222,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setTrendlySocial(null);
         setShadowUser(null);
         setShadowSocial(null);
-        setIsAnalyticsLoading(false);
+        // Start loader immediately to avoid transient error state/flicker.
+        setIsAnalyticsLoading(!!data);
         setSelectedInfluencer(data);
         setOpenProfileModal(!!data);
-    };
+    }, [selectedBrand?.credits?.discovery, selectedBrand?.discoveredInfluencers]);
 
     const closeProfileModal = () => {
         setOpenProfileModal(false);
@@ -249,45 +252,40 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         if (influencerMatch) {
             openProfile(influencerMatch);
             setAutoOpenedId(initialInfluencerId);
-        } else if (!loading && data.length > 0) {
+        } else if (!loading && data.length > 0 && selectedBrand?.id) {
             (async () => {
                 try {
-                    const docRef = doc(FirestoreDB, "scrapped-socials", initialInfluencerId);
-                    const docSnap = await getDoc(docRef);
+                    const res = await HttpWrapper.fetch(
+                        `/discovery/brands/${selectedBrand.id}/influencers/${initialInfluencerId}`,
+                        { method: "GET" }
+                    );
+                    const body = await res.json();
 
-                    if (docSnap.exists()) {
-                        const body = docSnap.data();
-
-                        if (body?.id) {
-                            const influencerItem: InfluencerItem = {
-                                id: body.id,
-                                name: body.name || "Unknown",
-                                username: body.username || "unknown",
-                                profile_pic: body.profile_pic || "",
-                                follower_count: body.follower_count || 0,
-                                engagement_count: body.engagement_count || 0,
-                                views_count: body.views_count || 0,
-                                engagement_rate: body.engagement_rate || 0,
-                            };
-                            openProfile(influencerItem);
-                            setAutoOpenedId(initialInfluencerId);
-                        }
+                    if (body?.id) {
+                        const influencerItem: InfluencerItem = {
+                            id: body.id,
+                            name: body.name || "Unknown",
+                            username: body.username || "unknown",
+                            profile_pic: body.profile_pic || "",
+                            follower_count: body.follower_count || 0,
+                            engagement_count: body.engagement_count || 0,
+                            views_count: body.views_count || 0,
+                            engagement_rate: body.engagement_rate || 0,
+                        };
+                        openProfile(influencerItem);
+                        setAutoOpenedId(initialInfluencerId);
                     }
                 } catch (error) {
                     console.error("[DiscoverInfluencer] Error fetching influencer:", error);
                 }
             })();
         }
-    }, [initialInfluencerId, data, loading, openProfile]);
+    }, [initialInfluencerId, data, loading, openProfile, selectedBrand?.id]);
 
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageCount, setPageCount] = useState<number>(20);
     const [totalResults, setTotalResults] = useState<number>(0);
 
-    const [sortMenuVisible, setSortMenuVisible] = useState(false);
-    const [currentSort, setCurrentSort] = useState<string>("followers");
-    const [statusMenuVisible, setStatusMenuVisible] = useState(false);
-    const [currentStatus, setCurrentStatus] = useState<string>("pending");
     const { discoverCommunication } = useDiscovery();
 
     const dedupeById = useCallback((items: InfluencerItem[]) => {
@@ -303,28 +301,29 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         return result;
     }, []);
 
-    const statusOptions = [
-        { label: "Pending", value: "pending" },
-        { label: "Accepted", value: "accepted" },
-        { label: "Denied", value: "denied" },
-    ];
-
     discoverCommunication.current = useCallback(
         ({ loading, data, page, sort }: DiscoverCommunication) => {
             setLoading(loading || false);
             const nextData = Array.isArray(data) ? data : [];
             setData(dedupeById(nextData));
+            setTotalCount(
+                nextData.length < 15 ? String(nextData.length) : "500+"
+            );
             if (!xl) {
                 setRightPanel(false);
             }
             if (page) setCurrentPage(page);
-            if (sort) setCurrentSort(sort);
+            if (sort) {
+                setCurrentSort(sort);
+            }
         },
-        [dedupeById, xl, setRightPanel]
+        [dedupeById, xl, setRightPanel, setTotalCount, setCurrentSort]
     );
 
     // Trigger first discover API call when we have a brand. Run when filters are set OR when
     // we're ready with no filters (defaultAdvanceFilters undefined) so the list still loads.
+    // When showRightPanel is false, the effect below performs the fetch; do not clear data here
+    // or we would overwrite the loaded list when this effect re-runs (e.g. new defaultAdvanceFilters ref).
     useEffect(() => {
         if (!selectedBrand?.id) return;
 
@@ -332,17 +331,107 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             setAppliedFilters(defaultAdvanceFilters);
         }
 
+        if (showRightPanel !== false) {
+            discoverCommunication.current?.({
+                loading: true,
+                data: [],
+                page: 1,
+                sort: currentSort,
+            });
+            pageSortCommunication.current?.({
+                page: 1,
+                sort: currentSort,
+            });
+        }
+    }, [defaultAdvanceFilters, selectedBrand?.id, showRightPanel, currentSort]);
+
+    // When right panel is hidden (e.g. Send Invitations tab), this component must perform the
+    // discovery API call with defaultAdvanceFilters so the list loads; TrendlyAdvancedFilter
+    // is not mounted in that case. Use a stable key for filters so we don't re-run and cancel
+    // the request on every parent re-render (defaultAdvanceFilters is often a new object ref).
+    const defaultAdvanceFiltersKey = useMemo(
+        () => JSON.stringify(defaultAdvanceFilters ?? {}),
+        [defaultAdvanceFilters]
+    );
+
+    useEffect(() => {
+        if (showRightPanel !== false || !selectedBrand?.id) return;
+
+        const filters = defaultAdvanceFilters ?? undefined;
+        const sort = (filters?.sort || currentSort || "engagement") as string;
+        const payload = buildDiscoveryPayload(filters, {
+            sort,
+            sort_direction: "desc",
+            offset: 0,
+            limit: 16,
+        });
+
+        let isActive = true;
         discoverCommunication.current?.({
             loading: true,
             data: [],
             page: 1,
-            sort: "followers",
+            sort,
         });
-        pageSortCommunication.current?.({
-            page: 1,
-            sort: "followers",
-        });
-    }, [defaultAdvanceFilters, selectedBrand?.id]);
+
+        HttpWrapper.fetch(
+            `/discovery/brands/${selectedBrand.id}/influencers`,
+            {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify(payload),
+            }
+        )
+            .then(async (res) => {
+                const rawText = await res.text();
+                const body = rawText ? JSON.parse(rawText) : {};
+                if (!isActive) return;
+                let list = (body?.data ?? body?.influencers ?? body?.results ?? (Array.isArray(body) ? body : [])) as InfluencerItem[];
+
+                if (list.length === 0) {
+                    Console.log(
+                        "[DiscoverInfluencer] No influencers matched – payload:",
+                        JSON.stringify(payload, null, 2)
+                    );
+                    Console.log(
+                        "[DiscoverInfluencer] Response: body.data =",
+                        Array.isArray(body?.data) ? `array(length=${body.data.length})` : body?.data,
+                        ", body.message =",
+                        body?.message
+                    );
+                } else {
+                    Console.log("[DiscoverInfluencer] Fetched list length (no-panel):", list.length);
+                }
+                discoverCommunication.current?.({
+                    loading: false,
+                    data: list,
+                    page: 1,
+                    sort,
+                });
+                setTotalCount(
+                    list.length < 15 ? String(list.length) : "500+"
+                );
+            })
+            .catch(async (err) => {
+                if (!isActive) return;
+                discoverCommunication.current?.({
+                    loading: false,
+                    data: [],
+                });
+                const message = await HttpWrapper.extractErrorMessage(err);
+                Toaster.error("Failed to load influencers", message ?? "Please try again.");
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [
+        showRightPanel,
+        selectedBrand?.id,
+        defaultAdvanceFiltersKey,
+        currentSort,
+        setTotalCount,
+    ]);
 
     useEffect(() => {
         if (
@@ -424,29 +513,51 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     };
 
     const renderItem = useCallback(
-        ({ item }: ListRenderItemInfo<InfluencerItem>) => {
+        ({ item, index }: ListRenderItemInfo<InfluencerItem>) => {
+            const cardStyle: ViewStyle = {
+                width: (columns === 2 ? "50%" : "100%") as ViewStyle["width"],
+                paddingHorizontal: isCollapsed ? 12 : 8,
+                paddingVertical: isCollapsed ? 12 : 8,
+            };
+            const card = (
+                <InfluencerCard
+                    item={item}
+                    isCollapsed={isCollapsed}
+                    onPress={() => openProfile(item)}
+                    openModal={openModal}
+                    isSelected={selectedIds.includes(item.id)}
+                    onToggleSelect={() => toggleSelect(item.id)}
+                    isStatusCard={isStatusCard}
+                />
+            );
+            if (index === 0) {
+                return (
+                    <RNView
+                        style={cardStyle}
+                        onLayout={() => {
+                            if (!firstCardLayoutFiredRef.current && onFirstInfluencerCardLayout) {
+                                firstCardLayoutFiredRef.current = true;
+                                onFirstInfluencerCardLayout();
+                            }
+                        }}
+                    >
+                        <CoachmarkAnchor
+                            id="guide-tour-influencer-card"
+                            shape="rect"
+                            scrollRef={flatListRef}
+                        >
+                            {card}
+                        </CoachmarkAnchor>
+                    </RNView>
+                );
+            }
             return (
-                <View
-                    style={{
-                        width: columns === 2 ? "50%" : "100%",
-                        paddingHorizontal: isCollapsed ? 12 : 8,
-                        paddingVertical: isCollapsed ? 12 : 8,
-
-                    }}
-                >
-                    <InfluencerCard
-                        item={item}
-                        isCollapsed={isCollapsed}
-                        onPress={() => openProfile(item)}
-                        openModal={openModal}
-                        isSelected={selectedIds.includes(item.id)}
-                        onToggleSelect={() => toggleSelect(item.id)}
-                        isStatusCard={isStatusCard}
-                    />
-                </View>
+                <RNView style={cardStyle}>
+                    {card}
+                </RNView>
             );
         },
-        [isCollapsed, openModal, openProfile, selectedIds]
+        [isCollapsed, openModal, openProfile, selectedIds, onFirstInfluencerCardLayout]
     );
 
     const keyExtractor = useCallback((i: InfluencerItem) => i.id, []);
@@ -478,7 +589,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         return pages;
     }, [currentPage, pageCount]);
 
-    const { pageSortCommunication } = useDiscovery();
     const onSelectPage = useCallback(
         (p: number) => {
             if (p < 1 || p > pageCount || p === currentPage) return;
@@ -495,29 +605,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         [currentPage, pageCount, xl, setRightPanel]
     );
 
-    const onSelectSort = useCallback((val: string) => {
-        setCurrentSort(val);
-        setSortMenuVisible(false);
-        // Close right panel on mobile when changing sort
-        if (!xl) {
-            setRightPanel(false);
-        }
-        pageSortCommunication.current?.({
-            page: currentPage,
-            sort: val,
-        });
-    }, [xl, setRightPanel, currentPage]);
-
-    const onSelectStatus = useCallback(
-        (val: string) => {
-            setCurrentStatus(val);
-            setStatusMenuVisible(false);
-            onStatusChange?.(val);
-        },
-        [onStatusChange]
-    );
-
-    if (loading && data.length === 0) {
+    if (!openProfileModal && loading && data.length === 0) {
         // Full screen loader when we're fetching the first page
         return (
             <View style={styles.fullScreenLoader}>
@@ -526,7 +614,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         );
     }
 
-    if (data.length == 0) {
+    if (!openProfileModal && data.length == 0) {
         return (
             <View
                 style={{
@@ -564,207 +652,25 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     return (
         <View
             style={[
-                { flex: 1, minWidth: 0, },
+                { flex: 1, minWidth: 0, minHeight: 0 },
                 !xl && rightPanel && { display: "none" },
             ]}
         >
-            {showTopPanel !== false && (
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderBottomEndRadius: 12,
-                        borderBottomStartRadius: 12,
-                        zIndex: 999,
-                        width: isCollapsed ? "90%" : undefined,
-                    }}
-                >
-                    {xl ? (
-                        <>
-                            <View style={{ width: 80 }} />
-                            {/* Centered Total on desktop */}
-                            <View
-                                style={{
-                                    position: "absolute",
-                                    left: 0,
-                                    right: 0,
-                                    alignItems: "center",
-                                }}
-                            >
-                                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                    <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
-                                        Total
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            opacity: 0.8,
-                                            color: Colors(theme).primary,
-                                            fontWeight: "500",
-                                            marginLeft: 4,
-                                        }}
-                                    >
-                                        {data.length < 15 ? data.length : "500+"} Results found
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Right: keep existing right-side controls */}
-                            {advanceFilter ? (
-                                <Button
-                                    mode="contained"
-                                    onPress={() => router.push("/discover")}
-                                    style={{
-                                        marginLeft: "auto",
-                                        backgroundColor: Colors(theme).aliceBlue,
-                                    }}
-                                    textColor={Colors(theme).black}
-                                    icon={"filter"}
-                                >
-                                    Advanced Filters
-                                </Button>
-                            ) : statusFilter ? (
-                                <Menu
-                                    visible={statusMenuVisible}
-                                    onDismiss={() => setStatusMenuVisible(false)}
-                                    anchor={
-                                        <Chip
-                                            compact
-                                            onPress={() => setStatusMenuVisible(true)}
-                                            icon="filter"
-                                            style={{ marginLeft: "auto" }}
-                                        >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                {statusOptions.find((o) => o.value === currentStatus)
-                                                    ?.label || "Status"}
-                                            </Text>
-                                        </Chip>
-                                    }
-                                    style={{ backgroundColor: Colors(theme).background }}
-                                >
-                                    {statusOptions.map((opt) => (
-                                        <Menu.Item
-                                            key={opt.value}
-                                            onPress={() => onSelectStatus(opt.value)}
-                                            title={opt.label}
-                                        />
-                                    ))}
-                                </Menu>
-                            ) : (
-                                <Menu
-                                    visible={sortMenuVisible}
-                                    onDismiss={() => setSortMenuVisible(false)}
-                                    anchor={
-                                        <Chip
-                                            compact
-                                            onPress={() => setSortMenuVisible(true)}
-                                            icon="sort"
-                                            style={{ marginLeft: "auto" }}
-                                        >
-                                            <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                {sortOptions.find((o) => o.value === currentSort)?.label ||
-                                                    "Relevance"}
-                                            </Text>
-                                        </Chip>
-                                    }
-                                    style={{ backgroundColor: Colors(theme).background }}
-                                >
-                                    {sortOptions.map((opt) => (
-                                        <Menu.Item
-                                            key={opt.value}
-                                            onPress={() => onSelectSort(opt.value)}
-                                            title={opt.label}
-                                        />
-                                    ))}
-                                </Menu>
-                            )}
-                        </>
-                    ) : (
-                        // Mobile layout: Total on left, sort/filter on right
-                        <>
-                            <View>
-                                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                    <Text style={{ fontWeight: "600", color: Colors(theme).primary }}>
-                                        Total
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            opacity: 0.8,
-                                            color: Colors(theme).primary,
-                                            fontWeight: "500",
-                                            marginLeft: 6,
-                                        }}
-                                    >
-                                        {data.length < 15 ? data.length : "500+"}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            <View>
-                                {advanceFilter ? (
-                                    <Button
-                                        mode="contained"
-                                        onPress={() => router.push("/discover")}
-                                        style={{ backgroundColor: Colors(theme).aliceBlue }}
-                                        textColor={Colors(theme).black}
-                                        icon={"filter"}
-                                    >
-                                        Advanced Filters
-                                    </Button>
-                                ) : statusFilter ? (
-                                    <Menu
-                                        visible={statusMenuVisible}
-                                        onDismiss={() => setStatusMenuVisible(false)}
-                                        anchor={
-                                            <Chip compact onPress={() => setStatusMenuVisible(true)} icon="filter">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                    {statusOptions.find((o) => o.value === currentStatus)?.label || "Status"}
-                                                </Text>
-                                            </Chip>
-                                        }
-                                        style={{ backgroundColor: Colors(theme).background }}
-                                    >
-                                        {statusOptions.map((opt) => (
-                                            <Menu.Item key={opt.value} onPress={() => onSelectStatus(opt.value)} title={opt.label} />
-                                        ))}
-                                    </Menu>
-                                ) : (
-                                    <Menu
-                                        visible={sortMenuVisible}
-                                        onDismiss={() => setSortMenuVisible(false)}
-                                        anchor={
-                                            <Chip compact onPress={() => setSortMenuVisible(true)} icon="sort">
-                                                <Text numberOfLines={1} style={{ maxWidth: 140, color: colors.black }}>
-                                                    {sortOptions.find((o) => o.value === currentSort)?.label || "Relevance"}
-                                                </Text>
-                                            </Chip>
-                                        }
-                                        style={{ backgroundColor: Colors(theme).background }}
-                                    >
-                                        {sortOptions.map((opt) => (
-                                            <Menu.Item key={opt.value} onPress={() => onSelectSort(opt.value)} title={opt.label} />
-                                        ))}
-                                    </Menu>
-                                )}
-                            </View>
-                        </>
-                    )}
-                </View>
-            )}
-
             <View
                 style={{
                     flex: 1,
+                    minHeight: 0,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" ? 120 : 16,
-
+                    paddingHorizontal:
+                        Platform.OS === "web" && xl
+                            ? reduceHorizontalPadding
+                                ? 24
+                                : 140
+                            : 16,
                 }}
             >
                 <FlatList
+                    ref={flatListRef}
                     data={data}
                     keyExtractor={keyExtractor}
                     renderItem={renderItem}
@@ -848,18 +754,17 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
 
                             <View
                                 style={{
-                                    backgroundColor: "rgba(255, 255, 255, 0.8)",
+                                    backgroundColor: colors.playBadgeBg,
                                     paddingHorizontal: 16,
                                     paddingVertical: 12,
                                     borderRadius: 24,
-                                    shadowColor: "#000",
+                                    shadowColor: colors.black,
                                     shadowOffset: { width: 0, height: 3 },
                                     shadowOpacity: 0.2,
                                     shadowRadius: 6,
                                     elevation: 6,
-                                    width: "90%",
-                                    maxWidth: 420,
-                                    alignItems: "center",
+                                    width: "95%",
+                                    maxWidth: 520,
                                 }}
                             >
                                 <View
@@ -868,35 +773,43 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                         alignItems: "center",
                                         justifyContent: "space-between",
                                         width: "100%",
-                                        backgroundColor: "transparent"
+                                        backgroundColor: "transparent",
                                     }}
                                 >
-                                    <Text style={{ fontSize: 14, fontWeight: "700", color: colors.black }}>
+                                    <Text
+                                        style={{ fontSize: 14, fontWeight: "700", color: colors.black }}
+                                        numberOfLines={1}
+                                    >
                                         {selectedIds.length} {selectedIds.length === 1 ? "account" : "accounts"} selected
                                     </Text>
-                                    <IconButton
-                                        icon="close"
-                                        iconColor={colors.black}
-                                        size={20}
-                                        style={{ margin: 0, }}
-                                        onPress={() => setSelectedIds([])}
-
-                                    />
-                                </View>
-                                <View style={{ marginTop: 8, alignItems: "center", backgroundColor: "transparent", alignSelf: "center" }}>
-                                    <InviteToCampaignButton
-                                        label="Invite Now"
-                                        openModal={openModal}
-                                        influencerIds={selectedIds}
-                                        influencerName={
-                                            selectedIds.length === 1
-                                                ? data.find((i) => i.id === selectedIds[0])?.name
-                                                : undefined
-                                        }
-                                        brandId={selectedBrand?.id}
-                                        connectionCredits={selectedBrand?.credits?.connection}
-
-                                    />
+                                    <View
+                                        style={{
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: 8,
+                                            backgroundColor: "transparent",
+                                        }}
+                                    >
+                                        <InviteToCampaignButton
+                                            label="Invite Now"
+                                            openModal={openModal}
+                                            influencerIds={selectedIds}
+                                            influencerName={
+                                                selectedIds.length === 1
+                                                    ? data.find((i) => i.id === selectedIds[0])?.name
+                                                    : undefined
+                                            }
+                                            brandId={selectedBrand?.id}
+                                            connectionCredits={selectedBrand?.credits?.connection}
+                                        />
+                                        <IconButton
+                                            icon="close"
+                                            iconColor={colors.black}
+                                            size={20}
+                                            style={{ margin: 0 }}
+                                            onPress={() => setSelectedIds([])}
+                                        />
+                                    </View>
                                 </View>
                             </View>
                         </View>
@@ -917,8 +830,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                     id: selectedInfluencer.id,
                                 } as User}
                                 theme={theme}
-                                isOnFreePlan={isOnFreeTrial}
-                                isPhoneMasked={false}
+                                isPhoneMasked={true}
                                 social={profileSocial}
                                 actionCard={
                                     <>
@@ -930,26 +842,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             initialAnalytics={trendlyAnalytics}
                                         />
                                         <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-                                            {/* TODO Need to get the Profile Meta rendered correctly */}
-                                            {/* <Title style={[styles.cardColor, { marginBottom: 8 }]}>
-                                                Profile Meta
-                                            </Title>
-                                            <View style={{ gap: 6 }}>
-                                                <Text style={styles.subTextHeading}>
-                                                    ID: {trendlySocial.id}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Platform: {trendlySocial.social_type || "—"}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Last Updated:{" "}
-                                                    {formatDate(
-                                                        trendlySocial.last_update_time
-                                                            ? trendlySocial.last_update_time / 1000000
-                                                            : undefined
-                                                    )}
-                                                </Text>
-                                            </View> */}
                                         </View>
                                     </>
                                 }
@@ -968,25 +860,37 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerIds={[selectedInfluencer.id]}
                                             influencerName={selectedInfluencer.name}
                                         />
-                                        {manager?.isAdmin ? (
-                                            <>
-                                                <Button
-                                                    mode="contained"
-                                                    onPress={() => trendlyAnalyticsRef.current?.openEditModal()}
-                                                    icon="pencil"
-                                                >
-                                                    Edit Metrics
-                                                </Button>
-                                                <Button
-                                                    mode="contained"
-                                                    onPress={() => trendlyAnalyticsRef.current?.handleRescrape()}
-                                                    loading={isRescraping}
+                                        {manager?.isAdmin && (
+                                            <Menu
+                                                visible={adminMenuVisible}
+                                                onDismiss={() => setAdminMenuVisible(false)}
+                                                anchor={
+                                                    <IconButton
+                                                        icon="dots-vertical"
+                                                        onPress={() => setAdminMenuVisible(true)}
+                                                        accessibilityLabel="Admin actions"
+                                                    />
+                                                }
+                                                contentStyle={{ zIndex: 99999, elevation: 99999 }}
+                                            >
+                                                <Menu.Item
+                                                    onPress={() => {
+                                                        setAdminMenuVisible(false);
+                                                        trendlyAnalyticsRef.current?.openEditModal();
+                                                    }}
+                                                    title="Edit Metrics"
+                                                    leadingIcon="pencil"
+                                                />
+                                                <Menu.Item
+                                                    onPress={() => {
+                                                        setAdminMenuVisible(false);
+                                                        trendlyAnalyticsRef.current?.handleRescrape();
+                                                    }}
+                                                    title="Re-scrape"
                                                     disabled={isRescraping}
-                                                >
-                                                    Re-scrape
-                                                </Button>
-                                            </>
-                                        ) : null}
+                                                />
+                                            </Menu>
+                                        )}
                                     </View>
                                 }
                                 FireStoreDB={FirestoreDB}
@@ -1008,6 +912,10 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     )}
                 </BottomSheetScrollContainer>
             </View>
+            <NoDiscoveryCreditModal
+                visible={showNoCreditModal}
+                onClose={() => setShowNoCreditModal(false)}
+            />
         </View>
     );
 };

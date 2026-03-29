@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -18,6 +18,11 @@ export const stylesFn = (theme: Theme) =>
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
+        },
+        headerActionsRow: {
+            flexDirection: "row",
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
         },
         collabName: {
             fontSize: 18,

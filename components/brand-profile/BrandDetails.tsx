@@ -1,11 +1,11 @@
-import { useTheme } from "@react-navigation/native";
-import { Pressable, View } from "react-native";
-import { Button, Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface } from "react-native-paper";
-
 import { useBreakpoints } from "@/hooks";
 import ImageUpload from "@/shared-uis/components/image-upload";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
+import { useTheme } from "@react-navigation/native";
+import { useMemo } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Button, Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface } from "react-native-paper";
 
 interface BrandDetailsProps {
     brandData: Partial<Brand>;
@@ -13,6 +13,9 @@ interface BrandDetailsProps {
     setBrandWebImage: React.Dispatch<React.SetStateAction<File | null>>;
     onNext?: () => void;
     onBack?: () => void;
+    plainSection?: boolean;
+    /** Smaller inputs and spacing for 2-column web form */
+    compactLayout?: boolean;
 }
 
 const BrandDetails: React.FC<BrandDetailsProps> = ({
@@ -21,10 +24,13 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
     setBrandWebImage,
     onNext,
     onBack,
+    plainSection = false,
+    compactLayout = false,
 }) => {
     const theme = useTheme();
     const { xl } = useBreakpoints();
-    const colors = Colors(theme);
+    const colors = useMemo(() => Colors(theme), [theme]);
+    const styles = useMemo(() => createStyles(colors, compactLayout, xl), [colors, compactLayout, xl]);
 
     const handleImageUpload = (image: string | File) => {
         if (typeof image !== "string") {
@@ -37,34 +43,36 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
         }
     };
 
+    const Wrapper = plainSection ? View : Surface;
+    const wrapperProps = plainSection
+        ? { style: styles.wrapperPlain }
+        : { style: styles.wrapperCard, elevation: 1 };
+
     return (
-        <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Wrapper {...wrapperProps}>
+            <View style={styles.headerRow}>
                 {onBack && (
-                    <Pressable onPress={onBack} style={{ marginRight: 12, padding: 4 }}>
-                        <PaperText style={{ fontSize: 20, color: colors.text }}>←</PaperText>
+                    <Pressable onPress={onBack} style={styles.backBtn}>
+                        <PaperText style={styles.backArrow}>←</PaperText>
                     </Pressable>
                 )}
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
+                <PaperText variant="titleMedium" style={styles.sectionTitle}>
                     Brand Details
                 </PaperText>
             </View>
-            <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
+            <PaperText style={styles.subtitle}>
                 Add your brand logo and core details so creators can recognize you.
             </PaperText>
-            <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
+            <Divider style={styles.divider} />
 
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
-                {/* Left column: image uploader */}
-                <View style={xl ? { width: 240 } : { width: "100%", alignItems: "center" }}>
+            <View style={styles.contentRow}>
+                <View style={[styles.imageCol, (!xl || compactLayout) && styles.imageColCenter]}>
                     <ImageUpload initialImage={brandData.image} onUploadImage={handleImageUpload} theme={theme} />
-                    <HelperText type="info" style={{ color: colors.textSecondary, marginTop: 6 }}>
+                    <HelperText type="info" style={styles.helperImage}>
                         Recommended: square logo, 512×512 or higher
                     </HelperText>
                 </View>
-
-                {/* Right column: inputs */}
-                <View style={{ flex: 1, minWidth: 260, gap: 12 }}>
+                <View style={styles.inputsCol}>
                     <PaperTextInput
                         mode="outlined"
                         label="Brand Name*"
@@ -75,12 +83,13 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                                 name: value,
                             })
                         }
-                        outlineStyle={{ borderRadius: 12 }}
+                        outlineStyle={styles.inputOutline}
                         outlineColor={colors.border}
                         activeOutlineColor={colors.primary}
-                        style={{ backgroundColor: colors.background }}
+                        style={styles.input}
+                        contentStyle={compactLayout ? styles.inputContentCompact : undefined}
                     />
-                    <HelperText type="info" style={{ color: colors.textSecondary, marginTop: -4 }}>
+                    <HelperText type="info" style={styles.helperName}>
                         This will be visible on your public profile.
                     </HelperText>
 
@@ -88,6 +97,7 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                         mode="outlined"
                         label="About the Brand"
                         multiline
+                        numberOfLines={compactLayout ? 2 : 4}
                         value={brandData.profile?.about}
                         onChangeText={(value) =>
                             setBrandData({
@@ -98,10 +108,11 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                                 },
                             })
                         }
-                        outlineStyle={{ borderRadius: 12 }}
+                        outlineStyle={styles.inputOutline}
                         outlineColor={colors.border}
                         activeOutlineColor={colors.primary}
-                        style={{ backgroundColor: colors.background }}
+                        style={styles.input}
+                        contentStyle={compactLayout ? styles.inputContentCompact : undefined}
                     />
 
                     <PaperTextInput
@@ -119,10 +130,11 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                                 },
                             })
                         }
-                        outlineStyle={{ borderRadius: 12 }}
+                        outlineStyle={styles.inputOutline}
                         outlineColor={colors.border}
                         activeOutlineColor={colors.primary}
-                        style={{ backgroundColor: colors.background }}
+                        style={styles.input}
+                        contentStyle={compactLayout ? styles.inputContentCompact : undefined}
                     />
 
                     <PaperTextInput
@@ -140,28 +152,121 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
                                 },
                             })
                         }
-                        outlineStyle={{ borderRadius: 12 }}
+                        outlineStyle={styles.inputOutline}
                         outlineColor={colors.border}
                         activeOutlineColor={colors.primary}
-                        style={{ backgroundColor: colors.background }}
+                        style={styles.input}
+                        contentStyle={compactLayout ? styles.inputContentCompact : undefined}
                     />
                 </View>
             </View>
 
             {onNext && (
-                <View style={{ marginTop: 16 }}>
+                <View style={styles.nextWrap}>
                     <Button
                         mode="contained"
                         onPress={onNext}
-                        style={{ borderRadius: 12 }}
+                        style={styles.nextButton}
                         buttonColor={colors.primary}
+                        compact={compactLayout}
                     >
                         Next
                     </Button>
                 </View>
             )}
-        </Surface>
+        </Wrapper>
     );
 };
+
+function createStyles(
+    colors: ReturnType<typeof Colors>,
+    compact: boolean,
+    xl: boolean
+) {
+    const inputRadius = compact ? 8 : 12;
+    const inputGap = compact ? 8 : 12;
+    const imageColWidth = xl && !compact ? 240 : undefined;
+
+    return StyleSheet.create({
+        wrapperPlain: {
+            paddingVertical: compact ? 4 : 8,
+        },
+        wrapperCard: {
+            borderRadius: 16,
+            padding: compact ? 12 : 16,
+            backgroundColor: colors.card,
+        },
+        headerRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: compact ? 4 : 8,
+        },
+        backBtn: {
+            marginRight: 12,
+            padding: 4,
+        },
+        backArrow: {
+            fontSize: compact ? 18 : 20,
+            color: colors.text,
+        },
+        sectionTitle: {
+            fontWeight: "800",
+            color: colors.text,
+            fontSize: compact ? 15 : undefined,
+        },
+        subtitle: {
+            color: colors.textSecondary,
+            marginTop: 4,
+            fontSize: compact ? 13 : undefined,
+        },
+        divider: {
+            marginTop: compact ? 8 : 12,
+            marginBottom: compact ? 10 : 16,
+            backgroundColor: colors.surface,
+        },
+        contentRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: compact ? 12 : 16,
+            alignItems: "flex-start",
+        },
+        imageCol: {
+            width: imageColWidth ?? "100%",
+        },
+        imageColCenter: {
+            alignItems: "center",
+        },
+        inputsCol: {
+            flex: 1,
+            minWidth: compact ? 200 : 260,
+            gap: inputGap,
+        },
+        inputOutline: {
+            borderRadius: inputRadius,
+        },
+        input: {
+            backgroundColor: colors.background,
+        },
+        inputContentCompact: {
+            minHeight: 40,
+        },
+        helperImage: {
+            color: colors.textSecondary,
+            marginTop: 6,
+            fontSize: compact ? 12 : undefined,
+        },
+        helperName: {
+            color: colors.textSecondary,
+            marginTop: -4,
+            fontSize: compact ? 12 : undefined,
+        },
+        nextWrap: {
+            marginTop: compact ? 12 : 16,
+        },
+        nextButton: {
+            borderRadius: inputRadius,
+        },
+    });
+}
 
 export default BrandDetails;

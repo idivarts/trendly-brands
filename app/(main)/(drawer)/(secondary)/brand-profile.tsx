@@ -3,13 +3,12 @@ import { Platform } from "react-native";
 
 import BrandProfile from "@/components/brand-profile";
 import Button from "@/components/ui/button";
-import ScreenHeader from "@/components/ui/screen-header";
+import PageHeader from "@/components/ui/page-header";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
-import { useTheme } from "@react-navigation/native";
 
 const BrandProfileScreen = () => {
     const [isSaving, setIsSaving] = useState(false);
@@ -23,8 +22,6 @@ const BrandProfileScreen = () => {
         uploadFileUri,
         uploadFile,
     } = useAWSContext();
-
-    const theme = useTheme();
 
     const {
         manager: user,
@@ -77,43 +74,23 @@ const BrandProfileScreen = () => {
 
     return (
         <AppLayout withWebPadding={false}>
-            <ScreenHeader
+            <PageHeader
                 title="Brand Profile"
-            // rightAction
-            // rightActionButton={
-            //   <Pressable
-            //     onPress={handleSave}
-            //     style={{
-            //       padding: 10,
-            //       justifyContent: "center",
-            //       alignItems: "center",
-            //       gap: 8,
-            //       flexDirection: "row",
-            //     }}
-            //   >
-            //     {
-            //       isSaving && (
-            //         <ActivityIndicator
-            //           size="small"
-            //           color={Colors(theme).primary}
-            //         />
-            //       )
-            //     }
-            //     <Text>Save</Text>
-            //   </Pressable>
-            // }
+                subtitle={selectedBrand?.name}
+                mobileActions="all"
+                actionButtons={[
+                    <Button
+                        key="save"
+                        loading={isSaving}
+                        mode="contained"
+                        onPress={handleSave}
+                    >
+                        Save
+                    </Button>,
+                ]}
             />
             <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <BrandProfile
-                    action={
-                        <Button
-                            loading={isSaving}
-                            mode="contained"
-                            onPress={handleSave}
-                        >
-                            Save Brand Details
-                        </Button>
-                    }
                     brandData={brandData}
                     setBrandData={setBrandData}
                     setBrandWebImage={setBrandWebImage}

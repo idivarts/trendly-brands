@@ -3,8 +3,8 @@ import React, { PropsWithChildren, useMemo } from "react";
 import { Platform, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> {
     withWebPadding?: boolean;
@@ -23,7 +23,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     const theme = useTheme();
     const isAndroid = useMemo(() => Platform.OS === "android", []);
     const { xl } = useBreakpoints()
-    const edges = safeAreaEdges ?? ["top", "right", "bottom", "left"];
+    const edges = safeAreaEdges ?? ["right", "bottom", "left"];
     const colors = Colors(theme);
     return (
         <SafeAreaView

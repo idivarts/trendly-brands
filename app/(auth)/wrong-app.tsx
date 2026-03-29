@@ -9,13 +9,14 @@ import {
 import Colors from "@/shared-uis/constants/Colors";
 import { imageUrl } from "@/utils/url";
 import { useTheme } from "@react-navigation/native";
-import React from "react";
+import React, { useMemo } from "react";
 import { Image, Linking, Platform, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
 
 const TrendlyScreen = () => {
     // const { socials } = useSocialContext();
     const theme = useTheme();
+    const styles = useMemo(() => useStyles(theme), [theme]);
     const isAndroid = Platform.OS === "android";
     const storeLabel = isAndroid ? "Play Store" : "App Store";
     const storeUrl = isAndroid ? CREATORS_PLAYSTORE_URL : CREATORS_APPSTORE_URL;
@@ -26,18 +27,13 @@ const TrendlyScreen = () => {
     return (
         <AppLayout withWebPadding={true} safeAreaEdges={["left", "right", "bottom"]}>
             <View
-                style={{
-                    flex: 1,
-                    backgroundColor: Colors(theme).background,
-                    padding: 16,
-                    justifyContent: "space-between",
-                }}
+                style={styles.root}
             >
                 <View style={styles.backButton}>
                     <BackButton color={Colors(theme).text} />
                 </View>
 
-                <View style={{ flex: 1, justifyContent: "center" }}>
+                <View style={styles.centerContent}>
                     {/* Illustration */}
                     <View>
                         <View style={styles.imageContainer}>
@@ -51,16 +47,12 @@ const TrendlyScreen = () => {
                         {/* No Account Text */}
                         <Text style={styles.noAccountText}>Oops! you are on wrong app!</Text>
                         <Text
-                            style={{
-                                textAlign: "center",
-                                color: Colors(theme).gray100,
-                                marginBottom: 30,
-                            }}
+                            style={styles.subText}
                         >
                             If you're a creator, please download the Trendly app from the{" "}
                             {storeLabel} or continue using the web version.
                         </Text>
-                        <View style={[styles.buttonContainer, { display: "flex", alignContent: "stretch", gap: 16, alignItems: "stretch", width: 300, alignSelf: "center" }]}>
+                        <View style={styles.buttonRow}>
                             <Button onPress={() => {
                                 Linking.openURL(storeUrl)
                             }}> {storeButtonLabel}</Button>
@@ -78,43 +70,67 @@ const TrendlyScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: "bold",
-    },
-    imageContainer: {
-        alignItems: "center",
-        // marginVertical: 0,
-    },
-    image: {
-        height: 250,
-        width: 250,
-        marginBottom: 40
-    },
-    backButton: {
-        justifyContent: "flex-start",
-        alignItems: "flex-start",
-    },
-    noAccountText: {
-        textAlign: "center",
-        fontSize: 18,
-        fontWeight: "bold",
-        marginVertical: 10,
-    },
-    buttonContainer: {
-        alignItems: "center",
-        marginTop: 20,
-    },
-    button: {
-        marginVertical: 10,
-        paddingVertical: 5,
-    },
-});
+const useStyles = (theme: ReturnType<typeof useTheme>) =>
+    StyleSheet.create({
+        header: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+        },
+        title: {
+            fontSize: 24,
+            fontWeight: "bold",
+        },
+        root: {
+            flex: 1,
+            backgroundColor: Colors(theme).background,
+            padding: 16,
+            justifyContent: "space-between",
+        },
+        centerContent: {
+            flex: 1,
+            justifyContent: "center",
+        },
+        subText: {
+            textAlign: "center",
+            color: Colors(theme).gray100,
+            marginBottom: 30,
+        },
+        buttonRow: {
+            display: "flex",
+            alignContent: "stretch",
+            gap: 16,
+            alignItems: "stretch",
+            width: 300,
+            alignSelf: "center",
+            marginTop: 20,
+        },
+        imageContainer: {
+            alignItems: "center",
+        },
+        image: {
+            height: 250,
+            width: 250,
+            marginBottom: 40
+        },
+        backButton: {
+            justifyContent: "flex-start",
+            alignItems: "flex-start",
+        },
+        noAccountText: {
+            textAlign: "center",
+            fontSize: 18,
+            fontWeight: "bold",
+            marginVertical: 10,
+        },
+        buttonContainer: {
+            alignItems: "center",
+            marginTop: 20,
+        },
+        button: {
+            marginVertical: 10,
+            paddingVertical: 5,
+        },
+    });
 
 export default TrendlyScreen;

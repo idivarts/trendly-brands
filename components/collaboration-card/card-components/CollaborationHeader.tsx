@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { formatTimeToNow } from "@/utils/date";
 import { imageUrl } from "@/utils/url";
@@ -7,8 +7,8 @@ import { faCheckCircle, faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import { FC } from "react";
-import { Pressable } from "react-native";
+import { FC, useMemo } from "react";
+import { Pressable, StyleSheet } from "react-native";
 
 interface CollaborationHeaderProps {
     cardType: string;
@@ -36,6 +36,7 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
     onOpenBottomSheet,
 }) => {
     const theme = useTheme();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     return (
         <Pressable
@@ -53,58 +54,20 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
                     },
                 });
             }}
-            style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: Colors(theme).background,
-                justifyContent: "space-between",
-                padding: 8,
-                paddingTop: 16,
-            }}
+            style={styles.pressable}
         >
-            <View
-                style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    paddingRight: 16,
-                    flex: 1,
-                }}
-            >
+            <View style={styles.leftRow}>
                 <ImageComponent
                     url={imageUrl(brand.image)}
                     altText="brand logo"
                     shape="square"
-                    style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 5,
-                    }}
+                    style={styles.brandImage}
                 />
-                <View
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "center",
-                        gap: 2,
-                        flex: 1,
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            fontWeight: "bold",
-                        }}
-                    >
+                <View style={styles.titleColumn}>
+                    <Text style={styles.collabName}>
                         {collaboration.collabName}
                     </Text>
-                    <Text
-                        style={{
-                            fontSize: 14,
-                        }}
-                    >
+                    <Text style={styles.brandName}>
                         {brand.name}{" "}
                         {brand.paymentVerified && (
                             <FontAwesomeIcon
@@ -116,21 +79,9 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
                     </Text>
                 </View>
             </View>
-            <View
-                style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                }}
-            >
+            <View style={styles.rightRow}>
                 {collaboration.timePosted ? (
-                    <Text
-                        style={{
-                            fontSize: 10,
-                            color: Colors(theme).text,
-                            paddingRight: 8,
-                        }}
-                    >
+                    <Text style={styles.timeText}>
                         {formatTimeToNow(collaboration.timePosted)}
                     </Text>
                 ) : null}
@@ -149,5 +100,56 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
         </Pressable>
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    return StyleSheet.create({
+        pressable: {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: Colors(theme).background,
+            justifyContent: "space-between",
+            padding: 8,
+            paddingTop: 16,
+        },
+        leftRow: {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingRight: 16,
+            flex: 1,
+        },
+        brandImage: {
+            width: 40,
+            height: 40,
+            borderRadius: 5,
+        },
+        titleColumn: {
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 2,
+            flex: 1,
+        },
+        collabName: {
+            fontSize: 16,
+            fontWeight: "bold",
+        },
+        brandName: {
+            fontSize: 14,
+        },
+        rightRow: {
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        timeText: {
+            fontSize: 10,
+            color: Colors(theme).text,
+            paddingRight: 8,
+        },
+    });
+}
 
 export default CollaborationHeader;

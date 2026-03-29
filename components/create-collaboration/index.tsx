@@ -3,23 +3,27 @@ import React, { useEffect, useRef, useState } from "react";
 
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
-import Colors from "@/constants/Colors";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
-import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import {
+    CollaborationLocationType,
+    ICollaboration,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
 import ScreenThree from "./screen-three";
+import { AICampaignDraft, AIGeneratedCampaignData } from "./types";
 
 // Mapping functions to convert API response to app format
 const mapPromotionType = (apiValue: string): PromotionType => {
@@ -70,7 +74,7 @@ const mapContentFormat = (apiValue: string): string => {
 
 interface CreateCollaborationProps {
     headerRight?: React.ReactNode;
-    aiData?: any;
+    aiData?: AIGeneratedCampaignData | null;
 }
 
 const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, aiData }) => {
@@ -90,7 +94,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
         platform: [],
         numberOfInfluencersNeeded: 1,
         location: {
-            type: "Remote",
+            type: CollaborationLocationType.Remote,
             name: "",
             latlong: {
                 lat: 0,
@@ -119,7 +123,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     const theme = useTheme();
     const params = useLocalSearchParams();
     const type = params.id ? "Edit" : "Add";
-    const { publish } = usePublishCollaboration();
+    // const { publish } = usePublishCollaboration();
     const isSavingRef = useRef(false);
 
     const {
@@ -169,7 +173,10 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 Console.log("Received AI Data:", aiData);
 
                 // Extract the collaboration data from the response
-                const collaborationData = aiData.collaboration || aiData;
+                const collaborationData: AICampaignDraft =
+                    "collaboration" in aiData
+                        ? aiData.collaboration ?? {}
+                        : (aiData as AICampaignDraft);
 
                 Console.log("Extracted collaboration data:", collaborationData);
                 Console.log("Raw Name:", collaborationData.name);
@@ -188,6 +195,49 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                     : [];
 
                 Console.log("Final mapped contentFormat:", mappedContentFormat);
+
+                const mappedLocation = collaborationData.location?.type
+                    ? {
+                        type: normalizeCollaborationLocationType(
+                            collaborationData.location.type
+                        ),
+                        name: collaborationData.location.name || "",
+                        latlong: collaborationData.location.latlong
+                            ? {
+                                lat: Number(collaborationData.location.latlong.lat) || 0,
+                                long: Number(collaborationData.location.latlong.long) || 0,
+                            }
+                            : { lat: 0, long: 0 },
+                    }
+                    : {
+                        type: CollaborationLocationType.Remote,
+                        name: "",
+                        latlong: { lat: 0, long: 0 },
+                    };
+                const mappedAttachments: Attachment[] = Array.isArray(collaborationData.relevantImages)
+                    ? collaborationData.relevantImages
+                        .filter((url): url is string => typeof url === "string" && !!url.trim())
+                        .map((url) => ({
+                            type: "image",
+                            imageUrl: url.trim(),
+                        }))
+                    : [];
+
+                const mappedExternalLinks = Array.isArray(collaborationData.externalLinks)
+                    ? collaborationData.externalLinks
+                        .filter(
+                            (link): link is { name: string; link: string } =>
+                                !!link &&
+                                typeof link.name === "string" &&
+                                !!link.name.trim() &&
+                                typeof link.link === "string" &&
+                                !!link.link.trim()
+                        )
+                        .map((link) => ({
+                            name: link.name.trim(),
+                            link: link.link.trim(),
+                        }))
+                    : [];
 
                 const updatedCollaboration: Partial<ICollaboration> = {
                     name: collaborationData.name ? String(collaborationData.name) : "",
@@ -209,19 +259,15 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                     preferredContentLanguage: Array.isArray(collaborationData.preferredContentLanguage)
                         ? collaborationData.preferredContentLanguage
                         : ["English", "Hindi"],
-                    location: collaborationData.location || {
-                        type: "Remote",
-                        name: "",
-                        latlong: { lat: 0, long: 0 },
-                    },
+                    location: mappedLocation,
                     questionsToInfluencers: Array.isArray(collaborationData.questionsToInfluencers)
                         ? collaborationData.questionsToInfluencers
                         : [],
                     preferences: collaborationData.preferences || {},
-                    attachments: [],
+                    attachments: mappedAttachments,
                     brandId: "",
                     managerId: "",
-                    externalLinks: [],
+                    externalLinks: mappedExternalLinks,
                     status: "",
                     timeStamp: 0,
                     viewsLastHour: 0,
@@ -263,21 +309,11 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
             ...collaboration,
             location: {
                 ...collaboration.location,
-                type: "On-Site",
+                type: CollaborationLocationType.OnSite,
                 name: address,
                 latlong,
             },
         });
-    };
-
-    const handleCollaboration = async (
-        data: Partial<ICollaboration>
-    ): Promise<void> => {
-        if (params.id && typeof params.id === "string") {
-            await updateCollaboration(params.id, data);
-        } else {
-            await createCollaboration(data);
-        }
     };
 
     const notifyUprade = () => {
@@ -297,7 +333,6 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 return;
             }
             isSavingRef.current = true;
-            let shouldNavigateToCollaborations = false;
             if (!AuthApp.currentUser || !selectedBrand) {
                 Console.error("User or brand not selected");
                 return;
@@ -313,13 +348,14 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
             let locationAddress = collaboration?.location;
 
             if (
-                collaboration?.location?.type === "On-Site" &&
+                collaboration?.location?.type === CollaborationLocationType.OnSite &&
                 mapRegion.latitude &&
                 mapRegion.longitude
             ) {
                 locationAddress = {
                     ...collaboration.location,
-                    type: collaboration.location.type || "Remote",
+                    type:
+                        collaboration.location.type ?? CollaborationLocationType.Remote,
                     latlong: {
                         lat: mapRegion.latitude,
                         long: mapRegion.longitude,
@@ -357,25 +393,14 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                         status: wantedStatus,
                         timeStamp: collaboration.timeStamp || Date.now(),
                     });
-                    if (wantedStatus === "draft") {
-                        shouldNavigateToCollaborations = true;
-                    }
+                    router.push("/collaborations");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to update collaboration");
                 }
-                // If user wanted publish and we set wantedStatus active then call publish
-                if (wantedStatus === "active") {
-                    // params.id exists so we can publish by id
-                    await publish(params.id);
-                }
             } else {
-                // creating new collaboration
-                // IMPORTANT: your createCollaboration should return the newly created doc id.
-                let created: string | null = null;
-
                 try {
-                    created = await createCollaboration({
+                    await createCollaboration({
                         ...collaboration,
                         attachments,
                         brandId: selectedBrand ? selectedBrand.id : "",
@@ -388,42 +413,11 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                         status: wantedStatus,
                         timeStamp: Date.now(),
                     });
+                    router.push("/collaborations");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to create collaboration");
-                    created = null;
                 }
-
-                if (!created) {
-                    return;
-                }
-
-                // ASSUMPTION: createCollaboration returns the created doc id
-                // If it returns an object, adjust accordingly (e.g. created.id)
-                let newId: string | null = null;
-                if (typeof created === "string") {
-                    newId = created;
-                } else if (created && (created as any).id) {
-                    newId = (created as any).id;
-                }
-
-                if (!newId) {
-                    // fallback: if createCollaboration didn't return id, log and stop.
-                    Console.error(
-                        "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
-                    );
-                } else {
-                    // If wantedStatus is 'active', then call publish using shared hook
-                    if (wantedStatus === "active") {
-                        await publish(newId);
-                        router.push("/collaborations");
-                    } else {
-                        shouldNavigateToCollaborations = true;
-                    }
-                }
-            }
-            if (shouldNavigateToCollaborations) {
-                router.push("/collaborations");
             }
         } catch (error) {
             Console.error(error);
@@ -525,6 +519,10 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 collaboration={
                     {
                         ...collaboration,
+                        attachments,
+                        // Ensure manager/brand details are present for preview
+                        managerId: AuthApp.currentUser?.uid as string,
+                        brandId: selectedBrand.id,
                         brandName: selectedBrand?.name ?? "",
                         brandDescription: selectedBrand?.profile?.about ?? "",
                         brandCategory: selectedBrand?.profile?.industries ?? [],

@@ -1,13 +1,13 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 const SignUpScreen = () => {
     const [name, setName] = useState("");
@@ -16,7 +16,7 @@ const SignUpScreen = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [verificationSent, setVerificationSent] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const router = useRouter();
+    const router = useMyNavigation();
     const theme = useTheme();
     const styles = fnStyles(theme);
     const { signUp } = useAuthContext();
@@ -36,18 +36,18 @@ const SignUpScreen = () => {
     if (verificationSent) {
         return (
             <AuthPageLayout>
-                <Image
+                {/* <Image
                     source={require("@/assets/images/logo.png")}
                     style={styles.logo}
                     resizeMode="contain"
-                />
+                /> */}
                 <View style={authLayoutStyles.formHeader}>
                     <Text style={[styles.title, authLayoutStyles.formTitle]}>
                         Verification Email Sent
                     </Text>
                     <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
                         We've sent a verification email to{" "}
-                        <Text style={{ fontWeight: "bold" }}>{email}</Text>.
+                        <Text style={styles.bold}>{email}</Text>.
                         {"\n\n"}
                         Please open your inbox and click the verification link to activate your account.
                     </Text>
@@ -74,11 +74,11 @@ const SignUpScreen = () => {
 
     return (
         <AuthPageLayout>
-            <Image
+            {/* <Image
                 source={require("@/assets/images/logo.png")}
                 style={styles.logo}
                 resizeMode="contain"
-            />
+            /> */}
             <View style={authLayoutStyles.formHeader}>
                 <Text style={[styles.title, authLayoutStyles.formTitle]}>
                     Create your brand
@@ -157,7 +157,13 @@ const SignUpScreen = () => {
                 Looking for Social Signup?{" "}
                 <Text
                     style={styles.loginLink}
-                    onPress={() => router.back()}
+                    onPress={() => {
+                        if (router.canGoBack()) {
+                            router.back()
+                        } else {
+                            router.resetAndNavigate("/pre-signin")
+                        }
+                    }}
                 >
                     Go Back
                 </Text>

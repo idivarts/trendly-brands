@@ -1,8 +1,9 @@
 import { Text, View } from '@/components/theme/Themed';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
+import { useBreakpoints } from '@/hooks';
 import { Theme, useTheme } from '@react-navigation/native';
 import React from 'react';
-import { Dimensions, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import RenderHTML from 'react-native-render-html';
 
 type CardDescriptionProps = {
@@ -12,7 +13,7 @@ type CardDescriptionProps = {
 export const CardDescription = ({ text }: CardDescriptionProps) => {
     const theme = useTheme();
     const styles = stylesFn(theme);
-    const screenWidth = Dimensions.get("window").width;
+    const { width: screenWidth } = useBreakpoints();
 
     return (
         <View style={styles.container}>

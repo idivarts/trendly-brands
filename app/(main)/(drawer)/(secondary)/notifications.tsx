@@ -1,6 +1,6 @@
 import Notifications from "@/components/notifications";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     useAuthContext,
     useNotificationContext
@@ -35,7 +35,7 @@ const NotificationsScreen = () => {
     };
 
     return (
-        <AppLayout withWebPadding={false}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
 
             <ScreenHeader
                 title="Notifications"

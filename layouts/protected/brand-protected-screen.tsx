@@ -5,7 +5,7 @@ import { ActivityIndicator, Platform } from "react-native";
 
 import ExploreInfluencerShimmer from "@/components/shimmers/explore-influencer-shimmer";
 import { View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";

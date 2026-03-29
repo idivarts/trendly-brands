@@ -3,6 +3,7 @@ import { useAuthContext } from "@/contexts/auth-context.provider";
 import { CRMStatus } from "@/shared-libs/firestore/trendly-pro/models/brands";
 import { CRMColumnId, moveCardBetweenColumns } from "@/shared-libs/kanban";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     DndContext,
@@ -193,14 +194,14 @@ export default function BrandCRMBoard() {
         setIsModalVisible(true);
 
         // Fetch discovered influencers and campaigns
-        fetchDiscoveredInfluencers(brand.discoveredInfluencers);
+        fetchDiscoveredInfluencers(brand.id, brand.discoveredInfluencers);
         fetchCampaigns(brand.id);
         fetchMembers(brand.id);
         fetchSubscription(brand.id);
     }, []);
 
-    const fetchDiscoveredInfluencers = async (influencerIds?: string[]) => {
-        if (!influencerIds || influencerIds.length === 0) {
+    const fetchDiscoveredInfluencers = async (brandId?: string, influencerIds?: string[]) => {
+        if (!brandId || !influencerIds || influencerIds.length === 0) {
             setDiscoveredInfluencers([]);
             return;
         }
@@ -209,17 +210,15 @@ export default function BrandCRMBoard() {
         try {
             const influencers: any[] = [];
 
-            // Fetch each influencer from scrapped-socials collection
             for (const influencerId of influencerIds) {
                 try {
-                    const docRef = doc(FirestoreDB, "scrapped-socials", influencerId);
-                    const docSnap = await getDoc(docRef);
-
-                    if (docSnap.exists()) {
-                        influencers.push({
-                            id: influencerId,
-                            ...docSnap.data()
-                        });
+                    const res = await HttpWrapper.fetch(
+                        `/discovery/brands/${brandId}/influencers/${influencerId}`,
+                        { method: "GET" }
+                    );
+                    const body = await res.json();
+                    if (body?.id) {
+                        influencers.push({ id: influencerId, ...body });
                     }
                 } catch (err) {
                     console.warn(`Failed to fetch influencer ${influencerId}`, err);
@@ -493,8 +492,8 @@ export default function BrandCRMBoard() {
                             style={{
                                 padding: 12,
                                 borderRadius: 8,
-                                backgroundColor: "#fff",
-                                boxShadow: "0px 8px 24px rgba(0,0,0,0.15)",
+                                backgroundColor: colors.card,
+                                boxShadow: `0px 8px 24px ${colors.cardShadow}`,
                                 width: 260,
                             }}
                         >
@@ -661,7 +660,7 @@ const SortableCard = ({
                         left: 0,
                         right: 0,
                         height: 3,
-                        backgroundColor: "#2563EB",
+                        backgroundColor: colors.primary,
                         borderRadius: 2,
                     }}
                 />
@@ -672,7 +671,6 @@ const SortableCard = ({
                     <View
                         style={[
                             styles.brandImage,
-                            { backgroundColor: "#F3F4F6" },
                         ]}
                     >
                         {card.image ? (
@@ -681,7 +679,7 @@ const SortableCard = ({
                                 style={styles.brandImage}
                             />
                         ) : (
-                            <Text style={{ fontSize: 24, fontWeight: "700", color: "#6B7280" }}>
+                            <Text style={[styles.brandInitial, { fontSize: 24 }]}>
                                 {card.name?.charAt(0)?.toUpperCase() || "B"}
                             </Text>
                         )}
@@ -805,7 +803,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             padding: 12,
             marginBottom: 8,
             borderWidth: 1,
-            borderColor: "#E5E5E5",
+            borderColor: colors.borderLight,
         },
         cardRow: {
             flexDirection: "row",
@@ -835,7 +833,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         joinedText: {
             fontSize: 12,
             fontWeight: "400",
-            color: "#9CA3AF",
+            color: colors.textSecondary,
             marginTop: 10,
             textAlign: "right",
             fontStyle: "italic",
@@ -851,7 +849,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         modalOverlay: {
             flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: colors.backdrop,
             justifyContent: "flex-end",
         },
         modalContent: {
@@ -867,7 +865,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             alignItems: "center",
             padding: 20,
             borderBottomWidth: 1,
-            borderBottomColor: "#E5E5E5",
+            borderBottomColor: colors.borderLight,
         },
         modalTitle: {
             fontSize: 20,
@@ -891,7 +889,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             width: 100,
             height: 100,
             borderRadius: 12,
-            backgroundColor: "#F3F4F6",
+            backgroundColor: colors.surfaceLight,
             justifyContent: "center",
             alignItems: "center",
             flexShrink: 0,
@@ -899,7 +897,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         brandInitial: {
             fontSize: 48,
             fontWeight: "700",
-            color: "#6B7280",
+            color: colors.textSecondary,
         },
         brandInfoContainer: {
             flex: 1,
@@ -934,7 +932,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         brandMeta: {
             fontSize: 14,
             fontWeight: "500",
-            color: "#6B7280",
+            color: colors.textSecondary,
         },
         brandDescription: {
             fontSize: 14,
@@ -946,7 +944,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         joinedDateLarge: {
             fontSize: 13,
             fontWeight: "400",
-            color: "#9CA3AF",
+            color: colors.textSecondary,
             fontStyle: "italic",
             textAlign: "right",
         },
@@ -988,7 +986,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         campaignCard: {
             backgroundColor: colors.white,
             borderWidth: 1,
-            borderColor: "#E5E5E5",
+            borderColor: colors.borderLight,
             borderRadius: 8,
             padding: 16,
             flex: 1,
@@ -1011,7 +1009,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         campaignDescription: {
             fontSize: 13,
             fontWeight: "400",
-            color: "#6B7280",
+            color: colors.textSecondary,
             marginBottom: 12,
             lineHeight: 18,
         },
@@ -1025,7 +1023,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             flexDirection: "row",
             gap: 6,
             alignItems: "center",
-            backgroundColor: "#1D425D",
+            backgroundColor: colors.primaryDark,
             paddingHorizontal: 10,
             paddingVertical: 6,
             borderRadius: 6,
@@ -1041,7 +1039,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingVertical: 12,
             borderTopWidth: 1,
             borderBottomWidth: 1,
-            borderColor: "#E5E5E5",
+            borderColor: colors.borderLight,
         },
         statsLeftColumn: {
             flex: 1,
@@ -1057,7 +1055,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         statLabel: {
             fontSize: 12,
             fontWeight: "400",
-            color: "#9CA3AF",
+            color: colors.textSecondary,
             marginBottom: 4,
         },
         statValue: {
@@ -1083,7 +1081,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             width: 50,
             height: 50,
             borderRadius: 25,
-            backgroundColor: "#E5E5E5",
+            backgroundColor: colors.borderLight,
         },
         memberInfo: {
             flex: 1,
@@ -1097,12 +1095,12 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         memberEmail: {
             fontSize: 14,
             fontWeight: "400",
-            color: "#6B7280",
+            color: colors.textSecondary,
         },
         emptyText: {
             fontSize: 14,
             fontWeight: "400",
-            color: "#9CA3AF",
+            color: colors.textSecondary,
             fontStyle: "italic",
         },
         subscriptionContainer: {
@@ -1121,6 +1119,6 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         subscriptionValue: {
             fontSize: 14,
             fontWeight: "400",
-            color: "#6B7280",
+            color: colors.textSecondary,
         },
     });

@@ -32,7 +32,6 @@ export interface DiscoveryProps {
     setShowFilters: Function;
     isCollapsed: boolean;
     showRightPanel?: boolean;
-    showTopPanel?: boolean;
     setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
     discoverCommunication: MutableRefObject<
         ((action: DiscoverCommunication) => any) | undefined
@@ -40,6 +39,12 @@ export interface DiscoveryProps {
     pageSortCommunication: MutableRefObject<
         ((action: PageSortCommunication) => any) | undefined
     >;
+    /** For header: total count display (e.g. "500+" or exact number) */
+    totalCount: string;
+    /** For header: current sort key (e.g. "followers") */
+    currentSort: string;
+    setTotalCount: (v: string) => void;
+    setCurrentSort: (v: string) => void;
 }
 
 const DiscoveryContext = createContext<DiscoveryProps>({} as DiscoveryProps);

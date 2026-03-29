@@ -1,18 +1,20 @@
-import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { collection, deleteDoc, doc, getDoc, getDocs } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     FlatList,
     RefreshControl,
+    StyleSheet,
 } from "react-native";
 import MembersCard from "../brand-profile/members-card";
-import { View } from "../theme/Themed";
+import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 import MembersModal from "../ui/modal/MembersModal";
 
@@ -21,12 +23,26 @@ export interface ManagerCard extends IManagers {
     status: number;
 }
 
-const Members = () => {
+interface MembersProps {
+    showMemberModal?: boolean;
+    onCloseMemberModal?: () => void;
+}
+
+const Members = ({ showMemberModal: externalShowModal, onCloseMemberModal }: MembersProps = {}) => {
     const theme = useTheme();
+    const { xl, width } = useBreakpoints();
     const { selectedBrand } = useBrandContext();
+    const colors = useMemo(() => Colors(theme), [theme]);
+    const styles = useMemo(() => createStyles(colors, xl, width), [colors, xl, width]);
+
     const [members, setMembers] = useState<ManagerCard[]>([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [showMemberModal, setShowMemberModal] = useState(false);
+    const [internalShowModal, setInternalShowModal] = useState(false);
+
+    const isControlled = onCloseMemberModal !== undefined;
+    const showMemberModal = isControlled ? (externalShowModal ?? false) : internalShowModal;
+    const handleModalClose = isControlled ? onCloseMemberModal : () => setInternalShowModal(false);
+
     const fetchMembers = async () => {
         if (!selectedBrand) return;
         try {
@@ -87,53 +103,73 @@ const Members = () => {
     }, [selectedBrand]);
 
     return (
-        <View
-            style={{
-                flex: 1,
-                padding: 10,
-                backgroundColor: Colors(theme).background,
-            }}
-        >
-            {/* <MembersCard /> */}
+        <View style={styles.container}>
             <FlatList
                 data={members}
                 renderItem={({ item }) => (
-                    <MembersCard
-                        manager={item}
-                        cardType="preferences"
-                        removeAction={() => removeMember(item)}
-                    />
+                    <View style={xl ? styles.cardWrapper : undefined}>
+                        <MembersCard
+                            manager={item}
+                            cardType="preferences"
+                            removeAction={() => removeMember(item)}
+                        />
+                    </View>
                 )}
                 keyExtractor={(item) => item.managerId}
-                contentContainerStyle={{
-                    gap: 10,
-                }}
+                contentContainerStyle={styles.listContent}
+                style={styles.list}
+                numColumns={xl ? 2 : 1}
+                columnWrapperStyle={xl ? styles.columnWrapper : undefined}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={handleRefresh}
-                        colors={[Colors(theme).primary]}
+                        colors={[colors.primary]}
                     />
                 }
             />
-            <Button
-                onPress={() => {
-                    setShowMemberModal(true);
-                }}
-            >
-                Add Member
-            </Button>
 
             <MembersModal
                 visible={showMemberModal}
-                handleModalClose={() => {
-                    setShowMemberModal(false);
-                }}
+                handleModalClose={handleModalClose}
                 refresh={fetchMembers}
                 theme={theme}
             />
         </View>
     );
 };
+
+function createStyles(
+    colors: ReturnType<typeof Colors>,
+    xl: boolean,
+    width: number
+) {
+    const contentMaxWidth = Math.min(width - 48, 960);
+    const horizontalPadding = xl ? 24 : 10;
+    const listGap = xl ? 16 : 10;
+
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            padding: horizontalPadding,
+            backgroundColor: colors.background,
+            ...(xl && { maxWidth: contentMaxWidth, alignSelf: "center", width: "100%" }),
+        },
+        list: {
+            flex: 1,
+        },
+        listContent: {
+            gap: listGap,
+            paddingBottom: xl ? 24 : 16,
+        },
+        columnWrapper: {
+            gap: listGap,
+        },
+        cardWrapper: {
+            flex: 1,
+            minWidth: 0,
+        },
+    });
+}
 
 export default Members;

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import useInvitation from "@/hooks/use-invitation";
@@ -39,6 +39,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
                 xl={xl}
                 influencer={data}
                 type="invitation"
+                fullWidth
                 ToggleModal={bottomSheetAction}
                 fullHeight={true}
                 isOnFreePlan={isOnFreeTrial}

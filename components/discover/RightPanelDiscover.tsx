@@ -86,6 +86,12 @@ const RightPanelDiscover: React.FC<IProps> = ({
         setRightPanel(false);
     };
 
+    /** Close filter panel after Apply/Clear: use onDismiss in overlay mode, else collapse panel */
+    const closeFilterAfterAction = () => {
+        if (onDismiss) onDismiss();
+        else collapsePanel();
+    };
+
     const translateX = slideAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [0, 400],
@@ -156,7 +162,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                         style={styles.clearBtn}
                         onPress={async () => {
                             await filterApply.current?.("clear");
-                            setTimeout(() => collapsePanel(), 100);
+                            setTimeout(closeFilterAfterAction, 100);
                         }}
                     >
                         Clear all
@@ -167,7 +173,7 @@ const RightPanelDiscover: React.FC<IProps> = ({
                         icon="filter-variant"
                         onPress={async () => {
                             await filterApply.current?.("apply");
-                            setTimeout(() => collapsePanel(), 100);
+                            setTimeout(closeFilterAfterAction, 100);
                         }}
                     >
                         Apply

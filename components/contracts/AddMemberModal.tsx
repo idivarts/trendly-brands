@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { IBrandsMembers } from "@/shared-libs/firestore/trendly-pro/models/brands";

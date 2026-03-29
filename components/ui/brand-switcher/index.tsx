@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Brand } from "@/types/Brand";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
@@ -45,7 +45,7 @@ const BrandSwitcher = () => {
             anchor={
                 <Pressable onPress={openMenu}>
                     <FontAwesomeIcon
-                        color={Colors(theme).text}
+                        color={Colors(theme).white}
                         icon={faChevronDown}
                         size={16}
                         style={{

@@ -8,7 +8,8 @@ import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import React, { useState } from "react";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
+import React, { useMemo, useState } from "react";
 import {
     Platform,
     Pressable,
@@ -16,9 +17,10 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    useWindowDimensions,
     View
 } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import Colors from "@/shared-uis/constants/Colors";
 import { ExplainerDynamic } from "../ExplainerDynamic";
 import { SuccessCelebration } from "../SuccessCelebration";
 
@@ -31,9 +33,11 @@ export default function BrandDetailPage() {
     const router = useMyNavigation()
     const { selectedBrand, updateBrand } = useBrandContext()
     const { features: { aboutBrand, showDetailsOnMobile } } = useMyGrowthBook()
+    const theme = useTheme();
+    const colors = Colors(theme);
 
-    const { width } = useWindowDimensions();
-    const isWide = width >= 1000;
+    const { xl, width } = useBreakpoints();
+    const isWide = xl || width >= 1000;
 
     const showDetails = isWide || showDetailsOnMobile;
 
@@ -103,6 +107,8 @@ export default function BrandDetailPage() {
     }
     explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
 
+    const styles = useMemo(() => useStyles(colors), [colors]);
+
     return (
         <AppLayout>
             <ScrollView
@@ -156,7 +162,7 @@ export default function BrandDetailPage() {
 
                         {/* About Brand (Optional) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>About brand <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <Text style={styles.label}>About brand <Text style={styles.optionalLabel}>(optional)</Text></Text>
                             <TextInput
                                 value={about}
                                 onChangeText={setAbout}
@@ -170,7 +176,7 @@ export default function BrandDetailPage() {
 
                         {/* Brand Website (Optional) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>Brand website <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <Text style={styles.label}>Brand website <Text style={styles.optionalLabel}>(optional)</Text></Text>
                             <TextInput
                                 value={website}
                                 onChangeText={setWebsite}
@@ -185,7 +191,7 @@ export default function BrandDetailPage() {
 
                         {/* Brand Industry (Optional, multi-select) */}
                         <View style={styles.field}>
-                            <Text style={styles.label}>Brand industry <Text style={{ color: "#6C7A89", fontWeight: "400" }}>(optional)</Text></Text>
+                            <Text style={styles.label}>Brand industry <Text style={styles.optionalLabel}>(optional)</Text></Text>
                             <View style={styles.chipWrap}>
                                 {LANDING_BRAND_INDUSTRIES.map((name) => {
                                     const active = selectedIndustries.includes(name);
@@ -241,17 +247,13 @@ export default function BrandDetailPage() {
 }
 
 /* --------- Styles --------- */
-const BLUE = "#254F7A";
-const BLUE_DARK = "#1A3B5C";
-const BLUE_LIGHT = "#6C91BA";
-const TEXT = "#243A53";
-
-const styles = StyleSheet.create({
+function useStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
     page: {
         paddingHorizontal: 24,
         paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: colors.background,
         maxWidth: 1300,
         alignSelf: "center",
         width: "100%",
@@ -263,7 +265,7 @@ const styles = StyleSheet.create({
         marginTop: 0,
     },
     heroRow: {
-        backgroundColor: "#F8FBFF",
+        backgroundColor: colors.formBg,
         padding: 28,
         flexDirection: "row",
         alignItems: "center",
@@ -278,29 +280,29 @@ const styles = StyleSheet.create({
         alignSelf: "flex-start"
     },
     kicker: {
-        color: BLUE_LIGHT,
+        color: colors.primaryMid,
         fontSize: 12,
         letterSpacing: 1.4,
         fontWeight: "700",
         marginBottom: 8,
     },
     title: {
-        color: TEXT,
+        color: colors.text,
         fontSize: 48,
         lineHeight: 62,
         fontWeight: "600",
         marginTop: 4,
     },
     titleAccent: {
-        color: BLUE,
+        color: colors.primary,
         textDecorationLine: "underline",
-        textDecorationColor: "#CFE2F7",
+        textDecorationColor: colors.textDecorationLight,
         textDecorationStyle: "solid",
     },
     subtitle: {
         marginTop: 18,
         marginBottom: 14,
-        color: "#53657A",
+        color: colors.subtitleGray,
         fontSize: 16,
         lineHeight: 24,
         maxWidth: 640,
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
     points: { marginTop: 8, gap: 10 },
     pointItem: { flexDirection: "row", alignItems: "center" },
     pointIcon: { fontSize: 18, marginRight: 10 },
-    pointText: { color: TEXT, fontSize: 14 },
+    pointText: { color: colors.text, fontSize: 14 },
 
     /* Visual under explainer */
     visual: {
@@ -318,8 +320,8 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         justifyContent: "flex-end",
         marginTop: 18,
-        backgroundColor: "#E7F0F9",
-        shadowColor: "#000",
+        backgroundColor: colors.visualBg,
+        shadowColor: colors.black,
         shadowOpacity: 0.12,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 8 },
@@ -329,17 +331,17 @@ const styles = StyleSheet.create({
     playBadge: {
         alignSelf: "flex-start",
         margin: 12,
-        backgroundColor: "rgba(255,255,255,0.9)",
+        backgroundColor: colors.playBadgeBg,
         borderRadius: 999,
         paddingHorizontal: 12,
         paddingVertical: 6,
     },
-    playBadgeText: { color: BLUE_DARK, fontWeight: "800" },
+    playBadgeText: { color: colors.primaryDark, fontWeight: "800" },
 
     /* Form */
     formCard: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: colors.background,
         gap: 12,
         ...Platform.select({ web: { maxWidth: 520 } }),
         ...Platform.select({ android: { elevation: 4 } }),
@@ -349,13 +351,13 @@ const styles = StyleSheet.create({
         paddingVertical: 22,
         paddingHorizontal: 22,
         marginTop: 18,
-        shadowColor: "#000",
+        shadowColor: colors.black,
         shadowOpacity: 0.08,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 6 },
     },
-    formHeading: { fontSize: 24, fontWeight: "800", color: TEXT },
-    formSub: { marginTop: 6, color: "#6C7A89", fontSize: 13 },
+    formHeading: { fontSize: 24, fontWeight: "800", color: colors.text },
+    formSub: { marginTop: 6, color: colors.formLabel, fontSize: 13 },
     headerRow: {
         marginTop: 0,
         marginBottom: 4,
@@ -369,28 +371,29 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
-        backgroundColor: "#F5FAFF",
+        borderColor: colors.formBorder,
+        backgroundColor: colors.skipBtnBg,
     },
     skipText: {
-        color: BLUE,
+        color: colors.primary,
         fontWeight: "800",
         fontSize: 12,
     },
     field: { marginTop: 16 },
-    label: { color: TEXT, fontSize: 13, fontWeight: "700", marginBottom: 6 },
+    label: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 6 },
+    optionalLabel: { color: colors.formLabel, fontWeight: "400" },
     input: {
         height: 48,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
+        borderColor: colors.formBorder,
         paddingHorizontal: 14,
-        backgroundColor: "#FAFCFF",
-        color: TEXT,
+        backgroundColor: colors.formBgInput,
+        color: colors.text,
     },
-    inputError: { borderColor: "#E87070" },
-    error: { color: "#D64545", marginTop: 6, fontSize: 12 },
-    disclaimer: { color: "#6C7A89", marginTop: 12, fontSize: 12 },
+    inputError: { borderColor: colors.errorBorder },
+    error: { color: colors.red, marginTop: 6, fontSize: 12 },
+    disclaimer: { color: colors.formLabel, marginTop: 12, fontSize: 12 },
 
     // Age select cards
     cardGrid: {
@@ -399,27 +402,27 @@ const styles = StyleSheet.create({
         gap: 12,
         marginTop: 8,
     },
-    ageHelp: { color: "#6C7A89", fontSize: 12, marginTop: 2 },
+    ageHelp: { color: colors.formLabel, fontSize: 12, marginTop: 2 },
     ageCard: {
         flexBasis: "48%",
         borderWidth: 1,
-        borderColor: "#E1E6EE",
-        backgroundColor: "#FFFFFF",
+        borderColor: colors.formBorder,
+        backgroundColor: colors.background,
         borderRadius: 12,
         padding: 12,
         minHeight: 80,
     },
     ageCardSelected: {
-        borderColor: BLUE,
-        backgroundColor: "#F0F6FF",
-        shadowColor: "#2B5C8F",
+        borderColor: colors.primary,
+        backgroundColor: colors.ageCardSelectedBg,
+        shadowColor: colors.primaryShadow,
         shadowOpacity: 0.12,
         shadowRadius: 10,
         shadowOffset: { width: 0, height: 6 },
         ...Platform.select({ android: { elevation: 3 } }),
     },
-    ageCardTitle: { fontSize: 14, fontWeight: "800", color: TEXT },
-    ageCardDesc: { fontSize: 12, color: "#6C7A89", marginTop: 4 },
+    ageCardTitle: { fontSize: 14, fontWeight: "800", color: colors.text },
+    ageCardDesc: { fontSize: 12, color: colors.formLabel, marginTop: 4 },
 
     // Text area
     textArea: {
@@ -440,15 +443,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "#E1E6EE",
-        backgroundColor: "#FFFFFF",
+        borderColor: colors.formBorder,
+        backgroundColor: colors.background,
     },
     chipSelected: {
-        backgroundColor: BLUE,
-        borderColor: BLUE,
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
-    chipText: { color: TEXT, fontSize: 12, fontWeight: "700" },
-    chipTextSelected: { color: "#FFFFFF" },
+    chipText: { color: colors.text, fontSize: 12, fontWeight: "700" },
+    chipTextSelected: { color: colors.onPrimary },
 
     /* CTA reused */
     cta: {
@@ -459,22 +462,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: 22,
         height: 48,
         borderRadius: 999,
-        backgroundColor: BLUE,
-        shadowColor: "#2B5C8F",
+        backgroundColor: colors.primary,
+        shadowColor: colors.primaryShadow,
         shadowOpacity: 0.25,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 8 },
         ...Platform.select({ android: { elevation: 6 } }),
     },
     ctaText: {
-        color: "#FFFFFF",
+        color: colors.onPrimary,
         fontSize: 16,
         fontWeight: "700",
     },
     ctaArrow: {
-        color: "#FFFFFF",
+        color: colors.onPrimary,
         fontSize: 22,
         marginLeft: 10,
         marginTop: -2,
     },
 });
+}

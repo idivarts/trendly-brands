@@ -1,10 +1,11 @@
 import { useTheme } from "@react-navigation/native";
-import { Linking, Pressable } from "react-native";
+import React, { useMemo } from "react";
+import { Linking, Pressable, StyleSheet } from "react-native";
 
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import ImageComponent from "@/shared-uis/components/image-component";
-import stylesFn from "@/styles/modal/UploadModal.styles";
 import {
     faCheck,
     faCheckCircle,
@@ -32,43 +33,25 @@ const BrandModal: React.FC<BrandModalProps> = ({
     setVisibility,
 }) => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const { width } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme, width), [theme, width]);
 
     return (
         <Modal
             visible={visible}
             onDismiss={() => setVisibility(false)}
-            contentContainerStyle={{
-                backgroundColor: Colors(theme).background,
-                borderRadius: 10,
-                padding: 20,
-                marginHorizontal: 20,
-            }}
+            contentContainerStyle={styles.modalContent}
         >
-            <View style={{ alignItems: "center", gap: 20 }}>
-                {/* Brand Image */}
+            <View style={styles.centerColumn}>
                 <ImageComponent
                     url={brand.image}
                     altText="Brand Image"
                     shape="square"
                     size="medium"
-                    style={{
-                        width: 120,
-                        height: 120,
-                        borderRadius: 10,
-                    }}
+                    style={styles.brandImage}
                 />
 
-                {/* Brand Name */}
-                <Text
-                    style={{
-                        fontSize: 24,
-                        fontWeight: "bold",
-                        color: Colors(theme).text,
-                        textAlign: "center",
-                        alignItems: "center",
-                    }}
-                >
+                <Text style={styles.brandName}>
                     {brand.name}{" "}
                     {brand.verified && (
                         <FontAwesomeIcon
@@ -79,31 +62,15 @@ const BrandModal: React.FC<BrandModalProps> = ({
                     )}
                 </Text>
 
-                {/* Brand Description */}
-                <Text
-                    style={{
-                        fontSize: 16,
-                        color: Colors(theme).text,
-                        textAlign: "center",
-                    }}
-                >
+                <Text style={styles.brandDescription}>
                     {brand.description}
                 </Text>
 
-                <View
-                    style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        justifyContent: "center",
-                        gap: 10,
-                    }}
-                >
+                <View style={styles.categoriesRow}>
                     {brand.category.map((cat, index) => (
                         <Chip
                             key={index}
-                            style={{
-                                margin: 5,
-                            }}
+                            style={styles.chip}
                             mode="outlined"
                         >
                             <FontAwesomeIcon
@@ -116,23 +83,11 @@ const BrandModal: React.FC<BrandModalProps> = ({
                     ))}
                 </View>
 
-                {/* Brand Website */}
                 <Pressable
                     onPress={() => Linking.openURL(brand.website)}
-                    style={{
-                        backgroundColor: Colors(theme).primary,
-                        borderRadius: 5,
-                        paddingVertical: 10,
-                        paddingHorizontal: 20,
-                    }}
+                    style={styles.websiteButton}
                 >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            color: Colors(theme).white,
-                            fontWeight: "bold",
-                        }}
-                    >
+                    <Text style={styles.websiteButtonText}>
                         <FontAwesomeIcon
                             icon={faLink}
                             color={Colors(theme).white}
@@ -145,5 +100,73 @@ const BrandModal: React.FC<BrandModalProps> = ({
         </Modal>
     );
 };
+
+const BRAND_MODAL_MAX_WIDTH = 560;
+
+function useStyles(
+    theme: ReturnType<typeof useTheme>,
+    constrainedWidth: number
+) {
+    const modalMaxWidth =
+        constrainedWidth > 0
+            ? Math.min(
+                  BRAND_MODAL_MAX_WIDTH,
+                  Math.max(280, constrainedWidth - 32)
+              )
+            : BRAND_MODAL_MAX_WIDTH;
+
+    return StyleSheet.create({
+        modalContent: {
+            backgroundColor: Colors(theme).background,
+            borderRadius: 10,
+            padding: 20,
+            marginHorizontal: 20,
+            maxWidth: modalMaxWidth,
+            width: "100%",
+            alignSelf: "center",
+        },
+        centerColumn: {
+            alignItems: "center",
+            gap: 20,
+        },
+        brandImage: {
+            width: 120,
+            height: 120,
+            borderRadius: 10,
+        },
+        brandName: {
+            fontSize: 24,
+            fontWeight: "bold",
+            color: Colors(theme).text,
+            textAlign: "center",
+            alignItems: "center",
+        },
+        brandDescription: {
+            fontSize: 16,
+            color: Colors(theme).text,
+            textAlign: "center",
+        },
+        categoriesRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: 10,
+        },
+        chip: {
+            margin: 5,
+        },
+        websiteButton: {
+            backgroundColor: Colors(theme).primary,
+            borderRadius: 5,
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+        },
+        websiteButtonText: {
+            fontSize: 16,
+            color: Colors(theme).white,
+            fontWeight: "bold",
+        },
+    });
+}
 
 export default BrandModal;

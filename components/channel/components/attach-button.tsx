@@ -1,4 +1,4 @@
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import React, { useState } from 'react';
 import type { GestureResponderEvent, LayoutChangeEvent, LayoutRectangle } from 'react-native';

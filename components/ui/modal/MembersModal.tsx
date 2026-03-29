@@ -1,17 +1,18 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
+import { useTheme, type Theme } from "@react-navigation/native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { stylesFn } from "@/styles/Members";
-import React from "react";
+import React, { useMemo } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    StyleSheet,
 } from "react-native";
 import { Modal, Portal } from "react-native-paper";
 import Button from "../button";
@@ -30,7 +31,13 @@ const MembersModal: React.FC<MembersModalProps> = ({
     theme,
     refresh,
 }) => {
-    const styles = stylesFn(theme);
+    const styles = useMemo(() => useMembersStyles(theme), [theme]);
+    const colors = Colors(theme);
+    const layoutStyles = React.useMemo(() => StyleSheet.create({
+        modalRoot: { justifyContent: "center", alignItems: "center" },
+        scroll: { borderRadius: 10, backgroundColor: colors.background, gap: 12 },
+        scrollContent: { paddingBottom: 16 },
+    }), [colors]);
 
     const [email, setEmail] = React.useState("");
     const [name, setName] = React.useState("");
@@ -89,24 +96,15 @@ const MembersModal: React.FC<MembersModalProps> = ({
                     onDismiss={() => {
                         handleModalClose();
                     }}
-                    style={{
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
+                    style={layoutStyles.modalRoot}
                 >
                     <View style={styles.modalContent}>
                         <Text style={styles.title}>Add Member</Text>
                         <Text style={styles.subtitle}>You can add members from here</Text>
                         <View style={styles.modalInputContainer}>
                             <ScrollView
-                                style={{
-                                    borderRadius: 10,
-                                    backgroundColor: Colors(theme).background,
-                                    gap: 12,
-                                }}
-                                contentContainerStyle={{
-                                    paddingBottom: 16,
-                                }}
+                                style={layoutStyles.scroll}
+                                contentContainerStyle={layoutStyles.scrollContent}
                             >
                                 <TextInput
                                     label="Email"
@@ -130,7 +128,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
                                     onPress={addMember}
                                     style={styles.addButton}
                                 >
-                                    {loading ? <ActivityIndicator color="#fff" /> : "Add Member"}
+                                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : "Add Member"}
                                 </Button>
                             </ScrollView>
                         </View>
@@ -140,5 +138,73 @@ const MembersModal: React.FC<MembersModalProps> = ({
         </KeyboardAvoidingView>
     );
 };
+
+function useMembersStyles(theme: Theme) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            padding: 16,
+            backgroundColor: Colors(theme).background,
+        },
+        searchInput: {
+            backgroundColor: Colors(theme).background,
+            flex: 1,
+        },
+        title: {
+            fontSize: 18,
+            fontWeight: "bold",
+        },
+        subtitle: {
+            fontSize: 16,
+        },
+        scrollView: {
+            paddingBottom: 160,
+            width: "100%",
+        },
+        scrollViewContent: {
+            paddingBottom: 16,
+        },
+        actionsCell: {
+            flexDirection: "row",
+            justifyContent: "flex-end",
+        },
+        modalContent: {
+            padding: 16,
+            gap: 16,
+            borderRadius: 10,
+            backgroundColor: Colors(theme).background,
+            width: 300,
+        },
+        modalInputContainer: {
+            marginBottom: 10,
+            backgroundColor: Colors(theme).background,
+        },
+        input: {
+            marginBottom: 10,
+            backgroundColor: Colors(theme).background,
+        },
+        chipContainer: {
+            backgroundColor: Colors(theme).background,
+            flexDirection: "row",
+            flexWrap: "wrap",
+            marginVertical: 10,
+        },
+        chip: {
+            margin: 4,
+        },
+        addButton: {
+            alignItems: "center",
+        },
+        noDataContainer: {
+            flex: 1,
+            justifyContent: "center",
+            marginTop: 16,
+            alignItems: "center",
+        },
+        noDataText: {
+            fontSize: 17,
+        },
+    });
+}
 
 export default MembersModal;

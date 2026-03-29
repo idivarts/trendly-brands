@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useChatContext } from "@/contexts/chat-context.provider";
 import AppLayout from "@/layouts/app-layout";

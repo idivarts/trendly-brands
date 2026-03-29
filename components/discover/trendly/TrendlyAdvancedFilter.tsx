@@ -2,7 +2,7 @@ import {
     PageSortCommunication,
     useDiscovery,
 } from "@/components/discover/discovery-context";
-import { hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
+import { cleanFilters, cleanFiltersForStorage, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import Select from "@/components/ui/select";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints, useNicheSearch } from "@/hooks";
@@ -13,7 +13,6 @@ import {
 } from "@/shared-constants/preferences/locations";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { MultiSelectExtendableAsync } from "@/shared-uis/components/multiselect-extendable/async";
 import { View } from "@/shared-uis/components/theme/Themed";
@@ -163,7 +162,7 @@ const TrendlyAdvancedFilter = ({
     const theme = useTheme();
     const styles = stylesFn(theme);
 
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, updateBrand } = useBrandContext();
 
     // Use dynamic niches from context
     const { niches: dynamicNiches, getAllNiches, handleSearch: searchNiches, isLoading: isLoadingNiches } = useNicheSearch();
@@ -215,7 +214,7 @@ const TrendlyAdvancedFilter = ({
     // Sorting & pagination state
     const [sort, setSort] = useState<
         "followers" | "views" | "engagement" | "engagement_rate"
-    >("followers");
+    >("engagement");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [offset, setOffset] = useState(0);
     const [limit, setLimit] = useState(16);
@@ -262,29 +261,29 @@ const TrendlyAdvancedFilter = ({
         setGenders(f?.genders || []);
         setSelectedNiches(f?.selectedNiches || []);
         setSelectedLocations(f?.selectedLocations || []);
+
+        if (f?.sort) {
+            setSort(f.sort as "followers" | "views" | "engagement" | "engagement_rate");
+        }
     };
 
     useEffect(() => {
         if (hasMeaningfulFilters(defaultAdvanceFilters)) {
-            // Use collaboration preferences (never overridden by saved filters)
-            setFieldsFromFilters(defaultAdvanceFilters as Partial<IAdvanceFilters>);
+            // Use collaboration preferences (never overridden by brand preferences)
+            setFieldsFromFilters(cleanFiltersForStorage(defaultAdvanceFilters as Record<string, any>) as Partial<IAdvanceFilters>);
+            setOffset(0);
             return;
         }
 
-        // Otherwise try to load the brand-specific saved filter from PersistentStorage
-        const loadSaved = async () => {
-            try {
-                const key = `defaultFilter-${selectedBrand?.id}`;
-                const saved = await PersistentStorage.get(key);
-                if (!saved) return;
-                const parsed = JSON.parse(saved);
-                setFieldsFromFilters(parsed as Partial<IAdvanceFilters>);
-            } catch (err) {
-                console.warn("Failed to load saved filters:", err);
-            }
-        };
-
-        loadSaved();
+        // Otherwise load from brand's discoverPreferences (stored in Firestore).
+        // Strip offset/limit so we never use them from storage; always start at 0.
+        if (
+            selectedBrand?.discoverPreferences &&
+            hasMeaningfulFilters(selectedBrand.discoverPreferences)
+        ) {
+            setFieldsFromFilters(cleanFiltersForStorage(selectedBrand.discoverPreferences as Record<string, any>) as Partial<IAdvanceFilters>);
+            setOffset(0);
+        }
     }, [selectedBrand, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
@@ -583,7 +582,7 @@ const TrendlyAdvancedFilter = ({
         setSelectedLocations([]);
 
         // Sorting & pagination defaults
-        setSort("followers");
+        setSort("engagement");
         setSortDirection("desc");
         setOffset(0);
         setLimit(16);
@@ -625,20 +624,30 @@ const TrendlyAdvancedFilter = ({
 
         if (action === "apply") {
             const payload = getFormData();
-            const key = `defaultFilter-${selectedBrand?.id}`;
-
-            await PersistentStorage.set(key, JSON.stringify(payload));
+            const cleaned = cleanFilters(payload);
+            if (selectedBrand?.id) {
+                try {
+                    await updateBrand(selectedBrand.id, {
+                        discoverPreferences: cleaned,
+                    });
+                } catch (err) {
+                    Toaster.error("Failed to save preferences. Please try again.");
+                    return;
+                }
+            }
             onFiltersApplied?.(payload);
             callApiRef.current(true);
         } else {
-            const key = `defaultFilter-${selectedBrand?.id}`;
-            try {
-                await PersistentStorage.clear(key);
-                onClearStoredFilters?.();
-            } catch (err) {
-                console.warn("Failed to clear saved filter:", err);
+            if (selectedBrand?.id) {
+                try {
+                    await updateBrand(selectedBrand.id, {
+                        discoverPreferences: {},
+                    });
+                } catch (err) {
+                    console.warn("Failed to clear saved filter:", err);
+                }
             }
-
+            onClearStoredFilters?.();
             resetCallApiRef.current();
         }
     };

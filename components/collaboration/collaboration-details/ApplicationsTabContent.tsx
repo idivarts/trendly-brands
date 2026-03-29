@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, StyleSheet } from "react-native";
 
 import {
     ApplicationCard
@@ -11,7 +11,6 @@ import InfluencerActionModal from "@/components/explore-influencers/InfluencerAc
 import { View } from "@/components/theme/Themed";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
 import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -22,6 +21,7 @@ import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Mod
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import { Text } from "@/shared-uis/components/theme/Themed";
+import Colors from "@/shared-uis/constants/Colors";
 import { Application, InfluencerApplication } from "@/types/Collaboration";
 import { User } from "@/types/User";
 import { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
@@ -42,12 +42,16 @@ interface IProps {
 }
 const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => {
     const theme = useTheme();
+    const colors = Colors(theme);
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [selectedInfluencerApplication, setSelectedInfluencerApplication] = useState<InfluencerApplication | null>(null);
     const [isActionModalVisible, setIsActionModalVisible] = useState(false);
     const { manager } = useAuthContext()
 
     const {
         xl,
+        width: bpWidth,
+        height: bpHeight,
     } = useBreakpoints();
 
     // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -106,14 +110,7 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
 
     if (loading) {
         return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    gap: 40,
-                }}
-            >
+            <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors(theme).primary} />
             </View>
         );
@@ -133,11 +130,11 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         );
     };
 
-    const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
-    const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height);
+    const width = Math.min(MAX_WIDTH_WEB, bpWidth);
+    const height = Math.min(APPROX_CARD_HEIGHT, bpHeight);
 
     return (
-        <View style={{ alignSelf: "stretch", height: "100%" }}>
+        <View style={styles.container}>
             <CarouselInViewProvider>
                 <CarouselScroller
                     data={influencers}
@@ -147,17 +144,10 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                     renderItem={({ item }) => (
                         <ApplicationCard
                             key={(item as InfluencerApplication).application.id}
-                            topHeaderNode={isApplicationConcised && <View style={{
-                                paddingBottom: 16, backgroundColor: Colors(theme).card
-                            }}>
-                                <View style={{
-                                    flexDirection: "column",
-                                    alignItems: "flex-start",
-                                    gap: 8,
-                                    // paddingHorizontal: 16,
-                                }}>
-                                    <Text style={{ fontWeight: "600", fontSize: 16 }}>{item.collaboration?.name || ""}</Text>
-                                    <Text style={{ fontWeight: "400", fontSize: 12 }}>{item.brand?.name || ""}</Text>
+                            topHeaderNode={isApplicationConcised && <View style={styles.topHeaderCard}>
+                                <View style={styles.topHeaderInner}>
+                                    <Text style={styles.topHeaderTitle}>{item.collaboration?.name || ""}</Text>
+                                    <Text style={styles.topHeaderSubtitle}>{item.brand?.name || ""}</Text>
                                 </View>
 
                             </View>}
@@ -198,15 +188,8 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
                 <ProfileBottomSheet
                     closeModal={() => setOpenProfileModal(false)}
                     isPhoneMasked={false}
-                    isOnFreePlan={isOnFreeTrial}
-                    lockProfile={false}
                     actionCard={
-                        <View
-                            style={{
-                                backgroundColor: Colors(theme).transparent,
-                                marginHorizontal: 16,
-                            }}
-                        >
+                        <View style={styles.actionCardWrapper}>
                             <ProfileApplicationCard
                                 data={selectedInfluencerApplication?.application as Application}
                                 onReject={async () => {
@@ -236,5 +219,40 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         </View>
     );
 };
+
+const createStyles = (colors: ReturnType<typeof Colors>) =>
+    StyleSheet.create({
+        loadingContainer: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 40,
+        },
+        container: {
+            alignSelf: "stretch",
+            height: "100%",
+        },
+        topHeaderCard: {
+            paddingBottom: 16,
+            backgroundColor: colors.card,
+        },
+        topHeaderInner: {
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 8,
+        },
+        topHeaderTitle: {
+            fontWeight: "600",
+            fontSize: 16,
+        },
+        topHeaderSubtitle: {
+            fontWeight: "400",
+            fontSize: 12,
+        },
+        actionCardWrapper: {
+            backgroundColor: colors.transparent,
+            marginHorizontal: 16,
+        },
+    });
 
 export default ApplicationsTabContent;

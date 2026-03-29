@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext, useCollaborationContext } from "@/contexts";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -45,7 +45,30 @@ const BottomSheetActions = ({
     const { openModal } = useConfirmationModel()
     const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
-    const actionTextStyle = { color: Colors(theme).black };
+    const colors = Colors(theme);
+    const styles = React.useMemo(
+        () =>
+            StyleSheet.create({
+                overlay: {
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: colors.backdrop,
+                },
+                bottomSheetContainer: {
+                    flex: 1,
+                    justifyContent: "flex-end",
+                    zIndex: 2,
+                },
+                bottomSheet: {
+                    zIndex: 9999,
+                },
+            }),
+        [colors]
+    );
+    const actionTextStyle = { color: colors.text };
 
     const { connectUser } = useChatContext();
 
@@ -179,6 +202,42 @@ const BottomSheetActions = ({
 
     };
 
+    const startReceivingApplications = async () => {
+        handleClose();
+        openModal({
+            title: "Start Receiving Applications",
+            description: "Influencers will be able to apply to this collaboration again.",
+            confirmText: "Start Receiving",
+            confirmAction: async () => {
+                try {
+                    await updateCollaboration(cardId, { status: "active" }, { skipEvaluation: true });
+                    Toaster.success("Collaboration is now accepting applications");
+                } catch (error) {
+                    Console.error(error);
+                    Toaster.error("Failed to start receiving applications");
+                }
+            }
+        });
+    };
+
+    const reactivateCollaboration = async () => {
+        handleClose();
+        openModal({
+            title: "Reactivate Collaboration",
+            description: "This will move the collaboration back to Active campaigns and influencers will be able to apply again.",
+            confirmText: "Reactivate",
+            confirmAction: async () => {
+                try {
+                    await updateCollaboration(cardId, { status: "active" }, { skipEvaluation: true });
+                    Toaster.success("Collaboration reactivated successfully");
+                } catch (error) {
+                    Console.error(error);
+                    Toaster.error("Failed to reactivate collaboration");
+                }
+            }
+        });
+    };
+
     const renderContent = () => {
         switch (cardType) {
             case "influencerType":
@@ -284,7 +343,11 @@ const BottomSheetActions = ({
                         />
                     </List.Section>
                 );
-            case "activeCollab":
+            case "activeCollab": {
+                const status = data?.status as string | undefined;
+                const isPast = status === "inactive"; // only delisted; "stopped" stays in active tab with Start Receiving option
+                const isStopped = status === "stopped";
+
                 return (
                     <List.Section style={{ paddingBottom: 28 }}>
                         <List.Item
@@ -316,20 +379,32 @@ const BottomSheetActions = ({
                                 Toaster.success("Link copied to clipboard");
                             }}
                         />
-                        <List.Item
-                            title="Stop Receiving Applications"
-                            titleStyle={actionTextStyle}
-                            onPress={() => {
-                                stopCollaboration();
-                            }}
-                        />
-                        <List.Item
-                            title="Delist Collaboration"
-                            titleStyle={actionTextStyle}
-                            onPress={() => {
-                                delistCollaboration();
-                            }}
-                        />
+                        {!isPast && (
+                            <List.Item
+                                title={isStopped ? "Start Receiving Applications" : "Stop Receiving Applications"}
+                                titleStyle={actionTextStyle}
+                                onPress={() => {
+                                    isStopped ? startReceivingApplications() : stopCollaboration();
+                                }}
+                            />
+                        )}
+                        {isPast ? (
+                            <List.Item
+                                title="Reactivate Collaboration"
+                                titleStyle={actionTextStyle}
+                                onPress={() => {
+                                    reactivateCollaboration();
+                                }}
+                            />
+                        ) : (
+                            <List.Item
+                                title="Delist Collaboration"
+                                titleStyle={actionTextStyle}
+                                onPress={() => {
+                                    delistCollaboration();
+                                }}
+                            />
+                        )}
                         <List.Item
                             title="Delete Collaboration"
                             titleStyle={actionTextStyle}
@@ -339,6 +414,7 @@ const BottomSheetActions = ({
                         />
                     </List.Section>
                 );
+            }
             case "contract":
                 return (
                     <List.Section style={{ paddingBottom: 28 }}>
@@ -384,24 +460,5 @@ const BottomSheetActions = ({
         </Modal>
     );
 };
-
-const styles = StyleSheet.create({
-    overlay: {
-        position: "absolute",
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-    },
-    bottomSheetContainer: {
-        flex: 1,
-        justifyContent: "flex-end",
-        zIndex: 2,
-    },
-    bottomSheet: {
-        zIndex: 9999,
-    },
-});
 
 export default BottomSheetActions;
