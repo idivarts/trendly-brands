@@ -1,6 +1,7 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
-import { DiscoveryProvider } from "@/components/discover/discovery-context";
 import { View } from "@/components/theme/Themed";
+import Button from "@/components/ui/button";
+import PageHeader from "@/components/ui/page-header";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -12,16 +13,14 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Colors from "@/shared-uis/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
-import Button from "@/components/ui/button";
-import PageHeader from "@/components/ui/page-header";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import InvitedMemberTabContent from "./InvitedMemberTabContent";
@@ -226,26 +225,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             id: "Invitations",
             title: "Send Invitations",
             component: (
-                <DiscoveryProvider
-                    value={{
-                        selectedDb: "trendly",
-                        setSelectedDb: () => { },
-                        rightPanel: false,
-                        setRightPanel: () => { },
-                        showFilters: false,
-                        setShowFilters: () => { },
-                        isCollapsed: false,
-                        setIsCollapsed: () => { },
-                        discoverCommunication: { current: undefined },
-                        pageSortCommunication: { current: undefined },
-                        totalCount: "0",
-                        currentSort: "engagement",
-                        setTotalCount: () => { },
-                        setCurrentSort: () => { },
-                    }}
-                >
-                    <InvitationsTabContent key={"invitations"} pageID={pageID} />
-                </DiscoveryProvider>
+                <InvitationsTabContent key={"invitations"} pageID={pageID} />
             ),
         },
         {
@@ -285,31 +265,31 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const isDraft = collaboration.status === "draft";
     const campaignHeaderActions = isDraft
         ? [
-              <Button
-                  key="edit"
-                  mode="contained"
-                  onPress={() => {
-                      nav.push({
-                          pathname: "/edit-collaboration",
-                          params: { id: pageID },
-                      });
-                  }}
-                  size="small"
-                  style={styles.draftActionButton}
-                  textColor={colors.text}
-              >
-                  Edit
-              </Button>,
-              <Button
-                  key="publish"
-                  mode="contained"
-                  onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
-                  size="small"
-                  style={styles.publishActionButton}
-              >
-                  Publish
-              </Button>,
-          ]
+            <Button
+                key="edit"
+                mode="contained"
+                onPress={() => {
+                    nav.push({
+                        pathname: "/edit-collaboration",
+                        params: { id: pageID },
+                    });
+                }}
+                size="small"
+                style={styles.draftActionButton}
+                textColor={colors.text}
+            >
+                Edit
+            </Button>,
+            <Button
+                key="publish"
+                mode="contained"
+                onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
+                size="small"
+                style={styles.publishActionButton}
+            >
+                Publish
+            </Button>,
+        ]
         : [];
 
     return (

@@ -324,15 +324,15 @@ const DiscoverComponent = ({
                             reduceHorizontalPadding={!showRightPanel}
                         />
                     </View>
-                    {showRightPanel && (
-                        <AdvancedFilterOverlay
-                            visible={filterOverlayVisible}
-                            onClose={() => setFilterOverlayVisible(false)}
-                            defaultAdvanceFilters={filtersForChildren}
-                            onClearStoredFilters={() => { }}
-                            onFiltersApplied={() => { }}
-                        />
-                    )}
+                    {/* {showRightPanel && ( */}
+                    <AdvancedFilterOverlay
+                        visible={filterOverlayVisible}
+                        onClose={() => setFilterOverlayVisible(false)}
+                        defaultAdvanceFilters={filtersForChildren}
+                        onClearStoredFilters={() => { }}
+                        onFiltersApplied={() => { }}
+                    />
+                    {/* )} */}
                 </View>
             </AppLayout>
         </DiscoveryProvider>
