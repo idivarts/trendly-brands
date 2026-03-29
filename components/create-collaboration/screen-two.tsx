@@ -1,13 +1,13 @@
-import Colors from "@/shared-uis/constants/Colors";
 import {
     INITIAL_PLATFORMS,
     PLATFORMS,
 } from "@/constants/ItemsList";
+import { CollaborationLocationType } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { Selector } from "@/shared-uis/components/select/selector";
+import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
-import { CollaborationLocationType } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Collaboration } from "@/types/Collaboration";
 import {
     faArrowRight,
@@ -212,7 +212,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                         options={[
                             {
                                 label: "Physical Product",
-                                value: "physical_product",
+                                value: "physical-product",
                                 description: "Any product based items like Beauty cream, shirts and so on.",
                             },
                             {
@@ -242,11 +242,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             label="About Product"
                             mode="outlined"
                             placeholder="Eg. TShirt for Kids"
-                            multiline
-                            numberOfLines={2}
-                            value={
-                                (collaboration.products ?? [])[0]?.name || ""
-                            }
+                            value={(collaboration.products ?? [])[0]?.name || ""}
                             onChangeText={(text) => {
                                 const current =
                                     (collaboration.products ?? [])[0] ?? {};
@@ -265,11 +261,11 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             keyboardType="number-pad"
                             value={
                                 (collaboration.products ?? [])[0]?.cost !==
-                                undefined
+                                    undefined
                                     ? String(
-                                          (collaboration.products ?? [])[0]
-                                              ?.cost ?? ""
-                                      )
+                                        (collaboration.products ?? [])[0]
+                                            ?.cost ?? ""
+                                    )
                                     : ""
                             }
                             onChangeText={(text) => {
@@ -289,7 +285,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 });
                             }}
                         />
-                            <Text style={styles.productCostHint}>
+                        <Text style={styles.productCostHint}>
                             This cost would be incurred by the brand and not
                             influencers
                         </Text>
@@ -351,18 +347,18 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     <View style={styles.locationSection}>
                         {collaboration.location?.type ===
                             CollaborationLocationType.OnSite && (
-                            <>
-                                <AddressAutocomplete
-                                    collaboration={collaboration}
-                                    mapRegion={mapRegion}
-                                    setCollaboration={setCollaboration}
-                                />
-                                <CreateCollaborationMap
-                                    mapRegion={mapRegion.state}
-                                    onLocationChange={onLocationChange}
-                                />
-                            </>
-                        )}
+                                <>
+                                    <AddressAutocomplete
+                                        collaboration={collaboration}
+                                        mapRegion={mapRegion}
+                                        setCollaboration={setCollaboration}
+                                    />
+                                    <CreateCollaborationMap
+                                        mapRegion={mapRegion.state}
+                                        onLocationChange={onLocationChange}
+                                    />
+                                </>
+                            )}
                     </View>
                 )}
 

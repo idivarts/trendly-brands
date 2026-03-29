@@ -2,7 +2,7 @@ import Button from "@/components/ui/button";
 import { useBreakpoints } from "@/hooks";
 import { IOScroll } from "@/shared-libs/contexts/scroll-context";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { CollaborationLocationType, IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import { CollaborationLocationType, IAdvanceFilters, normalizeCollaborationLocationType } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ImageComponent from "@/shared-uis/components/image-component";
@@ -41,13 +41,8 @@ import ManagerModal from "./modal/ManagerModal";
 
 function isOnSiteLocation(type?: string): boolean {
     if (!type) return false;
-    const t = type.toLowerCase();
-    return (
-        t.includes("on_site") ||
-        t.includes("on-site") ||
-        t.includes("physical") ||
-        t === "physical-mode"
-    );
+    const normalizedType = normalizeCollaborationLocationType(type);
+    return normalizedType === CollaborationLocationType.OnSite;
 }
 
 function formatPillLocationType(type?: string): string {
@@ -55,9 +50,9 @@ function formatPillLocationType(type?: string): string {
 }
 
 const PROMOTION_SUBJECT_LABELS: Record<string, string> = {
-    physical_product: "Physical product",
-    services: "Services",
-    others: "Other",
+    "physical-product": "Physical product",
+    "services": "Services",
+    "others": "Other",
 };
 
 function humanizePromotionSubject(key?: string): string | undefined {
