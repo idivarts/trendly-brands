@@ -7,7 +7,10 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import {
+    ICollaboration,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -86,6 +89,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             setCollaboration({
                 id: snapshot.id,
                 ...data,
+                location: {
+                    ...data.location,
+                    type: normalizeCollaborationLocationType(data.location?.type),
+                },
                 logo: brandData?.image || "",
                 brandName: brandData?.name || "Unknown Brand",
                 paymentVerified: brandData?.paymentMethodVerified || false,

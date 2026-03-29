@@ -7,6 +7,7 @@ import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { Selector } from "@/shared-uis/components/select/selector";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
+import { CollaborationLocationType } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Collaboration } from "@/types/Collaboration";
 import {
     faArrowRight,
@@ -25,13 +26,6 @@ import { View } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
-
-// Location type constants - single source of truth
-const LOCATION_TYPES = {
-    PHYSICAL_MODE: "Physical-Mode",
-    REMOTE: "Remote",
-    ON_SITE: "On_Site",
-} as const;
 
 interface ScreenTwoProps {
     collaboration: Partial<Collaboration>;
@@ -92,10 +86,8 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         return `${collaboration.numberOfInfluencersNeeded || 1}`;
     }, [collaboration.numberOfInfluencersNeeded]);
 
-    const handleLocationSelect = async (
-        value: typeof LOCATION_TYPES[keyof typeof LOCATION_TYPES]
-    ) => {
-        if (value === LOCATION_TYPES.ON_SITE) {
+    const handleLocationSelect = async (value: CollaborationLocationType) => {
+        if (value === CollaborationLocationType.OnSite) {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== "granted") {
@@ -313,25 +305,29 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             {
                                 icon: faBox,
                                 label: "Product/Service Will Be Shipped to Influencer",
-                                value: LOCATION_TYPES.PHYSICAL_MODE,
+                                value: CollaborationLocationType.PhysicalMode,
                                 description: "Brand will courier the product or perform the service to the influencer's address.",
                             },
                             {
                                 icon: faHouseLaptop,
                                 label: "Digital / Remote Collaboration",
-                                value: LOCATION_TYPES.REMOTE,
+                                value: CollaborationLocationType.Remote,
                                 description: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
                             },
                             {
                                 icon: faMapLocationDot,
                                 label: "Influencer Visits Store / Location",
-                                value: LOCATION_TYPES.ON_SITE,
+                                value: CollaborationLocationType.OnSite,
                                 description: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
                             },
                         ]}
                         onSelect={(value) => {
-                            if (value === LOCATION_TYPES.REMOTE || value === LOCATION_TYPES.ON_SITE || value === LOCATION_TYPES.PHYSICAL_MODE) {
-                                if (value === LOCATION_TYPES.ON_SITE) {
+                            if (
+                                value === CollaborationLocationType.Remote ||
+                                value === CollaborationLocationType.OnSite ||
+                                value === CollaborationLocationType.PhysicalMode
+                            ) {
+                                if (value === CollaborationLocationType.OnSite) {
                                     handleLocationSelect(value);
                                 } else {
                                     setCollaboration({
@@ -344,13 +340,17 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 }
                             }
                         }}
-                        selectedValue={collaboration.location?.type || LOCATION_TYPES.REMOTE}
+                        selectedValue={
+                            collaboration.location?.type ||
+                            CollaborationLocationType.Remote
+                        }
                         theme={theme}
                     />
                 </ContentWrapper>
-                {(collaboration.location?.type === LOCATION_TYPES.ON_SITE) && (
+                {collaboration.location?.type === CollaborationLocationType.OnSite && (
                     <View style={styles.locationSection}>
-                        {collaboration.location?.type === LOCATION_TYPES.ON_SITE && (
+                        {collaboration.location?.type ===
+                            CollaborationLocationType.OnSite && (
                             <>
                                 <AddressAutocomplete
                                     collaboration={collaboration}

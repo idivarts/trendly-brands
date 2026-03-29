@@ -1,6 +1,11 @@
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import {
+    CollaborationLocationType,
+    getCollaborationLocationDisplayLabel,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { truncateText } from "@/utils/text";
 import {
     faFacebook,
@@ -82,9 +87,14 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                         chipIcon={faDollarSign}
                     />
                     <ChipCard
-                        chipText={location.type}
+                        chipText={getCollaborationLocationDisplayLabel(
+                            location.type
+                        )}
                         chipIcon={
-                            location.type === "On-Site" ? faLocationDot : faHouseLaptop
+                            normalizeCollaborationLocationType(location.type) ===
+                            CollaborationLocationType.OnSite
+                                ? faLocationDot
+                                : faHouseLaptop
                         }
                     />
                     {platform &&
