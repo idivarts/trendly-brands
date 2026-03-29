@@ -5,10 +5,12 @@ import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
+import Colors from '@/shared-uis/constants/Colors'
+import { Theme, useTheme } from '@react-navigation/native'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { default as React, useEffect, useMemo, useState } from 'react'
 import { ScrollView, StyleSheet } from 'react-native'
-import { Text, useTheme } from 'react-native-paper'
+import { Text } from 'react-native-paper'
 import CancelPlanModal from './CancelPlanModal'
 import PlanWrapper from './plans/PlanWrapper'
 
@@ -76,7 +78,7 @@ const PayWallComponent = () => {
     )
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>, isMobile: boolean) =>
+const createStyles = (theme: Theme, isMobile: boolean) =>
     StyleSheet.create({
         header: {
             alignItems: 'center',
@@ -93,7 +95,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>, isMobile: boolean) =>
         },
         scrollContent: {
             padding: isMobile ? 20 : 40,
-            backgroundColor: theme.colors.background,
+            backgroundColor: Colors(theme).background,
             alignSelf: 'center',
         },
         contactSection: {
