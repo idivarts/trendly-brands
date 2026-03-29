@@ -54,31 +54,18 @@ const AutoScrollColumn = ({
     const translateY = useSharedValue(initialY);
 
     useEffect(() => {
-        if (direction === -1) {
-            // Downward scroll: animate from -scrollDistance to 0 (content moves up), then reset to -scrollDistance (seamless)
-            translateY.value = withRepeat(
-                withSequence(
-                    withTiming(0, {
-                        duration: marqueeScrollDurationMs,
-                        easing: Easing.linear,
-                    }),
-                    withTiming(-scrollDistance, { duration: 0 })
-                ),
-                -1
-            );
-        } else {
-            // Upward scroll: original behavior – animate from 0 to -scrollDistance, then reset to 0
-            translateY.value = withRepeat(
-                withSequence(
-                    withTiming(-scrollDistance, {
-                        duration: marqueeScrollDurationMs,
-                        easing: Easing.linear,
-                    }),
-                    withTiming(0, { duration: 0 })
-                ),
-                -1
-            );
-        }
+        const towardY = direction === -1 ? 0 : -scrollDistance;
+        const resetY = direction === -1 ? -scrollDistance : 0;
+        translateY.value = withRepeat(
+            withSequence(
+                withTiming(towardY, {
+                    duration: marqueeScrollDurationMs,
+                    easing: Easing.linear,
+                }),
+                withTiming(resetY, { duration: 0 })
+            ),
+            -1
+        );
     }, [direction, scrollDistance, translateY]);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -132,27 +119,35 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
             },
             showcaseContainer: {
                 ...authLayoutStyles.showcaseContainer,
-                backgroundColor: colors.showcaseBg,
-                borderColor: colors.showcaseBorder,
+                // backgroundColor: colors.showcaseBg,
+                // borderColor: colors.showcaseBorder,
             },
             floatingCard: {
                 ...authLayoutStyles.floatingCard,
                 backgroundColor: colors.floatingCardBg,
                 borderColor: colors.floatingCardBorder,
                 shadowColor: colors.floatingCardShadow,
-                ...(!isWideLayout && {
-                    padding: 20,
-                }),
-                ...(isWideLayout &&
-                    windowHeight < SHORT_VIEWPORT_MAX_HEIGHT && {
-                    padding: 12,
-                }),
+            },
+            /** Narrow layout: form sits on the gradient full-bleed (no elevated card). */
+            floatingCardFullBleed: {
+                width: "100%" as const,
+                alignSelf: "stretch" as const,
+                borderRadius: 0,
+                borderWidth: 0,
+                paddingHorizontal: 0,
+                paddingVertical: 0,
+                backgroundColor: colors.transparent,
+                borderColor: colors.transparent,
+                shadowColor: colors.transparent,
+                shadowOpacity: 0,
+                shadowRadius: 0,
+                shadowOffset: { width: 0, height: 0 },
             },
             pageNarrow: {
                 paddingHorizontal: 16,
             },
             floatingCardScrollContentNarrow: {
-                flexGrow: 0,
+                flexGrow: 1,
                 paddingBottom: 32,
             },
             leftPaneShortViewport:
@@ -186,7 +181,7 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 color: colors.textSecondary,
             },
         }),
-        [colors, isWideLayout, windowHeight, width]
+        [colors, isWideLayout, width]
     );
 
     const leftItems = useMemo(
@@ -207,7 +202,6 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                     style={[
                         stylesWithTheme.leftPane,
                         stylesWithTheme.leftPaneShortViewport,
-                        !isWideLayout && stylesWithTheme.leftPaneStacked,
                     ]}
                 >
                     <View style={authLayoutStyles.showcaseMarqueeWrapper}>
@@ -252,32 +246,23 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
             >
                 <View
                     style={[
-                        stylesWithTheme.floatingCard,
+                        isWideLayout
+                            ? stylesWithTheme.floatingCard
+                            : stylesWithTheme.floatingCardFullBleed,
                         authLayoutStyles.floatingCardConstrain,
                     ]}
                 >
-                    {isWideLayout ? (
-                        <ScrollView
-                            style={authLayoutStyles.floatingCardScroll}
-                            contentContainerStyle={authLayoutStyles.floatingCardScrollContent}
-                            showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            {children}
-                        </ScrollView>
-                    ) : (
-                        <ScrollView
-                            style={authLayoutStyles.floatingCardScroll}
-                            contentContainerStyle={[
-                                authLayoutStyles.floatingCardScrollContent,
-                                stylesWithTheme.floatingCardScrollContentNarrow,
-                            ]}
-                            showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            {children}
-                        </ScrollView>
-                    )}
+                    <ScrollView
+                        style={authLayoutStyles.floatingCardScroll}
+                        contentContainerStyle={[
+                            authLayoutStyles.floatingCardScrollContent,
+                            !isWideLayout && stylesWithTheme.floatingCardScrollContentNarrow,
+                        ]}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {children}
+                    </ScrollView>
                 </View>
             </View>
         </>
@@ -289,34 +274,24 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={stylesWithTheme.flex}
             >
-                {isWideLayout ? (
-                    <View
-                        style={[
-                            stylesWithTheme.page,
-                            stylesWithTheme.contentRow,
-                            {
-                                maxHeight: windowHeight - 30 * 2 - 16,
-                            },
-                        ]}
-                    >
-                        {pageContent}
-                    </View>
-                ) : (
-                    <View
-                        style={[
-                            stylesWithTheme.page,
-                            stylesWithTheme.pageNarrow,
-                            stylesWithTheme.contentColumn,
-                            stylesWithTheme.flex,
-                            {
+                <View
+                    style={[
+                        stylesWithTheme.page,
+                        isWideLayout
+                            ? stylesWithTheme.contentRow
+                            : stylesWithTheme.contentColumn,
+                        !isWideLayout && stylesWithTheme.flex,
+                        !isWideLayout && stylesWithTheme.pageNarrow,
+                        isWideLayout
+                            ? { maxHeight: windowHeight - 30 * 2 - 16 }
+                            : {
                                 paddingTop: narrowPagePaddingTop,
                                 paddingBottom: narrowPagePaddingBottom,
                             },
-                        ]}
-                    >
-                        {pageContent}
-                    </View>
-                )}
+                    ]}
+                >
+                    {pageContent}
+                </View>
             </KeyboardAvoidingView>
         </LinearGradient>
     );
@@ -349,9 +324,6 @@ export const authLayoutStyles = {
         flex: 0.52,
         width: "100%" as const,
         alignSelf: "flex-start" as const,
-    },
-    leftPaneStacked: {
-        marginBottom: 32,
     },
     rightPane: {
         flex: 0.48,
@@ -400,9 +372,9 @@ export const authLayoutStyles = {
         flex: 1,
         flexDirection: "row",
         gap: 20,
-        padding: 16,
-        borderRadius: 24,
-        borderWidth: 1,
+        // padding: 16,
+        // borderRadius: 24,
+        // borderWidth: 1,
         overflow: "hidden",
     },
     showcaseColumn: {
@@ -433,9 +405,6 @@ export const authLayoutStyles = {
     },
     floatingCardScroll: {
         flex: 1,
-    },
-    floatingCardScrollNarrow: {
-        flex: 0,
     },
     floatingCardScrollContent: {
         flexGrow: 1,
