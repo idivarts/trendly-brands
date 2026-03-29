@@ -17,15 +17,17 @@ import {
     faComments,
     faDollarSign,
     faEnvelope,
+    faFilm,
     faHouseLaptop,
     faLanguage,
     faLink,
     faLocationDot,
     faPaperPlane,
+    faShareNodes,
     faSliders,
     faUser,
     faUsers,
-    faVideo
+    faVideo,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -424,9 +426,9 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                     <Text style={styles.managerName} numberOfLines={1}>
                         {managerDetails?.name ?? "—"}
                     </Text>
-                    <Text style={styles.managerRole}>
+                    {/* <Text style={styles.managerRole}>
                         {managerDetails?.role ?? "Manager"}
-                    </Text>
+                    </Text> */}
                     <Text style={styles.managerBrand} numberOfLines={1}>
                         {props.collaboration.brandName}
                     </Text>
@@ -555,52 +557,67 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
         const platforms = c.platform ?? [];
         if (!langs.length && !formats.length && !platforms.length) return null;
 
+        const rows: {
+            key: string;
+            icon: React.ComponentProps<typeof FontAwesomeIcon>["icon"];
+            title: string;
+            values: string[];
+        }[] = [];
+        if (langs.length) {
+            rows.push({
+                key: "langs",
+                icon: faLanguage,
+                title: "Languages",
+                values: langs,
+            });
+        }
+        if (formats.length) {
+            rows.push({
+                key: "formats",
+                icon: faFilm,
+                title: "Content formats",
+                values: formats,
+            });
+        }
+        if (platforms.length) {
+            rows.push({
+                key: "platforms",
+                icon: faShareNodes,
+                title: "Platforms",
+                values: platforms,
+            });
+        }
+
         return (
             <View style={styles.card}>
                 <Text style={styles.sectionLabel}>CONTENT & CHANNELS</Text>
-                {langs.length > 0 ? (
-                    <View style={styles.subsection}>
-                        <View style={styles.subsectionTitleRow}>
-                            <FontAwesomeIcon
-                                icon={faLanguage}
-                                size={14}
-                                color={colors.textSecondary}
-                            />
-                            <Text style={styles.subLabel}>Languages</Text>
+                <View style={styles.contentChannelList}>
+                    {rows.map((row, index) => (
+                        <View
+                            key={row.key}
+                            style={[
+                                styles.contentChannelRow,
+                                index > 0 && styles.contentChannelRowBordered,
+                            ]}
+                        >
+                            <View style={styles.contentChannelIconWrap}>
+                                <FontAwesomeIcon
+                                    icon={row.icon}
+                                    size={16}
+                                    color={colors.primary}
+                                />
+                            </View>
+                            <View style={styles.contentChannelBody}>
+                                <Text style={styles.contentChannelTitle}>
+                                    {row.title}
+                                </Text>
+                                <Text style={styles.contentChannelValueText}>
+                                    {row.values.join(" · ")}
+                                </Text>
+                            </View>
                         </View>
-                        <View style={styles.chipWrap}>
-                            {langs.map((lang, i) => (
-                                <View style={styles.pill} key={`lang-${i}`}>
-                                    <Text style={styles.pillText}>{lang}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                ) : null}
-                {formats.length > 0 ? (
-                    <View style={styles.subsection}>
-                        <Text style={styles.subLabel}>Content formats</Text>
-                        <View style={styles.chipWrap}>
-                            {formats.map((f, i) => (
-                                <View style={styles.pill} key={`fmt-${i}`}>
-                                    <Text style={styles.pillText}>{f}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                ) : null}
-                {platforms.length > 0 ? (
-                    <View style={styles.subsection}>
-                        <Text style={styles.subLabel}>Platforms</Text>
-                        <View style={styles.chipWrap}>
-                            {platforms.map((p, i) => (
-                                <View style={styles.pill} key={`plat-${i}`}>
-                                    <Text style={styles.pillText}>{p}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                ) : null}
+                    ))}
+                </View>
             </View>
         );
     };
@@ -1300,21 +1317,6 @@ function createStyles(
             letterSpacing: 0.5,
             flex: 1,
         },
-        subsection: {
-            marginBottom: 16,
-        },
-        subsectionTitleRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 8,
-        },
-        subLabel: {
-            fontSize: 13,
-            fontWeight: "600",
-            color: colors.text,
-            marginBottom: 8,
-        },
         chipWrap: {
             flexDirection: "row",
             flexWrap: "wrap",
@@ -1441,6 +1443,47 @@ function createStyles(
             alignItems: "center",
             gap: 8,
             marginBottom: 12,
+        },
+        contentChannelList: {
+            width: "100%",
+        },
+        contentChannelRow: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 14,
+            paddingVertical: 14,
+        },
+        contentChannelRowBordered: {
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.outline,
+            paddingTop: 16,
+        },
+        contentChannelIconWrap: {
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag ?? colors.gray200,
+            flexShrink: 0,
+        },
+        contentChannelBody: {
+            flex: 1,
+            minWidth: 0,
+            gap: 6,
+        },
+        contentChannelTitle: {
+            fontSize: 11,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+            textTransform: "uppercase",
+        },
+        contentChannelValueText: {
+            fontSize: 15,
+            lineHeight: 22,
+            fontWeight: "500",
+            color: colors.text,
         },
     });
 }
