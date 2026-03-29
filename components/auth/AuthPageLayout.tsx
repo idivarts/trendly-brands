@@ -373,6 +373,7 @@ export const authLayoutStyles = {
     },
     floatingCardScrollContent: {
         flexGrow: 1,
+        paddingVertical: 16,
     },
     formTitle: {
         textAlign: "center" as const,
