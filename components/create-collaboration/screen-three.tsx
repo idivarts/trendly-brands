@@ -13,6 +13,7 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { isValidHttpUrl, normalizeHttpUrl } from "@/shared-libs/utils/http-url";
 import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
@@ -20,27 +21,6 @@ import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
-
-function isValidExternalLinkUrl(raw: string): boolean {
-    const trimmed = raw.trim();
-    if (!trimmed) {
-        return false;
-    }
-    try {
-        const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
-        const normalized = hasScheme ? trimmed : `https://${trimmed}`;
-        const url = new URL(normalized);
-        return url.protocol === "http:" || url.protocol === "https:";
-    } catch {
-        return false;
-    }
-}
-
-function normalizeExternalLinkUrl(raw: string): string {
-    const trimmed = raw.trim();
-    const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
-    return hasScheme ? trimmed : `https://${trimmed}`;
-}
 
 interface ScreenThreeProps {
     collaboration: Partial<Collaboration>;
@@ -106,7 +86,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
             return;
         }
 
-        if (!isValidExternalLinkUrl(externalLink.link)) {
+        if (!isValidHttpUrl(externalLink.link)) {
             setExternalLinkUrlError(
                 "Enter a valid URL using http or https (e.g. https://example.com).",
             );
@@ -114,7 +94,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         }
 
         setExternalLinkUrlError("");
-        const linkToStore = normalizeExternalLinkUrl(externalLink.link);
+        const linkToStore = normalizeHttpUrl(externalLink.link);
 
         setCollaboration({
             ...collaboration,
