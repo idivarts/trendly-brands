@@ -1,17 +1,13 @@
-import AuthPageLayout, {
-    authLayoutStyles,
-    SHORT_VIEWPORT_MAX_HEIGHT,
-} from "@/components/auth/AuthPageLayout";
+import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
 import { useAuthContext } from "@/contexts";
-import { useBreakpoints } from "@/hooks";
+import { useMyNavigation } from "@/shared-libs/utils/router";
 import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
-import { Image, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Text, View } from "react-native";
 
 const SignUpScreen = () => {
     const [name, setName] = useState("");
@@ -20,42 +16,9 @@ const SignUpScreen = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [verificationSent, setVerificationSent] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const router = useRouter();
+    const router = useMyNavigation();
     const theme = useTheme();
-    const { xl, height } = useBreakpoints();
     const styles = fnStyles(theme);
-    const shortViewport = height < SHORT_VIEWPORT_MAX_HEIGHT;
-    const narrowOverrides = useMemo(
-        () =>
-            !xl
-                ? {
-                      logo: { marginTop: 12 },
-                      title: { marginBottom: 16 },
-                      subTitle: { marginBottom: 16 },
-                      inputContainer: { marginBottom: 12, paddingHorizontal: 0 },
-                  }
-                : null,
-        [xl]
-    );
-    const compactOverrides = useMemo(
-        () =>
-            shortViewport
-                ? {
-                      logo: { marginTop: 4, width: 64, height: 64 },
-                      title: { marginBottom: 6, fontSize: 19 },
-                      subTitle: { marginBottom: 6 },
-                      formHeader: { minHeight: 36 },
-                      inputContainer: { marginBottom: 4, paddingHorizontal: 0 },
-                      inputStack: { gap: 2 },
-                      input: { marginBottom: 4 },
-                      primaryButton: { marginTop: 4 },
-                      loginPrompt: { marginTop: 4 },
-                      secondaryButton: { marginTop: 2 },
-                      backText: { marginTop: 4 },
-                  }
-                : null,
-        [shortViewport]
-    );
     const { signUp } = useAuthContext();
 
     const handleSignUp = async () => {
@@ -73,33 +36,33 @@ const SignUpScreen = () => {
     if (verificationSent) {
         return (
             <AuthPageLayout>
-                <Image
+                {/* <Image
                     source={require("@/assets/images/logo.png")}
-                    style={[styles.logo, narrowOverrides?.logo, compactOverrides?.logo]}
+                    style={styles.logo}
                     resizeMode="contain"
-                />
-                <View style={[authLayoutStyles.formHeader, compactOverrides?.formHeader]}>
-                    <Text style={[styles.title, authLayoutStyles.formTitle, narrowOverrides?.title, compactOverrides?.title]}>
+                /> */}
+                <View style={authLayoutStyles.formHeader}>
+                    <Text style={[styles.title, authLayoutStyles.formTitle]}>
                         Verification Email Sent
                     </Text>
-                    <Text style={[styles.subTitle, authLayoutStyles.formSubtitle, narrowOverrides?.subTitle, compactOverrides?.subTitle]}>
+                    <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
                         We've sent a verification email to{" "}
                         <Text style={styles.bold}>{email}</Text>.
                         {"\n\n"}
                         Please open your inbox and click the verification link to activate your account.
                     </Text>
                 </View>
-                <View style={[styles.inputContainer, authLayoutStyles.inputStack, narrowOverrides?.inputContainer, compactOverrides?.inputContainer, compactOverrides?.inputStack]}>
+                <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
                     <Button
                         mode="contained"
-                        style={[authLayoutStyles.primaryButton, compactOverrides?.primaryButton]}
+                        style={authLayoutStyles.primaryButton}
                         onPress={() => router.replace("/(auth)/login")}
                     >
                         Go to Login
                     </Button>
                     <Button
                         mode="outlined"
-                        style={[authLayoutStyles.secondaryButton, compactOverrides?.secondaryButton]}
+                        style={authLayoutStyles.secondaryButton}
                         onPress={() => setVerificationSent(false)}
                     >
                         Back to Sign Up
@@ -111,20 +74,20 @@ const SignUpScreen = () => {
 
     return (
         <AuthPageLayout>
-            <Image
+            {/* <Image
                 source={require("@/assets/images/logo.png")}
-                style={[styles.logo, narrowOverrides?.logo, compactOverrides?.logo]}
+                style={styles.logo}
                 resizeMode="contain"
-            />
-            <View style={[authLayoutStyles.formHeader, compactOverrides?.formHeader]}>
-                <Text style={[styles.title, authLayoutStyles.formTitle, narrowOverrides?.title, compactOverrides?.title]}>
+            /> */}
+            <View style={authLayoutStyles.formHeader}>
+                <Text style={[styles.title, authLayoutStyles.formTitle]}>
                     Create your brand
                 </Text>
-                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle, narrowOverrides?.subTitle, compactOverrides?.subTitle]}>
+                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
                     Use your work email to create a Trendly brand account
                 </Text>
             </View>
-            <View style={[styles.inputContainer, authLayoutStyles.inputStack, narrowOverrides?.inputContainer, compactOverrides?.inputContainer, compactOverrides?.inputStack]}>
+            <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
                 <TextInput
                     label="Name"
                     value={name}
@@ -132,7 +95,7 @@ const SignUpScreen = () => {
                     mode="outlined"
                     textColor={Colors(theme).text}
                     placeholderTextColor={Colors(theme).text}
-                    style={[styles.input, compactOverrides?.input]}
+                    style={styles.input}
                     theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <TextInput
@@ -143,7 +106,7 @@ const SignUpScreen = () => {
                     onChangeText={setEmail}
                     textColor={Colors(theme).text}
                     mode="outlined"
-                    style={[styles.input, compactOverrides?.input]}
+                    style={styles.input}
                     theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <TextInput
@@ -154,7 +117,7 @@ const SignUpScreen = () => {
                     mode="outlined"
                     placeholderTextColor={Colors(theme).text}
                     textColor={Colors(theme).text}
-                    style={[styles.input, compactOverrides?.input]}
+                    style={styles.input}
                     theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <TextInput
@@ -165,12 +128,12 @@ const SignUpScreen = () => {
                     textColor={Colors(theme).text}
                     secureTextEntry
                     mode="outlined"
-                    style={[styles.input, compactOverrides?.input]}
+                    style={styles.input}
                     theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <Button
                     mode="contained"
-                    style={[authLayoutStyles.primaryButton, compactOverrides?.primaryButton]}
+                    style={authLayoutStyles.primaryButton}
                     onPress={handleSignUp}
                     disabled={isSubmitting}
                     loading={isSubmitting}
@@ -178,23 +141,29 @@ const SignUpScreen = () => {
                     Create Account
                 </Button>
             </View>
-            <View style={[authLayoutStyles.loginPrompt, compactOverrides?.loginPrompt]}>
+            <View style={authLayoutStyles.loginPrompt}>
                 <Text style={[styles.loginText, authLayoutStyles.loginText]}>
                     Already have an account?
                 </Text>
                 <Button
                     mode="outlined"
-                    style={[authLayoutStyles.secondaryButton, compactOverrides?.secondaryButton]}
+                    style={authLayoutStyles.secondaryButton}
                     onPress={() => router.replace("/(auth)/login")}
                 >
                     Login
                 </Button>
             </View>
-            <Text style={[styles.loginText, authLayoutStyles.backText, compactOverrides?.backText]}>
+            <Text style={[styles.loginText, authLayoutStyles.backText]}>
                 Looking for Social Signup?{" "}
                 <Text
                     style={styles.loginLink}
-                    onPress={() => router.back()}
+                    onPress={() => {
+                        if (router.canGoBack()) {
+                            router.back()
+                        } else {
+                            router.resetAndNavigate("/pre-signin")
+                        }
+                    }}
                 >
                     Go Back
                 </Text>

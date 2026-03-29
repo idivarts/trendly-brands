@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { Linking, Pressable, StyleSheet } from "react-native";
 
 import { Text, View } from "@/components/theme/Themed";
+import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import ImageComponent from "@/shared-uis/components/image-component";
 import {
@@ -32,7 +33,8 @@ const BrandModal: React.FC<BrandModalProps> = ({
     setVisibility,
 }) => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const { width } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme, width), [theme, width]);
 
     return (
         <Modal
@@ -99,13 +101,29 @@ const BrandModal: React.FC<BrandModalProps> = ({
     );
 };
 
-function useStyles(theme: ReturnType<typeof useTheme>) {
+const BRAND_MODAL_MAX_WIDTH = 560;
+
+function useStyles(
+    theme: ReturnType<typeof useTheme>,
+    constrainedWidth: number
+) {
+    const modalMaxWidth =
+        constrainedWidth > 0
+            ? Math.min(
+                  BRAND_MODAL_MAX_WIDTH,
+                  Math.max(280, constrainedWidth - 32)
+              )
+            : BRAND_MODAL_MAX_WIDTH;
+
     return StyleSheet.create({
         modalContent: {
             backgroundColor: Colors(theme).background,
             borderRadius: 10,
             padding: 20,
             marginHorizontal: 20,
+            maxWidth: modalMaxWidth,
+            width: "100%",
+            alignSelf: "center",
         },
         centerColumn: {
             alignItems: "center",

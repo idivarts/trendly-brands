@@ -1,18 +1,19 @@
 import {
-    faCircle,
-    faClose,
     faLink,
+    faPen,
     faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useState } from "react";
-import { Keyboard, Pressable, ScrollView } from "react-native";
-import { HelperText, Modal, ProgressBar } from "react-native-paper";
+import React, { useMemo, useState } from "react";
+import { Pressable } from "react-native";
+import { HelperText, Modal, Portal, ProgressBar } from "react-native-paper";
 
+import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { isValidHttpUrl, normalizeHttpUrl } from "@/shared-libs/utils/http-url";
 import stylesFn from "@/styles/create-collaboration/Screen.styles";
 import { Collaboration } from "@/types/Collaboration";
 import { faTrashCan } from "@fortawesome/free-regular-svg-icons";
@@ -51,40 +52,61 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
     type,
 }) => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const { xl, width } = useBreakpoints();
+    const styles = useMemo(
+        () => stylesFn(theme, { xl, width }),
+        [theme, xl, width],
+    );
     const [isExternalLinkModalVisible, setIsExternalLinkModalVisible] =
         useState(false);
-    const [isQuestionsModalVisible, setIsQuestionsModalVisible] = useState(false);
+    const [isQuestionModalVisible, setIsQuestionModalVisible] = useState(false);
+    const [questionDraft, setQuestionDraft] = useState("");
+    const [questionEditIndex, setQuestionEditIndex] = useState<number | null>(
+        null,
+    );
     const [externalLink, setExternalLink] = useState({
         name: "",
         link: "",
     });
-    const newQuestions = collaboration.questionsToInfluencers || [""];
-    const [questions, setQuestions] = useState(
-        newQuestions.length === 0 ? [""] : newQuestions
-    );
+    const [externalLinkUrlError, setExternalLinkUrlError] = useState("");
+    const questionsList = collaboration.questionsToInfluencers ?? [];
+
+    const closeExternalLinkModal = () => {
+        setIsExternalLinkModalVisible(false);
+        setExternalLink({
+            name: "",
+            link: "",
+        });
+        setExternalLinkUrlError("");
+    };
 
     const handleAddExternalLink = () => {
-        if (!externalLink.name || !externalLink.link) {
+        if (!externalLink.name?.trim() || !externalLink.link?.trim()) {
             Toaster.error("Please fill all fields");
             return;
         }
+
+        if (!isValidHttpUrl(externalLink.link)) {
+            setExternalLinkUrlError(
+                "Enter a valid URL using http or https (e.g. https://example.com).",
+            );
+            return;
+        }
+
+        setExternalLinkUrlError("");
+        const linkToStore = normalizeHttpUrl(externalLink.link);
 
         setCollaboration({
             ...collaboration,
             externalLinks: [
                 ...(collaboration.externalLinks || []),
                 {
-                    name: externalLink.name,
-                    link: externalLink.link,
+                    name: externalLink.name.trim(),
+                    link: linkToStore,
                 },
             ],
         });
-        setIsExternalLinkModalVisible(false);
-        setExternalLink({
-            name: "",
-            link: "",
-        });
+        closeExternalLinkModal();
     };
 
     const handleRemoveExternalLink = (index: number) => {
@@ -96,28 +118,58 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         });
     };
 
-    const handleAddQuestions = () => {
-        setQuestions([...questions, ""]);
+    const closeQuestionModal = () => {
+        setIsQuestionModalVisible(false);
+        setQuestionDraft("");
+        setQuestionEditIndex(null);
     };
 
-    const handleRemoveQuestion = (index: number) => {
-        setQuestions(questions.filter((question, i) => i !== index));
+    const openAddQuestionModal = () => {
+        setQuestionEditIndex(null);
+        setQuestionDraft("");
+        setIsQuestionModalVisible(true);
     };
 
-    const submitNewQuestions = () => {
-        const newQuestions = questions.filter((question) => question !== "");
+    const openEditQuestionModal = (index: number) => {
+        const q = questionsList[index];
+        if (q === undefined) {
+            return;
+        }
+        setQuestionEditIndex(index);
+        setQuestionDraft(q);
+        setIsQuestionModalVisible(true);
+    };
+
+    const saveQuestion = () => {
+        const trimmed = questionDraft.trim();
+        if (!trimmed) {
+            Toaster.error("Please enter a question");
+            return;
+        }
+
+        const current = collaboration.questionsToInfluencers ?? [];
+        if (questionEditIndex === null) {
+            setCollaboration({
+                ...collaboration,
+                questionsToInfluencers: [...current, trimmed],
+            });
+        } else {
+            const next = [...current];
+            next[questionEditIndex] = trimmed;
+            setCollaboration({
+                ...collaboration,
+                questionsToInfluencers: next,
+            });
+        }
+        closeQuestionModal();
+    };
+
+    const deleteQuestion = (index: number) => {
+        const current = collaboration.questionsToInfluencers ?? [];
         setCollaboration({
             ...collaboration,
-            questionsToInfluencers: newQuestions,
+            questionsToInfluencers: current.filter((_, i) => i !== index),
         });
-
-        setIsQuestionsModalVisible(false);
-
-        if (newQuestions.length === 0) {
-            setQuestions([...newQuestions, ""]);
-        } else {
-            setQuestions(newQuestions);
-        }
     };
 
     return (
@@ -138,7 +190,10 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                             rightAction={
                                 <Button
                                     mode="outlined"
-                                    onPress={() => setIsExternalLinkModalVisible(true)}
+                                    onPress={() => {
+                                        setExternalLinkUrlError("");
+                                        setIsExternalLinkModalVisible(true);
+                                    }}
                                     size="small"
                                 >
                                     <FontAwesomeIcon
@@ -191,7 +246,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                             rightAction={
                                 <Button
                                     mode="outlined"
-                                    onPress={() => setIsQuestionsModalVisible(true)}
+                                    onPress={openAddQuestionModal}
                                     size="small"
                                 >
                                     <FontAwesomeIcon
@@ -200,7 +255,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                                         color={Colors(theme).primary}
                                         style={styles.addLinkIcon}
                                     />
-                                    Edit Questions
+                                    Add Question
                                 </Button>
                             }
                             theme={theme}
@@ -210,14 +265,38 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                             <></>
                         </ContentWrapper>
                         <View style={styles.sectionGap8}>
-                            {collaboration.questionsToInfluencers?.map((question) => (
-                                <View key={question} style={styles.questionRow}>
-                                    <FontAwesomeIcon
-                                        color={Colors(theme).text}
-                                        icon={faCircle}
-                                        size={6}
-                                    />
-                                    <Text>{question}</Text>
+                            {questionsList.map((question, index) => (
+                                <View
+                                    key={`q-${index}`}
+                                    style={styles.questionListItem}
+                                >
+                                    <Text style={styles.questionListText}>
+                                        {question}
+                                    </Text>
+                                    <View style={styles.questionListActions}>
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Edit question"
+                                            onPress={() => openEditQuestionModal(index)}
+                                        >
+                                            <FontAwesomeIcon
+                                                color={Colors(theme).primary}
+                                                icon={faPen}
+                                                size={16}
+                                            />
+                                        </Pressable>
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Delete question"
+                                            onPress={() => deleteQuestion(index)}
+                                        >
+                                            <FontAwesomeIcon
+                                                color={Colors(theme).text}
+                                                icon={faTrashCan}
+                                                size={16}
+                                            />
+                                        </Pressable>
+                                    </View>
                                 </View>
                             ))}
                         </View>
@@ -253,143 +332,105 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                 </Button>
             </ScreenLayout>
 
-            <Modal
-                contentContainerStyle={styles.modalContainer}
-                onDismiss={() => {
-                    setIsExternalLinkModalVisible(false);
-                    setExternalLink({
-                        name: "",
-                        link: "",
-                    });
-                }}
-                visible={isExternalLinkModalVisible}
-            >
-                <TextInput
-                    label="Link Name"
-                    mode="outlined"
-                    onChangeText={(text) => {
-                        setExternalLink({
-                            ...externalLink,
-                            name: text,
-                        });
-                    }}
-                    value={externalLink.name}
-                />
-                <TextInput
-                    label="Link URL"
-                    keyboardType="url"
-                    textContentType="URL"
-                    autoCapitalize="none"
-                    mode="outlined"
-                    onChangeText={(text) => {
-                        setExternalLink({
-                            ...externalLink,
-                            link: text,
-                        });
-                    }}
-                    value={externalLink.link}
-                />
-                <View style={styles.modalButtonsRow}>
-                    <Button
+            <Portal>
+                <Modal
+                    contentContainerStyle={styles.modalContainer}
+                    onDismiss={closeExternalLinkModal}
+                    style={styles.modalRoot}
+                    visible={isExternalLinkModalVisible}
+                >
+                    <TextInput
+                        label="Link Name"
                         mode="outlined"
-                        onPress={() => setIsExternalLinkModalVisible(false)}
-                        style={styles.modalButtonFlex}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        mode="contained"
-                        onPress={handleAddExternalLink}
-                        style={styles.modalButtonFlex}
-                    >
-                        Add Link
-                    </Button>
-                </View>
-            </Modal>
-
-            <Modal
-                contentContainerStyle={styles.modalContainer}
-                dismissable={false}
-                onDismiss={() => {
-                    setIsQuestionsModalVisible(false);
-                    setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
-                }}
-                visible={isQuestionsModalVisible}
-            >
-                <Pressable
-                    style={styles.pressableDismiss}
-                    onPress={() => {
-                        Keyboard.dismiss();
-                    }}
-                />
-                <View style={styles.sectionGap8}>
-                    <Pressable
-                        style={styles.questionsHeader}
-                        onPress={() => {
-                            Keyboard.dismiss();
+                        onChangeText={(text) => {
+                            setExternalLink({
+                                ...externalLink,
+                                name: text,
+                            });
                         }}
-                    >
-                        <Text style={styles.questionsTitle}>
-                            Questions
-                        </Text>
-                        <Pressable
-                            onPress={() => {
-                                setIsQuestionsModalVisible(false);
-                                setQuestions(newQuestions.length === 0 ? [""] : newQuestions);
-                            }}
-                        >
-                            <FontAwesomeIcon
-                                icon={faClose}
-                                size={18}
-                                color={Colors(theme).primary}
-                            />
-                        </Pressable>
-                    </Pressable>
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        style={styles.questionsScroll}
-                        contentContainerStyle={styles.questionsScrollContent}
-                    >
-                        {questions.map((question, index) => (
-                            <View key={index} style={styles.questionInputRow}>
-                                <TextInput
-                                    label="Question"
-                                    mode="outlined"
-                                    style={styles.questionInputFlex}
-                                    value={questions[index]}
-                                    onChangeText={(text) => {
-                                        const newQuestions = [...questions];
-                                        newQuestions[index] = text;
-
-                                        setQuestions(newQuestions);
-                                    }}
-                                />
-                                <Pressable onPress={() => handleRemoveQuestion(index)}>
-                                    <FontAwesomeIcon
-                                        icon={faTrashCan}
-                                        size={20}
-                                        color={Colors(theme).primary}
-                                        style={styles.trashIconMargin}
-                                    />
-                                </Pressable>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
-                <Button mode="outlined" onPress={handleAddQuestions}>
-                    <FontAwesomeIcon
-                        icon={faPlus}
-                        size={12}
-                        color={Colors(theme).primary}
-                        style={{
-                            marginTop: -2,
-                            marginRight: 8,
-                        }}
+                        value={externalLink.name}
                     />
-                    Add Question
-                </Button>
-                <Button onPress={submitNewQuestions}>Done</Button>
-            </Modal>
+                    <View style={styles.linkUrlFieldGroup}>
+                        <TextInput
+                            error={Boolean(externalLinkUrlError)}
+                            label="Link URL"
+                            keyboardType="url"
+                            textContentType="URL"
+                            autoCapitalize="none"
+                            mode="outlined"
+                            onChangeText={(text) => {
+                                setExternalLinkUrlError("");
+                                setExternalLink({
+                                    ...externalLink,
+                                    link: text,
+                                });
+                            }}
+                            value={externalLink.link}
+                        />
+                        <HelperText
+                            padding="none"
+                            type="error"
+                            visible={Boolean(externalLinkUrlError)}
+                            style={styles.linkUrlErrorHelper}
+                        >
+                            {externalLinkUrlError}
+                        </HelperText>
+                    </View>
+                    <View style={styles.modalButtonsRow}>
+                        <Button
+                            mode="outlined"
+                            onPress={closeExternalLinkModal}
+                            style={styles.modalButtonFlex}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={handleAddExternalLink}
+                            style={styles.modalButtonFlex}
+                        >
+                            Add Link
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
+
+            <Portal>
+                <Modal
+                    contentContainerStyle={styles.modalContainer}
+                    onDismiss={closeQuestionModal}
+                    style={styles.modalRoot}
+                    visible={isQuestionModalVisible}
+                >
+                    <Text style={styles.questionModalTitle}>
+                        {questionEditIndex === null ? "Add question" : "Edit question"}
+                    </Text>
+                    <TextInput
+                        label="Question"
+                        mode="outlined"
+                        multiline
+                        numberOfLines={3}
+                        onChangeText={setQuestionDraft}
+                        value={questionDraft}
+                    />
+                    <View style={styles.modalButtonsRow}>
+                        <Button
+                            mode="outlined"
+                            onPress={closeQuestionModal}
+                            style={styles.modalButtonFlex}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={saveQuestion}
+                            style={styles.modalButtonFlex}
+                        >
+                            {questionEditIndex === null ? "Add" : "Save"}
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
         </>
     );
 };

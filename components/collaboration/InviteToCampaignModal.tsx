@@ -47,9 +47,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
     brandId,
     onNavigateToCampaigns,
 }) => {
-    const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>(
-        undefined
-    );
+    const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
     const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
     const theme = useTheme();
     const colors = Colors(theme);
@@ -68,10 +66,11 @@ const InviteToCampaignModal: React.FC<Props> = ({
         ...(isWeb ? { minWidth: 640 } : {}),
         maxHeight: isWeb ? "80%" : Math.min(height * 0.85, height - 64),
     };
-    const selectedCampaign = useMemo(
-        () => collaborations.find((c) => c.id === selectedCampaignId),
-        [collaborations, selectedCampaignId]
-    );
+    const toggleCampaignSelection = (id: string) => {
+        setSelectedCampaignIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+    };
 
     useEffect(() => {
         const fetchActiveCollaborations = async () => {
@@ -124,13 +123,13 @@ const InviteToCampaignModal: React.FC<Props> = ({
     }, [effectiveBrandId]);
 
     const handleInvite = async () => {
-        if (!selectedCampaignId || isSubmitting) return;
+        if (selectedCampaignIds.length === 0 || isSubmitting) return;
         setIsSubmitting(true);
 
         try {
-            const isSuccess = await onInvite([selectedCampaignId]);
+            const isSuccess = await onInvite(selectedCampaignIds);
             if (isSuccess) {
-                setSelectedCampaignId(undefined);
+                setSelectedCampaignIds([]);
                 onClose();
             }
         } finally {
@@ -139,17 +138,17 @@ const InviteToCampaignModal: React.FC<Props> = ({
     };
 
     const handleClose = () => {
-        setSelectedCampaignId(undefined);
+        setSelectedCampaignIds([]);
         onClose();
     };
 
     const renderCampaignItem = ({ item }: { item: Collaboration }) => {
         if (!item.active) return null;
-        const isSelected = selectedCampaignId === item.id;
+        const isSelected = selectedCampaignIds.includes(item.id);
 
         return (
             <Pressable
-                onPress={() => setSelectedCampaignId(item.id)}
+                onPress={() => toggleCampaignSelection(item.id)}
                 style={[
                     styles.campaignCard,
                     isSelected && styles.campaignCardSelected,
@@ -165,10 +164,11 @@ const InviteToCampaignModal: React.FC<Props> = ({
                         </Text>
                     )}
                 </View>
-                <Checkbox
-                    status={isSelected ? "checked" : "unchecked"}
-                    onPress={() => setSelectedCampaignId(item.id)}
-                />
+                <View pointerEvents="none">
+                    <Checkbox
+                        status={isSelected ? "checked" : "unchecked"}
+                    />
+                </View>
             </Pressable>
         );
     };
@@ -201,7 +201,8 @@ const InviteToCampaignModal: React.FC<Props> = ({
                             </Pressable>
                         </View>
                         <Text style={styles.headerSubtitle}>
-                            Select a campaign to send an invitation to this influencer.
+                            Select one or more campaigns to send invitations to this
+                            influencer.
                         </Text>
                     </View>
 
@@ -252,7 +253,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
                         ) : (
                             <>
                                 <View style={styles.selectSection}>
-                                    <Text style={styles.selectLabel}>Select Campaign</Text>
+                                    <Text style={styles.selectLabel}>Select campaigns</Text>
                                 </View>
                                 <FlatList
                                     data={collaborations}
@@ -279,10 +280,10 @@ const InviteToCampaignModal: React.FC<Props> = ({
                                 style={[
                                     styles.footerButton,
                                     styles.inviteButton,
-                                    (!selectedCampaignId || isSubmitting) &&
+                                    (selectedCampaignIds.length === 0 || isSubmitting) &&
                                         styles.inviteButtonDisabled,
                                 ]}
-                                disabled={!selectedCampaignId || isSubmitting}
+                                disabled={selectedCampaignIds.length === 0 || isSubmitting}
                             >
                                 {isSubmitting ? (
                                     <View style={styles.inviteButtonLoadingRow}>

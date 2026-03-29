@@ -8,7 +8,11 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import {
+    CollaborationLocationType,
+    ICollaboration,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
@@ -90,7 +94,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
         platform: [],
         numberOfInfluencersNeeded: 1,
         location: {
-            type: "Remote",
+            type: CollaborationLocationType.Remote,
             name: "",
             latlong: {
                 lat: 0,
@@ -194,7 +198,9 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
 
                 const mappedLocation = collaborationData.location?.type
                     ? {
-                        type: collaborationData.location.type,
+                        type: normalizeCollaborationLocationType(
+                            collaborationData.location.type
+                        ),
                         name: collaborationData.location.name || "",
                         latlong: collaborationData.location.latlong
                             ? {
@@ -204,7 +210,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                             : { lat: 0, long: 0 },
                     }
                     : {
-                        type: "Remote",
+                        type: CollaborationLocationType.Remote,
                         name: "",
                         latlong: { lat: 0, long: 0 },
                     };
@@ -303,7 +309,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
             ...collaboration,
             location: {
                 ...collaboration.location,
-                type: "On-Site",
+                type: CollaborationLocationType.OnSite,
                 name: address,
                 latlong,
             },
@@ -342,13 +348,14 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
             let locationAddress = collaboration?.location;
 
             if (
-                collaboration?.location?.type === "On-Site" &&
+                collaboration?.location?.type === CollaborationLocationType.OnSite &&
                 mapRegion.latitude &&
                 mapRegion.longitude
             ) {
                 locationAddress = {
                     ...collaboration.location,
-                    type: collaboration.location.type || "Remote",
+                    type:
+                        collaboration.location.type ?? CollaborationLocationType.Remote,
                     latlong: {
                         lat: mapRegion.latitude,
                         long: mapRegion.longitude,

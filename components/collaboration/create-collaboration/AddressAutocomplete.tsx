@@ -8,7 +8,10 @@ import {
     GooglePlacesAutocompleteRef as GooglePlacesAutocompleteRefNative,
 } from "react-native-google-places-autocomplete";
 
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import {
+    CollaborationLocationType,
+    ICollaboration,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { calculateDelta, fetchLatLngFromPlaceId } from "@/utils/map";
 
 interface AddressAutocompleteProps {
@@ -72,7 +75,9 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                             ...collaboration,
                             location: {
                                 latlong,
-                                type: collaboration.location?.type as string,
+                                type:
+                                    collaboration.location?.type ??
+                                    CollaborationLocationType.OnSite,
                                 name: data.adr_address || "",
                             },
                         });
@@ -111,7 +116,9 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                         ...collaboration,
                         location: {
                             latlong,
-                            type: collaboration.location?.type as string,
+                            type:
+                                collaboration.location?.type ??
+                                CollaborationLocationType.OnSite,
                             name: _data.description || "",
                         },
                     });

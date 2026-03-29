@@ -1,19 +1,21 @@
+import {
+    AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX,
+    authShowcaseSampleInfluencers,
+} from "@/components/auth/auth-showcase-sample-influencers";
 import type { InfluencerItem } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import { useBreakpoints } from "@/hooks";
 import { getConstrainedHeight } from "@/shared-libs/contexts/mobile-layout-context.provider";
 import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Text,
-    View,
+    View
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "@react-navigation/native";
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -22,141 +24,14 @@ import Animated, {
     withSequence,
     withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const FLOATING_CARD_MAX_WIDTH = 460;
-const FLOATING_CARD_RADIUS = 24;
-const FLOATING_CARD_PADDING = 12;
-const FLOATING_CARD_PADDING_NARROW = 20;
-const SCROLL_CONTENT_PADDING_BOTTOM_NARROW = 32;
-const PAGE_PADDING_HORIZONTAL_NARROW = 16;
-const FLOATING_CARD_BORDER = 1;
-const CONTENT_PADDING_HORIZONTAL = 24;
-const CONTENT_PADDING_VERTICAL = 30;
-const PAGE_PADDING_TOP = 0;
-const GRID_GAP = 32;
-const LEFT_COLUMN_WIDTH = 0.52;
-const RIGHT_COLUMN_WIDTH = 0.48;
-/** When browser is not full screen (short viewport), give more space to the left panel. */
-const LEFT_COLUMN_WIDTH_SHORT_VIEWPORT = 0.58;
-const RIGHT_COLUMN_WIDTH_SHORT_VIEWPORT = 0.42;
-const SHOWCASE_CARD_HEIGHT = 260;
-const SHOWCASE_CARD_GAP = 60;
-const SHOWCASE_ANIMATION_DURATION = 26000;
-const SHOWCASE_COLUMN_GAP = 20;
-const SHOWCASE_MIN_HEIGHT = 640;
-const SHOWCASE_VERTICAL_PADDING = 24;
-const SHOWCASE_RADIUS = 24;
-const SHOWCASE_PADDING = 16;
-const SHOWCASE_TITLE_SIZE = 26;
-const SHOWCASE_SUBTITLE_SIZE = 16;
-const SHOWCASE_SUBTITLE_LINE_HEIGHT = 22;
-const SHOWCASE_TITLE = "Creators you can work with";
-const SHOWCASE_SUBTITLE = "Live marketplace snapshots, updated continuously.";
-const TITLE_TEXT_ALIGN = "center" as const;
-const WIDE_LAYOUT_MIN = 980;
-const SHOWCASE_SPLIT_INDEX = 3;
-const SHOWCASE_TEXT_GAP = 16;
-const SHOWCASE_CARD_OPACITY = 0.6;
-const SHOWCASE_TEXT_BLOCK_HEIGHT = 72;
-const RIGHT_PANE_TOP_OFFSET = 24;
-const SHOWCASE_TITLE_SHADOW_RADIUS = 10;
-const FLOATING_CARD_SHADOW_OPACITY = 0.35;
-const FLOATING_CARD_SHADOW_RADIUS = 30;
-const FLOATING_CARD_SHADOW_OFFSET_Y = 18;
-const SHOWCASE_BORDER_WIDTH = 1;
+/** Must match `showcaseCardWrapper` height + gap so the scroll loop stays seamless. */
+const marqueeCard = { height: 260, gap: 60 } as const;
+const marqueeScrollDurationMs = 26_000;
 
-export const FORM_SUBTITLE_MARGIN = 10;
-export const INPUT_GAP = 8;
-export const PRIMARY_BUTTON_MARGIN_TOP = 12;
-export const BUTTON_RADIUS = 14;
-export const LOGIN_PROMPT_MARGIN = 12;
-export const SECONDARY_BUTTON_MARGIN = 6;
-export const BACK_TEXT_MARGIN = 10;
-
-/** Viewport height below this uses compact spacing so form fits without scrolling (e.g. browser not full screen). */
+/** Viewport height below this uses compact spacing so the form fits without scrolling. */
 export const SHORT_VIEWPORT_MAX_HEIGHT = 920;
-const FLOATING_CARD_PADDING_COMPACT = 12;
-
-const SAMPLE_INFLUENCERS: InfluencerItem[] = [
-    {
-        id: "influencer-1",
-        name: "Mia Alvarez",
-        username: "miaalvarez",
-        profile_pic:
-            "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 125000,
-        engagement_count: 8200,
-        views_count: 242000,
-        engagement_rate: 4.3,
-        location: "Los Angeles, CA",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-2",
-        name: "Kai Morgan",
-        username: "kaimorgan",
-        profile_pic:
-            "https://images.unsplash.com/photo-1546539781-2e9c76dfe0ed?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 98000,
-        engagement_count: 6400,
-        views_count: 198000,
-        engagement_rate: 3.9,
-        location: "Austin, TX",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-3",
-        name: "Sana Patel",
-        username: "sanapatel",
-        profile_pic:
-            "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 210000,
-        engagement_count: 11900,
-        views_count: 312000,
-        engagement_rate: 5.1,
-        location: "New York, NY",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-4",
-        name: "Noah Park",
-        username: "noahpark",
-        profile_pic:
-            "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 76000,
-        engagement_count: 5200,
-        views_count: 141000,
-        engagement_rate: 3.6,
-        location: "Seattle, WA",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-5",
-        name: "Elena Rossi",
-        username: "elenarossi",
-        profile_pic:
-            "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 188000,
-        engagement_count: 10400,
-        views_count: 276000,
-        engagement_rate: 4.7,
-        location: "Miami, FL",
-        isDiscover: true,
-    },
-    {
-        id: "influencer-6",
-        name: "Owen Lee",
-        username: "owenlee",
-        profile_pic:
-            "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=facearea&w=240&h=240",
-        follower_count: 142000,
-        engagement_count: 7600,
-        views_count: 224000,
-        engagement_rate: 4.0,
-        location: "Chicago, IL",
-        isDiscover: true,
-    },
-];
 
 /** Duplicate items so that when we scroll, duplicated content fills any gap (no white space). */
 const buildLoop = (items: InfluencerItem[]) => [...items, ...items, ...items];
@@ -170,7 +45,7 @@ const AutoScrollColumn = ({
 }) => {
     const loopItems = useMemo(() => buildLoop(items), [items]);
     const scrollDistance = useMemo(
-        () => items.length * (SHOWCASE_CARD_HEIGHT + SHOWCASE_CARD_GAP),
+        () => items.length * (marqueeCard.height + marqueeCard.gap),
         [items.length]
     );
     // direction -1 = scroll downward: start one segment down so content above viewport (no white at top).
@@ -178,31 +53,18 @@ const AutoScrollColumn = ({
     const translateY = useSharedValue(initialY);
 
     useEffect(() => {
-        if (direction === -1) {
-            // Downward scroll: animate from -scrollDistance to 0 (content moves up), then reset to -scrollDistance (seamless)
-            translateY.value = withRepeat(
-                withSequence(
-                    withTiming(0, {
-                        duration: SHOWCASE_ANIMATION_DURATION,
-                        easing: Easing.linear,
-                    }),
-                    withTiming(-scrollDistance, { duration: 0 })
-                ),
-                -1
-            );
-        } else {
-            // Upward scroll: original behavior – animate from 0 to -scrollDistance, then reset to 0
-            translateY.value = withRepeat(
-                withSequence(
-                    withTiming(-scrollDistance, {
-                        duration: SHOWCASE_ANIMATION_DURATION,
-                        easing: Easing.linear,
-                    }),
-                    withTiming(0, { duration: 0 })
-                ),
-                -1
-            );
-        }
+        const towardY = direction === -1 ? 0 : -scrollDistance;
+        const resetY = direction === -1 ? -scrollDistance : 0;
+        translateY.value = withRepeat(
+            withSequence(
+                withTiming(towardY, {
+                    duration: marqueeScrollDurationMs,
+                    easing: Easing.linear,
+                }),
+                withTiming(resetY, { duration: 0 })
+            ),
+            -1
+        );
     }, [direction, scrollDistance, translateY]);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -223,22 +85,19 @@ const AutoScrollColumn = ({
             </Animated.View>
         </View>
     ) : null;
-}; 
+};
 
 const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const insets = useSafeAreaInsets();
     const { width, height: windowHeight } = useBreakpoints();
-    const isWideLayout = width >= WIDE_LAYOUT_MIN;
-    const narrowPagePaddingTop = Math.max(CONTENT_PADDING_VERTICAL, insets.top);
-    const narrowPagePaddingBottom = Math.max(CONTENT_PADDING_VERTICAL, insets.bottom);
+    const isWideLayout = width >= 980;
+    const narrowPagePaddingTop = Math.max(30, insets.top);
+    const narrowPagePaddingBottom = Math.max(30, insets.bottom);
     const narrowMaxHeight =
         windowHeight - narrowPagePaddingTop - narrowPagePaddingBottom;
-    const showcaseHeight = Math.max(
-        SHOWCASE_MIN_HEIGHT,
-        windowHeight - SHOWCASE_VERTICAL_PADDING * 2 - SHOWCASE_TEXT_BLOCK_HEIGHT
-    );
+    const showcaseHeight = Math.max(640, windowHeight - 24 * 2);
 
     const gradientColors = useMemo<readonly [string, string, string]>(
         () => [colors.authGradient1, colors.authGradient2, colors.authGradient3],
@@ -259,47 +118,57 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
             },
             showcaseContainer: {
                 ...authLayoutStyles.showcaseContainer,
-                backgroundColor: colors.showcaseBg,
-                borderColor: colors.showcaseBorder,
+                // backgroundColor: colors.showcaseBg,
+                // borderColor: colors.showcaseBorder,
             },
             floatingCard: {
                 ...authLayoutStyles.floatingCard,
                 backgroundColor: colors.floatingCardBg,
                 borderColor: colors.floatingCardBorder,
                 shadowColor: colors.floatingCardShadow,
-                ...(!isWideLayout && {
-                    padding: FLOATING_CARD_PADDING_NARROW,
-                }),
-                ...(isWideLayout &&
-                    windowHeight < SHORT_VIEWPORT_MAX_HEIGHT && {
-                    padding: FLOATING_CARD_PADDING_COMPACT,
-                }),
+            },
+            /** Narrow layout: form sits on the gradient full-bleed (no elevated card). */
+            floatingCardFullBleed: {
+                width: "100%" as const,
+                alignSelf: "stretch" as const,
+                borderRadius: 0,
+                borderWidth: 0,
+                paddingHorizontal: 0,
+                paddingVertical: 0,
+                backgroundColor: colors.transparent,
+                borderColor: colors.transparent,
+                shadowColor: colors.transparent,
+                shadowOpacity: 0,
+                shadowRadius: 0,
+                shadowOffset: { width: 0, height: 0 },
             },
             pageNarrow: {
-                paddingHorizontal: PAGE_PADDING_HORIZONTAL_NARROW,
+                paddingHorizontal: 16,
             },
             floatingCardScrollContentNarrow: {
-                flexGrow: 0,
-                paddingBottom: SCROLL_CONTENT_PADDING_BOTTOM_NARROW,
+                flexGrow: 1,
+                paddingBottom: 32,
             },
             leftPaneShortViewport:
                 isWideLayout && windowHeight < SHORT_VIEWPORT_MAX_HEIGHT
-                    ? { flex: LEFT_COLUMN_WIDTH_SHORT_VIEWPORT }
+                    ? { flex: 0.58 }
                     : null,
             rightPaneShortViewport:
                 isWideLayout && windowHeight < SHORT_VIEWPORT_MAX_HEIGHT
-                    ? { flex: RIGHT_COLUMN_WIDTH_SHORT_VIEWPORT }
+                    ? { flex: 0.42 }
                     : null,
         }),
         [colors, isWideLayout, windowHeight]
     );
 
     const leftItems = useMemo(
-        () => SAMPLE_INFLUENCERS.slice(0, SHOWCASE_SPLIT_INDEX),
+        () =>
+            authShowcaseSampleInfluencers.slice(0, AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX),
         []
     );
     const rightItems = useMemo(
-        () => SAMPLE_INFLUENCERS.slice(SHOWCASE_SPLIT_INDEX),
+        () =>
+            authShowcaseSampleInfluencers.slice(AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX),
         []
     );
 
@@ -310,14 +179,15 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                     style={[
                         stylesWithTheme.leftPane,
                         stylesWithTheme.leftPaneShortViewport,
-                        !isWideLayout && stylesWithTheme.leftPaneStacked,
                     ]}
                 >
-                    <Text style={stylesWithTheme.showcaseTitle}>{SHOWCASE_TITLE}</Text>
-                    <Text style={stylesWithTheme.showcaseSubtitle}>{SHOWCASE_SUBTITLE}</Text>
-                    <View style={[stylesWithTheme.showcaseContainer, { height: showcaseHeight }]}>
-                        <AutoScrollColumn items={rightItems} direction={-1} />
-                        <AutoScrollColumn items={leftItems} direction={1} />
+                    <View style={authLayoutStyles.showcaseMarqueeWrapper}>
+                        <View
+                            style={[stylesWithTheme.showcaseContainer, { height: showcaseHeight }]}
+                        >
+                            <AutoScrollColumn items={rightItems} direction={-1} />
+                            <AutoScrollColumn items={leftItems} direction={1} />
+                        </View>
                     </View>
                 </View>
             )}
@@ -331,45 +201,32 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         maxHeight: narrowMaxHeight,
                         minHeight: 0,
                     },
-                    isWideLayout && { paddingTop: RIGHT_PANE_TOP_OFFSET },
+                    isWideLayout && { paddingTop: 24 },
                     isWideLayout && { minHeight: 0, alignSelf: "center" as const },
                     isWideLayout && {
-                        maxHeight:
-                            windowHeight -
-                            CONTENT_PADDING_VERTICAL * 2 -
-                            RIGHT_PANE_TOP_OFFSET -
-                            16,
+                        maxHeight: windowHeight - 30 * 2 - 24 - 16,
                     },
                 ]}
             >
                 <View
                     style={[
-                        stylesWithTheme.floatingCard,
+                        isWideLayout
+                            ? stylesWithTheme.floatingCard
+                            : stylesWithTheme.floatingCardFullBleed,
                         authLayoutStyles.floatingCardConstrain,
                     ]}
                 >
-                    {isWideLayout ? (
-                        <ScrollView
-                            style={authLayoutStyles.floatingCardScroll}
-                            contentContainerStyle={authLayoutStyles.floatingCardScrollContent}
-                            showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            {children}
-                        </ScrollView>
-                    ) : (
-                        <ScrollView
-                            style={authLayoutStyles.floatingCardScroll}
-                            contentContainerStyle={[
-                                authLayoutStyles.floatingCardScrollContent,
-                                stylesWithTheme.floatingCardScrollContentNarrow,
-                            ]}
-                            showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            {children}
-                        </ScrollView>
-                    )}
+                    <ScrollView
+                        style={authLayoutStyles.floatingCardScroll}
+                        contentContainerStyle={[
+                            authLayoutStyles.floatingCardScrollContent,
+                            !isWideLayout && stylesWithTheme.floatingCardScrollContentNarrow,
+                        ]}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {children}
+                    </ScrollView>
                 </View>
             </View>
         </>
@@ -381,38 +238,24 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={stylesWithTheme.flex}
             >
-                {isWideLayout ? (
-                    <View
-                        style={[
-                            stylesWithTheme.page,
-                            stylesWithTheme.contentRow,
-                            {
-                                maxHeight:
-                                    windowHeight -
-                                    PAGE_PADDING_TOP -
-                                    CONTENT_PADDING_VERTICAL * 2 -
-                                    16,
-                            },
-                        ]}
-                    >
-                        {pageContent}
-                    </View>
-                ) : (
-                    <View
-                        style={[
-                            stylesWithTheme.page,
-                            stylesWithTheme.pageNarrow,
-                            stylesWithTheme.contentColumn,
-                            stylesWithTheme.flex,
-                            {
+                <View
+                    style={[
+                        stylesWithTheme.page,
+                        isWideLayout
+                            ? stylesWithTheme.contentRow
+                            : stylesWithTheme.contentColumn,
+                        !isWideLayout && stylesWithTheme.flex,
+                        !isWideLayout && stylesWithTheme.pageNarrow,
+                        isWideLayout
+                            ? { maxHeight: windowHeight - 30 * 2 - 16 }
+                            : {
                                 paddingTop: narrowPagePaddingTop,
                                 paddingBottom: narrowPagePaddingBottom,
                             },
-                        ]}
-                    >
-                        {pageContent}
-                    </View>
-                )}
+                    ]}
+                >
+                    {pageContent}
+                </View>
             </KeyboardAvoidingView>
         </LinearGradient>
     );
@@ -427,13 +270,13 @@ export const authLayoutStyles = {
     },
     page: {
         minHeight: getConstrainedHeight(),
-        paddingHorizontal: CONTENT_PADDING_HORIZONTAL,
-        paddingTop: PAGE_PADDING_TOP,
-        paddingBottom: CONTENT_PADDING_VERTICAL,
+        paddingHorizontal: 24,
+        paddingTop: 0,
+        paddingBottom: 30,
     },
     contentRow: {
         flexDirection: "row" as const,
-        gap: GRID_GAP,
+        gap: 32,
         alignItems: "flex-start",
         justifyContent: "center",
     },
@@ -442,16 +285,12 @@ export const authLayoutStyles = {
         justifyContent: "flex-start" as const,
     },
     leftPane: {
-        flex: LEFT_COLUMN_WIDTH,
+        flex: 0.52,
         width: "100%" as const,
-        gap: SHOWCASE_TEXT_GAP,
         alignSelf: "flex-start" as const,
     },
-    leftPaneStacked: {
-        marginBottom: GRID_GAP,
-    },
     rightPane: {
-        flex: RIGHT_COLUMN_WIDTH,
+        flex: 0.48,
         width: "100%" as const,
         justifyContent: "flex-start",
         alignItems: "center",
@@ -466,24 +305,41 @@ export const authLayoutStyles = {
         maxHeight: undefined,
     },
     showcaseTitle: {
-        fontSize: SHOWCASE_TITLE_SIZE,
+        fontSize: 26,
         fontWeight: "700",
-        textAlign: TITLE_TEXT_ALIGN,
+        textAlign: "center" as const,
         textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: SHOWCASE_TITLE_SHADOW_RADIUS,
+        textShadowRadius: 10,
     },
     showcaseSubtitle: {
-        fontSize: SHOWCASE_SUBTITLE_SIZE,
-        lineHeight: SHOWCASE_SUBTITLE_LINE_HEIGHT,
-        textAlign: TITLE_TEXT_ALIGN,
+        fontSize: 16,
+        lineHeight: 22,
+        textAlign: "center" as const,
+    },
+    showcaseMarqueeWrapper: {
+        position: "relative" as const,
+        width: "100%" as const,
+        height: "100vh" as any,
+        alignSelf: "stretch" as const,
+    },
+    showcaseTextOverlay: {
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 2,
+        justifyContent: "flex-end" as const,
+        alignItems: "stretch" as const,
+        paddingHorizontal: 12,
+        paddingBottom: 12,
     },
     showcaseContainer: {
         flex: 1,
         flexDirection: "row",
-        gap: SHOWCASE_COLUMN_GAP,
-        padding: SHOWCASE_PADDING,
-        borderRadius: SHOWCASE_RADIUS,
-        borderWidth: SHOWCASE_BORDER_WIDTH,
+        gap: 20,
+        // padding: 16,
+        // borderRadius: 24,
+        // borderWidth: 1,
         overflow: "hidden",
     },
     showcaseColumn: {
@@ -491,20 +347,20 @@ export const authLayoutStyles = {
         overflow: "hidden" as const,
     },
     showcaseCardWrapper: {
-        height: SHOWCASE_CARD_HEIGHT,
-        marginBottom: SHOWCASE_CARD_GAP,
-        opacity: SHOWCASE_CARD_OPACITY,
+        height: marqueeCard.height,
+        marginBottom: marqueeCard.gap,
+        opacity: 0.6,
     },
     floatingCard: {
         width: "100%" as const,
-        maxWidth: FLOATING_CARD_MAX_WIDTH,
+        maxWidth: 460,
         alignSelf: "center" as const,
-        borderRadius: FLOATING_CARD_RADIUS,
-        padding: FLOATING_CARD_PADDING,
-        borderWidth: FLOATING_CARD_BORDER,
-        shadowOpacity: FLOATING_CARD_SHADOW_OPACITY,
-        shadowRadius: FLOATING_CARD_SHADOW_RADIUS,
-        shadowOffset: { width: 0, height: FLOATING_CARD_SHADOW_OFFSET_Y },
+        borderRadius: 24,
+        padding: 12,
+        borderWidth: 1,
+        shadowOpacity: 0.35,
+        shadowRadius: 30,
+        shadowOffset: { width: 0, height: 18 },
     },
     /** When right pane is height-constrained, card fills it and content scrolls (avoids bottom cut-off on smaller windows) */
     floatingCardConstrain: {
@@ -515,11 +371,9 @@ export const authLayoutStyles = {
     floatingCardScroll: {
         flex: 1,
     },
-    floatingCardScrollNarrow: {
-        flex: 0,
-    },
     floatingCardScrollContent: {
         flexGrow: 1,
+        paddingVertical: 16,
     },
     formTitle: {
         textAlign: "center" as const,
@@ -527,28 +381,28 @@ export const authLayoutStyles = {
     formSubtitle: {
         textAlign: "center" as const,
         opacity: 0.8,
-        marginBottom: FORM_SUBTITLE_MARGIN,
+        marginBottom: 10,
     },
     formHeader: {
         minHeight: 72,
     },
     inputStack: {
-        gap: INPUT_GAP,
+        gap: 8,
     },
     primaryButton: {
-        marginTop: PRIMARY_BUTTON_MARGIN_TOP,
-        borderRadius: BUTTON_RADIUS,
+        marginTop: 12,
+        borderRadius: 14,
     },
     loginPrompt: {
-        marginTop: LOGIN_PROMPT_MARGIN,
+        marginTop: 12,
         alignItems: "center" as const,
     },
     loginText: {
         opacity: 0.8,
     },
     secondaryButton: {
-        marginTop: SECONDARY_BUTTON_MARGIN,
-        borderRadius: BUTTON_RADIUS,
+        marginTop: 6,
+        borderRadius: 14,
     },
     forgotPassword: {
         // marginTop: 4,
@@ -556,7 +410,7 @@ export const authLayoutStyles = {
     },
     backText: {
         opacity: 0.7,
-        marginTop: BACK_TEXT_MARGIN,
+        marginTop: 10,
         textAlign: "center" as const,
     },
 } as const;

@@ -2,8 +2,16 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
-const stylesFn = (theme: Theme) => {
+const stylesFn = (
+    theme: Theme,
+    layout?: { xl: boolean; width: number },
+) => {
     const colors = Colors(theme);
+    const modalMaxWidth =
+        layout && layout.width > 0
+            ? Math.min(600, Math.max(280, layout.width - 32))
+            : undefined;
+
     return StyleSheet.create({
     container: {
         flex: 1,
@@ -13,14 +21,26 @@ const stylesFn = (theme: Theme) => {
         paddingVertical: 16,
         flexGrow: 1,
     },
+    modalRoot: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
     modalContainer: {
-        position: 'relative',
+        position: "relative",
         backgroundColor: colors.background,
         zIndex: 100,
         padding: 20,
         gap: 16,
         margin: 16,
         borderRadius: 8,
+        ...(modalMaxWidth !== undefined
+            ? {
+                  maxWidth: modalMaxWidth,
+                  width: "100%",
+                  alignSelf: "center",
+              }
+            : {}),
     },
     sectionTitle: { fontSize: 16 },
     mainSection: { flexGrow: 1, gap: 16 },
@@ -37,30 +57,28 @@ const stylesFn = (theme: Theme) => {
         borderRadius: 10,
     },
     linkText: { textDecorationLine: "underline" as const, flex: 1 },
-    questionRow: { alignItems: "center" as const, flexDirection: "row" as const, gap: 8 },
+    questionListItem: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 12,
+        padding: 8,
+        borderColor: colors.text,
+        borderWidth: 1,
+        borderRadius: 10,
+    },
+    questionListText: { flex: 1 },
+    questionListActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+    questionModalTitle: { fontSize: 18, fontWeight: "700" as const },
     helperText: { color: colors.primary, textAlign: "center" as const },
     progressBar: { backgroundColor: colors.transparent },
     modalButtonsRow: { flexDirection: "row" as const, gap: 8 },
     modalButtonFlex: { flex: 1 },
-    pressableDismiss: {
-        position: "absolute",
-        top: 0,
-        right: 0,
-        left: 0,
-        bottom: 0,
+    linkUrlFieldGroup: {
+        gap: 0,
     },
-    questionsHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 16,
+    linkUrlErrorHelper: {
+        paddingHorizontal: 0,
     },
-    questionsTitle: { fontSize: 16, fontWeight: "bold" as const },
-    questionsScroll: { maxHeight: 180 },
-    questionsScrollContent: { gap: 8 },
-    questionInputRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 16 },
-    questionInputFlex: { flex: 1 },
-    trashIconMargin: { marginTop: 4 },
     });
 };
 

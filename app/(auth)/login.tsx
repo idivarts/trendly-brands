@@ -1,17 +1,13 @@
-import AuthPageLayout, {
-    authLayoutStyles,
-    SHORT_VIEWPORT_MAX_HEIGHT,
-} from "@/components/auth/AuthPageLayout";
+import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
 import { useAuthContext } from "@/contexts";
-import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
-import { Image, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Text, View } from "react-native";
 
 const LoginScreen = () => {
     const search = useLocalSearchParams()
@@ -19,27 +15,7 @@ const LoginScreen = () => {
     const [password, setPassword] = useState("");
     const router = useRouter();
     const theme = useTheme();
-    const { height } = useBreakpoints();
     const styles = fnStyles(theme);
-    const shortViewport = height < SHORT_VIEWPORT_MAX_HEIGHT;
-    const compactOverrides = useMemo(
-        () =>
-            shortViewport
-                ? {
-                      logo: { marginTop: 4, width: 64, height: 64 },
-                      title: { marginBottom: 6, fontSize: 19 },
-                      subTitle: { marginBottom: 6 },
-                      formHeader: { minHeight: 36 },
-                      inputContainer: { marginBottom: 4, paddingHorizontal: 0 },
-                      inputStack: { gap: 2 },
-                      input: { marginBottom: 4 },
-                      primaryButton: { marginTop: 4 },
-                      loginPrompt: { marginTop: 4 },
-                      secondaryButton: { marginTop: 2 },
-                  }
-                : null,
-        [shortViewport]
-    );
     const { signIn } = useAuthContext();
 
     const handleSignIn = () => {
@@ -48,20 +24,20 @@ const LoginScreen = () => {
 
     return (
         <AuthPageLayout>
-            <Image
+            {/* <Image
                 source={require("@/assets/images/logo.png")}
-                style={[styles.logo, compactOverrides?.logo]}
+                style={styles.logo}
                 resizeMode="contain"
-            />
-            <View style={[authLayoutStyles.formHeader, compactOverrides?.formHeader]}>
-                <Text style={[styles.title, authLayoutStyles.formTitle, compactOverrides?.title]}>
+            /> */}
+            <View style={authLayoutStyles.formHeader}>
+                <Text style={[styles.title, authLayoutStyles.formTitle]}>
                     Login
                 </Text>
-                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle, compactOverrides?.subTitle]}>
+                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
                     Welcome to Trendly Brands
                 </Text>
             </View>
-            <View style={[styles.inputContainer, authLayoutStyles.inputStack, compactOverrides?.inputContainer, compactOverrides?.inputStack]}>
+            <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
                 <TextInput
                     autoCapitalize="none"
                     label="Email"
@@ -69,7 +45,7 @@ const LoginScreen = () => {
                     onChangeText={setEmail}
                     mode="outlined"
                     textColor={Colors(theme).text}
-                    style={[styles.input, compactOverrides?.input]}
+                    style={styles.input}
                     theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <TextInput
@@ -78,25 +54,25 @@ const LoginScreen = () => {
                     onChangeText={setPassword}
                     secureTextEntry
                     mode="outlined"
-                    style={[styles.input, compactOverrides?.input]}
+                    style={styles.input}
                     textColor={Colors(theme).text}
                     theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <Button
                     mode="contained"
-                    style={[authLayoutStyles.primaryButton, compactOverrides?.primaryButton]}
+                    style={authLayoutStyles.primaryButton}
                     onPress={handleSignIn}
                 >
                     Login
                 </Button>
             </View>
-            <View style={[authLayoutStyles.loginPrompt, compactOverrides?.loginPrompt]}>
+            <View style={authLayoutStyles.loginPrompt}>
                 <Text style={[styles.loginText, authLayoutStyles.loginText]}>
                     Don&apos;t have an account?
                 </Text>
                 <Button
                     mode="outlined"
-                    style={[authLayoutStyles.secondaryButton, compactOverrides?.secondaryButton]}
+                    style={authLayoutStyles.secondaryButton}
                     onPress={() => router.replace("/(auth)/create-new-account")}
                 >
                     Sign Up
