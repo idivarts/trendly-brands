@@ -2,12 +2,12 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
-import GlassTabBar from "@/components/glass/GlassTabBar";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useChatContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
+import GlassTabBar from "@/shared-uis/components/glass/GlassTabBar";
 import Colors from "@/shared-uis/constants/Colors";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
