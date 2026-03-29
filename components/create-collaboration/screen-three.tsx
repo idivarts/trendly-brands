@@ -21,6 +21,27 @@ import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
 
+function isValidExternalLinkUrl(raw: string): boolean {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+        return false;
+    }
+    try {
+        const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+        const normalized = hasScheme ? trimmed : `https://${trimmed}`;
+        const url = new URL(normalized);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
+function normalizeExternalLinkUrl(raw: string): string {
+    const trimmed = raw.trim();
+    const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+    return hasScheme ? trimmed : `https://${trimmed}`;
+}
+
 interface ScreenThreeProps {
     collaboration: Partial<Collaboration>;
     headerRight?: React.ReactNode;
@@ -67,29 +88,45 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
         name: "",
         link: "",
     });
+    const [externalLinkUrlError, setExternalLinkUrlError] = useState("");
     const questionsList = collaboration.questionsToInfluencers ?? [];
 
+    const closeExternalLinkModal = () => {
+        setIsExternalLinkModalVisible(false);
+        setExternalLink({
+            name: "",
+            link: "",
+        });
+        setExternalLinkUrlError("");
+    };
+
     const handleAddExternalLink = () => {
-        if (!externalLink.name || !externalLink.link) {
+        if (!externalLink.name?.trim() || !externalLink.link?.trim()) {
             Toaster.error("Please fill all fields");
             return;
         }
+
+        if (!isValidExternalLinkUrl(externalLink.link)) {
+            setExternalLinkUrlError(
+                "Enter a valid URL using http or https (e.g. https://example.com).",
+            );
+            return;
+        }
+
+        setExternalLinkUrlError("");
+        const linkToStore = normalizeExternalLinkUrl(externalLink.link);
 
         setCollaboration({
             ...collaboration,
             externalLinks: [
                 ...(collaboration.externalLinks || []),
                 {
-                    name: externalLink.name,
-                    link: externalLink.link,
+                    name: externalLink.name.trim(),
+                    link: linkToStore,
                 },
             ],
         });
-        setIsExternalLinkModalVisible(false);
-        setExternalLink({
-            name: "",
-            link: "",
-        });
+        closeExternalLinkModal();
     };
 
     const handleRemoveExternalLink = (index: number) => {
@@ -173,7 +210,10 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                             rightAction={
                                 <Button
                                     mode="outlined"
-                                    onPress={() => setIsExternalLinkModalVisible(true)}
+                                    onPress={() => {
+                                        setExternalLinkUrlError("");
+                                        setIsExternalLinkModalVisible(true);
+                                    }}
                                     size="small"
                                 >
                                     <FontAwesomeIcon
@@ -315,13 +355,7 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
             <Portal>
                 <Modal
                     contentContainerStyle={styles.modalContainer}
-                    onDismiss={() => {
-                        setIsExternalLinkModalVisible(false);
-                        setExternalLink({
-                            name: "",
-                            link: "",
-                        });
-                    }}
+                    onDismiss={closeExternalLinkModal}
                     style={styles.modalRoot}
                     visible={isExternalLinkModalVisible}
                 >
@@ -336,24 +370,36 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                         }}
                         value={externalLink.name}
                     />
-                    <TextInput
-                        label="Link URL"
-                        keyboardType="url"
-                        textContentType="URL"
-                        autoCapitalize="none"
-                        mode="outlined"
-                        onChangeText={(text) => {
-                            setExternalLink({
-                                ...externalLink,
-                                link: text,
-                            });
-                        }}
-                        value={externalLink.link}
-                    />
+                    <View style={styles.linkUrlFieldGroup}>
+                        <TextInput
+                            error={Boolean(externalLinkUrlError)}
+                            label="Link URL"
+                            keyboardType="url"
+                            textContentType="URL"
+                            autoCapitalize="none"
+                            mode="outlined"
+                            onChangeText={(text) => {
+                                setExternalLinkUrlError("");
+                                setExternalLink({
+                                    ...externalLink,
+                                    link: text,
+                                });
+                            }}
+                            value={externalLink.link}
+                        />
+                        <HelperText
+                            padding="none"
+                            type="error"
+                            visible={Boolean(externalLinkUrlError)}
+                            style={styles.linkUrlErrorHelper}
+                        >
+                            {externalLinkUrlError}
+                        </HelperText>
+                    </View>
                     <View style={styles.modalButtonsRow}>
                         <Button
                             mode="outlined"
-                            onPress={() => setIsExternalLinkModalVisible(false)}
+                            onPress={closeExternalLinkModal}
                             style={styles.modalButtonFlex}
                         >
                             Cancel

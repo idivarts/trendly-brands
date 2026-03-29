@@ -73,6 +73,12 @@ const stylesFn = (
     progressBar: { backgroundColor: colors.transparent },
     modalButtonsRow: { flexDirection: "row" as const, gap: 8 },
     modalButtonFlex: { flex: 1 },
+    linkUrlFieldGroup: {
+        gap: 0,
+    },
+    linkUrlErrorHelper: {
+        paddingHorizontal: 0,
+    },
     });
 };
 
