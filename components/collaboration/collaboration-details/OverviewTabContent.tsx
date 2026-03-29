@@ -50,9 +50,9 @@ function formatPillLocationType(type?: string): string {
 }
 
 const PROMOTION_SUBJECT_LABELS: Record<string, string> = {
-    physical_product: "Physical product",
-    services: "Services",
-    others: "Other",
+    "physical-product": "Physical product",
+    "services": "Services",
+    "others": "Other",
 };
 
 function humanizePromotionSubject(key?: string): string | undefined {
