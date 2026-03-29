@@ -1,19 +1,30 @@
+import { useBrandContext } from '@/contexts/brand-context.provider'
 import { Text, View } from '@/shared-uis/components/theme/Themed'
 import React from 'react'
 import { Linking } from 'react-native'
 import { Button } from 'react-native-paper'
 
+const SUPPORT_EMAIL = 'support@trendly.now'
+/** wa.me expects digits only (country code + number, no + or spaces). */
+const WHATSAPP_NUMBER_DIGITS = '917604007156'
+
 const PayWallComponent = () => {
+    const { selectedBrand } = useBrandContext()
+    const brandId = selectedBrand?.id ?? '—'
+
+    const whatsAppMessage = `Hi, I'd like to activate my brand on Trendly. My brand ID is: ${brandId}.`
+    const emailSubject = `Activate my brand (${brandId})`
+    const emailBody = `Hi Trendly support,\n\nPlease activate my brand.\n\nBrand ID: ${brandId}\n\nThank you.`
 
     const handleWhatsApp = () => {
-        const phoneNumber = '+917604007156' // Replace with actual number
-        const url = `https://wa.me/${phoneNumber}`
+        const url = `https://wa.me/${WHATSAPP_NUMBER_DIGITS}?text=${encodeURIComponent(whatsAppMessage)}`
+        // https://wa.me/917604007156?text=Hi%2C%20I%27d%20like%20to%20activate%20my%20brand%20on%20Trendly.%20My%20brand%20ID%20is%3A%20124325246.
         Linking.openURL(url)
     }
 
     const handleEmail = () => {
-        const email = 'support@trendly.now'
-        Linking.openURL(`mailto:${email}`)
+        const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
+        Linking.openURL(url)
     }
 
     return (
