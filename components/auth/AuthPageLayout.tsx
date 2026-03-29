@@ -14,8 +14,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Text,
-    View,
+    View
 } from "react-native";
 import Animated, {
     Easing,
@@ -158,30 +157,8 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                 isWideLayout && windowHeight < SHORT_VIEWPORT_MAX_HEIGHT
                     ? { flex: 0.42 }
                     : null,
-            showcaseTextOverlayPill: {
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 16,
-                paddingHorizontal: 20,
-                paddingVertical: 14,
-                width: "88%" as const,
-                maxWidth: width * 0.52 * 0.92,
-                alignItems: "center" as const,
-                gap: 16,
-            },
-            showcaseOverlayTitle: {
-                ...authLayoutStyles.showcaseTitle,
-                color: colors.text,
-                textShadowRadius: 0,
-                textShadowOffset: { width: 0, height: 0 },
-            },
-            showcaseOverlaySubtitle: {
-                ...authLayoutStyles.showcaseSubtitle,
-                color: colors.textSecondary,
-            },
         }),
-        [colors, isWideLayout, width]
+        [colors, isWideLayout, windowHeight]
     );
 
     const leftItems = useMemo(
@@ -210,19 +187,6 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         >
                             <AutoScrollColumn items={rightItems} direction={-1} />
                             <AutoScrollColumn items={leftItems} direction={1} />
-                        </View>
-                        <View
-                            style={authLayoutStyles.showcaseTextOverlay}
-                            pointerEvents="box-none"
-                        >
-                            <View style={stylesWithTheme.showcaseTextOverlayPill}>
-                                <Text style={stylesWithTheme.showcaseOverlayTitle}>
-                                    Creators you can work with
-                                </Text>
-                                <Text style={stylesWithTheme.showcaseOverlaySubtitle}>
-                                    Live marketplace snapshots, updated continuously.
-                                </Text>
-                            </View>
                         </View>
                     </View>
                 </View>
@@ -355,18 +319,19 @@ export const authLayoutStyles = {
     showcaseMarqueeWrapper: {
         position: "relative" as const,
         width: "100%" as const,
+        height: "100vh" as any,
         alignSelf: "stretch" as const,
     },
     showcaseTextOverlay: {
         position: "absolute" as const,
-        top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         zIndex: 2,
-        justifyContent: "center" as const,
-        alignItems: "center" as const,
-        paddingHorizontal: 16,
+        justifyContent: "flex-end" as const,
+        alignItems: "stretch" as const,
+        paddingHorizontal: 12,
+        paddingBottom: 12,
     },
     showcaseContainer: {
         flex: 1,
