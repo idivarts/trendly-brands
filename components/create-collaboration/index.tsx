@@ -125,6 +125,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     const type = params.id ? "Edit" : "Add";
     // const { publish } = usePublishCollaboration();
     const isSavingRef = useRef(false);
+    const [dataKey, setDataKey] = useState("initial-state")
 
     const {
         isProcessing,
@@ -278,8 +279,13 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
                 Console.log("Mapped promotionType:", updatedCollaboration.promotionType);
                 Console.log("Mapped platforms:", updatedCollaboration.platform);
                 Console.log("Mapped contentFormats:", updatedCollaboration.contentFormat);
+                Console.log("Mapped Attachments:", updatedCollaboration.attachments);
+                Console.log("Mapped External Links:", updatedCollaboration.externalLinks);
 
                 setCollaboration(updatedCollaboration);
+                setAttachments(updatedCollaboration?.attachments || []);
+                setDataKey("data-loaded-" + Date.now());
+                console.log("Attachments:", (updatedCollaboration?.attachments || []));
 
                 Toaster.success("Campaign generated successfully! Review and customize as needed.");
             } catch (error) {
@@ -298,6 +304,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
         Console.log("Platform:", collaboration.platform);
         Console.log("PromotionType:", collaboration.promotionType);
         Console.log("Budget:", collaboration.budget);
+        Console.log("Attachment:", collaboration.attachments);
         Console.log("===================================");
     }, [collaboration]);
 
@@ -454,6 +461,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     if (screen === 1) {
         return (
             <ScreenOne
+                key={"screen-one-" + dataKey}
                 headerRight={headerRight}
                 attachments={attachments}
                 collaboration={collaboration}
@@ -473,6 +481,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     if (screen == 2) {
         return (
             <ScreenTwo
+                key={"screen-two-" + dataKey}
                 headerRight={headerRight}
                 collaboration={collaboration}
                 isEdited={isEdited}
@@ -493,6 +502,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     if (screen === 3) {
         return (
             <ScreenThree
+                key={"screen-three-" + dataKey}
                 headerRight={headerRight}
                 collaboration={collaboration}
                 isEdited={isEdited}
@@ -516,6 +526,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
         }
         return (
             <PreviewCollaboration
+                key={"preview-collaboration-" + dataKey}
                 collaboration={
                     {
                         ...collaboration,

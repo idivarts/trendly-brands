@@ -3,9 +3,10 @@ import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import gsap from "gsap";
@@ -36,6 +37,7 @@ const LetsStartWeb = () => {
 
     const [showSplash, setShowSplash] = useState(true);
     const [showContent, setShowContent] = useState(false);
+    const [isStorageHydrated, setIsStorageHydrated] = useState(false);
 
     // Refs
     const containerRef = useRef<View>(null);
@@ -43,13 +45,46 @@ const LetsStartWeb = () => {
     const orbsRef = useRef<View[]>([]);
     const { triggerTransition } = useTransition();
 
-    const handleSplashComplete = () => {
+    const handleSplashComplete = async () => {
         setShowSplash(false);
         setShowContent(true);
+        try {
+            await PersistentStorage.set("lets_start_intro_splash_seen", "true");
+        } catch {
+            // Ignore persistence errors; splash will still be hidden for this session.
+        }
     };
 
     useEffect(() => {
-        if (!showContent) return;
+        let cancelled = false;
+        const hydrate = async () => {
+            try {
+                const seen = await PersistentStorage.get("lets_start_intro_splash_seen");
+                if (cancelled) return;
+                if (seen) {
+                    setShowSplash(false);
+                    setShowContent(true);
+                } else {
+                    setShowSplash(true);
+                    setShowContent(false);
+                }
+            } catch {
+                if (cancelled) return;
+                setShowSplash(true);
+                setShowContent(false);
+            } finally {
+                if (!cancelled) setIsStorageHydrated(true);
+            }
+        };
+
+        hydrate();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!showContent || !isStorageHydrated) return;
 
         // Load Google Fonts for web
         if (Platform.OS === 'web') {
@@ -121,6 +156,8 @@ const LetsStartWeb = () => {
             return () => ctx.revert();
         }
     }, [showContent]);
+
+    if (!isStorageHydrated) return null;
 
     if (showSplash) {
         return <IntroSplash onComplete={handleSplashComplete} />;
