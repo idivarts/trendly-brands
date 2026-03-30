@@ -11,6 +11,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface PageHeaderProps {
+    customMainContent?: React.ReactNode;
     title: string;
     subtitle?: string;
     /** Show back button. On mobile (!xl), defaults to true unless explicitly false. */
@@ -25,6 +26,7 @@ export interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({
     title,
     subtitle,
+    customMainContent,
     showBackButton,
     onBackPress,
     actionButtons = [],
@@ -71,12 +73,13 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                     />
                 </Pressable>
             )}
-            <View style={styles.headerTitleBlock}>
-                <Text style={styles.headerTitle}>{title}</Text>
-                {subtitle ? (
-                    <Text style={styles.headerSubtitle}>{subtitle}</Text>
-                ) : null}
-            </View>
+            {customMainContent ? customMainContent :
+                <View style={styles.headerTitleBlock}>
+                    <Text style={styles.headerTitle}>{title}</Text>
+                    {subtitle ? (
+                        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+                    ) : null}
+                </View>}
             {showActions && (hasActionButtons || hasRightComponent) && (
                 <View style={styles.headerActions}>
                     {hasActionButtons && actionButtons.map((btn, index) => (
@@ -101,11 +104,11 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     paddingBottom: 12,
                     // Use subtle shadow instead of a border for elevation/distinction.
                     shadowColor: colors.panelShadow,
-                    shadowOffset: { width: 0, height: 4 }, // positive = shadow below
-                    shadowRadius: 10,
-                    shadowOpacity: 0.8,
-                    elevation: 3,
-                    zIndex: 10,
+                    shadowOffset: { width: 0, height: 2 }, // positive = shadow below
+                    shadowRadius: 8,
+                    shadowOpacity: 0.6,
+                    elevation: 2,
+                    zIndex: 5,
                     overflow: "visible",
                     backgroundColor: colors.background,
                 },
