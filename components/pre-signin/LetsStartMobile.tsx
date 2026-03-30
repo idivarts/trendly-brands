@@ -1,10 +1,12 @@
 import ActionCard from "@/components/pre-signin/ActionCard";
+import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import React from "react";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -13,7 +15,28 @@ const LetsStartMobile = () => {
     const theme = useTheme();
     const brandColors = Colors(theme);
     const [showSplash, setShowSplash] = React.useState(true);
+    const [isStorageHydrated, setIsStorageHydrated] = React.useState(false);
     const { triggerTransition } = useTransition();
+
+    React.useEffect(() => {
+        let cancelled = false;
+        const hydrate = async () => {
+            try {
+                const seen = await PersistentStorage.get("lets_start_intro_splash_seen");
+                if (cancelled) return;
+                setShowSplash(!seen);
+            } catch {
+                // If storage fails, default to showing the splash once for this session.
+                if (!cancelled) setShowSplash(true);
+            } finally {
+                if (!cancelled) setIsStorageHydrated(true);
+            }
+        };
+        hydrate();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleBrandPress = React.useCallback(() => {
         router.push("/pre-signin");
@@ -40,9 +63,20 @@ const LetsStartMobile = () => {
         }
     }, []);
 
-    // if (showSplash) {
-    //     return <IntroSplash onComplete={() => setShowSplash(false)} />;
-    // }
+    const handleSplashComplete = React.useCallback(async () => {
+        setShowSplash(false);
+        try {
+            await PersistentStorage.set("lets_start_intro_splash_seen", "true");
+        } catch {
+            // Ignore persistence errors; splash will still be hidden for this session.
+        }
+    }, []);
+
+    if (!isStorageHydrated) return null;
+
+    if (showSplash) {
+        return <IntroSplash onComplete={handleSplashComplete} />;
+    }
 
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["left", "right", "bottom"]}>
