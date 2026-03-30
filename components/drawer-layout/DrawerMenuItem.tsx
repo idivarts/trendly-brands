@@ -62,7 +62,13 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                             ? hoverBg
                             : inactiveBg,
                     borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
-                    borderColor: isActive ? colorSet.primary : (drawerColors ? colorSet.drawerBorder : colorSet.border),
+                    borderColor: isActive
+                        ? colorSet.primary
+                        : drawerColors
+                          ? theme.dark
+                              ? colorSet.border
+                              : colorSet.drawerBorder
+                          : colorSet.border,
                 },
             ]}
             accessibilityRole="button"
