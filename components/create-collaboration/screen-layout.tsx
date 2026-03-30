@@ -86,7 +86,7 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
                         setScreen(screen - 1);
                     }
                 }}
-                hideAction={screen === 1 && (type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
+                hideAction={false}
                 title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
                 rightAction={showHeaderRight}
                 rightActionButton={headerRightContent}

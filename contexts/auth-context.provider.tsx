@@ -11,6 +11,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Manager } from "@/types/Manager";
 import { User } from "@/types/User";
 import { updatedTokens } from "@/utils/push-notification/push-notification-token.native";
+import { useColorScheme } from "@/components/theme/useColorScheme";
 import { resetAndNavigate } from "@/utils/router";
 import { useRouter } from "expo-router";
 import {
@@ -83,6 +84,8 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
     const [[isLoading, session], setSession] = useStorageState("manager");
     const [manager, setManager] = useState<Manager | null>(null);
     const router = useRouter();
+    /** OS color scheme; AuthContext sits above ThemeProvider, so useTheme() is invalid here. */
+    const colorScheme = useColorScheme();
 
     const fetchManager = () => {
         if (session) {
@@ -178,6 +181,10 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             if (!isExistingUser) {
                 const userData: IManagers = {
                     ...INITIAL_MANAGER_DATA,
+                    settings: {
+                        ...INITIAL_MANAGER_DATA.settings,
+                        theme: colorScheme,
+                    },
                     name: managerCredential.user.displayName || "",
                     email: email,
                     profileImage: managerCredential.user.photoURL || "",
