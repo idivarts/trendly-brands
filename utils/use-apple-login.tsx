@@ -9,6 +9,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { OAuthProvider, signInWithCredential, UserCredential } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { useTheme } from "@react-navigation/native";
 
 const provider = new OAuthProvider('apple.com');
 provider.addScope('email');
@@ -17,6 +18,7 @@ provider.addScope('name');
 export const useAppleLogin = (setLoading: Function, setError: Function) => {
     const { firebaseSignIn, firebaseSignUp, signOutManager } = useAuthContext();
     const [isAppleAvailable, setIsAppleAvailable] = useState(false)
+    const theme = useTheme();
     useEffect(() => {
         (async () => {
             const b = await AppleAuthentication.isAvailableAsync()
@@ -54,6 +56,10 @@ export const useAppleLogin = (setLoading: Function, setError: Function) => {
         if (!isExistingUser) {
             const userData: IManagers = {
                 ...INITIAL_MANAGER_DATA,
+                settings: {
+                    ...INITIAL_MANAGER_DATA.settings,
+                    theme: theme.dark ? "dark" : "light",
+                },
                 name: appleCredential.fullName?.givenName || extractNameFromEmail(result.user.email || ""),
                 email: result.user.email || "",
                 profileImage: "",
