@@ -3,10 +3,10 @@ import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import React from "react";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -95,9 +95,9 @@ const LetsStartMobile = () => {
                                     styles.heroText,
                                     {
                                         color: brandColors.primary,
-                                        textShadowColor: '#00ffff', // Neon cyan glow
-                                        textShadowRadius: 20,
-                                        textShadowOffset: { width: 0, height: 0 },
+                                        // textShadowColor: brandColors.secondary,
+                                        // textShadowRadius: 20,
+                                        // textShadowOffset: { width: 0, height: 0 },
                                     }
                                 ]}
                             >
