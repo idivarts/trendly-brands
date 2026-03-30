@@ -1,5 +1,4 @@
 import ActionCard from "@/components/pre-signin/ActionCard";
-import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
@@ -41,12 +40,12 @@ const LetsStartMobile = () => {
         }
     }, []);
 
-    if (showSplash) {
-        return <IntroSplash onComplete={() => setShowSplash(false)} />;
-    }
+    // if (showSplash) {
+    //     return <IntroSplash onComplete={() => setShowSplash(false)} />;
+    // }
 
     return (
-        <AppLayout withWebPadding={false} safeAreaEdges={["left","right","bottom"]}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["left", "right", "bottom"]}>
             {/* ScrollView allows content to fit on small screens without cut-off */}
             <ScrollView
                 contentContainerStyle={styles.scrollContent}

@@ -1,11 +1,10 @@
 import ActionCard from "@/components/pre-signin/ActionCard";
-import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Colors from "@/shared-uis/constants/Colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import gsap from "gsap";
@@ -122,9 +121,9 @@ const LetsStartWeb = () => {
         }
     }, [showContent]);
 
-    if (showSplash) {
-        return <IntroSplash onComplete={handleSplashComplete} />;
-    }
+    // if (showSplash) {
+    //     return <IntroSplash onComplete={handleSplashComplete} />;
+    // }
 
     return (
         <AppLayout withWebPadding={false}>
