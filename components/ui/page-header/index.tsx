@@ -1,7 +1,7 @@
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
-import Colors from "@/shared-uis/constants/Colors";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import Colors from "@/shared-uis/constants/Colors";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -99,8 +99,14 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     paddingHorizontal: 16,
                     paddingTop: 12 + topInset,
                     paddingBottom: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
+                    // Use subtle shadow instead of a border for elevation/distinction.
+                    shadowColor: colors.panelShadow,
+                    shadowOffset: { width: 0, height: 4 }, // positive = shadow below
+                    shadowRadius: 10,
+                    shadowOpacity: 0.8,
+                    elevation: 3,
+                    zIndex: 10,
+                    overflow: "visible",
                     backgroundColor: colors.background,
                 },
                 headerBack: {
