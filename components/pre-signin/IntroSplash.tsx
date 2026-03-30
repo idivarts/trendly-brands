@@ -21,6 +21,8 @@ export default function IntroSplash({ onComplete }: IntroSplashProps) {
                 loop={false}
                 onAnimationFinish={onComplete}
                 style={styles.lottie}
+                webStyle={styles.lottie}
+                resizeMode="contain"
             />
         </View>
     );
@@ -36,8 +38,8 @@ function createStyles(colors: ReturnType<typeof Colors>, theme: Theme) {
             zIndex: 9999,
         },
         lottie: {
-            width: 320,
-            height: 120,
+            width: "100%",
+            height: "100%",
         },
     });
 }
