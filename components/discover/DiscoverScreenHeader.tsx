@@ -1,10 +1,11 @@
 import { OpenFilterRightPanel, useDiscovery } from "@/components/discover/discovery-context";
-import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import Colors from "@/shared-uis/constants/Colors";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faChevronDown,
     faFilter,
@@ -12,11 +13,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Menu } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SORT_OPTIONS = [
     { label: "Followers", value: "followers", sublabel: "High to Low" },
@@ -219,53 +219,58 @@ const DiscoverScreenHeader: React.FC = () => {
 
     if (!xl) {
         return (
-            <View style={styles.mobileStackedContainer}>
-                <View style={styles.mobileTitleRow}>
-                    <CoachmarkAnchor id="guide-tour-header" shape="rect">
-                        <Pressable
-                            onPress={() => OpenDrawerSubject.next(true)}
-                            style={{ flex: 1, minWidth: 0 }}
+            <PageHeader
+                title="Discover Influencer"
+                showBackButton={false}
+                customMainContent={<CoachmarkAnchor id="guide-tour-header" shape="rect">
+                    <Pressable
+                        onPress={() => OpenDrawerSubject.next(true)}
+                        style={{ flex: 1, minWidth: 0 }}
+                    >
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                            }}
                         >
-                            <View
+                            <Text style={styles.mobileTitle}>Discover Influencer</Text>
+                            <FontAwesomeIcon
+                                color={colors.text}
+                                icon={faChevronDown}
+                                size={16}
                                 style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
+                                    marginLeft: 6,
+                                    marginBottom: -2,
                                 }}
-                            >
-                                <Text style={styles.mobileTitle}>Discover Influencer</Text>
-                                <FontAwesomeIcon
-                                    color={colors.text}
-                                    icon={faChevronDown}
-                                    size={16}
-                                    style={{
-                                        marginLeft: 6,
-                                        marginBottom: -2,
-                                    }}
-                                />
-                            </View>
-                            <Text style={styles.mobileSubtitle}>
-                                {`Total ${String(totalCount ?? "0").trim()}+ found`}
-                            </Text>
-                        </Pressable>
-                    </CoachmarkAnchor>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        {filterButton}
-                        {sortComponent}
-                    </View>
-                </View>
-            </View>
+                            />
+                        </View>
+                        <Text style={styles.mobileSubtitle}>
+                            {`Total ${String(totalCount ?? "0").trim()}+ found`}
+                        </Text>
+                    </Pressable>
+                </CoachmarkAnchor>}
+                actionButtons={[filterButton]}
+                rightComponent={sortComponent}
+            />
+            // <View style={styles.mobileStackedContainer}>
+            //     <View style={styles.mobileTitleRow}>
+
+            //         <View style={{ flexDirection: "row", alignItems: "center" }}>
+            //             {filterButton}
+            //             {sortComponent}
+            //         </View>
+            //     </View>
+            // </View>
         );
     }
 
     return (
-        <>
-            <PageHeader
-                title="Discover Influencer"
-                subtitle={`Total ${String(totalCount ?? "0").trim()}+ found`}
-                actionButtons={[filterButton]}
-                rightComponent={sortComponent}
-            />
-        </>
+        <PageHeader
+            title="Discover Influencer"
+            subtitle={`Total ${String(totalCount ?? "0").trim()}+ found`}
+            actionButtons={[filterButton]}
+            rightComponent={sortComponent}
+        />
     );
 };
 

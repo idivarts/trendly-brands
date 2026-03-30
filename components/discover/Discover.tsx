@@ -309,9 +309,7 @@ const DiscoverComponent = ({
         >
             <AppLayout safeAreaEdges={["left", "right"]}>
                 <View style={{ width: "100%", flex: 1, minHeight: 0 }}>
-                    {showTopPanel && <View style={{ flexShrink: 0 }}>
-                        <DiscoverScreenHeader />
-                    </View>}
+                    {showTopPanel && <DiscoverScreenHeader />}
                     <View style={{ width: "100%", flexDirection: "row", flex: 1, minHeight: 0 }}>
                         <DiscoverInfluencer
                             advanceFilter={advanceFilter}
