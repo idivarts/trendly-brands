@@ -1,11 +1,12 @@
 import EmptyState from "@/components/ui/empty-state";
 import AppLayout from "@/layouts/app-layout";
-import { stylesFn } from "@/styles/NotificationCard.styles";
 import { Notification } from "@/types/Notification";
-import { useTheme } from "@react-navigation/native";
-import { FlatList } from "react-native";
+import { useTheme, type Theme } from "@react-navigation/native";
+import React, { useMemo } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
+import Colors from "@/shared-uis/constants/Colors";
 import { NotificationCard } from "../NotificationCard";
-import { View } from "../theme/Themed";
+import { View as ThemedView } from "../theme/Themed";
 
 interface NotificationsProps {
     notifications: Notification[];
@@ -17,20 +18,20 @@ const Notifications: React.FC<NotificationsProps> = ({
     onMarkAsRead,
 }) => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const styles = useMemo(() => useNotificationStyles(theme), [theme]);
 
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["left", "right", "bottom"]}>
             {
                 notifications.length === 0 ? (
-                    <View style={styles.container}>
+                    <ThemedView style={styles.container}>
                         <EmptyState
                             hideAction
                             image={require("@/assets/images/illustration2.png")}
                             subtitle="We have no notifications for you today!"
                             title="You are all caught up! "
                         />
-                    </View >
+                    </ThemedView >
                 ) : (
                     <FlatList
                         style={styles.container}
@@ -62,5 +63,50 @@ const Notifications: React.FC<NotificationsProps> = ({
         </AppLayout>
     );
 };
+
+function useNotificationStyles(theme: Theme) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            padding: 16,
+            backgroundColor: Colors(theme).background,
+        },
+        contentContainer: {
+            gap: 16,
+            paddingBottom: 24,
+        },
+        card: {
+            padding: 16,
+            borderRadius: 10,
+            backgroundColor: Colors(theme).card,
+            shadowColor: Colors(theme).transparent,
+        },
+        row: {
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        content: {
+            marginLeft: 16,
+            flex: 1,
+            color: Colors(theme).text,
+        },
+        title: {
+            fontWeight: "bold",
+            color: Colors(theme).text,
+        },
+        time: {
+            color: Colors(theme).text,
+            marginTop: 5,
+        },
+        actions: {
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            flexWrap: "wrap",
+            rowGap: 10,
+            columnGap: 10,
+            marginTop: 10,
+        },
+    });
+}
 
 export default Notifications;

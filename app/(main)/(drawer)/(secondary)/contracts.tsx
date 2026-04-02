@@ -1,9 +1,16 @@
 import ActiveContracts from "@/components/contracts/active";
 import PastContracts from "@/components/contracts/past";
 import { View } from "@/components/theme/Themed";
-import ScreenHeader from "@/components/ui/screen-header";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import PageHeader from "@/components/ui/page-header";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import AppLayout from "@/layouts/app-layout";
+import React from "react";
+import { StyleSheet } from "react-native";
+
+const styles = StyleSheet.create({
+    flex1: { flex: 1 },
+});
 
 const tabs = [
     {
@@ -19,15 +26,14 @@ const tabs = [
 ];
 
 const Contracts = () => {
+    const { selectedBrand } = useBrandContext();
     return (
         <AppLayout>
-            <ScreenHeader title="Contracts" />
-            <View
-                style={{
-                    flex: 1,
-                    // paddingTop: 16,
-                }}
-            >
+            <PageHeader
+                title="Contracts"
+                subtitle={selectedBrand?.name}
+            />
+            <View style={styles.flex1}>
                 <TopTabNavigation tabs={tabs} />
             </View>
         </AppLayout>

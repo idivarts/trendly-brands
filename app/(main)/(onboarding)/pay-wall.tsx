@@ -8,7 +8,7 @@ const PayWall = () => {
     if (Platform.OS == "web")
         return <PricingPage />
     return (
-        <AppLayout withWebPadding={true}>
+        <AppLayout withWebPadding={true} safeAreaEdges={["top", "right", "bottom", "left"]}>
             <PayWallComponent />
         </AppLayout>
     )

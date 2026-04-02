@@ -1,15 +1,53 @@
+import Colors from "@/shared-uis/constants/Colors";
 import AppLayout from "@/layouts/app-layout";
-import { Stack } from "expo-router";
-import { View } from "react-native";
+import { useTheme } from "@react-navigation/native";
+import { Stack, usePathname } from "expo-router";
+import { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
+
+const layoutStyles = StyleSheet.create({
+    flex1: { flex: 1 },
+});
+
+const FULL_BLEED_AUTH_ROUTES = [
+    "/pre-signin",
+    "/create-new-account",
+    "/login",
+    "/forgot-password",
+] as const;
 
 const AuthLayout = () => {
+    const pathname = usePathname();
+    const theme = useTheme();
+    const isFullBleedAuth = useMemo(
+        () =>
+            FULL_BLEED_AUTH_ROUTES.some(
+                (route) =>
+                    pathname === route || pathname?.endsWith(route)
+            ),
+        [pathname]
+    );
+    const layoutProps: any = useMemo(
+        () =>
+            isFullBleedAuth
+                ? {
+                    safeAreaEdges: [] as const,
+                    backgroundColor:
+                        pathname === "/pre-signin" || pathname?.endsWith("/pre-signin")
+                            ? theme.dark
+                                ? Colors(theme).background
+                                : Colors(theme).aliceBlue
+                            : theme.dark
+                                ? Colors(theme).background
+                                : Colors(theme).aliceBlue,
+                }
+                : undefined,
+        [isFullBleedAuth, theme, pathname]
+    );
+
     return (
-        <AppLayout>
-            <View
-                style={{
-                    flex: 1,
-                }}
-            >
+        <AppLayout {...layoutProps}>
+            <View style={layoutStyles.flex1}>
                 <Stack
                     screenOptions={{
                         headerShown: false,

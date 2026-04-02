@@ -1,13 +1,32 @@
 import ExploreInfluencers from "@/components/explore-influencers";
 import RightPanel from "@/components/explore-influencers/RightPanel";
 import FullInformationalIllustration from "@/components/FullScreenIllustration";
+import NotificationIcon from "@/components/notifications/notification-icon";
+import PageHeader from "@/components/ui/page-header";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import React, { useEffect, useState } from "react";
+import { StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+
+const styles = StyleSheet.create({
+    xlContainer: {
+        width: "100%",
+        flexDirection: "row",
+        gap: 24,
+        height: "100%",
+    },
+    main: {
+        flex: 1,
+        minWidth: 0,
+    },
+    rightPanel: {
+        width: 350,
+    },
+});
 
 const ExploreInfluencersScreen = () => {
     const { manager } = useAuthContext()
@@ -42,20 +61,38 @@ const ExploreInfluencersScreen = () => {
     if (!manager && !preferences)
         return <ActivityIndicator />
 
+    const pageHeader = (
+        <PageHeader
+            title="Influencer Spotlights"
+            subtitle="Discover featured creators"
+            rightComponent={<NotificationIcon />}
+            mobileActions="notification-only"
+            showBackButton={false}
+        />
+    );
+
     if (xl) {
         return (
-            <View style={{ width: "100%", flexDirection: "row", gap: 24, height: "100%" }}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                    <ExploreInfluencers key={connectedInfluencer ? "connected" : "explore"} connectedInfluencers={connectedInfluencer} />
-                </View>
-                <View style={{ width: 350 }} >
-                    <RightPanel connectedInfluencers={connectedInfluencer} setConnectedInfluencers={setConnectedInfluencer} />
+            <View style={{ flex: 1 }}>
+                {pageHeader}
+                <View style={styles.xlContainer}>
+                    <View style={styles.main}>
+                        <ExploreInfluencers key={connectedInfluencer ? "connected" : "explore"} connectedInfluencers={connectedInfluencer} />
+                    </View>
+                    <View style={styles.rightPanel} >
+                        <RightPanel connectedInfluencers={connectedInfluencer} setConnectedInfluencers={setConnectedInfluencer} />
+                    </View>
                 </View>
             </View>
         );
     }
 
-    return <ExploreInfluencers />
+    return (
+        <View style={{ flex: 1 }}>
+            {pageHeader}
+            <ExploreInfluencers />
+        </View>
+    );
 };
 
 export default ExploreInfluencersScreen;

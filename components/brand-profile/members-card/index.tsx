@@ -1,6 +1,6 @@
 import { ManagerCard } from "@/components/members";
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -70,72 +70,161 @@ const MembersCard: FC<MembersCardProps> = ({ manager, cardType, removeAction }) 
     return (
         <View
             style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: 16,
-                borderWidth: 0.3,
-                borderColor: Colors(theme).gray300,
-
+                backgroundColor: Colors(theme).primary,
+                borderRadius: 14,
+                shadowColor: Colors(theme).primary,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 5,
             }}
         >
             <View
                 style={{
                     flexDirection: "row",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: 10,
-
+                    padding: 16,
+                    borderRadius: 12,
+                    backgroundColor: Colors(theme).card,
+                    gap: 16,
                 }}
             >
-                <ImageComponent
-                    size="small"
-                    shape="circle"
-                    initials={manager.name}
-                    url={manager.profileImage || ""}
-                    altText="Image"
-                />
-                <View >
-                    <Text style={{ fontSize: 16 }}>{manager.name}</Text>
-                    <Text style={{ fontSize: 16 }}>{manager.email}</Text>
-                </View>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "transparent", }}>
-                {manager.status === 0 && (
-                    <Text style={{ color: Colors(theme).orange }}>Invite Sent</Text>
-                )}
-                {loading && <ActivityIndicator size="small" />}
-                <Menu
-                    visible={menuVisible}
-                    onDismiss={closeMenu}
-                    anchor={
-                        <Pressable onPress={openMenu}>
-                            <FontAwesomeIcon icon={faEllipsis} />
-                        </Pressable>
-                    }
+                <View
                     style={{
-                        backgroundColor: Colors(theme).background,
-                        borderWidth: 0.3,
-                        borderColor: Colors(theme).gray300,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 12,
+                        flex: 1,
                     }}
                 >
-                    {manager.status === 0 &&
+                    <View
+                        style={{
+                            borderRadius: 50,
+                            padding: 2,
+                            shadowColor: Colors(theme).primary,
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 4,
+                            elevation: 3,
+                        }}
+                    >
+                        <ImageComponent
+                            size="small"
+                            shape="circle"
+                            initials={manager.name}
+                            url={manager.profileImage || ""}
+                            altText="Image"
+                        />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ fontSize: 16, fontWeight: "600" }}>
+                            {manager.name}
+                        </Text>
+                        <Text
+                            style={{
+                                fontSize: 14,
+                                // color: Colors(theme).gray600,
+                            }}
+                        >
+                            {manager.email}
+                        </Text>
+                    </View>
+                </View>
+
+                <View
+                    style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 12,
+                        backgroundColor: "transparent",
+                    }}
+                >
+                    {manager.status === 0 && (
+                        <View
+                            style={{
+                                backgroundColor: Colors(theme).orange + "20",
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                                shadowColor: Colors(theme).orange,
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.2,
+                                shadowRadius: 4,
+                                elevation: 2,
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: Colors(theme).orange,
+                                    fontSize: 12,
+                                    fontWeight: "600",
+                                }}
+                            >
+                                Invite Sent
+                            </Text>
+                        </View>
+                    )}
+                    {loading && <ActivityIndicator size="small" color={Colors(theme).primary} />}
+                    <Menu
+                        visible={menuVisible}
+                        onDismiss={closeMenu}
+                        anchor={
+                            <Pressable
+                                onPress={openMenu}
+                                style={{
+                                    padding: 8,
+                                    borderRadius: 8,
+                                    backgroundColor: Colors(theme).background,
+                                    shadowColor: Colors(theme).primary,
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: 0.2,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                }}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faEllipsis}
+                                    color={Colors(theme).primary}
+                                    size={18}
+                                />
+                            </Pressable>
+                        }
+                        style={{
+                            backgroundColor: Colors(theme).card,
+                            shadowColor: Colors(theme).primary,
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.25,
+                            shadowRadius: 6,
+                            elevation: 4,
+                        }}
+                    >
+                        {manager.status === 0 && (
+                            <Menu.Item
+                                onPress={() => {
+                                    resendInvite();
+                                    closeMenu();
+                                }}
+                                title="Resend Invite"
+                                titleStyle={{
+                                    color: Colors(theme).text,
+                                    fontWeight: "600",
+                                }}
+                            />
+                        )}
                         <Menu.Item
                             onPress={() => {
-                                resendInvite();
+                                deleteAction();
                                 closeMenu();
                             }}
-                            title="Resend Invite"
-                            titleStyle={{ color: Colors(theme).text }}
-                        />}
-                    <Menu.Item
-                        onPress={() => {
-                            deleteAction();
-                            closeMenu();
-                        }}
-                        title="Delete"
-                        titleStyle={{ color: Colors(theme).text }}
-                    />
-                </Menu>
+                            title="Delete"
+                            titleStyle={{
+                                color: Colors(theme).text,
+                                fontWeight: "600",
+                            }}
+                        />
+                    </Menu>
+                </View>
             </View>
         </View>
     );

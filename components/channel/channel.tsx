@@ -6,7 +6,7 @@ import { Channel as ChannelType } from "stream-chat";
 
 import { View } from "@/components/theme/Themed";
 import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useChatContext, useContractContext } from "@/contexts";
 import { streamClient } from "@/contexts/streamClient";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";

@@ -1,17 +1,17 @@
-import Colors from "@/constants/Colors";
 import {
-    CONTENT_FORMATS,
-    INITIAL_CONTENT_FORMATS,
     INITIAL_PLATFORMS,
     PLATFORMS,
 } from "@/constants/ItemsList";
+import { CollaborationLocationType } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { Selector } from "@/shared-uis/components/select/selector";
+import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Collaboration } from "@/types/Collaboration";
 import {
     faArrowRight,
+    faBox,
     faHouseLaptop,
     faMapLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
@@ -19,7 +19,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as Location from "expo-location";
 import React, { useMemo } from "react";
-import { Alert, useWindowDimensions } from "react-native";
+import { Alert, StyleSheet, Text } from "react-native";
 import AddressAutocomplete from "../collaboration/create-collaboration/AddressAutocomplete";
 import CreateCollaborationMap from "../collaboration/create-collaboration/CreateCollaborationMap";
 import { View } from "../theme/Themed";
@@ -29,6 +29,7 @@ import ScreenLayout from "./screen-layout";
 
 interface ScreenTwoProps {
     collaboration: Partial<Collaboration>;
+    headerRight?: React.ReactNode;
     isEdited: boolean;
     isSubmitting: boolean;
     mapRegion: {
@@ -61,6 +62,7 @@ interface ScreenTwoProps {
 
 const ScreenTwo: React.FC<ScreenTwoProps> = ({
     collaboration,
+    headerRight,
     isEdited,
     isSubmitting,
     mapRegion,
@@ -71,7 +73,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
     type,
 }) => {
     const theme = useTheme();
-    const dimensions = useWindowDimensions();
+    const styles = useMemo(() => createStyles(theme), [theme]);
 
     const numberOfInfluencersNeededText = useMemo(() => {
         if (
@@ -84,8 +86,8 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         return `${collaboration.numberOfInfluencersNeeded || 1}`;
     }, [collaboration.numberOfInfluencersNeeded]);
 
-    const handleLocationSelect = async (value: string) => {
-        if (value === "On-Site") {
+    const handleLocationSelect = async (value: CollaborationLocationType) => {
+        if (value === CollaborationLocationType.OnSite) {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== "granted") {
@@ -123,6 +125,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
     return (
         <>
             <ScreenLayout
+                headerRight={headerRight}
                 isEdited={isEdited}
                 isSubmitting={isSubmitting}
                 saveAsDraft={saveAsDraft}
@@ -131,46 +134,10 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                 type={type}
             >
                 <ContentWrapper
-                    description="Which content format are you willing to post on your social media account for promotions."
-                    theme={theme}
-                    title="Content Format"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
-                >
-                    <MultiSelectExtendable
-                        buttonIcon={
-                            <FontAwesomeIcon
-                                icon={faArrowRight}
-                                color={Colors(theme).primary}
-                                size={14}
-                            />
-                        }
-                        buttonLabel="Others"
-                        closeOnSelect
-
-                        initialMultiselectItemsList={INITIAL_CONTENT_FORMATS}
-                        initialItemsList={includeSelectedItems(
-                            CONTENT_FORMATS,
-                            collaboration.contentFormat || []
-                        )}
-                        onSelectedItemsChange={(value) => {
-                            setCollaboration({
-                                ...collaboration,
-                                contentFormat: value,
-                            });
-                        }}
-                        selectedItems={collaboration.contentFormat || []}
-                        theme={theme}
-                    />
-                </ContentWrapper>
-                <ContentWrapper
                     description="Which platforms would you like to post content on?"
                     theme={theme}
                     title="Platform"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <MultiSelectExtendable
                         buttonIcon={
@@ -201,9 +168,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                     rightText={numberOfInfluencersNeededText}
                     theme={theme}
                     title="Influencers Needed"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    titleStyle={styles.sectionTitle}
                 >
                     <TextInput
                         label="Number of Influencers"
@@ -235,51 +200,165 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 ? collaboration.numberOfInfluencersNeeded.toString()
                                 : ""
                         }
-                        style={{
-                            width: "100%",
-                        }}
+                        style={styles.textInputFullWidth}
                     />
                 </ContentWrapper>
                 <ContentWrapper
                     theme={theme}
-                    title="Location"
-                    titleStyle={{
-                        fontSize: 16,
-                    }}
+                    title="What are you promoting?"
+                    titleStyle={styles.sectionTitle}
                 >
                     <Selector
                         options={[
                             {
-                                icon: faHouseLaptop,
-                                label: "Remote",
-                                value: "Remote",
+                                label: "Physical Product",
+                                value: "physical-product",
+                                description: "Any product based items like Beauty cream, shirts and so on.",
                             },
                             {
-                                icon: faMapLocationDot,
-                                label: "On-Site",
-                                value: "On-Site",
+                                label: "Services",
+                                value: "services",
+                                description: "Any professional services like Spa or Nail or any other digital services like SaaS Product",
+                            },
+                            {
+                                label: "Others",
+                                value: "others",
+                                description: "Any other thing like maybe food/restaurant promotion, store promotion.",
                             },
                         ]}
-                        onSelect={handleLocationSelect}
-                        selectedValue={collaboration.location?.type || "Remote"}
+                        selectedValue={collaboration.promotionSubject}
+                        onSelect={(value) => {
+                            setCollaboration({
+                                ...collaboration,
+                                promotionSubject: value as Collaboration["promotionSubject"],
+                            });
+                        }}
                         theme={theme}
                     />
                 </ContentWrapper>
-                {collaboration.location?.type === "On-Site" && (
-                    <View
-                        style={{
-                            gap: 16,
+                {collaboration.promotionSubject && (
+                    <View style={styles.productSection}>
+                        <TextInput
+                            label="About Product"
+                            mode="outlined"
+                            placeholder="Eg. TShirt for Kids"
+                            value={(collaboration.products ?? [])[0]?.name || ""}
+                            onChangeText={(text) => {
+                                const current =
+                                    (collaboration.products ?? [])[0] ?? {};
+                                setCollaboration({
+                                    ...collaboration,
+                                    products: [
+                                        { ...current, name: text || undefined },
+                                    ],
+                                });
+                            }}
+                        />
+                        <TextInput
+                            label="Product Cost (Optional)"
+                            mode="outlined"
+                            placeholder="Approx Retail Cost of Product"
+                            keyboardType="number-pad"
+                            value={
+                                (collaboration.products ?? [])[0]?.cost !==
+                                    undefined
+                                    ? String(
+                                        (collaboration.products ?? [])[0]
+                                            ?.cost ?? ""
+                                    )
+                                    : ""
+                            }
+                            onChangeText={(text) => {
+                                const value = Number(text);
+                                const current =
+                                    (collaboration.products ?? [])[0] ?? {};
+                                setCollaboration({
+                                    ...collaboration,
+                                    products: [
+                                        {
+                                            ...current,
+                                            cost: isNaN(value)
+                                                ? undefined
+                                                : value,
+                                        },
+                                    ],
+                                });
+                            }}
+                        />
+                        <Text style={styles.productCostHint}>
+                            This cost would be incurred by the brand and not
+                            influencers
+                        </Text>
+                    </View>
+                )}
+                <ContentWrapper
+                    theme={theme}
+                    title="Collaboration Fulfillment Type"
+                    titleStyle={styles.sectionTitle}
+                >
+                    <Selector
+                        options={[
+                            {
+                                icon: faBox,
+                                label: "Product/Service Will Be Shipped to Influencer",
+                                value: CollaborationLocationType.PhysicalMode,
+                                description: "Brand will courier the product or perform the service to the influencer's address.",
+                            },
+                            {
+                                icon: faHouseLaptop,
+                                label: "Digital / Remote Collaboration",
+                                value: CollaborationLocationType.Remote,
+                                description: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
+                            },
+                            {
+                                icon: faMapLocationDot,
+                                label: "Influencer Visits Store / Location",
+                                value: CollaborationLocationType.OnSite,
+                                description: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
+                            },
+                        ]}
+                        onSelect={(value) => {
+                            if (
+                                value === CollaborationLocationType.Remote ||
+                                value === CollaborationLocationType.OnSite ||
+                                value === CollaborationLocationType.PhysicalMode
+                            ) {
+                                if (value === CollaborationLocationType.OnSite) {
+                                    handleLocationSelect(value);
+                                } else {
+                                    setCollaboration({
+                                        ...collaboration,
+                                        location: {
+                                            ...collaboration.location,
+                                            type: value,
+                                        },
+                                    });
+                                }
+                            }
                         }}
-                    >
-                        <AddressAutocomplete
-                            collaboration={collaboration}
-                            mapRegion={mapRegion}
-                            setCollaboration={setCollaboration}
-                        />
-                        <CreateCollaborationMap
-                            mapRegion={mapRegion.state}
-                            onLocationChange={onLocationChange}
-                        />
+                        selectedValue={
+                            collaboration.location?.type ||
+                            CollaborationLocationType.Remote
+                        }
+                        theme={theme}
+                    />
+                </ContentWrapper>
+                {collaboration.location?.type === CollaborationLocationType.OnSite && (
+                    <View style={styles.locationSection}>
+                        {collaboration.location?.type ===
+                            CollaborationLocationType.OnSite && (
+                                <>
+                                    <AddressAutocomplete
+                                        collaboration={collaboration}
+                                        mapRegion={mapRegion}
+                                        setCollaboration={setCollaboration}
+                                    />
+                                    <CreateCollaborationMap
+                                        mapRegion={mapRegion.state}
+                                        onLocationChange={onLocationChange}
+                                    />
+                                </>
+                            )}
                     </View>
                 )}
 
@@ -295,6 +374,21 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
             </ScreenLayout>
         </>
     );
+};
+
+const createStyles = (theme: ReturnType<typeof useTheme>) => {
+    const colors = Colors(theme);
+    return StyleSheet.create({
+        sectionTitle: { fontSize: 16 },
+        textInputFullWidth: { width: "100%" },
+        productSection: { gap: 12, marginTop: 12 },
+        productCostHint: {
+            fontSize: 12,
+            color: colors.gray300 || "#6B7280",
+            marginTop: -6,
+        },
+        locationSection: { gap: 16 },
+    });
 };
 
 export default ScreenTwo;

@@ -2,13 +2,10 @@ import {
     PageSortCommunication,
     useDiscovery,
 } from "@/components/discover/discovery-context";
+import { cleanFilters, cleanFiltersForStorage, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import Select from "@/components/ui/select";
-import {
-    INFLUENCER_CATEGORIES,
-    INITIAL_INFLUENCER_CATEGORIES,
-} from "@/constants/ItemsList";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useBreakpoints } from "@/hooks";
+import { useBreakpoints, useNicheSearch } from "@/hooks";
 import { GENDER_SELECT } from "@/shared-constants/preferences/gender";
 import {
     CITIES,
@@ -16,16 +13,18 @@ import {
 } from "@/shared-constants/preferences/locations";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
+import { MultiSelectExtendableAsync } from "@/shared-uis/components/multiselect-extendable/async";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
-import { faRightLong } from "@fortawesome/free-solid-svg-icons";
+import { faStar } from "@fortawesome/free-regular-svg-icons";
+import { faRightLong, faStar as faStarSolid } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
-import React, { MutableRefObject, useEffect, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
+import React, { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { HelperText, Switch, Text, TextInput } from "react-native-paper";
 import type { InfluencerItem } from "../discover-types";
 
@@ -78,20 +77,99 @@ const RangeInputs = ({
     );
 };
 
+/** Tappable star row for picking a 0-5 star value (full-star increments) */
+const TappableStarRow = ({
+    value,
+    onChange,
+    theme,
+}: {
+    value: number;
+    onChange: (stars: number) => void;
+    theme: Theme;
+}) => (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 2, backgroundColor: "transparent" }}>
+        {Array.from({ length: 5 }, (_, i) => {
+            const starNum = i + 1;
+            const filled = starNum <= value;
+            return (
+                <Pressable
+                    key={i}
+                    onPress={() => onChange(starNum === value ? 0 : starNum)}
+                    hitSlop={4}
+                >
+                    <FontAwesomeIcon
+                        icon={filled ? faStarSolid : faStar}
+                        size={22}
+                        color={Colors(theme).yellow}
+                    />
+                </Pressable>
+            );
+        })}
+        <Text style={{ marginLeft: 6, fontSize: 13, color: Colors(theme).textSecondary }}>
+            {value > 0 ? `${value}.0` : "Any"}
+        </Text>
+    </View>
+);
+
+/** Star-based min/max range picker for quality filtering */
+const StarRangePicker = ({
+    label,
+    minStars,
+    maxStars,
+    onChangeMin,
+    onChangeMax,
+    theme,
+}: {
+    label: string;
+    minStars: number;
+    maxStars: number;
+    onChangeMin: (stars: number) => void;
+    onChangeMax: (stars: number) => void;
+    theme: Theme;
+}) => {
+    const styles = stylesFn(theme);
+    return (
+        <View style={{ backgroundColor: "transparent" }}>
+            <Text style={styles.fieldLabel} variant="labelSmall">
+                {label}
+            </Text>
+            <View style={{ gap: 8, backgroundColor: "transparent" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "transparent" }}>
+                    <Text style={{ fontSize: 13, width: 30, color: Colors(theme).textSecondary }}>Min</Text>
+                    <TappableStarRow value={minStars} onChange={onChangeMin} theme={theme} />
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "transparent" }}>
+                    <Text style={{ fontSize: 13, width: 30, color: Colors(theme).textSecondary }}>Max</Text>
+                    <TappableStarRow value={maxStars} onChange={onChangeMax} theme={theme} />
+                </View>
+            </View>
+        </View>
+    );
+};
+
 interface IProps {
     FilterApplyRef: MutableRefObject<any>;
     defaultAdvanceFilters?: IAdvanceFilters;
     onClearStoredFilters?: () => void;
+    onFiltersApplied?: (filters: IAdvanceFilters) => void;
 }
 const TrendlyAdvancedFilter = ({
     FilterApplyRef,
     defaultAdvanceFilters,
     onClearStoredFilters,
+    onFiltersApplied,
 }: IProps) => {
     const theme = useTheme();
     const styles = stylesFn(theme);
 
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, updateBrand } = useBrandContext();
+
+    // Use dynamic niches from context
+    const { niches: dynamicNiches, getAllNiches, handleSearch: searchNiches, isLoading: isLoadingNiches } = useNicheSearch();
+
+    // Memoize the niche lists to prevent unnecessary re-renders
+    const allNichesList = useMemo(() => getAllNiches(), [getAllNiches]);
+    const initialNichesList = useMemo(() => dynamicNiches.slice(0, 8), [dynamicNiches]);
 
     /** Local state (can be lifted later) */
     const [followerMin, setFollowerMin] = useState("");
@@ -131,11 +209,12 @@ const TrendlyAdvancedFilter = ({
 
     const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
     const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+    const [apiError, setApiError] = useState<string | null>(null);
 
     // Sorting & pagination state
     const [sort, setSort] = useState<
         "followers" | "views" | "engagement" | "engagement_rate"
-    >("followers");
+    >("engagement");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [offset, setOffset] = useState(0);
     const [limit, setLimit] = useState(16);
@@ -182,42 +261,36 @@ const TrendlyAdvancedFilter = ({
         setGenders(f?.genders || []);
         setSelectedNiches(f?.selectedNiches || []);
         setSelectedLocations(f?.selectedLocations || []);
+
+        if (f?.sort) {
+            setSort(f.sort as "followers" | "views" | "engagement" | "engagement_rate");
+        }
     };
 
     useEffect(() => {
-        // Determine if collaboration preferences actually contain meaningful data
-        const hasRealDefaults =
-            defaultAdvanceFilters &&
-            Object.keys(defaultAdvanceFilters).length > 0 &&
-            Object.values(defaultAdvanceFilters).some(
-                (v) => v !== null && v !== undefined
-            );
-
-        if (hasRealDefaults) {
-            // Use collaboration preferences (never overridden by saved filters)
-            setFieldsFromFilters(defaultAdvanceFilters as Partial<IAdvanceFilters>);
+        if (hasMeaningfulFilters(defaultAdvanceFilters)) {
+            // Use collaboration preferences (never overridden by brand preferences)
+            setFieldsFromFilters(cleanFiltersForStorage(defaultAdvanceFilters as Record<string, any>) as Partial<IAdvanceFilters>);
+            setOffset(0);
             return;
         }
 
-        // Otherwise try to load the brand-specific saved filter from PersistentStorage
-        const loadSaved = async () => {
-            try {
-                const key = `defaultFilter-${selectedBrand?.id}`;
-                const saved = await PersistentStorage.get(key);
-                if (!saved) return;
-                const parsed = JSON.parse(saved);
-                console.log("Loaded saved filters for brand:", key, parsed);
-                setFieldsFromFilters(parsed as Partial<IAdvanceFilters>);
-            } catch (err) {
-                console.warn("Failed to load saved filters:", err);
-            }
-        };
-
-        loadSaved();
+        // Otherwise load from brand's discoverPreferences (stored in Firestore).
+        // Strip offset/limit so we never use them from storage; always start at 0.
+        if (
+            selectedBrand?.discoverPreferences &&
+            hasMeaningfulFilters(selectedBrand.discoverPreferences)
+        ) {
+            setFieldsFromFilters(cleanFiltersForStorage(selectedBrand.discoverPreferences as Record<string, any>) as Partial<IAdvanceFilters>);
+            setOffset(0);
+        }
     }, [selectedBrand, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
-        if (page) setOffset((page - 1) * 15);
+        if (page) {
+            const newOffset = (page - 1) * 16;
+            setOffset(newOffset);
+        }
         setSort(sort as any);
         setTimeout(() => {
             callApiRef.current(true);
@@ -301,7 +374,7 @@ const TrendlyAdvancedFilter = ({
                 defaultAdvanceFilters?.avgCommentsMax
             ),
 
-            // Quality/aesthetics slider (0..100) (int)
+            // Quality/aesthetics (0..10, displayed as 0-5 stars)
             qualityMin: safeNum(qualityMin, defaultAdvanceFilters?.qualityMin),
             qualityMax: safeNum(qualityMax, defaultAdvanceFilters?.qualityMax),
 
@@ -336,9 +409,6 @@ const TrendlyAdvancedFilter = ({
             ),
         } as const;
 
-        console.log("Payload Object", payload, followerMin, followerMax);
-
-        // prune empty objects/undefined recursively
         const prune = (obj: any): any => {
             if (obj == null || typeof obj !== "object") return obj;
             if (Array.isArray(obj)) return obj;
@@ -374,35 +444,96 @@ const TrendlyAdvancedFilter = ({
             });
             return;
         }
+        const formData = getFormData();
         discoverCommunication.current?.({
             loading: true,
             data: [],
         });
-        try {
-            let body = await HttpWrapper.fetch(
+        setApiError(null);
+        const runRequest = async (payload: any, label: string) => {
+            const res = await HttpWrapper.fetch(
                 `/discovery/brands/${selectedBrand.id}/influencers`,
                 {
                     method: "POST",
                     headers: {
                         "content-type": "application/json",
                     },
-                    body: JSON.stringify(getFormData()),
+                    body: JSON.stringify(payload),
                 }
-            ).then(async (res) => {
-                return res.json();
-            });
+            );
+            const rawText = await res.text();
+            let body: any = null;
+            try {
+                body = rawText ? JSON.parse(rawText) : {};
+            } catch (err) {
+                body = { raw: rawText };
+            }
+            return { body };
+        };
+
+        const applyData = (body: any) => {
             const d = body.data as InfluencerItem[];
-            console.log("🔥 Filtered influencers count:", d.length);
+
+            const ids = d.map((item) => item.id);
+            const uniqueIds = new Set(ids);
+
             const newData = [...(reset ? [] : data), ...d];
-            console.log("🔥 Total accumulated influencers:", newData.length);
             setData(newData);
             discoverCommunication.current?.({
                 loading: false,
                 data: newData,
-                page: offset / 15 + 1,
+                page: offset / 16 + 1,
                 sort: sort,
             });
+        };
+
+        try {
+            const { body } = await runRequest(formData, "primary");
+            applyData(body);
         } catch (e) {
+            let message = "Unknown error";
+            let rawText = "";
+            let status: number | undefined;
+            if (e && typeof (e as Response).text === "function") {
+                const response = e as Response;
+                status = response.status;
+                rawText = await response.text();
+                try {
+                    const parsed = rawText ? JSON.parse(rawText) : {};
+                    message =
+                        parsed?.message ||
+                        parsed?.error ||
+                        `Request failed (${response.status})`;
+                } catch (err) {
+                    message = rawText || `Request failed (${response.status})`;
+                }
+            } else if (e instanceof Error) {
+                message = e.message;
+            }
+
+            if (rawText.includes("text[]") || rawText.includes("SQLSTATE 42883")) {
+                const strippedPayload = {
+                    ...formData,
+                    genders: undefined,
+                    selectedNiches: undefined,
+                    selectedLocations: undefined,
+                    descKeywords: undefined,
+                };
+                try {
+                    const { body } = await runRequest(strippedPayload, "fallback-no-arrays");
+                    Toaster.error(
+                        "Some filters were skipped",
+                        "Backend rejected array filters; results may be broader."
+                    );
+                    setApiError(null);
+                    applyData(body);
+                    return;
+                } catch (retryError) {
+                }
+            }
+
+            setApiError(message);
+            Toaster.error("Failed to load influencers", message);
             discoverCommunication.current?.({
                 loading: false,
                 data: [],
@@ -451,10 +582,10 @@ const TrendlyAdvancedFilter = ({
         setSelectedLocations([]);
 
         // Sorting & pagination defaults
-        setSort("followers");
+        setSort("engagement");
         setSortDirection("desc");
         setOffset(0);
-        setLimit(15);
+        setLimit(16);
 
         // Clear current data
         setData([]);
@@ -493,22 +624,30 @@ const TrendlyAdvancedFilter = ({
 
         if (action === "apply") {
             const payload = getFormData();
-            const key = `defaultFilter-${selectedBrand?.id}`;
-
-            await PersistentStorage.set(key, JSON.stringify(payload));
-            console.log("Saved filter for brand:", key, payload);
-
+            const cleaned = cleanFilters(payload);
+            if (selectedBrand?.id) {
+                try {
+                    await updateBrand(selectedBrand.id, {
+                        discoverPreferences: cleaned,
+                    });
+                } catch (err) {
+                    Toaster.error("Failed to save preferences. Please try again.");
+                    return;
+                }
+            }
+            onFiltersApplied?.(payload);
             callApiRef.current(true);
         } else {
-            const key = `defaultFilter-${selectedBrand?.id}`;
-            try {
-                await PersistentStorage.clear(key);
-                console.log("Cleared saved filter for brand:", key);
-                onClearStoredFilters?.();
-            } catch (err) {
-                console.warn("Failed to clear saved filter:", err);
+            if (selectedBrand?.id) {
+                try {
+                    await updateBrand(selectedBrand.id, {
+                        discoverPreferences: {},
+                    });
+                } catch (err) {
+                    console.warn("Failed to clear saved filter:", err);
+                }
             }
-
+            onClearStoredFilters?.();
             resetCallApiRef.current();
         }
     };
@@ -516,6 +655,11 @@ const TrendlyAdvancedFilter = ({
     // Unlocked: full filter UI
     return (
         <View style={[styles.surface]}>
+            {apiError && (
+                <HelperText type="error" visible style={{ marginBottom: 8 }}>
+                    {apiError}
+                </HelperText>
+            )}
             <View style={styles.fieldsWrap}>
                 <Text style={{ fontWeight: 600 }}>Demography and Niche</Text>
                 {/* creator_gender */}
@@ -539,7 +683,7 @@ const TrendlyAdvancedFilter = ({
                     <Text style={styles.fieldLabel} variant="labelSmall">
                         Influencer niche
                     </Text>
-                    <MultiSelectExtendable
+                    <MultiSelectExtendableAsync
                         key={`niche-${selectedNiches.join(",")}`}
                         buttonIcon={
                             <FontAwesomeIcon
@@ -549,17 +693,15 @@ const TrendlyAdvancedFilter = ({
                             />
                         }
                         buttonLabel="Others"
-                        initialItemsList={includeSelectedItems(
-                            INFLUENCER_CATEGORIES,
-                            selectedNiches
-                        )}
+                        initialItemsList={allNichesList}
                         initialMultiselectItemsList={includeSelectedItems(
-                            INITIAL_INFLUENCER_CATEGORIES,
+                            initialNichesList,
                             selectedNiches
                         )}
                         onSelectedItemsChange={(values) => {
                             setSelectedNiches(values.map((v) => v));
                         }}
+                        onSearch={searchNiches}
                         selectedItems={selectedNiches}
                         theme={theme}
                     />
@@ -688,15 +830,13 @@ const TrendlyAdvancedFilter = ({
                     theme={theme}
                 />
 
-                {/* influencer aesthetics / quality*/}
-                <RangeInputs
-                    label="Influencer aesthetics / quality (0-100)"
-                    min={qualityMin}
-                    max={qualityMax}
-                    onChangeMin={setQualityMin}
-                    onChangeMax={setQualityMax}
-                    placeholderMin="Min (0)"
-                    placeholderMax="Max (100)"
+                {/* influencer aesthetics / quality (0-5 stars, stored as 0-10 internally) */}
+                <StarRangePicker
+                    label="Influencer aesthetics / quality"
+                    minStars={qualityMin ? Math.round(parseFloat(qualityMin) / 2) : 0}
+                    maxStars={qualityMax ? Math.round(parseFloat(qualityMax) / 2) : 0}
+                    onChangeMin={(stars) => setQualityMin(stars > 0 ? String(stars * 2) : "")}
+                    onChangeMax={(stars) => setQualityMax(stars > 0 ? String(stars * 2) : "")}
                     theme={theme}
                 />
 

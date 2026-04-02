@@ -3,25 +3,81 @@ import React, { useEffect, useRef, useState } from "react";
 
 import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
-import Colors from "@/constants/Colors";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useProcess } from "@/hooks";
-import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import {
+    CollaborationLocationType,
+    ICollaboration,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { ActivityIndicator } from "react-native";
 import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
 import ScreenThree from "./screen-three";
+import { AICampaignDraft, AIGeneratedCampaignData } from "./types";
 
-const CreateCollaboration = () => {
+// Mapping functions to convert API response to app format
+const mapPromotionType = (apiValue: string): PromotionType => {
+    const mapping: Record<string, PromotionType> = {
+        "sponsored-post": PromotionType.PAID_COLLAB,
+        "paid-collab": PromotionType.PAID_COLLAB,
+        "paid": PromotionType.PAID_COLLAB,
+        "barter": PromotionType.BARTER_COLLAB,
+        "barter-collab": PromotionType.BARTER_COLLAB,
+    };
+    return mapping[apiValue.toLowerCase()] || PromotionType.BARTER_COLLAB;
+};
+
+const mapPlatform = (apiValue: string): string => {
+    const mapping: Record<string, string> = {
+        "instagram": "Instagram",
+        "facebook": "Facebook",
+        "youtube": "YouTube",
+        "linkedin": "LinkedIn",
+    };
+    return mapping[apiValue.toLowerCase()] || apiValue;
+};
+
+const mapContentFormat = (apiValue: string): string => {
+    if (!apiValue || typeof apiValue !== 'string') {
+        Console.log("Invalid content format value:", apiValue);
+        return "";
+    }
+
+    const mapping: Record<string, string> = {
+        "post": "Post",
+        "reel": "Reels",
+        "reels": "Reels",
+        "story": "Stories",
+        "stories": "Stories",
+        "live": "Live",
+        "online-review": "Online Reviews",
+        "online-reviews": "Online Reviews",
+    };
+
+    const normalized = apiValue.trim().toLowerCase();
+    const result = mapping[normalized] || apiValue;
+
+    Console.log(`mapContentFormat: "${apiValue}" (normalized: "${normalized}") -> "${result}"`);
+
+    return result;
+};
+
+interface CreateCollaborationProps {
+    headerRight?: React.ReactNode;
+    aiData?: AIGeneratedCampaignData | null;
+}
+
+const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, aiData }) => {
     const [collaboration, setCollaboration] = useState<Partial<ICollaboration>>({
         name: "",
         brandId: "",
@@ -38,7 +94,7 @@ const CreateCollaboration = () => {
         platform: [],
         numberOfInfluencersNeeded: 1,
         location: {
-            type: "Remote",
+            type: CollaborationLocationType.Remote,
             name: "",
             latlong: {
                 lat: 0,
@@ -67,8 +123,9 @@ const CreateCollaboration = () => {
     const theme = useTheme();
     const params = useLocalSearchParams();
     const type = params.id ? "Edit" : "Add";
-    const { publish } = usePublishCollaboration();
+    // const { publish } = usePublishCollaboration();
     const isSavingRef = useRef(false);
+    const [dataKey, setDataKey] = useState("initial-state")
 
     const {
         isProcessing,
@@ -108,8 +165,148 @@ const CreateCollaboration = () => {
             fetchCollaboration(params.id).finally(() => {
                 setIsLoading(false);
             });
+            return;
         }
-    }, []);
+
+        if (aiData) {
+            // Handle AI-generated data
+            try {
+                Console.log("Received AI Data:", aiData);
+
+                // Extract the collaboration data from the response
+                const collaborationData: AICampaignDraft =
+                    "collaboration" in aiData
+                        ? aiData.collaboration ?? {}
+                        : (aiData as AICampaignDraft);
+
+                Console.log("Extracted collaboration data:", collaborationData);
+                Console.log("Raw Name:", collaborationData.name);
+                Console.log("Raw Budget:", collaborationData.budget);
+                Console.log("Raw Platform:", collaborationData.platform);
+                Console.log("Raw ContentFormat:", collaborationData.contentFormat);
+                Console.log("Raw PromotionType:", collaborationData.promotionType);
+
+                // Map content format with detailed logging
+                const mappedContentFormat = Array.isArray(collaborationData.contentFormat)
+                    ? collaborationData.contentFormat.map((format: string) => {
+                        const mapped = mapContentFormat(format);
+                        Console.log(`Mapping contentFormat: "${format}" -> "${mapped}"`);
+                        return mapped;
+                    })
+                    : [];
+
+                Console.log("Final mapped contentFormat:", mappedContentFormat);
+
+                const mappedLocation = collaborationData.location?.type
+                    ? {
+                        type: normalizeCollaborationLocationType(
+                            collaborationData.location.type
+                        ),
+                        name: collaborationData.location.name || "",
+                        latlong: collaborationData.location.latlong
+                            ? {
+                                lat: Number(collaborationData.location.latlong.lat) || 0,
+                                long: Number(collaborationData.location.latlong.long) || 0,
+                            }
+                            : { lat: 0, long: 0 },
+                    }
+                    : {
+                        type: CollaborationLocationType.Remote,
+                        name: "",
+                        latlong: { lat: 0, long: 0 },
+                    };
+                const mappedAttachments: Attachment[] = Array.isArray(collaborationData.relevantImages)
+                    ? collaborationData.relevantImages
+                        .filter((url): url is string => typeof url === "string" && !!url.trim())
+                        .map((url) => ({
+                            type: "image",
+                            imageUrl: url.trim(),
+                        }))
+                    : [];
+
+                const mappedExternalLinks = Array.isArray(collaborationData.externalLinks)
+                    ? collaborationData.externalLinks
+                        .filter(
+                            (link): link is { name: string; link: string } =>
+                                !!link &&
+                                typeof link.name === "string" &&
+                                !!link.name.trim() &&
+                                typeof link.link === "string" &&
+                                !!link.link.trim()
+                        )
+                        .map((link) => ({
+                            name: link.name.trim(),
+                            link: link.link.trim(),
+                        }))
+                    : [];
+
+                const updatedCollaboration: Partial<ICollaboration> = {
+                    name: collaborationData.name ? String(collaborationData.name) : "",
+                    description: collaborationData.description ? String(collaborationData.description) : "",
+                    promotionType: collaborationData.promotionType
+                        ? mapPromotionType(collaborationData.promotionType)
+                        : PromotionType.BARTER_COLLAB,
+                    budget: collaborationData.budget ? {
+                        min: Number(collaborationData.budget.min) || 0,
+                        max: Number(collaborationData.budget.max) || 0,
+                    } : { min: 0, max: 0 },
+                    numberOfInfluencersNeeded: collaborationData.numberOfInfluencersNeeded
+                        ? Number(collaborationData.numberOfInfluencersNeeded)
+                        : 1,
+                    platform: Array.isArray(collaborationData.platform)
+                        ? collaborationData.platform.map(mapPlatform)
+                        : [],
+                    contentFormat: mappedContentFormat,
+                    preferredContentLanguage: Array.isArray(collaborationData.preferredContentLanguage)
+                        ? collaborationData.preferredContentLanguage
+                        : ["English", "Hindi"],
+                    location: mappedLocation,
+                    questionsToInfluencers: Array.isArray(collaborationData.questionsToInfluencers)
+                        ? collaborationData.questionsToInfluencers
+                        : [],
+                    preferences: collaborationData.preferences || {},
+                    attachments: mappedAttachments,
+                    brandId: "",
+                    managerId: "",
+                    externalLinks: mappedExternalLinks,
+                    status: "",
+                    timeStamp: 0,
+                    viewsLastHour: 0,
+                    lastReviewedTimeStamp: 0,
+                };
+
+                Console.log("Updated collaboration object:", updatedCollaboration);
+                Console.log("Mapped promotionType:", updatedCollaboration.promotionType);
+                Console.log("Mapped platforms:", updatedCollaboration.platform);
+                Console.log("Mapped contentFormats:", updatedCollaboration.contentFormat);
+                Console.log("Mapped Attachments:", updatedCollaboration.attachments);
+                Console.log("Mapped External Links:", updatedCollaboration.externalLinks);
+
+                setCollaboration(updatedCollaboration);
+                setAttachments(updatedCollaboration?.attachments || []);
+                setDataKey("data-loaded-" + Date.now());
+                console.log("Attachments:", (updatedCollaboration?.attachments || []));
+
+                Toaster.success("Campaign generated successfully! Review and customize as needed.");
+            } catch (error) {
+                Console.error("Failed to parse AI data:");
+                Console.error(error);
+                Toaster.error("Failed to load AI-generated campaign data.");
+            }
+        }
+    }, [aiData]);
+
+    // Debug: Log collaboration state changes
+    useEffect(() => {
+        Console.log("=== Collaboration State Changed ===");
+        Console.log("Name:", collaboration.name);
+        Console.log("ContentFormat:", collaboration.contentFormat);
+        Console.log("Platform:", collaboration.platform);
+        Console.log("PromotionType:", collaboration.promotionType);
+        Console.log("Budget:", collaboration.budget);
+        Console.log("Attachment:", collaboration.attachments);
+        Console.log("===================================");
+    }, [collaboration]);
 
     const onLocationChange = (
         latlong: { lat: number; long: number },
@@ -119,21 +316,11 @@ const CreateCollaboration = () => {
             ...collaboration,
             location: {
                 ...collaboration.location,
-                type: "On-Site",
+                type: CollaborationLocationType.OnSite,
                 name: address,
                 latlong,
             },
         });
-    };
-
-    const handleCollaboration = async (
-        data: Partial<ICollaboration>
-    ): Promise<void> => {
-        if (params.id && typeof params.id === "string") {
-            await updateCollaboration(params.id, data);
-        } else {
-            await createCollaboration(data);
-        }
     };
 
     const notifyUprade = () => {
@@ -153,7 +340,6 @@ const CreateCollaboration = () => {
                 return;
             }
             isSavingRef.current = true;
-            let shouldNavigateToCollaborations = false;
             if (!AuthApp.currentUser || !selectedBrand) {
                 Console.error("User or brand not selected");
                 return;
@@ -169,13 +355,14 @@ const CreateCollaboration = () => {
             let locationAddress = collaboration?.location;
 
             if (
-                collaboration?.location?.type === "On-Site" &&
+                collaboration?.location?.type === CollaborationLocationType.OnSite &&
                 mapRegion.latitude &&
                 mapRegion.longitude
             ) {
                 locationAddress = {
                     ...collaboration.location,
-                    type: collaboration.location.type || "Remote",
+                    type:
+                        collaboration.location.type ?? CollaborationLocationType.Remote,
                     latlong: {
                         lat: mapRegion.latitude,
                         long: mapRegion.longitude,
@@ -213,25 +400,14 @@ const CreateCollaboration = () => {
                         status: wantedStatus,
                         timeStamp: collaboration.timeStamp || Date.now(),
                     });
-                    if (wantedStatus === "draft") {
-                        shouldNavigateToCollaborations = true;
-                    }
+                    router.push("/collaborations");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to update collaboration");
                 }
-                // If user wanted publish and we set wantedStatus active then call publish
-                if (wantedStatus === "active") {
-                    // params.id exists so we can publish by id
-                    await publish(params.id);
-                }
             } else {
-                // creating new collaboration
-                // IMPORTANT: your createCollaboration should return the newly created doc id.
-                let created: string | null = null;
-
                 try {
-                    created = await createCollaboration({
+                    await createCollaboration({
                         ...collaboration,
                         attachments,
                         brandId: selectedBrand ? selectedBrand.id : "",
@@ -244,42 +420,11 @@ const CreateCollaboration = () => {
                         status: wantedStatus,
                         timeStamp: Date.now(),
                     });
+                    router.push("/collaborations");
                 } catch (error) {
                     Console.error(error);
                     Toaster.error("Failed to create collaboration");
-                    created = null;
                 }
-
-                if (!created) {
-                    return;
-                }
-
-                // ASSUMPTION: createCollaboration returns the created doc id
-                // If it returns an object, adjust accordingly (e.g. created.id)
-                let newId: string | null = null;
-                if (typeof created === "string") {
-                    newId = created;
-                } else if (created && (created as any).id) {
-                    newId = (created as any).id;
-                }
-
-                if (!newId) {
-                    // fallback: if createCollaboration didn't return id, log and stop.
-                    Console.error(
-                        "createCollaboration didn't return an id — adjust createCollaboration to return the new doc id"
-                    );
-                } else {
-                    // If wantedStatus is 'active', then call publish using shared hook
-                    if (wantedStatus === "active") {
-                        await publish(newId);
-                        router.push("/collaborations");
-                    } else {
-                        shouldNavigateToCollaborations = true;
-                    }
-                }
-            }
-            if (shouldNavigateToCollaborations) {
-                router.push("/collaborations");
             }
         } catch (error) {
             Console.error(error);
@@ -316,6 +461,8 @@ const CreateCollaboration = () => {
     if (screen === 1) {
         return (
             <ScreenOne
+                key={"screen-one-" + dataKey}
+                headerRight={headerRight}
                 attachments={attachments}
                 collaboration={collaboration}
                 setAttachments={setAttachments}
@@ -334,6 +481,8 @@ const CreateCollaboration = () => {
     if (screen == 2) {
         return (
             <ScreenTwo
+                key={"screen-two-" + dataKey}
+                headerRight={headerRight}
                 collaboration={collaboration}
                 isEdited={isEdited}
                 isSubmitting={isProcessing}
@@ -353,6 +502,8 @@ const CreateCollaboration = () => {
     if (screen === 3) {
         return (
             <ScreenThree
+                key={"screen-three-" + dataKey}
+                headerRight={headerRight}
                 collaboration={collaboration}
                 isEdited={isEdited}
                 isSubmitting={isProcessing}
@@ -375,9 +526,14 @@ const CreateCollaboration = () => {
         }
         return (
             <PreviewCollaboration
+                key={"preview-collaboration-" + dataKey}
                 collaboration={
                     {
                         ...collaboration,
+                        attachments,
+                        // Ensure manager/brand details are present for preview
+                        managerId: AuthApp.currentUser?.uid as string,
+                        brandId: selectedBrand.id,
                         brandName: selectedBrand?.name ?? "",
                         brandDescription: selectedBrand?.profile?.about ?? "",
                         brandCategory: selectedBrand?.profile?.industries ?? [],

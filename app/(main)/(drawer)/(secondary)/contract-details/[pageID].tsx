@@ -2,11 +2,11 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
-import { View } from "@/components/theme/Themed";
-import ScreenHeader from "@/components/ui/screen-header";
-import Colors from "@/constants/Colors";
+import { Text, View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import {
     IApplications,
@@ -19,6 +19,7 @@ import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import {
@@ -29,8 +30,27 @@ import {
     query,
     where,
 } from "firebase/firestore";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 import { Button } from "react-native-paper";
+
+const styles = StyleSheet.create({
+    loadingCenter: {
+        flex: 1,
+        alignItems: "center",
+        padding: 20,
+    },
+    viewProfileButton: {
+        marginHorizontal: 16,
+    },
+    footer: {
+        paddingVertical: 16,
+        alignItems: "center",
+    },
+    footerText: {
+        fontSize: 12,
+        opacity: 0.7,
+    },
+});
 
 interface ICollaborationCard extends IContracts {
     userData: IUsers;
@@ -40,6 +60,8 @@ interface ICollaborationCard extends IContracts {
 
 const ContractScreen = () => {
     const theme = useTheme();
+    const colors = Colors(theme);
+    const { xl } = useBreakpoints();
     const [isVisible, setIsVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -114,23 +136,35 @@ const ContractScreen = () => {
 
     if (isLoading || !contract) {
         return (
-            <AppLayout>
-                <View style={{ flex: 1, alignItems: "center", padding: 20 }}>
-                    {/* <Text>Status is here: {isLoading} & {JSON.stringify(contract)}</Text> */}
+            <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
+                <View style={styles.loadingCenter}>
                     <ActivityIndicator size="large" color={Colors(theme).primary} />
                 </View>
             </AppLayout>
         );
     }
 
+    const contractSubtitle =
+        contract.collaborationData?.name ||
+        contract.userData?.name ||
+        "Contract";
+
     return (
         <AppLayout withWebPadding={false}>
-            <ScreenHeader
+            <PageHeader
                 title="Contract Details"
-                rightAction
-                rightActionButton={
-                    <Button mode="outlined" style={{ marginHorizontal: 16 }} onPress={() => setOpenProfileModal(true)}>View Profile</Button>
-                }
+                subtitle={contractSubtitle}
+                showBackButton
+                actionButtons={[
+                    <Button
+                        key="view-profile"
+                        mode="outlined"
+                        style={styles.viewProfileButton}
+                        onPress={() => setOpenProfileModal(true)}
+                    >
+                        View Profile
+                    </Button>,
+                ]}
             />
             <ContractDetailsContent
                 applicationData={contract?.applications[0]}
@@ -139,14 +173,21 @@ const ContractScreen = () => {
                 contractData={contract}
                 refreshData={fetchProposals}
             />
+            {xl && (
+                <View style={styles.footer}>
+                    <Text style={[styles.footerText, { color: colors.text }]}>
+                        © {new Date().getFullYear()} Trendly Influencer Management Platform
+                    </Text>
+                </View>
+            )}
             <BottomSheetScrollContainer
                 isVisible={openProfileModal}
                 snapPointsRange={["90%", "90%"]}
                 onClose={() => { setOpenProfileModal(false) }}
             >
                 <ProfileBottomSheet
-                    isOnFreePlan={isOnFreeTrial}
-                    lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
+                    // isOnFreePlan={isOnFreeTrial}
+                    // lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
                     influencer={selectedInfluencer as User}
                     theme={theme}
                     FireStoreDB={FirestoreDB}

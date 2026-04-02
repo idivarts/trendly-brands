@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trendly - Create New Brand</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1A3B5C",
+                        "background-light": "#F9FAFB",
+                        "background-dark": "#111827",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                        'xl': '1rem',
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+<div class="max-w-5xl mx-auto px-6 py-12">
+<header class="flex items-center justify-between mb-12">
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-icons-outlined block">arrow_back</span>
+</button>
+<h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Create New Brand</h1>
+</div>
+<div class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Step 1 of 1
+            </div>
+</header>
+<main class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+<div class="lg:col-span-5 flex flex-col items-center">
+<div class="w-full max-w-[320px] aspect-square relative group">
+<div class="w-full h-full bg-slate-100 dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center gap-4 hover:border-primary transition-all cursor-pointer">
+<div class="w-20 h-20 bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center">
+<span class="material-icons-outlined text-slate-400 text-4xl">image</span>
+</div>
+<div class="text-center px-6">
+<p class="font-medium text-slate-700 dark:text-slate-200">Upload Brand Logo</p>
+<p class="text-sm text-slate-500 mt-1">Recommended: square logo, 512x512 or higher</p>
+</div>
+<div class="absolute bottom-4 right-4 bg-primary text-white p-3 rounded-full shadow-lg transform group-hover:scale-110 transition-transform">
+<span class="material-icons-outlined block">photo_camera</span>
+</div>
+</div>
+</div>
+<div class="mt-12 w-full space-y-8 hidden lg:block">
+<div class="p-6 bg-blue-50 dark:bg-slate-800/50 rounded-2xl border border-blue-100 dark:border-slate-700">
+<h3 class="text-sm font-semibold text-primary dark:text-blue-400 uppercase tracking-wider mb-2">Why complete your profile?</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                            Brands with complete details see 4x more creator engagement. Providing accurate industry and age information helps our AI match you with the most relevant influencers.
+                        </p>
+</div>
+</div>
+</div>
+<div class="lg:col-span-7 space-y-10">
+<section>
+<h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
+<span class="w-6 h-6 bg-primary text-white text-xs flex items-center justify-center rounded-full">1</span>
+                        Brand Details
+                    </h2>
+<div class="space-y-5">
+<div class="space-y-1.5">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="brandName">Brand Name*</label>
+<input class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white" id="brandName" placeholder="Enter your brand name" type="text"/>
+<p class="text-xs text-slate-500">This will be visible on your public profile.</p>
+</div>
+<div class="space-y-1.5">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="about">About the Brand</label>
+<textarea class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white" id="about" placeholder="Briefly describe what your brand does..." rows="4"></textarea>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="phone">Phone*</label>
+<input class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white" id="phone" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="website">Website</label>
+<input class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all dark:text-white" id="website" placeholder="https://yourbrand.com" type="url"/>
+</div>
+</div>
+</div>
+</section>
+<hr class="border-slate-200 dark:border-slate-800"/>
+<section>
+<h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
+<span class="w-6 h-6 bg-primary text-white text-xs flex items-center justify-center rounded-full">2</span>
+                        Brand Age
+                    </h2>
+<p class="text-sm text-slate-500 mb-6">How established is your brand? (required)</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<label class="relative block cursor-pointer group">
+<input class="peer sr-only" name="brand_age" type="radio"/>
+<div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl peer-checked:border-primary peer-checked:ring-1 peer-checked:ring-primary peer-checked:bg-blue-50/30 dark:peer-checked:bg-primary/10 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<p class="font-semibold text-slate-800 dark:text-white">Just starting</p>
+<p class="text-sm text-slate-500">New or pre-launch brand</p>
+</div>
+</label>
+<label class="relative block cursor-pointer group">
+<input class="peer sr-only" name="brand_age" type="radio"/>
+<div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl peer-checked:border-primary peer-checked:ring-1 peer-checked:ring-primary peer-checked:bg-blue-50/30 dark:peer-checked:bg-primary/10 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<p class="font-semibold text-slate-800 dark:text-white">Less than 1 year</p>
+<p class="text-sm text-slate-500">Operating for under 12 months</p>
+</div>
+</label>
+<label class="relative block cursor-pointer group">
+<input class="peer sr-only" name="brand_age" type="radio"/>
+<div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl peer-checked:border-primary peer-checked:ring-1 peer-checked:ring-primary peer-checked:bg-blue-50/30 dark:peer-checked:bg-primary/10 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<p class="font-semibold text-slate-800 dark:text-white">Less than 5 years</p>
+<p class="text-sm text-slate-500">Established but growing</p>
+</div>
+</label>
+<label class="relative block cursor-pointer group">
+<input class="peer sr-only" name="brand_age" type="radio"/>
+<div class="p-4 border border-slate-200 dark:border-slate-700 rounded-xl peer-checked:border-primary peer-checked:ring-1 peer-checked:ring-primary peer-checked:bg-blue-50/30 dark:peer-checked:bg-primary/10 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<p class="font-semibold text-slate-800 dark:text-white">5+ years</p>
+<p class="text-sm text-slate-500">Well established brand</p>
+</div>
+</label>
+</div>
+</section>
+<hr class="border-slate-200 dark:border-slate-800"/>
+<section>
+<h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
+<span class="w-6 h-6 bg-primary text-white text-xs flex items-center justify-center rounded-full">3</span>
+                        Brand Industry
+                    </h2>
+<p class="text-sm text-slate-500 mb-6">Specifying the industry helps us match you with relevant creators.</p>
+<div class="flex flex-wrap gap-3">
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all active:bg-primary active:text-white">Fashion</button>
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all">Beauty &amp; Personal Care</button>
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all">Food &amp; Beverage</button>
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all">Holidays / Stays</button>
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all">Beauty / Spa</button>
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all">Tech &amp; Gadgets</button>
+<button class="px-5 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent hover:border-primary text-sm font-medium text-slate-700 dark:text-slate-300 transition-all">Health &amp; Fitness</button>
+<button class="px-5 py-2.5 rounded-full border border-slate-300 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2">
+                            See Other Options <span class="material-icons-outlined text-base">arrow_forward</span>
+</button>
+</div>
+</section>
+<div class="pt-8">
+<button class="w-full bg-primary hover:bg-slate-800 text-white font-semibold py-4 rounded-xl shadow-lg shadow-blue-900/10 transition-all transform hover:-translate-y-0.5 active:scale-[0.98]">
+                        Create Brand
+                    </button>
+<p class="text-center text-xs text-slate-400 mt-4">By clicking Create Brand, you agree to our Terms of Service.</p>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

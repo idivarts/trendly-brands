@@ -1,11 +1,10 @@
 // hooks/usePublishCollaboration.ts
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
 import { Console } from "@/shared-libs/utils/console";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { doc, updateDoc } from "firebase/firestore";
 import { useCallback } from "react";
 
 /**
@@ -13,8 +12,9 @@ import { useCallback } from "react";
  * publish(collaborationId: string, options?: { onSuccess?: () => void })
  */
 export const usePublishCollaboration = () => {
-    const { isOnFreeTrial } = useBrandContext();
+    const { selectedBrand } = useBrandContext();
     const { openModal } = useConfirmationModel();
+    const { updateCollaboration } = useCollaborationContext();
     const router = useMyNavigation();
 
     const publish = useCallback(
@@ -24,7 +24,7 @@ export const usePublishCollaboration = () => {
                 return;
             }
 
-            if (isOnFreeTrial) {
+            if (selectedBrand?.credits?.collaboration && selectedBrand.credits.collaboration <= 0) {
                 openModal({
                     title: "Upgrade to Publish",
                     description:
@@ -38,8 +38,7 @@ export const usePublishCollaboration = () => {
             }
 
             try {
-                const collabRef = doc(FirestoreDB, "collaborations", collaborationId);
-                await updateDoc(collabRef, {
+                await updateCollaboration(collaborationId, {
                     status: "active",
                 });
                 Toaster.success("Collaboration is published successfully");
@@ -49,7 +48,7 @@ export const usePublishCollaboration = () => {
                 Toaster.error("Failed to publish collaboration");
             }
         },
-        [isOnFreeTrial, openModal, router]
+        [selectedBrand, openModal, router, updateCollaboration]
     );
 
     return { publish };

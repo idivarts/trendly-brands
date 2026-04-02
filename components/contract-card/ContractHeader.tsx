@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { formatTimeToNow } from "@/utils/date";
 import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";

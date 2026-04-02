@@ -1,26 +1,16 @@
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { useTheme } from "@react-navigation/native";
-import { Pressable, ScrollView, View } from "react-native";
-
-import {
-    BRAND_INDUSTRIES,
-    INITIAL_BRAND_INDUSTRIES
-} from "@/constants/ItemsList";
 import { useBreakpoints } from "@/hooks";
-import ImageUpload from "@/shared-uis/components/image-upload";
-import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import Colors from "@/shared-uis/constants/Colors";
-import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Brand } from "@/types/Brand";
-import { Divider, HelperText, Text as PaperText, TextInput as PaperTextInput, Surface } from "react-native-paper";
+import { useTheme } from "@react-navigation/native";
+import { cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, ScrollView, StyleSheet, View } from "react-native";
+import { Surface } from "react-native-paper";
 
-const AGE_OPTIONS = [
-    { key: "JUST_STARTING", title: "Just starting", desc: "New or pre-launch brand" },
-    { key: "LT_1", title: "Less than 1 year", desc: "Operating for under 12 months" },
-    { key: "LT_5", title: "Less than 5 years", desc: "Established but growing" },
-    { key: "GT_5", title: "5+ years", desc: "Well established brand" },
-];
+import BrandAge from "./BrandAge";
+import BrandDetails from "./BrandDetails";
+import BrandIndustry from "./BrandIndustry";
+
+const STEP_ANIM_DURATION = 280;
 
 interface BrandProfileProps {
     action?: React.ReactNode;
@@ -28,6 +18,9 @@ interface BrandProfileProps {
     setBrandData: React.Dispatch<React.SetStateAction<Partial<Brand>>>;
     setBrandWebImage: React.Dispatch<React.SetStateAction<File | null>>;
     type?: "create" | "update";
+    /** Web-only: no card, report step for sidebar, plain sections */
+    webOnboarding?: boolean;
+    onStepChange?: (step: number) => void;
 }
 
 const BrandProfile: React.FC<BrandProfileProps> = ({
@@ -36,220 +29,342 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
     setBrandData,
     setBrandWebImage,
     type = "update",
+    webOnboarding = false,
+    onStepChange,
 }) => {
     const theme = useTheme();
-    const { xl } = useBreakpoints();
+    const { xl, width } = useBreakpoints();
+    const colors = useMemo(() => Colors(theme), [theme]);
+    const styles = useMemo(() => createStyles(colors, xl, width), [colors, xl, width]);
 
-    const handleImageUpload = (image: string | File) => {
-        if (typeof image !== "string") {
-            setBrandWebImage(image);
-        } else {
-            setBrandData({
-                ...brandData,
-                image,
-            });
-        }
+    const [currentStep, setCurrentStep] = useState(1);
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const slideAnim = useRef(new Animated.Value(0)).current;
+
+    const runStepTransition = (direction: "next" | "back", onComplete: () => void) => {
+        const slideDistance = 16;
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: STEP_ANIM_DURATION * 0.4,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: direction === "next" ? -slideDistance : slideDistance,
+                duration: STEP_ANIM_DURATION * 0.4,
+                useNativeDriver: true,
+            }),
+        ]).start(() => {
+            onComplete();
+            slideAnim.setValue(direction === "next" ? slideDistance : -slideDistance);
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: STEP_ANIM_DURATION * 0.6,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: STEP_ANIM_DURATION * 0.6,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        });
     };
 
-    const colors = Colors(theme);
-    const brandAge = brandData.age
+    const handleNext = () => {
+        if (currentStep >= 3) return;
+        runStepTransition("next", () => setCurrentStep((s) => s + 1));
+    };
+
+    const handleBack = () => {
+        if (currentStep <= 1) return;
+        runStepTransition("back", () => setCurrentStep((s) => s - 1));
+    };
+
+    const isCreate = type === "create";
+    const showSection = (step: number) => !isCreate || currentStep === step;
+    const usePlainLayout = isCreate && webOnboarding;
+    const useTwoColumnForm = xl;
+
+    useEffect(() => {
+        if (webOnboarding && onStepChange) onStepChange(currentStep);
+    }, [webOnboarding, currentStep, onStepChange]);
+
+    const sectionProps = {
+        brandData,
+        setBrandData,
+        setBrandWebImage,
+        plainSection: usePlainLayout || useTwoColumnForm,
+        compactLayout: useTwoColumnForm,
+    };
+
+    if (useTwoColumnForm) {
+        const smallAction =
+            action && isValidElement(action)
+                ? cloneElement(action as React.ReactElement<{ size?: "small" | "medium" | "large" }>, { size: "small" })
+                : action;
+
+        return (
+            <ScrollView
+                contentContainerStyle={styles.scrollContentTwoCol}
+                showsVerticalScrollIndicator={false}
+            >
+                {action && (
+                    <View style={styles.actionTopBar}>
+                        {smallAction}
+                    </View>
+                )}
+                <View style={styles.twoColRow}>
+                    <View style={styles.twoColLeft}>
+                        <BrandDetails
+                            {...sectionProps}
+                            onNext={isCreate ? handleNext : undefined}
+                        />
+                    </View>
+                    <View style={styles.twoColRight}>
+                        <BrandAge
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onNext={isCreate ? handleNext : undefined}
+                            onBack={isCreate ? handleBack : undefined}
+                            plainSection
+                            compactLayout
+                        />
+                        <BrandIndustry
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onBack={isCreate ? handleBack : undefined}
+                            plainSection
+                            compactLayout
+                        />
+                    </View>
+                </View>
+            </ScrollView>
+        );
+    }
 
     return (
         <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 24, paddingBottom: 32 }}
+            contentContainerStyle={
+                isCreate
+                    ? (usePlainLayout ? styles.scrollContentCreatePlain : styles.scrollContentCreate)
+                    : styles.scrollContentUpdate
+            }
+            showsVerticalScrollIndicator={false}
         >
-            {/* Brand details: image on the left, fields on the right */}
-            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                    Brand Details
-                </PaperText>
-                <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-                    Add your brand logo and core details so creators can recognize you.
-                </PaperText>
-                <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
-
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, alignItems: "flex-start" }}>
-                    {/* Left column: image uploader */}
-                    <View style={xl ? { width: 240 } : { width: "100%", alignItems: "center" }}>
-                        <ImageUpload initialImage={brandData.image} onUploadImage={handleImageUpload} theme={theme} />
-                        <HelperText type="info" style={{ color: colors.textSecondary, marginTop: 6 }}>
-                            Recommended: square logo, 512×512 or higher
-                        </HelperText>
-                    </View>
-
-                    {/* Right column: inputs */}
-                    <View style={{ flex: 1, minWidth: 260, gap: 12 }}>
-                        <PaperTextInput
-                            mode="outlined"
-                            label="Brand Name*"
-                            value={brandData.name}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    name: value,
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
+            {isCreate && !webOnboarding && (
+                <View style={styles.stepRow}>
+                    {[1, 2, 3].map((step) => (
+                        <View
+                            key={step}
+                            style={[
+                                styles.stepDot,
+                                currentStep === step && styles.stepDotActive,
+                                currentStep > step && styles.stepDotDone,
+                            ]}
                         />
-                        <HelperText type="info" style={{ color: colors.textSecondary, marginTop: -4 }}>
-                            This will be visible on your public profile.
-                        </HelperText>
-
-                        <PaperTextInput
-                            mode="outlined"
-                            label="About the Brand"
-                            multiline
-                            value={brandData.profile?.about}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    profile: {
-                                        ...brandData.profile,
-                                        about: value,
-                                    },
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
-                        />
-
-                        <PaperTextInput
-                            mode="outlined"
-                            label="Phone*"
-                            keyboardType="phone-pad"
-                            autoCapitalize="none"
-                            value={brandData.profile?.phone}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    profile: {
-                                        ...brandData.profile,
-                                        phone: value,
-                                    },
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
-                        />
-
-                        <PaperTextInput
-                            mode="outlined"
-                            label="Website"
-                            keyboardType="url"
-                            autoCapitalize="none"
-                            value={brandData.profile?.website}
-                            onChangeText={(value) =>
-                                setBrandData({
-                                    ...brandData,
-                                    profile: {
-                                        ...brandData.profile,
-                                        website: value,
-                                    },
-                                })
-                            }
-                            outlineStyle={{ borderRadius: 12 }}
-                            outlineColor={colors.border}
-                            activeOutlineColor={colors.primary}
-                            style={{ backgroundColor: colors.background }}
-                        />
-                    </View>
+                    ))}
                 </View>
-            </Surface>
-            {/* Brand Age */}
-            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                    Brand age
-                </PaperText>
-                <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-                    How established is your brand? (required)
-                </PaperText>
-                <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
-
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {AGE_OPTIONS.map((opt) => {
-                        const selected = brandAge === opt.key;
-                        return (
-                            <Pressable
-                                key={opt.key}
-                                onPress={() =>
-                                    setBrandData({
-                                        ...brandData,
-                                        profile: { ...brandData.profile },
-                                        age: opt.key as any,
-                                    })
-                                }
-                                style={{
-                                    flexBasis: "48%",
-                                    marginBottom: 12,
-                                    borderRadius: 12,
-                                    borderWidth: 1,
-                                    borderColor: selected ? colors.primary : colors.border,
-                                    backgroundColor: selected ? colors.primaryLight : colors.background,
-                                    padding: 16,
-                                }}
-                            >
-                                <PaperText style={{ fontWeight: "800", fontSize: 15, color: selected ? colors.primary : colors.text }}>
-                                    {opt.title}
-                                </PaperText>
-                                <PaperText style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>
-                                    {opt.desc}
-                                </PaperText>
-                            </Pressable>
-                        );
-                    })}
-                </View>
-            </Surface>
-            {/* Industry selection card */}
-            <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                <PaperText variant="titleMedium" style={{ fontWeight: "800", color: colors.text }}>
-                    Brand Industry
-                </PaperText>
-                <PaperText style={{ color: colors.textSecondary, marginTop: 4 }}>
-                    Specifying the industry helps us match you with relevant creators.
-                </PaperText>
-                <Divider style={{ marginTop: 12, marginBottom: 16, backgroundColor: colors.surface }} />
-
-                <MultiSelectExtendable
-                    buttonIcon={<FontAwesomeIcon icon={faArrowRight} color={Colors(theme).primary} size={14} />}
-                    buttonLabel="See Other Options"
-                    initialItemsList={includeSelectedItems(
-                        BRAND_INDUSTRIES,
-                        brandData.profile?.industries || []
-                    )}
-                    initialMultiselectItemsList={includeSelectedItems(
-                        INITIAL_BRAND_INDUSTRIES,
-                        brandData.profile?.industries || []
-                    )}
-                    onSelectedItemsChange={(value) => {
-                        setBrandData({
-                            ...brandData,
-                            profile: {
-                                ...brandData.profile,
-                                industries: value.map((v) => v),
-                            },
-                        });
-                    }}
-                    selectedItems={brandData.profile?.industries || []}
-                    theme={theme}
-                    closeOnSelect
-                />
-            </Surface>
-
-            {!!action && (
-                <Surface style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card }} elevation={1}>
-                    {action}
-                </Surface>
             )}
+
+            <View
+                style={
+                    isCreate
+                        ? [
+                            styles.cardOuter,
+                            usePlainLayout ? styles.cardOuterCreateFullWidth : styles.cardOuterCreateMaxWidth,
+                            usePlainLayout && styles.cardOuterPlain,
+                        ]
+                        : styles.cardOuterUpdate
+                }
+            >
+                <Animated.View
+                    style={[
+                        styles.cardWrap,
+                        isCreate && {
+                            opacity: fadeAnim,
+                            transform: [{ translateX: slideAnim }],
+                        },
+                        !isCreate && styles.cardWrapUpdate,
+                        usePlainLayout && styles.cardWrapPlain,
+                    ]}
+                >
+                    {showSection(1) && (
+                        <BrandDetails
+                            {...sectionProps}
+                            onNext={isCreate ? handleNext : undefined}
+                        />
+                    )}
+                    {showSection(2) && (
+                        <BrandAge
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onNext={isCreate ? handleNext : undefined}
+                            onBack={isCreate ? handleBack : undefined}
+                            plainSection={usePlainLayout}
+                        />
+                    )}
+                    {showSection(3) && (
+                        <BrandIndustry
+                            brandData={brandData}
+                            setBrandData={setBrandData}
+                            onBack={isCreate ? handleBack : undefined}
+                            plainSection={usePlainLayout}
+                        />
+                    )}
+                    {showSection(3) && action && (
+                        usePlainLayout ? (
+                            <View style={[styles.actionSurface, styles.actionSurfacePlain, styles.actionSurfaceMarginTop]}>
+                                {action}
+                            </View>
+                        ) : (
+                            <Surface
+                                style={[
+                                    styles.actionSurface,
+                                    styles.actionSurfaceCard,
+                                    isCreate ? styles.actionSurfaceMarginTop : styles.actionSurfaceMarginTopUpdate,
+                                ]}
+                                elevation={1}
+                            >
+                                {action}
+                            </Surface>
+                        )
+                    )}
+                </Animated.View>
+            </View>
         </ScrollView>
     );
 };
+
+function createStyles(
+    colors: ReturnType<typeof Colors>,
+    xl: boolean,
+    width: number
+) {
+    const horizontalPadding = xl ? 32 : 16;
+    const verticalPaddingCreate = xl ? 32 : 24;
+    const verticalPaddingUpdate = xl ? 48 : 40;
+    const cardMaxWidth = 480;
+    const twoColGap = 24;
+    const contentMaxWidth = Math.min(width - 48, 1000);
+
+    return StyleSheet.create({
+        stepRow: {
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 20,
+        },
+        stepDot: {
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: colors.stepDotInactive,
+        },
+        stepDotActive: {
+            width: 24,
+            backgroundColor: colors.stepDotActive,
+        },
+        stepDotDone: {
+            backgroundColor: colors.stepDotDone,
+        },
+        scrollContentCreate: {
+            flexGrow: 1,
+            paddingVertical: verticalPaddingCreate,
+            paddingHorizontal: horizontalPadding,
+        },
+        scrollContentCreatePlain: {
+            flexGrow: 1,
+            paddingVertical: verticalPaddingCreate,
+            paddingHorizontal: 0,
+        },
+        scrollContentUpdate: {
+            paddingVertical: verticalPaddingUpdate,
+            paddingHorizontal: horizontalPadding,
+            alignItems: "center",
+        },
+        scrollContentTwoCol: {
+            paddingVertical: 24,
+            paddingHorizontal: horizontalPadding,
+            maxWidth: contentMaxWidth,
+            alignSelf: "center",
+            width: "100%",
+        },
+        twoColRow: {
+            flexDirection: "row",
+            gap: twoColGap,
+            alignItems: "flex-start",
+        },
+        twoColLeft: {
+            flex: 1,
+            minWidth: 0,
+            gap: 20,
+        },
+        twoColRight: {
+            flex: 1,
+            minWidth: 0,
+            gap: 100,
+        },
+        actionTopBar: {
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            marginBottom: 16,
+            width: "100%",
+        },
+        actionWrap: {
+            marginTop: 8,
+        },
+        cardOuter: {
+            flex: 1,
+            width: "100%",
+            alignSelf: "center",
+        },
+        cardOuterCreateMaxWidth: {
+            maxWidth: cardMaxWidth,
+        },
+        cardOuterPlain: {
+            alignSelf: "flex-start",
+        },
+        cardOuterCreateFullWidth: {
+            maxWidth: "100%",
+        },
+        cardOuterUpdate: {
+            width: "100%",
+            maxWidth: cardMaxWidth,
+            gap: 24,
+        },
+        cardWrap: {
+            width: "100%",
+            paddingHorizontal: horizontalPadding,
+        },
+        cardWrapUpdate: {
+            gap: 24,
+        },
+        cardWrapPlain: {
+            paddingHorizontal: 0,
+        },
+        actionSurface: {
+            borderRadius: 16,
+            padding: 16,
+            marginTop: 24,
+        },
+        actionSurfacePlain: {
+            borderRadius: 0,
+            paddingHorizontal: 0,
+            paddingVertical: 0,
+        },
+        actionSurfaceCard: {
+            backgroundColor: colors.card,
+        },
+        actionSurfaceMarginTop: {
+            marginTop: 24,
+        },
+        actionSurfaceMarginTopUpdate: {
+            marginTop: 8,
+        },
+    });
+}
 
 export default BrandProfile;

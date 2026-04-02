@@ -228,7 +228,7 @@ const stylesCustomModalFn = (theme: Theme) => {
     return StyleSheet.create({
         modalOverlay: {
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: colors.backdrop,
             alignItems: "center",
             justifyContent: "center",
             padding: 16,
@@ -241,7 +241,7 @@ const stylesCustomModalFn = (theme: Theme) => {
             padding: 20,
             borderWidth: 1,
             borderColor: colors.border,
-            shadowColor: "#000",
+            shadowColor: colors.text,
             shadowOpacity: 0.08,
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 6 },

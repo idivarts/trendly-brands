@@ -3,13 +3,14 @@ import React, { PropsWithChildren, useMemo } from "react";
 import { Platform, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 interface AppLayoutProps extends PropsWithChildren<Record<string, unknown>> {
     withWebPadding?: boolean;
     setInvisible?: boolean
     safeAreaEdges?: Array<"top" | "bottom" | "left" | "right">;
+    backgroundColor?: string;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({
@@ -17,11 +18,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     withWebPadding = false,
     setInvisible,
     safeAreaEdges,
+    backgroundColor,
 }) => {
     const theme = useTheme();
     const isAndroid = useMemo(() => Platform.OS === "android", []);
     const { xl } = useBreakpoints()
-    const edges = safeAreaEdges ?? ["top", "right", "bottom", "left"];
+    const edges = safeAreaEdges ?? ["right", "bottom", "left"];
+    const colors = Colors(theme);
     return (
         <SafeAreaView
             edges={edges}
@@ -29,7 +32,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                 styles.container,
                 setInvisible && { display: "none" },
                 {
-                    backgroundColor: Colors(theme).background,
+                    backgroundColor: backgroundColor ?? colors.background,
                     paddingTop: isAndroid && edges.includes("top")
                         ? StatusBar.currentHeight ?? 0
                         : 0,

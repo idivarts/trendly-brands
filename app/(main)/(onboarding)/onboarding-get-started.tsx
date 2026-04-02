@@ -1,5 +1,5 @@
 import Button from "@/components/ui/button";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -7,13 +7,12 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import fnStyles from "@/styles/onboarding/get-started.styles";
 import { Brand } from "@/types/Brand";
-import { useTheme } from "@react-navigation/native";
+import { useTheme, type Theme } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import React, { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Menu } from "react-native-paper";
 
 const GetStartedScreen = () => {
@@ -22,7 +21,7 @@ const GetStartedScreen = () => {
     const [volumeOfCollaboration, setVolumeOfCollaboration] = useState("");
     const { setSession } = useAuthContext();
     const theme = useTheme();
-    const styles = fnStyles(theme);
+    const styles = useMemo(() => useGetStartedStyles(theme), [theme]);
 
     const [visible1, setVisible1] = useState(false);
     const [visible2, setVisible2] = useState(false);
@@ -89,7 +88,7 @@ const GetStartedScreen = () => {
 
 
     return (
-        <AppLayout withWebPadding={true}>
+        <AppLayout withWebPadding={true} safeAreaEdges={["top", "right", "bottom", "left"]}>
             <View style={styles.container}>
                 {/* Heading */}
                 <View style={styles.headerContainer}>
@@ -109,10 +108,10 @@ const GetStartedScreen = () => {
                 <Menu
                     visible={visible1}
                     onDismiss={closeMenu1}
-                    contentStyle={{ backgroundColor: "#fff" }}
+                    contentStyle={styles.menuContent}
                     anchor={
                         <TouchableOpacity onPress={openMenu1} style={styles.dropdown}>
-                            <Text style={{ color: Colors(theme).text }}>
+                            <Text style={styles.dropdownText}>
                                 {hearAboutUs ? hearAboutUs : "Select Option"}
                             </Text>
                         </TouchableOpacity>
@@ -146,10 +145,10 @@ const GetStartedScreen = () => {
                 <Menu
                     visible={visible2}
                     onDismiss={closeMenu2}
-                    contentStyle={{ backgroundColor: "#fff" }}
+                    contentStyle={styles.menuContent}
                     anchor={
                         <TouchableOpacity onPress={openMenu2} style={styles.dropdown}>
-                            <Text style={{ color: Colors(theme).text }}>
+                            <Text style={styles.dropdownText}>
                                 {useFor ? useFor : "Select Option"}
                             </Text>
                         </TouchableOpacity>
@@ -185,10 +184,10 @@ const GetStartedScreen = () => {
                 <Menu
                     visible={visible3}
                     onDismiss={closeMenu3}
-                    contentStyle={{ backgroundColor: "#fff" }}
+                    contentStyle={styles.menuContent}
                     anchor={
                         <TouchableOpacity onPress={openMenu3} style={styles.dropdown}>
-                            <Text style={{ color: Colors(theme).text }}>
+                            <Text style={styles.dropdownText}>
                                 {volumeOfCollaboration
                                     ? volumeOfCollaboration
                                     : "Select Option"}
@@ -223,12 +222,8 @@ const GetStartedScreen = () => {
                 <View style={styles.footer}>
                     <Button
                         mode="contained"
-                        onPress={() => {
-                            handleSubmit();
-                        }}
-                        style={{
-                            width: "100%",
-                        }}
+                        onPress={() => { handleSubmit(); }}
+                        style={styles.fullWidth}
                     >
                         {firstBrand === "true" ? "Take me in" : "Submit"}
                     </Button>
@@ -237,5 +232,74 @@ const GetStartedScreen = () => {
         </AppLayout>
     );
 };
+
+function useGetStartedStyles(theme: Theme) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            padding: 20,
+            backgroundColor: Colors(theme).background,
+        },
+        heading: {
+            fontSize: 28,
+            fontWeight: "bold",
+            color: Colors(theme).text,
+            marginBottom: 20,
+        },
+        headerContainer: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 20,
+        },
+        button: {
+            backgroundColor: Colors(theme).primary,
+            padding: 10,
+            borderRadius: 5,
+            width: "100%",
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        buttonText: {
+            color: Colors(theme).text,
+            fontSize: 16,
+        },
+        headline: {
+            fontSize: 28,
+            fontWeight: "bold",
+            color: Colors(theme).text,
+        },
+        question: {
+            fontSize: 16,
+            color: Colors(theme).text,
+            marginBottom: 10,
+        },
+        dropdown: {
+            borderWidth: 1,
+            borderColor: Colors(theme).text,
+            backgroundColor: Colors(theme).background,
+            padding: 10,
+            marginBottom: 20,
+            justifyContent: "center",
+        },
+        dropdownText: {
+            color: Colors(theme).text,
+        },
+        menuContent: {
+            backgroundColor: Colors(theme).background,
+        },
+        fullWidth: {
+            width: "100%",
+        },
+        footer: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            position: "absolute",
+            bottom: 30,
+            left: 20,
+            right: 20,
+        },
+    });
+}
 
 export default GetStartedScreen;

@@ -1,16 +1,29 @@
 import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useBreakpoints } from "@/hooks";
 import {
     ISocialAnalytics,
     ISocials,
 } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { Stars, qualityScoreToStars } from "@/shared-uis/components/rating-section";
 import { View } from "@/shared-uis/components/theme/Themed";
-import { Brand } from "@/types/Brand";
-import { collection, doc, updateDoc } from "firebase/firestore"
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
-import React, { useEffect, useState } from "react";
-import { Image, Linking, Platform, ScrollView, useWindowDimensions } from "react-native";
+import { Brand } from "@/types/Brand";
+import { getTrustabilityLevel } from "@/utils/trustability";
+import {
+    faArrowDown,
+    faArrowTrendDown,
+    faArrowTrendUp,
+    faArrowUp,
+    faChartLine,
+    faIndianRupee,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Image, Linking, Platform, View as RNView, ScrollView, StyleSheet } from "react-native";
 import {
     ActivityIndicator,
     Card,
@@ -19,11 +32,9 @@ import {
     List,
     Text,
 } from "react-native-paper";
-import { StatChip } from "../StatChip";
+import Svg, { Circle } from "react-native-svg";
 import type { InfluencerItem } from "../discover-types";
 import EditSocialMetricsModal from "./EditSocialMetricsModal";
-import Colors from "@/constants/Colors";
-import { useTheme } from "@react-navigation/native";
 
 interface IProps {
     influencer: InfluencerItem;
@@ -36,7 +47,7 @@ interface IProps {
 const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
     ({ influencer, selectedBrand, initialSocial, initialAnalytics, onLoadingChange }, ref) => {
         const { manager } = useAuthContext();
-        const { width } = useWindowDimensions();
+        const { width, xl } = useBreakpoints();
         const [loading, setLoading] = useState(false);
         const [social, setSocial] = useState<ISocials | null>(null);
         const [analytics, setAnalytics] = useState<ISocialAnalytics | null>(null);
@@ -44,6 +55,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const [isSaving, setIsSaving] = useState(false);
         const [saveError, setSaveError] = useState<string | null>(null);
         const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({});
+        const [isRescraping, setIsRescraping] = useState(false);
         const isAdmin = manager?.isAdmin === true;
         const hasChanges = Object.keys(editedSocial).length > 0;
         const theme = useTheme();
@@ -89,16 +101,47 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         }, [initialSocial, initialAnalytics, onLoadingChange]);
 
         const handleSaveChanges = async () => {
-            if (!social?.id || !hasChanges) return;
+            if (!social?.id || !selectedBrand?.id || !hasChanges) return;
 
             try {
                 setIsSaving(true);
                 setSaveError(null);
                 const updatedSocial = { ...social, ...editedSocial };
-                const col = collection(FirestoreDB, "scrapped-socials");
-                const docRef = doc(col, social.id);
 
-                await updateDoc(docRef, updatedSocial);
+                // Prepare the request body with the API format
+                const requestBody = {
+                    name: updatedSocial.name,
+                    bio: updatedSocial.bio,
+                    category: updatedSocial.category,
+                    follower_count: updatedSocial.follower_count,
+                    following_count: updatedSocial.following_count,
+                    content_count: updatedSocial.content_count,
+                    profile_verified: updatedSocial.profile_verified,
+                    links: updatedSocial.links,
+                    gender: updatedSocial.gender,
+                    quality_score: updatedSocial.quality_score,
+                    niches: updatedSocial.niches,
+                    location: updatedSocial.location,
+                };
+
+                // Call the API using HttpWrapper
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(requestBody),
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to save changes. Please try again."
+                    );
+                }
 
                 setSocial(updatedSocial);
                 setIsEditModalVisible(false);
@@ -121,14 +164,49 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             }
         };
 
+        const handleRescrape = async () => {
+            if (!selectedBrand?.id) return;
+
+            try {
+                setIsRescraping(true);
+                const response = await HttpWrapper.fetch(
+                    `/discovery/brands/${selectedBrand.id}/influencers/${influencer.id}/rescrape`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.message || "Failed to rescrape. Please try again."
+                    );
+                }
+
+                Toaster.success("Rescrape initiated successfully!");
+                // Optionally reload the influencer data
+                await loadInfluencer();
+            } catch (e: any) {
+                console.error("Error rescrapting influencer:", e);
+                const errorMessage = e?.message || "Failed to rescrape. Please try again.";
+                Toaster.error(errorMessage);
+            } finally {
+                setIsRescraping(false);
+            }
+        };
+
         React.useImperativeHandle(
             ref,
             () => ({
                 handleEditClick,
+                handleRescrape,
                 isAdmin,
                 openEditModal: handleEditClick,
             }),
-            [handleEditClick, isAdmin]
+            [handleEditClick, handleRescrape, isAdmin]
         );
 
         useEffect(() => {
@@ -207,113 +285,303 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
         const isNarrow = width < 520;
         const isTiny = width < 360;
-        const smallCardWidth = isNarrow ? "48%" : "31%";
+        // On compact layouts (!xl) stack these metric cards like the estimated boxes.
+        const smallCardWidth = xl ? "48%" : "100%";
         const wideCardWidth = isNarrow ? "100%" : "48%";
         const labelVariant = isTiny ? "labelSmall" : isNarrow ? "labelMedium" : "labelLarge";
         const valueVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "displaySmall";
         const rangeVariant = isTiny ? "titleLarge" : isNarrow ? "headlineSmall" : "headlineLarge";
-        const contentPadding = isNarrow ? 12 : 16;
+        const contentPadding = isNarrow ? 10 : 16;
         const cardSpacing = isNarrow ? 10 : 12;
 
-        const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => (
-            <View style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                <View
-                    style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        justifyContent: "space-between",
-                    }}
-                >
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Quality
-                            </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.quality}
-                                <Text variant={labelVariant}>%</Text>
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Higher = richer, classy, aesthetic creators
-                            </Text>
-                        </Card.Content>
-                    </Card>
+        const circleR = xl ? 32 : 30;
+        const circleSize = xl ? 80 : 72;
+        const circleCircumference = 2 * Math.PI * circleR;
+        const circleStrokeWidth = xl ? 6 : 4;
 
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Trustability
-                            </Text>
-                            <Text variant={valueVariant}>
-                                {analytics.trustablity}
-                                <Text variant={labelVariant}>%</Text>
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Signals from past collabs, engagement quality
-                            </Text>
-                        </Card.Content>
-                    </Card>
-                    <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                CPM
-                            </Text>
-                            <Text variant={valueVariant}>
-                                {formatCurrency(analytics.cpm)}{" "}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Cost per Mille (1000 views)
-                            </Text>
-                        </Card.Content>
-                    </Card>
+        const HeaderCards = ({ analytics }: { analytics: ISocialAnalytics }) => {
+            const trustLevel = getTrustabilityLevel(analytics.trustablity);
+            const trustColor = trustLevel?.color || colors.primary;
+            const trustPercent = analytics.trustablity ?? 0;
+            const strokeDashLength = (trustPercent / 100) * circleCircumference;
 
-                    <Card style={{ width: wideCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
+            return (
+                <View style={{ marginHorizontal: 12, marginBottom: 12, marginTop: 12 }}>
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            gap: cardSpacing,
+                            alignItems: "stretch",
+                        }}
+                    >
+                        <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                            <Card.Content
+                                style={{
+                                    padding: contentPadding,
+                                    paddingBottom: xl ? contentPadding : 18,
+                                    flex: 1,
+                                    justifyContent: xl ? "flex-start" : "space-between",
+                                }}
                             >
-                                Estimated Budget
-                            </Text>
-                            <Text variant={rangeVariant}>
-                                {formatCurrency(analytics.estimatedBudget?.min)} —{" "}
-                                {formatCurrency(analytics.estimatedBudget?.max)}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Typical creator ask for one deliverable
-                            </Text>
-                        </Card.Content>
-                    </Card>
+                                <Text
+                                    variant={labelVariant}
+                                    style={{ opacity: 0.7, marginBottom: 8 }}
+                                >
+                                    TRUSTABILITY
+                                </Text>
+                                <RNView style={{ flexDirection: "row", alignItems: "center" }}>
+                                    <RNView style={{ position: "relative", width: circleSize, height: circleSize }}>
+                                        <Svg width={circleSize} height={circleSize} viewBox="0 0 80 80" style={{ position: "absolute" }}>
+                                            <Circle
+                                                cx={40}
+                                                cy={40}
+                                                r={circleR}
+                                                stroke={colors.tag}
+                                                strokeWidth={circleStrokeWidth}
+                                                fill="none"
+                                            />
+                                            <Circle
+                                                cx={40}
+                                                cy={40}
+                                                r={circleR}
+                                                stroke={trustColor}
+                                                strokeWidth={circleStrokeWidth}
+                                                fill="none"
+                                                strokeDasharray={`${strokeDashLength} ${circleCircumference}`}
+                                                strokeLinecap="round"
+                                                transform="rotate(-90 40 40)"
+                                            />
+                                        </Svg>
+                                        <RNView
+                                            style={{
+                                                position: "absolute",
+                                                left: 0,
+                                                top: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                            }}
+                                            pointerEvents="none"
+                                        >
+                                            <Text
+                                                variant={xl ? "titleLarge" : "titleSmall"}
+                                                style={{ fontWeight: "bold", color: trustColor, textAlign: "center" }}
+                                            >
+                                                {trustPercent}%
+                                            </Text>
+                                        </RNView>
+                                    </RNView>
+                                    <RNView style={{ marginLeft: xl ? 12 : 8, flex: 1 }}>
+                                        <Text
+                                            variant={xl ? valueVariant : "titleMedium"}
+                                            style={{ fontWeight: "600", color: trustColor }}
+                                        >
+                                            {trustLevel?.label || "—"}
+                                        </Text>
+                                        <Text
+                                            variant="bodySmall"
+                                            style={{
+                                                opacity: 0.7,
+                                                marginTop: xl ? 4 : 8,
+                                            }}
+                                            numberOfLines={2}
+                                        >
+                                            {xl
+                                                ? "Based on engagement quality"
+                                                : "Based on engagement\nquality"}
+                                        </Text>
+                                    </RNView>
+                                </RNView>
+                            </Card.Content>
+                        </Card>
+                        <Card style={{ width: smallCardWidth, marginBottom: cardSpacing }}>
+                            <Card.Content
+                                style={{
+                                    padding: contentPadding,
+                                    flex: 1,
+                                    justifyContent: "flex-start",
+                                }}
+                            >
+                                <Text
+                                    variant={labelVariant}
+                                    style={{ opacity: 0.7, marginBottom: 6 }}
+                                >
+                                    CPM
+                                </Text>
+                                <Text variant={valueVariant}>
+                                    {formatCurrency(analytics.cpm)}{" "}
+                                </Text>
+                                <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
+                                    Cost per Mille (1000 views)
+                                </Text>
+                            </Card.Content>
+                        </Card>
 
-                    <Card style={{ width: wideCardWidth, marginBottom: cardSpacing }}>
-                        <Card.Content style={{ padding: contentPadding }}>
-                            <Text
-                                variant={labelVariant}
-                                style={{ opacity: 0.7, marginBottom: 6 }}
-                            >
-                                Estimated Reach
-                            </Text>
-                            <Text variant={rangeVariant}>
-                                {formatNumber(analytics.estimatedReach?.min)} —{" "}
-                                {formatNumber(analytics.estimatedReach?.max)}
-                            </Text>
-                            <Text variant="bodySmall" style={{ opacity: 0.7, marginTop: 6 }}>
-                                Projected unique views per post
-                            </Text>
-                        </Card.Content>
-                    </Card>
+                        <Card
+                            style={[
+                                { width: wideCardWidth, marginBottom: cardSpacing },
+                                {
+                                    backgroundColor: colors.budgetCardBg,
+                                    borderWidth: 1,
+                                    borderColor: colors.budgetCardBorder,
+                                    borderRadius: 12,
+                                },
+                            ]}
+                        >
+                            <Card.Content style={{ padding: contentPadding, flexDirection: "row" }}>
+                                <RNView
+                                    style={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 10,
+                                        backgroundColor: colors.white,
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 12,
+                                    }}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faIndianRupee}
+                                        size={22}
+                                        color={colors.primary}
+                                    />
+                                </RNView>
+                                <RNView style={{ flex: 1 }}>
+                                    <Text
+                                        variant="labelSmall"
+                                        style={{
+                                            color: colors.primary,
+                                            opacity: 0.85,
+                                            marginBottom: 4,
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
+                                        ESTIMATED BUDGET
+                                    </Text>
+                                    <Text
+                                        variant={rangeVariant}
+                                        style={{
+                                            fontWeight: "bold",
+                                            color: colors.text,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        {analytics.estimatedBudget
+                                            ? formatCurrency(
+                                                (analytics.estimatedBudget.min + analytics.estimatedBudget.max) / 2
+                                            )
+                                            : "—"}
+                                    </Text>
+                                    <RNView style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+                                        <FontAwesomeIcon icon={faArrowDown} size={10} color={colors.textSecondary} />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedBudget
+                                                ? formatCurrency(analytics.estimatedBudget.min) + " min"
+                                                : "—"}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
+                                            •
+                                        </Text>
+                                        <FontAwesomeIcon icon={faArrowUp} size={10} color={colors.textSecondary} />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedBudget
+                                                ? formatCurrency(analytics.estimatedBudget.max) + " max"
+                                                : "—"}
+                                        </Text>
+                                    </RNView>
+                                </RNView>
+                            </Card.Content>
+                        </Card>
+
+                        <Card
+                            style={[
+                                { width: wideCardWidth, marginBottom: cardSpacing },
+                                {
+                                    backgroundColor: colors.reachCardBg,
+                                    borderWidth: 1,
+                                    borderColor: colors.reachCardBorder,
+                                    borderRadius: 12,
+                                },
+                            ]}
+                        >
+                            <Card.Content style={{ padding: contentPadding, flexDirection: "row" }}>
+                                <RNView
+                                    style={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: 10,
+                                        backgroundColor: colors.white,
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 12,
+                                    }}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faChartLine}
+                                        size={22}
+                                        color={colors.green}
+                                    />
+                                </RNView>
+                                <RNView style={{ flex: 1 }}>
+                                    <Text
+                                        variant="labelSmall"
+                                        style={{
+                                            color: colors.green,
+                                            opacity: 0.85,
+                                            marginBottom: 4,
+                                            letterSpacing: 0.5,
+                                        }}
+                                    >
+                                        ESTIMATED REACH
+                                    </Text>
+                                    <Text
+                                        variant={rangeVariant}
+                                        style={{
+                                            fontWeight: "bold",
+                                            color: colors.text,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        {analytics.estimatedReach
+                                            ? formatNumber(
+                                                (analytics.estimatedReach.min + analytics.estimatedReach.max) / 2
+                                            )
+                                            : "—"}
+                                    </Text>
+                                    <RNView style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+                                        <FontAwesomeIcon
+                                            icon={faArrowTrendDown}
+                                            size={10}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedReach
+                                                ? formatNumber(analytics.estimatedReach.min) + " min"
+                                                : "—"}
+                                        </Text>
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, marginHorizontal: 4 }}>
+                                            •
+                                        </Text>
+                                        <FontAwesomeIcon
+                                            icon={faArrowTrendUp}
+                                            size={10}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text variant="bodySmall" style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                            {analytics.estimatedReach
+                                                ? formatNumber(analytics.estimatedReach.max) + " max"
+                                                : "—"}
+                                        </Text>
+                                    </RNView>
+                                </RNView>
+                            </Card.Content>
+                        </Card>
+                    </View>
                 </View>
-            </View>
-        );
+            );
+        };
 
         const ProfileOverviewCard = ({ social }: { social: ISocials }) => (
             <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
@@ -368,9 +636,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                             </Chip>
                         )}
                         {typeof social.quality_score === "number" && (
-                            <Chip style={{ marginRight: 8, marginBottom: 0 }} icon="star">
-                                Quality: {social.quality_score}/100
-                            </Chip>
+                            <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8, marginBottom: 0, backgroundColor: "transparent" }}>
+                                <Stars rating={qualityScoreToStars(social.quality_score)} size={14} />
+                                <Text variant="bodySmall" style={{ marginLeft: 4 }}>
+                                    {qualityScoreToStars(social.quality_score).toFixed(1)}
+                                </Text>
+                            </View>
                         )}
                     </View>
 
@@ -392,43 +663,69 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             </Card>
         );
 
-        const TotalsCard = ({ social }: { social: ISocials }) => (
-
-            <Card style={{ marginHorizontal: 12, marginBottom: 12 }}>
-                <Card.Title title="Totals" />
-                <Card.Content>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Followers" value={social.follower_count} textColor={Colors(theme).black} />
-                        <StatChip label="Following" value={social.following_count} textColor={Colors(theme).black} />
-                        <StatChip label="Posts" value={social.content_count} textColor={Colors(theme).black} />
-                        <StatChip label="Total Views" value={convertToMUnits(social.views_count)} textColor={Colors(theme).black} />
-                        <StatChip
-                            label="Total Engagements"
-                            value={social.engagement_count}
-                            textColor={Colors(theme).black}
-                        />
-                    </View>
-                </Card.Content>
-            </Card>
+        const sectionStyles = useMemo(
+            () =>
+                makeTotalsAndRatesStyles(colors, xl),
+            [colors, xl]
         );
 
-        const AveragesCard = ({ social }: { social: ISocials }) => (
-            <Card style={{ marginHorizontal: 12, marginBottom: 12, }}>
-                <Card.Title title="Averages & Rates" />
-                <Card.Content>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", backgroundColor: "transparent" }}>
-                        <StatChip label="Median Views" value={social.average_views} textColor={Colors(theme).black}/>
-                        <StatChip label="Median Likes" value={social.average_likes} textColor={Colors(theme).black} />
-                        <StatChip label="Median Comments" value={social.average_comments} textColor={Colors(theme).black}/>
-                        <StatChip
-                            label="Engagement Rate %"
-                            value={social.engagement_rate || 0}
-                            textColor={Colors(theme).black}
-                        />
-                        <StatChip label="Quality Score" value={social.quality_score} textColor={Colors(theme).black}/>
-                    </View>
-                </Card.Content>
-            </Card>
+        const TotalsAndRatesSection = ({ social }: { social: ISocials }) => (
+            <RNView style={sectionStyles.container}>
+                <RNView style={sectionStyles.column}>
+                    <Text style={sectionStyles.sectionHeading}>TOTALS</Text>
+                    <RNView style={sectionStyles.totalsGrid}>
+                        <RNView style={sectionStyles.miniCard}>
+                            <Text style={sectionStyles.value}>
+                                {formatNumber(social.follower_count)}
+                            </Text>
+                            <Text style={sectionStyles.label}>FOLLOWERS</Text>
+                        </RNView>
+                        <RNView style={sectionStyles.miniCard}>
+                            <Text style={sectionStyles.value}>
+                                {social.views_count >= 1_000_000
+                                    ? convertToMUnits(social.views_count)
+                                    : formatNumber(social.views_count)}
+                            </Text>
+                            <Text style={sectionStyles.label}>TOTAL VIEWS</Text>
+                        </RNView>
+                        <RNView style={sectionStyles.miniCard}>
+                            <Text style={sectionStyles.value}>
+                                {formatNumber(social.following_count)}
+                            </Text>
+                            <Text style={sectionStyles.label}>FOLLOWING</Text>
+                        </RNView>
+                        <RNView style={sectionStyles.miniCard}>
+                            <Text style={sectionStyles.value}>
+                                {formatNumber(social.content_count)}
+                            </Text>
+                            <Text style={sectionStyles.label}>POSTS</Text>
+                        </RNView>
+                    </RNView>
+                </RNView>
+                <RNView style={sectionStyles.column}>
+                    <Text style={sectionStyles.sectionHeading}>PERFORMANCE RATES</Text>
+                    <RNView style={sectionStyles.engagementCard}>
+                        <Text style={sectionStyles.engagementLabel}>ENGAGEMENT RATE</Text>
+                        <Text style={sectionStyles.engagementValue}>
+                            {formatPercent(social.engagement_rate ?? 0)}
+                        </Text>
+                    </RNView>
+                    <RNView style={sectionStyles.ratesRow}>
+                        <RNView style={sectionStyles.miniCard}>
+                            <Text style={sectionStyles.value}>
+                                {formatNumber(social.average_views)}
+                            </Text>
+                            <Text style={sectionStyles.label}>MEDIAN VIEWS</Text>
+                        </RNView>
+                        <RNView style={sectionStyles.miniCard}>
+                            <Text style={sectionStyles.value}>
+                                {formatNumber(social.average_likes)}
+                            </Text>
+                            <Text style={sectionStyles.label}>MEDIAN LIKES</Text>
+                        </RNView>
+                    </RNView>
+                </RNView>
+            </RNView>
         );
 
         const ReelsCard = ({ social }: { social: ISocials }) =>
@@ -441,12 +738,12 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                 {social.reels.map((r) => (
                                     <Card
                                         key={r.id}
-                                        style={{ width: 140, marginRight: 12, borderWidth:1,borderColor:colors.border }}
+                                        style={{ width: 140, marginRight: 12, borderWidth: 1, borderColor: colors.border }}
                                         onPress={() => r.url && Linking.openURL(r.url)}
                                     >
-                                        {!!r.thumbnail_url && (
+                                        {(r.display_url || r.thumbnail_url) ? (
                                             <Image
-                                                source={{ uri: r.thumbnail_url }}
+                                                source={{ uri: r.display_url || r.thumbnail_url || "" }}
                                                 style={{
                                                     width: "100%",
                                                     height: 180,
@@ -454,7 +751,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     borderTopRightRadius: 12,
                                                 }}
                                             />
-                                        )}
+                                        ) : null}
                                         <Card.Content>
                                             <Text
                                                 numberOfLines={2}
@@ -471,13 +768,13 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     icon="play-circle"
                                                     textStyle={{ color: colors.black }}
                                                 >
-                                                    {formatNumber(r.views_count)}
+                                                    {formatNumber(r.video_view_count ?? r.video_play_count ?? r.views_count ?? 0)}
                                                 </Chip>
                                                 <Chip
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="heart"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.likes_count)}
                                                 </Chip>
@@ -485,7 +782,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                                                     compact
                                                     style={{ marginRight: 6, marginBottom: 6 }}
                                                     icon="comment-text"
-                                                     textStyle={{ color: colors.black }}
+                                                    textStyle={{ color: colors.black }}
                                                 >
                                                     {formatNumber(r.comments_count)}
                                                 </Chip>
@@ -562,8 +859,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
                     {!loading && social && (
                         <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
                             {analytics && <HeaderCards analytics={analytics} />}
-                            <TotalsCard social={social} />
-                            <AveragesCard social={social} />
+                            <TotalsAndRatesSection social={social} />
                             <ReelsCard social={social} />
                             <LinksList social={social} />
                         </ScrollView>
@@ -585,6 +881,84 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         );
     }
 );
+
+function makeTotalsAndRatesStyles(
+    colors: ReturnType<typeof Colors>,
+    xl: boolean
+) {
+    return StyleSheet.create({
+        container: {
+            flexDirection: xl ? "row" : "column",
+            paddingHorizontal: 20,
+            marginBottom: 20,
+            gap: 24,
+        },
+        column: {
+            flex: xl ? 1 : undefined,
+        },
+        sectionHeading: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+            marginBottom: 12,
+        },
+        totalsGrid: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 12,
+        },
+        miniCard: {
+            backgroundColor: colors.card,
+            borderRadius: 12,
+            padding: 16,
+            flex: 1,
+            minWidth: 120,
+            minHeight: 80,
+            justifyContent: "center",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        value: {
+            fontSize: 20,
+            fontWeight: "bold",
+            color: colors.text,
+            marginBottom: 4,
+        },
+        label: {
+            fontSize: 11,
+            fontWeight: "500",
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+        },
+        engagementCard: {
+            backgroundColor: colors.card,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        engagementLabel: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+        },
+        engagementValue: {
+            fontSize: 18,
+            fontWeight: "bold",
+            color: colors.primary,
+        },
+        ratesRow: {
+            flexDirection: "row",
+            gap: 12,
+        },
+    });
+}
 
 TrendlyAnalyticsEmbed.displayName = "TrendlyAnalyticsEmbed";
 export default TrendlyAnalyticsEmbed;

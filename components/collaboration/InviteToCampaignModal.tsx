@@ -1,4 +1,5 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
@@ -15,10 +16,10 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
     type ViewStyle,
 } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Checkbox } from "react-native-paper";
 
 type Collaboration = {
@@ -36,6 +37,7 @@ type Props = {
     // optional influencers being invited. If provided, the modal header should reflect it
     influencers?: { id: string; name?: string }[];
     brandId?: string;
+    onNavigateToCampaigns?: () => void;
 };
 
 const InviteToCampaignModal: React.FC<Props> = ({
@@ -43,17 +45,18 @@ const InviteToCampaignModal: React.FC<Props> = ({
     onInvite,
     influencers,
     brandId,
+    onNavigateToCampaigns,
 }) => {
-    const [selected, setSelected] = useState<string[]>([]);
+    const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
     const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const { width, height, xl } = useBreakpoints();
+    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
     const { selectedBrand } = useBrandContext();
     const effectiveBrandId = brandId ?? selectedBrand?.id;
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const { width, height } = useWindowDimensions();
     const isWeb = Platform.OS === "web";
     const horizontalInset = isWeb ? 0 : 16;
     const maxModalWidth = 700;
@@ -62,6 +65,11 @@ const InviteToCampaignModal: React.FC<Props> = ({
         maxWidth: maxModalWidth,
         ...(isWeb ? { minWidth: 640 } : {}),
         maxHeight: isWeb ? "80%" : Math.min(height * 0.85, height - 64),
+    };
+    const toggleCampaignSelection = (id: string) => {
+        setSelectedCampaignIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
     };
 
     useEffect(() => {
@@ -114,20 +122,14 @@ const InviteToCampaignModal: React.FC<Props> = ({
         fetchActiveCollaborations();
     }, [effectiveBrandId]);
 
-    const toggleSelect = (id: string) => {
-        setSelected((prev) =>
-            prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-        );
-    };
-
     const handleInvite = async () => {
-        if (selected.length === 0 || isSubmitting) return;
+        if (selectedCampaignIds.length === 0 || isSubmitting) return;
         setIsSubmitting(true);
 
         try {
-            const isSuccess = await onInvite(selected);
+            const isSuccess = await onInvite(selectedCampaignIds);
             if (isSuccess) {
-                setSelected([]);
+                setSelectedCampaignIds([]);
                 onClose();
             }
         } finally {
@@ -136,57 +138,37 @@ const InviteToCampaignModal: React.FC<Props> = ({
     };
 
     const handleClose = () => {
-        setSelected([]);
+        setSelectedCampaignIds([]);
         onClose();
     };
 
-    const renderItem = ({ item }: { item: Collaboration }) => {
+    const renderCampaignItem = ({ item }: { item: Collaboration }) => {
         if (!item.active) return null;
-        const isSelected = selected.includes(item.id);
+        const isSelected = selectedCampaignIds.includes(item.id);
 
         return (
             <Pressable
-                onPress={() => toggleSelect(item.id)}
+                onPress={() => toggleCampaignSelection(item.id)}
                 style={[
-                    styles.card,
-                    isSelected && styles.cardSelected,
-                    { backgroundColor: Colors(theme).aliceBlue },
+                    styles.campaignCard,
+                    isSelected && styles.campaignCardSelected,
                 ]}
             >
-                {/* Media */}
-                {/* {item.isVideo ? (
-                    <Video
-                        source={{ uri: item.mediaUrl ?? "https://via.placeholder.com/150" }}
-                        style={styles.media}
-                        shouldPlay={false}
-                        isMuted
-                    />
-                ) : (
-                    <ImageComponent
-                        url={item.mediaUrl ?? ""}
-                        altText={item.name}
-                        style={styles.media}
-                        resizeMode="cover"
-                    />
-                )} */}
-
-                {/* Info */}
-                <View style={styles.info}>
-                    <Text numberOfLines={1} style={styles.name}>
+                <View style={styles.campaignInfo}>
+                    <Text numberOfLines={1} style={styles.campaignName}>
                         {item.name}
                     </Text>
-                    <Text numberOfLines={1} style={styles.description}>
-                        {item.description}
-                    </Text>
+                    {!!item.description && (
+                        <Text numberOfLines={1} style={styles.campaignDescription}>
+                            {item.description}
+                        </Text>
+                    )}
                 </View>
-
-                {/* Checkbox */}
-                <Checkbox
-                    status={isSelected ? "checked" : "unchecked"}
-                    onPress={() => toggleSelect(item.id)}
-                // color={Colors(theme).InfluencerStatCard}
-                // uncheckedColor={Colors(theme).InfluencerStatCard}
-                />
+                <View pointerEvents="none">
+                    <Checkbox
+                        status={isSelected ? "checked" : "unchecked"}
+                    />
+                </View>
             </Pressable>
         );
     };
@@ -194,67 +176,135 @@ const InviteToCampaignModal: React.FC<Props> = ({
     return (
         <Modal visible={true} transparent animationType="fade">
             <View style={styles.overlay}>
-                <View style={[styles.container, containerStyle, { backgroundColor: colors.white }]}>
-                    <Text style={styles.header}>
-                        {influencers && influencers?.length > 1
-                            ? `Inviting ${influencers.length} influencers`
-                            : influencers && influencers?.length === 1
-                                ? `Inviting ${influencers[0].name ?? "influencer"}`
-                                : "Invite to Campaign"}
-                    </Text>
-
-                    {loading ? (
-                        <Text style={{ textAlign: "center", marginVertical: 20 }}>
-                            Loading...
+                <View style={[styles.container, containerStyle]}>
+                    {/* Header */}
+                    <View style={styles.headerSection}>
+                        <View style={styles.headerRow}>
+                            <Text style={styles.headerTitle} numberOfLines={2}>
+                                {influencers && influencers?.length > 1
+                                    ? `Invite ${influencers.length} influencers`
+                                    : influencers && influencers?.length === 1
+                                        ? `Invite ${influencers[0].name ?? "Influencer"}`
+                                        : "Invite Influencer"}
+                            </Text>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Close invite modal"
+                                onPress={handleClose}
+                                style={styles.closeButton}
+                            >
+                                <MaterialIcons
+                                    name="close"
+                                    size={22}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                        </View>
+                        <Text style={styles.headerSubtitle}>
+                            Select one or more campaigns to send invitations to this
+                            influencer.
                         </Text>
-                    ) : collaborations.length === 0 ? (
-                        <Text style={{ textAlign: "center", marginVertical: 20 }}>
-                            No collaborations found
-                        </Text>
-                    ) : (
-                        <FlatList
-                            data={collaborations}
-                            keyExtractor={(item) => item.id}
-                            renderItem={renderItem}
-                            contentContainerStyle={styles.listContent}
-                        />
-                    )}
-                    <View style={styles.footer}>
-                        <Pressable onPress={handleClose} style={styles.cancelBtn}>
-                            <Text style={styles.cancelText}>Cancel</Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={handleInvite}
-                            style={[
-                                styles.inviteBtn,
-                                (selected.length === 0 || isSubmitting) && {
-                                    opacity: 0.6,
-                                },
-                            ]}
-                            disabled={selected.length === 0 || isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <View style={styles.inviteContent}>
-                                    <ActivityIndicator
-                                        size="small"
-                                        color={colors.white}
-                                    />
-                                    <Text style={styles.inviteText}>
-                                        Inviting...
-                                    </Text>
-                                </View>
-                            ) : (
-                                <Text style={styles.inviteText}>Invite Now</Text>
-                            )}
-                        </Pressable>
                     </View>
+
+                    {/* Content */}
+                    <View style={styles.contentSection}>
+                        {loading ? (
+                            <View style={styles.loadingWrap}>
+                                <ActivityIndicator />
+                                <Text style={styles.loadingText}>Loading campaigns...</Text>
+                            </View>
+                        ) : collaborations.length === 0 ? (
+                            <View style={styles.createCampaignOnlyWrap}>
+                                <View style={styles.createCampaignCard}>
+                                    <View style={styles.createCampaignIconWrap}>
+                                        <MaterialIcons
+                                            name="campaign"
+                                            size={28}
+                                            color={colors.primary}
+                                        />
+                                    </View>
+                                    <View style={styles.createCampaignTextWrap}>
+                                        <Text style={styles.createCampaignTitle}>
+                                            Create Campaign
+                                        </Text>
+                                        <Text style={styles.createCampaignSubtitle}>
+                                            Don&apos;t have a campaign ready yet? Create one now to
+                                            start collaborating with top influencers.
+                                        </Text>
+                                    </View>
+                                    <Pressable
+                                        onPress={() => {
+                                            onNavigateToCampaigns?.();
+                                            onClose();
+                                        }}
+                                        style={styles.createNowButton}
+                                    >
+                                        <MaterialIcons
+                                            name="add"
+                                            size={18}
+                                            color={colors.white}
+                                        />
+                                        <Text style={styles.createNowButtonText}>
+                                            Create Now
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={styles.selectSection}>
+                                    <Text style={styles.selectLabel}>Select campaigns</Text>
+                                </View>
+                                <FlatList
+                                    data={collaborations}
+                                    keyExtractor={(item) => item.id}
+                                    renderItem={renderCampaignItem}
+                                    contentContainerStyle={styles.campaignListContent}
+                                    showsVerticalScrollIndicator={false}
+                                />
+                            </>
+                        )}
+                    </View>
+
+                    {/* Footer */}
+                    {!loading && collaborations.length > 0 && (
+                        <View style={styles.footerSection}>
+                            <Pressable
+                                onPress={handleClose}
+                                style={[styles.footerButton, styles.cancelButton]}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                                onPress={handleInvite}
+                                style={[
+                                    styles.footerButton,
+                                    styles.inviteButton,
+                                    (selectedCampaignIds.length === 0 || isSubmitting) &&
+                                        styles.inviteButtonDisabled,
+                                ]}
+                                disabled={selectedCampaignIds.length === 0 || isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <View style={styles.inviteButtonLoadingRow}>
+                                        <ActivityIndicator size="small" color={colors.white} />
+                                        <Text style={styles.inviteButtonText}>
+                                            Inviting...
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.inviteButtonText}>Invite Now</Text>
+                                )}
+                            </Pressable>
+                        </View>
+                    )}
                 </View>
             </View>
         </Modal>
     );
 };
 
-const useStyles = (colors: ReturnType<typeof Colors>) =>
+const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
     StyleSheet.create({
         overlay: {
             flex: 1,
@@ -264,74 +314,199 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         },
         container: {
             borderRadius: 12,
-            padding: 16,
+            backgroundColor: colors.card,
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: colors.border,
         },
-        header: {
-            fontSize: 18,
-            fontWeight: "600",
-            marginBottom: 10,
+        headerSection: {
+            padding: 20,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            gap: 8,
         },
-        listContent: {
-            paddingBottom: 80,
+        headerRow: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
         },
-        card: {
+        headerTitle: {
+            flex: 1,
+            fontSize: 26,
+            fontWeight: "800",
+            color: colors.text,
+            lineHeight: 34,
+        },
+        headerSubtitle: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            lineHeight: 20,
+        },
+        closeButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.transparent,
+        },
+        contentSection: {
+            padding: 20,
+            gap: 18,
+            minHeight: 160,
+        },
+        loadingWrap: {
+            alignItems: "center",
+            justifyContent: "center",
+            paddingVertical: 24,
+            gap: 10,
+        },
+        loadingText: {
+            fontSize: 13,
+            color: colors.textSecondary,
+        },
+        createCampaignOnlyWrap: {
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        createCampaignCard: {
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 12,
+            borderWidth: 2,
+            borderStyle: "dashed",
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            paddingVertical: 18,
+            paddingHorizontal: 16,
+            gap: 12,
+        },
+        createCampaignIconWrap: {
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            backgroundColor: colors.glassSurface,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        createCampaignTextWrap: {
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            maxWidth: 520,
+        },
+        createCampaignTitle: {
+            fontSize: 16,
+            fontWeight: "800",
+            color: colors.text,
+        },
+        createCampaignSubtitle: {
+            fontSize: 13,
+            color: colors.textSecondary,
+            textAlign: "center",
+            lineHeight: 18,
+        },
+        createNowButton: {
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            backgroundColor: colors.primary,
             borderRadius: 10,
-            marginBottom: 10,
-            padding: 8,
+            paddingHorizontal: 18,
+            paddingVertical: 10,
         },
-        cardSelected: {
+        createNowButtonText: {
+            color: colors.white,
+            fontSize: 13,
+            fontWeight: "700",
+        },
+        selectSection: {
+            gap: 8,
+        },
+        selectLabel: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        campaignListContent: {
+            paddingBottom: 6,
+        },
+        campaignCard: {
+            flexDirection: "row",
+            alignItems: "center",
+            borderRadius: 12,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            marginBottom: 10,
+        },
+        campaignCardSelected: {
             borderWidth: 2,
             borderColor: colors.primary,
-            backgroundColor: colors.background,
+            backgroundColor: colors.card,
         },
-        media: {
-            width: 60,
-            height: 60,
-            borderRadius: 8,
-            marginLeft: 6,
-        },
-        info: {
+        campaignInfo: {
             flex: 1,
-            marginLeft: 10,
-            rowGap: 8,
+            gap: 4,
+            paddingRight: 10,
         },
-        name: {
-            fontSize: 16,
-            fontWeight: "600",
-            color: colors.black,
+        campaignName: {
+            fontSize: 14,
+            fontWeight: "800",
+            color: colors.text,
         },
-        description: {
-            fontSize: 13,
-            color: colors.black,
+        campaignDescription: {
+            fontSize: 12,
+            color: colors.textSecondary,
         },
-        footer: {
-            flexDirection: "row",
+        footerSection: {
+            paddingHorizontal: 20,
+            paddingVertical: 16,
+            backgroundColor: colors.background,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            flexDirection: xl ? "row" : "column",
             justifyContent: "flex-end",
-            marginTop: 15,
+            alignItems: "stretch",
+            gap: 12,
         },
-        cancelBtn: {
-            marginRight: 10,
-            padding: 10,
-        },
-        cancelText: {
-            color: colors.primary,
-        },
-        inviteBtn: {
-            backgroundColor: colors.primary,
-            borderRadius: 8,
+        footerButton: {
+            borderRadius: 10,
             paddingVertical: 10,
             paddingHorizontal: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            ...(xl ? {} : { width: "100%" }),
         },
-        inviteText: {
+        cancelButton: {
+            backgroundColor: colors.card,
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        cancelButtonText: {
+            color: colors.text,
+            fontWeight: "700",
+            fontSize: 13,
+        },
+        inviteButton: {
+            backgroundColor: colors.primary,
+        },
+        inviteButtonDisabled: {
+            opacity: 0.6,
+        },
+        inviteButtonText: {
             color: colors.white,
-            fontWeight: "600",
+            fontWeight: "800",
+            fontSize: 13,
         },
-        inviteContent: {
+        inviteButtonLoadingRow: {
             flexDirection: "row",
             alignItems: "center",
-            gap: 8,
+            gap: 10,
         },
     });
 

@@ -7,13 +7,9 @@ import React from "react";
 const BillingScreen = () => {
     const { xl } = useBreakpoints()
     return (
-        <AppLayout withWebPadding={false}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
             {!xl && <ScreenHeader title="" />}
-            {/* <ScreenHeader
-        title="Billing"
-      /> */}
             <PayWallComponent />
-            {/* <Billing /> */}
         </AppLayout>
     );
 };

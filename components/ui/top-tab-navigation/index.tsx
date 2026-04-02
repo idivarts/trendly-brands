@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -8,7 +8,6 @@ import { Href } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
     Animated,
-    Dimensions,
     Pressable,
     ScrollView,
     Text,
@@ -28,6 +27,8 @@ interface TopTabNavigationProps {
     mobileFullWidth?: boolean;
     splitTwoColumns?: boolean;
     defaultSelection?: number;
+    /** When false, tab strip is always expanded (no collapse toggle or animation). Default true. */
+    collapsible?: boolean;
 }
 
 const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
@@ -36,6 +37,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
     mobileFullWidth = false,
     splitTwoColumns = true,
     defaultSelection = 0,
+    collapsible = true,
 }) => {
     const router = useMyNavigation();
     const { isCollapsed, setIsCollapsed } = useCollapseContext();
@@ -45,13 +47,17 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
     const scrollViewRef = useRef<ScrollView>(null);
     const theme = useTheme();
     const styles = stylesFn(theme);
+    const { xl: xlRaw, height } = useBreakpoints();
+    const xl = splitTwoColumns && xlRaw;
+    const canCollapse = collapsible && xl;
 
     const collapseAnim = useRef(new Animated.Value(1)).current;
     const autoCollapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isFirstMount = useRef(true);
 
     // Auto-collapse after 2 seconds of inactivity
     const startAutoCollapseTimer = () => {
-        if (!xl) return;
+        if (!canCollapse) return;
         if (autoCollapseTimer.current) {
             clearTimeout(autoCollapseTimer.current);
         }
@@ -61,6 +67,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
     };
 
     const handleCollapse = (collapse: boolean) => {
+        if (!canCollapse) return;
         setIsCollapsed(collapse);
         Animated.timing(collapseAnim, {
             toValue: collapse ? 0 : 1,
@@ -77,9 +84,20 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
             }
         };
     }, []);
-    const { xl: xlRaw } = useBreakpoints();
-    const xl = splitTwoColumns && xlRaw;
-
+    // Sync animation when collapse state is changed from outside (e.g. header back button or strip tap)
+    useEffect(() => {
+        if (!canCollapse) return;
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            collapseAnim.setValue(isCollapsed ? 0 : 1);
+            return;
+        }
+        Animated.timing(collapseAnim, {
+            toValue: isCollapsed ? 0 : 1,
+            duration: 300,
+            useNativeDriver: false,
+        }).start();
+    }, [isCollapsed, canCollapse]);
     useEffect(() => {
         setActiveTab(tabs[defaultSelection]);
     }, [tabs, defaultSelection]);
@@ -118,13 +136,26 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
                 style={{
                     position: "relative",
                     width: xl
-                        ? collapseAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [50, 300],
-                        })
+                        ? canCollapse
+                            ? collapseAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [50, 300],
+                              })
+                            : 300
                         : "100%",
                 }}
             >
+                {canCollapse && isCollapsed ? (
+                    <Pressable
+                        style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, zIndex: 5 }}
+                        onPress={() => {
+                            if (autoCollapseTimer.current) {
+                                clearTimeout(autoCollapseTimer.current);
+                            }
+                            handleCollapse(false);
+                        }}
+                    />
+                ) : null}
                 <ScrollView
                     ref={scrollViewRef}
                     horizontal={!xl}
@@ -148,7 +179,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
                         }
                     }}
                     onTouchEnd={() => {
-                        if (!xl) return;
+                        if (!canCollapse) return;
                         startAutoCollapseTimer();
                     }}
                 >
@@ -160,9 +191,9 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
                                 alignSelf: "stretch",
                                 justifyContent: "flex-start",
                                 paddingTop: 16,
-                                minHeight: Dimensions.get("window").height * 0.8,
+                                minHeight: height * 0.8,
                                 paddingHorizontal: 16,
-                                opacity: collapseAnim,
+                                opacity: canCollapse ? collapseAnim : 1,
                             },
                         ]}
                     >
@@ -216,13 +247,14 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
                         )}
                     </Animated.View>
                 </ScrollView>
-                {xl && (
+                {canCollapse && (
                     <Animated.View
                         style={{
                             position: "absolute",
                             right: 4,
                             top: "50%",
                             transform: [{ translateY: -20 }],
+                            zIndex: 10,
                             opacity: collapseAnim.interpolate({
                                 inputRange: [0, 0.5, 1],
                                 outputRange: [1, 0, 1],

@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -56,5 +56,6 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
     tabContent: {
         flex: 1,
         width: '100%',
+        minHeight: 0,
     },
 });

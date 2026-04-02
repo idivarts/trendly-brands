@@ -1,17 +1,17 @@
 import { PublicContextProvider } from "@/contexts/public-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { Stack } from "expo-router";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
+
+const layoutStyles = StyleSheet.create({
+    flex1: { flex: 1 },
+});
 
 const PublicLayout = () => {
     return (
         <PublicContextProvider>
-            <AppLayout>
-                <View
-                    style={{
-                        flex: 1,
-                    }}
-                >
+            <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
+                <View style={layoutStyles.flex1}>
                     <Stack
                         screenOptions={{
                             headerShown: false,

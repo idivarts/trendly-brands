@@ -3,7 +3,10 @@ import AppLayout from "@/layouts/app-layout";
 import { useLocalSearchParams } from "expo-router";
 
 const CollaborationDetailsScreen = () => {
-    const pageID = useLocalSearchParams().pageID;
+    const { pageID } = useLocalSearchParams<{ pageID?: string }>();
+    const collaborationId = pageID?.toString();
+
+    if (!collaborationId) return null;
 
     return (
         <AppLayout withWebPadding={false}>
@@ -20,7 +23,7 @@ const CollaborationDetailsScreen = () => {
           </Pressable>
         }
       /> */}
-            <CollaborationDetails pageID={pageID as string} />
+            <CollaborationDetails pageID={collaborationId} />
         </AppLayout>
     );
 };

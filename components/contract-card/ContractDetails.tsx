@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { IApplications } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { truncateText } from "@/utils/text";
 import { useTheme } from "@react-navigation/native";

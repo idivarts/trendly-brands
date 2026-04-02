@@ -7,7 +7,6 @@ import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheet
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
@@ -20,29 +19,28 @@ import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import {
-    APPROX_CARD_HEIGHT,
-    MAX_WIDTH_WEB,
-} from "@/shared-uis/components/carousel/carousel-util";
+import { APPROX_CARD_HEIGHT } from "@/shared-uis/components/carousel/carousel-util";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import { CarouselInViewProvider } from "@/shared-uis/components/scroller/CarouselInViewContext";
 import CarouselScroller from "@/shared-uis/components/scroller/CarouselScroller";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, setDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
-import { Dimensions, Modal } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Modal, Platform, ScrollView, StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 import { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const InvitationsTabContent = (props: any) => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
-    const { isCollapsed, setIsCollapsed } = useCollapseContext();
+    const stylesFromFn = stylesFn(theme);
+    const { isCollapsed } = useCollapseContext();
+    const styles = useMemo(() => useLocalStyles(theme, isCollapsed), [theme, isCollapsed]);
     const [isActionModalVisible, setIsActionModalVisible] = useState(false);
     const [selectedInfluencer, setSelectedInfluencer] = useState<
         (User & { documentId: string }) | null
@@ -67,7 +65,7 @@ const InvitationsTabContent = (props: any) => {
         collaborationId,
     });
 
-    const { xl } = useBreakpoints();
+    const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
     const { manager } = useAuthContext();
     const { isOnFreeTrial, isProfileLocked } = useBrandContext();
 
@@ -113,6 +111,7 @@ const InvitationsTabContent = (props: any) => {
                 collaborationId,
                 status: "pending",
                 message: message,
+                timeStamp: Date.now(),
             };
 
             // Invitation Id as influencer id
@@ -181,11 +180,14 @@ const InvitationsTabContent = (props: any) => {
         );
     }
 
-    const width = Math.min(MAX_WIDTH_WEB, Dimensions.get("window").width);
-    const height = Math.min(APPROX_CARD_HEIGHT, Dimensions.get("window").height);
+    const width = bpWidth;
+    const height = Math.min(APPROX_CARD_HEIGHT, bpHeight);
+
+    console.log("Default Advance Filters", collaboration?.preferences);
+
 
     return (
-        <View style={{ alignSelf: "stretch", height: "100%" }}>
+        <View style={styles.root}>
             {/* Toggle Bar */}
             {/* <View
         style={{
@@ -231,37 +233,41 @@ const InvitationsTabContent = (props: any) => {
             {viewMode === "discover" ? (
                 collaboration ? (
                     <View
-                        style={{
-                            flex: 1,
-                            flexDirection: "row",
-                            flexWrap: "wrap",
-                            justifyContent: isCollapsed ? "flex-start" : "flex-start",
-                            paddingTop: 12,
-                            paddingBottom: 24,
-                            gap: isCollapsed ? 20 : 8,
-                            paddingRight: isCollapsed ? 120 : 16,
-                            paddingLeft: isCollapsed ? 120 : 4,
-                        }}
+                        style={[styles.discoverWrapper, Platform.OS === "web" && styles.discoverWrapperWeb]}
                     >
-                        <Discover
-                            showRightPanel={false}
-                            showTopPanel={true}
-                            advanceFilter={true}
-                            onStatusChange={handleStatusChange}
-                            isStatusCard={false}
-                            defaultAdvanceFilters={collaboration?.preferences}
-                            useStoredFilters={false}
-                        />
+                        {Platform.OS === "web" ? (
+                            <ScrollView
+                                style={styles.webScrollView}
+                                contentContainerStyle={styles.webScrollContent}
+                                showsVerticalScrollIndicator={true}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                <Discover
+                                    showRightPanel={false}
+                                    showTopPanel={false}
+                                    advanceFilter={true}
+                                    onStatusChange={handleStatusChange}
+                                    isStatusCard={false}
+                                    defaultAdvanceFilters={collaboration?.preferences}
+                                    useStoredFilters={false}
+                                    skipGuideTour={true}
+                                />
+                            </ScrollView>
+                        ) : (
+                            <Discover
+                                showRightPanel={false}
+                                showTopPanel={false}
+                                advanceFilter={true}
+                                onStatusChange={handleStatusChange}
+                                isStatusCard={false}
+                                defaultAdvanceFilters={collaboration?.preferences}
+                                useStoredFilters={false}
+                                skipGuideTour={true}
+                            />
+                        )}
                     </View>
                 ) : (
-                    <View
-                        style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            paddingVertical: 16,
-                        }}
-                    >
+                    <View style={styles.loadingCenter}>
                         <ActivityIndicator />
                     </View>
                 )
@@ -307,17 +313,17 @@ const InvitationsTabContent = (props: any) => {
                 onDismiss={() => setIsInvitationModalVisible(false)}
                 onRequestClose={() => setIsInvitationModalVisible(false)}
             >
-                <View style={styles.messageModalContainer}>
-                    <View style={styles.messageModalContent}>
-                        <Text style={styles.modalTitle}>Enter Invitation Message</Text>
+                <View style={stylesFromFn.messageModalContainer}>
+                    <View style={stylesFromFn.messageModalContent}>
+                        <Text style={stylesFromFn.modalTitle}>Enter Invitation Message</Text>
                         <TextInput
-                            style={styles.messageInput}
+                            style={stylesFromFn.messageInput}
                             placeholder="Type your message here"
                             value={message}
                             onChangeText={setMessage}
                             multiline
                         />
-                        <View style={styles.buttonContainer}>
+                        <View style={stylesFromFn.buttonContainer}>
                             <Button
                                 mode="outlined"
                                 onPress={() => setIsInvitationModalVisible(false)}
@@ -356,12 +362,7 @@ const InvitationsTabContent = (props: any) => {
                     isOnFreePlan={isOnFreeTrial}
                     lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
                     actionCard={
-                        <View
-                            style={{
-                                backgroundColor: Colors(theme).transparent,
-                                marginHorizontal: 16,
-                            }}
-                        >
+                        <View style={styles.actionCardWrapper}>
                             <ProfileInvitationCard
                                 checkIfAlreadyInvited={checkIfAlreadyInvited}
                                 influencerId={selectedInfluencer?.id}
@@ -385,5 +386,50 @@ const InvitationsTabContent = (props: any) => {
         </View>
     );
 };
+
+function useLocalStyles(theme: ReturnType<typeof useTheme>, isCollapsed: boolean) {
+    return StyleSheet.create({
+        root: {
+            alignSelf: "stretch",
+            flex: 1,
+            height: "100%",
+            minHeight: 0,
+            ...(Platform.OS === "web" && { overflow: "hidden" as const }),
+        },
+        discoverWrapper: {
+            flex: 1,
+            minHeight: 0,
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: "flex-start",
+            paddingTop: 12,
+            paddingBottom: 24,
+            gap: isCollapsed ? 20 : 8,
+            paddingRight: isCollapsed ? 120 : 8,
+            paddingLeft: isCollapsed ? 120 : 8,
+        },
+        discoverWrapperWeb: {
+            flexDirection: "column" as const,
+            flexWrap: "nowrap" as const,
+        },
+        webScrollView: {
+            flex: 1,
+            minHeight: 0,
+        },
+        webScrollContent: {
+            flexGrow: 1,
+        },
+        loadingCenter: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingVertical: 16,
+        },
+        actionCardWrapper: {
+            backgroundColor: Colors(theme).transparent,
+            marginHorizontal: 16,
+        },
+    });
+}
 
 export default InvitationsTabContent;

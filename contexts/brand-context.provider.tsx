@@ -197,11 +197,6 @@ export const BrandContextProvider: React.FC<
                 try {
                     Console.log("Unlocking Influencer on brand", selectedBrand);
                     if (!selectedBrand) return;
-                    const uCredit = selectedBrand?.credits?.influencer || 0;
-                    if (uCredit <= 0 && IS_MONETIZATION_DONE) {
-                        Toaster.error("Your Profile has no unlock Credits");
-                        return;
-                    }
                     Console.log("Unlocking Influencer", influencerId);
 
                     const influencerSet = new Set([
@@ -210,10 +205,6 @@ export const BrandContextProvider: React.FC<
                     ]);
                     await updateBrand(selectedBrand.id, {
                         unlockedInfluencers: [...influencerSet],
-                        credits: {
-                            ...selectedBrand.credits,
-                            influencer: IS_MONETIZATION_DONE ? uCredit - 1 : uCredit,
-                        },
                     });
                     Console.log("Unlocked Influencer", [...influencerSet]);
 

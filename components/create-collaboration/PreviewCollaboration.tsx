@@ -1,6 +1,6 @@
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { CollaborationDetail } from "../collaboration/collaboration-details";

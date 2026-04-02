@@ -5,7 +5,7 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 import { Text, View } from '@/components/theme/Themed';
-import Colors from '@/constants/Colors';
+import Colors from '@/shared-uis/constants/Colors';
 
 type File = {
     url: string;

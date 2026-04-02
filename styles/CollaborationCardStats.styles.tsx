@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
@@ -9,6 +9,7 @@ export const stylesFn = (theme: Theme) =>
             justifyContent: "space-between",
             marginTop: 8,
             width: "100%",
+            backgroundColor: "transparent",
         },
         infoText: {
             fontSize: 14,

@@ -7,6 +7,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { OAuthProvider, signInWithPopup, UserCredential } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useTheme } from "@react-navigation/native";
 
 const provider = new OAuthProvider('apple.com');
 provider.addScope('email');
@@ -15,6 +16,7 @@ provider.addScope('name');
 export const useAppleLogin = (setLoading: Function, setError: Function) => {
     const { firebaseSignIn, firebaseSignUp } = useAuthContext();
     const INTIAL_DATA = INITIAL_MANAGER_DATA
+    const theme = useTheme();
 
     const evalResult = async (result: void | UserCredential) => {
         if (!result) return;
@@ -27,6 +29,10 @@ export const useAppleLogin = (setLoading: Function, setError: Function) => {
         if (!isExistingUser) {
             const userData: IManagers = {
                 ...INTIAL_DATA,
+                settings: {
+                    ...INTIAL_DATA.settings,
+                    theme: theme.dark ? "dark" : "light",
+                },
                 name: result.user.displayName || "Apple User",
                 email: result.user.email || "",
                 profileImage: result.user.photoURL || "",

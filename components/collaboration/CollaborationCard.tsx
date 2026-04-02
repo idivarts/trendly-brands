@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { stylesFn } from "@/styles/CollaborationCard.styles";
 import { formatTimeToNow } from "@/utils/date";
@@ -41,14 +41,7 @@ const JobCard = (props: CollaborationAdCardProps) => {
                     <View>
                         <Text style={styles.collabName}>{props.name}</Text>
                     </View>
-                    <View
-                        style={{
-                            display: "flex",
-                            flexDirection: "row",
-                            justifyContent: "flex-start",
-                            alignItems: "flex-start",
-                        }}
-                    >
+                    <View style={styles.headerActionsRow}>
                         <Pressable
                             onPress={() => {
                                 props.onOpenBottomSheet(props.id);

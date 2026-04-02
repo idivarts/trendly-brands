@@ -2,11 +2,10 @@ import TermsAndCondition from "@/components/TermsAndCondition";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
 import Button from "@/components/ui/button";
 import SocialButton from "@/components/ui/button/social-button";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { slides } from "@/constants/Slides";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
-import stylesFn from "@/styles/tab1.styles";
 import { imageUrl } from "@/utils/url";
 import { useAppleLogin } from "@/utils/use-apple-login";
 import { useGoogleLogin } from "@/utils/use-google-login";
@@ -16,14 +15,14 @@ import {
     faEnvelope
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { useTheme } from "@react-navigation/native";
+import { useTheme, type Theme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Dimensions,
     Image,
     Platform,
     Pressable,
+    StyleSheet,
     Text,
     View,
 } from "react-native";
@@ -35,7 +34,8 @@ import Carousel, {
 
 const PreSignInMobile = () => {
     const theme = useTheme();
-    const styles = stylesFn(theme);
+    const colors = Colors(theme);
+    const styles = useMemo(() => usePreSigninStyles(theme), [theme]);
     const [error, setError] = useState<string | null>(null);
     const [termsCondition, setTermsCondition] = useState(false);
     const [loading, setLoading] = useState(false)
@@ -69,7 +69,7 @@ const PreSignInMobile = () => {
         }
     }, [skip])
 
-    const { xl } = useBreakpoints();
+    const { xl, width, height, scale } = useBreakpoints();
     const { googleLogin } = useGoogleLogin(setLoading, setError)
     const { appleLogin } = useAppleLogin(setLoading, setError)
     return (
@@ -79,8 +79,8 @@ const PreSignInMobile = () => {
                     ref={swiperRef} // Attach the ref to Swiper
                     // style={styles.wrapper}
                     loop={false}
-                    width={xl ? 800 : Dimensions.get("window").width}
-                    height={Dimensions.get("window").height - 36 * Dimensions.get("window").scale}
+                    width={xl ? 800 : width}
+                    height={height - 36 * scale}
                     pagingEnabled
                     data={slides}
                     onProgressChange={(_, absoluteProgress) => {
@@ -192,7 +192,7 @@ const PreSignInMobile = () => {
                             )}
 
                             {error && (
-                                <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+                                <Text style={{ color: colors.red, marginTop: 10, textAlign: "center" }}>
                                     {error}
                                 </Text>
                             )}
@@ -230,9 +230,72 @@ const PreSignInMobile = () => {
                 }}>
                 <TermsAndCondition />
             </BottomSheetScrollContainer>
-            {/* {error && <Text style={{ color: "red" }}>Error: {error}</Text>} */}
+            {/* {error && <Text style={{ color: colors.red }}>Error: {error}</Text>} */}
         </AppLayout>
     );
 };
+
+function usePreSigninStyles(theme: Theme) {
+    return StyleSheet.create({
+        wrapper: {
+            backgroundColor: Colors(theme).background,
+            flex: 1,
+            alignSelf: "center"
+        },
+        slide: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: Colors(theme).background,
+            paddingHorizontal: 16,
+        },
+        skipButtonContainer: {
+            position: "absolute",
+            top: 16,
+            right: 16,
+        },
+        imageContainer: {
+            marginBottom: 20,
+        },
+        image: {
+            width: 200,
+            height: 200,
+            resizeMode: "contain",
+        },
+        title: {
+            fontSize: 24,
+            marginBottom: 10,
+            textAlign: "center",
+        },
+        paragraph: {
+            fontSize: 16,
+            textAlign: "center",
+            paddingHorizontal: 20,
+            color: Colors(theme).text,
+        },
+        socialContainer: {
+            flexDirection: "column",
+            gap: 10,
+            justifyContent: "space-between",
+            marginTop: 20,
+        },
+        pagination: {
+            bottom: 30,
+        },
+        buttonWrapper: {
+            backgroundColor: Colors(theme).white,
+            borderRadius: 20,
+            paddingHorizontal: 10,
+            paddingVertical: 10,
+        },
+        dotStyle: {
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: Colors(theme).eerieBlack,
+            marginHorizontal: 5,
+        },
+    });
+}
 
 export default PreSignInMobile;

@@ -1,11 +1,12 @@
-import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     DndContext,
     DragEndEvent,
+    DragOverlay,
     PointerSensor,
-    closestCenter,
+    pointerWithin,
     useDroppable,
     useSensor,
     useSensors,
@@ -14,30 +15,23 @@ import {
     SortableContext,
     arrayMove,
     rectSortingStrategy,
-    useSortable
+    useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTheme } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import {
     collection,
-    doc,
     getDocs,
+    orderBy,
     query,
-    updateDoc,
-    where,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import type { InfluencerItem } from "../discover/discover-types";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Menu } from "react-native-paper";
+import { CollaborationCard, type CollaborationCardData } from "./CollaborationCard";
 
-export type KanbanCardT = {
-    id: string;
-    status: string;
-    message: string;
-    socialProfile?: InfluencerItem;
-    timeStamp?: number;
-    collaborationId?: string;
-};
+export type KanbanCardT = CollaborationCardData & { isLive?: boolean };
 
 export type KanbanColumnT = {
     id: string;
@@ -47,214 +41,259 @@ export type KanbanColumnT = {
 
 export default function CollaborationCMSBoard() {
     const [columns, setColumns] = useState<KanbanColumnT[]>([
-        { id: "waiting", title: "Waiting", cards: [] },
-        { id: "accepted", title: "Accepted", cards: [] },
-        { id: "declined", title: "Declined", cards: [] },
+        { id: "draft", title: "Draft Campaign", cards: [] },
+        { id: "active", title: "Active Campaign", cards: [] },
+        { id: "stopped", title: "Stopped Campaign", cards: [] },
+        { id: "inactive", title: "Past Campaign", cards: [] },
+        { id: "deleted", title: "Deleted Campaign", cards: [] },
     ]);
-    const [activeId, setActiveId] = useState<string | null>(null);
+    const [activeCard, setActiveCard] = useState<KanbanCardT | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const { manager } = useAuthContext();
+    const [liveFilter, setLiveFilter] = useState<"none" | "live" | "not-live">("none");
+    const [menuVisible, setMenuVisible] = useState(false);
+    const [allCollaborations, setAllCollaborations] = useState<KanbanCardT[]>([]);
+    const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     useEffect(() => {
-        const fetchInvites = async () => {
+        const fetchCollaborations = async () => {
             setError(null);
             setLoading(true);
             try {
-                console.log("[Kanban] Fetching invites. managerId:", manager?.id);
+                console.log("[Kanban] Fetching collaborations (all)");
 
-                const collectionsToTry = ["collaborations-invites"];
-                let snapshot = null;
-                let usedCollection = "";
-                let usedConstraintLabel = "";
+                const collRef = collection(FirestoreDB, "collaborations");
+                const snapshot = await getDocs(query(collRef, orderBy("timeStamp", "desc")));
+                console.log("[Kanban] Collaborations found", snapshot.size);
 
-                for (const colName of collectionsToTry) {
-                    const colRef = collection(FirestoreDB, colName);
-                    const candidateQueries = [
-                        manager?.id
-                            ? {
-                                label: `${colName} isDiscover=true managerId=${manager.id}`,
-                                q: query(
-                                    colRef,
-                                    where("isDiscover", "==", true),
-                                    where("managerId", "==", manager.id)
-                                ),
-                            }
-                            : null,
-                        {
-                            label: `${colName} isDiscover=true (no manager filter)`,
-                            q: query(colRef, where("isDiscover", "==", true)),
-                        },
-                    ].filter(Boolean) as { label: string; q: any }[];
-
-                    for (const { label, q } of candidateQueries) {
-                        console.log("[Kanban] Running query", label);
-                        const snap = await getDocs(q);
-                        console.log("[Kanban] Query size", snap.size);
-                        if (!snap.empty) {
-                            snapshot = snap;
-                            usedCollection = colName;
-                            usedConstraintLabel = label;
-                            break;
-                        }
-                    }
-                    if (snapshot) break;
-                }
-
-                if (!snapshot) throw new Error("No invites found in tried collections");
-                console.log("[Kanban] Using collection", usedCollection, "query", usedConstraintLabel);
-
-                const invites: KanbanCardT[] = [];
+                const collabs: KanbanCardT[] = [];
                 snapshot.forEach((docSnap) => {
                     const data = docSnap.data() as any;
-                    console.log("[Kanban] Doc", docSnap.id, data);
-                    invites.push({
+                    collabs.push({
                         id: docSnap.id,
-                        status: data.status || "waiting",
-                        message: data.message || "",
+                        status: (data.status || "draft") as string,
+                        message: data.message || data.name || "",
                         socialProfile: data.socialProfile,
                         timeStamp: data.timeStamp,
-                        collaborationId: data.collaborationId,
+                        collaborationId: docSnap.id,
+                        brandId: data.brandId,
+                        isLive: data.isLive ?? false, // Default to false if not present
                     });
                 });
-                console.log("[Kanban] Total invites", invites.length);
+                console.log("[Kanban] Total collaborations", collabs.length);
+                setAllCollaborations(collabs);
 
-                const grouped: Record<string, KanbanCardT[]> = {
-                    waiting: [],
-                    accepted: [],
-                    declined: [],
-                };
-                invites.forEach((inv) => {
-                    const bucket = (inv.status || "waiting").toLowerCase();
-                    if (bucket === "accepted") grouped.accepted.push(inv);
-                    else if (
-                        bucket === "declined" ||
-                        bucket === "denied" ||
-                        bucket === "inactive"
-                    )
-                        grouped.declined.push(inv);
-                    else grouped.waiting.push(inv);
-                });
-                console.log("[Kanban] Grouped counts", {
-                    waiting: grouped.waiting.length,
-                    accepted: grouped.accepted.length,
-                    declined: grouped.declined.length,
-                });
-                setColumns([
-                    {
-                        id: "waiting",
-                        title: `Waiting (${grouped.waiting.length})`,
-                        cards: grouped.waiting,
-                    },
-                    {
-                        id: "accepted",
-                        title: `Accepted (${grouped.accepted.length})`,
-                        cards: grouped.accepted,
-                    },
-                    {
-                        id: "declined",
-                        title: `Declined (${grouped.declined.length})`,
-                        cards: grouped.declined,
-                    },
-                ]);
+                updateColumns(collabs, liveFilter);
+
             } catch (err: any) {
-                console.warn("Failed to fetch invites", err);
-                setError(err?.message || "Unable to load invites");
+                console.warn("Failed to fetch collaborations", err);
+                setError(err?.message || "Unable to load collaborations");
             } finally {
                 setLoading(false);
             }
         };
-        fetchInvites();
-    }, [manager?.id]);
+        fetchCollaborations();
+    }, []);
+
+    const updateColumns = (collabs: KanbanCardT[], filter: "none" | "live" | "not-live") => {
+        const grouped: Record<string, KanbanCardT[]> = {
+            draft: [],
+            active: [],
+            inactive: [],
+            stopped: [],
+            deleted: [],
+        };
+
+        const filteredCollabs = collabs.filter((collab) => {
+            if (filter === "none") return true;
+            if (filter === "live") return collab.isLive === true;
+            if (filter === "not-live") return !collab.isLive;
+            return true;
+        });
+
+        filteredCollabs.forEach((collab) => {
+            const bucket = (collab.status || "draft").toLowerCase();
+            if (bucket === "active") grouped.active.push(collab);
+            else if (bucket === "stopped") grouped.stopped.push(collab);
+            else if (bucket === "deleted") grouped.deleted.push(collab);
+            else if (bucket === "inactive") grouped.inactive.push(collab);
+            else grouped.draft.push(collab);
+        });
+
+        setColumns([
+            { id: "draft", title: `Draft (${grouped.draft.length})`, cards: grouped.draft },
+            { id: "active", title: `Active (${grouped.active.length})`, cards: grouped.active },
+            { id: "stopped", title: `Stopped (${grouped.stopped.length})`, cards: grouped.stopped },
+            { id: "inactive", title: `Past (${grouped.inactive.length})`, cards: grouped.inactive },
+            { id: "deleted", title: `Deleted (${grouped.deleted.length})`, cards: grouped.deleted },
+        ]);
+    };
+
+    useEffect(() => {
+        if (allCollaborations.length > 0) {
+            updateColumns(allCollaborations, liveFilter);
+        }
+    }, [liveFilter, allCollaborations]);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        })
     );
+
+    const handleDragStart = (event: any) => {
+        const activeId = event.active.id as string;
+        const [, cardId] = activeId.split(":");
+        const card = columns.flatMap((c) => c.cards).find((c) => c.id === cardId) || null;
+        setActiveCard(card);
+    };
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
+        setActiveCard(null);
+
         if (!over) return;
-        const [fromColumnId, fromCardId] = (active.id as string).split(":");
-        const [toColumnId, toCardId] = (over.id as string).split(":");
+
+        const activeIdVal = active.id as string;
+        const overIdVal = over.id as string;
+
+        const [fromColumnId, fromCardId] = activeIdVal.split(":");
+
+        // Determine drop column
+        const isColumnDrop = !overIdVal.includes(":"); // Dropped on column container
+        const toColumnId = isColumnDrop ? overIdVal : overIdVal.split(":")[0];
+        const toCardId = isColumnDrop ? null : overIdVal.split(":")[1];
+
+        // Find source and dest columns
+        const sourceColIndex = columns.findIndex(c => c.id === fromColumnId);
+        const destColIndex = columns.findIndex(c => c.id === toColumnId);
+        
+        if (sourceColIndex === -1 || destColIndex === -1) return;
 
         if (fromColumnId === toColumnId) {
-            const col = columns.find((c) => c.id === fromColumnId);
-            if (!col) return;
-            const oldIndex = col.cards.findIndex((c) => c.id === fromCardId);
-            const newIndex = col.cards.findIndex((c) => c.id === toCardId);
-            if (oldIndex === -1 || newIndex === -1) return;
-            const updated = columns.map((c) =>
-                c.id === col.id
-                    ? { ...c, cards: arrayMove(c.cards, oldIndex, newIndex) }
-                    : c
-            );
-            setColumns(updated);
+            // Same column reorder
+            const column = columns[sourceColIndex];
+            const oldIndex = column.cards.findIndex(c => c.id === fromCardId);
+            const newIndex = toCardId ? column.cards.findIndex(c => c.id === toCardId) : column.cards.length;
+
+            if (oldIndex !== newIndex && oldIndex !== -1) {
+                 const newCards = arrayMove(column.cards, oldIndex, newIndex);
+                 const newColumns = [...columns];
+                 newColumns[sourceColIndex] = { ...column, cards: newCards };
+                 setColumns(newColumns);
+            }
         } else {
-            const from = columns.find((c) => c.id === fromColumnId);
-            const to = columns.find((c) => c.id === toColumnId);
-            if (!from || !to) return;
-            const card = from.cards.find((c) => c.id === fromCardId);
+            // Move between columns
+            const sourceCol = columns[sourceColIndex];
+            const destCol = columns[destColIndex];
+            const card = sourceCol.cards.find(c => c.id === fromCardId);
+            
             if (!card) return;
 
-            const fromCards = from.cards.filter((c) => c.id !== fromCardId);
-            const updatedCard = { ...card, status: to.id };
-            const toCards = [...to.cards, updatedCard];
+            const newSourceCards = sourceCol.cards.filter(c => c.id !== fromCardId);
+            const newDestCards = [...destCol.cards];
+            
+            const insertIndex = toCardId 
+                ? newDestCards.findIndex(c => c.id === toCardId)
+                : newDestCards.length;
+            
+            // Insert at index
+            newDestCards.splice(insertIndex < 0 ? newDestCards.length : insertIndex, 0, card);
 
-            const updated = columns.map((c) =>
-                c.id === from.id
-                    ? { ...c, cards: fromCards }
-                    : c.id === to.id
-                        ? { ...c, cards: toCards }
-                        : c
-            );
-            setColumns(updated);
+            const newColumns = [...columns];
+            newColumns[sourceColIndex] = { ...sourceCol, cards: newSourceCards };
+            newColumns[destColIndex] = { ...destCol, cards: newDestCards };
+            
+            setColumns(newColumns);
 
             try {
-                // Persist to primary collection name (collaborations-invites)
-                const inviteRef = doc(FirestoreDB, "collaborations-invites", card.id);
-                await updateDoc(inviteRef, { status: to.id });
+                await updateCollaboration(fromCardId, { status: toColumnId }, { skipEvaluation: true });
             } catch (err) {
-                console.warn("Failed to update invite status", err);
+                console.warn("Failed to update collaboration status", err);
             }
         }
-        setActiveId(null);
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Collaboration CMS</Text>
-            </View>
+        <View style={{ flex: 1, backgroundColor: colors.white }}>
+             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Collaboration CMS</Text>
+                    <Menu
+                        visible={menuVisible}
+                        onDismiss={() => setMenuVisible(false)}
+                        anchor={
+                            <Pressable
+                                onPress={() => setMenuVisible(true)}
+                                style={[styles.filterBtn]}
+                            >
+                                <Text style={styles.filterBtnText}>
+                                    {liveFilter === "none"
+                                        ? "All Campaigns"
+                                        : liveFilter === "live"
+                                            ? "Live Campaigns"
+                                            : "Not-Live Campaigns"}
+                                </Text>
+                            </Pressable>
+                        }
+                    >
+                        <Menu.Item onPress={() => { setLiveFilter("none"); setMenuVisible(false); }} title="None (All Campaigns)" />
+                        <Menu.Item onPress={() => { setLiveFilter("live"); setMenuVisible(false); }} title="Live Campaigns" />
+                        <Menu.Item onPress={() => { setLiveFilter("not-live"); setMenuVisible(false); }} title="Not-Live Campaigns" />
+                    </Menu>
+                </View>
 
-            {loading && (
-                <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
-                    Loading invites…
-                </Text>
-            )}
-            {error && (
-                <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
-            )}
+                {loading && (
+                    <Text style={{ paddingVertical: 8, opacity: 0.7 }}>Loading collaborations…</Text>
+                )}
+                {error && (
+                    <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
+                )}
 
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 20 }}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={pointerWithin} // Switched to pointerWithin like BrandCRMBoard
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
                 >
-                    <View style={styles.row}>
-                        {columns.map((col) => (
-                            <DroppableColumn key={col.id} column={col} />
-                        ))}
-                    </View>
-                </ScrollView>
-            </DndContext>
+                    <DragOverlay>
+                        {activeCard ? (
+                             <View
+                                style={{
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    backgroundColor: colors.card,
+                                    boxShadow: `0px 8px 24px ${colors.cardShadow}`,
+                                    width: 260,
+                                    borderWidth: 1,
+                                    borderColor: colors.border,
+                                }}
+                            >
+                                <Text style={{ fontWeight: "700" }}>{activeCard.message || "Unknown Campaign"}</Text>
+                                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>ID: {activeCard.id}</Text>
+                            </View>
+                        ) : null}
+                    </DragOverlay>
+
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 20, paddingRight: 16 }}
+                        nestedScrollEnabled
+                    >
+                        <View style={styles.row}>
+                            {columns.map((col) => (
+                                <DroppableColumn key={col.id} column={col} />
+                            ))}
+                        </View>
+                    </ScrollView>
+                </DndContext>
+            </ScrollView>
         </View>
     );
 }
@@ -277,34 +316,40 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                 >
-                    {column.title}
+                    {column.title.split(" (")[0]} ({column.cards.length})
                 </Text>
             </View>
 
-            <SortableContext
-                items={column.cards.map((c) => `${column.id}:${c.id}`)}
-                strategy={rectSortingStrategy}
+            <ScrollView
+                style={styles.columnScroll}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
             >
-                {column.cards.map((card) => (
-                    <SortableCard
-                        key={card.id}
-                        id={`${column.id}:${card.id}`}
-                        card={card}
-                        colId={column.id}
-                    />
-                ))}
-            </SortableContext>
+                <SortableContext
+                    items={column.cards.map((c) => `${column.id}:${c.id}`)}
+                    strategy={rectSortingStrategy}
+                >
+                    {column.cards.map((card) => (
+                        <SortableCollaborationCard
+                            key={card.id}
+                            id={`${column.id}:${card.id}`}
+                            card={card}
+                            colId={column.id}
+                        />
+                    ))}
+                </SortableContext>
 
-            {column.cards.length === 0 && (
-                <Text style={{ textAlign: "center", opacity: 0.6 }}>
-                    Drop here to move card
-                </Text>
-            )}
+                {column.cards.length === 0 && (
+                    <Text style={{ textAlign: "center", opacity: 0.6, marginTop: 20 }}>
+                        Drop here to move card
+                    </Text>
+                )}
+            </ScrollView>
         </View>
     );
 };
 
-const SortableCard = ({
+const SortableCollaborationCard = ({
     id,
     card,
     colId,
@@ -313,61 +358,77 @@ const SortableCard = ({
     card: KanbanCardT;
     colId: string;
 }) => {
-    const { attributes, listeners, setNodeRef, transform, transition } =
-        useSortable({ id });
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isOver,
+    } = useSortable({ id });
+    const router = useRouter();
+    const theme = useTheme();
+    const colors = Colors(theme);
+
+    // Filter out web-specific attributes
+    const { tabIndex, role, ...restAttributes } = attributes as any;
+    
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
-    const theme = useTheme();
-    const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
-
+    
+    // Using inline style specifically to avoid "touchAction: none" which blocks scrolling
+    // and to match BrandCRMBoard's structure wrapper
+    
     return (
-        // @ts-ignore
-        <View
+         <View
             ref={setNodeRef as any}
-            {...attributes}
+            {...restAttributes}
             {...listeners}
             style={[
-                styles.card,
-                style,
                 {
-                    display: "flex",
-                    flexDirection: "column",
                     marginBottom: 8,
+                    borderRadius: 8,
+                    backgroundColor: colors.transparent, // Wrapper is transparent, card handling bg
+                    position: "relative",
+                    opacity: isOver ? 0.5 : 1, // Simple visual feedback for source
+                    // touchAction: "none" <-- OMITTED to enable scrolling
                 },
+                style
             ]}
         >
-            <Text style={styles.cardTitle}>
-                {card.socialProfile?.name || "Unknown"}{" "}
-                <Text style={{ fontWeight: "400", opacity: 0.7 }}>
-                    @{card.socialProfile?.username || ""}
-                </Text>
-            </Text>
-            <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
-                Status: {colId.charAt(0).toUpperCase() + colId.slice(1)}
-            </Text>
-            {card.collaborationId && (
-                <Text style={[styles.cardDesc, { marginBottom: 4 }]}>
-                    Collaboration: {card.collaborationId}
-                </Text>
+            {/* Drop Indicator Logic like BrandCRMBoard */}
+            {isOver && (
+                <View
+                    style={{
+                        position: "absolute",
+                        top: -4,
+                        left: 0,
+                        right: 0,
+                        height: 3,
+                        backgroundColor: colors.primary,
+                        borderRadius: 2,
+                        zIndex: 10,
+                    }}
+                />
             )}
-            <Text style={styles.cardDesc} numberOfLines={3} ellipsizeMode="tail">
-                {card.message || "No message"}
-            </Text>
-            <Text style={[styles.cardDesc, { marginTop: 6 }]}>
-                Followers: {card.socialProfile?.follower_count ?? "-"} | ER:{" "}
-                {card.socialProfile?.engagement_rate?.toFixed?.(2) ?? "-"}%
-            </Text>
-            {card.timeStamp && (
-                <Text style={[styles.cardDesc, { marginTop: 4, opacity: 0.7 }]}>
-                    Invited: {new Date(card.timeStamp).toLocaleDateString()}
-                </Text>
-            )}
+            
+            <Pressable
+                onPress={() => {
+                     console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
+                     router.push(`/collaboration-details/${card.id}`);
+                }}
+            >
+                <CollaborationCard
+                    id={id}
+                    card={card}
+                    colId={colId}
+                />
+            </Pressable>
         </View>
     );
-};
+}
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
@@ -379,27 +440,29 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             marginBottom: 20,
         },
         title: { fontSize: 22, fontWeight: "700" },
-        addBtn: {
+        filterBtn: {
             backgroundColor: colors.primary,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
             borderRadius: 8,
         },
-        addBtnText: { color: colors.white, fontWeight: "700" },
+        filterBtnText: { color: colors.white, fontWeight: "600", fontSize: 14 },
         row: {
             flexDirection: "row",
             gap: 16,
             alignItems: "flex-start",
             flexWrap: "nowrap",
-            // overflowX: "auto",
         },
         column: {
             borderRadius: 12,
             padding: 12,
             width: 280,
+            minHeight: 500, // Added min/max height to allow column scrolling
+            maxHeight: 900,
             shadowColor: colors.black,
             shadowOpacity: 0.1,
             shadowRadius: 6,
+            flexShrink: 0,
         },
         columnHeader: {
             flexDirection: "row",
@@ -411,21 +474,8 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             marginBottom: 8,
         },
         columnTitle: { fontSize: 16, fontWeight: "700" },
-        card: {
-            backgroundColor: colors.white,
-            borderRadius: 8,
-            padding: 10,
-            marginBottom: 8,
-        },
-        cardTitle: {
-            fontWeight: "600",
-            // borderBottomWidth: 1
-            // borderColor: "#D1D5DB",
-            paddingBottom: 4,
-            marginBottom: 4,
-        },
-        cardDesc: {
-            marginTop: 0,
-            color: colors.text,
+        columnScroll: {
+            flex: 1,
+            paddingBottom: 8,
         },
     });

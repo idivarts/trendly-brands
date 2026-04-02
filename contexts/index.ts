@@ -18,6 +18,10 @@ import {
     useFirebaseStorageContext,
 } from "./firebase-storage-context.provider";
 import {
+    NicheProvider,
+    useNiche,
+} from "./niche-context.provider";
+import {
     NotificationContextProvider,
     useNotificationContext,
 } from "./notification-context.provider";
@@ -25,6 +29,10 @@ import {
     ThemeOverrideProvider,
     useThemeOverride,
 } from "./theme-override-context.provider";
+import {
+    TransitionProvider,
+    useTransition,
+} from "./transition-context.provider";
 
 export {
     AuthContextProvider,
@@ -34,8 +42,10 @@ export {
     CollaborationContextProvider,
     ContractContextProvider,
     FirebaseStorageContextProvider,
+    NicheProvider,
     NotificationContextProvider,
     ThemeOverrideProvider,
+    TransitionProvider,
     useAuthContext,
     useAWSContext,
     useChatContext,
@@ -43,6 +53,8 @@ export {
     useCollaborationContext,
     useContractContext,
     useFirebaseStorageContext,
+    useNiche,
     useNotificationContext,
-    useThemeOverride
+    useThemeOverride,
+    useTransition
 };

@@ -1,10 +1,10 @@
-import Colors from "@/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
-import { Dimensions } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet } from "react-native";
 import CollaborationFilter from "../FilterModal";
 //  import InfluencerCard from "../InfluencerCard";
 import { View } from "../theme/Themed";
@@ -78,7 +78,8 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
     const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext()
     const preferences = selectedBrand?.preferences || {}
 
-    const { xl } = useBreakpoints();
+    const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     const [influencerIds, setInfluencerIds] = useState<string[]>([])
 
@@ -157,8 +158,8 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
         manager
     ]);
 
-    const width = Math.min(MAX_WIDTH_WEB, Dimensions.get('window').width);
-    const [height, setHeight] = useState(Math.min(APPROX_CARD_HEIGHT, Dimensions.get('window').height))
+    const width = Math.min(MAX_WIDTH_WEB, bpWidth);
+    const height = Math.min(APPROX_CARD_HEIGHT, bpHeight);
 
 
     if (influencers.length == 0 && connectedInfluencers) {
@@ -176,13 +177,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
     if (isLoading && influencers.length == 0) {
         return (
             <AppLayout safeAreaEdges={["left", "right"]}>
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
-                >
+                <View style={styles.loadingCenter}>
                     <SlowLoader />
                 </View>
             </AppLayout>
@@ -202,15 +197,8 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
     }
     return (
         <AppLayout safeAreaEdges={["left", "right"]}>
-            <View
-                style={{
-                    flex: 1,
-                    width: "100%",
-                    height: "100%",
-                    alignSelf: "stretch",
-                    minHeight: 0,
-                }}>
-                <View style={{ alignSelf: "stretch", flex: 1, minHeight: 0 }}>
+            <View style={styles.mainContainer}>
+                <View style={styles.innerContainer}>
                     <CarouselInViewProvider>
                         <CarouselScroller
                             data={filteredInfluencers}
@@ -218,8 +206,8 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                                 <InfluencerCard
                                     xl={xl}
                                     key={item.id}
-                                    isOnFreePlan={isOnFreeTrial}
-                                    lockProfile={isProfileLocked(item.id)}
+                                    // isOnFreePlan={isOnFreeTrial}
+                                    // lockProfile={isProfileLocked(item.id)}
                                     type="explore"
                                     ToggleModal={ToggleModal}
                                     influencer={item}
@@ -276,26 +264,45 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
                 <ProfileBottomSheet
                     influencer={selectedInfluencer as User}
                     theme={theme}
-                    isOnFreePlan={isOnFreeTrial}
-                    isPhoneMasked={false}
+                    isPhoneMasked={true}
                     actionCard={
-                        <View
-                            style={{
-                                backgroundColor: Colors(theme).transparent,
-                                marginHorizontal: 16,
-                            }}
-                        >
+                        <View style={styles.actionCardWrapper}>
                             <InfluencerInvite selectedInfluencer={selectedInfluencer as User} />
                         </View>
                     }
                     FireStoreDB={FirestoreDB}
                     isBrandsApp={true}
-                    lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
                     closeModal={() => setOpenProfileModal(false)}
                 />
             </BottomSheetScrollContainer>
         </AppLayout>
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    return StyleSheet.create({
+        loadingCenter: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        mainContainer: {
+            flex: 1,
+            width: "100%",
+            height: "100%",
+            alignSelf: "stretch",
+            minHeight: 0,
+        },
+        innerContainer: {
+            alignSelf: "stretch",
+            flex: 1,
+            minHeight: 0,
+        },
+        actionCardWrapper: {
+            backgroundColor: Colors(theme).transparent,
+            marginHorizontal: 16,
+        },
+    });
+}
 
 export default ExploreInfluencers;

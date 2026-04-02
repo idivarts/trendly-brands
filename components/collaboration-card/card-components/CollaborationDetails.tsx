@@ -1,6 +1,11 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
+import {
+    CollaborationLocationType,
+    getCollaborationLocationDisplayLabel,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { truncateText } from "@/utils/text";
 import {
     faFacebook,
@@ -20,8 +25,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { FC } from "react";
-import { Pressable } from "react-native";
+import { FC, useMemo } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import ChipCard from "./ChipComponent";
 
 interface CollaborationDetailsProps {
@@ -47,38 +52,16 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
 }) => {
     const theme = useTheme();
     const router = useRouter();
+    const styles = useMemo(() => useStyles(theme), [theme]);
 
     return (
-        <View
-            style={{
-                paddingHorizontal: 16,
-                paddingTop: 8,
-            }}
-        >
-            <View
-                style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 8,
-                }}
-            >
-                <Pressable
-                    onPress={() => router.push(`/collaboration-details/${collabId}`)}
-                    style={{
-                        flex: 1,
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            fontWeight: "bold",
-                            color: Colors(theme).text,
-                        }}
-                    >
+        <View style={styles.container}>
+            <View style={styles.headerRow}>
+                <View style={styles.titleWrap}>
+                    <Text style={styles.nameText}>
                         {name}
                     </Text>
-                </Pressable>
+                </View>
                 {onOpenBottomSheet && (
                     <Pressable
                         onPress={() => {
@@ -92,24 +75,11 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                         />
                     </Pressable>)}
             </View>
-            <Pressable
-                onPress={() => router.push(`/collaboration-details/${collabId}`)}
-            >
-                <Text
-                    style={{
-                        color: Colors(theme).gray100,
-                    }}
-                >
+            <View>
+                <Text style={styles.descriptionText}>
                     {truncateText(collabDescription, 120)}
                 </Text>
-                <View
-                    style={{
-                        flexDirection: "row",
-                        marginTop: 10,
-                        flexWrap: "wrap",
-                        rowGap: 10,
-                    }}
-                >
+                <View style={styles.chipsRow}>
                     <ChipCard
                         chipText={
                             promotionType === PromotionType.PAID_COLLAB ? "Paid" : "Unpaid"
@@ -117,9 +87,14 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                         chipIcon={faDollarSign}
                     />
                     <ChipCard
-                        chipText={location.type}
+                        chipText={getCollaborationLocationDisplayLabel(
+                            location.type
+                        )}
                         chipIcon={
-                            location.type === "On-Site" ? faLocationDot : faHouseLaptop
+                            normalizeCollaborationLocationType(location.type) ===
+                            CollaborationLocationType.OnSite
+                                ? faLocationDot
+                                : faHouseLaptop
                         }
                     />
                     {platform &&
@@ -159,9 +134,43 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
                             />
                         ))}
                 </View>
-            </Pressable>
+            </View>
         </View>
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    return StyleSheet.create({
+        container: {
+            paddingHorizontal: 16,
+            paddingTop: 8,
+            backgroundColor: Colors(theme).transparent,
+            marginBottom: 12,
+        },
+        headerRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+        },
+        titleWrap: {
+            flex: 1,
+        },
+        nameText: {
+            fontSize: 16,
+            fontWeight: "bold",
+            color: Colors(theme).text,
+        },
+        descriptionText: {
+            color: Colors(theme).gray100,
+        },
+        chipsRow: {
+            flexDirection: "row",
+            marginTop: 10,
+            flexWrap: "wrap",
+            rowGap: 10,
+        },
+    });
+}
 
 export default CollaborationDetails;

@@ -1,24 +1,29 @@
-import { DiscoveryProvider } from "@/components/discover/discovery-context";
+import BottomSheetActions from "@/components/BottomSheetActions";
 import { View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
+import PageHeader from "@/components/ui/page-header";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
-import Colors from "@/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { CollapseProvider } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import {
+    ICollaboration,
+    normalizeCollaborationLocationType,
+} from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Colors from "@/shared-uis/constants/Colors";
+import { faEllipsisH } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { Href } from "expo-router";
+import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
-import CollaborationHeader from "../CollaborationHeader";
 import ApplicationsTabContent from "./ApplicationsTabContent";
 import InvitationsTabContent from "./InvitationsTabContent";
 import InvitedMemberTabContent from "./InvitedMemberTabContent";
@@ -44,22 +49,38 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const [collaboration, setCollaboration] = useState<
         CollaborationDetail | undefined
     >(undefined);
+    const [actionsVisible, setActionsVisible] = useState(false);
     const theme = useTheme();
+    const colors = Colors(theme);
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme), [theme]);
     const { isOnFreeTrial } = useBrandContext();
     const { openModal } = useConfirmationModel();
-    const router = useMyNavigation();
+    const nav = useMyNavigation();
+    const expoRouter = useRouter();
+    const { pageID: paramPageID } = useLocalSearchParams<{ pageID?: string }>();
 
     const { publish } = usePublishCollaboration();
 
     const fetchCollaboration = async () => {
         if (!pageID) return;
         try {
-            const collabRef = doc(FirestoreDB, "collaborations", pageID as string);
+            console.log("[CollaborationDetails] Fetching collaboration:", pageID);
+            const collabRef = doc(FirestoreDB, "collaborations", pageID);
             const snapshot = await getDoc(collabRef);
             const data = snapshot.data() as ICollaboration;
-            if (!data) return;
+
+            console.log("[CollaborationDetails] Fetched data:", {
+                exists: snapshot.exists(),
+                status: data?.status,
+                hasData: !!data
+            });
+
+            if (!data) {
+                console.warn("[CollaborationDetails] No data found for:", pageID);
+                return;
+            }
 
             const brandRef = doc(FirestoreDB, "brands", data.brandId);
             const brandSnapshot = await getDoc(brandRef);
@@ -68,6 +89,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             setCollaboration({
                 id: snapshot.id,
                 ...data,
+                location: {
+                    ...data.location,
+                    type: normalizeCollaborationLocationType(data.location?.type),
+                },
                 logo: brandData?.image || "",
                 brandName: brandData?.name || "Unknown Brand",
                 paymentVerified: brandData?.paymentMethodVerified || false,
@@ -81,8 +106,10 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                     ? brandData?.profile?.industries || []
                     : [],
             });
+
+            console.log("[CollaborationDetails] Collaboration set successfully");
         } catch (e) {
-            Console.error(e);
+            Console.error(e, "[CollaborationDetails] Error:");
         } finally {
             setLoading(false);
         }
@@ -205,22 +232,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             id: "Invitations",
             title: "Send Invitations",
             component: (
-                <DiscoveryProvider
-                    value={{
-                        selectedDb: "trendly",
-                        setSelectedDb: () => { },
-                        rightPanel: false,
-                        setRightPanel: () => { },
-                        showFilters: false,
-                        setShowFilters: () => { },
-                        isCollapsed: false,
-                        setIsCollapsed: () => { },
-                        discoverCommunication: { current: undefined },
-                        pageSortCommunication: { current: undefined },
-                    }}
-                >
-                    <InvitationsTabContent key={"invitations"} pageID={pageID} />
-                </DiscoveryProvider>
+                <InvitationsTabContent key={"invitations"} pageID={pageID} />
             ),
         },
         {
@@ -241,91 +253,147 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
 
     if (loading)
         return (
-            <View
-                style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                }}
-            >
+            <View style={styles.loadingContainer}>
                 <ActivityIndicator />
             </View>
         );
 
-    if (!collaboration) return null;
+    console.log("[CollaborationDetails] Rendering:", {
+        hasCollaboration: !!collaboration,
+        status: collaboration?.status,
+        id: collaboration?.id
+    });
+
+    if (!collaboration) {
+        console.warn("[CollaborationDetails] No collaboration data available");
+        return null;
+    }
+
+    const isDraft = collaboration.status === "draft";
+    const campaignHeaderActions = isDraft
+        ? [
+            <Button
+                key="edit"
+                mode="contained"
+                onPress={() => {
+                    nav.push({
+                        pathname: "/edit-collaboration",
+                        params: { id: pageID },
+                    });
+                }}
+                size="small"
+                style={styles.draftActionButton}
+                textColor={colors.text}
+            >
+                Edit
+            </Button>,
+            <Button
+                key="publish"
+                mode="contained"
+                onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
+                size="small"
+                style={styles.publishActionButton}
+            >
+                Publish
+            </Button>,
+        ]
+        : [];
 
     return (
-        <View
-            style={{
-                flex: 1,
-            }}
-        >
-            {/* <View
-        style={{
-          zIndex: 1000,
-        }}
-      >
-        <Toast />
-      </View> */}
-            <CollaborationHeader collaboration={collaboration} />
-
-            {collaboration.status === "draft" && (
-                <View
-                    style={{
-                        flexDirection: "row",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        paddingHorizontal: 16,
-                        gap: 16,
-                        marginBottom: 16,
-                    }}
-                >
-                    <Button
-                        mode="contained"
-                        onPress={() => {
-                            router.push({
-                                pathname: "/edit-collaboration",
-                                params: {
-                                    id: pageID,
-                                },
-                            });
-                        }}
-                        style={{
-                            flex: 1,
-                            backgroundColor: Colors(theme).background,
-                            borderWidth: 0.3,
-                            borderColor: Colors(theme).outline,
-                        }}
-                        textColor={Colors(theme).text}
+        <View style={styles.column}>
+            <PageHeader
+                title="Campaign Details"
+                subtitle={collaboration.name}
+                showBackButton
+                onBackPress={() => expoRouter.replace("/(main)/(drawer)/(tabs)/collaborations")}
+                actionButtons={campaignHeaderActions}
+                rightComponent={
+                    <Pressable
+                        onPress={() => setActionsVisible(true)}
+                        style={styles.iconButton}
                     >
-                        Edit Draft
-                    </Button>
-                    <Button
-                        mode="contained"
-                        onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
-                        style={{
-                            flex: 1,
-                        }}
-                    >
-                        Publish Now
-                    </Button>
-                </View>
-            )}
-            {collaboration.status === "draft" && (
-                <OverviewTabContent collaboration={collaboration} />
-            )}
-            {collaboration.status === "active" && (
-                <CollapseProvider>
+                        <FontAwesomeIcon
+                            icon={faEllipsisH}
+                            size={24}
+                            color={colors.text}
+                        />
+                    </Pressable>
+                }
+            />
+            {collaboration.status !== "draft" && (
+                <View style={styles.tabContainer}>
                     <TopTabNavigation
                         tabs={tabs(xl)}
                         size="compact"
                         mobileFullWidth={true}
                         splitTwoColumns={true}
+                        collapsible={false}
                     />
-                </CollapseProvider>
+                </View>
+            )}
+            <BottomSheetActions
+                cardId={(paramPageID || pageID) as string}
+                cardType="activeCollab"
+                data={{ status: collaboration?.status }}
+                isVisible={actionsVisible}
+                snapPointsRange={["20%", "50%"]}
+                onClose={() => setActionsVisible(false)}
+            />
+
+            {collaboration.status === "draft" && (
+                <OverviewTabContent
+                    collaboration={collaboration}
+                    onEditPress={() => {
+                        nav.push({
+                            pathname: "/edit-collaboration",
+                            params: { id: pageID },
+                        });
+                    }}
+                    onPublishPress={() =>
+                        publish(pageID, { onSuccess: fetchCollaboration })
+                    }
+                />
             )}
         </View>
     );
 };
+
+function useStyles(theme: ReturnType<typeof useTheme>) {
+    const colors = Colors(theme);
+    return StyleSheet.create({
+        loadingContainer: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        column: {
+            flex: 1,
+            flexDirection: "column",
+        },
+        tabContainer: {
+            flex: 1,
+            width: "100%",
+            minHeight: 0,
+        },
+        iconButton: {
+            padding: 8,
+        },
+        draftActionButton: {
+            backgroundColor: colors.background,
+            borderWidth: 0.3,
+            borderColor: colors.outline,
+            borderRadius: 16,
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            minHeight: 32,
+        },
+        publishActionButton: {
+            borderRadius: 16,
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            minHeight: 32,
+        },
+    });
+}
 
 export default CollaborationDetails;

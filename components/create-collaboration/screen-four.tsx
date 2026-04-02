@@ -4,7 +4,7 @@ import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { Title } from "react-native-paper";
 
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import stylesFn from "@/styles/modal/UploadModal.styles";
 import { Text, View } from "../theme/Themed";
 

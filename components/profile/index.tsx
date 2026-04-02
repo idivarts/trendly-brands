@@ -1,4 +1,4 @@
-import Colors from "@/constants/Colors";
+import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useAWSContext, useChatContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -26,7 +26,7 @@ import {
 import ProfileItemCard from "../ProfileItemCard";
 import Button from "../ui/button";
 import ImageUploadModal from "../ui/modal/ImageUploadModal";
-import ScreenHeader from "../ui/screen-header";
+import PageHeader from "../ui/page-header";
 import TextInput from "../ui/text-input";
 
 const Profile = () => {
@@ -145,11 +145,10 @@ const Profile = () => {
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-            <View style={{}}>
-                <ScreenHeader
-                    title="Profile"
-                />
-            </View>
+            <PageHeader
+                title="Profile"
+                subtitle="Manage your account and preferences"
+            />
             <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <ScrollView
                     contentContainerStyle={{
