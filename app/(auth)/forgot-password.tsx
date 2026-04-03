@@ -1,14 +1,14 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/shared-uis/constants/Colors";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 const ForgotPasswordScreen = () => {
     const [email, setEmail] = useState("");
@@ -59,11 +59,11 @@ const ForgotPasswordScreen = () => {
 
     return (
         <AuthPageLayout>
-            <Image
+            {/* <Image
                 source={require("@/assets/images/logo.png")}
                 style={styles.logo}
                 resizeMode="contain"
-            />
+            /> */}
             <View style={authLayoutStyles.formHeader}>
                 <Text style={[styles.title, authLayoutStyles.formTitle]}>
                     Forgot Password

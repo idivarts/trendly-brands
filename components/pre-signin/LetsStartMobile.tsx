@@ -3,6 +3,7 @@ import IntroSplash from "@/components/pre-signin/IntroSplash";
 import { useTransition } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -14,7 +15,28 @@ const LetsStartMobile = () => {
     const theme = useTheme();
     const brandColors = Colors(theme);
     const [showSplash, setShowSplash] = React.useState(true);
+    const [isStorageHydrated, setIsStorageHydrated] = React.useState(false);
     const { triggerTransition } = useTransition();
+
+    React.useEffect(() => {
+        let cancelled = false;
+        const hydrate = async () => {
+            try {
+                const seen = await PersistentStorage.get("lets_start_intro_splash_seen");
+                if (cancelled) return;
+                setShowSplash(!seen);
+            } catch {
+                // If storage fails, default to showing the splash once for this session.
+                if (!cancelled) setShowSplash(true);
+            } finally {
+                if (!cancelled) setIsStorageHydrated(true);
+            }
+        };
+        hydrate();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleBrandPress = React.useCallback(() => {
         router.push("/pre-signin");
@@ -41,12 +63,23 @@ const LetsStartMobile = () => {
         }
     }, []);
 
+    const handleSplashComplete = React.useCallback(async () => {
+        setShowSplash(false);
+        try {
+            await PersistentStorage.set("lets_start_intro_splash_seen", "true");
+        } catch {
+            // Ignore persistence errors; splash will still be hidden for this session.
+        }
+    }, []);
+
+    if (!isStorageHydrated) return null;
+
     if (showSplash) {
-        return <IntroSplash onComplete={() => setShowSplash(false)} />;
+        return <IntroSplash onComplete={handleSplashComplete} />;
     }
 
     return (
-        <AppLayout withWebPadding={false} safeAreaEdges={["left","right","bottom"]}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["left", "right", "bottom"]}>
             {/* ScrollView allows content to fit on small screens without cut-off */}
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
@@ -62,9 +95,9 @@ const LetsStartMobile = () => {
                                     styles.heroText,
                                     {
                                         color: brandColors.primary,
-                                        textShadowColor: '#00ffff', // Neon cyan glow
-                                        textShadowRadius: 20,
-                                        textShadowOffset: { width: 0, height: 0 },
+                                        // textShadowColor: brandColors.secondary,
+                                        // textShadowRadius: 20,
+                                        // textShadowOffset: { width: 0, height: 0 },
                                     }
                                 ]}
                             >

@@ -8,8 +8,8 @@ import { useMyNavigation } from "@/shared-libs/utils/router";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
-import { Theme, useTheme } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
+import { useTheme } from "@react-navigation/native";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Linking,
@@ -95,6 +95,9 @@ interface PlanWrapperProps {
 
 const PlanWrapper = (props: PlanWrapperProps) => {
     const theme = useTheme();
+    const { xl } = useBreakpoints();
+    const colors = useMemo(() => Colors(theme), [theme]);
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [billing, setBilling] = React.useState<BillingCycle>("yearly"); // default Yearly
     const isYearly = billing === "yearly";
@@ -166,16 +169,18 @@ const PlanWrapper = (props: PlanWrapperProps) => {
         }
     };
 
-    const { xl } = useBreakpoints()
-    const vStacked = xl ? props.verticallyStacked : true
+    const vStacked = xl ? props.verticallyStacked : true;
 
-    const SORTED_FILTER = vStacked ? PLANS.sort((a, b) => {
-        if (a.preferred && !b.preferred) return -1; // a is preferred, b is not
-        if (!a.preferred && b.preferred) return 1; // b is preferred, a is not
-        return b.monthly - a.monthly; // both are either preferred or not
-    }) : PLANS;
+    const SORTED_FILTER = useMemo(() => {
+        if (!vStacked) return PLANS;
+        return [...PLANS].sort((a, b) => {
+            if (a.preferred && !b.preferred) return -1;
+            if (!a.preferred && b.preferred) return 1;
+            return b.monthly - a.monthly;
+        });
+    }, [vStacked]);
 
-    const { selectedBrand } = useBrandContext()
+    const { selectedBrand } = useBrandContext();
 
     useEffect(() => {
         if (!selectedBrand)
@@ -184,9 +189,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     }, [selectedBrand])
 
     const currentPlanKey = selectedBrand?.billing?.planKey as PlanKey | undefined
-    const currentPlanCycle = selectedBrand?.billing?.planCycle as BillingCycle | undefined
-
-    const styles = stylesFn(theme);
+    const currentPlanCycle = selectedBrand?.billing?.planCycle as BillingCycle | undefined;
 
     const openPaymentLink = async () => {
         if (!paymentUrl) return;
@@ -253,9 +256,9 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     }, [paymentUrl, adminData]);
 
     return (
-        <View style={{ marginTop: 16 }}>
+        <View style={styles.rootWrap}>
             {/* Billing toggle */}
-            <View style={[styles.toggleWrap, !vStacked && { alignSelf: "center" }]}>
+            <View style={styles.toggleWrap}>
                 <View style={styles.togglePill}>
                     <Pressable
                         accessibilityRole="button"
@@ -284,17 +287,19 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                             pressed && styles.pressed,
                         ]}
                     >
-                        <Text
-                            style={[
-                                styles.toggleText,
-                                billing === "yearly" && styles.toggleTextActive,
-                            ]}
-                        >
-                            Yearly
+                        <View style={styles.toggleYearlyRow}>
+                            <Text
+                                style={[
+                                    styles.toggleText,
+                                    billing === "yearly" && styles.toggleTextActive,
+                                ]}
+                            >
+                                Yearly
+                            </Text>
                             <View style={styles.discountPillAlt}>
                                 <Text style={styles.discountText}>Save 2 months</Text>
                             </View>
-                        </Text>
+                        </View>
                     </Pressable>
                 </View>
                 {/* {isYearly && (
@@ -308,7 +313,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
             <View
                 style={[
                     styles.plansWrap,
-                    vStacked ? { flexDirection: "column" } : { flexDirection: "row", flexWrap: "wrap" },
+                    vStacked ? styles.plansWrapColumn : styles.plansWrapRow,
                 ]}
             >
                 {SORTED_FILTER.map((plan) => {
@@ -333,7 +338,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         disabled={currentPlan}
                         style={({ pressed }) => [
                             currentPlan ? styles.buyBtnCurrent : (plan.preferred ? styles.buyBtn : styles.buyBtnAlt),
-                            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                            pressed && !currentPlan && styles.buyBtnPressed,
                         ]}
                     >
                         <Text style={currentPlan ? styles.buyTextCurrent : (plan.preferred ? styles.buyText : styles.buyTextAlt)}>
@@ -347,7 +352,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                             style={[
                                 styles.planCard,
                                 plan.preferred && styles.planPreferred,
-                                vStacked ? { width: "100%" } : { minWidth: 260, flex: 1 },
+                                vStacked ? styles.planCardStacked : styles.planCardRow,
                             ]}
                         >
                             {plan.preferred && (
@@ -417,7 +422,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                 <Text style={styles.modalText}>
                                     Please wait, we are generating your payment link. This usually takes a few seconds.
                                 </Text>
-                                <ActivityIndicator size="large" />
+                                <ActivityIndicator size="large" color={colors.primary} />
                             </>
                         )}
 
@@ -444,12 +449,12 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
                                 {/* Payment link with copy */}
                                 {paymentUrl && (
-                                    <View style={[styles.copyWrap, { marginTop: 12 }]}>
+                                    <View style={[styles.copyWrap, styles.copyWrapTop]}>
                                         <Text style={styles.label}>Payment link</Text>
                                         <View style={styles.copyRow}>
                                             <Text style={styles.copyTextMono} numberOfLines={1} selectable>{paymentUrl}</Text>
                                             <Pressable accessibilityRole="button" onPress={() => copyText(paymentUrl)} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                <Text style={styles.modalBtnText}>Copy</Text>
+                                                <Text style={styles.copyBtnText}>Copy</Text>
                                             </Pressable>
                                         </View>
                                     </View>
@@ -457,7 +462,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
                                 {/* User details depending on existence */}
                                 {!!adminData && (
-                                    <View style={{ marginTop: 12 }}>
+                                    <View style={styles.modalBlockSpaced}>
                                         {adminData.userExists ? (
                                             <>
                                                 <Text style={styles.label}>User account</Text>
@@ -465,14 +470,14 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                                 <View style={styles.copyRow}>
                                                     <Text style={styles.copyTextMono} selectable>{adminData.email}</Text>
                                                     <Pressable accessibilityRole="button" onPress={() => copyText(adminData.email)} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.modalBtnText}>Copy</Text>
+                                                        <Text style={styles.copyBtnText}>Copy</Text>
                                                     </Pressable>
                                                 </View>
-                                                <Text style={[styles.modalText, { marginTop: 6 }]}>Password is not included because the user previously registered.</Text>
-                                                <View style={[styles.copyRow, { marginTop: 6 }]}>
+                                                <Text style={styles.modalTextTight}>Password is not included because the user previously registered.</Text>
+                                                <View style={[styles.copyRow, styles.copyRowTight]}>
                                                     <Text style={styles.copyTextMono} selectable>https://brands.trendly.now/login</Text>
                                                     <Pressable accessibilityRole="button" onPress={() => copyText('https://brands.trendly.now/login')} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.modalBtnText}>Copy</Text>
+                                                        <Text style={styles.copyBtnText}>Copy</Text>
                                                     </Pressable>
                                                 </View>
                                             </>
@@ -480,23 +485,23 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                             <>
                                                 <Text style={styles.label}>New user credentials</Text>
                                                 <View style={styles.copyRow}>
-                                                    <Text style={[styles.copyTextMono, { flexShrink: 0 }]}>Email:</Text>
-                                                    <Text style={[styles.copyTextMono, { flex: 1 }]} selectable>{adminData.email}</Text>
+                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoLabel]}>Email:</Text>
+                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoValue]} selectable>{adminData.email}</Text>
                                                     <Pressable accessibilityRole="button" onPress={() => copyText(adminData.email)} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.modalBtnText}>Copy</Text>
+                                                        <Text style={styles.copyBtnText}>Copy</Text>
                                                     </Pressable>
                                                 </View>
-                                                <View style={[styles.copyRow, { marginTop: 6 }]}>
-                                                    <Text style={[styles.copyTextMono, { flexShrink: 0 }]}>Password:</Text>
-                                                    <Text style={[styles.copyTextMono, { flex: 1 }]} selectable>{adminData.password}</Text>
+                                                <View style={[styles.copyRow, styles.copyRowTight]}>
+                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoLabel]}>Password:</Text>
+                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoValue]} selectable>{adminData.password}</Text>
                                                     <Pressable accessibilityRole="button" onPress={() => copyText(adminData.password || '')} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.modalBtnText}>Copy</Text>
+                                                        <Text style={styles.copyBtnText}>Copy</Text>
                                                     </Pressable>
                                                 </View>
-                                                <View style={[styles.copyRow, { marginTop: 6 }]}>
+                                                <View style={[styles.copyRow, styles.copyRowTight]}>
                                                     <Text style={styles.copyTextMono} selectable>https://brands.trendly.now/login</Text>
                                                     <Pressable accessibilityRole="button" onPress={() => copyText('https://brands.trendly.now/login')} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.modalBtnText}>Copy</Text>
+                                                        <Text style={styles.copyBtnText}>Copy</Text>
                                                     </Pressable>
                                                 </View>
                                             </>
@@ -506,7 +511,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
                                 {/* Copy formatted message */}
                                 {!!formattedAdminMessage && (
-                                    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.modalBtn, pressed && styles.pressed, { marginTop: 16 }]} onPress={() => copyText(formattedAdminMessage)}>
+                                    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.modalBtnCopyMessage, pressed && styles.pressed]} onPress={() => copyText(formattedAdminMessage)}>
                                         <Text style={styles.modalBtnText}>Copy message for customer</Text>
                                     </Pressable>
                                 )}
@@ -524,7 +529,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                 <Text style={styles.modalText}>
                                     After payment, please return to this page. It might take 3 to 5 minutes for your payment to reflect on your account. Don’t worry if it doesn’t show up immediately.
                                 </Text>
-                                <Text style={[styles.modalText, { marginTop: 6 }]}>
+                                <Text style={styles.modalTextTight}>
                                     Need help? Write to us at <Text style={styles.modalLink}>support@trendly.now</Text>
                                 </Text>
                                 <Pressable style={({ pressed }) => [styles.modalBtnAlt, pressed && styles.pressed]} onPress={() => setModalVisible(false)}>
@@ -565,13 +570,35 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 export default PlanWrapper;
 
 
-const stylesFn = (theme: Theme) => {
-    const colors = Colors(theme);
-
-    /* --------- Styles --------- */
-    // Removed hardcoded color constants
-
+function createStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
+        rootWrap: { marginTop: 16, width: "100%" },
+        plansWrapColumn: { flexDirection: "column" },
+        plansWrapRow: { flexDirection: "row", flexWrap: "wrap" },
+        planCardStacked: { width: "100%" },
+        planCardRow: { minWidth: 260, flex: 1 },
+        buyBtnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+        copyWrapTop: { marginTop: 12 },
+        modalBlockSpaced: { marginTop: 12 },
+        modalTextTight: {
+            color: colors.textSecondary,
+            fontSize: 13,
+            lineHeight: 18,
+            marginTop: 6,
+        },
+        copyRowTight: { marginTop: 6 },
+        copyTextMonoLabel: { flexShrink: 0 },
+        copyTextMonoValue: { flex: 1 },
+        copyBtnText: { color: colors.onPrimary, fontWeight: "800", fontSize: 12 },
+        modalBtnCopyMessage: {
+            marginTop: 16,
+            backgroundColor: colors.primary,
+            height: 44,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+
         /* Container helpers kept for future reuse (page/hero/etc. preserved from prior file) */
         page: {
             paddingHorizontal: 24,
@@ -611,7 +638,7 @@ const stylesFn = (theme: Theme) => {
             paddingVertical: 4,
             borderRadius: 999,
         },
-        planTagText: { color: colors.background, fontSize: 11, fontWeight: "800" },
+        planTagText: { color: colors.onPrimary, fontSize: 11, fontWeight: "800" },
         planName: { color: colors.text, fontSize: 18, fontWeight: "800", marginTop: 2 },
         priceRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 6, flexWrap: "wrap" },
         priceMain: { color: colors.text, fontSize: 28, fontWeight: "900" },
@@ -631,29 +658,31 @@ const stylesFn = (theme: Theme) => {
             alignItems: "center",
             justifyContent: "center",
         },
-        buyText: { color: colors.background, fontWeight: "800" },
+        buyText: { color: colors.onPrimary, fontWeight: "800" },
         buyBtnAlt: {
             marginVertical: 14,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.tag,
             height: 46,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
+            borderWidth: 1,
+            borderColor: colors.border,
         },
-        buyTextAlt: { color: colors.text, fontWeight: "800" },
+        buyTextAlt: { color: colors.tagForeground, fontWeight: "800" },
 
         buyBtnCurrent: {
             marginVertical: 14,
-            backgroundColor: colors.gray100,
+            backgroundColor: colors.tag,
             borderWidth: 1,
-            borderColor: colors.gray200,
+            borderColor: colors.border,
             opacity: 0.95,
             height: 46,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
         },
-        buyTextCurrent: { color: colors.background, fontWeight: "900" },
+        buyTextCurrent: { color: colors.tagForeground, fontWeight: "900" },
 
         /* Compare hint kept for reuse */
         compareHint: { marginTop: 12, color: colors.textSecondary, fontSize: 12 },
@@ -662,28 +691,41 @@ const stylesFn = (theme: Theme) => {
         toggleWrap: {
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "center",
             marginBottom: 8,
+            alignSelf: "center",
+            maxWidth: "100%",
         },
         togglePill: {
             flexDirection: "row",
-            backgroundColor: colors.surface,
+            alignItems: "stretch",
+            backgroundColor: colors.tag,
             borderRadius: 999,
             padding: 4,
             borderWidth: 1,
             borderColor: colors.border,
+            maxWidth: "100%",
         },
         toggleItem: {
-            paddingHorizontal: 14,
-            height: 36,
+            paddingHorizontal: 12,
+            minHeight: 36,
+            paddingVertical: 4,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
         },
+        toggleYearlyRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: 6,
+            maxWidth: "100%",
+        },
         toggleItemActive: {
             backgroundColor: colors.background,
             borderWidth: 1,
-            borderColor: colors.primaryLight,
+            borderColor: colors.primary,
             shadowColor: colors.text,
             shadowOpacity: 0.06,
             shadowRadius: 6,
@@ -691,16 +733,14 @@ const stylesFn = (theme: Theme) => {
             ...Platform.select({ android: { elevation: 2 } }),
         },
         toggleText: { color: colors.text, fontWeight: "700", fontSize: 14 },
-        toggleTextActive: { color: colors.primaryDark },
+        toggleTextActive: { color: colors.primary },
         discountPillAlt: {
-            alignSelf: "flex-start",
             backgroundColor: colors.primaryDark,
-            paddingHorizontal: 12,
-            paddingVertical: 6,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
             borderRadius: 999,
-            marginLeft: 16,
         },
-        discountText: { color: colors.background, fontWeight: "600", fontSize: 10 },
+        discountText: { color: colors.onPrimary, fontWeight: "600", fontSize: 10 },
 
         /* Modal styles */
         modalOverlay: {
@@ -735,7 +775,7 @@ const stylesFn = (theme: Theme) => {
             alignItems: "center",
             justifyContent: "center",
         },
-        modalBtnText: { color: colors.background, fontWeight: "800" },
+        modalBtnText: { color: colors.onPrimary, fontWeight: "800" },
         modalBtnAlt: {
             marginTop: 10,
             backgroundColor: colors.surface,
@@ -779,7 +819,6 @@ const stylesFn = (theme: Theme) => {
             alignItems: 'center',
             justifyContent: 'center',
         },
-    })
-
-};
+    });
+}
 

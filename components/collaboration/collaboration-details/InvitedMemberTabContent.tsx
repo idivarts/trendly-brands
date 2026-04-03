@@ -1,11 +1,11 @@
 import type { InfluencerInviteUnit } from "@/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import EmptyState from "@/components/ui/empty-state";
-import Colors from "@/shared-uis/constants/Colors";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import useInvitedInfluencers from "@/hooks/request/use-invited-influencers";
 import { MAX_WIDTH_WEB } from "@/shared-uis/components/carousel/carousel-util";
+import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
@@ -61,16 +61,18 @@ const InvitedMemberTabContent = (props: any) => {
         setStatusFilter(val as string | undefined);
     };
 
-    const renderItem = ({ item }: { item: InfluencerInviteUnit }) => (
-        <View style={styles.itemWrapper}>
-            <InfluencerCard
-                item={item}
-                isCollapsed={isCollapsed}
-                isStatusCard={true}
-                onPress={() => { }}
-            />
-        </View>
-    );
+    const renderItem = ({ item }: { item: InfluencerInviteUnit }) => {
+        return (
+            <View style={styles.itemWrapper}>
+                <InfluencerCard
+                    item={item}
+                    isCollapsed={isCollapsed}
+                    isStatusCard={true}
+                    onPress={() => { }}
+                />
+            </View>
+        );
+    };
 
     return (
         <View style={styles.root}>

@@ -1,15 +1,15 @@
 import Menu from "@/components/menu";
-import AppLayout from "@/layouts/app-layout";
+import Button from "@/components/ui/button";
+import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import PageHeader from "@/components/ui/page-header";
-import Button from "@/components/ui/button";
+import AppLayout from "@/layouts/app-layout";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Platform, Pressable } from "react-native";
-import * as Clipboard from "expo-clipboard";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 
 const MenuScreen = () => {
     const router = useRouter();
@@ -61,7 +61,9 @@ const MenuScreen = () => {
                 ]}
                 rightComponent={profileButton}
             />
-            <Menu />
+            <AppLayout withWebPadding={true}>
+                <Menu />
+            </AppLayout>
         </AppLayout>
     );
 };

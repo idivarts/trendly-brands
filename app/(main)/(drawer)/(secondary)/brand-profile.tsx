@@ -85,7 +85,7 @@ const BrandProfileScreen = () => {
                         mode="contained"
                         onPress={handleSave}
                     >
-                        Save Brand Details
+                        Save
                     </Button>,
                 ]}
             />

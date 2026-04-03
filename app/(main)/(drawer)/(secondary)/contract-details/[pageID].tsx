@@ -5,10 +5,9 @@ import ContractDetailsContent from "@/components/contracts/ContractDetailContent
 import ContractStatusDevTools from "@/components/contracts/ContractStatusDevTools";
 import { Text, View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
-import Colors from "@/shared-uis/constants/Colors";
-import { useBreakpoints } from "@/hooks";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import {
     IApplications,
@@ -21,6 +20,7 @@ import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
+import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
 import { useTheme } from "@react-navigation/native";
 import {
@@ -198,8 +198,8 @@ const ContractScreen = () => {
                 onClose={() => { setOpenProfileModal(false) }}
             >
                 <ProfileBottomSheet
-                    isOnFreePlan={isOnFreeTrial}
-                    lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
+                    // isOnFreePlan={isOnFreeTrial}
+                    // lockProfile={isProfileLocked(selectedInfluencer?.id || "")}
                     influencer={selectedInfluencer as User}
                     theme={theme}
                     FireStoreDB={FirestoreDB}

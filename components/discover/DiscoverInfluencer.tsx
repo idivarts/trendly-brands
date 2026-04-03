@@ -5,37 +5,35 @@ import {
 import { buildDiscoveryPayload } from "@/components/discover/utils/filter-utils";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { ISocials as IShadowSocial } from "@/shared-libs/firestore/trendly-pro/models/socials";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { Console } from "@/shared-libs/utils/console";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import SlowLoader from "@/shared-uis/components/SlowLoader";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { View } from "@/shared-uis/components/theme/Themed";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { User } from "@/types/User";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
-    Linking,
     ListRenderItemInfo,
     Platform,
+    View as RNView,
     StyleSheet,
     Text,
-    View as RNView,
-    type ViewStyle,
+    type ViewStyle
 } from "react-native";
 import {
-    Button,
     Chip,
     Divider,
     IconButton,
@@ -76,9 +74,9 @@ import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         list: {
-            flexGrow: 1,
+            flex: 1,
             alignSelf: "center",
-            width: "100%", // optional, you can even remove it
+            width: "100%",
         },
         row: { flexDirection: "row", alignItems: "center" },
         avatarCol: {
@@ -151,6 +149,8 @@ interface DiscoverInfluencerProps {
     initialInfluencerId?: string;
     /** Called once when the first influencer card has laid out (for guided tour). */
     onFirstInfluencerCardLayout?: () => void;
+    /** When true (e.g. embedded in Send Invitations tab), use smaller horizontal padding so cards spread more. */
+    reduceHorizontalPadding?: boolean;
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
@@ -161,6 +161,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     defaultAdvanceFilters,
     initialInfluencerId,
     onFirstInfluencerCardLayout,
+    reduceHorizontalPadding = false,
 }) => {
     const {
         selectedDb,
@@ -207,7 +208,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const { xl } = useBreakpoints();
 
     // collaborations are fetched inside InviteToCampaignModal when it mounts
-    const openProfile = (data: InfluencerItem | null) => {
+    const openProfile = useCallback((data: InfluencerItem | null) => {
         if (
             (selectedBrand?.credits?.discovery || 0) <= 0 &&
             data &&
@@ -221,10 +222,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setTrendlySocial(null);
         setShadowUser(null);
         setShadowSocial(null);
-        setIsAnalyticsLoading(false);
+        // Start loader immediately to avoid transient error state/flicker.
+        setIsAnalyticsLoading(!!data);
         setSelectedInfluencer(data);
         setOpenProfileModal(!!data);
-    };
+    }, [selectedBrand?.credits?.discovery, selectedBrand?.discoveredInfluencers]);
 
     const closeProfileModal = () => {
         setOpenProfileModal(false);
@@ -603,7 +605,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         [currentPage, pageCount, xl, setRightPanel]
     );
 
-    if (loading && data.length === 0) {
+    if (!openProfileModal && loading && data.length === 0) {
         // Full screen loader when we're fetching the first page
         return (
             <View style={styles.fullScreenLoader}>
@@ -612,7 +614,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         );
     }
 
-    if (data.length == 0) {
+    if (!openProfileModal && data.length == 0) {
         return (
             <View
                 style={{
@@ -650,15 +652,21 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     return (
         <View
             style={[
-                { flex: 1, minWidth: 0, },
+                { flex: 1, minWidth: 0, minHeight: 0 },
                 !xl && rightPanel && { display: "none" },
             ]}
         >
             <View
                 style={{
                     flex: 1,
+                    minHeight: 0,
                     alignItems: isCollapsed ? "center" : "flex-start",
-                    paddingHorizontal: Platform.OS === "web" && xl ? 140 : 16,
+                    paddingHorizontal:
+                        Platform.OS === "web" && xl
+                            ? reduceHorizontalPadding
+                                ? 24
+                                : 140
+                            : 16,
                 }}
             >
                 <FlatList
@@ -822,8 +830,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                     id: selectedInfluencer.id,
                                 } as User}
                                 theme={theme}
-                                isOnFreePlan={isOnFreeTrial}
-                                isPhoneMasked={false}
+                                isPhoneMasked={true}
                                 social={profileSocial}
                                 actionCard={
                                     <>
@@ -835,26 +842,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             initialAnalytics={trendlyAnalytics}
                                         />
                                         <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-                                            {/* TODO Need to get the Profile Meta rendered correctly */}
-                                            {/* <Title style={[styles.cardColor, { marginBottom: 8 }]}>
-                                                Profile Meta
-                                            </Title>
-                                            <View style={{ gap: 6 }}>
-                                                <Text style={styles.subTextHeading}>
-                                                    ID: {trendlySocial.id}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Platform: {trendlySocial.social_type || "—"}
-                                                </Text>
-                                                <Text style={styles.subTextHeading}>
-                                                    Last Updated:{" "}
-                                                    {formatDate(
-                                                        trendlySocial.last_update_time
-                                                            ? trendlySocial.last_update_time / 1000000
-                                                            : undefined
-                                                    )}
-                                                </Text>
-                                            </View> */}
                                         </View>
                                     </>
                                 }

@@ -1,13 +1,13 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
+import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 const LoginScreen = () => {
     const search = useLocalSearchParams()
@@ -24,11 +24,11 @@ const LoginScreen = () => {
 
     return (
         <AuthPageLayout>
-            <Image
+            {/* <Image
                 source={require("@/assets/images/logo.png")}
                 style={styles.logo}
                 resizeMode="contain"
-            />
+            /> */}
             <View style={authLayoutStyles.formHeader}>
                 <Text style={[styles.title, authLayoutStyles.formTitle]}>
                     Login

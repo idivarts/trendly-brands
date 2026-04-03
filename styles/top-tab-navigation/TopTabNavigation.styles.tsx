@@ -56,5 +56,6 @@ export const stylesFn = (theme: Theme) => StyleSheet.create({
     tabContent: {
         flex: 1,
         width: '100%',
+        minHeight: 0,
     },
 });

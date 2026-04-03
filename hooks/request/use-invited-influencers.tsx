@@ -30,22 +30,12 @@ const useInvitedInfluencers = ({
             try {
                 const url = `/discovery/brands/${brandId}/collaborations/${collaborationId}/influencers`;
 
-                const normalizedOffset = pageNumber < 1 ? 1 : pageNumber;
-                const bodyPayload: {
-                    Offset: number;
-                    Limit: number;
-                    Filter?: string;
-                    offset: number;
-                    limit: number;
-                    filter?: string;
-                } = {
-                    Offset: normalizedOffset,
-                    Limit: limit,
-                    offset: normalizedOffset,
+                const offset = (pageNumber < 1 ? 1 : pageNumber - 1) * limit;
+                const bodyPayload: { offset: number; limit: number; filter?: string } = {
+                    offset,
                     limit,
                 };
                 if (filter !== undefined) {
-                    bodyPayload.Filter = filter;
                     bodyPayload.filter = filter;
                 }
                 console.debug("useInvitedInfluencers: request body", bodyPayload);
@@ -59,6 +49,141 @@ const useInvitedInfluencers = ({
                 });
                 const body = await res.json();
                 const newItems = (body?.influencers || []) as InfluencerInviteUnit[];
+
+                // #region agent log
+                try {
+                    const summary = newItems.map((u: InfluencerInviteUnit, i: number) => ({
+                        i,
+                        id: u?.id,
+                        hasProfilePic: !!u?.profile_pic,
+                        followerCount: u?.follower_count,
+                        viewsCount: u?.views_count,
+                        engagementCount: u?.engagement_count,
+                        engagementRate: u?.engagement_rate,
+                    }));
+                    fetch("http://127.0.0.1:7635/ingest/35d7f708-ae10-4154-b612-6c5217b8dac1", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d1a82d" },
+                        body: JSON.stringify({
+                            sessionId: "d1a82d",
+                            location: "use-invited-influencers.tsx:fetchPage",
+                            message: "invited influencers API response",
+                            data: { pageNumber, count: newItems.length, perItem: summary },
+                            timestamp: Date.now(),
+                            hypothesisId: "H1",
+                        }),
+                    }).catch(() => {});
+                } catch (_) {}
+                // #endregion
+
+                // Enrich invited influencers missing discovery stats (profile pic + counts).
+                // We already have an endpoint used elsewhere for influencer details.
+                const needsEnrichment = newItems.filter((u) => {
+                    const noPic = !u.profile_pic;
+                    const zeros =
+                        (u.follower_count ?? 0) === 0 &&
+                        (u.views_count ?? 0) === 0 &&
+                        (u.engagement_count ?? 0) === 0;
+                    return noPic && zeros;
+                });
+
+                if (needsEnrichment.length > 0) {
+                    const toEnrich = needsEnrichment.slice(0, 10); // cap to avoid heavy fanout
+                    // #region agent log
+                    fetch("http://127.0.0.1:7635/ingest/35d7f708-ae10-4154-b612-6c5217b8dac1", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d1a82d" },
+                        body: JSON.stringify({
+                            sessionId: "d1a82d",
+                            location: "use-invited-influencers.tsx:enrich",
+                            message: "enrichment candidates",
+                            data: { count: needsEnrichment.length, enriching: toEnrich.map((u) => u.id) },
+                            timestamp: Date.now(),
+                            hypothesisId: "H4",
+                        }),
+                    }).catch(() => {});
+                    // #endregion
+
+                    const enriched = await Promise.all(
+                        toEnrich.map(async (u) => {
+                            try {
+                                const detailUrl = `/discovery/brands/${brandId}/influencers/${u.id}`;
+                                const detailRes = await HttpWrapper.fetch(detailUrl, {
+                                    method: "GET",
+                                    headers: {
+                                        "content-type": "application/json",
+                                    },
+                                }).then((r) => r.json());
+
+                                const social = detailRes?.social ?? null;
+                                const patched: Partial<InfluencerInviteUnit> = social
+                                    ? {
+                                          name: social?.name ?? u.name,
+                                          username: social?.username ?? u.username,
+                                          profile_pic: social?.profile_pic ?? u.profile_pic,
+                                          follower_count: social?.follower_count ?? u.follower_count,
+                                          views_count: social?.views_count ?? u.views_count,
+                                          engagement_count: social?.engagement_count ?? u.engagement_count,
+                                          engagement_rate: social?.engagement_rate ?? u.engagement_rate,
+                                      }
+                                    : {};
+
+                                // #region agent log
+                                fetch("http://127.0.0.1:7635/ingest/35d7f708-ae10-4154-b612-6c5217b8dac1", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d1a82d" },
+                                    body: JSON.stringify({
+                                        sessionId: "d1a82d",
+                                        location: "use-invited-influencers.tsx:enrich",
+                                        message: "enriched influencer",
+                                        data: {
+                                            id: u.id,
+                                            hadSocial: !!social,
+                                            before: {
+                                                profile_pic: u.profile_pic,
+                                                follower_count: u.follower_count,
+                                                views_count: u.views_count,
+                                                engagement_count: u.engagement_count,
+                                                engagement_rate: u.engagement_rate,
+                                            },
+                                            after: patched,
+                                        },
+                                        timestamp: Date.now(),
+                                        hypothesisId: "H4",
+                                    }),
+                                }).catch(() => {});
+                                // #endregion
+
+                                return { id: u.id, patched };
+                            } catch (e: any) {
+                                // #region agent log
+                                fetch("http://127.0.0.1:7635/ingest/35d7f708-ae10-4154-b612-6c5217b8dac1", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d1a82d" },
+                                    body: JSON.stringify({
+                                        sessionId: "d1a82d",
+                                        location: "use-invited-influencers.tsx:enrich",
+                                        message: "enrichment failed",
+                                        data: { id: u.id, error: e?.message ?? String(e) },
+                                        timestamp: Date.now(),
+                                        hypothesisId: "H4",
+                                    }),
+                                }).catch(() => {});
+                                // #endregion
+                                return { id: u.id, patched: {} as Partial<InfluencerInviteUnit> };
+                            }
+                        })
+                    );
+
+                    // apply patches onto newItems (and existing ones if needed)
+                    const patchMap = new Map(enriched.map((e) => [e.id, e.patched]));
+                    for (let i = 0; i < newItems.length; i++) {
+                        const patch = patchMap.get(newItems[i].id);
+                        if (patch && Object.keys(patch).length > 0) {
+                            newItems[i] = { ...newItems[i], ...patch };
+                        }
+                    }
+                }
 
                 setInfluencers((prev) => {
                     if (reset) return newItems;

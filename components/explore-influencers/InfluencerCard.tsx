@@ -5,6 +5,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { maskHandle } from "@/shared-uis/utils/masks";
 import { getPlaceholderImageForGender } from "@/shared-uis/utils/url";
 import { useTheme } from "@react-navigation/native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo, useState } from "react";
 import { ImageSourcePropType, StyleSheet, Text, View } from "react-native";
@@ -320,9 +321,15 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
                     <StatsSection item={item} isCollapsed={isCollapsed} />
                 </Card.Content>
             </Card>
-            {item.isDiscover && (
-                <View style={[styles.CategoryTag]}>
+            {item.isDiscover === true ? (
+                <View style={styles.CategoryTag}>
                     <Text style={styles.CategoryText}>By Discovery</Text>
+                </View>
+            ) : (
+                <View style={styles.PlatformTag}>
+                    <MaterialCommunityIcons name="star" size={11} color={colors.primary} />
+                    <Text style={styles.PlatformTagText}>Platform</Text>
+                    <MaterialCommunityIcons name="star" size={11} color={colors.primary} />
                 </View>
             )}
         </LinearGradient>
@@ -413,6 +420,25 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             fontWeight: "200",
             color: colors.onPrimary,
             letterSpacing: 1.2,
+        },
+        PlatformTag: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            backgroundColor: colors.gold,
+            borderTopLeftRadius: 8,
+            borderBottomRightRadius: 8,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+            position: "absolute",
+            right: 0,
+            bottom: 0,
+        },
+        PlatformTagText: {
+            fontSize: 10,
+            fontWeight: "600",
+            color: colors.eerieBlack,
+            letterSpacing: 1,
         },
     });
 

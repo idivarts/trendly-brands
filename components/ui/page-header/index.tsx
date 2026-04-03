@@ -1,7 +1,7 @@
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
-import Colors from "@/shared-uis/constants/Colors";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import Colors from "@/shared-uis/constants/Colors";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -11,6 +11,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export interface PageHeaderProps {
+    customMainContent?: React.ReactNode;
     title: string;
     subtitle?: string;
     /** Show back button. On mobile (!xl), defaults to true unless explicitly false. */
@@ -25,6 +26,7 @@ export interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({
     title,
     subtitle,
+    customMainContent,
     showBackButton,
     onBackPress,
     actionButtons = [],
@@ -71,12 +73,13 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                     />
                 </Pressable>
             )}
-            <View style={styles.headerTitleBlock}>
-                <Text style={styles.headerTitle}>{title}</Text>
-                {subtitle ? (
-                    <Text style={styles.headerSubtitle}>{subtitle}</Text>
-                ) : null}
-            </View>
+            {customMainContent ? customMainContent :
+                <View style={styles.headerTitleBlock}>
+                    <Text style={styles.headerTitle}>{title}</Text>
+                    {subtitle ? (
+                        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+                    ) : null}
+                </View>}
             {showActions && (hasActionButtons || hasRightComponent) && (
                 <View style={styles.headerActions}>
                     {hasActionButtons && actionButtons.map((btn, index) => (
@@ -97,10 +100,16 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     flexDirection: "row",
                     alignItems: "center",
                     paddingHorizontal: 16,
-                    paddingTop: xl ? 12 + topInset : topInset,
+                    paddingTop: 12 + topInset,
                     paddingBottom: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
+                    // Use subtle shadow instead of a border for elevation/distinction.
+                    shadowColor: colors.panelShadow,
+                    shadowOffset: { width: 0, height: 2 }, // positive = shadow below
+                    shadowRadius: 8,
+                    shadowOpacity: 0.6,
+                    elevation: 2,
+                    zIndex: 5,
+                    overflow: "visible",
                     backgroundColor: colors.background,
                 },
                 headerBack: {

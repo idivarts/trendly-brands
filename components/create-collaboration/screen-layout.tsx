@@ -5,8 +5,9 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 import { View } from "../theme/Themed";
 
-import Colors from "@/shared-uis/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import ConfirmationModal from "@/shared-uis/components/ConfirmationModal";
+import Colors from "@/shared-uis/constants/Colors";
 import { resetAndNavigate } from "@/utils/router";
 import { useRouter } from "expo-router";
 import ScreenHeader from "../ui/screen-header";
@@ -39,6 +40,7 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
 
     const showCloseButton = screen !== 1 && type === "Add";
     const showHeaderRight = Boolean(headerRight) || showCloseButton;
+    const { xl } = useBreakpoints();
 
     const headerRightContent = showHeaderRight ? (
         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -84,7 +86,7 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
                         setScreen(screen - 1);
                     }
                 }}
-                hideAction={screen === 1 && (type === "Add" && (Platform.OS === "android" || Platform.OS === "ios"))}
+                hideAction={false}
                 title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
                 rightAction={showHeaderRight}
                 rightActionButton={headerRightContent}
@@ -105,7 +107,7 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
                             style={{
                                 flex: 1,
                                 height: 4,
-                                backgroundColor: screen > index ? Colors(theme).primary : Colors(theme).platinum,
+                                backgroundColor: screen > index ? Colors(theme).primary : Colors(theme).aliceBlue,
                                 marginTop: 8,
                             }}
                         />
@@ -117,6 +119,9 @@ const ScreenLayout: React.FC<ScreenLayoutProps> = ({
                     flex: 1,
                     paddingTop: 16,
                     paddingHorizontal: 16,
+                    alignSelf: "center",
+                    width: "100%",
+                    maxWidth: xl ? 800 : undefined
                 }}
                 contentContainerStyle={{
                     paddingBottom: 32,

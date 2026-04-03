@@ -1,11 +1,12 @@
 import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
+import { useBreakpoints } from "@/hooks";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faAddressCard,
     faComment,
@@ -42,7 +43,6 @@ import {
     StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBreakpoints } from "@/hooks";
 import CreditDisplayCard from "./CreditDisplayCard";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
@@ -201,12 +201,19 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const hasMultipleBrands = brands.length > 1;
 
     const drawerColors = useMemo(
-        () => ({
-            inactiveColor: colors.primary,
-            activeColor: colors.white,
-            inactiveBg: "transparent",
-        }),
-        [colors.primary, colors.white]
+        () =>
+            theme.dark
+                ? {
+                    inactiveColor: colors.text,
+                    activeColor: colors.onPrimary,
+                    inactiveBg: "transparent",
+                }
+                : {
+                    inactiveColor: colors.primary,
+                    activeColor: colors.white,
+                    inactiveBg: "transparent",
+                },
+        [theme.dark, colors.primary, colors.white, colors.text, colors.onPrimary]
     );
 
     const [isBrandHovered, setIsBrandHovered] = useState(false);
@@ -229,15 +236,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
                         style={styles.headerPressable}
                     >
-                            <View style={styles.headerRow}>
-                                <ImageComponent
-                                    url={selectedBrand?.image || ""}
-                                    initials={selectedBrand?.name?.[0] ?? ""}
-                                    shape="circle"
-                                    size="small"
-                                    altText={selectedBrand?.name || "Brand"}
-                                    style={styles.logoCircle}
-                                />
+                        <View style={styles.headerRow}>
+                            <ImageComponent
+                                url={selectedBrand?.image || ""}
+                                initials={selectedBrand?.name?.[0] ?? ""}
+                                shape="circle"
+                                size="small"
+                                altText={selectedBrand?.name || "Brand"}
+                                style={styles.logoCircle}
+                            />
                             <View style={styles.headerBrand}>
                                 <Text style={styles.brandName} numberOfLines={1}>
                                     {selectedBrand?.name ?? "Brand"}
@@ -368,7 +375,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             ) : (
                                 <CreditDisplayCard />
                             )
-                        )}
+                            )}
                         {selectedBrand && !selectedBrand.isBillingDisabled && (
                             <>
                                 {(!selectedBrand.billing || selectedBrand?.billing?.planKey === "starter") && (
@@ -527,12 +534,20 @@ const RenderBanner = (props: {
 
 const createStyles = (theme: Theme, bottom: number = 0) => {
     const colors = Colors(theme);
+    const sidebarSurfaceBg = theme.dark ? colors.card : colors.drawerBackground;
+    const sectionLabelColor = theme.dark ? colors.textSecondary : colors.drawerTextMuted;
+    const sidebarDividerColor = theme.dark ? colors.border : colors.drawerBorder;
     return StyleSheet.create({
         root: {
             flex: 1,
             overflow: "visible",
             paddingTop: Platform.OS === "web" ? 8 : 64,
-            backgroundColor: colors.aliceBlue,
+            backgroundColor: sidebarSurfaceBg,
+            // Subtle elevation so the drawer feels slightly "raised"
+            shadowColor: colors.panelShadow,
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 16,
+            elevation: 6,
         },
         header: {
             position: "relative",
@@ -634,7 +649,7 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             paddingVertical: 12,
             paddingHorizontal: 8,
             gap: 8,
-            backgroundColor: colors.aliceBlue,
+            backgroundColor: sidebarSurfaceBg,
         },
         section: {
             gap: 8,
@@ -644,7 +659,7 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             fontSize: 12,
             fontWeight: "600",
             paddingHorizontal: 8,
-            color: colors.drawerTextMuted,
+            color: sectionLabelColor,
             backgroundColor: "transparent",
         },
         campaignItems: {
@@ -671,7 +686,7 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
 
         },
         divider: {
-            borderTopColor: colors.drawerBorder,
+            borderTopColor: sidebarDividerColor,
             borderTopWidth: StyleSheet.hairlineWidth,
         },
         menuItems: {
@@ -682,8 +697,8 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             paddingHorizontal: 8,
             paddingTop: 12,
             paddingBottom: bottom,
-            backgroundColor: colors.aliceBlue,
-            borderTopColor: colors.black,
+            backgroundColor: sidebarSurfaceBg,
+            borderTopColor: sidebarDividerColor,
             borderTopWidth: StyleSheet.hairlineWidth,
             gap: 4,
         },

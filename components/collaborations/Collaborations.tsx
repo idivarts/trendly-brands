@@ -44,11 +44,13 @@ const CollaborationList = ({ active }: { active: boolean }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [proposals, setProposals] = useState<any[]>([]);
     const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
+    const [selectedCollabStatus, setSelectedCollabStatus] = useState<string | undefined>(undefined);
     const { selectedBrand } = useBrandContext();
 
-    const openBottomSheet = (id: string) => {
+    const openBottomSheet = (id: string, status?: string) => {
         setIsVisible(true);
         setSelectedCollabId(id);
+        setSelectedCollabStatus(status);
     };
     const closeBottomSheet = () => setIsVisible(false);
 
@@ -77,7 +79,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             const q = query(
                 collaborationCol,
                 where("brandId", "==", selectedBrand?.id),
-                (active ? where("status", "in", ["active", "draft"]) : where("status", "in", ["inactive", "stopped"])),
+                (active ? where("status", "in", ["active", "draft", "stopped"]) : where("status", "in", ["inactive"])),
                 orderBy("timeStamp", "desc")
             );
 
@@ -194,8 +196,11 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                             <View style={styles.cardOuter}>
                                 <View style={[styles.cardInner, item.status === "draft" && styles.cardInnerDraft]}>
                                     <View key={item.id} style={styles.cardContent}>
-
-
+                                        {item.status === "draft" && (
+                                            <View style={styles.draftBadge}>
+                                                <Text style={styles.draftBadgeText}>Draft</Text>
+                                            </View>
+                                        )}
                                         {item.attachments && item.attachments?.length > 0 && (
                                             <ScrollMedia
                                                 theme={theme}
@@ -212,12 +217,6 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                             router.push(`/collaboration-details/${item.id}`)
                                         }>
 
-                                            {item.status === "draft" && (
-                                                <View style={styles.draftBadge}>
-                                                    <Text style={styles.draftBadgeText}>Draft</Text>
-                                                </View>
-                                            )}
-
                                             <View style={styles.detailsWrapper}>
                                                 <CollaborationDetails
                                                     collabDescription={item.description || ""}
@@ -226,7 +225,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                                                     location={item.location}
                                                     platform={item.platform}
                                                     promotionType={item.promotionType}
-                                                    onOpenBottomSheet={active ? openBottomSheet : undefined}
+                                                    onOpenBottomSheet={(id) => openBottomSheet(id, item.status)}
                                                     collabId={item.id}
                                                 />
                                             </View>
@@ -267,6 +266,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 <BottomSheetActions
                     cardId={selectedCollabId || ""}
                     cardType="activeCollab"
+                    data={{ status: selectedCollabStatus }}
                     isVisible={isVisible}
                     onClose={closeBottomSheet}
                     snapPointsRange={["25%", "50%"]}
@@ -343,16 +343,21 @@ function useStyles(theme: ReturnType<typeof useTheme>, xl: boolean) {
             justifyContent: "space-between",
         },
         draftBadge: {
-            position: "absolute",
-            right: 10,
-            top: 28,
-            backgroundColor: Colors(theme).backdrop,
-            padding: 4,
-            borderRadius: 4,
-            zIndex: 1,
+            // Avoid absolute positioning overlap by letting the badge
+            // participate in layout. This keeps it near the top-right
+            // without colliding with media/details.
+            alignSelf: "flex-end",
+            marginTop: 6,
+            marginRight: 12,
+            backgroundColor: Colors(theme).tag,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 999,
         },
         draftBadgeText: {
-            color: Colors(theme).white,
+            color: Colors(theme).tagForeground,
+            fontWeight: "700",
+            fontSize: 12,
         },
         detailsWrapper: {
             flex: 1,

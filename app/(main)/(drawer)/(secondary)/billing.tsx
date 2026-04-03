@@ -9,11 +9,7 @@ const BillingScreen = () => {
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
             {!xl && <ScreenHeader title="" />}
-            {/* <ScreenHeader
-        title="Billing"
-      /> */}
             <PayWallComponent />
-            {/* <Billing /> */}
         </AppLayout>
     );
 };

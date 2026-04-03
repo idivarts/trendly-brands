@@ -9,7 +9,7 @@ export const stylesFn = (theme: Theme) =>
             justifyContent: "space-between",
             marginTop: 8,
             width: "100%",
-            backgroundColor: Colors(theme).aliceBlue,
+            backgroundColor: "transparent",
         },
         infoText: {
             fontSize: 14,

@@ -1,11 +1,12 @@
-import Colors from "@/shared-uis/constants/Colors";
 import {
     INITIAL_PLATFORMS,
     PLATFORMS,
 } from "@/constants/ItemsList";
+import { CollaborationLocationType } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import { Selector } from "@/shared-uis/components/select/selector";
+import Colors from "@/shared-uis/constants/Colors";
 import { includeSelectedItems } from "@/shared-uis/utils/items-list";
 import { Collaboration } from "@/types/Collaboration";
 import {
@@ -25,13 +26,6 @@ import { View } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import ScreenLayout from "./screen-layout";
-
-// Location type constants - single source of truth
-const LOCATION_TYPES = {
-    PHYSICAL_MODE: "Physical-Mode",
-    REMOTE: "Remote",
-    ON_SITE: "On_Site",
-} as const;
 
 interface ScreenTwoProps {
     collaboration: Partial<Collaboration>;
@@ -92,10 +86,8 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
         return `${collaboration.numberOfInfluencersNeeded || 1}`;
     }, [collaboration.numberOfInfluencersNeeded]);
 
-    const handleLocationSelect = async (
-        value: typeof LOCATION_TYPES[keyof typeof LOCATION_TYPES]
-    ) => {
-        if (value === LOCATION_TYPES.ON_SITE) {
+    const handleLocationSelect = async (value: CollaborationLocationType) => {
+        if (value === CollaborationLocationType.OnSite) {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== "granted") {
@@ -220,7 +212,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                         options={[
                             {
                                 label: "Physical Product",
-                                value: "physical_product",
+                                value: "physical-product",
                                 description: "Any product based items like Beauty cream, shirts and so on.",
                             },
                             {
@@ -250,11 +242,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             label="About Product"
                             mode="outlined"
                             placeholder="Eg. TShirt for Kids"
-                            multiline
-                            numberOfLines={2}
-                            value={
-                                (collaboration.products ?? [])[0]?.name || ""
-                            }
+                            value={(collaboration.products ?? [])[0]?.name || ""}
                             onChangeText={(text) => {
                                 const current =
                                     (collaboration.products ?? [])[0] ?? {};
@@ -273,11 +261,11 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             keyboardType="number-pad"
                             value={
                                 (collaboration.products ?? [])[0]?.cost !==
-                                undefined
+                                    undefined
                                     ? String(
-                                          (collaboration.products ?? [])[0]
-                                              ?.cost ?? ""
-                                      )
+                                        (collaboration.products ?? [])[0]
+                                            ?.cost ?? ""
+                                    )
                                     : ""
                             }
                             onChangeText={(text) => {
@@ -297,7 +285,7 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 });
                             }}
                         />
-                            <Text style={styles.productCostHint}>
+                        <Text style={styles.productCostHint}>
                             This cost would be incurred by the brand and not
                             influencers
                         </Text>
@@ -313,25 +301,29 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                             {
                                 icon: faBox,
                                 label: "Product/Service Will Be Shipped to Influencer",
-                                value: LOCATION_TYPES.PHYSICAL_MODE,
+                                value: CollaborationLocationType.PhysicalMode,
                                 description: "Brand will courier the product or perform the service to the influencer's address.",
                             },
                             {
                                 icon: faHouseLaptop,
                                 label: "Digital / Remote Collaboration",
-                                value: LOCATION_TYPES.REMOTE,
+                                value: CollaborationLocationType.Remote,
                                 description: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
                             },
                             {
                                 icon: faMapLocationDot,
                                 label: "Influencer Visits Store / Location",
-                                value: LOCATION_TYPES.ON_SITE,
+                                value: CollaborationLocationType.OnSite,
                                 description: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
                             },
                         ]}
                         onSelect={(value) => {
-                            if (value === LOCATION_TYPES.REMOTE || value === LOCATION_TYPES.ON_SITE || value === LOCATION_TYPES.PHYSICAL_MODE) {
-                                if (value === LOCATION_TYPES.ON_SITE) {
+                            if (
+                                value === CollaborationLocationType.Remote ||
+                                value === CollaborationLocationType.OnSite ||
+                                value === CollaborationLocationType.PhysicalMode
+                            ) {
+                                if (value === CollaborationLocationType.OnSite) {
                                     handleLocationSelect(value);
                                 } else {
                                     setCollaboration({
@@ -344,25 +336,29 @@ const ScreenTwo: React.FC<ScreenTwoProps> = ({
                                 }
                             }
                         }}
-                        selectedValue={collaboration.location?.type || LOCATION_TYPES.REMOTE}
+                        selectedValue={
+                            collaboration.location?.type ||
+                            CollaborationLocationType.Remote
+                        }
                         theme={theme}
                     />
                 </ContentWrapper>
-                {(collaboration.location?.type === LOCATION_TYPES.ON_SITE) && (
+                {collaboration.location?.type === CollaborationLocationType.OnSite && (
                     <View style={styles.locationSection}>
-                        {collaboration.location?.type === LOCATION_TYPES.ON_SITE && (
-                            <>
-                                <AddressAutocomplete
-                                    collaboration={collaboration}
-                                    mapRegion={mapRegion}
-                                    setCollaboration={setCollaboration}
-                                />
-                                <CreateCollaborationMap
-                                    mapRegion={mapRegion.state}
-                                    onLocationChange={onLocationChange}
-                                />
-                            </>
-                        )}
+                        {collaboration.location?.type ===
+                            CollaborationLocationType.OnSite && (
+                                <>
+                                    <AddressAutocomplete
+                                        collaboration={collaboration}
+                                        mapRegion={mapRegion}
+                                        setCollaboration={setCollaboration}
+                                    />
+                                    <CreateCollaborationMap
+                                        mapRegion={mapRegion.state}
+                                        onLocationChange={onLocationChange}
+                                    />
+                                </>
+                            )}
                     </View>
                 )}
 

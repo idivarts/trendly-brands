@@ -8,6 +8,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { GoogleAuthProvider, signInWithCredential, UserCredential } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useTheme } from "@react-navigation/native";
 
 import {
     GoogleSignin,
@@ -18,6 +19,7 @@ import { useEffect } from "react";
 
 export const useGoogleLogin = (setLoading: Function, setError: Function, signupHandler: Function | null = null) => {
     const { firebaseSignIn, firebaseSignUp } = useAuthContext();
+    const theme = useTheme();
 
     useEffect(() => {
         GoogleSignin.configure({
@@ -45,6 +47,10 @@ export const useGoogleLogin = (setLoading: Function, setError: Function, signupH
         if (!isExistingUser) {
             const userData: IManagers = {
                 ...INITIAL_MANAGER_DATA,
+                settings: {
+                    ...INITIAL_MANAGER_DATA.settings,
+                    theme: theme.dark ? "dark" : "light",
+                },
                 name: result.user.displayName || "",
                 email: result.user.email || "",
                 creationTime: Date.now()

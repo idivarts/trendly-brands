@@ -1,7 +1,7 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/shared-uis/constants/Colors";
 import { CURRENCY } from "@/constants/Unit";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import Colors from "@/shared-uis/constants/Colors";
 import { convertToMUnits } from "@/shared-uis/utils/conversion-million";
 import { stylesFn } from "@/styles/CollaborationCardStats.styles";
 import { convertToKUnits } from "@/utils/conversion";
@@ -29,7 +29,7 @@ const CollaborationStats: FC<CollaborationStatsProps> = (
     const localStyles = useMemo(() => StyleSheet.create({
         container: {
             padding: 16,
-            backgroundColor: Colors(theme).aliceBlue,
+            backgroundColor: Colors(theme).card,
         },
     }), [theme]);
 
