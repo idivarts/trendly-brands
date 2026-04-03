@@ -1,29 +1,29 @@
-import { useFirebaseStorageContext } from "@/contexts";
-import Colors from "@/shared-uis/constants/Colors";
+import { useAWSContext } from "@/contexts";
+import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { faBox, faCircleInfo, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
     Keyboard,
     KeyboardAvoidingView,
-    Modal as RNModal,
     Platform,
     Pressable,
+    Modal as RNModal,
     ScrollView,
     StyleSheet,
     View,
 } from "react-native";
+import { Checkbox, Modal as PaperModal, Portal } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Checkbox, Modal as PaperModal } from "react-native-paper";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 
 const MAX_IMAGE_MB = 5;
-const PROOF_PATH_PREFIX = "contracts";
 
 export interface MarkAsDeliveredModalProps {
     visible: boolean;
@@ -36,20 +36,44 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     visible,
     onClose,
     onSubmit,
-    contractId,
+    contractId: _contractId,
 }) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
-    const { uploadImage } = useFirebaseStorageContext();
+    const { uploadFile, uploadFileUri } = useAWSContext();
 
-    const [proofDataUrl, setProofDataUrl] = useState<string>("");
+    const webFileInputRef = useRef<HTMLInputElement | null>(null);
+    const [webSelectedFile, setWebSelectedFile] = useState<File | null>(null);
+    const [nativeImageUri, setNativeImageUri] = useState<string>("");
+    const [nativeImageMimeType, setNativeImageMimeType] = useState<string>("image/jpeg");
     const [note, setNote] = useState("");
     const [confirmChecked, setConfirmChecked] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    const pickImage = async () => {
+    const hasProofSelected = Platform.OS === "web" ? !!webSelectedFile : !!nativeImageUri;
+
+    const openWebFilePicker = () => {
+        webFileInputRef.current?.click?.();
+    };
+
+    const handleWebFileInputChange = (e: { target: HTMLInputElement }) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            Toaster.error("Please select an image file.");
+            return;
+        }
+        if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+            Toaster.error(`Image must be under ${MAX_IMAGE_MB}MB`);
+            return;
+        }
+        setWebSelectedFile(file);
+    };
+
+    const pickImageNative = async () => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== "granted") {
@@ -60,7 +84,6 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 quality: 0.8,
-                base64: true,
             });
             if (!result.canceled && result.assets[0]) {
                 const asset = result.assets[0];
@@ -68,15 +91,19 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                     Toaster.error(`Image must be under ${MAX_IMAGE_MB}MB`);
                     return;
                 }
-                const base64 = asset.base64;
-                if (base64) {
-                    setProofDataUrl(`data:image/jpeg;base64,${base64}`);
-                } else {
-                    Toaster.error("Could not read image data");
-                }
+                setNativeImageUri(asset.uri);
+                setNativeImageMimeType(asset.mimeType ?? "image/jpeg");
             }
-        } catch (e) {
+        } catch {
             Toaster.error("Failed to pick image");
+        }
+    };
+
+    const pickImage = () => {
+        if (Platform.OS === "web") {
+            openWebFilePicker();
+        } else {
+            void pickImageNative();
         }
     };
 
@@ -85,40 +112,87 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
             Toaster.error("Please confirm that the product is delivered and documentation is accurate.");
             return;
         }
-        if (!proofDataUrl) {
+        if (!hasProofSelected) {
             Toaster.error("Please upload proof of delivery.");
             return;
         }
         setSubmitting(true);
+        let proofOfDeliveryUrl: string;
         try {
-            const path = `${PROOF_PATH_PREFIX}/${contractId}/delivery-proof/${Date.now()}.jpg`;
-            const proofOfDeliveryUrl = await uploadImage(proofDataUrl, path);
+            if (Platform.OS === "web") {
+                if (!webSelectedFile) {
+                    throw new Error("Missing proof file");
+                }
+                const attachment = await uploadFile(webSelectedFile);
+                proofOfDeliveryUrl = processRawAttachment(attachment).url;
+            } else {
+                if (!nativeImageUri) {
+                    throw new Error("Missing proof image");
+                }
+                const attachment = await uploadFileUri({
+                    id: nativeImageUri,
+                    type: nativeImageMimeType,
+                    localUri: nativeImageUri,
+                    uri: nativeImageUri,
+                });
+                proofOfDeliveryUrl = processRawAttachment(attachment).url;
+            }
+            if (!proofOfDeliveryUrl) {
+                throw new Error("Upload did not return a URL");
+            }
+        } catch (e) {
+            const message = e instanceof Error ? e.message : "";
+            if (message) {
+                Toaster.error(message);
+            } else {
+                Toaster.error("Failed to upload proof. Please try again.");
+            }
+            setSubmitting(false);
+            return;
+        }
+
+        try {
             await onSubmit({
                 proofOfDeliveryUrl,
                 receivedNotes: note.trim() || undefined,
             });
-            setProofDataUrl("");
+            setWebSelectedFile(null);
+            setNativeImageUri("");
+            setNativeImageMimeType("image/jpeg");
             setNote("");
             setConfirmChecked(false);
             onClose();
-        } catch (e) {
-            // If the failure came from ActionContainer (Firestore update), it already toasts the real error.
-            // Only show a generic toast when the image upload itself failed.
-            const message = e instanceof Error ? e.message : "";
-            if (!message) {
-                Toaster.error("Failed to upload proof. Please try again.");
-            }
+        } catch {
+            // Parent (e.g. ActionContainer) already surfaces API / Firestore errors.
         } finally {
             setSubmitting(false);
         }
     };
 
     const handleClose = () => {
-        setProofDataUrl("");
+        setWebSelectedFile(null);
+        setNativeImageUri("");
+        setNativeImageMimeType("image/jpeg");
         setNote("");
         setConfirmChecked(false);
         onClose();
     };
+
+    const webHiddenFileInput =
+        Platform.OS === "web"
+            ? React.createElement("input", {
+                  ref: webFileInputRef,
+                  type: "file",
+                  accept: "image/jpeg,image/png,image/webp,image/*",
+                  style: { display: "none" },
+                  onChange: handleWebFileInputChange,
+              })
+            : null;
+
+    const uploadPreviewLabel =
+        Platform.OS === "web" && webSelectedFile
+            ? webSelectedFile.name
+            : "Image selected. Tap to change.";
 
     const modalContent = (
         <KeyboardAvoidingView
@@ -129,6 +203,7 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                 style={styles.modalInner}
                 onPress={() => Platform.OS !== "web" && Keyboard.dismiss()}
             >
+                {webHiddenFileInput}
                 <View style={styles.header}>
                     <View style={styles.iconCircle}>
                         <FontAwesomeIcon icon={faBox} size={28} color={colors.onPrimary ?? colors.surface} />
@@ -144,16 +219,18 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                 >
                     <Text style={styles.label}>PROOF OF DELIVERY</Text>
                     <Pressable style={styles.uploadBox} onPress={pickImage}>
-                        {proofDataUrl ? (
+                        {hasProofSelected ? (
                             <View style={styles.uploadPreview}>
                                 <FontAwesomeIcon icon={faBox} size={40} color={colors.primary} />
-                                <Text style={styles.uploadPreviewText}>Image selected. Tap to change.</Text>
+                                <Text style={styles.uploadPreviewText} numberOfLines={2}>
+                                    {uploadPreviewLabel}
+                                </Text>
                             </View>
                         ) : (
                             <>
                                 <FontAwesomeIcon icon={faCloudArrowUp} size={32} color={colors.primary} />
                                 <Text style={styles.uploadTitle}>Tap to upload image</Text>
-                                <Text style={styles.uploadHint}>JPG, PNG or PDF (Max {MAX_IMAGE_MB}MB)</Text>
+                                <Text style={styles.uploadHint}>JPG or PNG (Max {MAX_IMAGE_MB}MB)</Text>
                             </>
                         )}
                     </Pressable>
@@ -224,13 +301,15 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     }
 
     return (
-        <PaperModal
-            visible={visible}
-            onDismiss={handleClose}
-            contentContainerStyle={styles.modalContainer}
-        >
-            {modalContent}
-        </PaperModal>
+        <Portal>
+            <PaperModal
+                visible={visible}
+                onDismiss={handleClose}
+                contentContainerStyle={styles.modalContainer}
+            >
+                {modalContent}
+            </PaperModal>
+        </Portal>
     );
 };
 
@@ -241,23 +320,23 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             backgroundColor: colors.background,
             ...(isNative
                 ? {
-                      flex: 1,
-                      margin: 0,
-                      marginHorizontal: 0,
-                      maxWidth: "100%",
-                      alignSelf: "stretch",
-                      borderRadius: 0,
-                      paddingTop: Math.max(safeAreaTop, 16),
-                      paddingHorizontal: 24,
-                      paddingBottom: 24,
-                  }
+                    flex: 1,
+                    margin: 0,
+                    marginHorizontal: 0,
+                    maxWidth: "100%",
+                    alignSelf: "stretch",
+                    borderRadius: 0,
+                    paddingTop: Math.max(safeAreaTop, 16),
+                    paddingHorizontal: 24,
+                    paddingBottom: 24,
+                }
                 : {
-                      borderRadius: 12,
-                      padding: 24,
-                      marginHorizontal: 24,
-                      maxWidth: 440,
-                      alignSelf: "center",
-                  }),
+                    borderRadius: 12,
+                    padding: 24,
+                    marginHorizontal: 24,
+                    maxWidth: 440,
+                    alignSelf: "center",
+                }),
             overflow: "hidden",
         },
         keyboardView: { flex: 1, width: "100%" },
@@ -323,6 +402,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             fontSize: 14,
             color: colors.primary,
             marginTop: 8,
+            textAlign: "center",
         },
         noteInput: {
             minHeight: 80,

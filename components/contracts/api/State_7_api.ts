@@ -1,4 +1,6 @@
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { ContractStatus } from "@/shared-constants/contract-status";
+import { logContractApiCall } from "./logContractApiCall";
 
 export type ChangeReleaseDatePayload = {
     contractId: string;
@@ -12,6 +14,12 @@ export async function changeReleaseDate(
     const body = { newScheduledDate: payload.newScheduledDate };
 
     try {
+        logContractApiCall({
+            apiState: "State_7_api",
+            state: ContractStatus.PlanRelease,
+            action: "changeReleaseDate",
+            contractId: payload.contractId,
+        });
         await HttpWrapper.fetch(urlPath, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

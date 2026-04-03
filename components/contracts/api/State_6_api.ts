@@ -1,5 +1,7 @@
 import type { ReleasePlanOption } from "@/shared-constants/contract-status";
+import { ContractStatus } from "@/shared-constants/contract-status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { logContractApiCall } from "./logContractApiCall";
 
 export type RequestVideoRevisionPayload = {
     contractId: string;
@@ -19,6 +21,12 @@ export async function requestVideoRevision(
     const body = { notes: payload.notes };
 
     try {
+        logContractApiCall({
+            apiState: "State_6_api",
+            state: ContractStatus.ReviewPending,
+            action: "requestVideoRevision",
+            contractId: payload.contractId,
+        });
         await HttpWrapper.fetch(urlPath, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -49,6 +57,12 @@ export async function approveVideoRelease(
     }
 
     try {
+        logContractApiCall({
+            apiState: "State_6_api",
+            state: ContractStatus.ReviewPending,
+            action: "approveVideoRelease",
+            contractId: payload.contractId,
+        });
         await HttpWrapper.fetch(urlPath, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

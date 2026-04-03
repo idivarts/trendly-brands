@@ -2,7 +2,7 @@ import type { ReleasePlanOption } from "@/shared-constants/contract-status";
 import { RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Checkbox } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -37,6 +37,44 @@ const maxReleaseDate = () => {
     return d;
 };
 
+const sendDebugLog = (
+    runId: string,
+    hypothesisId: string,
+    location: string,
+    message: string,
+    data: Record<string, unknown>
+) =>
+    fetch("http://127.0.0.1:7635/ingest/35d7f708-ae10-4154-b612-6c5217b8dac1", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "320059",
+        },
+        body: JSON.stringify({
+            sessionId: "320059",
+            runId,
+            hypothesisId,
+            location,
+            message,
+            data,
+            timestamp: Date.now(),
+        }),
+    }).catch(() => {});
+
+const formatDateForWebInput = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+};
+
+const parseWebInputDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return null;
+    const parsed = new Date(year, month - 1, day);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export interface ApproveVideoReleaseBottomSheetProps {
     onClose: () => void;
     onConfirm: (data: {
@@ -65,6 +103,7 @@ const ApproveVideoReleaseBottomSheet: React.FC<
     const [hasSelectedDate, setHasSelectedDate] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const webDateInputRef = useRef<any>(null);
 
     const needsScheduledDate = selectedOption !== "brand_posts_alone";
 
@@ -74,6 +113,78 @@ const ApproveVideoReleaseBottomSheet: React.FC<
             setHasSelectedDate(false);
         }
     }, [selectedOption]);
+
+    useEffect(() => {
+        if (Platform.OS !== "web" || !showDatePicker) return;
+        const input = webDateInputRef.current;
+        // #region agent log
+        sendDebugLog(
+            "post-fix",
+            "H8",
+            "ApproveVideoReleaseBottomSheet.tsx:web-input:effect-open",
+            "web date input open effect running",
+            { hasInputRef: !!input }
+        );
+        // #endregion
+        if (!input) return;
+        try {
+            input.focus();
+            // #region agent log
+            sendDebugLog(
+                "post-fix",
+                "H8",
+                "ApproveVideoReleaseBottomSheet.tsx:web-input:effect-focus",
+                "web date input focused",
+                {}
+            );
+            // #endregion
+        } catch (error) {
+            // #region agent log
+            sendDebugLog(
+                "post-fix",
+                "H8",
+                "ApproveVideoReleaseBottomSheet.tsx:web-input:effect-focus-error",
+                "web date input focus threw",
+                { error: error instanceof Error ? error.message : "unknown_focus_error" }
+            );
+            // #endregion
+        }
+        try {
+            if (typeof input.showPicker === "function") {
+                input.showPicker();
+                // #region agent log
+                sendDebugLog(
+                    "post-fix",
+                    "H8",
+                    "ApproveVideoReleaseBottomSheet.tsx:web-input:effect-showPicker",
+                    "web date input showPicker invoked",
+                    {}
+                );
+                // #endregion
+            } else {
+                input.click();
+                // #region agent log
+                sendDebugLog(
+                    "post-fix",
+                    "H8",
+                    "ApproveVideoReleaseBottomSheet.tsx:web-input:effect-click",
+                    "web date input click invoked",
+                    {}
+                );
+                // #endregion
+            }
+        } catch (error) {
+            // #region agent log
+            sendDebugLog(
+                "post-fix",
+                "H8",
+                "ApproveVideoReleaseBottomSheet.tsx:web-input:effect-open-error",
+                "web date input open attempt threw",
+                { error: error instanceof Error ? error.message : "unknown_open_error" }
+            );
+            // #endregion
+        }
+    }, [showDatePicker]);
 
     const handleConfirm = async () => {
         if (!selectedOption) return;
@@ -149,11 +260,35 @@ const ApproveVideoReleaseBottomSheet: React.FC<
                         mode="outlined"
                         style={styles.selectDateButton}
                         onPress={() => {
+                            // #region agent log
+                            sendDebugLog(
+                                "pre-fix",
+                                "H1",
+                                "ApproveVideoReleaseBottomSheet.tsx:select-date:onPress",
+                                "select date button pressed",
+                                {
+                                    platform: Platform.OS,
+                                    selectedOption,
+                                    needsScheduledDate,
+                                }
+                            );
+                            // #endregion
                             // Reset so "selected date" text doesn't appear until the user actually confirms.
                             setHasSelectedDate(false);
-                            try {
+                            if (Platform.OS === "web") {
+                                // #region agent log
+                                sendDebugLog(
+                                    "post-fix",
+                                    "H6",
+                                    "ApproveVideoReleaseBottomSheet.tsx:select-date:web-open-inline",
+                                    "opening inline web DateTimePicker",
+                                    {}
+                                );
+                                // #endregion
                                 setShowDatePicker(true);
-                            } catch (_) {}
+                                return;
+                            }
+                            setShowDatePicker(true);
                         }}
                     >
                         Select date
@@ -169,26 +304,128 @@ const ApproveVideoReleaseBottomSheet: React.FC<
                     ) : null}
 
                     {showDatePicker && (
-                        <DateTimePicker
-                            value={date}
-                            mode="date"
-                            // Use spinner on iOS to avoid the "second tap" behavior and reduce crash risk.
-                            display={Platform.OS === "ios" ? "spinner" : "default"}
-                            minimumDate={new Date()}
-                            maximumDate={maxReleaseDate()}
-                            onChange={(event, d) => {
-                                // Only mark as selected when the user actually sets a date.
-                                if ((event as any)?.type === "set" && d) {
-                                    const prevMs = date.getTime();
-                                    setDate(d);
-                                    // If the picker fires an initial "set" with the same default date,
-                                    // don't render the selected date text until the user changes it.
-                                    setHasSelectedDate(d.getTime() !== prevMs);
-                                }
+                        Platform.OS === "web" ? (
+                            <>
+                                {React.createElement("input", {
+                                    ref: webDateInputRef,
+                                    type: "date",
+                                    value: formatDateForWebInput(date),
+                                    min: formatDateForWebInput(new Date()),
+                                    max: formatDateForWebInput(maxReleaseDate()),
+                                    onFocus: () => {
+                                        // #region agent log
+                                        sendDebugLog(
+                                            "post-fix",
+                                            "H8",
+                                            "ApproveVideoReleaseBottomSheet.tsx:web-input:onFocus",
+                                            "native HTML date input focused by user/system",
+                                            {}
+                                        );
+                                        // #endregion
+                                    },
+                                    onClick: () => {
+                                        // #region agent log
+                                        sendDebugLog(
+                                            "post-fix",
+                                            "H8",
+                                            "ApproveVideoReleaseBottomSheet.tsx:web-input:onClick",
+                                            "native HTML date input clicked",
+                                            {}
+                                        );
+                                        // #endregion
+                                    },
+                                    onChange: (e: any) => {
+                                        const selected = parseWebInputDate(e?.target?.value ?? "");
+                                        // #region agent log
+                                        sendDebugLog(
+                                            "post-fix",
+                                            "H8",
+                                            "ApproveVideoReleaseBottomSheet.tsx:web-input:onChange",
+                                            "native HTML date input changed",
+                                            {
+                                                rawValue: e?.target?.value ?? null,
+                                                parsedMs: selected?.getTime() ?? null,
+                                            }
+                                        );
+                                        // #endregion
+                                        if (!selected) return;
+                                        const prevMs = date.getTime();
+                                        setDate(selected);
+                                        setHasSelectedDate(selected.getTime() !== prevMs);
+                                    },
+                                    style: {
+                                        width: "100%",
+                                        height: 42,
+                                        marginBottom: 12,
+                                        borderRadius: 8,
+                                        border: `1px solid ${colors.budgetCardBorder}`,
+                                        backgroundColor: colors.background,
+                                        color: colors.text,
+                                        padding: "8px 12px",
+                                        fontSize: "14px",
+                                        boxSizing: "border-box",
+                                    },
+                                })}
+                            </>
+                        ) : (
+                            <DateTimePicker
+                                value={date}
+                                mode="date"
+                                // Use spinner on iOS to avoid the "second tap" behavior and reduce crash risk.
+                                display={Platform.OS === "ios" ? "spinner" : "default"}
+                                minimumDate={new Date()}
+                                maximumDate={maxReleaseDate()}
+                                onChange={(event, d) => {
+                                    // #region agent log
+                                    sendDebugLog(
+                                        "post-fix",
+                                        "H6",
+                                        "ApproveVideoReleaseBottomSheet.tsx:DateTimePicker:onChange",
+                                        "DateTimePicker onChange fired",
+                                        {
+                                            platform: Platform.OS,
+                                            eventType: (event as any)?.type ?? null,
+                                            hasDate: !!d,
+                                            pickedMs: d?.getTime() ?? null,
+                                        }
+                                    );
+                                    // #endregion
+                                    // Only mark as selected when the user actually sets a date.
+                                    if ((event as any)?.type === "set" && d) {
+                                        const prevMs = date.getTime();
+                                        setDate(d);
+                                        // If the picker fires an initial "set" with the same default date,
+                                        // don't render the selected date text until the user changes it.
+                                        setHasSelectedDate(d.getTime() !== prevMs);
+                                    }
+                                    setShowDatePicker(false);
+                                }}
+                            />
+                        )
+                    )}
+                    {Platform.OS === "web" && showDatePicker ? (
+                        <Button
+                            mode="outlined"
+                            style={styles.selectDateDoneButton}
+                            onPress={() => {
+                                // #region agent log
+                                sendDebugLog(
+                                    "post-fix",
+                                    "H6",
+                                    "ApproveVideoReleaseBottomSheet.tsx:DateTimePicker:web-done",
+                                    "web date picker done tapped",
+                                    {
+                                        hasSelectedDate,
+                                        selectedMs: date.getTime(),
+                                    }
+                                );
+                                // #endregion
                                 setShowDatePicker(false);
                             }}
-                        />
-                    )}
+                        >
+                            Done
+                        </Button>
+                    ) : null}
 
                     <View style={styles.warningBox}>
                         <Text style={styles.warningText}>
@@ -293,6 +530,9 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             lineHeight: 18,
         },
         selectDateButton: {
+            marginBottom: 12,
+        },
+        selectDateDoneButton: {
             marginBottom: 12,
         },
         selectedDateText: {

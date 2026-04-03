@@ -15,7 +15,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Modal as PaperModal } from "react-native-paper";
+import { Modal as PaperModal, Portal } from "react-native-paper";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
@@ -120,13 +120,15 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
     }
 
     return (
-        <PaperModal
-            visible={visible}
-            onDismiss={handleClose}
-            contentContainerStyle={styles.modalContainer}
-        >
-            {modalContent}
-        </PaperModal>
+        <Portal>
+            <PaperModal
+                visible={visible}
+                onDismiss={handleClose}
+                contentContainerStyle={styles.modalContainer}
+            >
+                {modalContent}
+            </PaperModal>
+        </Portal>
     );
 };
 

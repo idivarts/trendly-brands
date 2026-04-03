@@ -1,4 +1,6 @@
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { ContractStatus } from "@/shared-constants/contract-status";
+import { logContractApiCall } from "./logContractApiCall";
 
 export type MarkShipmentDeliveredPayload = {
     contractId: string;
@@ -16,6 +18,12 @@ export async function markShipmentDelivered(
     };
 
     try {
+        logContractApiCall({
+            apiState: "State_4_api",
+            state: ContractStatus.DeliveryPending,
+            action: "markShipmentDelivered",
+            contractId: payload.contractId,
+        });
         await HttpWrapper.fetch(urlPath, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

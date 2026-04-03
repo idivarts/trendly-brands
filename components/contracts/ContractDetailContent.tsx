@@ -22,10 +22,10 @@ import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Card, Portal } from "react-native-paper";
+import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
-import FeedbackModal from "./FeedbackModal";
+import BrandFeedbackModal from "./BrandFeedbackModal";
 import MemberContainer from "./MemberContainer";
 
 interface CollaborationDetailsContentProps {
@@ -363,22 +363,13 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     setUpdateMemberContainer((prev) => prev + 1)
                 }
             />
-            {feedbackModalVisible && (
-                <Portal>
-                    <FeedbackModal
-                        feedbackGiven={false}
-                        setVisibility={() =>
-                            setFeedbackModalVisible(false)
-                        }
-                        star={
-                            props.contractData.feedbackFromBrand?.ratings || 0
-                        }
-                        visible={feedbackModalVisible}
-                        contract={props.contractData}
-                        refreshData={props.refreshData}
-                    />
-                </Portal>
-            )}
+            <BrandFeedbackModal
+                visible={feedbackModalVisible}
+                onClose={() => setFeedbackModalVisible(false)}
+                initialRating={props.contractData.feedbackFromBrand?.ratings || 0}
+                contractId={props.contractData.streamChannelId}
+                refreshData={props.refreshData}
+            />
         </ScrollView>
     );
 };

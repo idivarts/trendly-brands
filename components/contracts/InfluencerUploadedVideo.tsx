@@ -16,7 +16,7 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const links = contract.deliverable?.deliverableLinks ?? [];
-    const firstLink = links[0];
+    const latestLink = links.length > 0 ? links[links.length - 1] : undefined;
 
     if (links.length === 0) {
         return (
@@ -30,27 +30,22 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
     return (
         <View style={styles.card}>
             <Text style={styles.title}>Uploaded video by influencer</Text>
-            {firstLink ? (
+            {latestLink ? (
                 <View style={styles.videoWrap}>
                     {Platform.OS === "web" ? (
-                        <VideoPlayer videoLink={firstLink} />
+                        <VideoPlayer videoLink={latestLink} />
                     ) : (
                         <Pressable
                             style={styles.nativeVideoCard}
-                            onPress={() => firstLink && Linking.openURL(firstLink)}
+                            onPress={() => latestLink && Linking.openURL(latestLink)}
                         >
                             <Text style={styles.nativeVideoLabel}>Tap to view video</Text>
                             <Text style={styles.nativeVideoUrl} numberOfLines={1}>
-                                {firstLink}
+                                {latestLink}
                             </Text>
                         </Pressable>
                     )}
                 </View>
-            ) : null}
-            {links.length > 1 ? (
-                <Text style={styles.moreLinks}>
-                    +{links.length - 1} more link{links.length > 2 ? "s" : ""}
-                </Text>
             ) : null}
         </View>
     );

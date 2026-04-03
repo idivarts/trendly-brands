@@ -11,7 +11,6 @@ import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -23,7 +22,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import type { ShipmentFormInput } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import React, { FC, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
@@ -48,6 +47,9 @@ import {
     scheduleRelease,
     changeReleaseDate as changeReleaseDateState8,
 } from "./api/State_8_api";
+import { createContractOrder, getContractOrderStatus, reviseQuotation } from "./api/State_0_api";
+import { requestDeliverable } from "./api/State_5_api";
+import { openRazorpayCheckout } from "./RazorpayCheckout";
 
 /** Pass through 0–10 (Firestore). Legacy: 2 = feedback → PlanRelease, 3 = completed → Settled. */
 function normalizeStatus(status: number): number {
@@ -131,44 +133,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 )}
             </>
         );
-    };
-
-    /** Legacy: start contract (status 0 → 1). */
-    const startContract = async () => {
-        const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-        const timeStarted = new Date().getTime();
-        await updateDoc(contractRef, {
-            status: 1,
-            contractTimestamp: {
-                startedOn: timeStarted,
-            },
-        });
-        await HttpWrapper.fetch(`/api/collabs/contracts/${contract.streamChannelId}`, {
-            method: "POST",
-        }).then(() => {
-            Toaster.success("Your Contract has started");
-        });
-        refreshData();
-    };
-
-    /** New flow: after Start Contract, move to ShipmentPending (3) or VideoPending (5) for digital. */
-    const startContractAfterPayment = async () => {
-        const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-        const timeStarted = new Date().getTime();
-        const nextStatus = productShipping ? ContractStatus.ShipmentPending : ContractStatus.VideoPending;
-        await updateDoc(contractRef, {
-            status: nextStatus,
-            contractTimestamp: {
-                ...contract.contractTimestamp,
-                startedOn: timeStarted,
-            },
-        });
-        await HttpWrapper.fetch(`/api/collabs/contracts/${contract.streamChannelId}`, {
-            method: "POST",
-        }).then(() => {
-            Toaster.success("Contract started successfully");
-        });
-        refreshData();
     };
 
     const handleShippingSubmit = async (data: ShipmentFormInput) => {
@@ -316,6 +280,99 @@ const ActionContainer: FC<ActionContainerProps> = ({
         }
     };
 
+    const handlePendingPayment = async () => {
+        try {
+            // Important for web: opening a new tab after an `await` is often popup-blocked.
+            // Open a blank tab synchronously (user gesture), then redirect it once we have the URL.
+            const paymentTab =
+                Platform.OS === "web"
+                    ? window.open("about:blank", "_blank", "noopener,noreferrer")
+                    : null;
+
+            const razorpayKeyId =
+                process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RtPhjl6Q2YAk8S";
+            if (!razorpayKeyId) {
+                throw new Error("Missing Razorpay key. Set EXPO_PUBLIC_RAZORPAY_KEY_ID.");
+            }
+
+            const order = await createContractOrder({ contractId: contract.streamChannelId });
+            if (!order.id) {
+                throw new Error(
+                    `Invalid order response from server (missing orderId)`
+                );
+            }
+
+            // If backend returns a hosted payment link (common), use that.
+            if (order.shortUrl) {
+                if (Platform.OS === "web") {
+                    if (paymentTab) {
+                        paymentTab.location.href = order.shortUrl;
+                    } else {
+                        Toaster.info("Popup blocked. Opening Razorpay in this tab.");
+                        window.location.href = order.shortUrl;
+                    }
+                } else {
+                    await openRazorpayCheckout({ shortUrl: order.shortUrl });
+                }
+            } else {
+                // No URL to redirect the opened tab to; close it to avoid leaving a blank page around.
+                paymentTab?.close();
+                // Web-only checkout.js flow.
+                await openRazorpayCheckout({
+                    key: razorpayKeyId,
+                    orderId: order.id,
+                    amount: order.amount > 0 ? order.amount : undefined,
+                    currency: order.currency || undefined,
+                    name: "Trendly",
+                    description: "Contract pre-payment",
+                    prefill: {
+                        name: userData?.name,
+                        email: userData?.email,
+                        contact: userData?.phoneNumber,
+                    },
+                    themeColor: colors.primary,
+                });
+            }
+
+            const latest = await getContractOrderStatus({
+                contractId: contract.streamChannelId,
+            });
+            if (latest?.status === "paid") {
+                Toaster.success("Payment completed successfully");
+            } else {
+                Toaster.info("Payment submitted. We'll update status shortly.");
+            }
+            refreshData();
+        } catch (e) {
+            // Close the blank tab if we opened one and then errored out.
+            // (No-op if popup was blocked.)
+            // eslint-disable-next-line no-undef
+            // @ts-expect-error window.open tab may be undefined in non-web builds
+            // (guarded by Platform.OS check above)
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const message =
+                e instanceof Error ? e.message : "Unable to complete payment";
+            Toaster.error(message);
+            refreshData();
+        }
+    };
+
+    const handleReviseQuotation = async () => {
+        try {
+            const collabId = contract.collaborationId;
+            const influencerUserId = contract.userId;
+            if (!collabId || !influencerUserId) {
+                throw new Error("Missing collaborationId or userId for revise request");
+            }
+
+            await reviseQuotation({ collabId, userId: influencerUserId });
+            Toaster.success("Revision request sent");
+        } catch (e) {
+            const message = e instanceof Error ? e.message : "Unable to request revision";
+            Toaster.error(message);
+        }
+    };
+
     const fetchManager = async () => {
         if (!contract.feedbackFromBrand?.managerId) return;
         const managerRef = doc(
@@ -410,15 +467,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Ask to Revise Quote",
                         variant: "outlined",
-                        onPress: goToMessages,
+                        onPress: handleReviseQuotation,
                     },
                     {
                         label: "Payment",
                         variant: "contained",
-                        onPress: () => {
-                            // For UI testing: simulate successful payment and move to status 1 (Started).
-                            startContract();
-                        },
+                        onPress: handlePendingPayment,
                     },
                 ],
                 message: {
@@ -458,15 +512,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Ask to Revise Quote",
                         variant: "outlined",
-                        onPress: goToMessages,
+                        onPress: handleReviseQuotation,
                     },
                     {
                         label: "Payment",
                         variant: "contained",
-                        onPress: () => {
-                            // For UI testing: simulate successful payment and move to status 1 (Started).
-                            startContract();
-                        },
+                        onPress: handlePendingPayment,
                     },
                 ],
                 message: {
@@ -482,32 +533,44 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Retry Payment",
                         variant: "contained",
-                        onPress: () => Toaster.info("Razorpay integration: retry payment"),
+                        onPress: handlePendingPayment,
                     },
                 ],
                 message: messageForStatus(),
             };
         }
         if (!isLegacyFlow && status === ContractStatus.Started) {
+            // Backend-owned flow: do not write state from UI.
+            // If legacy/transitional `Started` appears, treat it as the next actionable state.
             return {
-                buttons: [
-                    {
-                        label: "Start Contract",
-                        variant: "contained",
-                        onPress: () => {
-                            openModal({
-                                confirmAction: startContractAfterPayment,
-                                confirmText: "Start",
-                                title: "Start contract?",
-                                description:
-                                    "Next step: " +
-                                    (productShipping
-                                        ? "add shipment details and ship the product to the influencer."
-                                        : "influencer will upload video."),
-                            });
-                        },
-                    },
-                ],
+                buttons: productShipping
+                    ? [
+                          {
+                              label: "View Influencer Address",
+                              variant: "outlined",
+                              onPress: () => {
+                                  setShowShippingModal(false);
+                                  setShowViewAddressSheet(true);
+                              },
+                          },
+                          {
+                              label: "Add Shipment Details",
+                              variant: "contained",
+                              onPress: () => {
+                                  setShowViewAddressSheet(false);
+                                  setShowShippingModal(true);
+                              },
+                          },
+                      ]
+                    : [
+                          {
+                              label: "Request for Video",
+                              variant: "contained",
+                              onPress: async () => {
+                                  await requestDeliverable({ contractId: contract.streamChannelId });
+                              },
+                          },
+                      ],
                 message: messageForStatus(),
             };
         }
@@ -557,12 +620,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Request for Video",
                         variant: "contained",
-                        onPress: () => {
-                            sendMessageToChannel(
-                                contract.streamChannelId,
-                                "The influencer is all set for the delivery of the content. Please coordinate with the influencer to get the video done."
-                            );
-                            Toaster.success("Message sent in chat");
+                        onPress: async () => {
+                            await requestDeliverable({ contractId: contract.streamChannelId });
                         },
                     },
                 ],
@@ -637,12 +696,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.posting?.scheduledDate,
         colors.primary,
         openModal,
-        startContract,
-        startContractAfterPayment,
         feedbackModalVisible,
         goToMessages,
         handleMarkAsDeliveredSubmit,
         handleRevisionSend,
+        handlePendingPayment,
+        handleReviseQuotation,
         contract.shipment,
         contract.deliverable,
         devOverrideStatus,

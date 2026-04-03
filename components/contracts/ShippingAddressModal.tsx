@@ -17,7 +17,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Modal as PaperModal } from "react-native-paper";
+import { Modal as PaperModal, Portal } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
@@ -140,7 +140,6 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
                                 style={styles.expectedDateButton}
                                 onPress={() => {
                                     setHasSelectedExpectedDate(false);
-                                    setExpectedDatePickerVisibleAtLeastOnce(true);
                                     setShowExpectedDatePicker(true);
                                 }}
                             >
@@ -209,13 +208,15 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
     }
 
     return (
-        <PaperModal
-            visible={visible}
-            onDismiss={handleClose}
-            contentContainerStyle={styles.modalContainer}
-        >
-            {modalContent}
-        </PaperModal>
+        <Portal>
+            <PaperModal
+                visible={visible}
+                onDismiss={handleClose}
+                contentContainerStyle={styles.modalContainer}
+            >
+                {modalContent}
+            </PaperModal>
+        </Portal>
     );
 };
 
