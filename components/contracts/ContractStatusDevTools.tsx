@@ -18,11 +18,11 @@ const ALL_STATES = [
     ContractStatus.PaymentFailed,
     ContractStatus.ShipmentPending,
     ContractStatus.DeliveryPending,
+    ContractStatus.DeliveryAcknowledgementPending,
     ContractStatus.VideoPending,
     ContractStatus.ReviewPending,
-    ContractStatus.PlanRelease,
-    ContractStatus.PostScheduled,
-    ContractStatus.PostDone,
+    ContractStatus.PostingPending,
+    ContractStatus.SettlementPending,
     ContractStatus.Settled,
 ] as const;
 

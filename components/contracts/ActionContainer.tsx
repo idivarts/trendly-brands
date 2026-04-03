@@ -1,5 +1,10 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { ContractStatus, isContractBlockedByKYC, type ReleasePlanOption } from "@/shared-constants/contract-status";
+import {
+    ContractStatus,
+    isContractBlockedByKYC,
+    normalizeStatus,
+    type ReleasePlanOption,
+} from "@/shared-constants/contract-status";
 import {
     ContractActionsWithMessage,
     type ContractActionButton,
@@ -9,7 +14,6 @@ import { useChatContext } from "@/contexts";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
@@ -23,8 +27,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import type { ShipmentFormInput } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import React, { FC, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ChangeReleaseDateSheet from "./ChangeReleaseDateSheet";
@@ -49,19 +52,14 @@ import {
 } from "./api/State_8_api";
 import { createContractOrder, getContractOrderStatus, reviseQuotation } from "./api/State_0_api";
 import { requestDeliverable } from "./api/State_5_api";
-import { openRazorpayCheckout } from "./RazorpayCheckout";
+import { openRazorpayHostedPaymentLink } from "./RazorpayCheckout";
+import RazorpayCheckoutModal from "./RazorpayCheckoutModal";
+import type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 
-/** Pass through 0–10 (Firestore). Legacy: 2 = feedback → PlanRelease, 3 = completed → Settled. */
-function normalizeStatus(status: number): number {
-    if (status >= 0 && status <= 10) return status;
-    if (status === 2) return ContractStatus.PlanRelease;
-    if (status === 3) return ContractStatus.Settled;
-    return ContractStatus.Pending;
-}
-
-/** True if collaboration requires product shipping (→ states 6, 7). */
+/** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {
-    return collab?.promotionSubject === "physical_product";
+    return collab?.promotionSubject === "physical-product";
 }
 
 interface ActionContainerProps {
@@ -99,6 +97,84 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
 
+    const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
+    const [checkoutOptions, setCheckoutOptions] = useState<RazorpayCheckoutModalOptions>({});
+    const [paymentButtonLoading, setPaymentButtonLoading] = useState(false);
+    const checkoutDeferredRef = useRef<{
+        resolve: (value: unknown) => void;
+        reject: (reason: Error) => void;
+    } | null>(null);
+
+    const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
+    const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
+    const [shippingAddressError, setShippingAddressError] = useState<string | null>(null);
+
+    const closeAddressSheet = useCallback(() => {
+        setShowViewAddressSheet(false);
+        setFetchedInfluencerUser(null);
+        setShippingAddressError(null);
+    }, []);
+
+    const closeAddressModal = useCallback(() => {
+        setShowViewAddressModal(false);
+        setFetchedInfluencerUser(null);
+        setShippingAddressError(null);
+    }, []);
+
+    /** KYC-verified shipping address from the Users app (`kyc.currentAddress`). */
+    type InfluencerKycShippingAddress = NonNullable<
+        NonNullable<IUsers["kyc"]>["currentAddress"]
+    >;
+
+    /** Returns KYC shipping address when street and city are present (usable for shipment). */
+    function getInfluencerKycShippingAddress(
+        user: IUsers | null | undefined
+    ): InfluencerKycShippingAddress | undefined {
+        const a = user?.kyc?.currentAddress;
+        if (!a) return undefined;
+        if (!String(a.street ?? "").trim() || !String(a.city ?? "").trim()) return undefined;
+        return a;
+    }
+
+
+    useEffect(() => {
+        if (!showViewAddressSheet && !showViewAddressModal) return;
+        let cancelled = false;
+        setShippingAddressLoading(true);
+        setShippingAddressError(null);
+        (async () => {
+            try {
+                const userRef = doc(FirestoreDB, "users", contract.userId);
+                const snap = await getDoc(userRef);
+                if (cancelled) return;
+                if (snap.exists()) {
+                    setFetchedInfluencerUser(snap.data() as IUsers);
+                } else {
+                    setFetchedInfluencerUser(null);
+                    setShippingAddressError("Influencer profile could not be found.");
+                }
+            } catch (e) {
+                if (!cancelled) {
+                    setFetchedInfluencerUser(null);
+                    setShippingAddressError(
+                        e instanceof Error ? e.message : "Failed to load address"
+                    );
+                }
+            } finally {
+                if (!cancelled) setShippingAddressLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [showViewAddressSheet, showViewAddressModal, contract.userId]);
+
+    const kycShippingAddress = useMemo(
+        () => getInfluencerKycShippingAddress(fetchedInfluencerUser),
+        [fetchedInfluencerUser]
+    );
+    const displayInfluencerName = fetchedInfluencerUser?.name ?? userData.name;
+
     const status =
         devOverrideStatus != null ? normalizeStatus(devOverrideStatus) : normalizeStatus(contract.status);
     const productShipping = isProductShipping(collaborationData);
@@ -135,7 +211,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         );
     };
 
-    const handleShippingSubmit = async (data: ShipmentFormInput) => {
+    const handleShippingSubmit = async (data: any) => {
         try {
             const courierName = data.courierName?.trim();
             const trackingNumber = data.trackingNumber?.trim();
@@ -185,7 +261,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             sendMessageToChannel(
                 contract.streamChannelId,
                 "Product has been marked as delivered. You can now upload your collaboration video."
-            ).catch(() => {});
+            ).catch(() => { });
         } catch (e) {
             console.error("Failed to update delivered status", e);
             const message = e instanceof Error ? e.message : undefined;
@@ -236,16 +312,17 @@ const ActionContainer: FC<ActionContainerProps> = ({
     };
 
     const handleChangeDateConfirm = async (scheduledReleaseAt: number) => {
+        if (status !== ContractStatus.PostingPending) return;
         try {
-            if (status === ContractStatus.PlanRelease) {
-                await changeReleaseDateState7({
-                    contractId: contract.streamChannelId,
-                    newScheduledDate: scheduledReleaseAt,
-                });
-            } else {
+            if (contract.posting?.scheduledDate) {
                 await changeReleaseDateState8({
                     contractId: contract.streamChannelId,
                     scheduledReleaseAt,
+                });
+            } else {
+                await changeReleaseDateState7({
+                    contractId: contract.streamChannelId,
+                    newScheduledDate: scheduledReleaseAt,
                 });
             }
             Toaster.success("Release date updated");
@@ -277,83 +354,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message ? `Failed to approve video: ${message}` : "Failed to approve video"
             );
             throw e;
-        }
-    };
-
-    const handlePendingPayment = async () => {
-        try {
-            // Important for web: opening a new tab after an `await` is often popup-blocked.
-            // Open a blank tab synchronously (user gesture), then redirect it once we have the URL.
-            const paymentTab =
-                Platform.OS === "web"
-                    ? window.open("about:blank", "_blank", "noopener,noreferrer")
-                    : null;
-
-            const razorpayKeyId =
-                process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RtPhjl6Q2YAk8S";
-            if (!razorpayKeyId) {
-                throw new Error("Missing Razorpay key. Set EXPO_PUBLIC_RAZORPAY_KEY_ID.");
-            }
-
-            const order = await createContractOrder({ contractId: contract.streamChannelId });
-            if (!order.id) {
-                throw new Error(
-                    `Invalid order response from server (missing orderId)`
-                );
-            }
-
-            // If backend returns a hosted payment link (common), use that.
-            if (order.shortUrl) {
-                if (Platform.OS === "web") {
-                    if (paymentTab) {
-                        paymentTab.location.href = order.shortUrl;
-                    } else {
-                        Toaster.info("Popup blocked. Opening Razorpay in this tab.");
-                        window.location.href = order.shortUrl;
-                    }
-                } else {
-                    await openRazorpayCheckout({ shortUrl: order.shortUrl });
-                }
-            } else {
-                // No URL to redirect the opened tab to; close it to avoid leaving a blank page around.
-                paymentTab?.close();
-                // Web-only checkout.js flow.
-                await openRazorpayCheckout({
-                    key: razorpayKeyId,
-                    orderId: order.id,
-                    amount: order.amount > 0 ? order.amount : undefined,
-                    currency: order.currency || undefined,
-                    name: "Trendly",
-                    description: "Contract pre-payment",
-                    prefill: {
-                        name: userData?.name,
-                        email: userData?.email,
-                        contact: userData?.phoneNumber,
-                    },
-                    themeColor: colors.primary,
-                });
-            }
-
-            const latest = await getContractOrderStatus({
-                contractId: contract.streamChannelId,
-            });
-            if (latest?.status === "paid") {
-                Toaster.success("Payment completed successfully");
-            } else {
-                Toaster.info("Payment submitted. We'll update status shortly.");
-            }
-            refreshData();
-        } catch (e) {
-            // Close the blank tab if we opened one and then errored out.
-            // (No-op if popup was blocked.)
-            // eslint-disable-next-line no-undef
-            // @ts-expect-error window.open tab may be undefined in non-web builds
-            // (guarded by Platform.OS check above)
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const message =
-                e instanceof Error ? e.message : "Unable to complete payment";
-            Toaster.error(message);
-            refreshData();
         }
     };
 
@@ -392,6 +392,116 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    const handleRazorpayModalSuccess = useCallback((data: unknown) => {
+        setCheckoutModalVisible(false);
+        checkoutDeferredRef.current?.resolve(data);
+        checkoutDeferredRef.current = null;
+    }, []);
+
+    const handleRazorpayModalClose = useCallback(() => {
+        setCheckoutModalVisible(false);
+        checkoutDeferredRef.current?.reject(new Error("Payment cancelled"));
+        checkoutDeferredRef.current = null;
+    }, []);
+
+    const handleRazorpayModalError = useCallback((err: unknown) => {
+        setCheckoutModalVisible(false);
+        const e = err instanceof Error ? err : new Error(String(err));
+        checkoutDeferredRef.current?.reject(e);
+        checkoutDeferredRef.current = null;
+    }, []);
+
+    const handlePendingPayment = useCallback(async () => {
+        if (paymentButtonLoading) return;
+
+        const razorpayKeyId =
+            process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RtPhjl6Q2YAk8S";
+        if (!razorpayKeyId) {
+            Toaster.error("Missing Razorpay key. Set EXPO_PUBLIC_RAZORPAY_KEY_ID.");
+            return;
+        }
+
+        setPaymentButtonLoading(true);
+        let order: Awaited<ReturnType<typeof createContractOrder>> | undefined;
+        try {
+            order = await createContractOrder({ contractId: contract.streamChannelId });
+        } catch (e) {
+            setPaymentButtonLoading(false);
+            const message = e instanceof Error ? e.message : "Unable to create payment order";
+            Toaster.error(message);
+            refreshData();
+            return;
+        }
+
+        if (!order.id) {
+            setPaymentButtonLoading(false);
+            Toaster.error("Invalid order response from server (missing orderId)");
+            refreshData();
+            return;
+        }
+
+        const razorpayOptions: RazorpayCheckoutModalOptions = {
+            key: razorpayKeyId,
+            order_id: order.id,
+            name: "Trendly",
+            description: "Contract pre-payment",
+            prefill: {
+                name: userData?.name,
+                email: userData?.email,
+                contact: userData?.phoneNumber,
+            },
+            theme: { color: colors.primary },
+        };
+        if (order.amount > 0) razorpayOptions.amount = order.amount;
+        if (order.currency) razorpayOptions.currency = order.currency;
+
+        setPaymentButtonLoading(false);
+
+        try {
+            try {
+                await new Promise<unknown>((resolve, reject) => {
+                    checkoutDeferredRef.current = { resolve, reject };
+                    setCheckoutOptions(razorpayOptions);
+                    setCheckoutModalVisible(true);
+                });
+            } catch (checkoutErr) {
+                const msg = checkoutErr instanceof Error ? checkoutErr.message : "";
+                if (msg === "Payment cancelled") {
+                    refreshData();
+                    return;
+                }
+                if (order.shortUrl) {
+                    Toaster.info("Opening Razorpay in your browser instead.");
+                    await openRazorpayHostedPaymentLink(order.shortUrl);
+                } else {
+                    throw checkoutErr;
+                }
+            }
+
+            const latest = await getContractOrderStatus({
+                contractId: contract.streamChannelId,
+            });
+            if (latest?.status === "paid") {
+                Toaster.success("Payment completed successfully");
+            } else {
+                Toaster.info("Payment submitted. We'll update status shortly.");
+            }
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : "Unable to complete payment";
+            Toaster.error(message);
+            refreshData();
+        }
+    }, [
+        paymentButtonLoading,
+        contract.streamChannelId,
+        userData?.name,
+        userData?.email,
+        userData?.phoneNumber,
+        colors.primary,
+        refreshData,
+    ]);
+
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
 
@@ -428,27 +538,29 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     text: "Payment failed. You can retry payment using the button above.",
                     icon: infoIcon,
                 };
-            if (status === ContractStatus.PostDone)
+            if (status === ContractStatus.SettlementPending)
                 return {
                     variant: "info",
                     text: "Contract closed. Please submit feedback to finish.",
                     icon: infoIcon,
                 };
-            if (status === ContractStatus.PlanRelease) {
+            if (status === ContractStatus.PostingPending) {
                 const scheduledText = contract.posting?.scheduledDate
                     ? new Date(contract.posting.scheduledDate).toLocaleDateString(undefined, {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                      })
-                    : "the scheduled date";
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                    })
+                    : null;
                 return {
                     variant: "warning",
-                    text: `Release pending until ${scheduledText}.`,
+                    text: scheduledText
+                        ? `Release scheduled for ${scheduledText}. You can change the date if needed.`
+                        : "Posting and release are pending. Set or update the release date when ready.",
                     icon: infoIcon,
                 };
             }
-            if (status <= ContractStatus.PostScheduled)
+            if (status <= ContractStatus.PostingPending)
                 return {
                     variant: "warning",
                     text: "Complete the current step to move the contract forward. Use chat for any coordination.",
@@ -473,6 +585,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Payment",
                         variant: "contained",
                         onPress: handlePendingPayment,
+                        loading: paymentButtonLoading,
                     },
                 ],
                 message: {
@@ -518,6 +631,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Payment",
                         variant: "contained",
                         onPress: handlePendingPayment,
+                        loading: paymentButtonLoading,
                     },
                 ],
                 message: {
@@ -534,6 +648,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Retry Payment",
                         variant: "contained",
                         onPress: handlePendingPayment,
+                        loading: paymentButtonLoading,
                     },
                 ],
                 message: messageForStatus(),
@@ -545,32 +660,32 @@ const ActionContainer: FC<ActionContainerProps> = ({
             return {
                 buttons: productShipping
                     ? [
-                          {
-                              label: "View Influencer Address",
-                              variant: "outlined",
-                              onPress: () => {
-                                  setShowShippingModal(false);
-                                  setShowViewAddressSheet(true);
-                              },
-                          },
-                          {
-                              label: "Add Shipment Details",
-                              variant: "contained",
-                              onPress: () => {
-                                  setShowViewAddressSheet(false);
-                                  setShowShippingModal(true);
-                              },
-                          },
-                      ]
+                        {
+                            label: "View Influencer Address",
+                            variant: "outlined",
+                            onPress: () => {
+                                setShowShippingModal(false);
+                                setShowViewAddressSheet(true);
+                            },
+                        },
+                        {
+                            label: "Add Shipment Details",
+                            variant: "contained",
+                            onPress: () => {
+                                closeAddressSheet();
+                                setShowShippingModal(true);
+                            },
+                        },
+                    ]
                     : [
-                          {
-                              label: "Request for Video",
-                              variant: "contained",
-                              onPress: async () => {
-                                  await requestDeliverable({ contractId: contract.streamChannelId });
-                              },
-                          },
-                      ],
+                        {
+                            label: "Request for Video",
+                            variant: "contained",
+                            onPress: async () => {
+                                await requestDeliverable({ contractId: contract.streamChannelId });
+                            },
+                        },
+                    ],
                 message: messageForStatus(),
             };
         }
@@ -589,7 +704,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Add Shipment Details",
                         variant: "contained",
                         onPress: () => {
-                            setShowViewAddressSheet(false);
+                            closeAddressSheet();
                             setShowShippingModal(true);
                         },
                     },
@@ -611,6 +726,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         onPress: () => setShowMarkAsDeliveredModal(true),
                     },
                 ],
+                message: messageForStatus(),
+            };
+        }
+        if (!isLegacyFlow && status === ContractStatus.DeliveryAcknowledgementPending) {
+            return {
+                buttons: [{ label: "Go to Messages", variant: "contained", onPress: goToMessages }],
                 message: messageForStatus(),
             };
         }
@@ -645,7 +766,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.PlanRelease) {
+        if (!isLegacyFlow && status === ContractStatus.PostingPending) {
             return {
                 buttons: [
                     {
@@ -657,21 +778,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.PostScheduled) {
-            return {
-                buttons: contract.posting?.scheduledDate
-                    ? [
-                          {
-                              label: "Change Release Date",
-                              variant: "outlined",
-                              onPress: () => setShowChangeDateSheet(true),
-                          },
-                      ]
-                    : [],
-                message: messageForStatus(),
-            };
-        }
-        if (!isLegacyFlow && status === ContractStatus.PostDone) {
+        if (!isLegacyFlow && status === ContractStatus.SettlementPending) {
             return {
                 buttons: [
                     {
@@ -706,10 +813,18 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.deliverable,
         devOverrideStatus,
         refreshData,
+        paymentButtonLoading,
     ]);
 
     return (
         <View style={styles.root}>
+            <RazorpayCheckoutModal
+                visible={checkoutModalVisible}
+                options={checkoutOptions}
+                onSuccess={handleRazorpayModalSuccess}
+                onClose={handleRazorpayModalClose}
+                onError={handleRazorpayModalError}
+            />
             {(showButtons || showFeedbackAndInfo) && (
                 <ContractActionsWithMessage
                     buttons={showButtons ? actionsConfig.buttons : []}
@@ -778,13 +893,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
             {showViewAddressModal && (
                 <ViewInfluencerAddressModal
                     visible
-                    onClose={() => setShowViewAddressModal(false)}
-                    influencerName={userData.name}
-                    address={userData.currentAddress}
+                    onClose={closeAddressModal}
+                    influencerName={displayInfluencerName}
+                    address={kycShippingAddress}
+                    loading={shippingAddressLoading}
+                    errorMessage={shippingAddressError}
                     onNudgeForAddress={() =>
                         sendMessageToChannel(
                             contract.streamChannelId,
-                            "Please share your shipping address for this collaboration."
+                            "Please complete KYC with your shipping address so we can ship your collaboration product."
                         )
                     }
                 />
@@ -792,11 +909,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
             <BottomSheetScrollContainer
                 isVisible={showViewAddressSheet}
                 snapPointsRange={["35%", "50%"]}
-                onClose={() => setShowViewAddressSheet(false)}
+                onClose={closeAddressSheet}
             >
                 <ViewInfluencerAddressBottomSheet
-                    influencerName={userData.name}
-                    address={userData.currentAddress}
+                    influencerName={displayInfluencerName}
+                    address={kycShippingAddress}
+                    loading={shippingAddressLoading}
+                    errorMessage={shippingAddressError}
                 />
             </BottomSheetScrollContainer>
             {showShippingModal && (
