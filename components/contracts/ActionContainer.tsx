@@ -56,6 +56,7 @@ import { openRazorpayHostedPaymentLink } from "./RazorpayCheckout";
 import RazorpayCheckoutModal from "./RazorpayCheckoutModal";
 import type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { getInfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
 
 /** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {
@@ -120,22 +121,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setFetchedInfluencerUser(null);
         setShippingAddressError(null);
     }, []);
-
-    /** KYC-verified shipping address from the Users app (`kyc.currentAddress`). */
-    type InfluencerKycShippingAddress = NonNullable<
-        NonNullable<IUsers["kyc"]>["currentAddress"]
-    >;
-
-    /** Returns KYC shipping address when street and city are present (usable for shipment). */
-    function getInfluencerKycShippingAddress(
-        user: IUsers | null | undefined
-    ): InfluencerKycShippingAddress | undefined {
-        const a = user?.kyc?.currentAddress;
-        if (!a) return undefined;
-        if (!String(a.street ?? "").trim() || !String(a.city ?? "").trim()) return undefined;
-        return a;
-    }
-
 
     useEffect(() => {
         if (!showViewAddressSheet && !showViewAddressModal) return;

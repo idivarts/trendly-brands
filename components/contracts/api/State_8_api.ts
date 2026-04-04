@@ -27,7 +27,7 @@ export async function scheduleRelease(
     try {
         logContractApiCall({
             apiState: "State_8_api",
-            state: ContractStatus.PostScheduled,
+            state: ContractStatus.PostingPending,
             action: "scheduleRelease",
             contractId: payload.contractId,
         });
@@ -52,7 +52,7 @@ export async function changeReleaseDate(
     try {
         logContractApiCall({
             apiState: "State_8_api",
-            state: ContractStatus.PostScheduled,
+            state: ContractStatus.PostingPending,
             action: "changeReleaseDate",
             contractId: payload.contractId,
         });

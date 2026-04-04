@@ -16,7 +16,7 @@ export async function changeReleaseDate(
     try {
         logContractApiCall({
             apiState: "State_7_api",
-            state: ContractStatus.PlanRelease,
+            state: ContractStatus.PostingPending,
             action: "changeReleaseDate",
             contractId: payload.contractId,
         });

@@ -1,11 +1,18 @@
-import type { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import type { InfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faClose, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
-import { Modal as RNModal, Platform, Pressable, StyleSheet, View } from "react-native";
+import {
+    ActivityIndicator,
+    Modal as RNModal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Modal as PaperModal } from "react-native-paper";
 import { Text } from "../theme/Themed";
@@ -15,8 +22,11 @@ export interface ViewInfluencerAddressModalProps {
     visible: boolean;
     onClose: () => void;
     influencerName: string;
-    address: IUsers["currentAddress"] | null | undefined;
-    onNudgeForAddress: () => Promise<void>;
+    /** From Firestore `users/{id}.kyc.currentAddress`. */
+    address?: InfluencerKycShippingAddress | null;
+    loading?: boolean;
+    errorMessage?: string | null;
+    onNudgeForAddress?: () => Promise<void>;
 }
 
 const ViewInfluencerAddressModal: React.FC<ViewInfluencerAddressModalProps> = ({
@@ -24,6 +34,8 @@ const ViewInfluencerAddressModal: React.FC<ViewInfluencerAddressModalProps> = ({
     onClose,
     influencerName,
     address,
+    loading = false,
+    errorMessage = null,
     onNudgeForAddress,
 }) => {
     const theme = useTheme();
@@ -32,15 +44,19 @@ const ViewInfluencerAddressModal: React.FC<ViewInfluencerAddressModalProps> = ({
     const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
     const [sending, setSending] = useState(false);
 
-    const hasAddress = address?.line1 && address?.city;
+    const hasAddress =
+        address &&
+        String(address.street ?? "").trim() &&
+        String(address.city ?? "").trim();
 
     const handleNudge = async () => {
+        if (!onNudgeForAddress) return;
         setSending(true);
         try {
             await onNudgeForAddress();
             Toaster.success("Message sent in chat");
             onClose();
-        } catch (e) {
+        } catch {
             Toaster.error("Failed to send message");
         } finally {
             setSending(false);
@@ -48,62 +64,69 @@ const ViewInfluencerAddressModal: React.FC<ViewInfluencerAddressModalProps> = ({
     };
 
     const content = (
-            <View style={styles.inner}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Influencer shipping address</Text>
-                    <Pressable onPress={onClose} hitSlop={12}>
-                        <FontAwesomeIcon icon={faClose} color={colors.primary} size={22} />
-                    </Pressable>
-                </View>
-                <Text style={styles.subtitle}>{influencerName}</Text>
+        <View style={styles.inner}>
+            <View style={styles.header}>
+                <Text style={styles.title}>Influencer shipping address</Text>
+                <Pressable onPress={onClose} hitSlop={12}>
+                    <FontAwesomeIcon icon={faClose} color={colors.primary} size={22} />
+                </Pressable>
+            </View>
+            <Text style={styles.subtitle}>{influencerName}</Text>
 
-                {hasAddress ? (
-                    <View style={styles.addressBlock}>
-                        <View style={styles.addressRow}>
-                            <FontAwesomeIcon
-                                icon={faLocationDot}
-                                size={16}
-                                color={colors.gray300}
-                                style={styles.addressIcon}
-                            />
-                            <View style={styles.addressLines}>
-                                <Text style={styles.addressLine}>{address.line1}</Text>
-                                {address.line2 ? (
-                                    <Text style={styles.addressLine}>{address.line2}</Text>
-                                ) : null}
-                                <Text style={styles.addressLine}>
-                                    {[address.city, address.state, address.postalCode]
-                                        .filter(Boolean)
-                                        .join(", ")}
-                                </Text>
-                                {address.country ? (
-                                    <Text style={styles.addressLine}>{address.country}</Text>
-                                ) : null}
-                            </View>
+            {loading ? (
+                <View style={styles.centerBlock}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.loadingText}>Loading address…</Text>
+                </View>
+            ) : errorMessage ? (
+                <View style={styles.centerBlock}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+            ) : hasAddress ? (
+                <View style={styles.addressBlock}>
+                    <View style={styles.addressRow}>
+                        <FontAwesomeIcon
+                            icon={faLocationDot}
+                            size={16}
+                            color={colors.gray300}
+                            style={styles.addressIcon}
+                        />
+                        <View style={styles.addressLines}>
+                            <Text style={styles.addressLine}>{address!.street}</Text>
+                            <Text style={styles.addressLine}>
+                                {[address!.city, address!.state, address!.postalCode]
+                                    .filter((p) => String(p ?? "").trim())
+                                    .join(", ")}
+                            </Text>
                         </View>
                     </View>
-                ) : (
-                    <View style={styles.noAddressBlock}>
-                        <Text style={styles.noAddressText}>No address on file</Text>
-                        <Text style={styles.noAddressHint}>
-                            Ask the influencer to share their shipping address. You can nudge them
-                            with a message in the contract chat.
-                        </Text>
-                        <Button
-                            mode="contained"
-                            onPress={handleNudge}
-                            disabled={sending}
-                            style={styles.nudgeButton}
-                        >
-                            {sending ? "Sending…" : "Nudge for address in chat"}
-                        </Button>
-                    </View>
-                )}
+                </View>
+            ) : (
+                <View style={styles.noAddressBlock}>
+                    <Text style={styles.noAddressText}>No KYC address on file</Text>
+                    {onNudgeForAddress ? (
+                        <>
+                            <Text style={styles.noAddressHint}>
+                                Ask the influencer to complete KYC with a valid shipping address. You
+                                can nudge them in the contract chat.
+                            </Text>
+                            <Button
+                                mode="contained"
+                                onPress={handleNudge}
+                                disabled={sending}
+                                style={styles.nudgeButton}
+                            >
+                                {sending ? "Sending…" : "Nudge in chat"}
+                            </Button>
+                        </>
+                    ) : null}
+                </View>
+            )}
 
-                <Button mode="outlined" onPress={onClose} style={styles.closeButton}>
-                    Close
-                </Button>
-            </View>
+            <Button mode="outlined" onPress={onClose} style={styles.closeButton}>
+                Close
+            </Button>
+        </View>
     );
 
     if (Platform.OS !== "web") {
@@ -170,6 +193,22 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             fontSize: 14,
             color: colors.gray300,
             marginBottom: 16,
+        },
+        centerBlock: {
+            paddingVertical: 24,
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 20,
+        },
+        loadingText: {
+            fontSize: 14,
+            color: colors.gray300,
+        },
+        errorText: {
+            fontSize: 15,
+            color: colors.text,
+            textAlign: "center",
+            lineHeight: 22,
         },
         addressBlock: {
             backgroundColor: colors.tag ?? "rgba(0,0,0,0.06)",

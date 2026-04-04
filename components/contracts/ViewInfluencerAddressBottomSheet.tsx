@@ -1,33 +1,50 @@
-import type { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import type { InfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
 import Colors from "@/shared-uis/constants/Colors";
 import { faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Text } from "../theme/Themed";
 
 export interface ViewInfluencerAddressBottomSheetProps {
     influencerName: string;
-    address: IUsers["currentAddress"] | null | undefined;
+    /** Populated from Firestore `users/{id}.kyc.currentAddress` after fetch. */
+    address?: InfluencerKycShippingAddress | null;
+    loading?: boolean;
+    errorMessage?: string | null;
 }
 
 const ViewInfluencerAddressBottomSheet: React.FC<ViewInfluencerAddressBottomSheetProps> = ({
     influencerName,
     address,
+    loading = false,
+    errorMessage = null,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const hasAddress = address?.line1 && address?.city;
+    const hasAddress =
+        address &&
+        String(address.street ?? "").trim() &&
+        String(address.city ?? "").trim();
 
     return (
         <View style={styles.inner}>
             <Text style={styles.title}>Influencer shipping address</Text>
             <Text style={styles.subtitle}>{influencerName}</Text>
 
-            {hasAddress ? (
+            {loading ? (
+                <View style={styles.centerBlock}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.loadingText}>Loading address…</Text>
+                </View>
+            ) : errorMessage ? (
+                <View style={styles.centerBlock}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+            ) : hasAddress ? (
                 <View style={styles.addressBlock}>
                     <View style={styles.addressRow}>
                         <FontAwesomeIcon
@@ -37,24 +54,18 @@ const ViewInfluencerAddressBottomSheet: React.FC<ViewInfluencerAddressBottomShee
                             style={styles.addressIcon}
                         />
                         <View style={styles.addressLines}>
-                            <Text style={styles.addressLine}>{address!.line1}</Text>
-                            {address!.line2 ? (
-                                <Text style={styles.addressLine}>{address!.line2}</Text>
-                            ) : null}
+                            <Text style={styles.addressLine}>{address!.street}</Text>
                             <Text style={styles.addressLine}>
                                 {[address!.city, address!.state, address!.postalCode]
-                                    .filter(Boolean)
+                                    .filter((p) => String(p ?? "").trim())
                                     .join(", ")}
                             </Text>
-                            {address!.country ? (
-                                <Text style={styles.addressLine}>{address!.country}</Text>
-                            ) : null}
                         </View>
                     </View>
                 </View>
             ) : (
                 <View style={styles.noAddressBlock}>
-                    <Text style={styles.noAddressText}>No address</Text>
+                    <Text style={styles.noAddressText}>No KYC address on file</Text>
                 </View>
             )}
         </View>
@@ -77,6 +88,21 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             fontSize: 14,
             color: colors.gray300,
             marginBottom: 16,
+        },
+        centerBlock: {
+            paddingVertical: 24,
+            alignItems: "center",
+            gap: 12,
+        },
+        loadingText: {
+            fontSize: 14,
+            color: colors.gray300,
+        },
+        errorText: {
+            fontSize: 15,
+            color: colors.text,
+            textAlign: "center",
+            lineHeight: 22,
         },
         addressBlock: {
             backgroundColor: colors.tag ?? "rgba(0,0,0,0.06)",

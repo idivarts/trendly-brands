@@ -20,7 +20,7 @@ export async function submitBrandFeedback(
     try {
         logContractApiCall({
             apiState: "State_9_api",
-            state: ContractStatus.PostDone,
+            state: ContractStatus.SettlementPending,
             action: "submitBrandFeedback",
             contractId: payload.contractId,
         });
