@@ -57,6 +57,7 @@ import RazorpayCheckoutModal from "./RazorpayCheckoutModal";
 import type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { getInfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
+import type { Payment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 
 /** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {
@@ -69,7 +70,7 @@ interface ActionContainerProps {
     feedbackModalVisible: () => void;
     userData: IUsers;
     collaborationData?: ICollaboration | null;
-    paymentStatus?: "pending" | "processing" | "completed" | "failed";
+    paymentStatus?: Payment["status"];
     slot?: "all" | "buttons" | "feedback-and-info";
     /** Dev only: override status for UI testing (no Firestore write) */
     devOverrideStatus?: number | null;
