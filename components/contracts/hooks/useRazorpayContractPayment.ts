@@ -1,7 +1,7 @@
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useCallback, useRef, useState } from "react";
 import { createContractOrder, getContractOrderStatus } from "../api/payment-pending.api";
-import type { RazorpayCheckoutModalOptions } from "../razorpay-checkout-modal.types";
+import type { RazorpayCheckoutModalOptions } from "../utils/razorpay-checkout-modal.types";
 
 type RazorpayPayerPrefill = {
     name?: string;

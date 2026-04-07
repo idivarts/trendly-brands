@@ -16,10 +16,10 @@ import {
     View,
 } from "react-native";
 import { Modal as PaperModal, Portal } from "react-native-paper";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import TextInput from "../ui/text-input";
-import { submitBrandFeedback } from "./api/feedback-pending.api";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import TextInput from "../../ui/text-input";
+import { submitBrandFeedback } from "../api/feedback-pending.api";
 
 export interface BrandFeedbackModalProps {
     visible: boolean;

@@ -7,10 +7,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Checkbox } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import { approveVideoRelease } from "./api/review-pending.api";
-import ContractActionOverlay from "./ContractActionOverlay";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import { approveVideoRelease } from "../api/review-pending.api";
+import ContractActionOverlay from "../ContractActionOverlay";
 
 const RELEASE_CARDS: {
     value: ReleasePlanOption;

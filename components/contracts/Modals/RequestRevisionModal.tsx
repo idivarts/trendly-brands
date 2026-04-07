@@ -14,11 +14,11 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import TextInput from "../ui/text-input";
-import { requestVideoRevision } from "./api/review-pending.api";
-import ContractActionOverlay from "./ContractActionOverlay";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import TextInput from "../../ui/text-input";
+import { requestVideoRevision } from "../api/review-pending.api";
+import ContractActionOverlay from "../ContractActionOverlay";
 
 export interface RequestRevisionModalProps {
     visible: boolean;

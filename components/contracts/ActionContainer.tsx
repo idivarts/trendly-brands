@@ -1,22 +1,23 @@
-import Colors from "@/shared-uis/constants/Colors";
+import { useChatContext } from "@/contexts";
 import {
     ContractStatus,
     isContractBlockedByKYC,
     normalizeStatus,
 } from "@/shared-constants/contract-status";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import type { Payment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
+import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import {
     ContractActionsWithMessage,
     type ContractActionButton,
     type ContractActionsMessage,
 } from "@/shared-uis/components/contract-actions-with-message";
-import { useChatContext } from "@/contexts";
-import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ImageComponent from "@/shared-uis/components/image-component";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     faCircleInfo,
     faStar,
@@ -28,26 +29,23 @@ import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
-import ChangeReleaseDateSheet from "./ChangeReleaseDateSheet";
-import ReleaseOptionsBottomSheet from "./ReleaseOptionsBottomSheet";
-import ApproveVideoReleaseBottomSheet from "./ApproveVideoReleaseBottomSheet";
-import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
-import MarkAsDeliveredModal from "./MarkAsDeliveredModal";
-import RequestRevisionModal from "./RequestRevisionModal";
-import ShippingAddressModal from "./ShippingAddressModal";
-import ViewInfluencerAddressOverlay from "./ViewInfluencerAddressOverlayComponent";
 import { Text, View } from "../theme/Themed";
-import { createContractOrder, getContractOrderStatus } from "./api/payment-pending.api";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
+import ApproveVideoReleaseBottomSheet from "./Modals/ApproveVideoReleaseBottomSheet";
+import ChangeReleaseDateSheet from "./Modals/ChangeReleaseDateSheet";
+import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
+import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
+import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
+import MarkAsDeliveredModal from "./Modals/MarkAsDeliveredModal";
+import RazorpayCheckoutModal from "./Modals/RazorpayCheckoutModal";
+import ReleaseOptionsBottomSheet from "./Modals/ReleaseOptionsBottomSheet";
 import {
     requestReviseQuotationForContract,
     showReviseQuotationError,
 } from "./request-revise-quotation";
-import RazorpayCheckoutModal from "./RazorpayCheckoutModal";
-import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
-import { getInfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
-import type { Payment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
+import RequestRevisionModal from "./Modals/RequestRevisionModal";
+import ShippingAddressModal from "./Modals/ShippingAddressModal";
+import ViewInfluencerAddressOverlay from "./Modals/ViewInfluencerAddressOverlayComponent";
 
 /** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {

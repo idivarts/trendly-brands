@@ -18,11 +18,11 @@ import {
 } from "react-native";
 import { Checkbox } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import TextInput from "../ui/text-input";
-import { markShipmentDelivered } from "./api/delivery-pending.api";
-import ContractActionOverlay from "./ContractActionOverlay";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import TextInput from "../../ui/text-input";
+import { markShipmentDelivered } from "../api/delivery-pending.api";
+import ContractActionOverlay from "../ContractActionOverlay";
 
 const MAX_IMAGE_MB = 5;
 

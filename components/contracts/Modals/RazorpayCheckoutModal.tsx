@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import type { RazorpayCheckoutModalProps } from "./razorpay-checkout-modal.types";
+import type { RazorpayCheckoutModalProps } from "../utils/razorpay-checkout-modal.types";
 
-export type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
+export type { RazorpayCheckoutModalOptions } from "../utils/razorpay-checkout-modal.types";
 
 /**
  * Web: Razorpay Standard Checkout via checkout.js (in-page overlay).

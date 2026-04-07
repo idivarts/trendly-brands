@@ -1,4 +1,4 @@
-import type { InfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
+import type { InfluencerKycShippingAddress } from "../utils/influencer-kyc-shipping-address";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faClose, faLocationDot } from "@fortawesome/free-solid-svg-icons";
@@ -7,9 +7,9 @@ import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import ContractActionOverlay from "./ContractActionOverlay";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import ContractActionOverlay from "../ContractActionOverlay";
 
 export interface ViewInfluencerAddressOverlayProps {
     visible: boolean;

@@ -1,15 +1,23 @@
-import { ContractStatus, RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
+import {
+    RELEASE_DATE_MAX_DAYS,
+    type ReleasePlanOption,
+} from "@/shared-constants/contract-status";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import { changeReleaseDate as changeReleaseDateState7 } from "./api/release-pending.api";
-import { changeReleaseDate as changeReleaseDateState8 } from "./api/State_8_api";
-import ContractActionOverlay from "./ContractActionOverlay";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import { scheduleRelease } from "../api/State_8_api";
+import ContractActionOverlay from "../ContractActionOverlay";
+
+const RELEASE_OPTIONS: { value: ReleasePlanOption; label: string }[] = [
+    { value: "brand_and_influencer_post", label: "Brand + Influencer post as collaboration" },
+    { value: "influencer_posts_alone", label: "Influencer posts alone" },
+    { value: "brand_posts_alone", label: "Brand posts alone" },
+];
 
 const maxReleaseDate = () => {
     const d = new Date();
@@ -17,71 +25,81 @@ const maxReleaseDate = () => {
     return d;
 };
 
-export interface ChangeReleaseDateSheetProps {
+export interface ReleaseOptionsBottomSheetProps {
     visible: boolean;
-    initialDate?: number;
     onClose: () => void;
     contractId: string;
-    /** True when `contract.posting?.scheduledDate` is already set (state-8 reschedule path). */
-    hasExistingScheduledDate: boolean;
-    contractStatus: ContractStatus;
     onSuccess: () => void;
 }
 
-const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
+const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
     visible,
-    initialDate,
     onClose,
     contractId,
-    hasExistingScheduledDate,
-    contractStatus,
     onSuccess,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const [date, setDate] = useState(() =>
-        initialDate ? new Date(initialDate) : (() => {
-            const d = new Date();
-            d.setDate(d.getDate() + 7);
-            return d;
-        })()
-    );
+    const [selectedOption, setSelectedOption] = useState<ReleasePlanOption | null>(null);
+    const [date, setDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        return d;
+    });
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     const handleConfirm = async () => {
-        if (contractStatus !== ContractStatus.PostingPending) return;
+        if (!selectedOption) return;
         const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
         setSubmitting(true);
         try {
-            if (hasExistingScheduledDate) {
-                await changeReleaseDateState8({
-                    contractId,
-                    scheduledReleaseAt: ts,
-                });
-            } else {
-                await changeReleaseDateState7({
-                    contractId,
-                    newScheduledDate: ts,
-                });
-            }
-            Toaster.success("Release date updated");
+            await scheduleRelease({
+                contractId,
+                scheduledReleaseAt: ts,
+                option: selectedOption,
+            });
+            Toaster.success("Release scheduled");
             onSuccess();
             onClose();
         } catch (e) {
             const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(message ? `Failed to update date: ${message}` : "Failed to update date");
+            Toaster.error(
+                message ? `Failed to schedule release: ${message}` : "Failed to schedule release"
+            );
         } finally {
             setSubmitting(false);
         }
     };
 
+    const maxDate = maxReleaseDate();
+
     const content = (
         <View style={styles.container}>
-            <Text style={styles.title}>Change Release Date</Text>
-            <Text style={styles.subtitle}>Max 30 days from today</Text>
+            <Text style={styles.title}>Plan Release</Text>
+            <Text style={styles.subtitle}>How will the video be published?</Text>
+            {RELEASE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                        styles.optionRow,
+                        selectedOption === opt.value && styles.optionRowSelected,
+                    ]}
+                    onPress={() => setSelectedOption(opt.value)}
+                >
+                    <Text
+                        style={[
+                            styles.optionLabel,
+                            selectedOption === opt.value && styles.optionLabelSelected,
+                        ]}
+                    >
+                        {opt.label}
+                    </Text>
+                </TouchableOpacity>
+            ))}
+            <Text style={[styles.subtitle, styles.dateLabel]}>Release date (max 30 days)</Text>
             <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowDatePicker(true)}
@@ -99,7 +117,7 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
                     value={date}
                     mode="date"
                     minimumDate={new Date()}
-                    maximumDate={maxReleaseDate()}
+                    maximumDate={maxDate}
                     onChange={(_, d) => {
                         if (d) setDate(d);
                         setShowDatePicker(false);
@@ -114,9 +132,9 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
                     mode="contained"
                     style={styles.button}
                     onPress={handleConfirm}
-                    disabled={submitting}
+                    disabled={!selectedOption || submitting}
                 >
-                    Update Date
+                    Schedule Release
                 </Button>
             </View>
         </View>
@@ -127,7 +145,7 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
             visible={visible}
             onClose={onClose}
             mode="auto"
-            snapPointsRange={["40%", "50%"]}
+            snapPointsRange={["50%", "90%"]}
             modalMaxWidth={520}
         >
             {content}
@@ -152,6 +170,24 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             color: colors.gray300,
             marginBottom: 12,
         },
+        dateLabel: { marginTop: 16 },
+        optionRow: {
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            backgroundColor: colors.tag ?? "rgba(0,0,0,0.06)",
+            marginBottom: 8,
+        },
+        optionRowSelected: {
+            backgroundColor: colors.primary,
+        },
+        optionLabel: {
+            fontSize: 15,
+            color: colors.text,
+        },
+        optionLabelSelected: {
+            color: colors.white,
+        },
         dateButton: {
             paddingVertical: 12,
             paddingHorizontal: 16,
@@ -171,4 +207,4 @@ function createStyles(colors: ReturnType<typeof Colors>) {
     });
 }
 
-export default ChangeReleaseDateSheet;
+export default ReleaseOptionsBottomSheet;

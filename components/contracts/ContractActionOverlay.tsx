@@ -3,9 +3,9 @@ import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scr
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { PropsWithChildren, useMemo } from "react";
-import { Modal as RNModal, Platform, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Platform, Modal as RNModal, StyleSheet, View } from "react-native";
 import { Modal as PaperModal, Portal } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type SnapPointsRange = [string, string];
 

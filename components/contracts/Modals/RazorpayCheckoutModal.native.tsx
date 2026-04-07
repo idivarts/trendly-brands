@@ -3,9 +3,9 @@ import RazorpayCheckout from "react-native-razorpay";
 import type {
     RazorpayCheckoutModalOptions,
     RazorpayCheckoutModalProps,
-} from "./razorpay-checkout-modal.types";
+} from "../utils/razorpay-checkout-modal.types";
 
-export type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
+export type { RazorpayCheckoutModalOptions } from "../utils/razorpay-checkout-modal.types";
 
 type RazorpayNativeError = {
     code?: string | number;

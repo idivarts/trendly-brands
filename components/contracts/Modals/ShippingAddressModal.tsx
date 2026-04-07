@@ -1,6 +1,6 @@
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { markShipmentShipped } from "./api/shipment-pending.api";
+import { markShipmentShipped } from "../api/shipment-pending.api";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -17,10 +17,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Text } from "../theme/Themed";
-import Button from "../ui/button";
-import TextInput from "../ui/text-input";
-import ContractActionOverlay from "./ContractActionOverlay";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import TextInput from "../../ui/text-input";
+import ContractActionOverlay from "../ContractActionOverlay";
 
 export interface ShippingAddressModalProps {
     visible: boolean;

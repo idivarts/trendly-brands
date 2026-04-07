@@ -25,7 +25,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
-import BrandFeedbackModal from "./BrandFeedbackModal";
+import BrandFeedbackModal from "./Modals/BrandFeedbackModal";
 import MemberContainer from "./MemberContainer";
 
 interface CollaborationDetailsContentProps {
