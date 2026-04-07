@@ -9,6 +9,7 @@ import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import { changeReleaseDate as changeReleaseDateState7 } from "./api/release-pending.api";
 import { changeReleaseDate as changeReleaseDateState8 } from "./api/State_8_api";
+import ContractActionOverlay from "./ContractActionOverlay";
 
 const maxReleaseDate = () => {
     const d = new Date();
@@ -17,6 +18,7 @@ const maxReleaseDate = () => {
 };
 
 export interface ChangeReleaseDateSheetProps {
+    visible: boolean;
     initialDate?: number;
     onClose: () => void;
     contractId: string;
@@ -27,6 +29,7 @@ export interface ChangeReleaseDateSheetProps {
 }
 
 const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
+    visible,
     initialDate,
     onClose,
     contractId,
@@ -75,7 +78,7 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
         }
     };
 
-    return (
+    const content = (
         <View style={styles.container}>
             <Text style={styles.title}>Change Release Date</Text>
             <Text style={styles.subtitle}>Max 30 days from today</Text>
@@ -117,6 +120,18 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
                 </Button>
             </View>
         </View>
+    );
+
+    return (
+        <ContractActionOverlay
+            visible={visible}
+            onClose={onClose}
+            mode="auto"
+            snapPointsRange={["40%", "50%"]}
+            modalMaxWidth={520}
+        >
+            {content}
+        </ContractActionOverlay>
     );
 };
 

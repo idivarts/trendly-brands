@@ -10,6 +10,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import { approveVideoRelease } from "./api/review-pending.api";
+import ContractActionOverlay from "./ContractActionOverlay";
 
 const RELEASE_CARDS: {
     value: ReleasePlanOption;
@@ -78,6 +79,7 @@ const parseWebInputDate = (value: string) => {
 };
 
 export interface ApproveVideoReleaseBottomSheetProps {
+    visible: boolean;
     onClose: () => void;
     contractId: string;
     onSuccess: () => void;
@@ -85,7 +87,7 @@ export interface ApproveVideoReleaseBottomSheetProps {
 
 const ApproveVideoReleaseBottomSheet: React.FC<
     ApproveVideoReleaseBottomSheetProps
-> = ({ onClose, contractId, onSuccess }) => {
+> = ({ visible, onClose, contractId, onSuccess }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -214,7 +216,7 @@ const ApproveVideoReleaseBottomSheet: React.FC<
         }
     };
 
-    return (
+    const content = (
         <View style={styles.container}>
             <View style={styles.grabHandle} />
 
@@ -454,6 +456,18 @@ const ApproveVideoReleaseBottomSheet: React.FC<
                 </Button>
             </View>
         </View>
+    );
+
+    return (
+        <ContractActionOverlay
+            visible={visible}
+            onClose={onClose}
+            mode="auto"
+            snapPointsRange={["65%", "95%"]}
+            modalMaxWidth={720}
+        >
+            {content}
+        </ContractActionOverlay>
     );
 };
 

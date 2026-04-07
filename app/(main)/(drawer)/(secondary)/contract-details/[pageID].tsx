@@ -54,6 +54,8 @@ const styles = StyleSheet.create({
 });
 
 interface ICollaborationCard extends IContracts {
+    /** Firestore document id for `contracts/{id}`. This is the backend `:contractId`. */
+    id: string;
     userData: IUsers;
     applications: IApplications[];
     collaborationData: ICollaboration;
@@ -122,6 +124,7 @@ const ContractScreen = () => {
             const collaborationData = collaborationSnapshot.data() as ICollaboration;
 
             setContract({
+                id: contractsSnapshot.id,
                 ...contract,
                 userData,
                 applications,

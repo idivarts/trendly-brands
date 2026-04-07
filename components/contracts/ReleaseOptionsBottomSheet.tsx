@@ -11,6 +11,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import { scheduleRelease } from "./api/State_8_api";
+import ContractActionOverlay from "./ContractActionOverlay";
 
 const RELEASE_OPTIONS: { value: ReleasePlanOption; label: string }[] = [
     { value: "brand_and_influencer_post", label: "Brand + Influencer post as collaboration" },
@@ -25,12 +26,14 @@ const maxReleaseDate = () => {
 };
 
 export interface ReleaseOptionsBottomSheetProps {
+    visible: boolean;
     onClose: () => void;
     contractId: string;
     onSuccess: () => void;
 }
 
 const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
+    visible,
     onClose,
     contractId,
     onSuccess,
@@ -73,7 +76,7 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
 
     const maxDate = maxReleaseDate();
 
-    return (
+    const content = (
         <View style={styles.container}>
             <Text style={styles.title}>Plan Release</Text>
             <Text style={styles.subtitle}>How will the video be published?</Text>
@@ -135,6 +138,18 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                 </Button>
             </View>
         </View>
+    );
+
+    return (
+        <ContractActionOverlay
+            visible={visible}
+            onClose={onClose}
+            mode="auto"
+            snapPointsRange={["50%", "90%"]}
+            modalMaxWidth={520}
+        >
+            {content}
+        </ContractActionOverlay>
     );
 };
 

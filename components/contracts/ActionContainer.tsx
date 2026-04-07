@@ -28,7 +28,6 @@ import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
-import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ChangeReleaseDateSheet from "./ChangeReleaseDateSheet";
 import ReleaseOptionsBottomSheet from "./ReleaseOptionsBottomSheet";
 import ApproveVideoReleaseBottomSheet from "./ApproveVideoReleaseBottomSheet";
@@ -36,8 +35,7 @@ import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
 import MarkAsDeliveredModal from "./MarkAsDeliveredModal";
 import RequestRevisionModal from "./RequestRevisionModal";
 import ShippingAddressModal from "./ShippingAddressModal";
-import ViewInfluencerAddressBottomSheet from "./ViewInfluencerAddressBottomSheet";
-import ViewInfluencerAddressModal from "./ViewInfluencerAddressModal";
+import ViewInfluencerAddressOverlay from "./ViewInfluencerAddressOverlayComponent";
 import { Text, View } from "../theme/Themed";
 import { createContractOrder, getContractOrderStatus } from "./api/payment-pending.api";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
@@ -82,12 +80,16 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [manager, setManager] = useState<IManagers>();
     const { fetchChannelCid } = useChatContext();
 
+    // Backend expects Firestore contract doc id for `/monetize/brands/contracts/:contractId/...`.
+    // We attach `id` on the contract screen; fall back to streamChannelId for safety.
+    const contractIdForApi =
+        (contract as IContracts & { id?: string }).id ?? contract.streamChannelId;
+
     const [showShippingModal, setShowShippingModal] = useState(false);
-    const [showViewAddressModal, setShowViewAddressModal] = useState(false);
+    const [showViewAddress, setShowViewAddress] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showReleaseSheet, setShowReleaseSheet] = useState(false);
     const [showChangeDateSheet, setShowChangeDateSheet] = useState(false);
-    const [showViewAddressSheet, setShowViewAddressSheet] = useState(false);
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
 
@@ -95,20 +97,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
     const [shippingAddressError, setShippingAddressError] = useState<string | null>(null);
 
-    const closeAddressSheet = useCallback(() => {
-        setShowViewAddressSheet(false);
-        setFetchedInfluencerUser(null);
-        setShippingAddressError(null);
-    }, []);
-
     const closeAddressModal = useCallback(() => {
-        setShowViewAddressModal(false);
+        setShowViewAddress(false);
         setFetchedInfluencerUser(null);
         setShippingAddressError(null);
     }, []);
 
     useEffect(() => {
-        if (!showViewAddressSheet && !showViewAddressModal) return;
+        if (!showViewAddress) return;
         let cancelled = false;
         setShippingAddressLoading(true);
         setShippingAddressError(null);
@@ -137,7 +133,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         return () => {
             cancelled = true;
         };
-    }, [showViewAddressSheet, showViewAddressModal, contract.userId]);
+    }, [showViewAddress, contract.userId]);
 
     const kycShippingAddress = useMemo(
         () => getInfluencerKycShippingAddress(fetchedInfluencerUser),
@@ -202,7 +198,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
     const { paymentButtonLoading, startPayment: handlePendingPayment, razorpayModalProps } =
         useRazorpayContractPayment({
-            contractId: contract.streamChannelId,
+            contractId: contractIdForApi,
             themeColor: colors.primary,
             prefill: {
                 name: userData?.name,
@@ -379,14 +375,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             variant: "outlined",
                             onPress: () => {
                                 setShowShippingModal(false);
-                                setShowViewAddressSheet(true);
+                                setShowViewAddress(true);
                             },
                         },
                         {
                             label: "Add Shipment Details",
                             variant: "contained",
                             onPress: () => {
-                                closeAddressSheet();
+                                setShowViewAddress(false);
                                 setShowShippingModal(true);
                             },
                         },
@@ -397,7 +393,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             variant: "contained",
                             onPress: async () => {
                                 await requestDeliverableWithUX(
-                                    { contractId: contract.streamChannelId },
+                                    { contractId: contractIdForApi },
                                     { onSuccess: refreshData }
                                 );
                             },
@@ -414,14 +410,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         variant: "outlined",
                         onPress: () => {
                             setShowShippingModal(false);
-                            setShowViewAddressSheet(true);
+                            setShowViewAddress(true);
                         },
                     },
                     {
                         label: "Add Shipment Details",
                         variant: "contained",
                         onPress: () => {
-                            closeAddressSheet();
+                            setShowViewAddress(false);
                             setShowShippingModal(true);
                         },
                     },
@@ -460,7 +456,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         variant: "contained",
                         onPress: async () => {
                             await requestDeliverableWithUX(
-                                { contractId: contract.streamChannelId },
+                                { contractId: contractIdForApi },
                                 { onSuccess: refreshData }
                             );
                         },
@@ -607,33 +603,19 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 </View>
             )}
 
-            {showViewAddressModal && (
-                <ViewInfluencerAddressModal
-                    visible
-                    onClose={closeAddressModal}
-                    influencerName={displayInfluencerName}
-                    address={kycShippingAddress}
-                    loading={shippingAddressLoading}
-                    errorMessage={shippingAddressError}
-                />
-            )}
-            <BottomSheetScrollContainer
-                isVisible={showViewAddressSheet}
-                snapPointsRange={["35%", "50%"]}
-                onClose={closeAddressSheet}
-            >
-                <ViewInfluencerAddressBottomSheet
-                    influencerName={displayInfluencerName}
-                    address={kycShippingAddress}
-                    loading={shippingAddressLoading}
-                    errorMessage={shippingAddressError}
-                />
-            </BottomSheetScrollContainer>
+            <ViewInfluencerAddressOverlay
+                visible={showViewAddress}
+                onClose={closeAddressModal}
+                influencerName={displayInfluencerName}
+                address={kycShippingAddress}
+                loading={shippingAddressLoading}
+                errorMessage={shippingAddressError}
+            />
             {showShippingModal && (
                 <ShippingAddressModal
                     visible
                     onClose={() => setShowShippingModal(false)}
-                    contractId={contract.streamChannelId}
+                    contractId={contractIdForApi}
                     onSuccess={refreshData}
                 />
             )}
@@ -641,52 +623,37 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 <MarkAsDeliveredModal
                     visible
                     onClose={() => setShowMarkAsDeliveredModal(false)}
-                    contractId={contract.streamChannelId}
+                    contractId={contractIdForApi}
                     onSuccess={refreshData}
                 />
             )}
             <RequestRevisionModal
                 visible={showRevisionModal}
                 onClose={() => setShowRevisionModal(false)}
-                contractId={contract.streamChannelId}
+                contractId={contractIdForApi}
                 onSuccess={refreshData}
             />
-            <BottomSheetScrollContainer
-                isVisible={showApproveVideoSheet}
-                snapPointsRange={["65%", "95%"]}
+            <ApproveVideoReleaseBottomSheet
+                visible={showApproveVideoSheet}
                 onClose={() => setShowApproveVideoSheet(false)}
-            >
-                <ApproveVideoReleaseBottomSheet
-                    onClose={() => setShowApproveVideoSheet(false)}
-                    contractId={contract.streamChannelId}
-                    onSuccess={refreshData}
-                />
-            </BottomSheetScrollContainer>
-            <BottomSheetScrollContainer
-                isVisible={showReleaseSheet}
-                snapPointsRange={["50%", "90%"]}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <ReleaseOptionsBottomSheet
+                visible={showReleaseSheet}
                 onClose={() => setShowReleaseSheet(false)}
-            >
-                <ReleaseOptionsBottomSheet
-                    onClose={() => setShowReleaseSheet(false)}
-                    contractId={contract.streamChannelId}
-                    onSuccess={refreshData}
-                />
-            </BottomSheetScrollContainer>
-            <BottomSheetScrollContainer
-                isVisible={showChangeDateSheet}
-                snapPointsRange={["40%", "50%"]}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <ChangeReleaseDateSheet
+                visible={showChangeDateSheet}
+                initialDate={contract.posting?.scheduledDate}
                 onClose={() => setShowChangeDateSheet(false)}
-            >
-                <ChangeReleaseDateSheet
-                    initialDate={contract.posting?.scheduledDate}
-                    onClose={() => setShowChangeDateSheet(false)}
-                    contractId={contract.streamChannelId}
-                    hasExistingScheduledDate={!!contract.posting?.scheduledDate}
-                    contractStatus={status}
-                    onSuccess={refreshData}
-                />
-            </BottomSheetScrollContainer>
+                contractId={contractIdForApi}
+                hasExistingScheduledDate={!!contract.posting?.scheduledDate}
+                contractStatus={status}
+                onSuccess={refreshData}
+            />
         </View>
     );
 }

@@ -12,17 +12,17 @@ import {
     KeyboardAvoidingView,
     Platform,
     Pressable,
-    Modal as RNModal,
     ScrollView,
     StyleSheet,
     View,
 } from "react-native";
-import { Checkbox, Modal as PaperModal, Portal } from "react-native-paper";
+import { Checkbox } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
 import { markShipmentDelivered } from "./api/delivery-pending.api";
+import ContractActionOverlay from "./ContractActionOverlay";
 
 const MAX_IMAGE_MB = 5;
 
@@ -293,56 +293,20 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
         </KeyboardAvoidingView>
     );
 
-    if (Platform.OS !== "web") {
-        return (
-            <RNModal
-                visible={visible}
-                animationType="slide"
-                onRequestClose={handleClose}
-                statusBarTranslucent
-            >
-                <View style={styles.modalContainer}>{modalContent}</View>
-            </RNModal>
-        );
-    }
-
     return (
-        <Portal>
-            <PaperModal
-                visible={visible}
-                onDismiss={handleClose}
-                contentContainerStyle={styles.modalContainer}
-            >
-                {modalContent}
-            </PaperModal>
-        </Portal>
+        <ContractActionOverlay visible={visible} onClose={handleClose} mode="modal">
+            <View style={styles.modalContainer}>{modalContent}</View>
+        </ContractActionOverlay>
     );
 };
 
 function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
-    const isNative = Platform.OS !== "web";
     return StyleSheet.create({
         modalContainer: {
             backgroundColor: colors.background,
-            ...(isNative
-                ? {
-                    flex: 1,
-                    margin: 0,
-                    marginHorizontal: 0,
-                    maxWidth: "100%",
-                    alignSelf: "stretch",
-                    borderRadius: 0,
-                    paddingTop: Math.max(safeAreaTop, 16),
-                    paddingHorizontal: 24,
-                    paddingBottom: 24,
-                }
-                : {
-                    borderRadius: 12,
-                    padding: 24,
-                    marginHorizontal: 24,
-                    maxWidth: 440,
-                    alignSelf: "center",
-                }),
+            flex: 1,
+            padding: 24,
+            paddingTop: Math.max(safeAreaTop, 16),
             overflow: "hidden",
         },
         keyboardView: { flex: 1, width: "100%" },
