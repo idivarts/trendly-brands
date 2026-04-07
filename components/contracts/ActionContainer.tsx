@@ -26,7 +26,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import BottomSheetScrollContainer from "@/shared-uis/components/bottom-sheet/scroll-view";
 import ChangeReleaseDateSheet from "./ChangeReleaseDateSheet";
@@ -45,12 +45,11 @@ import {
     requestReviseQuotationForContract,
     showReviseQuotationError,
 } from "./request-revise-quotation";
-import { openRazorpayHostedPaymentLink } from "./RazorpayCheckout";
 import RazorpayCheckoutModal from "./RazorpayCheckoutModal";
-import type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { getInfluencerKycShippingAddress } from "./influencer-kyc-shipping-address";
 import type { Payment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 
 /** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {
@@ -91,14 +90,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showViewAddressSheet, setShowViewAddressSheet] = useState(false);
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
-
-    const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
-    const [checkoutOptions, setCheckoutOptions] = useState<RazorpayCheckoutModalOptions>({});
-    const [paymentButtonLoading, setPaymentButtonLoading] = useState(false);
-    const checkoutDeferredRef = useRef<{
-        resolve: (value: unknown) => void;
-        reject: (reason: Error) => void;
-    } | null>(null);
 
     const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
@@ -209,115 +200,17 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleRazorpayModalSuccess = useCallback((data: unknown) => {
-        setCheckoutModalVisible(false);
-        checkoutDeferredRef.current?.resolve(data);
-        checkoutDeferredRef.current = null;
-    }, []);
-
-    const handleRazorpayModalClose = useCallback(() => {
-        setCheckoutModalVisible(false);
-        checkoutDeferredRef.current?.reject(new Error("Payment cancelled"));
-        checkoutDeferredRef.current = null;
-    }, []);
-
-    const handleRazorpayModalError = useCallback((err: unknown) => {
-        setCheckoutModalVisible(false);
-        const e = err instanceof Error ? err : new Error(String(err));
-        checkoutDeferredRef.current?.reject(e);
-        checkoutDeferredRef.current = null;
-    }, []);
-
-    const handlePendingPayment = useCallback(async () => {
-        if (paymentButtonLoading) return;
-
-        const razorpayKeyId =
-            process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RtPhjl6Q2YAk8S";
-        if (!razorpayKeyId) {
-            Toaster.error("Missing Razorpay key. Set EXPO_PUBLIC_RAZORPAY_KEY_ID.");
-            return;
-        }
-
-        setPaymentButtonLoading(true);
-        let order: Awaited<ReturnType<typeof createContractOrder>> | undefined;
-        try {
-            order = await createContractOrder({ contractId: contract.streamChannelId });
-        } catch (e) {
-            setPaymentButtonLoading(false);
-            const message = e instanceof Error ? e.message : "Unable to create payment order";
-            Toaster.error(message);
-            refreshData();
-            return;
-        }
-
-        if (!order.id) {
-            setPaymentButtonLoading(false);
-            Toaster.error("Invalid order response from server (missing orderId)");
-            refreshData();
-            return;
-        }
-
-        const razorpayOptions: RazorpayCheckoutModalOptions = {
-            key: razorpayKeyId,
-            order_id: order.id,
-            name: "Trendly",
-            description: "Contract pre-payment",
+    const { paymentButtonLoading, startPayment: handlePendingPayment, razorpayModalProps } =
+        useRazorpayContractPayment({
+            contractId: contract.streamChannelId,
+            themeColor: colors.primary,
             prefill: {
                 name: userData?.name,
                 email: userData?.email,
                 contact: userData?.phoneNumber,
             },
-            theme: { color: colors.primary },
-        };
-        if (order.amount > 0) razorpayOptions.amount = order.amount;
-        if (order.currency) razorpayOptions.currency = order.currency;
-
-        setPaymentButtonLoading(false);
-
-        try {
-            try {
-                await new Promise<unknown>((resolve, reject) => {
-                    checkoutDeferredRef.current = { resolve, reject };
-                    setCheckoutOptions(razorpayOptions);
-                    setCheckoutModalVisible(true);
-                });
-            } catch (checkoutErr) {
-                const msg = checkoutErr instanceof Error ? checkoutErr.message : "";
-                if (msg === "Payment cancelled") {
-                    refreshData();
-                    return;
-                }
-                if (order.shortUrl) {
-                    Toaster.info("Opening Razorpay in your browser instead.");
-                    await openRazorpayHostedPaymentLink(order.shortUrl);
-                } else {
-                    throw checkoutErr;
-                }
-            }
-
-            const latest = await getContractOrderStatus({
-                contractId: contract.streamChannelId,
-            });
-            if (latest?.status === "paid") {
-                Toaster.success("Payment completed successfully");
-            } else {
-                Toaster.info("Payment submitted. We'll update status shortly.");
-            }
-            refreshData();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : "Unable to complete payment";
-            Toaster.error(message);
-            refreshData();
-        }
-    }, [
-        paymentButtonLoading,
-        contract.streamChannelId,
-        userData?.name,
-        userData?.email,
-        userData?.phoneNumber,
-        colors.primary,
-        refreshData,
-    ]);
+            onRefresh: refreshData,
+        });
 
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
@@ -643,11 +536,11 @@ const ActionContainer: FC<ActionContainerProps> = ({
     return (
         <View style={styles.root}>
             <RazorpayCheckoutModal
-                visible={checkoutModalVisible}
-                options={checkoutOptions}
-                onSuccess={handleRazorpayModalSuccess}
-                onClose={handleRazorpayModalClose}
-                onError={handleRazorpayModalError}
+                visible={razorpayModalProps.visible}
+                options={razorpayModalProps.options}
+                onSuccess={razorpayModalProps.onSuccess}
+                onClose={razorpayModalProps.onClose}
+                onError={razorpayModalProps.onError}
             />
             {(showButtons || showFeedbackAndInfo) && (
                 <ContractActionsWithMessage
