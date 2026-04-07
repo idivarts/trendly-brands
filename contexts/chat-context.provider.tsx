@@ -13,7 +13,7 @@ import {
     type PropsWithChildren,
 } from "react";
 import { Platform } from "react-native";
-import { DefaultGenerics, StreamChat } from "stream-chat";
+import { StreamChat } from "stream-chat";
 import { useAuthContext } from "./auth-context.provider";
 import StreamWrapper from "./stream-wrapper";
 import { streamClient } from "./streamClient";
@@ -30,8 +30,6 @@ interface ChatContextProps {
         channel: string,
         member: string
     ) => Promise<boolean>;
-    /** Send a text message to a contract/messaging channel (e.g. nudge for address). */
-    sendMessageToChannel: (channelId: string, text: string) => Promise<void>;
     hasError?: boolean;
     deregisterTokens?: Function;
     unreadCount: number;
@@ -47,7 +45,6 @@ const ChatContext = createContext<ChatContextProps>({
     // sendSystemMessage: async () => { },
     fetchChannelCid: async () => "",
     removeMemberFromChannel: async () => false,
-    sendMessageToChannel: async () => {},
     hasError: false,
     deregisterTokens: () => { Console.log("No deregister function provided") },
     unreadCount: 0,
@@ -64,7 +61,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(false)
 
-    const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(null);
+    const [client, setClient] = useState<StreamChat | null>(null);
 
     const { getToken, registerPushTokenWithStream, updatedTokens } = useCloudMessagingContext()
 
@@ -103,7 +100,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
                 const message = event.message;
 
                 console.log("Event received:", event);
-                Toaster.notification(channel?.name || "New message received", message?.text || "You have a new message", () => {
+                Toaster.notification((channel as any)?.name || "New message received", message?.text || "You have a new message", () => {
                     if (channel) {
                         router.push(`/channel/${channel.cid}`);
                     }
@@ -227,12 +224,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
         return channel.cid;
     };
 
-    const sendMessageToChannel = async (channelId: string, text: string) => {
-        const channel = streamClient.channel("messaging", channelId);
-        await channel.watch();
-        await channel.sendMessage({ text });
-    };
-
     return (
         <ChatContext.Provider
             value={{
@@ -243,7 +234,6 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
                 addMemberToChannel,
                 fetchChannelCid,
                 removeMemberFromChannel,
-                sendMessageToChannel,
                 hasError,
                 deregisterTokens: updatedTokens,
                 unreadCount,

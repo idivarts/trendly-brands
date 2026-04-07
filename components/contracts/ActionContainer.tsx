@@ -87,7 +87,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
 }) => {
     const theme = useTheme();
     const [manager, setManager] = useState<IManagers>();
-    const { fetchChannelCid, sendMessageToChannel } = useChatContext();
+    const { fetchChannelCid } = useChatContext();
 
     const [showShippingModal, setShowShippingModal] = useState(false);
     const [showViewAddressModal, setShowViewAddressModal] = useState(false);
@@ -243,10 +243,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
             refreshData();
             Toaster.success("Marked as delivered.");
-            sendMessageToChannel(
-                contract.streamChannelId,
-                "Product has been marked as delivered. You can now upload your collaboration video."
-            ).catch(() => { });
         } catch (e) {
             console.error("Failed to update delivered status", e);
             const message = e instanceof Error ? e.message : undefined;
@@ -261,10 +257,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 contractId: contract.streamChannelId,
                 notes: revisionNotes,
             });
-            await sendMessageToChannel(
-                contract.streamChannelId,
-                `Revision request from brand: ${revisionNotes}`
-            );
             Toaster.success("Revision request sent in chat");
             refreshData();
         } catch (e) {
@@ -883,12 +875,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     address={kycShippingAddress}
                     loading={shippingAddressLoading}
                     errorMessage={shippingAddressError}
-                    onNudgeForAddress={() =>
-                        sendMessageToChannel(
-                            contract.streamChannelId,
-                            "Please complete KYC with your shipping address so we can ship your collaboration product."
-                        )
-                    }
                 />
             )}
             <BottomSheetScrollContainer
