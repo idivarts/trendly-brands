@@ -19,17 +19,20 @@ import { Modal as PaperModal, Portal } from "react-native-paper";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
+import { requestVideoRevision } from "./api/review-pending.api";
 
 export interface RequestRevisionModalProps {
     visible: boolean;
     onClose: () => void;
-    onSend: (revisionNotes: string) => Promise<void> | void;
+    contractId: string;
+    onSuccess: () => void;
 }
 
 const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
     visible,
     onClose,
-    onSend,
+    contractId,
+    onSuccess,
 }) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
@@ -45,9 +48,19 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
         }
         setSubmitting(true);
         try {
-            await onSend(notes.trim());
+            await requestVideoRevision({
+                contractId,
+                notes: notes.trim(),
+            });
+            Toaster.success("Revision request sent");
+            onSuccess();
             setNotes("");
             onClose();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to send revision request: ${message}` : "Failed to send revision request"
+            );
         } finally {
             setSubmitting(false);
         }

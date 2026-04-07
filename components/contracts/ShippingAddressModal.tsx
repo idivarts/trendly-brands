@@ -1,6 +1,6 @@
-import { type ShipmentFormInput } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { markShipmentShipped } from "./api/shipment-pending.api";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -26,13 +26,15 @@ import TextInput from "../ui/text-input";
 export interface ShippingAddressModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (data: ShipmentFormInput) => Promise<void> | void;
+    contractId: string;
+    onSuccess: () => void;
 }
 
 const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
     visible,
     onClose,
-    onSubmit,
+    contractId,
+    onSuccess,
 }) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
@@ -59,18 +61,24 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
         }
         setSubmitting(true);
         try {
-            await onSubmit({
-                courierName: courierName.trim(),
-                trackingNumber: trackingNumber.trim(),
-                shipmentLink: shipmentLink.trim() || undefined,
+            await markShipmentShipped({
+                contractId,
+                shipmentProvider: courierName.trim(),
+                trackingId: trackingNumber.trim(),
                 expectedDate,
             });
+            Toaster.success("Shipment marked as shipped");
+            onSuccess();
             setCourierName("");
             setTrackingNumber("");
             setShipmentLink("");
             onClose();
         } catch (e) {
-            // ActionContainer's onSubmit handler already toasts the real error.
+            console.error("Failed to update shipment", e);
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to update shipment: ${message}` : "Failed to update shipment"
+            );
         } finally {
             setSubmitting(false);
         }

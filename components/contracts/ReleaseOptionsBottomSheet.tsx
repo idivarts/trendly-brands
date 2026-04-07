@@ -3,12 +3,14 @@ import {
     type ReleasePlanOption,
 } from "@/shared-constants/contract-status";
 import Colors from "@/shared-uis/constants/Colors";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
+import { scheduleRelease } from "./api/State_8_api";
 
 const RELEASE_OPTIONS: { value: ReleasePlanOption; label: string }[] = [
     { value: "brand_and_influencer_post", label: "Brand + Influencer post as collaboration" },
@@ -24,15 +26,14 @@ const maxReleaseDate = () => {
 
 export interface ReleaseOptionsBottomSheetProps {
     onClose: () => void;
-    onConfirm: (
-        option: ReleasePlanOption,
-        scheduledReleaseAt: number
-    ) => Promise<void> | void;
+    contractId: string;
+    onSuccess: () => void;
 }
 
 const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
     onClose,
-    onConfirm,
+    contractId,
+    onSuccess,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -52,8 +53,19 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
         const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
         setSubmitting(true);
         try {
-            await onConfirm(selectedOption, ts);
+            await scheduleRelease({
+                contractId,
+                scheduledReleaseAt: ts,
+                option: selectedOption,
+            });
+            Toaster.success("Release scheduled");
+            onSuccess();
             onClose();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to schedule release: ${message}` : "Failed to schedule release"
+            );
         } finally {
             setSubmitting(false);
         }

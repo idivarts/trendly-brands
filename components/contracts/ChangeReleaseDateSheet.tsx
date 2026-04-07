@@ -1,11 +1,14 @@
-import { RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
+import { ContractStatus, RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
 import Colors from "@/shared-uis/constants/Colors";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
+import { changeReleaseDate as changeReleaseDateState7 } from "./api/release-pending.api";
+import { changeReleaseDate as changeReleaseDateState8 } from "./api/State_8_api";
 
 const maxReleaseDate = () => {
     const d = new Date();
@@ -16,13 +19,20 @@ const maxReleaseDate = () => {
 export interface ChangeReleaseDateSheetProps {
     initialDate?: number;
     onClose: () => void;
-    onConfirm: (scheduledReleaseAt: number) => Promise<void> | void;
+    contractId: string;
+    /** True when `contract.posting?.scheduledDate` is already set (state-8 reschedule path). */
+    hasExistingScheduledDate: boolean;
+    contractStatus: ContractStatus;
+    onSuccess: () => void;
 }
 
 const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
     initialDate,
     onClose,
-    onConfirm,
+    contractId,
+    hasExistingScheduledDate,
+    contractStatus,
+    onSuccess,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -39,11 +49,27 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
     const [submitting, setSubmitting] = useState(false);
 
     const handleConfirm = async () => {
+        if (contractStatus !== ContractStatus.PostingPending) return;
         const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
         setSubmitting(true);
         try {
-            await onConfirm(ts);
+            if (hasExistingScheduledDate) {
+                await changeReleaseDateState8({
+                    contractId,
+                    scheduledReleaseAt: ts,
+                });
+            } else {
+                await changeReleaseDateState7({
+                    contractId,
+                    newScheduledDate: ts,
+                });
+            }
+            Toaster.success("Release date updated");
+            onSuccess();
             onClose();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to update date: ${message}` : "Failed to update date");
         } finally {
             setSubmitting(false);
         }

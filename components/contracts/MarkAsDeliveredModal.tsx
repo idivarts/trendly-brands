@@ -22,21 +22,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import TextInput from "../ui/text-input";
+import { markShipmentDelivered } from "./api/delivery-pending.api";
 
 const MAX_IMAGE_MB = 5;
 
 export interface MarkAsDeliveredModalProps {
     visible: boolean;
     onClose: () => void;
-    onSubmit: (data: { proofOfDeliveryUrl?: string; receivedNotes?: string }) => Promise<void> | void;
     contractId: string;
+    onSuccess: () => void;
 }
 
 const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     visible,
     onClose,
-    onSubmit,
-    contractId: _contractId,
+    contractId,
+    onSuccess,
 }) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
@@ -152,18 +153,23 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
         }
 
         try {
-            await onSubmit({
-                proofOfDeliveryUrl,
-                receivedNotes: note.trim() || undefined,
+            await markShipmentDelivered({
+                contractId,
+                screenshotUrl: proofOfDeliveryUrl,
+                notes: note.trim() || undefined,
             });
+            onSuccess();
+            Toaster.success("Marked as delivered.");
             setWebSelectedFile(null);
             setNativeImageUri("");
             setNativeImageMimeType("image/jpeg");
             setNote("");
             setConfirmChecked(false);
             onClose();
-        } catch {
-            // Parent (e.g. ActionContainer) already surfaces API / Firestore errors.
+        } catch (e) {
+            console.error("Failed to update delivered status", e);
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Failed to update status: ${message}` : "Failed to update status");
         } finally {
             setSubmitting(false);
         }

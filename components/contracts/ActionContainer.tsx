@@ -3,7 +3,6 @@ import {
     ContractStatus,
     isContractBlockedByKYC,
     normalizeStatus,
-    type ReleasePlanOption,
 } from "@/shared-constants/contract-status";
 import {
     ContractActionsWithMessage,
@@ -40,18 +39,12 @@ import ShippingAddressModal from "./ShippingAddressModal";
 import ViewInfluencerAddressBottomSheet from "./ViewInfluencerAddressBottomSheet";
 import ViewInfluencerAddressModal from "./ViewInfluencerAddressModal";
 import { Text, View } from "../theme/Themed";
-import { markShipmentShipped } from "./api/shipment-pending.api";
-import { markShipmentDelivered } from "./api/delivery-pending.api";
-import { requestVideoRevision, approveVideoRelease } from "./api/review-pending.api";
-import {
-    changeReleaseDate as changeReleaseDateState7,
-} from "./api/release-pending.api";
-import {
-    scheduleRelease,
-    changeReleaseDate as changeReleaseDateState8,
-} from "./api/State_8_api";
-import { createContractOrder, getContractOrderStatus, reviseQuotation } from "./api/payment-pending.api";
+import { createContractOrder, getContractOrderStatus } from "./api/payment-pending.api";
 import { requestDeliverable } from "./api/video-pending.api";
+import {
+    requestReviseQuotationForContract,
+    showReviseQuotationError,
+} from "./request-revise-quotation";
 import { openRazorpayHostedPaymentLink } from "./RazorpayCheckout";
 import RazorpayCheckoutModal from "./RazorpayCheckoutModal";
 import type { RazorpayCheckoutModalOptions } from "./razorpay-checkout-modal.types";
@@ -195,160 +188,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 )}
             </>
         );
-    };
-
-    const handleShippingSubmit = async (data: any) => {
-        try {
-            const courierName = data.courierName?.trim();
-            const trackingNumber = data.trackingNumber?.trim();
-            const expectedDate = data.expectedDate ?? Date.now();
-
-            if (!courierName || !trackingNumber) {
-                Toaster.error("Courier name and tracking number are required");
-                return;
-            }
-
-            await markShipmentShipped({
-                contractId: contract.streamChannelId,
-                shipmentProvider: courierName,
-                trackingId: trackingNumber,
-                expectedDate,
-            });
-
-            Toaster.success("Shipment marked as shipped");
-            refreshData();
-        } catch (e) {
-            // Helps us debug the exact Firestore failure (security rules vs invalid payload, etc.)
-            console.error("Failed to update shipment", e);
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(message ? `Failed to update shipment: ${message}` : "Failed to update shipment");
-            throw e;
-        }
-    };
-
-    const handleMarkAsDeliveredSubmit = async (data: {
-        proofOfDeliveryUrl?: string;
-        receivedNotes?: string;
-    }) => {
-        try {
-            if (!data.proofOfDeliveryUrl) {
-                Toaster.error("Please upload proof of delivery.");
-                return;
-            }
-
-            await markShipmentDelivered({
-                contractId: contract.streamChannelId,
-                screenshotUrl: data.proofOfDeliveryUrl,
-                notes: data.receivedNotes?.trim() || undefined,
-            });
-
-            refreshData();
-            Toaster.success("Marked as delivered.");
-        } catch (e) {
-            console.error("Failed to update delivered status", e);
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(message ? `Failed to update status: ${message}` : "Failed to update status");
-            throw e;
-        }
-    };
-
-    const handleRevisionSend = async (revisionNotes: string) => {
-        try {
-            await requestVideoRevision({
-                contractId: contract.streamChannelId,
-                notes: revisionNotes,
-            });
-            Toaster.success("Revision request sent in chat");
-            refreshData();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(message ? `Failed to send revision request: ${message}` : "Failed to send revision request");
-            throw e;
-        }
-    };
-
-    const handleReleaseConfirm = async (
-        option: "brand_and_influencer_post" | "influencer_posts_alone" | "brand_posts_alone",
-        scheduledReleaseAt: number
-    ) => {
-        try {
-            await scheduleRelease({
-                contractId: contract.streamChannelId,
-                scheduledReleaseAt,
-                option,
-            });
-
-            Toaster.success("Release scheduled");
-            refreshData();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(
-                message ? `Failed to schedule release: ${message}` : "Failed to schedule release"
-            );
-            throw e;
-        }
-    };
-
-    const handleChangeDateConfirm = async (scheduledReleaseAt: number) => {
-        if (status !== ContractStatus.PostingPending) return;
-        try {
-            if (contract.posting?.scheduledDate) {
-                await changeReleaseDateState8({
-                    contractId: contract.streamChannelId,
-                    scheduledReleaseAt,
-                });
-            } else {
-                await changeReleaseDateState7({
-                    contractId: contract.streamChannelId,
-                    newScheduledDate: scheduledReleaseAt,
-                });
-            }
-            Toaster.success("Release date updated");
-            refreshData();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(message ? `Failed to update date: ${message}` : "Failed to update date");
-            throw e;
-        }
-    };
-
-    const handleApproveVideoReleaseConfirm = async (data: {
-        option: ReleasePlanOption;
-        scheduledReleaseAt?: number;
-        trendlyBoost: boolean;
-    }) => {
-        try {
-            await approveVideoRelease({
-                contractId: contract.streamChannelId,
-                option: data.option,
-                scheduledReleaseAt: data.scheduledReleaseAt,
-            });
-
-            Toaster.success("Video approved");
-            refreshData();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : undefined;
-            Toaster.error(
-                message ? `Failed to approve video: ${message}` : "Failed to approve video"
-            );
-            throw e;
-        }
-    };
-
-    const handleReviseQuotation = async () => {
-        try {
-            const collabId = contract.collaborationId;
-            const influencerUserId = contract.userId;
-            if (!collabId || !influencerUserId) {
-                throw new Error("Missing collaborationId or userId for revise request");
-            }
-
-            await reviseQuotation({ collabId, userId: influencerUserId });
-            Toaster.success("Revision request sent");
-        } catch (e) {
-            const message = e instanceof Error ? e.message : "Unable to request revision";
-            Toaster.error(message);
-        }
     };
 
     const fetchManager = async () => {
@@ -557,7 +396,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Ask to Revise Quote",
                         variant: "outlined",
-                        onPress: handleReviseQuotation,
+                        onPress: () => {
+                            void requestReviseQuotationForContract(contract).catch(showReviseQuotationError);
+                        },
                     },
                     {
                         label: "Payment",
@@ -603,7 +444,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Ask to Revise Quote",
                         variant: "outlined",
-                        onPress: handleReviseQuotation,
+                        onPress: () => {
+                            void requestReviseQuotationForContract(contract).catch(showReviseQuotationError);
+                        },
                     },
                     {
                         label: "Payment",
@@ -783,10 +626,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         openModal,
         feedbackModalVisible,
         goToMessages,
-        handleMarkAsDeliveredSubmit,
-        handleRevisionSend,
         handlePendingPayment,
-        handleReviseQuotation,
         contract.shipment,
         contract.deliverable,
         devOverrideStatus,
@@ -894,21 +734,23 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 <ShippingAddressModal
                     visible
                     onClose={() => setShowShippingModal(false)}
-                    onSubmit={handleShippingSubmit}
+                    contractId={contract.streamChannelId}
+                    onSuccess={refreshData}
                 />
             )}
             {showMarkAsDeliveredModal && (
                 <MarkAsDeliveredModal
                     visible
                     onClose={() => setShowMarkAsDeliveredModal(false)}
-                    onSubmit={handleMarkAsDeliveredSubmit}
                     contractId={contract.streamChannelId}
+                    onSuccess={refreshData}
                 />
             )}
             <RequestRevisionModal
                 visible={showRevisionModal}
                 onClose={() => setShowRevisionModal(false)}
-                onSend={handleRevisionSend}
+                contractId={contract.streamChannelId}
+                onSuccess={refreshData}
             />
             <BottomSheetScrollContainer
                 isVisible={showApproveVideoSheet}
@@ -917,7 +759,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
             >
                 <ApproveVideoReleaseBottomSheet
                     onClose={() => setShowApproveVideoSheet(false)}
-                    onConfirm={handleApproveVideoReleaseConfirm}
+                    contractId={contract.streamChannelId}
+                    onSuccess={refreshData}
                 />
             </BottomSheetScrollContainer>
             <BottomSheetScrollContainer
@@ -927,7 +770,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
             >
                 <ReleaseOptionsBottomSheet
                     onClose={() => setShowReleaseSheet(false)}
-                    onConfirm={handleReleaseConfirm}
+                    contractId={contract.streamChannelId}
+                    onSuccess={refreshData}
                 />
             </BottomSheetScrollContainer>
             <BottomSheetScrollContainer
@@ -938,7 +782,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 <ChangeReleaseDateSheet
                     initialDate={contract.posting?.scheduledDate}
                     onClose={() => setShowChangeDateSheet(false)}
-                    onConfirm={handleChangeDateConfirm}
+                    contractId={contract.streamChannelId}
+                    hasExistingScheduledDate={!!contract.posting?.scheduledDate}
+                    contractStatus={status}
+                    onSuccess={refreshData}
                 />
             </BottomSheetScrollContainer>
         </View>

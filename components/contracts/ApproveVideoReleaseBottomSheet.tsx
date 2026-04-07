@@ -1,6 +1,7 @@
 import type { ReleasePlanOption } from "@/shared-constants/contract-status";
 import { RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
 import Colors from "@/shared-uis/constants/Colors";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
@@ -8,6 +9,7 @@ import { Checkbox } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
+import { approveVideoRelease } from "./api/review-pending.api";
 
 const RELEASE_CARDS: {
     value: ReleasePlanOption;
@@ -77,24 +79,18 @@ const parseWebInputDate = (value: string) => {
 
 export interface ApproveVideoReleaseBottomSheetProps {
     onClose: () => void;
-    onConfirm: (data: {
-        option: ReleasePlanOption;
-        /** Omitted when option is `brand_posts_alone` (brand posts independently — skips release scheduling). */
-        scheduledReleaseAt?: number;
-        trendlyBoost: boolean;
-    }) => Promise<void> | void;
+    contractId: string;
+    onSuccess: () => void;
 }
 
 const ApproveVideoReleaseBottomSheet: React.FC<
     ApproveVideoReleaseBottomSheetProps
-> = ({ onClose, onConfirm }) => {
+> = ({ onClose, contractId, onSuccess }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [selectedOption, setSelectedOption] = useState<ReleasePlanOption | null>(null);
-    /** Always on — brand boost opt-in is fixed for this flow. */
-    const trendlyBoost = true;
     const [date, setDate] = useState(() => {
         const d = new Date();
         d.setDate(d.getDate() + 7);
@@ -193,21 +189,26 @@ const ApproveVideoReleaseBottomSheet: React.FC<
         setSubmitting(true);
         try {
             if (selectedOption === "brand_posts_alone") {
-                await onConfirm({
+                await approveVideoRelease({
+                    contractId,
                     option: selectedOption,
-                    trendlyBoost,
                 });
-                onClose();
-                return;
+            } else {
+                const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
+                await approveVideoRelease({
+                    contractId,
+                    option: selectedOption,
+                    scheduledReleaseAt: ts,
+                });
             }
-
-            const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
-            await onConfirm({
-                option: selectedOption,
-                scheduledReleaseAt: ts,
-                trendlyBoost,
-            });
+            Toaster.success("Video approved");
+            onSuccess();
             onClose();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to approve video: ${message}` : "Failed to approve video"
+            );
         } finally {
             setSubmitting(false);
         }
