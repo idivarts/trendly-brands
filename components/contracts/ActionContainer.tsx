@@ -40,7 +40,7 @@ import ViewInfluencerAddressBottomSheet from "./ViewInfluencerAddressBottomSheet
 import ViewInfluencerAddressModal from "./ViewInfluencerAddressModal";
 import { Text, View } from "../theme/Themed";
 import { createContractOrder, getContractOrderStatus } from "./api/payment-pending.api";
-import { requestDeliverable } from "./api/video-pending.api";
+import { requestDeliverableWithUX } from "./api/video-pending.api";
 import {
     requestReviseQuotationForContract,
     showReviseQuotationError,
@@ -503,7 +503,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             label: "Request for Video",
                             variant: "contained",
                             onPress: async () => {
-                                await requestDeliverable({ contractId: contract.streamChannelId });
+                                await requestDeliverableWithUX(
+                                    { contractId: contract.streamChannelId },
+                                    { onSuccess: refreshData }
+                                );
                             },
                         },
                     ],
@@ -563,7 +566,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Request for Video",
                         variant: "contained",
                         onPress: async () => {
-                            await requestDeliverable({ contractId: contract.streamChannelId });
+                            await requestDeliverableWithUX(
+                                { contractId: contract.streamChannelId },
+                                { onSuccess: refreshData }
+                            );
                         },
                     },
                 ],
