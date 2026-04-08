@@ -7,11 +7,11 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import { scheduleRelease } from "../api/State_8_api";
 import ContractActionOverlay from "../ContractActionOverlay";
+import DatePickerModal from "../../modals/DatePickerModal";
 
 const RELEASE_OPTIONS: { value: ReleasePlanOption; label: string }[] = [
     { value: "brand_and_influencer_post", label: "Brand + Influencer post as collaboration" },
@@ -48,8 +48,8 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
         d.setDate(d.getDate() + 7);
         return d;
     });
-    const [showDatePicker, setShowDatePicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [dateModalVisible, setDateModalVisible] = useState(false);
 
     const handleConfirm = async () => {
         if (!selectedOption) return;
@@ -87,7 +87,14 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                         styles.optionRow,
                         selectedOption === opt.value && styles.optionRowSelected,
                     ]}
-                    onPress={() => setSelectedOption(opt.value)}
+                    onPress={() => {
+                        if (selectedOption === opt.value) {
+                            setDateModalVisible(true);
+                            return;
+                        }
+                        setSelectedOption(opt.value);
+                        setDateModalVisible(true);
+                    }}
                 >
                     <Text
                         style={[
@@ -99,31 +106,33 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                     </Text>
                 </TouchableOpacity>
             ))}
-            <Text style={[styles.subtitle, styles.dateLabel]}>Release date (max 30 days)</Text>
-            <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-            >
-                <Text style={styles.dateButtonText}>
-                    {date.toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                    })}
-                </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-                <DateTimePicker
-                    value={date}
-                    mode="date"
-                    minimumDate={new Date()}
-                    maximumDate={maxDate}
-                    onChange={(_, d) => {
-                        if (d) setDate(d);
-                        setShowDatePicker(false);
-                    }}
-                />
-            )}
+            {selectedOption ? (
+                <>
+                    <Text style={[styles.subtitle, styles.dateLabel]}>
+                        Release date (max 30 days)
+                    </Text>
+                    {!dateModalVisible ? (
+                        <Text style={styles.dateDisplayText}>
+                            {date.toLocaleDateString(undefined, {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                            })}
+                        </Text>
+                    ) : null}
+                </>
+            ) : null}
+            <DatePickerModal
+                visible={dateModalVisible}
+                title="Select release date"
+                value={date}
+                onChange={setDate}
+                onClose={() => setDateModalVisible(false)}
+                minimumDate={new Date()}
+                maximumDate={maxDate}
+                submitText="Done"
+                cancelText="Cancel"
+            />
             <View style={styles.actions}>
                 <Button mode="outlined" style={styles.button} onPress={onClose}>
                     Cancel
@@ -188,16 +197,11 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         optionLabelSelected: {
             color: colors.white,
         },
-        dateButton: {
-            paddingVertical: 12,
-            paddingHorizontal: 16,
-            borderRadius: 8,
-            backgroundColor: colors.tag ?? "rgba(0,0,0,0.06)",
-            marginBottom: 20,
-        },
-        dateButtonText: {
+        dateDisplayText: {
             fontSize: 15,
+            fontWeight: "600",
             color: colors.text,
+            marginBottom: 20,
         },
         actions: {
             flexDirection: "row",

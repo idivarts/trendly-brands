@@ -1,7 +1,6 @@
 import { ContractStatus, RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -10,6 +9,7 @@ import Button from "../../ui/button";
 import { changeReleaseDate as changeReleaseDateState7 } from "../api/release-pending.api";
 import { changeReleaseDate as changeReleaseDateState8 } from "../api/State_8_api";
 import ContractActionOverlay from "../ContractActionOverlay";
+import DatePickerModal from "../../modals/DatePickerModal";
 
 const maxReleaseDate = () => {
     const d = new Date();
@@ -48,8 +48,8 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
             return d;
         })()
     );
-    const [showDatePicker, setShowDatePicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [dateModalVisible, setDateModalVisible] = useState(false);
 
     const handleConfirm = async () => {
         if (contractStatus !== ContractStatus.PostingPending) return;
@@ -84,7 +84,7 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
             <Text style={styles.subtitle}>Max 30 days from today</Text>
             <TouchableOpacity
                 style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => setDateModalVisible(true)}
             >
                 <Text style={styles.dateButtonText}>
                     {date.toLocaleDateString(undefined, {
@@ -94,18 +94,17 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
                     })}
                 </Text>
             </TouchableOpacity>
-            {showDatePicker && (
-                <DateTimePicker
-                    value={date}
-                    mode="date"
-                    minimumDate={new Date()}
-                    maximumDate={maxReleaseDate()}
-                    onChange={(_, d) => {
-                        if (d) setDate(d);
-                        setShowDatePicker(false);
-                    }}
-                />
-            )}
+            <DatePickerModal
+                visible={dateModalVisible}
+                title="Select release date"
+                value={date}
+                onChange={setDate}
+                onClose={() => setDateModalVisible(false)}
+                minimumDate={new Date()}
+                maximumDate={maxReleaseDate()}
+                submitText="Done"
+                cancelText="Cancel"
+            />
             <View style={styles.actions}>
                 <Button mode="outlined" style={styles.button} onPress={onClose}>
                     Cancel

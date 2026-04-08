@@ -16,11 +16,11 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import TextInput from "../../ui/text-input";
 import ContractActionOverlay from "../ContractActionOverlay";
+import DatePickerModal from "../../modals/DatePickerModal";
 
 export interface ShippingAddressModalProps {
     visible: boolean;
@@ -50,8 +50,8 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
         return d.getTime();
     });
     const [hasSelectedExpectedDate, setHasSelectedExpectedDate] = useState(false);
-    const [showExpectedDatePicker, setShowExpectedDatePicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [expectedDateModalVisible, setExpectedDateModalVisible] = useState(false);
 
     const handleSubmit = async () => {
         if (!courierName.trim() || !trackingNumber.trim()) {
@@ -147,14 +147,14 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
                                 style={styles.expectedDateButton}
                                 onPress={() => {
                                     setHasSelectedExpectedDate(false);
-                                    setShowExpectedDatePicker(true);
+                                    setExpectedDateModalVisible(true);
                                 }}
                             >
                                 <Text style={styles.expectedDateButtonText}>
                                     Select expected date
                                 </Text>
                             </TouchableOpacity>
-                            {hasSelectedExpectedDate && !showExpectedDatePicker ? (
+                            {hasSelectedExpectedDate && !expectedDateModalVisible ? (
                                 <Text style={styles.expectedDateSelectedText}>
                                     {new Date(expectedDate).toLocaleDateString(undefined, {
                                         day: "numeric",
@@ -163,24 +163,21 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
                                     })}
                                 </Text>
                             ) : null}
-                            {showExpectedDatePicker && (
-                                <DateTimePicker
-                                    value={new Date(expectedDate)}
-                                    mode="date"
-                                    // Use spinner to reduce iOS double-tap / crash risk.
-                                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                                    minimumDate={new Date()}
-                                    onChange={(event, d) => {
-                                        if ((event as any)?.type === "set" && d) {
-                                            const prevMs = expectedDate;
-                                            const nextMs = d.getTime();
-                                            setExpectedDate(nextMs);
-                                            setHasSelectedExpectedDate(nextMs !== prevMs);
-                                        }
-                                        setShowExpectedDatePicker(false);
-                                    }}
-                                />
-                            )}
+                            <DatePickerModal
+                                visible={expectedDateModalVisible}
+                                title="Select expected delivery date"
+                                value={new Date(expectedDate)}
+                                onChange={(d) => {
+                                    const prevMs = expectedDate;
+                                    const nextMs = d.getTime();
+                                    setExpectedDate(nextMs);
+                                    setHasSelectedExpectedDate(nextMs !== prevMs);
+                                }}
+                                onClose={() => setExpectedDateModalVisible(false)}
+                                minimumDate={new Date()}
+                                submitText="Done"
+                                cancelText="Cancel"
+                            />
                         </View>
 
                         <View style={styles.actions}>
