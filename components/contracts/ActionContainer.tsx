@@ -70,7 +70,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
     feedbackModalVisible,
     userData,
     collaborationData = null,
-    paymentStatus = "pending",
     slot = "all",
     devOverrideStatus = null,
 }) => {
@@ -364,7 +363,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         }
         if (!isLegacyFlow && status === ContractStatus.Started) {
             // Backend-owned flow: do not write state from UI.
-            // If legacy/transitional `Started` appears, treat it as the next actionable state.
+            // Started (same as backend OrderCreated): next step is shipment or deliverable request.
             return {
                 buttons: productShipping
                     ? [

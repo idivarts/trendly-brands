@@ -1,3 +1,4 @@
+import { PaymentStatus } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useCallback, useRef, useState } from "react";
 import { createContractOrder, getContractOrderStatus } from "../api/payment-pending.api";
@@ -108,7 +109,7 @@ export function useRazorpayContractPayment({
             }
 
             const latest = await getContractOrderStatus({ contractId });
-            if (latest?.status === "paid") {
+            if (latest?.status === PaymentStatus.Paid) {
                 Toaster.success("Payment completed successfully");
             } else {
                 Toaster.info("Payment submitted. We'll update status shortly.");

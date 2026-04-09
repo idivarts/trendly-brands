@@ -2,6 +2,7 @@ import { CHAT_MESSAGE_TOPBAR_DESCRIPTION } from "@/constants/ChatMessageTopbar";
 import MessageTopbar from "@/shared-uis/components/chat-message-bar";
 import { View } from "@/shared-uis/components/theme/Themed";
 import { Contract } from "@/types/Contract";
+import { ContractStatus } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import Button from "../ui/button";
@@ -16,7 +17,7 @@ const ChatMessageTopbar: React.FC<ChatMessageTopbarProps> = ({
     const [status, setStatus] = useState(contract.status);
     const router = useRouter();
 
-    if (status === 0) {
+    if (status === ContractStatus.Pending) {
         return <MessageTopbar
             actions={
                 <View
