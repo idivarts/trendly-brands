@@ -31,21 +31,21 @@ import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
-import ApproveVideoReleaseBottomSheet from "./Modals/ApproveVideoReleaseBottomSheet";
-import ChangeReleaseDateSheet from "./Modals/ChangeReleaseDateSheet";
 import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
-import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
-import MarkAsDeliveredModal from "./Modals/MarkAsDeliveredModal";
-import RazorpayCheckoutModal from "./Modals/RazorpayCheckoutModal";
-import ReleaseOptionsBottomSheet from "./Modals/ReleaseOptionsBottomSheet";
+import ApproveVideoReleaseBottomSheet from "./modals/ApproveVideoReleaseBottomSheet";
+import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
+import MarkAsDeliveredModal from "./modals/MarkAsDeliveredModal";
+import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
+import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
+import RequestRevisionModal from "./modals/RequestRevisionModal";
+import ShippingAddressModal from "./modals/ShippingAddressModal";
+import ViewInfluencerAddressOverlay from "./modals/ViewInfluencerAddressOverlayComponent";
 import {
     requestReviseQuotationForContract,
     showReviseQuotationError,
 } from "./request-revise-quotation";
-import RequestRevisionModal from "./Modals/RequestRevisionModal";
-import ShippingAddressModal from "./Modals/ShippingAddressModal";
-import ViewInfluencerAddressOverlay from "./Modals/ViewInfluencerAddressOverlayComponent";
+import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
 
 /** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {

@@ -1,5 +1,5 @@
 import UserResponse from "@/components/contract-card/UserResponse";
-import Colors from "@/shared-uis/constants/Colors";
+import { CURRENCY } from "@/constants/Unit";
 import { useBreakpoints } from "@/hooks";
 import {
     IApplications,
@@ -11,11 +11,11 @@ import Carousel from "@/shared-uis/components/carousel/carousel";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { Text } from "@/shared-uis/components/theme/Themed";
+import Colors from "@/shared-uis/constants/Colors";
 import { truncateText } from "@/shared-uis/utils/text";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
-import { CURRENCY } from "@/constants/Unit";
 import { faArrowRight, faVideo } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -25,8 +25,8 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
-import BrandFeedbackModal from "./Modals/BrandFeedbackModal";
 import MemberContainer from "./MemberContainer";
+import BrandFeedbackModal from "./modals/BrandFeedbackModal";
 
 interface CollaborationDetailsContentProps {
     collaborationDetail: ICollaboration;
@@ -65,14 +65,14 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
         props.userData.profile?.content?.socialMediaHighlight ||
         (props.userData.profile?.content?.about
             ? truncateText(
-                  props.userData.profile.content.about as string,
-                  60
-              ).split("\n")[0]
+                props.userData.profile.content.about as string,
+                60
+            ).split("\n")[0]
             : null) ||
         "—";
     const nicheDisplay =
         props.userData.profile?.category?.length &&
-        Array.isArray(props.userData.profile.category)
+            Array.isArray(props.userData.profile.category)
             ? props.userData.profile.category.join(" & ")
             : "—";
 
@@ -87,7 +87,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                             index={0}
                             height={MEDIA_CARD_SIZE}
                             width={MEDIA_CARD_SIZE}
-                            handleImagePress={() => {}}
+                            handleImagePress={() => { }}
                         />
                     </View>
                     <View style={[styles.mediaCard, styles.profileImageCard]}>
@@ -187,7 +187,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 influencerQuestions={
                     props?.collaborationDetail?.questionsToInfluencers
                 }
-                setConfirmationModalVisible={() => {}}
+                setConfirmationModalVisible={() => { }}
             />
 
             <Pressable
@@ -301,7 +301,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     influencerQuestions={
                         props?.collaborationDetail?.questionsToInfluencers
                     }
-                    setConfirmationModalVisible={() => {}}
+                    setConfirmationModalVisible={() => { }}
                 />
                 <Pressable
                     style={styles.activeCampaignCard}
@@ -381,9 +381,9 @@ function createStyles(
 ) {
     const contentMaxWidth = xl
         ? Math.min(
-              width - DESKTOP_HORIZONTAL_PADDING * 2,
-              CONTENT_MAX_WIDTH
-          )
+            width - DESKTOP_HORIZONTAL_PADDING * 2,
+            CONTENT_MAX_WIDTH
+        )
         : undefined;
     return StyleSheet.create({
         scrollContainer: {

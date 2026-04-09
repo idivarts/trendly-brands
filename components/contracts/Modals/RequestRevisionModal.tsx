@@ -1,5 +1,5 @@
-import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import TextInput from "../../ui/text-input";
-import { requestVideoRevision } from "../api/review-pending.api";
+import { requestVideoRevision } from "../api/posting-pending.api";
 import ContractActionOverlay from "../ContractActionOverlay";
 
 export interface RequestRevisionModalProps {

@@ -1,38 +1,38 @@
 import type { ReleasePlanOption } from "@/shared-constants/contract-status";
 import { RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contract-status";
-import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Checkbox } from "react-native-paper";
+import DatePickerModal from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
-import { approveVideoRelease } from "../api/review-pending.api";
+import { approveVideoRelease } from "../api/posting-pending.api";
 import ContractActionOverlay from "../ContractActionOverlay";
-import DatePickerModal from "../../modals/DatePickerModal";
 
 const RELEASE_CARDS: {
     value: ReleasePlanOption;
     title: string;
     subtitle: string;
 }[] = [
-    {
-        value: "influencer_posts_alone",
-        title: "Influencer will Post independently",
-        subtitle: "Brand will courier the product to the influencer's address.",
-    },
-    {
-        value: "brand_and_influencer_post",
-        title: "Influencer needs to Collab Post",
-        subtitle: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
-    },
-    {
-        value: "brand_posts_alone",
-        title: "Brand will post Independently",
-        subtitle: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
-    },
-];
+        {
+            value: "influencer_posts_alone",
+            title: "Influencer will Post independently",
+            subtitle: "Brand will courier the product to the influencer's address.",
+        },
+        {
+            value: "brand_and_influencer_post",
+            title: "Influencer needs to Collab Post",
+            subtitle: "No physical product. Examples: SaaS tools, apps, online services, digital access.",
+        },
+        {
+            value: "brand_posts_alone",
+            title: "Brand will post Independently",
+            subtitle: "Influencer needs to visit a physical shop, cafe, salon, or venue.",
+        },
+    ];
 
 const maxReleaseDate = () => {
     const d = new Date();
@@ -278,7 +278,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         cardTitleSelected: {
             color: colors.primary,
-          },
+        },
         cardSubtitle: {
             fontSize: 14,
             fontWeight: "400",
@@ -287,7 +287,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         cardSubtitleSelected: {
             color: colors.primaryDark ?? colors.primary,
-          },
+        },
         checkboxRow: {
             flexDirection: "row",
             alignItems: "center",
