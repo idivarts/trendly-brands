@@ -4,12 +4,12 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
+import DatePickerModal from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
-import { changeReleaseDate as changeReleaseDateState7 } from "../api/release-pending.api";
+import { changeReleaseDate as changeReleaseDateState7 } from "../api/posting-pending.api";
 import { changeReleaseDate as changeReleaseDateState8 } from "../api/State_8_api";
 import ContractActionOverlay from "../ContractActionOverlay";
-import DatePickerModal from "../../modals/DatePickerModal";
 
 const maxReleaseDate = () => {
     const d = new Date();
