@@ -1,5 +1,6 @@
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { ContractStatus } from "@/shared-constants/contract-status";
+import { PaymentStatus } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { logContractApiCall } from "./logContractApiCall";
 
 export type CreateContractOrderPayload = {
@@ -16,13 +17,14 @@ export type ContractOrderData = {
     amount: number;
     currency: string;
     shortUrl?: string;
-    status?: string;
+    /** Razorpay / backend order status; prefer `PaymentStatus` when it matches contract payment */
+    status?: PaymentStatus;
     [key: string]: unknown;
 };
 
 export type ContractOrderStatusData = {
     id?: string;
-    status?: string;
+    status?: PaymentStatus | string;
     amount?: number;
     currency?: string;
     [key: string]: unknown;
@@ -37,11 +39,11 @@ function normalizeOrderData(raw: unknown): ContractOrderData {
 
     const id = String(
         candidate.id ??
-            candidate.orderId ??
-            candidate.order_id ??
-            candidate.razorpayOrderId ??
-            candidate.razorpay_order_id ??
-            ""
+        candidate.orderId ??
+        candidate.order_id ??
+        candidate.razorpayOrderId ??
+        candidate.razorpay_order_id ??
+        ""
     );
 
     const amountRaw =
