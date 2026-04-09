@@ -26,7 +26,7 @@ import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
 import MemberContainer from "./MemberContainer";
-import BrandFeedbackModal from "./modals/BrandFeedbackModal";
+import BrandFeedbackModal from "./modals2/BrandFeedbackModal";
 
 interface CollaborationDetailsContentProps {
     collaborationDetail: ICollaboration;
