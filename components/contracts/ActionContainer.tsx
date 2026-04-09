@@ -33,14 +33,14 @@ import { Text, View } from "../theme/Themed";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
 import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
-import ApproveVideoReleaseBottomSheet from "./modals2/ApproveVideoReleaseBottomSheet";
-import ChangeReleaseDateSheet from "./modals2/ChangeReleaseDateSheet";
-import MarkAsDeliveredModal from "./modals2/MarkAsDeliveredModal";
-import RazorpayCheckoutModal from "./modals2/RazorpayCheckoutModal";
-import ReleaseOptionsBottomSheet from "./modals2/ReleaseOptionsBottomSheet";
-import RequestRevisionModal from "./modals2/RequestRevisionModal";
-import ShippingAddressModal from "./modals2/ShippingAddressModal";
-import ViewInfluencerAddressOverlay from "./modals2/ViewInfluencerAddressOverlayComponent";
+import ApproveVideoReleaseBottomSheet from "./modals/ApproveVideoReleaseBottomSheet";
+import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
+import MarkAsDeliveredModal from "./modals/MarkAsDeliveredModal";
+import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
+import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
+import RequestRevisionModal from "./modals/RequestRevisionModal";
+import ShippingAddressModal from "./modals/ShippingAddressModal";
+import ViewInfluencerAddressOverlay from "./modals/ViewInfluencerAddressOverlayComponent";
 import {
     requestReviseQuotationForContract,
     showReviseQuotationError,
