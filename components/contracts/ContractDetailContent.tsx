@@ -1,5 +1,5 @@
 import UserResponse from "@/components/contract-card/UserResponse";
-import Colors from "@/shared-uis/constants/Colors";
+import { CURRENCY } from "@/constants/Unit";
 import { useBreakpoints } from "@/hooks";
 import {
     IApplications,
@@ -11,22 +11,22 @@ import Carousel from "@/shared-uis/components/carousel/carousel";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { Text } from "@/shared-uis/components/theme/Themed";
+import Colors from "@/shared-uis/constants/Colors";
 import { truncateText } from "@/shared-uis/utils/text";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
-import { CURRENCY } from "@/constants/Unit";
 import { faArrowRight, faVideo } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Card, Portal } from "react-native-paper";
+import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
-import FeedbackModal from "./FeedbackModal";
 import MemberContainer from "./MemberContainer";
+import BrandFeedbackModal from "./modals/BrandFeedbackModal";
 
 interface CollaborationDetailsContentProps {
     collaborationDetail: ICollaboration;
@@ -34,6 +34,8 @@ interface CollaborationDetailsContentProps {
     userData: IUsers;
     contractData: IContracts;
     refreshData: () => void;
+    /** Dev only: override contract status for UI testing */
+    devOverrideStatus?: number | null;
 }
 
 const CONTENT_MAX_WIDTH = 720;
@@ -63,14 +65,14 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
         props.userData.profile?.content?.socialMediaHighlight ||
         (props.userData.profile?.content?.about
             ? truncateText(
-                  props.userData.profile.content.about as string,
-                  60
-              ).split("\n")[0]
+                props.userData.profile.content.about as string,
+                60
+            ).split("\n")[0]
             : null) ||
         "—";
     const nicheDisplay =
         props.userData.profile?.category?.length &&
-        Array.isArray(props.userData.profile.category)
+            Array.isArray(props.userData.profile.category)
             ? props.userData.profile.category.join(" & ")
             : "—";
 
@@ -85,7 +87,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                             index={0}
                             height={MEDIA_CARD_SIZE}
                             width={MEDIA_CARD_SIZE}
-                            handleImagePress={() => {}}
+                            handleImagePress={() => { }}
                         />
                     </View>
                     <View style={[styles.mediaCard, styles.profileImageCard]}>
@@ -152,7 +154,10 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         setFeedbackModalVisible(true)
                     }
                     userData={props.userData}
+                    collaborationData={props.collaborationDetail}
+                    paymentStatus={props.contractData.payment?.status}
                     slot="buttons"
+                    devOverrideStatus={props.devOverrideStatus}
                 />
             ) : null}
 
@@ -182,7 +187,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 influencerQuestions={
                     props?.collaborationDetail?.questionsToInfluencers
                 }
-                setConfirmationModalVisible={() => {}}
+                setConfirmationModalVisible={() => { }}
             />
 
             <Pressable
@@ -236,7 +241,10 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     setFeedbackModalVisible(true)
                 }
                 userData={props.userData}
+                collaborationData={props.collaborationDetail}
+                paymentStatus={props.contractData.payment?.status}
                 slot="feedback-and-info"
+                devOverrideStatus={props.devOverrideStatus}
             />
         </View>
     );
@@ -274,6 +282,9 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         setFeedbackModalVisible(true)
                     }
                     userData={props.userData}
+                    collaborationData={props.collaborationDetail}
+                    paymentStatus={props.contractData.payment?.status}
+                    devOverrideStatus={props.devOverrideStatus}
                 />
 
                 <MemberContainer
@@ -290,7 +301,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     influencerQuestions={
                         props?.collaborationDetail?.questionsToInfluencers
                     }
-                    setConfirmationModalVisible={() => {}}
+                    setConfirmationModalVisible={() => { }}
                 />
                 <Pressable
                     style={styles.activeCampaignCard}
@@ -352,22 +363,13 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     setUpdateMemberContainer((prev) => prev + 1)
                 }
             />
-            {feedbackModalVisible && (
-                <Portal>
-                    <FeedbackModal
-                        feedbackGiven={false}
-                        setVisibility={() =>
-                            setFeedbackModalVisible(false)
-                        }
-                        star={
-                            props.contractData.feedbackFromBrand?.ratings || 0
-                        }
-                        visible={feedbackModalVisible}
-                        contract={props.contractData}
-                        refreshData={props.refreshData}
-                    />
-                </Portal>
-            )}
+            <BrandFeedbackModal
+                visible={feedbackModalVisible}
+                onClose={() => setFeedbackModalVisible(false)}
+                initialRating={props.contractData.feedbackFromBrand?.ratings || 0}
+                contractId={props.contractData.streamChannelId}
+                refreshData={props.refreshData}
+            />
         </ScrollView>
     );
 };
@@ -379,9 +381,9 @@ function createStyles(
 ) {
     const contentMaxWidth = xl
         ? Math.min(
-              width - DESKTOP_HORIZONTAL_PADDING * 2,
-              CONTENT_MAX_WIDTH
-          )
+            width - DESKTOP_HORIZONTAL_PADDING * 2,
+            CONTENT_MAX_WIDTH
+        )
         : undefined;
     return StyleSheet.create({
         scrollContainer: {
