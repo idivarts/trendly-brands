@@ -8,7 +8,7 @@ import DatePickerModal from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import { changeReleaseDate as changeReleaseDateState7 } from "../api/posting-pending.api";
-import { changeReleaseDate as changeReleaseDateState8 } from "../api/State_8_api";
+import { changeReleaseDate as changeReleaseDateState8 } from "../api/release-pending.api";
 import ContractActionOverlay from "../ContractActionOverlay";
 
 const maxReleaseDate = () => {

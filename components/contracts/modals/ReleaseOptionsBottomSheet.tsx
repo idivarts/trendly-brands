@@ -2,16 +2,16 @@ import {
     RELEASE_DATE_MAX_DAYS,
     type ReleasePlanOption,
 } from "@/shared-constants/contract-status";
-import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
+import DatePickerModal from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
-import { scheduleRelease } from "../api/State_8_api";
+import { scheduleRelease } from "../api/release-pending.api";
 import ContractActionOverlay from "../ContractActionOverlay";
-import DatePickerModal from "../../modals/DatePickerModal";
 
 const RELEASE_OPTIONS: { value: ReleasePlanOption; label: string }[] = [
     { value: "brand_and_influencer_post", label: "Brand + Influencer post as collaboration" },
