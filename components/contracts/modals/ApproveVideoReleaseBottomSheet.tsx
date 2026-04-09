@@ -9,7 +9,7 @@ import { Checkbox } from "react-native-paper";
 import DatePickerModal from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
-import { approveVideoRelease } from "../api/posting-pending.api";
+import { approveVideoRelease } from "../api/review-pending.api";
 import ContractActionOverlay from "../ContractActionOverlay";
 
 const RELEASE_CARDS: {
