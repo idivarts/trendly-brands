@@ -225,9 +225,6 @@ export default function InviteManagementBoard() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Trendly Admin Invites</Text>
-            </View>
 
             {loading && (
                 <Text style={{ paddingVertical: 8, opacity: 0.7 }}>

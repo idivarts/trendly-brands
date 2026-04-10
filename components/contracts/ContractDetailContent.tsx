@@ -128,7 +128,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         </View>
                     ) : null}
                 </View>
-                <View style={styles.taglineRow}>
+                {/* <View style={styles.taglineRow}>
                     <View style={styles.taglineIconWrap}>
                         <FontAwesomeIcon
                             icon={faVideo}
@@ -137,13 +137,13 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         />
                     </View>
                     <Text style={styles.taglineText}>{tagline}</Text>
-                </View>
-                <Text style={styles.aboutText}>
+                </View> */}
+                {/* <Text style={styles.aboutText}>
                     {truncateText(
                         (props.userData.profile?.content?.about as string) || "",
                         160
                     )}
-                </Text>
+                </Text> */}
             </View>
 
             {xl ? (

@@ -467,9 +467,6 @@ export default function BrandCRMBoard() {
     return (
         <View style={{ flex: 1, backgroundColor: colors.white }}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Brands CRM</Text>
-            </View>
 
             {loading && (
                 <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
