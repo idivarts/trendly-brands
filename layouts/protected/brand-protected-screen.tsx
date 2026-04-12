@@ -1,6 +1,6 @@
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { PropsWithChildren, useEffect } from "react";
+import React, { PropsWithChildren, useEffect, useState } from "react";
 import { ActivityIndicator, Platform } from "react-native";
 
 import ExploreInfluencerShimmer from "@/components/shimmers/explore-influencer-shimmer";
@@ -17,6 +17,7 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
     // const [loading, setLoading] = useState(true);
     const router = useRouter();
     const { selectedBrand, loading } = useBrandContext()
+    const [key, setKey] = useState(0);
     useEffect(() => {
         Console.log("Brand Selected", loading, selectedBrand);
         if (!loading && !selectedBrand) {
@@ -28,12 +29,15 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
                 },
             });
         }
+        if (!loading && selectedBrand?.id) {
+            setKey(key + 1);
+        }
     }, [selectedBrand?.id, loading])
 
 
     return <>
         {loading && <LoadingScreen />}
-        <View style={{ flex: 1, display: loading ? "none" : "flex" }}>
+        <View key={key} style={{ flex: 1, display: loading ? "none" : "flex" }}>
             {children}
         </View>
     </>;
