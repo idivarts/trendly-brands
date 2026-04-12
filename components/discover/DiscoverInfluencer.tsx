@@ -141,10 +141,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     });
 
 interface DiscoverInfluencerProps {
-    advanceFilter?: boolean;
-    statusFilter?: boolean;
     isStatusCard?: boolean;
-    onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     initialInfluencerId?: string;
     /** Called once when the first influencer card has laid out (for guided tour). */
@@ -154,10 +151,7 @@ interface DiscoverInfluencerProps {
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
-    advanceFilter = false,
-    statusFilter = false,
     isStatusCard = false,
-    onStatusChange,
     defaultAdvanceFilters,
     initialInfluencerId,
     onFirstInfluencerCardLayout,
