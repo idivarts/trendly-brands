@@ -182,7 +182,7 @@ const DiscoverComponent = ({
             skipGuideTour ||
             !surveyCheckDone ||
             showSurvey ||
-            !manager ||
+            !manager?.id ||
             !selectedBrand?.id ||
             isActive ||
             hasStartedTourRef.current
@@ -248,7 +248,7 @@ const DiscoverComponent = ({
         skipGuideTour,
         surveyCheckDone,
         showSurvey,
-        manager,
+        manager?.id,
         selectedBrand?.id,
         xl,
         isActive,

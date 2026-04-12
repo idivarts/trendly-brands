@@ -199,9 +199,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<InfluencerItem[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
-        null
-    );
     const { openModal } = useConfirmationModel();
     const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
@@ -327,8 +324,10 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     useEffect(() => {
         if (!selectedBrand?.id) return;
 
-        if (defaultAdvanceFilters) {
-            setAppliedFilters(defaultAdvanceFilters);
+        const preferredSort = selectedBrand.discoverPreferences?.sort;
+        if (preferredSort && preferredSort !== currentSort) {
+            setCurrentSort(preferredSort);
+            return;
         }
 
         if (showRightPanel !== false) {
@@ -345,9 +344,9 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         }
     }, [defaultAdvanceFilters, selectedBrand?.id, showRightPanel, currentSort]);
 
-    // When right panel is hidden (e.g. Send Invitations tab), this component must perform the
-    // discovery API call with defaultAdvanceFilters so the list loads; TrendlyAdvancedFilter
-    // is not mounted in that case. Use a stable key for filters so we don't re-run and cancel
+    // When right panel is hidden (e.g. Send Invitations tab), this component performs the
+    // discovery API call with defaultAdvanceFilters so the list loads in that mode.
+    // Use a stable key for filters so we don't re-run and cancel
     // the request on every parent re-render (defaultAdvanceFilters is often a new object ref).
     const defaultAdvanceFiltersKey = useMemo(
         () => JSON.stringify(defaultAdvanceFilters ?? {}),

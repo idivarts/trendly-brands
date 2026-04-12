@@ -16,6 +16,7 @@ const useInvitedInfluencers = ({
     limit = DEFAULT_LIMIT,
 }: UseInvitedInfluencersProps) => {
     const { selectedBrand } = useBrandContext();
+    const selectedBrandId = selectedBrand?.id;
     const [influencers, setInfluencers] = useState<InfluencerInviteUnit[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -24,8 +25,8 @@ const useInvitedInfluencers = ({
 
     const fetchPage = useCallback(
         async (pageNumber: number, reset = false) => {
-            if (!selectedBrand) return;
-            const brandId = selectedBrand.id;
+            if (!selectedBrandId) return;
+            const brandId = selectedBrandId;
             setLoading(true);
             try {
                 const url = `/discovery/brands/${brandId}/collaborations/${collaborationId}/influencers`;
@@ -227,14 +228,14 @@ const useInvitedInfluencers = ({
                 setLoading(false);
             }
         },
-        [selectedBrand, collaborationId, filter, limit]
+        [selectedBrandId, collaborationId, filter, limit]
     );
 
     useEffect(() => {
         // initial load
         setPage(1);
         fetchPage(1, true);
-    }, [selectedBrand?.id, collaborationId, filter]);
+    }, [selectedBrandId, collaborationId, filter, fetchPage]);
 
     const loadMore = useCallback(() => {
         if (!nextAvailable || loading) return;

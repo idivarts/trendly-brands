@@ -606,19 +606,6 @@ const TrendlyAdvancedFilter = ({
         resetCallApiRef.current = resetAndCallApi;
     });
 
-    useEffect(() => {
-        if (!selectedBrand?.id) return;
-        callApi();
-        return () => {
-            if (xl) {
-                discoverCommunication.current?.({
-                    loading: false,
-                    data: [],
-                });
-            }
-        };
-    }, [selectedBrand?.id]);
-
     FilterApplyRef.current = async (action: string) => {
         setOffset(0);
 
