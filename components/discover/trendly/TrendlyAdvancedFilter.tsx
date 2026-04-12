@@ -284,7 +284,7 @@ const TrendlyAdvancedFilter = ({
             setFieldsFromFilters(cleanFiltersForStorage(selectedBrand.discoverPreferences as Record<string, any>) as Partial<IAdvanceFilters>);
             setOffset(0);
         }
-    }, [selectedBrand, defaultAdvanceFilters]);
+    }, [selectedBrand?.id, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
         if (page) {
@@ -444,6 +444,7 @@ const TrendlyAdvancedFilter = ({
             });
             return;
         }
+        console.log("callApi", selectedBrand.id);
         const formData = getFormData();
         discoverCommunication.current?.({
             loading: true,
@@ -604,20 +605,7 @@ const TrendlyAdvancedFilter = ({
     useEffect(() => {
         callApiRef.current = callApi;
         resetCallApiRef.current = resetAndCallApi;
-    });
-
-    useEffect(() => {
-        if (!selectedBrand?.id) return;
-        callApi();
-        return () => {
-            if (xl) {
-                discoverCommunication.current?.({
-                    loading: false,
-                    data: [],
-                });
-            }
-        };
-    }, [selectedBrand?.id]);
+    }, [callApi, resetAndCallApi]);
 
     FilterApplyRef.current = async (action: string) => {
         setOffset(0);

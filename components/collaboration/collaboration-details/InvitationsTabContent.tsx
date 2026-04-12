@@ -245,8 +245,6 @@ const InvitationsTabContent = (props: any) => {
                                 <Discover
                                     showRightPanel={false}
                                     showTopPanel={false}
-                                    advanceFilter={true}
-                                    onStatusChange={handleStatusChange}
                                     isStatusCard={false}
                                     defaultAdvanceFilters={collaboration?.preferences}
                                     useStoredFilters={false}
@@ -257,8 +255,6 @@ const InvitationsTabContent = (props: any) => {
                             <Discover
                                 showRightPanel={false}
                                 showTopPanel={false}
-                                advanceFilter={true}
-                                onStatusChange={handleStatusChange}
                                 isStatusCard={false}
                                 defaultAdvanceFilters={collaboration?.preferences}
                                 useStoredFilters={false}

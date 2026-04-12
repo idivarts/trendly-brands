@@ -145,7 +145,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
 
     useEffect(() => {
         fetchProposals();
-    }, [user, selectedBrand]);
+    }, [user, selectedBrand?.id]);
 
     useEffect(() => {
         const checkAndRedirectIfNoCampaigns = async () => {
@@ -163,7 +163,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             }
         };
         checkAndRedirectIfNoCampaigns();
-    }, [isLoading, proposals, selectedBrand]);
+    }, [isLoading, proposals, selectedBrand?.id]);
 
     const filteredProposals = proposals;
 

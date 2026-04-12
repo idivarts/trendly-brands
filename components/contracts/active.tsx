@@ -134,7 +134,7 @@ const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
 
     useEffect(() => {
         fetchProposals();
-    }, [user, selectedBrand]);
+    }, [user, selectedBrand?.id]);
 
     const filteredProposals = useMemo(() => {
         return proposals

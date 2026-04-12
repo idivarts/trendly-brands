@@ -2,8 +2,8 @@ import ExploreInfluencers from "@/components/explore-influencers";
 import RightPanel from "@/components/explore-influencers/RightPanel";
 import FullInformationalIllustration from "@/components/FullScreenIllustration";
 import NotificationIcon from "@/components/notifications/notification-icon";
-import PageHeader from "@/components/ui/page-header";
 import { View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -44,7 +44,7 @@ const ExploreInfluencersScreen = () => {
             const x = await PersistentStorage.get(selectedBrand.id + "-explore")
             setFullIllustration(!x)
         })()
-    }, [selectedBrand])
+    }, [selectedBrand?.id])
 
     if (fullIllustration)
         return <FullInformationalIllustration action={() => {

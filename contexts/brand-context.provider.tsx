@@ -38,6 +38,7 @@ import React, {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 import { Platform } from "react-native";
@@ -69,6 +70,16 @@ const BrandContext = createContext<BrandContextProps>({
 
 export const useBrandContext = () => useContext(BrandContext);
 
+const BRANDS_CACHE_KEY_PREFIX = "brandsCache";
+
+type BrandsCachePayload = {
+    brands: Brand[];
+    selectedBrandId?: string;
+};
+
+const getManagerBrandsCacheKey = (managerId: string) =>
+    `${BRANDS_CACHE_KEY_PREFIX}:${managerId}`;
+
 export const BrandContextProvider: React.FC<
     PropsWithChildren & { restrictForPayment?: boolean }
 > = ({ children, restrictForPayment = true }) => {
@@ -78,6 +89,16 @@ export const BrandContextProvider: React.FC<
     const { manager } = useAuthContext();
     const router = useMyNavigation();
     const pathName = usePathname();
+    const brandsRef = useRef<Brand[]>([]);
+    const selectedBrandRef = useRef<Brand | undefined>(undefined);
+
+    useEffect(() => {
+        brandsRef.current = brands;
+    }, [brands]);
+
+    useEffect(() => {
+        selectedBrandRef.current = selectedBrand;
+    }, [selectedBrand]);
 
     const setSelectedBrandHandler = async (
         brand: Brand | undefined,
@@ -110,6 +131,48 @@ export const BrandContextProvider: React.FC<
 
     useEffect(() => {
         if (!manager?.id) return;
+        const cacheKey = getManagerBrandsCacheKey(manager.id);
+        let hasHydratedFromCache = false;
+        let isMounted = true;
+
+        const hydrateFromCache = async () => {
+            try {
+                const cachedRaw = await PersistentStorage.get(cacheKey);
+                if (!cachedRaw) return;
+
+                const cachedPayload = JSON.parse(cachedRaw) as BrandsCachePayload;
+                if (!Array.isArray(cachedPayload?.brands)) return;
+
+                const cachedBrands = cachedPayload.brands;
+                setBrands(cachedBrands);
+
+                const desiredSelectedBrand = cachedPayload.selectedBrandId
+                    ? cachedBrands.find((brand) => brand.id === cachedPayload.selectedBrandId)
+                    : undefined;
+
+                if (desiredSelectedBrand) {
+                    await setSelectedBrandHandler(desiredSelectedBrand, false);
+                } else if (cachedBrands.length > 0) {
+                    const persistedSelectedBrandId =
+                        (await PersistentStorage.get("selectedBrandId")) || undefined;
+                    const fallbackBrand = persistedSelectedBrandId
+                        ? cachedBrands.find((brand) => brand.id === persistedSelectedBrandId)
+                        : cachedBrands[0];
+                    await setSelectedBrandHandler(fallbackBrand || cachedBrands[0], false);
+                } else {
+                    await setSelectedBrandHandler(undefined, false);
+                }
+
+                hasHydratedFromCache = true;
+                if (isMounted) {
+                    setLoading(false);
+                }
+            } catch (e) {
+                Console.log("Failed to parse brands cache", e);
+            }
+        };
+
+        void hydrateFromCache();
 
         const membersCollection = collectionGroup(FirestoreDB, "members");
         const membersQuery = query(
@@ -120,13 +183,15 @@ export const BrandContextProvider: React.FC<
         Console.log("Brand ID from member Query:", manager.id);
 
         const unsubscribe = onSnapshot(membersQuery, async (membersSnapshot) => {
-            setLoading(true);
+            if (!hasHydratedFromCache) {
+                setLoading(true);
+            }
             try {
                 Console.log("Brand ID from member Inside:", manager.id);
                 if (membersSnapshot.empty) {
                     Console.log("No members found for this manager");
                     setBrands([]);
-                    setSelectedBrandHandler(undefined, false);
+                    await setSelectedBrandHandler(undefined, false);
                     return;
                 }
 
@@ -147,7 +212,7 @@ export const BrandContextProvider: React.FC<
                 if (brandIds.size === 0) {
                     Console.log("No brands associated with this manager");
                     setBrands([]);
-                    setSelectedBrandHandler(undefined, false);
+                    await setSelectedBrandHandler(undefined, false);
                     return;
                 }
 
@@ -168,17 +233,35 @@ export const BrandContextProvider: React.FC<
 
                     setBrands(fetchedBrands);
 
-                    if (fetchedBrands.length > 0 && !selectedBrand) {
-                        const bId = await PersistentStorage.get("selectedBrandId");
-                        Console.log("Selected Brand ID from storage:", bId);
-                        if (bId) {
-                            const brand = fetchedBrands.find((b) => b.id === bId);
-                            if (brand) {
-                                await setSelectedBrandHandler(brand, false);
-                            } else {
-                                await setSelectedBrandHandler(fetchedBrands[0], false);
-                            }
-                        } else await setSelectedBrandHandler(fetchedBrands[0], false);
+                    let finalSelectedBrand: Brand | undefined = selectedBrandRef.current;
+
+                    if (fetchedBrands.length > 0) {
+                        const persistedSelectedBrandId =
+                            (await PersistentStorage.get("selectedBrandId")) || undefined;
+                        Console.log(
+                            "Selected Brand ID from storage:",
+                            persistedSelectedBrandId
+                        );
+
+                        const resolvedSelectedBrand =
+                            fetchedBrands.find(
+                                (brand) => brand.id === selectedBrandRef.current?.id
+                            ) ||
+                            fetchedBrands.find(
+                                (brand) => brand.id === persistedSelectedBrandId
+                            ) ||
+                            fetchedBrands[0];
+
+                        finalSelectedBrand = resolvedSelectedBrand;
+
+                        if (resolvedSelectedBrand.id !== selectedBrandRef.current?.id) {
+                            await setSelectedBrandHandler(resolvedSelectedBrand, false);
+                        }
+                    } else {
+                        finalSelectedBrand = undefined;
+                        if (selectedBrandRef.current) {
+                            await setSelectedBrandHandler(undefined, false);
+                        }
                     }
                 });
             } finally {
@@ -187,9 +270,37 @@ export const BrandContextProvider: React.FC<
         });
 
         return () => {
+            isMounted = false;
             unsubscribe();
         };
     }, [manager?.id]);
+
+    useEffect(() => {
+        if (!manager?.id) return;
+        const cacheKey = getManagerBrandsCacheKey(manager.id);
+
+        const persistBrandsCache = async () => {
+            try {
+                for (let i = 0; i < brands.length; i++) {
+                    if (brands[i].id === selectedBrand?.id) {
+                        brands[i] = selectedBrand;
+                        break;
+                    }
+                }
+                await PersistentStorage.set(
+                    cacheKey,
+                    JSON.stringify({
+                        brands,
+                        selectedBrandId: selectedBrand?.id,
+                    } as BrandsCachePayload)
+                );
+            } catch (e) {
+                Console.log("Failed to persist brands cache", e);
+            }
+        };
+
+        void persistBrandsCache();
+    }, [manager?.id, brands, selectedBrand]);
 
     useEffect(() => {
         const subscription1 = ProfileModalUnlockRequest.subscribe(
@@ -256,7 +367,7 @@ export const BrandContextProvider: React.FC<
             subscription1.unsubscribe();
             subscription2.unsubscribe();
         };
-    }, [selectedBrand]);
+    }, [selectedBrand?.id]);
 
     const isProfileLocked = useCallback(
         (influencerId: string) => {

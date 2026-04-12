@@ -41,7 +41,7 @@ const useInfluencers = ({
         }).catch(e => {
             Toaster.error("Cant fetch Influencers")
         })
-    }, [selectedBrand])
+    }, [selectedBrand?.id])
 
     const { loading: isLoading, data, resetData, loadMore, nextAvailable, onScrollEvent } = useInfiniteIdScroll<User>(influencerIds, q, 5)
 
