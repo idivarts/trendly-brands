@@ -281,6 +281,12 @@ export const BrandContextProvider: React.FC<
 
         const persistBrandsCache = async () => {
             try {
+                for (let i = 0; i < brands.length; i++) {
+                    if (brands[i].id === selectedBrand?.id) {
+                        brands[i] = selectedBrand;
+                        break;
+                    }
+                }
                 await PersistentStorage.set(
                     cacheKey,
                     JSON.stringify({
@@ -294,7 +300,7 @@ export const BrandContextProvider: React.FC<
         };
 
         void persistBrandsCache();
-    }, [manager?.id, brands, selectedBrand?.id]);
+    }, [manager?.id, brands, selectedBrand]);
 
     useEffect(() => {
         const subscription1 = ProfileModalUnlockRequest.subscribe(
