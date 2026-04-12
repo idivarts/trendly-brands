@@ -317,10 +317,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         [dedupeById, xl, setRightPanel, setTotalCount, setCurrentSort]
     );
 
-    // Trigger first discover API call when we have a brand. Run when filters are set OR when
-    // we're ready with no filters (defaultAdvanceFilters undefined) so the list still loads.
-    // When showRightPanel is false, the effect below performs the fetch; do not clear data here
-    // or we would overwrite the loaded list when this effect re-runs (e.g. new defaultAdvanceFilters ref).
+    // Trigger first discover API call when we have a brand.
+    // When showRightPanel is false, the effect below performs the fetch; do not clear data here.
     useEffect(() => {
         if (!selectedBrand?.id) return;
 
@@ -342,7 +340,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 sort: currentSort,
             });
         }
-    }, [defaultAdvanceFilters, selectedBrand?.id, showRightPanel, currentSort]);
+    }, [selectedBrand?.id, showRightPanel, currentSort]);
 
     // When right panel is hidden (e.g. Send Invitations tab), this component performs the
     // discovery API call with defaultAdvanceFilters so the list loads in that mode.
@@ -372,7 +370,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             page: 1,
             sort,
         });
-
+        console.log("fetching influencers", selectedBrand?.id);
         HttpWrapper.fetch(
             `/discovery/brands/${selectedBrand.id}/influencers`,
             {

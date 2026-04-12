@@ -444,6 +444,7 @@ const TrendlyAdvancedFilter = ({
             });
             return;
         }
+        console.log("callApi", selectedBrand.id);
         const formData = getFormData();
         discoverCommunication.current?.({
             loading: true,
@@ -604,7 +605,7 @@ const TrendlyAdvancedFilter = ({
     useEffect(() => {
         callApiRef.current = callApi;
         resetCallApiRef.current = resetAndCallApi;
-    });
+    }, [callApi, resetAndCallApi]);
 
     FilterApplyRef.current = async (action: string) => {
         setOffset(0);
