@@ -13,7 +13,7 @@ import {
     type PropsWithChildren,
 } from "react";
 import { Platform } from "react-native";
-import { DefaultGenerics, StreamChat } from "stream-chat";
+import { StreamChat } from "stream-chat";
 import { useAuthContext } from "./auth-context.provider";
 import StreamWrapper from "./stream-wrapper";
 import { streamClient } from "./streamClient";
@@ -61,7 +61,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
     const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(false)
 
-    const [client, setClient] = useState<StreamChat<DefaultGenerics> | null>(null);
+    const [client, setClient] = useState<StreamChat | null>(null);
 
     const { getToken, registerPushTokenWithStream, updatedTokens } = useCloudMessagingContext()
 
@@ -100,7 +100,7 @@ export const ChatContextProvider: React.FC<PropsWithChildren> = ({
                 const message = event.message;
 
                 console.log("Event received:", event);
-                Toaster.notification(channel?.name || "New message received", message?.text || "You have a new message", () => {
+                Toaster.notification((channel as any)?.name || "New message received", message?.text || "You have a new message", () => {
                     if (channel) {
                         router.push(`/channel/${channel.cid}`);
                     }

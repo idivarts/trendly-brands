@@ -2,6 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
+import ContractStatusDevTools from "@/components/contracts/ContractStatusDevTools";
 import { Text, View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
@@ -53,6 +54,8 @@ const styles = StyleSheet.create({
 });
 
 interface ICollaborationCard extends IContracts {
+    /** Firestore document id for `contracts/{id}`. This is the backend `:contractId`. */
+    id: string;
     userData: IUsers;
     applications: IApplications[];
     collaborationData: ICollaboration;
@@ -69,8 +72,9 @@ const ContractScreen = () => {
     const { isOnFreeTrial, isProfileLocked } = useBrandContext()
     const { pageID } = useLocalSearchParams();
     const [contract, setContract] = useState<ICollaborationCard>();
-    const [openProfileModal, setOpenProfileModal] = useState(false)
-    const [selectedInfluencer, setSelectedInfluencer] = useState<User | undefined>(undefined)
+    const [openProfileModal, setOpenProfileModal] = useState(false);
+    const [selectedInfluencer, setSelectedInfluencer] = useState<User | undefined>(undefined);
+    const [devOverrideStatus, setDevOverrideStatus] = useState<number | null>(null);
 
     const fetchProposals = async () => {
         try {
@@ -120,6 +124,7 @@ const ContractScreen = () => {
             const collaborationData = collaborationSnapshot.data() as ICollaboration;
 
             setContract({
+                id: contractsSnapshot.id,
                 ...contract,
                 userData,
                 applications,
@@ -166,12 +171,22 @@ const ContractScreen = () => {
                     </Button>,
                 ]}
             />
+            {__DEV__ && (
+                <ContractStatusDevTools
+                    realStatus={contract.status}
+                    overrideStatus={devOverrideStatus}
+                    onOverrideChange={setDevOverrideStatus}
+                    contractId={contract.streamChannelId}
+                    onWriteSuccess={fetchProposals}
+                />
+            )}
             <ContractDetailsContent
                 applicationData={contract?.applications[0]}
                 collaborationDetail={contract?.collaborationData}
                 userData={contract.userData}
                 contractData={contract}
                 refreshData={fetchProposals}
+                devOverrideStatus={devOverrideStatus}
             />
             {xl && (
                 <View style={styles.footer}>

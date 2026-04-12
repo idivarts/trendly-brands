@@ -2,7 +2,7 @@
     "expo": {
         "name": "Trendly Brands",
         "slug": "trendly-brands",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "orientation": "portrait",
         "icon": "./assets/images/icon2.png",
         "scheme": "trendly-brands",
@@ -31,6 +31,18 @@
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false,
                 "CFBundleDisplayName": "Trendly Brands",
+                "LSApplicationQueriesSchemes": [
+                    "upi",
+                    "bhim",
+                    "phonepe",
+                    "paytmmp",
+                    "tez",
+                    "gpay",
+                    "amazonpay",
+                    "credpay",
+                    "mobikwik",
+                    "freecharge"
+                ],
                 "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
                 "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
             },
