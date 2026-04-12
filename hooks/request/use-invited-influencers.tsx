@@ -72,8 +72,8 @@ const useInvitedInfluencers = ({
                             timestamp: Date.now(),
                             hypothesisId: "H1",
                         }),
-                    }).catch(() => {});
-                } catch (_) {}
+                    }).catch(() => { });
+                } catch (_) { }
                 // #endregion
 
                 // Enrich invited influencers missing discovery stats (profile pic + counts).
@@ -101,7 +101,7 @@ const useInvitedInfluencers = ({
                             timestamp: Date.now(),
                             hypothesisId: "H4",
                         }),
-                    }).catch(() => {});
+                    }).catch(() => { });
                     // #endregion
 
                     const enriched = await Promise.all(
@@ -118,14 +118,14 @@ const useInvitedInfluencers = ({
                                 const social = detailRes?.social ?? null;
                                 const patched: Partial<InfluencerInviteUnit> = social
                                     ? {
-                                          name: social?.name ?? u.name,
-                                          username: social?.username ?? u.username,
-                                          profile_pic: social?.profile_pic ?? u.profile_pic,
-                                          follower_count: social?.follower_count ?? u.follower_count,
-                                          views_count: social?.views_count ?? u.views_count,
-                                          engagement_count: social?.engagement_count ?? u.engagement_count,
-                                          engagement_rate: social?.engagement_rate ?? u.engagement_rate,
-                                      }
+                                        name: social?.name ?? u.name,
+                                        username: social?.username ?? u.username,
+                                        profile_pic: social?.profile_pic ?? u.profile_pic,
+                                        follower_count: social?.follower_count ?? u.follower_count,
+                                        views_count: social?.views_count ?? u.views_count,
+                                        engagement_count: social?.engagement_count ?? u.engagement_count,
+                                        engagement_rate: social?.engagement_rate ?? u.engagement_rate,
+                                    }
                                     : {};
 
                                 // #region agent log
@@ -151,7 +151,7 @@ const useInvitedInfluencers = ({
                                         timestamp: Date.now(),
                                         hypothesisId: "H4",
                                     }),
-                                }).catch(() => {});
+                                }).catch(() => { });
                                 // #endregion
 
                                 return { id: u.id, patched };
@@ -168,7 +168,7 @@ const useInvitedInfluencers = ({
                                         timestamp: Date.now(),
                                         hypothesisId: "H4",
                                     }),
-                                }).catch(() => {});
+                                }).catch(() => { });
                                 // #endregion
                                 return { id: u.id, patched: {} as Partial<InfluencerInviteUnit> };
                             }
@@ -234,7 +234,7 @@ const useInvitedInfluencers = ({
         // initial load
         setPage(1);
         fetchPage(1, true);
-    }, [selectedBrand, collaborationId, filter]);
+    }, [selectedBrand?.id, collaborationId, filter]);
 
     const loadMore = useCallback(() => {
         if (!nextAvailable || loading) return;

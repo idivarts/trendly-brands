@@ -284,7 +284,7 @@ const TrendlyAdvancedFilter = ({
             setFieldsFromFilters(cleanFiltersForStorage(selectedBrand.discoverPreferences as Record<string, any>) as Partial<IAdvanceFilters>);
             setOffset(0);
         }
-    }, [selectedBrand, defaultAdvanceFilters]);
+    }, [selectedBrand?.id, defaultAdvanceFilters]);
 
     pageSortCommunication.current = ({ page, sort }: PageSortCommunication) => {
         if (page) {

@@ -28,7 +28,7 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
                 },
             });
         }
-    }, [selectedBrand, loading])
+    }, [selectedBrand?.id, loading])
 
 
     return <>

@@ -361,7 +361,7 @@ export const BrandContextProvider: React.FC<
             subscription1.unsubscribe();
             subscription2.unsubscribe();
         };
-    }, [selectedBrand]);
+    }, [selectedBrand?.id]);
 
     const isProfileLocked = useCallback(
         (influencerId: string) => {

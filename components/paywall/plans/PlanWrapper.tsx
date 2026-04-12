@@ -186,7 +186,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
         if (!selectedBrand)
             return;
         setBilling(selectedBrand.billing?.planCycle == "monthly" ? "monthly" : "yearly")
-    }, [selectedBrand])
+    }, [selectedBrand?.id])
 
     const currentPlanKey = selectedBrand?.billing?.planKey as PlanKey | undefined
     const currentPlanCycle = selectedBrand?.billing?.planCycle as BillingCycle | undefined;
