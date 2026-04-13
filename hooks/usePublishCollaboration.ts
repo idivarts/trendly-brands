@@ -13,6 +13,7 @@ import { useCallback } from "react";
  */
 export const usePublishCollaboration = () => {
     const { selectedBrand } = useBrandContext();
+    const collaborationCredits = selectedBrand?.credits?.collaboration;
     const { openModal } = useConfirmationModel();
     const { updateCollaboration } = useCollaborationContext();
     const router = useMyNavigation();
@@ -24,7 +25,7 @@ export const usePublishCollaboration = () => {
                 return;
             }
 
-            if (selectedBrand?.credits?.collaboration && selectedBrand.credits.collaboration <= 0) {
+            if (collaborationCredits && collaborationCredits <= 0) {
                 openModal({
                     title: "Upgrade to Publish",
                     description:
@@ -48,7 +49,7 @@ export const usePublishCollaboration = () => {
                 Toaster.error("Failed to publish collaboration");
             }
         },
-        [selectedBrand, openModal, router, updateCollaboration]
+        [collaborationCredits, openModal, router, updateCollaboration]
     );
 
     return { publish };

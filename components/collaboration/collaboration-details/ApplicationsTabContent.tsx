@@ -103,10 +103,14 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
     });
 
     const { brands, isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const brandsIdsKey = useMemo(
+        () => brands.map((brand) => brand.id).sort().join(","),
+        [brands]
+    );
 
     useEffect(() => {
         fetchApplications();
-    }, [brands]);
+    }, [props.pageID, props.filter, isApplicationConcised, brandsIdsKey]);
 
     if (loading) {
         return (
