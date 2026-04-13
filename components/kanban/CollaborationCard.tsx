@@ -170,10 +170,12 @@ export const CollaborationCard = ({
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         card: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderRadius: 8,
             padding: 10,
             marginBottom: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
         },
         brandSection: {
             flexDirection: "row",

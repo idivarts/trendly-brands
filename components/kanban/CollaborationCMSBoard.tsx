@@ -276,10 +276,12 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.white }}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
                 {loading && (
-                    <Text style={{ paddingVertical: 8, opacity: 0.7 }}>Loading collaborations…</Text>
+                    <Text style={{ paddingVertical: 8, opacity: 0.7, color: colors.textSecondary }}>
+                        Loading collaborations…
+                    </Text>
                 )}
                 {error && (
                     <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
@@ -304,7 +306,9 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
                                     borderColor: colors.border,
                                 }}
                             >
-                                <Text style={{ fontWeight: "700" }}>{activeCard.message || "Unknown Campaign"}</Text>
+                                <Text style={{ fontWeight: "700", color: colors.text }}>
+                                    {activeCard.message || "Unknown Campaign"}
+                                </Text>
                                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>ID: {activeCard.id}</Text>
                             </View>
                         ) : null}
@@ -333,12 +337,18 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
-    const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
+    const columnBg = theme.dark
+        ? isOver
+            ? colors.secondarySurface
+            : colors.glassTabBarSurface
+        : isOver
+            ? colors.primaryLight
+            : colors.aliceBlue;
 
     return (
         <View
             ref={setNodeRef as any}
-            style={[styles.column, { backgroundColor: bgColor }]}
+            style={[styles.column, { backgroundColor: columnBg }]}
         >
             <View style={styles.columnHeader}>
                 <Text
@@ -370,7 +380,14 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                 </SortableContext>
 
                 {column.cards.length === 0 && (
-                    <Text style={{ textAlign: "center", opacity: 0.6, marginTop: 20 }}>
+                    <Text
+                        style={{
+                            textAlign: "center",
+                            opacity: 0.7,
+                            marginTop: 20,
+                            color: colors.textSecondary,
+                        }}
+                    >
                         Drop here to move card
                     </Text>
                 )}
@@ -473,7 +490,7 @@ const useCampaignFilterStyles = (colors: ReturnType<typeof Colors>) =>
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
-        container: { flex: 1, padding: 20, backgroundColor: colors.white },
+        container: { flex: 1, padding: 20, backgroundColor: colors.background },
         row: {
             flexDirection: "row",
             gap: 16,
@@ -500,7 +517,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingBottom: 8,
             marginBottom: 8,
         },
-        columnTitle: { fontSize: 16, fontWeight: "700" },
+        columnTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
         columnScroll: {
             flex: 1,
             paddingBottom: 8,

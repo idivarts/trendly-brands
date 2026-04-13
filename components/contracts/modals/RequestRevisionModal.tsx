@@ -1,3 +1,4 @@
+import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
@@ -35,7 +36,13 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
 }) => {
     const theme = useTheme();
     const insets = useSafeAreaInsets();
+    const { xl, width } = useBreakpoints();
     const colors = Colors(theme);
+    const modalMaxWidth = useMemo(() => {
+        const horizontalMargin = 48;
+        const cap = xl ? 1120 : 520;
+        return Math.max(280, Math.min(cap, width - horizontalMargin));
+    }, [xl, width]);
     const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
     const [notes, setNotes] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -119,7 +126,12 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
     );
 
     return (
-        <ContractActionOverlay visible={visible} onClose={handleClose} mode="modal">
+        <ContractActionOverlay
+            visible={visible}
+            onClose={handleClose}
+            mode="modal"
+            modalMaxWidth={modalMaxWidth}
+        >
             <View style={styles.modalContainer}>{modalContent}</View>
         </ContractActionOverlay>
     );
