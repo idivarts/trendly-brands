@@ -6,7 +6,7 @@ import {
 } from "@/shared-constants/contract-status";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import type { Payment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IContracts, PaymentStatus } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -35,21 +35,33 @@ import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
 import ApproveVideoReleaseBottomSheet from "./modals/ApproveVideoReleaseBottomSheet";
 import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
+import StartContractPaymentBottomSheet, {
+    formatContractMoneyLabel,
+    formatInfluencerHandleFromUser,
+} from "./modals/StartContractPaymentBottomSheet";
 import MarkAsDeliveredModal from "./modals/MarkAsDeliveredModal";
 import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
 import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
 import RequestRevisionModal from "./modals/RequestRevisionModal";
 import ShippingAddressModal from "./modals/ShippingAddressModal";
 import ViewInfluencerAddressOverlay from "./modals/ViewInfluencerAddressOverlayComponent";
-import {
-    requestReviseQuotationForContract,
-    showReviseQuotationError,
-} from "./request-revise-quotation";
 import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
 
 /** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
 function isProductShipping(collab?: ICollaboration | null): boolean {
     return collab?.promotionSubject === "physical-product";
+}
+
+/**
+ * Brand has a Razorpay order on the contract but checkout was not completed (e.g. app closed during payment).
+ * Shown with **Continue payment** when contract status is Started (1 / OrderCreated), not on Pending (0).
+ */
+function hasOutstandingContractPaymentOrder(contract: IContracts): boolean {
+    const orderId = contract.payment?.orderId?.trim();
+    if (!orderId) return false;
+    const st = contract.payment?.status;
+    if (st === PaymentStatus.Paid || st === PaymentStatus.TransferProcessed) return false;
+    return true;
 }
 
 interface ActionContainerProps {
@@ -58,6 +70,8 @@ interface ActionContainerProps {
     feedbackModalVisible: () => void;
     userData: IUsers;
     collaborationData?: ICollaboration | null;
+    /** Quoted amount from the influencer application (contract budget / pay amount). */
+    applicationQuotation?: number | null;
     paymentStatus?: Payment["status"];
     slot?: "all" | "buttons" | "feedback-and-info";
     /** Dev only: override status for UI testing (no Firestore write) */
@@ -70,6 +84,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     feedbackModalVisible,
     userData,
     collaborationData = null,
+    applicationQuotation = null,
     slot = "all",
     devOverrideStatus = null,
 }) => {
@@ -89,6 +104,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showChangeDateSheet, setShowChangeDateSheet] = useState(false);
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
+    const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
 
     const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
@@ -140,6 +156,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
     const status =
         devOverrideStatus != null ? normalizeStatus(devOverrideStatus) : normalizeStatus(contract.status);
+    const showContinueContractPayment = hasOutstandingContractPaymentOrder(contract);
     const productShipping = isProductShipping(collaborationData);
     /** KYC is a gate: block Make Payment / Start Contract until influencer KYC is done. Not a contract state. */
     const kycBlocked = (status === ContractStatus.Pending || contract.status === ContractStatus.Pending) && isContractBlockedByKYC(userData);
@@ -205,6 +222,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
             onRefresh: refreshData,
         });
 
+    const openStartContractPaymentSheet = useCallback(() => {
+        setShowStartContractPaymentSheet(true);
+    }, []);
+
+    const handlePayNowFromSheet = useCallback(async () => {
+        setShowStartContractPaymentSheet(false);
+        await handlePendingPayment();
+    }, [handlePendingPayment]);
+
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
 
@@ -233,6 +259,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 return {
                     variant: "info",
                     text: "Use the chat to align with the influencer, then proceed with payment and contract steps.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.Started && showContinueContractPayment)
+                return {
+                    variant: "warning",
+                    text: "Checkout was not completed. Tap Continue payment to finish paying before the next contract steps.",
                     icon: infoIcon,
                 };
             if (status === ContractStatus.PaymentFailed)
@@ -280,16 +312,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
             return {
                 buttons: [
                     {
-                        label: "Ask to Revise Quote",
-                        variant: "outlined",
-                        onPress: () => {
-                            void requestReviseQuotationForContract(contract).catch(showReviseQuotationError);
-                        },
-                    },
-                    {
                         label: "Start contract",
                         variant: "contained",
-                        onPress: handlePendingPayment,
+                        onPress: openStartContractPaymentSheet,
                         loading: paymentButtonLoading,
                     },
                 ],
@@ -301,6 +326,22 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         }
         if (isLegacyFlow && contract.status === 1) {
+            if (showContinueContractPayment) {
+                return {
+                    buttons: [
+                        {
+                            label: "Continue payment",
+                            variant: "contained",
+                            onPress: () => {
+                                void handlePendingPayment({ resumeExistingOrder: true });
+                            },
+                            loading: paymentButtonLoading,
+                        },
+                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
             return {
                 buttons: [
                     {
@@ -322,22 +363,26 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         }
         if (!isLegacyFlow && kycBlocked) {
-            return { buttons: [], message: messageForStatus() };
+            return {
+                buttons: [
+                    {
+                        label: "Start contract",
+                        variant: "contained",
+                        disabled: isContractBlockedByKYC(userData),
+                        onPress: openStartContractPaymentSheet,
+                        loading: paymentButtonLoading,
+                    },
+                ],
+                message: messageForStatus(),
+            };
         }
         if (!isLegacyFlow && status === ContractStatus.Pending) {
             return {
                 buttons: [
                     {
-                        label: "Ask to Revise Quote",
-                        variant: "outlined",
-                        onPress: () => {
-                            void requestReviseQuotationForContract(contract).catch(showReviseQuotationError);
-                        },
-                    },
-                    {
                         label: "Start contract",
                         variant: "contained",
-                        onPress: handlePendingPayment,
+                        onPress: openStartContractPaymentSheet,
                         loading: paymentButtonLoading,
                     },
                 ],
@@ -362,8 +407,24 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         }
         if (!isLegacyFlow && status === ContractStatus.Started) {
-            // Backend-owned flow: do not write state from UI.
-            // Started (same as backend OrderCreated): next step is shipment or deliverable request.
+            // Backend OrderCreated (1): after order exists, payment may still be open in Razorpay.
+            if (showContinueContractPayment) {
+                return {
+                    buttons: [
+                        {
+                            label: "Continue payment",
+                            variant: "contained",
+                            onPress: () => {
+                                void handlePendingPayment({ resumeExistingOrder: true });
+                            },
+                            loading: paymentButtonLoading,
+                        },
+                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
+            // Paid / no open order: next step is shipment or deliverable request.
             return {
                 buttons: productShipping
                     ? [
@@ -520,11 +581,17 @@ const ActionContainer: FC<ActionContainerProps> = ({
         feedbackModalVisible,
         goToMessages,
         handlePendingPayment,
+        openStartContractPaymentSheet,
         contract.shipment,
         contract.deliverable,
         devOverrideStatus,
         refreshData,
         paymentButtonLoading,
+        applicationQuotation,
+        contract.payment?.amount,
+        contract.payment?.orderId,
+        contract.payment?.status,
+        showContinueContractPayment,
     ]);
 
     return (
@@ -651,6 +718,24 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 hasExistingScheduledDate={!!contract.posting?.scheduledDate}
                 contractStatus={status}
                 onSuccess={refreshData}
+            />
+            <StartContractPaymentBottomSheet
+                visible={showStartContractPaymentSheet}
+                onClose={() => setShowStartContractPaymentSheet(false)}
+                onPayNow={() => {
+                    void handlePayNowFromSheet();
+                }}
+                payNowLoading={paymentButtonLoading}
+                influencerName={userData.name}
+                influencerHandle={formatInfluencerHandleFromUser(userData.primarySocial)}
+                influencerProfileImageUrl={userData.profileImage}
+                collaborationTitle={collaborationData?.name ?? "Collaboration"}
+                contractBudgetLabel={formatContractMoneyLabel(
+                    applicationQuotation ?? contract.payment?.amount
+                )}
+                paymentAmountLabel={formatContractMoneyLabel(
+                    applicationQuotation ?? contract.payment?.amount
+                )}
             />
         </View>
     );

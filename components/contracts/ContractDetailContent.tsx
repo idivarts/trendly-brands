@@ -155,6 +155,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     }
                     userData={props.userData}
                     collaborationData={props.collaborationDetail}
+                    applicationQuotation={props.applicationData?.quotation ?? null}
                     paymentStatus={props.contractData.payment?.status}
                     slot="buttons"
                     devOverrideStatus={props.devOverrideStatus}
@@ -242,6 +243,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 }
                 userData={props.userData}
                 collaborationData={props.collaborationDetail}
+                applicationQuotation={props.applicationData?.quotation ?? null}
                 paymentStatus={props.contractData.payment?.status}
                 slot="feedback-and-info"
                 devOverrideStatus={props.devOverrideStatus}
@@ -283,6 +285,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     }
                     userData={props.userData}
                     collaborationData={props.collaborationDetail}
+                    applicationQuotation={props.applicationData?.quotation ?? null}
                     paymentStatus={props.contractData.payment?.status}
                     devOverrideStatus={props.devOverrideStatus}
                 />

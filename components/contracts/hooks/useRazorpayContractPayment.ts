@@ -17,6 +17,17 @@ export type UseRazorpayContractPaymentParams = {
     onRefresh: () => void;
 };
 
+export type StartContractPaymentOptions = {
+    /** Load checkout from GET /order (reuse server order) instead of POST /order. */
+    resumeExistingOrder?: boolean;
+};
+
+function isPaidLikeStatus(status: unknown): boolean {
+    if (status === PaymentStatus.Paid || status === PaymentStatus.TransferProcessed) return true;
+    if (typeof status === "string" && status.toLowerCase() === PaymentStatus.Paid) return true;
+    return false;
+}
+
 export function useRazorpayContractPayment({
     contractId,
     themeColor,
@@ -51,8 +62,10 @@ export function useRazorpayContractPayment({
         checkoutDeferredRef.current = null;
     }, []);
 
-    const startPayment = useCallback(async () => {
+    const startPayment = useCallback(async (options?: StartContractPaymentOptions) => {
         if (paymentButtonLoading) return;
+
+        const resumeExistingOrder = options?.resumeExistingOrder === true;
 
         const razorpayKeyId = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RtPhjl6Q2YAk8S";
         if (!razorpayKeyId) {
@@ -63,7 +76,17 @@ export function useRazorpayContractPayment({
         setPaymentButtonLoading(true);
         let order: Awaited<ReturnType<typeof createContractOrder>> | undefined;
         try {
-            order = await createContractOrder({ contractId });
+            if (resumeExistingOrder) {
+                order = await getContractOrderStatus({ contractId });
+                if (isPaidLikeStatus(order.status)) {
+                    setPaymentButtonLoading(false);
+                    Toaster.success("Payment already completed");
+                    onRefresh();
+                    return;
+                }
+            } else {
+                order = await createContractOrder({ contractId });
+            }
         } catch (e) {
             setPaymentButtonLoading(false);
             const message = e instanceof Error ? e.message : "Unable to create payment order";
@@ -74,7 +97,11 @@ export function useRazorpayContractPayment({
 
         if (!order.id) {
             setPaymentButtonLoading(false);
-            Toaster.error("Invalid order response from server (missing orderId)");
+            Toaster.error(
+                resumeExistingOrder
+                    ? "No pending payment order found. Try again or contact support."
+                    : "Invalid order response from server (missing orderId)"
+            );
             onRefresh();
             return;
         }
@@ -109,7 +136,7 @@ export function useRazorpayContractPayment({
             }
 
             const latest = await getContractOrderStatus({ contractId });
-            if (latest?.status === PaymentStatus.Paid) {
+            if (isPaidLikeStatus(latest?.status)) {
                 Toaster.success("Payment completed successfully");
             } else {
                 Toaster.info("Payment submitted. We'll update status shortly.");
