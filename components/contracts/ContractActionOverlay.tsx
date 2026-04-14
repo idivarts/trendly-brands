@@ -106,6 +106,9 @@ function createStyles(
             backgroundColor: colors.background,
             borderRadius: 12,
             marginHorizontal: 24,
+            // `alignSelf: "center"` alone shrinks to content width; `width: "100%"` fills
+            // the overlay so `maxWidth` actually governs desktop modal width.
+            width: "100%",
             maxWidth: modalMaxWidth,
             alignSelf: "center",
             overflow: "hidden",

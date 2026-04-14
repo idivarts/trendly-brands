@@ -162,7 +162,7 @@ function useStyles(theme: ReturnType<typeof useTheme>) {
             color: Colors(theme).text,
         },
         descriptionText: {
-            color: Colors(theme).gray100,
+            color: Colors(theme).textSecondary,
         },
         chipsRow: {
             flexDirection: "row",

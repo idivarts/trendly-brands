@@ -465,14 +465,11 @@ export default function BrandCRMBoard() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.white }}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Brands CRM</Text>
-            </View>
 
             {loading && (
-                <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
+                <Text style={{ paddingVertical: 8, opacity: 0.7, color: colors.textSecondary }}>
                     Loading Brands…
                 </Text>
             )}
@@ -497,7 +494,7 @@ export default function BrandCRMBoard() {
                                 width: 260,
                             }}
                         >
-                            <Text style={{ fontWeight: "700" }}>{activeCard.name}</Text>
+                            <Text style={{ fontWeight: "700", color: colors.text }}>{activeCard.name}</Text>
                         </View>
                     ) : null}
                 </DragOverlay>
@@ -536,12 +533,18 @@ const DroppableColumn = ({ column, onCardPress }: { column: KanbanColumnT; onCar
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
-    const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
+    const columnBg = theme.dark
+        ? isOver
+            ? colors.secondarySurface
+            : colors.glassTabBarSurface
+        : isOver
+            ? colors.primaryLight
+            : colors.aliceBlue;
 
     return (
         <View
             ref={setNodeRef as any}
-            style={[styles.column, { backgroundColor: bgColor }]}
+            style={[styles.column, { backgroundColor: columnBg }]}
         >
             <View style={styles.columnHeader}>
                 <Text
@@ -574,7 +577,14 @@ const DroppableColumn = ({ column, onCardPress }: { column: KanbanColumnT; onCar
                 </SortableContext>
 
                 {column.cards.length === 0 && (
-                    <Text style={{ textAlign: "center", opacity: 0.6, marginTop: 20 }}>
+                    <Text
+                        style={{
+                            textAlign: "center",
+                            opacity: 0.7,
+                            marginTop: 20,
+                            color: colors.textSecondary,
+                        }}
+                    >
                         Drop here to move card
                     </Text>
                 )}
@@ -750,7 +760,7 @@ const SortableCard = ({
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
-        container: { flex: 1, padding: 20, backgroundColor: colors.white },
+        container: { flex: 1, padding: 20, backgroundColor: colors.background },
         header: {
             flexDirection: "row",
             justifyContent: "space-between",
@@ -796,14 +806,14 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingBottom: 8,
             marginBottom: 8,
         },
-        columnTitle: { fontSize: 16, fontWeight: "700" },
+        columnTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
         card: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderRadius: 8,
             padding: 12,
             marginBottom: 8,
             borderWidth: 1,
-            borderColor: colors.borderLight,
+            borderColor: colors.border,
         },
         cardRow: {
             flexDirection: "row",
@@ -853,7 +863,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             justifyContent: "flex-end",
         },
         modalContent: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.modalBackground,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
             maxHeight: "90%",
@@ -865,7 +875,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             alignItems: "center",
             padding: 20,
             borderBottomWidth: 1,
-            borderBottomColor: colors.borderLight,
+            borderBottomColor: colors.border,
         },
         modalTitle: {
             fontSize: 20,
@@ -889,7 +899,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             width: 100,
             height: 100,
             borderRadius: 12,
-            backgroundColor: colors.surfaceLight,
+            backgroundColor: colors.secondarySurface,
             justifyContent: "center",
             alignItems: "center",
             flexShrink: 0,
@@ -984,9 +994,9 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             marginRight: 8,
         },
         campaignCard: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderWidth: 1,
-            borderColor: colors.borderLight,
+            borderColor: colors.border,
             borderRadius: 8,
             padding: 16,
             flex: 1,
@@ -1039,7 +1049,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingVertical: 12,
             borderTopWidth: 1,
             borderBottomWidth: 1,
-            borderColor: colors.borderLight,
+            borderColor: colors.border,
         },
         statsLeftColumn: {
             flex: 1,
@@ -1081,7 +1091,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             width: 50,
             height: 50,
             borderRadius: 25,
-            backgroundColor: colors.borderLight,
+            backgroundColor: colors.secondarySurface,
         },
         memberInfo: {
             flex: 1,

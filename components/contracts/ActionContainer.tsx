@@ -287,7 +287,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         },
                     },
                     {
-                        label: "Payment",
+                        label: "Start contract",
                         variant: "contained",
                         onPress: handlePendingPayment,
                         loading: paymentButtonLoading,
@@ -335,7 +335,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         },
                     },
                     {
-                        label: "Payment",
+                        label: "Start contract",
                         variant: "contained",
                         onPress: handlePendingPayment,
                         loading: paymentButtonLoading,
@@ -448,6 +448,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         if (!isLegacyFlow && status === ContractStatus.VideoPending) {
             return {
                 buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Request for Video",
                         variant: "contained",
