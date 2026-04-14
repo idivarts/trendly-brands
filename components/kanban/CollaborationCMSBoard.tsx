@@ -1,4 +1,5 @@
 import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
+import { IS_LIVE } from "@/shared-libs/utils/environment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -25,6 +26,7 @@ import {
     getDocs,
     orderBy,
     query,
+    where,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -123,10 +125,16 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
             setError(null);
             setLoading(true);
             try {
-                console.log("[Kanban] Fetching collaborations (all)");
+                console.log("[Kanban] Fetching collaborations", { isLive: IS_LIVE });
 
                 const collRef = collection(FirestoreDB, "collaborations");
-                const snapshot = await getDocs(query(collRef, orderBy("timeStamp", "desc")));
+                const snapshot = await getDocs(
+                    query(
+                        collRef,
+                        where("isLive", "==", IS_LIVE),
+                        orderBy("timeStamp", "desc")
+                    )
+                );
                 console.log("[Kanban] Collaborations found", snapshot.size);
 
                 const collabs: KanbanCardT[] = [];
