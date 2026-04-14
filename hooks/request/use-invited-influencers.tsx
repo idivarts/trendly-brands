@@ -16,6 +16,7 @@ const useInvitedInfluencers = ({
     limit = DEFAULT_LIMIT,
 }: UseInvitedInfluencersProps) => {
     const { selectedBrand } = useBrandContext();
+    const selectedBrandId = selectedBrand?.id;
     const [influencers, setInfluencers] = useState<InfluencerInviteUnit[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -24,8 +25,8 @@ const useInvitedInfluencers = ({
 
     const fetchPage = useCallback(
         async (pageNumber: number, reset = false) => {
-            if (!selectedBrand) return;
-            const brandId = selectedBrand.id;
+            if (!selectedBrandId) return;
+            const brandId = selectedBrandId;
             setLoading(true);
             try {
                 const url = `/discovery/brands/${brandId}/collaborations/${collaborationId}/influencers`;
@@ -72,8 +73,8 @@ const useInvitedInfluencers = ({
                             timestamp: Date.now(),
                             hypothesisId: "H1",
                         }),
-                    }).catch(() => {});
-                } catch (_) {}
+                    }).catch(() => { });
+                } catch (_) { }
                 // #endregion
 
                 // Enrich invited influencers missing discovery stats (profile pic + counts).
@@ -101,7 +102,7 @@ const useInvitedInfluencers = ({
                             timestamp: Date.now(),
                             hypothesisId: "H4",
                         }),
-                    }).catch(() => {});
+                    }).catch(() => { });
                     // #endregion
 
                     const enriched = await Promise.all(
@@ -118,14 +119,14 @@ const useInvitedInfluencers = ({
                                 const social = detailRes?.social ?? null;
                                 const patched: Partial<InfluencerInviteUnit> = social
                                     ? {
-                                          name: social?.name ?? u.name,
-                                          username: social?.username ?? u.username,
-                                          profile_pic: social?.profile_pic ?? u.profile_pic,
-                                          follower_count: social?.follower_count ?? u.follower_count,
-                                          views_count: social?.views_count ?? u.views_count,
-                                          engagement_count: social?.engagement_count ?? u.engagement_count,
-                                          engagement_rate: social?.engagement_rate ?? u.engagement_rate,
-                                      }
+                                        name: social?.name ?? u.name,
+                                        username: social?.username ?? u.username,
+                                        profile_pic: social?.profile_pic ?? u.profile_pic,
+                                        follower_count: social?.follower_count ?? u.follower_count,
+                                        views_count: social?.views_count ?? u.views_count,
+                                        engagement_count: social?.engagement_count ?? u.engagement_count,
+                                        engagement_rate: social?.engagement_rate ?? u.engagement_rate,
+                                    }
                                     : {};
 
                                 // #region agent log
@@ -151,7 +152,7 @@ const useInvitedInfluencers = ({
                                         timestamp: Date.now(),
                                         hypothesisId: "H4",
                                     }),
-                                }).catch(() => {});
+                                }).catch(() => { });
                                 // #endregion
 
                                 return { id: u.id, patched };
@@ -168,7 +169,7 @@ const useInvitedInfluencers = ({
                                         timestamp: Date.now(),
                                         hypothesisId: "H4",
                                     }),
-                                }).catch(() => {});
+                                }).catch(() => { });
                                 // #endregion
                                 return { id: u.id, patched: {} as Partial<InfluencerInviteUnit> };
                             }
@@ -227,14 +228,14 @@ const useInvitedInfluencers = ({
                 setLoading(false);
             }
         },
-        [selectedBrand, collaborationId, filter, limit]
+        [selectedBrandId, collaborationId, filter, limit]
     );
 
     useEffect(() => {
         // initial load
         setPage(1);
         fetchPage(1, true);
-    }, [selectedBrand, collaborationId, filter]);
+    }, [selectedBrandId, collaborationId, filter, fetchPage]);
 
     const loadMore = useCallback(() => {
         if (!nextAvailable || loading) return;

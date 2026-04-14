@@ -48,9 +48,9 @@ import {
     View,
 } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import PageHeader from "../ui/page-header";
-import { Text } from "../theme/Themed";
 
 interface PreferencesTabContentProps {
     collaborationId?: string;
@@ -111,7 +111,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                 ...selectedBrand.preferences,
             });
         }
-    }, [selectedBrand]);
+    }, [selectedBrand?.id]);
 
     const notifyUpgrade = () => {
         openModal({
@@ -333,7 +333,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                             style={[
                                                 styles.toggleOption,
                                                 isSelected &&
-                                                    styles.toggleOptionSelected,
+                                                styles.toggleOptionSelected,
                                             ]}
                                             onPress={() => {
                                                 setPreferences({
@@ -346,7 +346,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                                 style={[
                                                     styles.toggleOptionText,
                                                     isSelected &&
-                                                        styles.toggleOptionTextSelected,
+                                                    styles.toggleOptionTextSelected,
                                                 ]}
                                             >
                                                 {PROMOTION_LABELS[value] ??
@@ -387,14 +387,14 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                                 style={[
                                                     styles.chip,
                                                     isSelected &&
-                                                        styles.chipSelected,
+                                                    styles.chipSelected,
                                                 ]}
                                             >
                                                 <Text
                                                     style={[
                                                         styles.chipText,
                                                         isSelected &&
-                                                            styles.chipTextSelected,
+                                                        styles.chipTextSelected,
                                                     ]}
                                                 >
                                                     {value}
@@ -420,7 +420,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                             style={[
                                                 styles.videoToggleOption,
                                                 isSelected &&
-                                                    styles.toggleOptionSelected,
+                                                styles.toggleOptionSelected,
                                             ]}
                                             onPress={() => {
                                                 setPreferences({
@@ -446,7 +446,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                                 style={[
                                                     styles.toggleOptionText,
                                                     isSelected &&
-                                                        styles.toggleOptionTextSelected,
+                                                    styles.toggleOptionTextSelected,
                                                 ]}
                                             >
                                                 {value}
@@ -477,15 +477,15 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                             style={[
                                                 styles.platformItem,
                                                 isSelected &&
-                                                    styles.platformItemSelected,
+                                                styles.platformItemSelected,
                                             ]}
                                             onPress={() => {
                                                 const current =
                                                     preferences.platforms ?? [];
                                                 const next = isSelected
                                                     ? current.filter(
-                                                          (p) => p !== platform
-                                                      )
+                                                        (p) => p !== platform
+                                                    )
                                                     : [...current, platform];
                                                 setPreferences({
                                                     ...preferences,
@@ -505,7 +505,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                                 <FontAwesomeIcon
                                                     icon={
                                                         PLATFORM_ICONS[
-                                                            platform
+                                                        platform
                                                         ] ?? faInstagram
                                                     }
                                                     size={20}
@@ -519,7 +519,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                                 style={[
                                                     styles.checkCircle,
                                                     isSelected &&
-                                                        styles.checkCircleSelected,
+                                                    styles.checkCircleSelected,
                                                 ]}
                                             >
                                                 {isSelected && (
@@ -552,7 +552,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                             style={[
                                                 styles.radioItem,
                                                 isSelected &&
-                                                    styles.radioItemSelected,
+                                                styles.radioItemSelected,
                                             ]}
                                             onPress={() => {
                                                 setPreferences({
@@ -565,7 +565,7 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
                                                 style={[
                                                     styles.radioCircle,
                                                     isSelected &&
-                                                        styles.radioCircleSelected,
+                                                    styles.radioCircleSelected,
                                                 ]}
                                             >
                                                 {isSelected && (

@@ -141,10 +141,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
     });
 
 interface DiscoverInfluencerProps {
-    advanceFilter?: boolean;
-    statusFilter?: boolean;
     isStatusCard?: boolean;
-    onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     initialInfluencerId?: string;
     /** Called once when the first influencer card has laid out (for guided tour). */
@@ -154,10 +151,7 @@ interface DiscoverInfluencerProps {
 }
 
 const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
-    advanceFilter = false,
-    statusFilter = false,
     isStatusCard = false,
-    onStatusChange,
     defaultAdvanceFilters,
     initialInfluencerId,
     onFirstInfluencerCardLayout,
@@ -199,9 +193,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<InfluencerItem[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [appliedFilters, setAppliedFilters] = useState<IAdvanceFilters | null>(
-        null
-    );
     const { openModal } = useConfirmationModel();
     const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
@@ -320,15 +311,15 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         [dedupeById, xl, setRightPanel, setTotalCount, setCurrentSort]
     );
 
-    // Trigger first discover API call when we have a brand. Run when filters are set OR when
-    // we're ready with no filters (defaultAdvanceFilters undefined) so the list still loads.
-    // When showRightPanel is false, the effect below performs the fetch; do not clear data here
-    // or we would overwrite the loaded list when this effect re-runs (e.g. new defaultAdvanceFilters ref).
+    // Trigger first discover API call when we have a brand.
+    // When showRightPanel is false, the effect below performs the fetch; do not clear data here.
     useEffect(() => {
         if (!selectedBrand?.id) return;
 
-        if (defaultAdvanceFilters) {
-            setAppliedFilters(defaultAdvanceFilters);
+        const preferredSort = selectedBrand.discoverPreferences?.sort;
+        if (preferredSort && preferredSort !== currentSort) {
+            setCurrentSort(preferredSort);
+            return;
         }
 
         if (showRightPanel !== false) {
@@ -343,11 +334,11 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                 sort: currentSort,
             });
         }
-    }, [defaultAdvanceFilters, selectedBrand?.id, showRightPanel, currentSort]);
+    }, [selectedBrand?.id, showRightPanel, currentSort]);
 
-    // When right panel is hidden (e.g. Send Invitations tab), this component must perform the
-    // discovery API call with defaultAdvanceFilters so the list loads; TrendlyAdvancedFilter
-    // is not mounted in that case. Use a stable key for filters so we don't re-run and cancel
+    // When right panel is hidden (e.g. Send Invitations tab), this component performs the
+    // discovery API call with defaultAdvanceFilters so the list loads in that mode.
+    // Use a stable key for filters so we don't re-run and cancel
     // the request on every parent re-render (defaultAdvanceFilters is often a new object ref).
     const defaultAdvanceFiltersKey = useMemo(
         () => JSON.stringify(defaultAdvanceFilters ?? {}),
@@ -373,7 +364,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
             page: 1,
             sort,
         });
-
+        console.log("fetching influencers", selectedBrand?.id);
         HttpWrapper.fetch(
             `/discovery/brands/${selectedBrand.id}/influencers`,
             {

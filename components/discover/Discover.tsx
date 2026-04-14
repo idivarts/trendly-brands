@@ -31,10 +31,7 @@ import React, { useEffect, useRef, useState } from "react";
 const DiscoverComponent = ({
     showRightPanel = true,
     showTopPanel = true,
-    advanceFilter = false,
-    statusFilter = false,
     isStatusCard = false,
-    onStatusChange,
     defaultAdvanceFilters,
     /**
      * If false -> ignore the brand-saved persisted filters and only honour defaultAdvanceFilters.
@@ -48,10 +45,7 @@ const DiscoverComponent = ({
 }: {
     showRightPanel?: boolean;
     showTopPanel?: boolean;
-    advanceFilter?: boolean;
-    statusFilter?: boolean;
     isStatusCard?: boolean;
-    onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     useStoredFilters?: boolean;
     initialInfluencerId?: string;
@@ -182,7 +176,7 @@ const DiscoverComponent = ({
             skipGuideTour ||
             !surveyCheckDone ||
             showSurvey ||
-            !manager ||
+            !manager?.id ||
             !selectedBrand?.id ||
             isActive ||
             hasStartedTourRef.current
@@ -248,7 +242,7 @@ const DiscoverComponent = ({
         skipGuideTour,
         surveyCheckDone,
         showSurvey,
-        manager,
+        manager?.id,
         selectedBrand?.id,
         xl,
         isActive,
@@ -312,9 +306,6 @@ const DiscoverComponent = ({
                     {showTopPanel && <DiscoverScreenHeader />}
                     <View style={{ width: "100%", flexDirection: "row", flex: 1, minHeight: 0 }}>
                         <DiscoverInfluencer
-                            advanceFilter={advanceFilter}
-                            statusFilter={statusFilter}
-                            onStatusChange={onStatusChange}
                             isStatusCard={isStatusCard}
                             defaultAdvanceFilters={filtersToUse}
                             initialInfluencerId={initialInfluencerId}
