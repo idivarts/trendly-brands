@@ -20,7 +20,10 @@ import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import TextInput from "../../ui/text-input";
 import ContractActionOverlay from "../ContractActionOverlay";
-import DatePickerModal from "../../modals/DatePickerModal";
+import DatePickerModal, {
+    formatDateForWebInput,
+    parseWebInputDate,
+} from "../../modals/DatePickerModal";
 
 export interface ShippingAddressModalProps {
     visible: boolean;
@@ -39,6 +42,21 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
     const insets = useSafeAreaInsets();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
+    const webExpectedDateInputStyle = useMemo(
+        () => ({
+            width: "100%" as const,
+            height: 44,
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            border: `1px solid ${colors.budgetCardBorder}`,
+            backgroundColor: colors.tag ?? colors.gray200,
+            color: colors.text,
+            fontSize: 15,
+            boxSizing: "border-box" as const,
+        }),
+        [colors.budgetCardBorder, colors.gray200, colors.tag, colors.text]
+    );
 
     const [courierName, setCourierName] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
@@ -49,7 +67,6 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
         d.setDate(d.getDate() + 7);
         return d.getTime();
     });
-    const [hasSelectedExpectedDate, setHasSelectedExpectedDate] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [expectedDateModalVisible, setExpectedDateModalVisible] = useState(false);
 
@@ -143,41 +160,44 @@ const ShippingAddressModal: React.FC<ShippingAddressModalProps> = ({
 
                         <View style={styles.expectedDateSection}>
                             <Text style={styles.label}>Expected delivery date</Text>
-                            <TouchableOpacity
-                                style={styles.expectedDateButton}
-                                onPress={() => {
-                                    setHasSelectedExpectedDate(false);
-                                    setExpectedDateModalVisible(true);
-                                }}
-                            >
-                                <Text style={styles.expectedDateButtonText}>
-                                    Select expected date
-                                </Text>
-                            </TouchableOpacity>
-                            {hasSelectedExpectedDate && !expectedDateModalVisible ? (
-                                <Text style={styles.expectedDateSelectedText}>
-                                    {new Date(expectedDate).toLocaleDateString(undefined, {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </Text>
-                            ) : null}
-                            <DatePickerModal
-                                visible={expectedDateModalVisible}
-                                title="Select expected delivery date"
-                                value={new Date(expectedDate)}
-                                onChange={(d) => {
-                                    const prevMs = expectedDate;
-                                    const nextMs = d.getTime();
-                                    setExpectedDate(nextMs);
-                                    setHasSelectedExpectedDate(nextMs !== prevMs);
-                                }}
-                                onClose={() => setExpectedDateModalVisible(false)}
-                                minimumDate={new Date()}
-                                submitText="Done"
-                                cancelText="Cancel"
-                            />
+                            {Platform.OS === "web" ? (
+                                React.createElement("input", {
+                                    type: "date",
+                                    value: formatDateForWebInput(new Date(expectedDate)),
+                                    min: formatDateForWebInput(new Date()),
+                                    onChange: (e: { target?: { value?: string } }) => {
+                                        const raw = e?.target?.value ?? "";
+                                        const parsed = parseWebInputDate(raw);
+                                        if (parsed) setExpectedDate(parsed.getTime());
+                                    },
+                                    style: webExpectedDateInputStyle,
+                                })
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.expectedDateButton}
+                                        onPress={() => setExpectedDateModalVisible(true)}
+                                    >
+                                        <Text style={styles.expectedDateButtonText}>
+                                            {new Date(expectedDate).toLocaleDateString(undefined, {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <DatePickerModal
+                                        visible={expectedDateModalVisible}
+                                        title="Select expected delivery date"
+                                        value={new Date(expectedDate)}
+                                        onChange={(d) => setExpectedDate(d.getTime())}
+                                        onClose={() => setExpectedDateModalVisible(false)}
+                                        minimumDate={new Date()}
+                                        submitText="Done"
+                                        cancelText="Cancel"
+                                    />
+                                </>
+                            )}
                         </View>
 
                         <View style={styles.actions}>
@@ -256,12 +276,6 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         expectedDateButtonText: {
             fontSize: 15,
             color: colors.text,
-        },
-        expectedDateSelectedText: {
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.text,
-            marginBottom: 10,
         },
         actions: {
             flexDirection: "row",

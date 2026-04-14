@@ -37,6 +37,8 @@ export function useRazorpayContractPayment({
     const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
     const [checkoutOptions, setCheckoutOptions] = useState<RazorpayCheckoutModalOptions>({});
     const [paymentButtonLoading, setPaymentButtonLoading] = useState(false);
+    /** Prevents double-submit before React re-renders loading state. */
+    const paymentInFlightRef = useRef(false);
 
     const checkoutDeferredRef = useRef<{
         resolve: (value: unknown) => void;
@@ -63,7 +65,7 @@ export function useRazorpayContractPayment({
     }, []);
 
     const startPayment = useCallback(async (options?: StartContractPaymentOptions) => {
-        if (paymentButtonLoading) return;
+        if (paymentInFlightRef.current) return;
 
         const resumeExistingOrder = options?.resumeExistingOrder === true;
 
@@ -73,81 +75,82 @@ export function useRazorpayContractPayment({
             return;
         }
 
+        paymentInFlightRef.current = true;
         setPaymentButtonLoading(true);
-        let order: Awaited<ReturnType<typeof createContractOrder>> | undefined;
         try {
-            if (resumeExistingOrder) {
-                order = await getContractOrderStatus({ contractId });
-                if (isPaidLikeStatus(order.status)) {
-                    setPaymentButtonLoading(false);
-                    Toaster.success("Payment already completed");
-                    onRefresh();
-                    return;
-                }
-            } else {
-                order = await createContractOrder({ contractId });
-            }
-        } catch (e) {
-            setPaymentButtonLoading(false);
-            const message = e instanceof Error ? e.message : "Unable to create payment order";
-            Toaster.error(message);
-            onRefresh();
-            return;
-        }
-
-        if (!order.id) {
-            setPaymentButtonLoading(false);
-            Toaster.error(
-                resumeExistingOrder
-                    ? "No pending payment order found. Try again or contact support."
-                    : "Invalid order response from server (missing orderId)"
-            );
-            onRefresh();
-            return;
-        }
-
-        const razorpayOptions: RazorpayCheckoutModalOptions = {
-            key: razorpayKeyId,
-            order_id: order.id,
-            name: "Trendly",
-            description: "Contract pre-payment",
-            prefill,
-            theme: { color: themeColor },
-        };
-        if (order.amount > 0) razorpayOptions.amount = order.amount;
-        if (order.currency) razorpayOptions.currency = order.currency;
-
-        setPaymentButtonLoading(false);
-
-        try {
+            let order: Awaited<ReturnType<typeof createContractOrder>> | undefined;
             try {
-                await new Promise<unknown>((resolve, reject) => {
-                    checkoutDeferredRef.current = { resolve, reject };
-                    setCheckoutOptions(razorpayOptions);
-                    setCheckoutModalVisible(true);
-                });
-            } catch (checkoutErr) {
-                const msg = checkoutErr instanceof Error ? checkoutErr.message : "";
-                if (msg === "Payment cancelled") {
-                    onRefresh();
-                    return;
+                if (resumeExistingOrder) {
+                    order = await getContractOrderStatus({ contractId });
+                    if (isPaidLikeStatus(order.status)) {
+                        Toaster.success("Payment already completed");
+                        onRefresh();
+                        return;
+                    }
+                } else {
+                    order = await createContractOrder({ contractId });
                 }
-                throw checkoutErr;
+            } catch (e) {
+                const message = e instanceof Error ? e.message : "Unable to create payment order";
+                Toaster.error(message);
+                onRefresh();
+                return;
             }
 
-            const latest = await getContractOrderStatus({ contractId });
-            if (isPaidLikeStatus(latest?.status)) {
-                Toaster.success("Payment completed successfully");
-            } else {
-                Toaster.info("Payment submitted. We'll update status shortly.");
+            if (!order.id) {
+                Toaster.error(
+                    resumeExistingOrder
+                        ? "No pending payment order found. Try again or contact support."
+                        : "Invalid order response from server (missing orderId)"
+                );
+                onRefresh();
+                return;
             }
-            onRefresh();
-        } catch (e) {
-            const message = e instanceof Error ? e.message : "Unable to complete payment";
-            Toaster.error(message);
-            onRefresh();
+
+            const razorpayOptions: RazorpayCheckoutModalOptions = {
+                key: razorpayKeyId,
+                order_id: order.id,
+                name: "Trendly",
+                description: "Contract pre-payment",
+                prefill,
+                theme: { color: themeColor },
+            };
+            if (order.amount > 0) razorpayOptions.amount = order.amount;
+            if (order.currency) razorpayOptions.currency = order.currency;
+
+            try {
+                try {
+                    await new Promise<unknown>((resolve, reject) => {
+                        checkoutDeferredRef.current = { resolve, reject };
+                        setCheckoutOptions(razorpayOptions);
+                        setCheckoutModalVisible(true);
+                    });
+                } catch (checkoutErr) {
+                    const msg = checkoutErr instanceof Error ? checkoutErr.message : "";
+                    if (msg === "Payment cancelled") {
+                        onRefresh();
+                        return;
+                    }
+                    throw checkoutErr;
+                }
+
+                const latest = await getContractOrderStatus({ contractId });
+                if (isPaidLikeStatus(latest?.status)) {
+                    Toaster.success("Payment completed successfully");
+                } else {
+                    Toaster.info("Payment submitted. We'll update status shortly.");
+                }
+                onRefresh();
+            } catch (e) {
+                const message = e instanceof Error ? e.message : "Unable to complete payment";
+                Toaster.error(message);
+                onRefresh();
+            }
+        } finally {
+            paymentInFlightRef.current = false;
+            setPaymentButtonLoading(false);
         }
-    }, [contractId, onRefresh, paymentButtonLoading, prefill, themeColor]);
+    }, [contractId, onRefresh, prefill, themeColor]);
 
     return {
         paymentButtonLoading,
