@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import { collection, collectionGroup, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import { useState } from "react";
 
@@ -33,7 +32,6 @@ const useApplications = ({
     statusFilter
 }: UseApplicationsProps) => {
     const { connectUser } = useChatContext();
-    const router = useRouter();
     const [influencers, setInfluencers] = useState<InfluencerApplication[]>([]);
     const [loading, setLoading] = useState(true);
     const { brands } = useBrandContext();
@@ -143,14 +141,15 @@ const useApplications = ({
     ) => {
         try {
             if (!influencerApplication.application) return;
-            HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
+            const res = await HttpWrapper.fetch(`/api/collabs/collaborations/${influencerApplication.application.collaborationId}/applications/${influencerApplication.application.userId}/accept`, {
                 method: "POST",
-            }).then(async (res) => {
-                Toaster.success("Application accepted successfully");
-                const body = await res.json()
-                await connectUser();
-                router.navigate(`/channel/${body.channel.cid}`);
-            })
+            });
+            if (!(res as any)?.ok) {
+                throw new Error(`Accept failed: ${(res as any)?.status || "unknown"}`);
+            }
+            await (res as any).json();
+            await connectUser();
+            Toaster.success("Application accepted successfully");
             fetchApplications();
             handleActionModalClose();
         } catch (error) {
