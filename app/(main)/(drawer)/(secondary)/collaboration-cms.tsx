@@ -4,10 +4,11 @@ import CollaborationCMSBoard, {
 } from "@/components/kanban/CollaborationCMSBoard";
 import PageHeader from "@/components/ui/page-header";
 import AppLayout from "@/layouts/app-layout";
+import { IS_LIVE } from "@/shared-libs/utils/environment";
 import React, { useState } from "react";
 
 const AdminInvites = () => {
-    const [liveFilter, setLiveFilter] = useState<CollaborationCMSLiveFilter>("none");
+    const [liveFilter, setLiveFilter] = useState<CollaborationCMSLiveFilter>(IS_LIVE ? "live" : "not-live");
 
     return (
         <AppLayout>

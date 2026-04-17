@@ -4,9 +4,12 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Checkbox } from "react-native-paper";
-import DatePickerModal from "../../modals/DatePickerModal";
+import DatePickerModal, {
+    formatDateForWebInput,
+    parseWebInputDate,
+} from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import { approveVideoRelease } from "../api/review-pending.api";
@@ -53,6 +56,21 @@ const ApproveVideoReleaseBottomSheet: React.FC<
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const webReleaseDateInputStyle = useMemo(
+        () => ({
+            width: "100%" as const,
+            height: 44,
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            border: `1px solid ${colors.budgetCardBorder}`,
+            backgroundColor: colors.tag ?? colors.gray200,
+            color: colors.text,
+            fontSize: 15,
+            boxSizing: "border-box" as const,
+        }),
+        [colors.budgetCardBorder, colors.gray200, colors.tag, colors.text]
+    );
 
     const [selectedOption, setSelectedOption] = useState<ReleasePlanOption | null>(null);
     const [date, setDate] = useState(() => {
@@ -69,13 +87,19 @@ const ApproveVideoReleaseBottomSheet: React.FC<
     const handleSelectReleaseOption = (value: ReleasePlanOption) => {
         const needsDate = value !== "brand_posts_alone";
         if (selectedOption === value && needsDate) {
-            setDateModalVisible(true);
+            if (Platform.OS !== "web") {
+                setDateModalVisible(true);
+            }
             return;
         }
         setSelectedOption(value);
-        setHasSelectedDate(false);
-        if (needsDate) {
-            setDateModalVisible(true);
+        if (Platform.OS === "web") {
+            setHasSelectedDate(needsDate);
+        } else {
+            setHasSelectedDate(false);
+            if (needsDate) {
+                setDateModalVisible(true);
+            }
         }
     };
 
@@ -161,32 +185,58 @@ const ApproveVideoReleaseBottomSheet: React.FC<
 
             {selectedOption && needsScheduledDate ? (
                 <>
-                    {hasSelectedDate && !dateModalVisible ? (
-                        <Text style={styles.selectedDateText}>
-                            {date.toLocaleDateString(undefined, {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
+                    {Platform.OS === "web" ? (
+                        <View style={styles.webDateSection}>
+                            <Text style={styles.dateLabel}>Release date</Text>
+                            {React.createElement("input", {
+                                type: "date",
+                                value: formatDateForWebInput(date),
+                                min: formatDateForWebInput(new Date()),
+                                max: formatDateForWebInput(maxReleaseDate()),
+                                onChange: (e: { target?: { value?: string } }) => {
+                                    const raw = e?.target?.value ?? "";
+                                    const parsed = parseWebInputDate(raw);
+                                    if (!parsed) return;
+                                    const capped = Math.min(
+                                        parsed.getTime(),
+                                        maxReleaseDate().getTime()
+                                    );
+                                    setDate(new Date(capped));
+                                    setHasSelectedDate(true);
+                                },
+                                style: webReleaseDateInputStyle,
                             })}
-                        </Text>
-                    ) : null}
-                    <DatePickerModal
-                        visible={dateModalVisible}
-                        title="Select release date"
-                        value={date}
-                        onChange={(d) => {
-                            const prevMs = date.getTime();
-                            const nextMs = d.getTime();
-                            setDate(d);
-                            setHasSelectedDate(nextMs !== prevMs);
-                        }}
-                        onSubmit={() => setHasSelectedDate(true)}
-                        onClose={() => setDateModalVisible(false)}
-                        minimumDate={new Date()}
-                        maximumDate={maxReleaseDate()}
-                        submitText="Done"
-                        cancelText="Cancel"
-                    />
+                        </View>
+                    ) : (
+                        <>
+                            {hasSelectedDate && !dateModalVisible ? (
+                                <Text style={styles.selectedDateText}>
+                                    {date.toLocaleDateString(undefined, {
+                                        day: "numeric",
+                                        month: "short",
+                                        year: "numeric",
+                                    })}
+                                </Text>
+                            ) : null}
+                            <DatePickerModal
+                                visible={dateModalVisible}
+                                title="Select release date"
+                                value={date}
+                                onChange={(d) => {
+                                    const prevMs = date.getTime();
+                                    const nextMs = d.getTime();
+                                    setDate(d);
+                                    setHasSelectedDate(nextMs !== prevMs);
+                                }}
+                                onSubmit={() => setHasSelectedDate(true)}
+                                onClose={() => setDateModalVisible(false)}
+                                minimumDate={new Date()}
+                                maximumDate={maxReleaseDate()}
+                                submitText="Done"
+                                cancelText="Cancel"
+                            />
+                        </>
+                    )}
 
                     <View style={styles.warningBox}>
                         <Text style={styles.warningText}>
@@ -301,6 +351,15 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
             marginLeft: 8,
             lineHeight: 18,
+        },
+        webDateSection: {
+            marginBottom: 12,
+        },
+        dateLabel: {
+            fontSize: 14,
+            fontWeight: "500",
+            color: colors.text,
+            marginBottom: 6,
         },
         selectedDateText: {
             fontSize: 14,

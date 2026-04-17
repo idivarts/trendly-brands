@@ -98,7 +98,7 @@ export async function createContractOrder(
 
 export async function getContractOrderStatus(
     payload: CreateContractOrderPayload
-): Promise<ContractOrderStatusData> {
+): Promise<ContractOrderData> {
     const urlPath = `/monetize/brands/contracts/${payload.contractId}/order`;
 
     try {
@@ -112,7 +112,8 @@ export async function getContractOrderStatus(
             method: "GET",
             headers: { "Content-Type": "application/json" },
         });
-        return (await response.json()) as ContractOrderStatusData;
+        const json = await response.json();
+        return normalizeOrderData(json);
     } catch (err) {
         const message = await HttpWrapper.extractErrorMessage(err);
         throw new Error(message ?? "Failed to fetch payment status");
