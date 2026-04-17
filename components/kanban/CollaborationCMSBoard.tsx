@@ -1,5 +1,4 @@
 import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
-import { IS_LIVE } from "@/shared-libs/utils/environment";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -125,15 +124,17 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
             setError(null);
             setLoading(true);
             try {
-                console.log("[Kanban] Fetching collaborations", { isLive: IS_LIVE });
+                console.log("[Kanban] Fetching collaborations", { liveFilter });
 
                 const collRef = collection(FirestoreDB, "collaborations");
                 const snapshot = await getDocs(
-                    query(
-                        collRef,
-                        where("isLive", "==", IS_LIVE),
-                        orderBy("timeStamp", "desc")
-                    )
+                    liveFilter === "none"
+                        ? query(collRef, orderBy("timeStamp", "desc"))
+                        : query(
+                            collRef,
+                            where("isLive", "==", liveFilter === "live"),
+                            orderBy("timeStamp", "desc")
+                        )
                 );
                 console.log("[Kanban] Collaborations found", snapshot.size);
 
@@ -162,7 +163,7 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
             }
         };
         fetchCollaborations();
-    }, []);
+    }, [liveFilter]);
 
     const updateColumns = (collabs: KanbanCardT[], filter: CollaborationCMSLiveFilter) => {
         const grouped: Record<string, KanbanCardT[]> = {
@@ -236,7 +237,7 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
         // Find source and dest columns
         const sourceColIndex = columns.findIndex(c => c.id === fromColumnId);
         const destColIndex = columns.findIndex(c => c.id === toColumnId);
-        
+
         if (sourceColIndex === -1 || destColIndex === -1) return;
 
         if (fromColumnId === toColumnId) {
@@ -246,33 +247,33 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
             const newIndex = toCardId ? column.cards.findIndex(c => c.id === toCardId) : column.cards.length;
 
             if (oldIndex !== newIndex && oldIndex !== -1) {
-                 const newCards = arrayMove(column.cards, oldIndex, newIndex);
-                 const newColumns = [...columns];
-                 newColumns[sourceColIndex] = { ...column, cards: newCards };
-                 setColumns(newColumns);
+                const newCards = arrayMove(column.cards, oldIndex, newIndex);
+                const newColumns = [...columns];
+                newColumns[sourceColIndex] = { ...column, cards: newCards };
+                setColumns(newColumns);
             }
         } else {
             // Move between columns
             const sourceCol = columns[sourceColIndex];
             const destCol = columns[destColIndex];
             const card = sourceCol.cards.find(c => c.id === fromCardId);
-            
+
             if (!card) return;
 
             const newSourceCards = sourceCol.cards.filter(c => c.id !== fromCardId);
             const newDestCards = [...destCol.cards];
-            
-            const insertIndex = toCardId 
+
+            const insertIndex = toCardId
                 ? newDestCards.findIndex(c => c.id === toCardId)
                 : newDestCards.length;
-            
+
             // Insert at index
             newDestCards.splice(insertIndex < 0 ? newDestCards.length : insertIndex, 0, card);
 
             const newColumns = [...columns];
             newColumns[sourceColIndex] = { ...sourceCol, cards: newSourceCards };
             newColumns[destColIndex] = { ...destCol, cards: newDestCards };
-            
+
             setColumns(newColumns);
 
             try {
@@ -285,7 +286,7 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
 
     return (
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
                 {loading && (
                     <Text style={{ paddingVertical: 8, opacity: 0.7, color: colors.textSecondary }}>
                         Loading collaborations…
@@ -303,7 +304,7 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
                 >
                     <DragOverlay>
                         {activeCard ? (
-                             <View
+                            <View
                                 style={{
                                     padding: 12,
                                     borderRadius: 8,
@@ -427,17 +428,17 @@ const SortableCollaborationCard = ({
 
     // Filter out web-specific attributes
     const { tabIndex, role, ...restAttributes } = attributes as any;
-    
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
-    
+
     // Using inline style specifically to avoid "touchAction: none" which blocks scrolling
     // and to match BrandCRMBoard's structure wrapper
-    
+
     return (
-         <View
+        <View
             ref={setNodeRef as any}
             {...restAttributes}
             {...listeners}
@@ -468,11 +469,11 @@ const SortableCollaborationCard = ({
                     }}
                 />
             )}
-            
+
             <Pressable
                 onPress={() => {
-                     console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
-                     router.push(`/collaboration-details/${card.id}`);
+                    console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
+                    router.push(`/collaboration-details/${card.id}`);
                 }}
             >
                 <CollaborationCard
