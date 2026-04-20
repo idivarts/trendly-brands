@@ -254,6 +254,7 @@ const ApproveVideoReleaseBottomSheet: React.FC<
                     mode="contained"
                     style={styles.button}
                     onPress={handleConfirm}
+                    loading={submitting}
                     disabled={
                         !selectedOption ||
                         (needsScheduledDate && !hasSelectedDate) ||
