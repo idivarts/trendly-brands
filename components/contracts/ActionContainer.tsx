@@ -11,6 +11,7 @@ import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     ContractActionsWithMessage,
     type ContractActionButton,
@@ -228,14 +229,22 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(true);
     }, []);
 
-    const handleStartContractPress = useCallback(() => {
-        // Allow the button to be enabled; show a clear modal if KYC blocks starting.
+    const handleStartContractPress = useCallback(async () => {
+        // Always hit the API (order creation/resume). If KYC blocks, show modal regardless of response.
         if (!isLegacyFlow && kycBlocked) {
+            void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
             setShowKycBlockedStartContractModal(true);
             return;
         }
-        openStartContractPaymentSheet();
-    }, [isLegacyFlow, kycBlocked, openStartContractPaymentSheet]);
+
+        // If not KYC-blocked, proceed normally with the API-driven payment flow.
+        await handlePendingPayment({ resumeExistingOrder: showContinueContractPayment });
+    }, [
+        handlePendingPayment,
+        isLegacyFlow,
+        kycBlocked,
+        showContinueContractPayment,
+    ]);
 
     const handlePayNowFromSheet = useCallback(async () => {
         setShowStartContractPaymentSheet(false);

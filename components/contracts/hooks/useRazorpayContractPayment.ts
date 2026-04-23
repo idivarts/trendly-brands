@@ -20,6 +20,11 @@ export type UseRazorpayContractPaymentParams = {
 export type StartContractPaymentOptions = {
     /** Load checkout from GET /order (reuse server order) instead of POST /order. */
     resumeExistingOrder?: boolean;
+    /**
+     * Hit the order API but do not open the Razorpay checkout UI.
+     * Useful for prefetching / side-effects even when UI flow is blocked.
+     */
+    prefetchOnly?: boolean;
 };
 
 function isPaidLikeStatus(status: unknown): boolean {
@@ -68,6 +73,7 @@ export function useRazorpayContractPayment({
         if (paymentInFlightRef.current) return;
 
         const resumeExistingOrder = options?.resumeExistingOrder === true;
+        const prefetchOnly = options?.prefetchOnly === true;
 
         const razorpayKeyId = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RtPhjl6Q2YAk8S";
         if (!razorpayKeyId) {
@@ -104,6 +110,11 @@ export function useRazorpayContractPayment({
                         : "Invalid order response from server (missing orderId)"
                 );
                 onRefresh();
+                return;
+            }
+
+            if (prefetchOnly) {
+                // Intentionally do not open checkout; caller may show a blocking UI instead.
                 return;
             }
 

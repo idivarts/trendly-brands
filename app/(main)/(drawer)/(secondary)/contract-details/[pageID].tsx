@@ -70,6 +70,7 @@ const ContractScreen = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const { manager } = useAuthContext()
+    const managerEmail = manager?.email;
     const { isOnFreeTrial, isProfileLocked } = useBrandContext()
     const { pageID } = useLocalSearchParams();
     const [contract, setContract] = useState<ICollaborationCard>();
@@ -138,7 +139,7 @@ const ContractScreen = () => {
     };
 
     useEffect(() => {
-        if (!manager || !pageID || typeof pageID !== "string") {
+        if (!managerEmail || !pageID || typeof pageID !== "string") {
             setContract(undefined);
             setIsLoading(false);
             return;
@@ -211,7 +212,7 @@ const ContractScreen = () => {
         );
 
         return () => unsubscribe();
-    }, [manager, pageID]);
+    }, [managerEmail, pageID]);
 
     if (isLoading || !contract) {
         return (
