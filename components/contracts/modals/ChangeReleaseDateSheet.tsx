@@ -59,7 +59,7 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
             if (hasExistingScheduledDate) {
                 await changeReleaseDateState8({
                     contractId,
-                    scheduledReleaseAt: ts,
+                    newScheduledDate: ts,
                 });
             } else {
                 await changeReleaseDateState7({

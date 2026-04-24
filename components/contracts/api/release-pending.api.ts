@@ -11,7 +11,7 @@ export type ScheduleReleasePayload = {
 
 export type ChangeReleaseDatePayload = {
     contractId: string;
-    scheduledReleaseAt: number;
+    newScheduledDate: number;
 };
 
 export async function scheduleRelease(
@@ -45,9 +45,9 @@ export async function scheduleRelease(
 export async function changeReleaseDate(
     payload: ChangeReleaseDatePayload
 ): Promise<void> {
-    // TODO: replace URL path with the backend endpoint for updating release date (state 8).
-    const urlPath = `/api/collabs/contracts/${payload.contractId}/state-8/change-release-date`;
-    const body = { scheduledReleaseAt: payload.scheduledReleaseAt };
+    // State-8 / PostingPending reschedule endpoint (backend contractId).
+    const urlPath = `/monetize/brands/contracts/${payload.contractId}/posting/reschedule`;
+    const body = { newScheduledDate: payload.newScheduledDate };
 
     try {
         logContractApiCall({

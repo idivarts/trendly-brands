@@ -28,6 +28,7 @@ import {
     doc,
     getDoc,
     getDocs,
+    onSnapshot,
     query,
     where,
 } from "firebase/firestore";
@@ -69,6 +70,7 @@ const ContractScreen = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const { manager } = useAuthContext()
+    const managerEmail = manager?.email;
     const { isOnFreeTrial, isProfileLocked } = useBrandContext()
     const { pageID } = useLocalSearchParams();
     const [contract, setContract] = useState<ICollaborationCard>();
@@ -87,9 +89,10 @@ const ContractScreen = () => {
                 throw new Error("User not authenticated");
             }
 
-            const contractsCol = doc(FirestoreDB, "contracts", pageID as string);
-            const contractsSnapshot = await getDoc(contractsCol);
+            if (!pageID || typeof pageID !== "string") return;
 
+            const contractsCol = doc(FirestoreDB, "contracts", pageID);
+            const contractsSnapshot = await getDoc(contractsCol);
             const contract = contractsSnapshot.data() as IContracts;
             const collaborationId = contract.collaborationId;
 
@@ -136,8 +139,80 @@ const ContractScreen = () => {
     };
 
     useEffect(() => {
-        fetchProposals();
-    }, [manager]);
+        if (!managerEmail || !pageID || typeof pageID !== "string") {
+            setContract(undefined);
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+
+        const contractRef = doc(FirestoreDB, "contracts", pageID);
+        const unsubscribe = onSnapshot(
+            contractRef,
+            async (snapshot) => {
+                try {
+                    if (!snapshot.exists()) {
+                        setContract(undefined);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    const contractData = snapshot.data() as IContracts;
+                    const collaborationId = contractData.collaborationId;
+
+                    const userDataRef = doc(FirestoreDB, "users", contractData.userId);
+                    const userSnapshot = await getDoc(userDataRef);
+                    const userData = userSnapshot.data() as IUsers;
+                    setSelectedInfluencer({
+                        ...(userData as IUsers),
+                        id: userSnapshot.id,
+                    });
+
+                    const hasAppliedQuery = query(
+                        collectionGroup(FirestoreDB, "applications"),
+                        where("userId", "==", contractData.userId),
+                        where("collaborationId", "==", collaborationId)
+                    );
+
+                    const hasAppliedSnapshot = await getDocs(hasAppliedQuery);
+                    // @ts-ignore
+                    const applications = hasAppliedSnapshot.docs.map((appDoc) => ({
+                        id: appDoc.id,
+                        ...appDoc.data(),
+                    })) as IApplications[];
+
+                    const collaborationRef = doc(
+                        FirestoreDB,
+                        "collaborations",
+                        collaborationId
+                    );
+                    const collaborationSnapshot = await getDoc(collaborationRef);
+                    const collaborationData = collaborationSnapshot.data() as ICollaboration;
+
+                    setContract({
+                        id: snapshot.id,
+                        ...contractData,
+                        userData,
+                        applications,
+                        collaborationData,
+                    });
+                } catch (error) {
+                    Console.error(error, "Error subscribing to contract");
+                    setContract(undefined);
+                } finally {
+                    setIsLoading(false);
+                }
+            },
+            (error) => {
+                Console.error(error, "Contract onSnapshot error");
+                setContract(undefined);
+                setIsLoading(false);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [managerEmail, pageID]);
 
     if (isLoading || !contract) {
         return (

@@ -44,6 +44,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
     const [activeTab, setActiveTab] = useState(tabs[defaultSelection]);
     const [tabLayout, setTabLayout] = useState<any>({});
     const prevTabIndex = useRef(0);
+    const prevDefaultSelection = useRef(defaultSelection);
     const scrollViewRef = useRef<ScrollView>(null);
     const theme = useTheme();
     const styles = stylesFn(theme);
@@ -107,11 +108,12 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
         const activeStillExists = !!tabs.find((t) => t.id === activeTab?.id);
 
         const shouldReset =
-            prevTabIndex.current !== defaultSelection || !activeStillExists;
+            prevDefaultSelection.current !== defaultSelection || !activeStillExists;
 
         if (shouldReset && nextDefault) {
             setActiveTab(nextDefault);
         }
+        prevDefaultSelection.current = defaultSelection;
     }, [tabs, defaultSelection, activeTab?.id]);
 
     const renderTabContent = () => {

@@ -116,6 +116,7 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
                             style={styles.button}
                             onPress={handleSend}
                             disabled={submitting}
+                            loading={submitting}
                         >
                             Send Request
                         </Button>

@@ -76,6 +76,35 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
             ? props.userData.profile.category.join(" & ")
             : "—";
 
+    const revisionNotes =
+        props.contractData.deliverable?.revisionNotes?.filter(
+            (n): n is string => typeof n === "string" && n.trim().length > 0
+        ) ?? [];
+
+    const renderRevisionNotesSection = () => {
+        if (!revisionNotes.length) return null;
+
+        const newestFirst = [...revisionNotes].reverse();
+
+        return (
+            <View style={styles.revisionSection}>
+                <Text style={styles.sectionLabel}>REQUESTED REVISIONS</Text>
+                <View style={styles.revisionCard}>
+                    {newestFirst.map((note, idx) => (
+                        <View key={`${idx}-${note.slice(0, 24)}`} style={styles.revisionItem}>
+                            <View style={styles.revisionIndexPill}>
+                                <Text style={styles.revisionIndexText}>
+                                    {revisionNotes.length - idx}
+                                </Text>
+                            </View>
+                            <Text style={styles.revisionText}>{note}</Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        );
+    };
+
     const renderMediaSection = () => {
         if (!attachments.length) return null;
         if (xl) {
@@ -183,6 +212,8 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 </View>
             )}
 
+            {renderRevisionNotesSection()}
+
             <UserResponse
                 application={props.applicationData}
                 influencerQuestions={
@@ -289,6 +320,8 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     paymentStatus={props.contractData.payment?.status}
                     devOverrideStatus={props.devOverrideStatus}
                 />
+
+                {renderRevisionNotesSection()}
 
                 <MemberContainer
                     //@ts-ignore
@@ -484,6 +517,10 @@ function createStyles(
             width: "100%",
             gap: 12,
         },
+        revisionSection: {
+            width: "100%",
+            gap: 12,
+        },
         sectionLabel: {
             fontSize: 12,
             fontWeight: "600",
@@ -500,6 +537,39 @@ function createStyles(
             backgroundColor: colors.gray200,
             borderRadius: 8,
             padding: 12,
+        },
+        revisionCard: {
+            width: "100%",
+            backgroundColor: colors.gray200,
+            borderRadius: 8,
+            padding: 12,
+            gap: 10,
+        },
+        revisionItem: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 10,
+        },
+        revisionIndexPill: {
+            minWidth: 22,
+            paddingHorizontal: 6,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: colors.gray300,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        revisionIndexText: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        revisionText: {
+            flex: 1,
+            minWidth: 0,
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.text,
         },
         fieldLabel: {
             fontSize: 12,

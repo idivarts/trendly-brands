@@ -11,6 +11,7 @@ import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     ContractActionsWithMessage,
     type ContractActionButton,
@@ -44,6 +45,7 @@ import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
 import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
 import RequestRevisionModal from "./modals/RequestRevisionModal";
 import ShippingAddressModal from "./modals/ShippingAddressModal";
+import KycBlockedStartContractModal from "./modals/KycBlockedStartContractModal";
 import ViewInfluencerAddressOverlay from "./modals/ViewInfluencerAddressOverlayComponent";
 import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
 
@@ -105,6 +107,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
     const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
+    const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
 
     const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
@@ -226,6 +229,23 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(true);
     }, []);
 
+    const handleStartContractPress = useCallback(async () => {
+        // Always hit the API (order creation/resume). If KYC blocks, show modal regardless of response.
+        if (!isLegacyFlow && kycBlocked) {
+            void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
+            setShowKycBlockedStartContractModal(true);
+            return;
+        }
+
+        // If not KYC-blocked, proceed normally with the API-driven payment flow.
+        await handlePendingPayment({ resumeExistingOrder: showContinueContractPayment });
+    }, [
+        handlePendingPayment,
+        isLegacyFlow,
+        kycBlocked,
+        showContinueContractPayment,
+    ]);
+
     const handlePayNowFromSheet = useCallback(async () => {
         setShowStartContractPaymentSheet(false);
         await handlePendingPayment();
@@ -314,7 +334,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Start contract",
                         variant: "contained",
-                        onPress: openStartContractPaymentSheet,
+                        onPress: handleStartContractPress,
                         loading: paymentButtonLoading,
                     },
                 ],
@@ -362,27 +382,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && kycBlocked) {
-            return {
-                buttons: [
-                    {
-                        label: "Start contract",
-                        variant: "contained",
-                        disabled: isContractBlockedByKYC(userData),
-                        onPress: openStartContractPaymentSheet,
-                        loading: paymentButtonLoading,
-                    },
-                ],
-                message: messageForStatus(),
-            };
-        }
         if (!isLegacyFlow && status === ContractStatus.Pending) {
             return {
                 buttons: [
                     {
                         label: "Start contract",
                         variant: "contained",
-                        onPress: openStartContractPaymentSheet,
+                        onPress: handleStartContractPress,
                         loading: paymentButtonLoading,
                     },
                 ],
@@ -502,7 +508,16 @@ const ActionContainer: FC<ActionContainerProps> = ({
         }
         if (!isLegacyFlow && status === ContractStatus.DeliveryAcknowledgementPending) {
             return {
-                buttons: [{ label: "Go to Messages", variant: "contained", onPress: goToMessages }],
+                buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Get Delivery Status",
+                        variant: "contained",
+                        onPress: () => {
+                            Toaster.info("Delivery status API coming soon");
+                        },
+                    },
+                ],
                 message: messageForStatus(),
             };
         }
@@ -581,7 +596,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         feedbackModalVisible,
         goToMessages,
         handlePendingPayment,
-        openStartContractPaymentSheet,
+        handleStartContractPress,
         contract.shipment,
         contract.deliverable,
         devOverrideStatus,
@@ -736,6 +751,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 paymentAmountLabel={formatContractMoneyLabel(
                     applicationQuotation ?? contract.payment?.amount
                 )}
+            />
+            <KycBlockedStartContractModal
+                visible={showKycBlockedStartContractModal}
+                onClose={() => setShowKycBlockedStartContractModal(false)}
             />
         </View>
     );
