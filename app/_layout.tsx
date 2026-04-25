@@ -24,6 +24,7 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
     AWSContextProvider,
+    NicheProvider,
     ThemeOverrideProvider,
     TransitionProvider,
     useAuthContext,
@@ -132,15 +133,17 @@ const RootLayoutStack = () => {
                         <DownloadApp />
                         <ConfirmationModalProvider>
                             <BottomSheetModalProvider>
-                                <Stack
-                                    screenOptions={{
-                                        headerShown: false,
-                                    }}
-                                >
-                                    <Stack.Screen name="index" />
-                                    <Stack.Screen name="+not-found" />
-                                </Stack>
-                                <Toast config={toastConfig} />
+                                <NicheProvider>
+                                    <Stack
+                                        screenOptions={{
+                                            headerShown: false,
+                                        }}
+                                    >
+                                        <Stack.Screen name="index" />
+                                        <Stack.Screen name="+not-found" />
+                                    </Stack>
+                                    <Toast config={toastConfig} />
+                                </NicheProvider>
                             </BottomSheetModalProvider>
                         </ConfirmationModalProvider>
                     </TransitionProvider>
