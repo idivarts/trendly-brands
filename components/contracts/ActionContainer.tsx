@@ -229,20 +229,21 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(true);
     }, []);
 
-    const handleStartContractPress = useCallback(async () => {
-        // Always hit the API (order creation/resume). If KYC blocks, show modal regardless of response.
+    const handleStartContractPress = useCallback(() => {
+        // KYC gate: prefetch order side-effects if any, then show blocking modal (no payment summary).
         if (!isLegacyFlow && kycBlocked) {
             void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
             setShowKycBlockedStartContractModal(true);
             return;
         }
 
-        // If not KYC-blocked, proceed normally with the API-driven payment flow.
-        await handlePendingPayment({ resumeExistingOrder: showContinueContractPayment });
+        // Show pay summary (collaboration, budget, amount) before Razorpay; Pay Now continues in `handlePayNowFromSheet`.
+        openStartContractPaymentSheet();
     }, [
         handlePendingPayment,
         isLegacyFlow,
         kycBlocked,
+        openStartContractPaymentSheet,
         showContinueContractPayment,
     ]);
 

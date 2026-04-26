@@ -458,10 +458,10 @@ function createStyles(
             height: MEDIA_CARD_SIZE,
             borderRadius: 12,
             overflow: "hidden",
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
         },
         profileImageCard: {
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
         },
         profileImageWrap: {
             width: "100%",
@@ -490,11 +490,11 @@ function createStyles(
             paddingHorizontal: 8,
             paddingVertical: 4,
             borderRadius: 12,
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
         },
         timestampText: {
             fontSize: 12,
-            color: colors.gray100,
+            color: colors.textSecondary,
         },
         taglineRow: {
             flexDirection: "row",
@@ -505,7 +505,7 @@ function createStyles(
         taglineIconWrap: { marginTop: 2 },
         taglineText: {
             fontSize: 14,
-            color: colors.gray100,
+            color: colors.textSecondary,
         },
         aboutText: {
             color: colors.text,
@@ -524,7 +524,7 @@ function createStyles(
         sectionLabel: {
             fontSize: 12,
             fontWeight: "600",
-            color: colors.gray100,
+            color: colors.textSecondary,
             letterSpacing: 0.5,
         },
         nicheQuoteRow: {
@@ -534,16 +534,20 @@ function createStyles(
         fieldCard: {
             flex: 1,
             minWidth: 0,
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
             borderRadius: 8,
             padding: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
         },
         revisionCard: {
             width: "100%",
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
             borderRadius: 8,
             padding: 12,
             gap: 10,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
         },
         revisionItem: {
             flexDirection: "row",
@@ -573,7 +577,7 @@ function createStyles(
         },
         fieldLabel: {
             fontSize: 12,
-            color: colors.gray100,
+            color: colors.textSecondary,
             marginBottom: 4,
         },
         fieldValue: {
@@ -618,7 +622,7 @@ function createStyles(
         },
         collaborationDescription: {
             fontSize: 14,
-            color: colors.gray100,
+            color: colors.textSecondary,
             lineHeight: 20,
         },
     });
