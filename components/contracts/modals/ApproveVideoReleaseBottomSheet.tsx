@@ -219,13 +219,23 @@ const ApproveVideoReleaseBottomSheet: React.FC<
                     ) : (
                         <>
                             {hasSelectedDate && !dateModalVisible ? (
-                                <Text style={styles.selectedDateText}>
-                                    {date.toLocaleDateString(undefined, {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </Text>
+                                <Pressable
+                                    onPress={() => setDateModalVisible(true)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Change release date"
+                                    style={({ pressed }) => [
+                                        styles.selectedDatePressable,
+                                        pressed && styles.selectedDatePressablePressed,
+                                    ]}
+                                >
+                                    <Text style={styles.selectedDateText}>
+                                        {date.toLocaleDateString(undefined, {
+                                            day: "numeric",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </Text>
+                                </Pressable>
                             ) : null}
                             <DatePickerModal
                                 visible={dateModalVisible}
@@ -384,11 +394,20 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             color: colors.text,
             marginBottom: 6,
         },
+        selectedDatePressable: {
+            alignSelf: "flex-start",
+            marginBottom: 10,
+            paddingVertical: 8,
+            paddingHorizontal: 4,
+        },
+        selectedDatePressablePressed: {
+            opacity: 0.75,
+        },
         selectedDateText: {
             fontSize: 14,
             fontWeight: "600",
-            color: colors.text,
-            marginBottom: 10,
+            color: colors.primary,
+            textDecorationLine: "underline",
         },
         warningBox: {
             padding: 16,

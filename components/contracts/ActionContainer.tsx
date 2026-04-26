@@ -67,6 +67,14 @@ function hasOutstandingContractPaymentOrder(contract: IContracts): boolean {
     return true;
 }
 
+/** True once the brand has submitted feedback (mirrors settlement CTA / feedback modal). */
+function brandHasSubmittedFeedback(contract: IContracts): boolean {
+    return (
+        (contract.feedbackFromBrand?.ratings ?? 0) >= 1 ||
+        Boolean(contract.feedbackFromBrand?.timeSubmitted)
+    );
+}
+
 interface ActionContainerProps {
     contract: IContracts;
     refreshData: () => void;
@@ -170,6 +178,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.status <= 1 &&
         contract.status >= 0 &&
         !collaborationData;
+
+    const brandSubmittedFeedback = brandHasSubmittedFeedback(contract);
+    const showInfluencerFeedbackCard =
+        Boolean(contract.feedbackFromInfluencer) && brandSubmittedFeedback;
 
     const renderStars = (rating: number) => {
         const fullStars = Math.floor(rating);
@@ -587,11 +599,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         }
         if (!isLegacyFlow && status === ContractStatus.SettlementPending) {
-            const hasBrandSubmittedFeedback =
-                (contract.feedbackFromBrand?.ratings ?? 0) >= 1 ||
-                Boolean(contract.feedbackFromBrand?.timeSubmitted);
-
-            if (hasBrandSubmittedFeedback) {
+            if (brandSubmittedFeedback) {
                 return {
                     buttons: [
                         { label: "Go to Messages", variant: "contained", onPress: goToMessages },
@@ -632,6 +640,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.deliverable,
         contract.feedbackFromBrand?.ratings,
         contract.feedbackFromBrand?.timeSubmitted,
+        brandSubmittedFeedback,
         devOverrideStatus,
         refreshData,
         paymentButtonLoading,
@@ -664,7 +673,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     }
                 />
             )}
-            {showFeedbackAndInfo && (contract.feedbackFromBrand || contract.feedbackFromInfluencer) && (
+            {showFeedbackAndInfo &&
+                (contract.feedbackFromBrand || showInfluencerFeedbackCard) && (
                 <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
             )}
             {showFeedbackAndInfo && contract.feedbackFromBrand && (
@@ -692,10 +702,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     </View>
                 </View>
             )}
-            {showFeedbackAndInfo && contract.feedbackFromInfluencer && (
+            {showFeedbackAndInfo && showInfluencerFeedbackCard && (
                 <View style={styles.feedbackCard}>
                     <View style={styles.starsRow}>
-                        {renderStars(contract.feedbackFromInfluencer.ratings || 0)}
+                        {renderStars(contract.feedbackFromInfluencer?.ratings || 0)}
                     </View>
                     <View style={styles.feedbackInner}>
                         <ImageComponent
