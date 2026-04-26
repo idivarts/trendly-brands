@@ -4,7 +4,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Checkbox } from "react-native-paper";
 import DatePickerModal, {
     formatDateForWebInput,
@@ -64,12 +64,12 @@ const ApproveVideoReleaseBottomSheet: React.FC<
             paddingHorizontal: 16,
             borderRadius: 8,
             border: `1px solid ${colors.budgetCardBorder}`,
-            backgroundColor: colors.tag ?? colors.gray200,
+            backgroundColor: colors.secondarySurface ?? colors.card,
             color: colors.text,
             fontSize: 15,
             boxSizing: "border-box" as const,
         }),
-        [colors.budgetCardBorder, colors.gray200, colors.tag, colors.text]
+        [colors.budgetCardBorder, colors.card, colors.secondarySurface, colors.text]
     );
 
     const [selectedOption, setSelectedOption] = useState<ReleasePlanOption | null>(null);
@@ -81,8 +81,11 @@ const ApproveVideoReleaseBottomSheet: React.FC<
     const [hasSelectedDate, setHasSelectedDate] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [dateModalVisible, setDateModalVisible] = useState(false);
+    const [boostOnTrendlyInstagram, setBoostOnTrendlyInstagram] = useState(true);
 
     const needsScheduledDate = selectedOption !== "brand_posts_alone";
+    const approveDisabled =
+        !selectedOption || (needsScheduledDate && !hasSelectedDate) || submitting;
 
     const handleSelectReleaseOption = (value: ReleasePlanOption) => {
         const needsDate = value !== "brand_posts_alone";
@@ -172,16 +175,22 @@ const ApproveVideoReleaseBottomSheet: React.FC<
                 );
             })}
 
-            <View style={styles.checkboxRow}>
-                <Checkbox
-                    status="checked"
-                    disabled
-                    color={colors.primary}
-                />
+            <Pressable
+                style={styles.checkboxRow}
+                onPress={() => setBoostOnTrendlyInstagram((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: boostOnTrendlyInstagram }}
+            >
+                <View style={styles.checkboxIconWrap} pointerEvents="none">
+                    <Checkbox
+                        status={boostOnTrendlyInstagram ? "checked" : "unchecked"}
+                        color={colors.primary}
+                    />
+                </View>
                 <Text style={styles.checkboxLabel}>
                     Boost your post by automatically shared on Trendly's insta account (for free)
                 </Text>
-            </View>
+            </Pressable>
 
             {selectedOption && needsScheduledDate ? (
                 <>
@@ -247,19 +256,24 @@ const ApproveVideoReleaseBottomSheet: React.FC<
             ) : null}
 
             <View style={styles.actions}>
-                <Button mode="outlined" style={styles.button} onPress={onClose}>
+                <Button
+                    mode="outlined"
+                    style={styles.button}
+                    onPress={onClose}
+                    textColor={colors.primary}
+                >
                     Cancel
                 </Button>
                 <Button
                     mode="contained"
-                    style={styles.button}
+                    style={[styles.button, styles.approveCta, approveDisabled && styles.approveCtaDimmed]}
+                    contentStyle={styles.approveCtaContent}
+                    labelStyle={styles.approveCtaLabel}
                     onPress={handleConfirm}
                     loading={submitting}
-                    disabled={
-                        !selectedOption ||
-                        (needsScheduledDate && !hasSelectedDate) ||
-                        submitting
-                    }
+                    disabled={approveDisabled}
+                    buttonColor={colors.primary}
+                    textColor={colors.onPrimary ?? colors.white}
                 >
                     Approve Video
                 </Button>
@@ -281,6 +295,8 @@ const ApproveVideoReleaseBottomSheet: React.FC<
 };
 
 function createStyles(colors: ReturnType<typeof Colors>) {
+    const cardBg = colors.secondarySurface ?? colors.card;
+    const cardBorder = colors.secondaryBorder ?? colors.budgetCardBorder;
     return StyleSheet.create({
         container: {
             paddingHorizontal: 20,
@@ -309,9 +325,10 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             lineHeight: 18,
         },
         card: {
-            backgroundColor: colors.surface ?? colors.background,
+            /** Avoid `colors.surface` — it is a static light token and breaks dark mode (light card + white text). */
+            backgroundColor: cardBg,
             borderWidth: 1,
-            borderColor: colors.budgetCardBorder,
+            borderColor: cardBorder,
             borderRadius: 12,
             padding: 16,
             marginBottom: 12,
@@ -319,7 +336,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         cardSelected: {
             borderColor: colors.primary,
             borderWidth: 2,
-            backgroundColor: colors.primaryLight ?? colors.tag,
+            backgroundColor: colors.planBadgeEnterpriseBg ?? cardBg,
         },
         cardTitle: {
             fontSize: 16,
@@ -333,24 +350,29 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         cardSubtitle: {
             fontSize: 14,
             fontWeight: "400",
-            color: colors.gray100 ?? colors.text,
+            color: colors.textSecondary ?? colors.text,
             lineHeight: 20,
         },
         cardSubtitleSelected: {
-            color: colors.primaryDark ?? colors.primary,
+            color: colors.text,
         },
         checkboxRow: {
             flexDirection: "row",
             alignItems: "center",
             marginTop: 16,
             marginBottom: 20,
+            paddingVertical: 8,
+            minHeight: 48,
+        },
+        checkboxIconWrap: {
+            marginRight: 4,
         },
         checkboxLabel: {
             fontSize: 14,
             fontWeight: "500",
             color: colors.text,
             flex: 1,
-            marginLeft: 8,
+            marginLeft: 4,
             lineHeight: 18,
         },
         webDateSection: {
@@ -372,13 +394,13 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             padding: 16,
             borderRadius: 8,
             borderWidth: 1,
-            borderColor: colors.budgetCardBorder,
+            borderColor: cardBorder,
             backgroundColor: colors.planBadgeProBg,
             marginBottom: 18,
         },
         warningText: {
             fontSize: 13,
-            color: colors.gray100 ?? colors.text,
+            color: colors.text,
             lineHeight: 18,
         },
         actions: {
@@ -386,6 +408,19 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             gap: 12,
         },
         button: { flex: 1 },
+        approveCta: {
+            borderRadius: 20,
+        },
+        approveCtaDimmed: {
+            opacity: 0.5,
+        },
+        approveCtaContent: {
+            // paddingVertical: 10,
+        },
+        approveCtaLabel: {
+            fontSize: 16,
+            fontWeight: "700",
+        },
     });
 }
 

@@ -100,6 +100,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
             onRequestClose={onClose}
             onDismiss={onClose}
         >
+            <View style={styles.modalRoot}>
             <Pressable style={styles.overlay} onPress={onClose}>
                 <Pressable style={styles.modal} onPress={() => { }}>
                     <View style={styles.header}>
@@ -133,6 +134,15 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
                             onChange={(event, d) => {
                                 if ((event as any)?.type === "set" && d) onChange(d);
                             }}
+                            {...(Platform.OS === "ios"
+                                ? {
+                                      themeVariant: theme.dark
+                                          ? ("dark" as const)
+                                          : ("light" as const),
+                                      textColor: colors.text,
+                                      accentColor: colors.primary,
+                                  }
+                                : {})}
                         />
                     )}
 
@@ -153,15 +163,21 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
                     </View>
                 </Pressable>
             </Pressable>
+            </View>
         </Modal>
     );
 };
 
 function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
     return StyleSheet.create({
-        overlay: {
+        /** Fills the modal window so the status-bar / safe area isn’t an unthemed (white) strip. */
+        modalRoot: {
             flex: 1,
             backgroundColor: colors.backdrop,
+        },
+        overlay: {
+            flex: 1,
+            backgroundColor: colors.transparent,
             justifyContent: "center",
             alignItems: "center",
             paddingTop: safeAreaTop,
