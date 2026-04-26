@@ -31,6 +31,7 @@ import { doc, getDoc } from "firebase/firestore";
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
+import { getShipmentStatus } from "./api/shipment-pending.api";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
 import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
@@ -108,6 +109,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
     const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
     const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
+    const [deliveryStatusLoading, setDeliveryStatusLoading] = useState(false);
 
     const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
@@ -251,6 +253,20 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(false);
         await handlePendingPayment();
     }, [handlePendingPayment]);
+
+    const handleGetDeliveryStatus = useCallback(async () => {
+        setDeliveryStatusLoading(true);
+        try {
+            await getShipmentStatus({ contractId: contractIdForApi });
+            Toaster.success("Delivery status refreshed");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Could not get delivery status: ${message}` : "Could not get delivery status");
+        } finally {
+            setDeliveryStatusLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
 
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
@@ -515,8 +531,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Get Delivery Status",
                         variant: "contained",
                         onPress: () => {
-                            Toaster.info("Delivery status API coming soon");
+                            void handleGetDeliveryStatus();
                         },
+                        loading: deliveryStatusLoading,
                     },
                 ],
                 message: messageForStatus(),
@@ -570,6 +587,19 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         }
         if (!isLegacyFlow && status === ContractStatus.SettlementPending) {
+            const hasBrandSubmittedFeedback =
+                (contract.feedbackFromBrand?.ratings ?? 0) >= 1 ||
+                Boolean(contract.feedbackFromBrand?.timeSubmitted);
+
+            if (hasBrandSubmittedFeedback) {
+                return {
+                    buttons: [
+                        { label: "Go to Messages", variant: "contained", onPress: goToMessages },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
+
             return {
                 buttons: [
                     {
@@ -600,6 +630,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
         handleStartContractPress,
         contract.shipment,
         contract.deliverable,
+        contract.feedbackFromBrand?.ratings,
+        contract.feedbackFromBrand?.timeSubmitted,
         devOverrideStatus,
         refreshData,
         paymentButtonLoading,
@@ -608,6 +640,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.payment?.orderId,
         contract.payment?.status,
         showContinueContractPayment,
+        handleGetDeliveryStatus,
+        deliveryStatusLoading,
     ]);
 
     return (

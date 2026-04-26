@@ -73,14 +73,87 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
         }
     };
 
-    const content = (
+    /** Shared form fields (native: parent BottomSheetScrollView scrolls; avoid nested ScrollView + KAV). */
+    const formFields = (
+        <>
+            <Text style={styles.label}>Rating</Text>
+            <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((rating) => {
+                    const selected = rating <= selectedRating;
+                    return (
+                        <Pressable
+                            key={rating}
+                            onPress={() => setSelectedRating(rating)}
+                            hitSlop={8}
+                            style={styles.starButton}
+                        >
+                            <FontAwesomeIcon
+                                icon={selected ? faStarSolid : faStarRegular}
+                                color={selected ? colors.yellow : colors.gray300}
+                                size={28}
+                            />
+                        </Pressable>
+                    );
+                })}
+            </View>
+
+            <Text style={styles.label}>Review (optional)</Text>
+            <TextInput
+                value={feedbackReview}
+                onChangeText={setFeedbackReview}
+                placeholder="Share your experience..."
+                multiline
+                numberOfLines={4}
+                style={styles.input}
+            />
+
+            <View style={styles.actions}>
+                <Button
+                    mode="outlined"
+                    style={styles.button}
+                    onPress={handleDismiss}
+                    disabled={submitting}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    mode="contained"
+                    style={styles.button}
+                    onPress={handleSubmit}
+                    disabled={submitting || selectedRating < 1}
+                >
+                    {submitting ? "Submitting..." : "Submit Feedback"}
+                </Button>
+            </View>
+        </>
+    );
+
+    const nativeSheetContent = (
+        <Pressable
+            style={styles.nativeSheetInner}
+            onPress={() => Keyboard.dismiss()}
+        >
+            <View style={styles.header}>
+                <Text style={styles.title}>Give Feedback</Text>
+                <Pressable onPress={handleDismiss} hitSlop={12}>
+                    <FontAwesomeIcon icon={faClose} color={colors.primary} size={20} />
+                </Pressable>
+            </View>
+            <Text style={styles.subtitle}>
+                Rate the influencer and optionally add your review.
+            </Text>
+            {formFields}
+        </Pressable>
+    );
+
+    const webContent = (
         <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.keyboardView}
         >
             <Pressable
                 style={styles.contentWrap}
-                onPress={() => Platform.OS !== "web" && Keyboard.dismiss()}
+                onPress={() => Keyboard.dismiss()}
             >
                 <View style={styles.header}>
                     <Text style={styles.title}>Give Feedback</Text>
@@ -97,55 +170,7 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <Text style={styles.label}>Rating</Text>
-                    <View style={styles.starsRow}>
-                        {[1, 2, 3, 4, 5].map((rating) => {
-                            const selected = rating <= selectedRating;
-                            return (
-                                <Pressable
-                                    key={rating}
-                                    onPress={() => setSelectedRating(rating)}
-                                    hitSlop={8}
-                                    style={styles.starButton}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={selected ? faStarSolid : faStarRegular}
-                                        color={selected ? colors.yellow : colors.gray300}
-                                        size={28}
-                                    />
-                                </Pressable>
-                            );
-                        })}
-                    </View>
-
-                    <Text style={styles.label}>Review (optional)</Text>
-                    <TextInput
-                        value={feedbackReview}
-                        onChangeText={setFeedbackReview}
-                        placeholder="Share your experience..."
-                        multiline
-                        numberOfLines={4}
-                        style={styles.input}
-                    />
-
-                    <View style={styles.actions}>
-                        <Button
-                            mode="outlined"
-                            style={styles.button}
-                            onPress={handleDismiss}
-                            disabled={submitting}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            mode="contained"
-                            style={styles.button}
-                            onPress={handleSubmit}
-                            disabled={submitting || selectedRating < 1}
-                        >
-                            {submitting ? "Submitting..." : "Submit Feedback"}
-                        </Button>
-                    </View>
+                    {formFields}
                 </ScrollView>
             </Pressable>
         </KeyboardAvoidingView>
@@ -155,10 +180,10 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
         return (
             <BottomSheetScrollContainer
                 isVisible={visible}
-                snapPointsRange={["55%", "75%"]}
+                snapPointsRange={["55%", "92%"]}
                 onClose={handleDismiss}
             >
-                {content}
+                {nativeSheetContent}
             </BottomSheetScrollContainer>
         );
     }
@@ -170,14 +195,13 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
                 onDismiss={handleDismiss}
                 contentContainerStyle={styles.webModalContainer}
             >
-                {content}
+                {webContent}
             </PaperModal>
         </Portal>
     );
 };
 
 function createStyles(colors: ReturnType<typeof Colors>) {
-    const isNative = Platform.OS !== "web";
     return StyleSheet.create({
         webModalContainer: {
             backgroundColor: colors.background,
@@ -191,7 +215,11 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         keyboardView: {
             width: "100%",
-            ...(isNative && { paddingHorizontal: 14 }),
+        },
+        nativeSheetInner: {
+            width: "100%",
+            paddingHorizontal: 14,
+            paddingBottom: 8,
         },
         contentWrap: {
             width: "100%",
