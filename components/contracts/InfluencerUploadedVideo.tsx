@@ -1,8 +1,12 @@
 import type { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
-import { Linking, Platform, Pressable, StyleSheet, View } from "react-native";
+import React, { useCallback, useMemo } from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import { IconButton } from "react-native-paper";
 import VideoPlayer from "@/components/landing/VideoPlayer";
 import { Text } from "../theme/Themed";
 
@@ -11,17 +15,66 @@ export interface InfluencerUploadedVideoProps {
 }
 
 const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contract }) => {
-    const theme = useTheme();
-    const colors = Colors(theme);
+    const colors = Colors(useTheme());
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const links = contract.deliverable?.deliverableLinks ?? [];
     const latestLink = links.length > 0 ? links[links.length - 1] : undefined;
 
+    const handleDownloadVideo = useCallback(async (url: string) => {
+        const trimmed = url.trim();
+        if (!trimmed) return;
+
+        if (isLikelyYoutubeUrl(trimmed)) {
+            Toaster.info("YouTube links can’t be downloaded as a file here. Save from YouTube if you need an offline copy.");
+            return;
+        }
+
+        if (Platform.OS === "web") {
+            try {
+                const res = await fetch(trimmed);
+                if (!res.ok) throw new Error("bad status");
+                const blob = await res.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = objectUrl;
+                a.download = `influencer-video-${Date.now()}.mp4`;
+                a.rel = "noopener";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(objectUrl);
+                Toaster.success("Download started");
+            } catch {
+                Toaster.error("Could not download this video. It may be blocked by the browser or server.");
+            }
+            return;
+        }
+
+        try {
+            const cacheDir = FileSystem.cacheDirectory;
+            if (!cacheDir) {
+                Toaster.error("Download isn’t available on this device.");
+                return;
+            }
+            const filename = `influencer-video-${Date.now()}.mp4`;
+            const dest = `${cacheDir}${filename}`;
+            const result = await FileSystem.downloadAsync(trimmed, dest);
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(result.uri);
+                Toaster.success("Choose where to save the video");
+            } else {
+                Toaster.success("Video downloaded to app cache");
+            }
+        } catch {
+            Toaster.error("Could not download this video.");
+        }
+    }, []);
+
     if (links.length === 0) {
         return (
             <View style={styles.card}>
-                <Text style={styles.title}>Uploaded video</Text>
+                <Text style={styles.emptyStateTitle}>Uploaded video</Text>
                 <Text style={styles.emptyText}>No video uploaded yet.</Text>
             </View>
         );
@@ -29,27 +82,37 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
 
     return (
         <View style={styles.card}>
-            <Text style={styles.title}>Uploaded video by influencer</Text>
+            <View style={styles.titleRow}>
+                <Text style={styles.title}>Uploaded video by influencer</Text>
+                {latestLink ? (
+                    <IconButton
+                        icon="download"
+                        size={22}
+                        onPress={() => void handleDownloadVideo(latestLink)}
+                        accessibilityLabel="Download video"
+                        iconColor={colors.primary}
+                        style={styles.downloadIconBtn}
+                    />
+                ) : null}
+            </View>
             {latestLink ? (
                 <View style={styles.videoWrap}>
-                    {Platform.OS === "web" ? (
-                        <VideoPlayer videoLink={latestLink} />
-                    ) : (
-                        <Pressable
-                            style={styles.nativeVideoCard}
-                            onPress={() => latestLink && Linking.openURL(latestLink)}
-                        >
-                            <Text style={styles.nativeVideoLabel}>Tap to view video</Text>
-                            <Text style={styles.nativeVideoUrl} numberOfLines={1}>
-                                {latestLink}
-                            </Text>
-                        </Pressable>
-                    )}
+                    <VideoPlayer videoLink={latestLink} />
                 </View>
             ) : null}
         </View>
     );
 };
+
+function isLikelyYoutubeUrl(url: string): boolean {
+    try {
+        const u = new URL(url.trim());
+        const h = u.hostname.replace(/^www\./, "").toLowerCase();
+        return h === "youtu.be" || h.includes("youtube");
+    } catch {
+        return false;
+    }
+}
 
 function createStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
@@ -61,11 +124,28 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             borderWidth: 1,
             borderColor: colors.budgetCardBorder ?? "rgba(0,0,0,0.08)",
         },
+        titleRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+            gap: 8,
+        },
         title: {
             fontSize: 14,
             fontWeight: "600",
             color: colors.text,
-            marginBottom: 12,
+            flex: 1,
+            minWidth: 0,
+        },
+        downloadIconBtn: {
+            margin: 0,
+        },
+        emptyStateTitle: {
+            fontSize: 14,
+            fontWeight: "600",
+            color: colors.text,
+            marginBottom: 8,
         },
         emptyText: {
             fontSize: 14,
@@ -74,24 +154,6 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         videoWrap: {
             width: "100%",
             marginBottom: 8,
-        },
-        nativeVideoCard: {
-            padding: 20,
-            borderRadius: 8,
-            backgroundColor: colors.surface ?? colors.background,
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 120,
-        },
-        nativeVideoLabel: {
-            fontSize: 16,
-            fontWeight: "600",
-            color: colors.primary,
-            marginBottom: 8,
-        },
-        nativeVideoUrl: {
-            fontSize: 12,
-            color: colors.gray300,
         },
         moreLinks: {
             fontSize: 12,

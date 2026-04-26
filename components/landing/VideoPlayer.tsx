@@ -1,5 +1,6 @@
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import Colors from "@/shared-uis/constants/Colors";
+import { ResizeMode, Video } from "expo-av";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import {
     Text,
     View,
 } from "react-native";
+import WebView from "react-native-webview";
 
 const VideoPlayer: React.FC<{ videoLink: string; thumbnail?: string }> = ({ videoLink, thumbnail }) => {
     const theme = useTheme();
@@ -85,30 +87,22 @@ const VideoPlayer: React.FC<{ videoLink: string; thumbnail?: string }> = ({ vide
         if (youtubeEmbedBase) {
             return (
                 <View style={styles.embedContainer}>
-                    {/* @ts-expect-error iframe for YouTube embed */}
-                    <iframe
-                        style={styles.embedIframe}
-                        width="100%"
-                        height="100%"
-                        src={appendAutoplay(youtubeEmbedBase)}
-                        title="YouTube video player"
-                        frameBorder={0}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        allowFullScreen
+                    <WebView
+                        source={{ uri: appendAutoplay(youtubeEmbedBase) }}
+                        style={styles.nativeWebView}
+                        allowsFullscreenVideo
+                        allowsInlineMediaPlayback
+                        mediaPlaybackRequiresUserAction={false}
+                        javaScriptEnabled
+                        domStorageEnabled
+                        originWhitelist={["*"]}
                     />
                 </View>
             );
         }
 
         return (
-            <Pressable
-                accessibilityRole="button"
-                onPress={() => Linking.openURL(videoLink)}
-                style={styles.fallbackOpen}
-            >
-                <Text style={styles.fallbackOpenText}>Open video in browser</Text>
-            </Pressable>
+            <NativeDirectVideoPlayer uri={videoLink} styles={styles} />
         );
     }, [showPlayer, videoLink, youtubeEmbedBase, styles]);
 
@@ -142,6 +136,45 @@ const VideoPlayer: React.FC<{ videoLink: string; thumbnail?: string }> = ({ vide
 };
 
 export default VideoPlayer;
+
+/** Direct file / signed URLs on iOS and Android (expo-av). Falls back to browser if playback fails. */
+function NativeDirectVideoPlayer({
+    uri,
+    styles,
+}: {
+    uri: string;
+    styles: ReturnType<typeof makeStyles>;
+}) {
+    const [failed, setFailed] = useState(false);
+
+    useEffect(() => {
+        setFailed(false);
+    }, [uri]);
+
+    if (failed) {
+        return (
+            <Pressable
+                accessibilityRole="button"
+                onPress={() => Linking.openURL(uri)}
+                style={styles.fallbackOpen}
+            >
+                <Text style={styles.fallbackOpenText}>Open video in browser</Text>
+            </Pressable>
+        );
+    }
+
+    return (
+        <View style={styles.embedContainer}>
+            <Video
+                source={{ uri }}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                style={styles.nativeInlineVideo}
+                onError={() => setFailed(true)}
+            />
+        </View>
+    );
+}
 
 /** Returns a canonical YouTube embed base URL, or null if the link is not YouTube. */
 function toYoutubeEmbedSrc(raw: string): string | null {
@@ -215,11 +248,20 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 20,
             overflow: "hidden",
             backgroundColor: colors.surface || colors.card,
+            position: "relative",
         },
         embedIframe: {
             width: "100%",
             height: "100%",
             borderWidth: 0,
+        },
+        nativeWebView: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: colors.surface || colors.card,
+        },
+        nativeInlineVideo: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: colors.surface || colors.card,
         },
         directVideo: {
             width: "100%",
