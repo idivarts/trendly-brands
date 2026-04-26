@@ -101,7 +101,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
             onDismiss={onClose}
         >
             <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.modal} onPress={() => {}}>
+                <Pressable style={styles.modal} onPress={() => { }}>
                     <View style={styles.header}>
                         <Text style={styles.title}>{title}</Text>
                     </View>

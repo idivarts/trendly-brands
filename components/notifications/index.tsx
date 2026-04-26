@@ -1,10 +1,10 @@
 import EmptyState from "@/components/ui/empty-state";
 import AppLayout from "@/layouts/app-layout";
+import Colors from "@/shared-uis/constants/Colors";
 import { Notification } from "@/types/Notification";
 import { useTheme, type Theme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
-import Colors from "@/shared-uis/constants/Colors";
+import { FlatList, StyleSheet } from "react-native";
 import { NotificationCard } from "../NotificationCard";
 import { View as ThemedView } from "../theme/Themed";
 
