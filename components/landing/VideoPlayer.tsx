@@ -1,7 +1,7 @@
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
 import Colors from "@/shared-uis/constants/Colors";
-import { ResizeMode, Video } from "expo-av";
 import { useTheme } from "@react-navigation/native";
+import { ResizeMode, Video } from "expo-av";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
@@ -54,7 +54,6 @@ const VideoPlayer: React.FC<{ videoLink: string; thumbnail?: string }> = ({ vide
             if (youtubeEmbedBase) {
                 return (
                     <View style={styles.embedContainer}>
-                        {/* @ts-expect-error iframe for YouTube embed */}
                         <iframe
                             style={styles.embedIframe}
                             width="100%"
@@ -72,7 +71,6 @@ const VideoPlayer: React.FC<{ videoLink: string; thumbnail?: string }> = ({ vide
             return (
                 <View style={styles.embedContainer}>
                     {/* Host <video> for direct / signed URLs (e.g. Firebase Storage). Iframe shows "Access denied" for those. */}
-                    {/* @ts-expect-error DOM <video> */}
                     <video
                         src={videoLink}
                         controls
