@@ -180,8 +180,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
         !collaborationData;
 
     const brandSubmittedFeedback = brandHasSubmittedFeedback(contract);
+    const canShowReviewsByStatus =
+        status === ContractStatus.SettlementPending
+            ? brandSubmittedFeedback
+            : status === ContractStatus.Settled;
     const showInfluencerFeedbackCard =
-        Boolean(contract.feedbackFromInfluencer) && brandSubmittedFeedback;
+        canShowReviewsByStatus &&
+        Boolean(contract.feedbackFromInfluencer) &&
+        brandSubmittedFeedback;
 
     const renderStars = (rating: number) => {
         const fullStars = Math.floor(rating);
@@ -674,10 +680,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 />
             )}
             {showFeedbackAndInfo &&
+                canShowReviewsByStatus &&
                 (contract.feedbackFromBrand || showInfluencerFeedbackCard) && (
                 <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
             )}
-            {showFeedbackAndInfo && contract.feedbackFromBrand && (
+            {showFeedbackAndInfo &&
+                canShowReviewsByStatus &&
+                contract.feedbackFromBrand && (
                 <View style={styles.feedbackCard}>
                     <View style={styles.starsRow}>
                         {renderStars(contract.feedbackFromBrand.ratings || 0)}
@@ -702,7 +711,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     </View>
                 </View>
             )}
-            {showFeedbackAndInfo && showInfluencerFeedbackCard && (
+            {showFeedbackAndInfo && canShowReviewsByStatus && showInfluencerFeedbackCard && (
                 <View style={styles.feedbackCard}>
                     <View style={styles.starsRow}>
                         {renderStars(contract.feedbackFromInfluencer?.ratings || 0)}

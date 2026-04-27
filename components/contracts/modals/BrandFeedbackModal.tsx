@@ -151,10 +151,7 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.keyboardView}
         >
-            <Pressable
-                style={styles.contentWrap}
-                onPress={() => Keyboard.dismiss()}
-            >
+            <View style={styles.contentWrap}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Give Feedback</Text>
                     <Pressable onPress={handleDismiss} hitSlop={12}>
@@ -172,7 +169,7 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
                 >
                     {formFields}
                 </ScrollView>
-            </Pressable>
+            </View>
         </KeyboardAvoidingView>
     );
 
