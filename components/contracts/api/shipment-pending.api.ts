@@ -46,3 +46,39 @@ export async function markShipmentShipped(
     }
 }
 
+export type GetShipmentStatusPayload = {
+    contractId: string;
+};
+
+/**
+ * POST /monetize/brands/contracts/:contractId/shipment/get-status
+ * Refreshes delivery / shipment status from the carrier (Delivery acknowledgement pending).
+ */
+export async function getShipmentStatus(
+    payload: GetShipmentStatusPayload
+): Promise<unknown> {
+    const urlPath = `/monetize/brands/contracts/${payload.contractId}/shipment/get-status`;
+
+    try {
+        logContractApiCall({
+            apiState: "State_5_api",
+            state: ContractStatus.DeliveryAcknowledgementPending,
+            action: "getShipmentStatus",
+            contractId: payload.contractId,
+        });
+        const res = await HttpWrapper.fetch(urlPath, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+        });
+        try {
+            return await res.json();
+        } catch {
+            return null;
+        }
+    } catch (err) {
+        const message = await HttpWrapper.extractErrorMessage(err);
+        throw new Error(message ?? "Failed to get delivery status");
+    }
+}
+

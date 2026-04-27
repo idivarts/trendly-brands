@@ -31,6 +31,7 @@ import { doc, getDoc } from "firebase/firestore";
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
+import { getShipmentStatus } from "./api/shipment-pending.api";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
 import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
@@ -64,6 +65,14 @@ function hasOutstandingContractPaymentOrder(contract: IContracts): boolean {
     const st = contract.payment?.status;
     if (st === PaymentStatus.Paid || st === PaymentStatus.TransferProcessed) return false;
     return true;
+}
+
+/** True once the brand has submitted feedback (mirrors settlement CTA / feedback modal). */
+function brandHasSubmittedFeedback(contract: IContracts): boolean {
+    return (
+        (contract.feedbackFromBrand?.ratings ?? 0) >= 1 ||
+        Boolean(contract.feedbackFromBrand?.timeSubmitted)
+    );
 }
 
 interface ActionContainerProps {
@@ -108,6 +117,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
     const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
     const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
+    const [deliveryStatusLoading, setDeliveryStatusLoading] = useState(false);
 
     const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
@@ -169,6 +179,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.status >= 0 &&
         !collaborationData;
 
+    const brandSubmittedFeedback = brandHasSubmittedFeedback(contract);
+    const showInfluencerFeedbackCard =
+        Boolean(contract.feedbackFromInfluencer) && brandSubmittedFeedback;
+
     const renderStars = (rating: number) => {
         const fullStars = Math.floor(rating);
         const hasHalfStar = rating % 1 !== 0;
@@ -229,20 +243,21 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(true);
     }, []);
 
-    const handleStartContractPress = useCallback(async () => {
-        // Always hit the API (order creation/resume). If KYC blocks, show modal regardless of response.
+    const handleStartContractPress = useCallback(() => {
+        // KYC gate: prefetch order side-effects if any, then show blocking modal (no payment summary).
         if (!isLegacyFlow && kycBlocked) {
             void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
             setShowKycBlockedStartContractModal(true);
             return;
         }
 
-        // If not KYC-blocked, proceed normally with the API-driven payment flow.
-        await handlePendingPayment({ resumeExistingOrder: showContinueContractPayment });
+        // Show pay summary (collaboration, budget, amount) before Razorpay; Pay Now continues in `handlePayNowFromSheet`.
+        openStartContractPaymentSheet();
     }, [
         handlePendingPayment,
         isLegacyFlow,
         kycBlocked,
+        openStartContractPaymentSheet,
         showContinueContractPayment,
     ]);
 
@@ -250,6 +265,20 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(false);
         await handlePendingPayment();
     }, [handlePendingPayment]);
+
+    const handleGetDeliveryStatus = useCallback(async () => {
+        setDeliveryStatusLoading(true);
+        try {
+            await getShipmentStatus({ contractId: contractIdForApi });
+            Toaster.success("Delivery status refreshed");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Could not get delivery status: ${message}` : "Could not get delivery status");
+        } finally {
+            setDeliveryStatusLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
 
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
@@ -514,8 +543,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         label: "Get Delivery Status",
                         variant: "contained",
                         onPress: () => {
-                            Toaster.info("Delivery status API coming soon");
+                            void handleGetDeliveryStatus();
                         },
+                        loading: deliveryStatusLoading,
                     },
                 ],
                 message: messageForStatus(),
@@ -569,6 +599,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         }
         if (!isLegacyFlow && status === ContractStatus.SettlementPending) {
+            if (brandSubmittedFeedback) {
+                return {
+                    buttons: [
+                        { label: "Go to Messages", variant: "contained", onPress: goToMessages },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
+
             return {
                 buttons: [
                     {
@@ -599,6 +638,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
         handleStartContractPress,
         contract.shipment,
         contract.deliverable,
+        contract.feedbackFromBrand?.ratings,
+        contract.feedbackFromBrand?.timeSubmitted,
+        brandSubmittedFeedback,
         devOverrideStatus,
         refreshData,
         paymentButtonLoading,
@@ -607,6 +649,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.payment?.orderId,
         contract.payment?.status,
         showContinueContractPayment,
+        handleGetDeliveryStatus,
+        deliveryStatusLoading,
     ]);
 
     return (
@@ -629,7 +673,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     }
                 />
             )}
-            {showFeedbackAndInfo && (contract.feedbackFromBrand || contract.feedbackFromInfluencer) && (
+            {showFeedbackAndInfo &&
+                (contract.feedbackFromBrand || showInfluencerFeedbackCard) && (
                 <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
             )}
             {showFeedbackAndInfo && contract.feedbackFromBrand && (
@@ -657,10 +702,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     </View>
                 </View>
             )}
-            {showFeedbackAndInfo && contract.feedbackFromInfluencer && (
+            {showFeedbackAndInfo && showInfluencerFeedbackCard && (
                 <View style={styles.feedbackCard}>
                     <View style={styles.starsRow}>
-                        {renderStars(contract.feedbackFromInfluencer.ratings || 0)}
+                        {renderStars(contract.feedbackFromInfluencer?.ratings || 0)}
                     </View>
                     <View style={styles.feedbackInner}>
                         <ImageComponent

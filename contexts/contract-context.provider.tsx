@@ -1,5 +1,5 @@
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import {
     createContext,
     useContext,
@@ -12,16 +12,11 @@ import { Contract } from "@/types/Contract";
 interface ContractContextProps {
     getContractById: (contractId: string) => Promise<IContracts>;
     getContractsByCollaborationId: (collaborationId: string) => Promise<Contract[]>;
-    updateContract: (
-        contractId: string,
-        contract: Partial<IContracts>
-    ) => Promise<void>;
 }
 
 const ContractContext = createContext<ContractContextProps>({
     getContractById: async () => ({} as IContracts),
     getContractsByCollaborationId: async () => ([] as Contract[]),
-    updateContract: () => Promise.resolve(),
 });
 
 export const useContractContext = () => useContext(ContractContext);
@@ -49,23 +44,11 @@ export const ContractContextProvider: React.FC<PropsWithChildren> = ({
         return fetchedContracts;
     }
 
-    const updateContract = async (
-        contractId: string,
-        contract: Partial<IContracts>,
-    ) => {
-        const contractRef = doc(FirestoreDB, "contracts", contractId);
-
-        await updateDoc(contractRef, {
-            ...contract,
-        });
-    }
-
     return (
         <ContractContext.Provider
             value={{
                 getContractById,
                 getContractsByCollaborationId,
-                updateContract,
             }}
         >
             {children}

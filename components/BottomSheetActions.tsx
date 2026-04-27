@@ -65,10 +65,37 @@ const BottomSheetActions = ({
                 bottomSheet: {
                     zIndex: 9999,
                 },
+                /** Gorhom default surface is light on web; must match theme for title contrast. */
+                sheetSurface: {
+                    backgroundColor: colors.card,
+                },
+                sheetHandle: {
+                    backgroundColor: colors.secondaryBorder,
+                },
+                sheetContent: {
+                    flex: 1,
+                    backgroundColor: colors.card,
+                },
+                listSection: {
+                    paddingBottom: 28,
+                    backgroundColor: colors.card,
+                },
+                actionTitle: {
+                    color: colors.text,
+                    fontSize: 16,
+                },
+                placeholderBox: {
+                    padding: 20,
+                    backgroundColor: colors.card,
+                },
+                placeholderText: {
+                    color: colors.text,
+                    fontSize: 15,
+                    lineHeight: 22,
+                },
             }),
         [colors]
     );
-    const actionTextStyle = { color: colors.text };
 
     const { connectUser } = useChatContext();
 
@@ -242,8 +269,8 @@ const BottomSheetActions = ({
         switch (cardType) {
             case "influencerType":
                 return (
-                    <View style={{ padding: 20 }}>
-                        <Text>
+                    <View style={styles.placeholderBox}>
+                        <Text style={styles.placeholderText}>
                             Lorem ipsum dolor sit amet consectetur adipisicing elit. Rem optio
                             possimus asperiores ad adipisci quo architecto quibusdam quaerat,
                             fugiat, et quae dignissimos consequuntur itaque sint accusamus
@@ -253,8 +280,8 @@ const BottomSheetActions = ({
                 );
             case "promotionType":
                 return (
-                    <View style={{ padding: 20 }}>
-                        <Text>
+                    <View style={styles.placeholderBox}>
+                        <Text style={styles.placeholderText}>
                             Lorem ipsum dolor sit amet consectetur adipisicing elit. Rem optio
                             possimus asperiores ad adipisci quo architecto quibusdam quaerat,
                             fugiat, et quae dignissimos consequuntur itaque sint accusamus
@@ -265,24 +292,24 @@ const BottomSheetActions = ({
 
             case "influencerCard":
                 return (
-                    <List.Section style={{ paddingBottom: 28 }}>
+                    <List.Section style={styles.listSection}>
                         <List.Item
                             title="View Profile"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Send Message"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Block Influencer"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                             }}
@@ -292,24 +319,24 @@ const BottomSheetActions = ({
 
             case "applicationCard":
                 return (
-                    <List.Section style={{ paddingBottom: 28 }}>
+                    <List.Section style={styles.listSection}>
                         <List.Item
                             title="Send Message"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Accept Application"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleAcceptApplication();
                             }}
                         />
                         <List.Item
                             title="Reject Application"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleRejectApplication();
                             }}
@@ -319,24 +346,24 @@ const BottomSheetActions = ({
 
             case "invitationCard":
                 return (
-                    <List.Section style={{ paddingBottom: 28 }}>
+                    <List.Section style={styles.listSection}>
                         <List.Item
                             title="View Profile"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Send Message"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                             }}
                         />
                         <List.Item
                             title="Invite to Collaboration"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 setIsMessageModalVisible(true);
                             }}
@@ -349,10 +376,10 @@ const BottomSheetActions = ({
                 const isStopped = status === "stopped";
 
                 return (
-                    <List.Section style={{ paddingBottom: 28 }}>
+                    <List.Section style={styles.listSection}>
                         <List.Item
                             title="View Collaboration"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                                 router.push(`/collaboration-details/${cardId}`);
@@ -360,7 +387,7 @@ const BottomSheetActions = ({
                         />
                         <List.Item
                             title="Edit Collaboration"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                                 router.push({
@@ -373,7 +400,7 @@ const BottomSheetActions = ({
                         />
                         <List.Item
                             title="Copy Link"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={async () => {
                                 await copyToClipboard();
                                 Toaster.success("Link copied to clipboard");
@@ -382,7 +409,7 @@ const BottomSheetActions = ({
                         {!isPast && (
                             <List.Item
                                 title={isStopped ? "Start Receiving Applications" : "Stop Receiving Applications"}
-                                titleStyle={actionTextStyle}
+                                titleStyle={styles.actionTitle}
                                 onPress={() => {
                                     isStopped ? startReceivingApplications() : stopCollaboration();
                                 }}
@@ -391,7 +418,7 @@ const BottomSheetActions = ({
                         {isPast ? (
                             <List.Item
                                 title="Reactivate Collaboration"
-                                titleStyle={actionTextStyle}
+                                titleStyle={styles.actionTitle}
                                 onPress={() => {
                                     reactivateCollaboration();
                                 }}
@@ -399,7 +426,7 @@ const BottomSheetActions = ({
                         ) : (
                             <List.Item
                                 title="Delist Collaboration"
-                                titleStyle={actionTextStyle}
+                                titleStyle={styles.actionTitle}
                                 onPress={() => {
                                     delistCollaboration();
                                 }}
@@ -407,7 +434,7 @@ const BottomSheetActions = ({
                         )}
                         <List.Item
                             title="Delete Collaboration"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 deleteCollaboration();
                             }}
@@ -417,10 +444,10 @@ const BottomSheetActions = ({
             }
             case "contract":
                 return (
-                    <List.Section style={{ paddingBottom: 28 }}>
+                    <List.Section style={styles.listSection}>
                         <List.Item
                             title="View Collaboration"
-                            titleStyle={actionTextStyle}
+                            titleStyle={styles.actionTitle}
                             onPress={() => {
                                 handleClose();
                                 router.push(`/collaboration-details/${cardId}`);
@@ -447,14 +474,18 @@ const BottomSheetActions = ({
                     index={1} // Snap to the first point when opened
                     snapPoints={snapPoints}
                     enablePanDownToClose
+                    backgroundStyle={styles.sheetSurface}
+                    handleIndicatorStyle={styles.sheetHandle}
                     backdropComponent={() => {
                         // Dismiss when tapping outside
                         return <Pressable style={styles.overlay} onPress={handleClose} />;
                     }}
                     onClose={handleClose}
-                    style={styles.bottomSheet} // Ensure it's on top of everything
+                    style={[styles.bottomSheet, styles.sheetSurface]}
                 >
-                    <BottomSheetView>{renderContent()}</BottomSheetView>
+                    <BottomSheetView style={styles.sheetContent}>
+                        {renderContent()}
+                    </BottomSheetView>
                 </BottomSheet>
             </View>
         </Modal>
