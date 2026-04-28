@@ -1,7 +1,7 @@
 import type { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
-import * as FileSystem from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useMemo } from "react";
@@ -30,6 +30,9 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
             return;
         }
 
+        const ext = getVideoFileExtensionFromUrl(trimmed);
+        const baseFilename = `influencer-video-${Date.now()}.${ext}`;
+
         if (Platform.OS === "web") {
             try {
                 const res = await fetch(trimmed);
@@ -38,7 +41,7 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
                 const objectUrl = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = objectUrl;
-                a.download = `influencer-video-${Date.now()}.mp4`;
+                a.download = baseFilename;
                 a.rel = "noopener";
                 document.body.appendChild(a);
                 a.click();
@@ -52,14 +55,12 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
         }
 
         try {
-            const cacheDir = FileSystem.cacheDirectory;
+            const cacheDir = Paths.cache.uri;
             if (!cacheDir) {
                 Toaster.error("Download isn’t available on this device.");
                 return;
             }
-            const filename = `influencer-video-${Date.now()}.mp4`;
-            const dest = `${cacheDir}${filename}`;
-            const result = await FileSystem.downloadAsync(trimmed, dest);
+            const result = await File.downloadFileAsync(trimmed, new File(Paths.cache, baseFilename));
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(result.uri);
                 Toaster.success("Choose where to save the video");
@@ -103,6 +104,26 @@ const InfluencerUploadedVideo: React.FC<InfluencerUploadedVideoProps> = ({ contr
         </View>
     );
 };
+
+const VIDEO_FILE_EXT_FALLBACK = "mp4";
+
+/** Extension without leading dot; uses last path segment, falls back to mp4. */
+function getVideoFileExtensionFromUrl(urlString: string): string {
+    try {
+        const base = new URL(urlString).pathname.split("/").filter(Boolean).pop() ?? "";
+        const dot = base.lastIndexOf(".");
+        if (dot < 0 || dot === base.length - 1) {
+            return VIDEO_FILE_EXT_FALLBACK;
+        }
+        const raw = base.slice(dot + 1).toLowerCase();
+        if (!/^[a-z0-9]{1,10}$/.test(raw)) {
+            return VIDEO_FILE_EXT_FALLBACK;
+        }
+        return raw;
+    } catch {
+        return VIDEO_FILE_EXT_FALLBACK;
+    }
+}
 
 function isLikelyYoutubeUrl(url: string): boolean {
     try {
