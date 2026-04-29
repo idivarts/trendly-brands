@@ -4,6 +4,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faClose, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import * as Clipboard from "expo-clipboard";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,6 +43,17 @@ const ViewInfluencerAddressOverlay: React.FC<ViewInfluencerAddressOverlayProps> 
         String(address.street ?? "").trim() &&
         String(address.city ?? "").trim();
 
+    const addressText = hasAddress
+        ? [
+              String(address!.street ?? "").trim(),
+              [address!.city, address!.state, address!.postalCode]
+                  .filter((p) => String(p ?? "").trim())
+                  .join(", "),
+          ]
+              .filter((l) => l.trim())
+              .join("\n")
+        : "";
+
     const handleNudge = useCallback(async () => {
         if (!onNudgeForAddress) return;
         setSending(true);
@@ -55,6 +67,16 @@ const ViewInfluencerAddressOverlay: React.FC<ViewInfluencerAddressOverlayProps> 
             setSending(false);
         }
     }, [onClose, onNudgeForAddress]);
+
+    const handleCopy = useCallback(async () => {
+        if (!hasAddress || !addressText) return;
+        try {
+            await Clipboard.setStringAsync(addressText);
+            Toaster.success("Shipping address copied");
+        } catch {
+            Toaster.error("Failed to copy address");
+        }
+    }, [addressText, hasAddress]);
 
     return (
         <ContractActionOverlay
@@ -122,9 +144,19 @@ const ViewInfluencerAddressOverlay: React.FC<ViewInfluencerAddressOverlayProps> 
                     </View>
                 )}
 
-                <Button mode="outlined" onPress={onClose} style={styles.closeButton}>
-                    Close
-                </Button>
+                <View style={styles.actionsRow}>
+                    <Button mode="outlined" onPress={onClose} style={styles.actionButton}>
+                        Cancel
+                    </Button>
+                    <Button
+                        mode="contained"
+                        onPress={handleCopy}
+                        style={styles.actionButton}
+                        disabled={!hasAddress}
+                    >
+                        Copy
+                    </Button>
+                </View>
             </View>
         </ContractActionOverlay>
     );
@@ -186,7 +218,11 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         noAddressText: { fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 8 },
         noAddressHint: { fontSize: 14, color: colors.gray300, lineHeight: 20, marginBottom: 16 },
         nudgeButton: { alignSelf: "flex-start" },
-        closeButton: { alignSelf: "stretch" },
+        actionsRow: {
+            flexDirection: "row",
+            gap: 12,
+        },
+        actionButton: { flex: 1 },
     });
 }
 
