@@ -10,13 +10,13 @@ import { IContracts, PaymentStatus } from "@/shared-libs/firestore/trendly-pro/m
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     ContractActionsWithMessage,
     type ContractActionButton,
     type ContractActionsMessage,
 } from "@/shared-uis/components/contract-actions-with-message";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCircleInfo,
@@ -36,16 +36,16 @@ import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
 import ApproveVideoReleaseBottomSheet from "./modals/ApproveVideoReleaseBottomSheet";
 import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
-import StartContractPaymentBottomSheet, {
-    formatContractMoneyLabel,
-    formatInfluencerHandleFromUser,
-} from "./modals/StartContractPaymentBottomSheet";
+import KycBlockedStartContractModal from "./modals/KycBlockedStartContractModal";
 import MarkAsDeliveredModal from "./modals/MarkAsDeliveredModal";
 import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
 import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
 import RequestRevisionModal from "./modals/RequestRevisionModal";
 import ShippingAddressModal from "./modals/ShippingAddressModal";
-import KycBlockedStartContractModal from "./modals/KycBlockedStartContractModal";
+import StartContractPaymentBottomSheet, {
+    formatContractMoneyLabel,
+    formatInfluencerHandleFromUser,
+} from "./modals/StartContractPaymentBottomSheet";
 import ViewInfluencerAddressOverlay from "./modals/ViewInfluencerAddressOverlayComponent";
 import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
 
@@ -428,65 +428,23 @@ const ActionContainer: FC<ActionContainerProps> = ({
         }
         if (status === ContractStatus.Started) {
             // Backend OrderCreated (1): after order exists, payment may still be open in Razorpay.
-            if (showContinueContractPayment) {
-                return {
-                    buttons: [
-                        {
-                            label: "Continue payment",
-                            variant: "contained",
-                            onPress: () => {
-                                void handlePendingPayment({ resumeExistingOrder: true });
-                            },
-                            loading: paymentButtonLoading,
-                        },
-                        {
-                            label: "Go to Messages",
-                            variant: "outlined",
-                            onPress: goToMessages,
-                            loading: goToMessagesLoading,
-                        },
-                    ],
-                    message: messageForStatus(),
-                };
-            }
-            // Paid / no open order: next step is shipment or deliverable request.
             return {
-                buttons: productShipping
-                    ? [
-                        {
-                            label: "View Influencer Address",
-                            variant: "outlined",
-                            onPress: () => {
-                                setShowShippingModal(false);
-                                setShowViewAddress(true);
-                            },
-                            loading: showViewAddress && shippingAddressLoading,
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Continue payment",
+                        variant: "contained",
+                        onPress: () => {
+                            void handlePendingPayment({ resumeExistingOrder: true });
                         },
-                        {
-                            label: "Add Shipment Details",
-                            variant: "contained",
-                            onPress: () => {
-                                setShowViewAddress(false);
-                                setShowShippingModal(true);
-                            },
-                        },
-                    ]
-                    : [
-                        {
-                            label: "Go to Messages",
-                            variant: "outlined",
-                            onPress: goToMessages,
-                            loading: goToMessagesLoading,
-                        },
-                        {
-                            label: "Request for Video",
-                            variant: "contained",
-                            onPress: () => {
-                                void handleRequestDeliverable();
-                            },
-                            loading: requestVideoLoading,
-                        },
-                    ],
+                        loading: paymentButtonLoading,
+                    },
+                ],
                 message: messageForStatus(),
             };
         }
@@ -619,14 +577,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     buttons: [
                         {
                             label: "Go to Messages",
-                            variant: "outlined",
+                            variant: "contained",
                             onPress: goToMessages,
                             loading: goToMessagesLoading,
-                        },
-                        {
-                            label: "Feedback",
-                            variant: "contained",
-                            onPress: () => feedbackModalVisible(),
                         },
                     ],
                     message: messageForStatus(),
@@ -673,7 +626,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         loading: goToMessagesLoading,
                     },
                     {
-                        label: "Feedback",
+                        label: "Give Feedback",
                         variant: "contained",
                         onPress: () => feedbackModalVisible(),
                     },
@@ -741,35 +694,35 @@ const ActionContainer: FC<ActionContainerProps> = ({
             {showFeedbackAndInfo &&
                 canShowReviewsByStatus &&
                 (contract.feedbackFromBrand || showInfluencerFeedbackCard) && (
-                <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
-            )}
+                    <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
+                )}
             {showFeedbackAndInfo &&
                 canShowReviewsByStatus &&
                 contract.feedbackFromBrand && (
-                <View style={styles.feedbackCard}>
-                    <View style={styles.starsRow}>
-                        {renderStars(contract.feedbackFromBrand.ratings || 0)}
-                    </View>
-                    <View style={styles.feedbackInner}>
-                        <ImageComponent
-                            url={manager?.profileImage || ""}
-                            altText={manager?.name || ""}
-                            initials={manager?.name || ""}
-                            shape="circle"
-                            size="small"
-                            style={styles.avatar}
-                        />
-                        <View style={styles.feedbackTextWrap}>
-                            <Text style={styles.feedbackLabel}>
-                                From Brand ({manager?.name})
-                            </Text>
-                            <Text style={styles.feedbackReview}>
-                                {contract.feedbackFromBrand.feedbackReview}
-                            </Text>
+                    <View style={styles.feedbackCard}>
+                        <View style={styles.starsRow}>
+                            {renderStars(contract.feedbackFromBrand.ratings || 0)}
+                        </View>
+                        <View style={styles.feedbackInner}>
+                            <ImageComponent
+                                url={manager?.profileImage || ""}
+                                altText={manager?.name || ""}
+                                initials={manager?.name || ""}
+                                shape="circle"
+                                size="small"
+                                style={styles.avatar}
+                            />
+                            <View style={styles.feedbackTextWrap}>
+                                <Text style={styles.feedbackLabel}>
+                                    From Brand ({manager?.name})
+                                </Text>
+                                <Text style={styles.feedbackReview}>
+                                    {contract.feedbackFromBrand.feedbackReview}
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                </View>
-            )}
+                )}
             {showFeedbackAndInfo && canShowReviewsByStatus && showInfluencerFeedbackCard && (
                 <View style={styles.feedbackCard}>
                     <View style={styles.starsRow}>
