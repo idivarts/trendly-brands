@@ -94,6 +94,7 @@
                     }
                 }
             ],
+            "./plugins/with-ios-fmt-xcode26-fix.js",
             "expo-notifications",
             "@react-native-google-signin/google-signin",
             [
