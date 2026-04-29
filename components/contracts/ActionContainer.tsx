@@ -366,6 +366,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         if (isLegacyFlow && contract.status === 0) {
             return {
                 buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Start contract",
                         variant: "contained",
@@ -420,6 +421,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         if (!isLegacyFlow && status === ContractStatus.Pending) {
             return {
                 buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Start contract",
                         variant: "contained",
@@ -437,6 +439,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         if (!isLegacyFlow && status === ContractStatus.PaymentFailed) {
             return {
                 buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Retry Payment",
                         variant: "contained",
@@ -487,6 +490,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         },
                     ]
                     : [
+                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                         {
                             label: "Request for Video",
                             variant: "contained",
@@ -595,9 +599,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
         if (!isLegacyFlow && status === ContractStatus.PostingPending) {
             return {
                 buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Change Release Date",
-                        variant: "outlined",
+                        variant: "contained",
                         onPress: () => setShowChangeDateSheet(true),
                     },
                 ],
@@ -608,7 +613,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
             if (brandSubmittedFeedback) {
                 return {
                     buttons: [
-                        { label: "Go to Messages", variant: "contained", onPress: goToMessages },
+                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                        {
+                            label: "Feedback",
+                            variant: "contained",
+                            onPress: () => feedbackModalVisible(),
+                        },
                     ],
                     message: messageForStatus(),
                 };
@@ -616,8 +626,30 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
             return {
                 buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Give Feedback",
+                        variant: "contained",
+                        onPress: () => feedbackModalVisible(),
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (!isLegacyFlow && status === ContractStatus.Settled) {
+            if (brandSubmittedFeedback) {
+                return {
+                    buttons: [
+                        { label: "Go to Messages", variant: "contained", onPress: goToMessages },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
+            return {
+                buttons: [
+                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Feedback",
                         variant: "contained",
                         onPress: () => feedbackModalVisible(),
                     },
