@@ -178,6 +178,7 @@ const BrandFeedbackModal: React.FC<BrandFeedbackModalProps> = ({
             <BottomSheetScrollContainer
                 isVisible={visible}
                 snapPointsRange={["55%", "92%"]}
+                fullScreen
                 onClose={handleDismiss}
             >
                 {nativeSheetContent}
