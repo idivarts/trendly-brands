@@ -1,4 +1,5 @@
 import { useAWSContext } from "@/contexts";
+import { AWSProgressUpdateSubject } from "@/shared-libs/contexts/aws-context.provider";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -6,7 +7,7 @@ import { faBox, faCircleInfo, faClose, faCloudArrowUp } from "@fortawesome/free-
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Keyboard,
     KeyboardAvoidingView,
@@ -16,7 +17,7 @@ import {
     StyleSheet,
     View,
 } from "react-native";
-import { Checkbox } from "react-native-paper";
+import { Checkbox, ProgressBar } from "react-native-paper";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import TextInput from "../../ui/text-input";
@@ -41,7 +42,7 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const { uploadFile, uploadFileUri } = useAWSContext();
+    const { uploadFiles, uploadFileUris } = useAWSContext();
 
     const webFileInputRef = useRef<HTMLInputElement | null>(null);
     const [webSelectedFile, setWebSelectedFile] = useState<File | null>(null);
@@ -50,8 +51,18 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     const [note, setNote] = useState("");
     const [confirmChecked, setConfirmChecked] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [uploadPercentage, setUploadPercentage] = useState<number>(0);
 
     const hasProofSelected = Platform.OS === "web" ? !!webSelectedFile : !!nativeImageUri;
+
+    useEffect(() => {
+        if (!submitting) return;
+        const subscription = AWSProgressUpdateSubject.subscribe(({ percentage }) => {
+            const next = Math.max(0, Math.min(100, Math.round(percentage)));
+            setUploadPercentage(next);
+        });
+        return () => subscription.unsubscribe();
+    }, [submitting]);
 
     const openWebFilePicker = () => {
         webFileInputRef.current?.click?.();
@@ -116,29 +127,33 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
             return;
         }
         setSubmitting(true);
+        setUploadPercentage(0);
         let proofOfDeliveryUrl: string;
         try {
             if (Platform.OS === "web") {
                 if (!webSelectedFile) {
                     throw new Error("Missing proof file");
                 }
-                const attachment = await uploadFile(webSelectedFile);
-                proofOfDeliveryUrl = processRawAttachment(attachment).url;
+                const attachments = await uploadFiles([webSelectedFile]);
+                proofOfDeliveryUrl = processRawAttachment(attachments[0]).url;
             } else {
                 if (!nativeImageUri) {
                     throw new Error("Missing proof image");
                 }
-                const attachment = await uploadFileUri({
-                    id: nativeImageUri,
-                    type: nativeImageMimeType,
-                    localUri: nativeImageUri,
-                    uri: nativeImageUri,
-                });
-                proofOfDeliveryUrl = processRawAttachment(attachment).url;
+                const attachments = await uploadFileUris([
+                    {
+                        id: nativeImageUri,
+                        type: nativeImageMimeType,
+                        localUri: nativeImageUri,
+                        uri: nativeImageUri,
+                    },
+                ]);
+                proofOfDeliveryUrl = processRawAttachment(attachments[0]).url;
             }
             if (!proofOfDeliveryUrl) {
                 throw new Error("Upload did not return a URL");
             }
+            setUploadPercentage(100);
         } catch (e) {
             const message = e instanceof Error ? e.message : "";
             if (message) {
@@ -179,6 +194,7 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
         setNativeImageMimeType("image/jpeg");
         setNote("");
         setConfirmChecked(false);
+        setUploadPercentage(0);
         onClose();
     };
 
@@ -225,7 +241,7 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                     showsVerticalScrollIndicator={false}
                 >
                     <Text style={styles.label}>PROOF OF DELIVERY</Text>
-                    <Pressable style={styles.uploadBox} onPress={pickImage}>
+                    <Pressable style={styles.uploadBox} onPress={pickImage} disabled={submitting}>
                         {hasProofSelected ? (
                             <View style={styles.uploadPreview}>
                                 <FontAwesomeIcon icon={faBox} size={40} color={colors.primary} />
@@ -241,6 +257,20 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                             </>
                         )}
                     </Pressable>
+
+                    {submitting && (
+                        <View style={styles.progressWrap}>
+                            <View style={styles.progressHeader}>
+                                <Text style={styles.progressLabel}>Uploading</Text>
+                                <Text style={styles.progressValue}>{uploadPercentage}%</Text>
+                            </View>
+                            <ProgressBar
+                                progress={uploadPercentage / 100}
+                                color={colors.primary}
+                                style={styles.progressBar}
+                            />
+                        </View>
+                    )}
 
                     <Text style={styles.label}>NOTE</Text>
                     <TextInput
@@ -367,6 +397,31 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             color: colors.primary,
             marginTop: 8,
             textAlign: "center",
+        },
+        progressWrap: {
+            marginTop: -8,
+            marginBottom: 20,
+            gap: 8,
+        },
+        progressHeader: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+        },
+        progressLabel: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary ?? colors.text,
+        },
+        progressValue: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        progressBar: {
+            height: 8,
+            borderRadius: 8,
+            backgroundColor: colors.secondarySurface,
         },
         noteInput: {
             minHeight: 80,

@@ -5,9 +5,13 @@ import {
     IApplications,
     ICollaboration,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import {
+    ContractStatus,
+    IContracts,
+} from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import Carousel from "@/shared-uis/components/carousel/carousel";
+import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { Text } from "@/shared-uis/components/theme/Themed";
@@ -21,7 +25,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
@@ -55,6 +59,11 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
     const [addMemberModal, setAddMemberModal] = useState(false);
     const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
     const [updateMemberContainer, setUpdateMemberContainer] = useState(0);
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState(false);
+
+    const effectiveStatus = (props.devOverrideStatus ??
+        props.contractData.status) as number;
 
     const attachments =
         props?.applicationData?.attachments?.map((a) =>
@@ -100,6 +109,133 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                             <Text style={styles.revisionText}>{note}</Text>
                         </View>
                     ))}
+                </View>
+            </View>
+        );
+    };
+
+    const renderProductReceivedProofSection = () => {
+        if (effectiveStatus !== ContractStatus.VideoPending) return null;
+
+        const proofImage = props.contractData.shipment?.packageScreenshots?.[0] || null;
+        const notes =
+            props.contractData.shipment?.receivedNotes ||
+            props.contractData.shipment?.notes ||
+            null;
+
+        return (
+            <View style={styles.postProofSection}>
+                <Text style={styles.sectionLabel}>PROOF OF PRODUCT RECEIVED</Text>
+                <View style={styles.postProofCard}>
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Product Proof Image</Text>
+                        {proofImage ? (
+                            <Pressable
+                                style={styles.postProofImageWrap}
+                                onPress={() => {
+                                    setPreviewImageUrl(proofImage);
+                                    setPreviewImage(true);
+                                }}
+                            >
+                                <ImageComponent
+                                    url={proofImage}
+                                    altText="Product received proof"
+                                    initials=" "
+                                    shape="square"
+                                    size="large"
+                                    style={styles.postProofImage}
+                                />
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.postProofValueMuted}>—</Text>
+                        )}
+                    </View>
+
+                    <View style={styles.postProofDivider} />
+
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Notes</Text>
+                        <Text
+                            style={[
+                                styles.postProofNotes,
+                                !notes ? styles.postProofValueMuted : null,
+                            ]}
+                        >
+                            {notes || "—"}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
+    const renderPostProofSection = () => {
+        if (effectiveStatus !== ContractStatus.SettlementPending) return null;
+
+        const proofScreenshot = props.contractData.posting?.proofScreenshot || null;
+        const postUrl =
+            props.contractData.posting?.postUrl ||
+            props.contractData.posting?.postedLinks?.[0] ||
+            null;
+        const notes = props.contractData.posting?.notes || null;
+
+        return (
+            <View style={styles.postProofSection}>
+                <Text style={styles.sectionLabel}>PROOF OF VIDEO POSTED</Text>
+                <View style={styles.postProofCard}>
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Post Proof Image</Text>
+                        {proofScreenshot ? (
+                            <Pressable
+                                style={styles.postProofImageWrap}
+                                onPress={() => {
+                                    setPreviewImageUrl(proofScreenshot);
+                                    setPreviewImage(true);
+                                }}
+                            >
+                                <ImageComponent
+                                    url={proofScreenshot}
+                                    altText="Post proof"
+                                    initials=" "
+                                    shape="square"
+                                    size="large"
+                                    style={styles.postProofImage}
+                                />
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.postProofValueMuted}>—</Text>
+                        )}
+                    </View>
+
+                    <View style={styles.postProofDivider} />
+
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Link added by the user</Text>
+                        {postUrl ? (
+                            <Pressable
+                                onPress={() => Linking.openURL(postUrl)}
+                                style={styles.postProofLinkPressable}
+                            >
+                                <Text style={styles.postProofLinkText}>{postUrl}</Text>
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.postProofValueMuted}>—</Text>
+                        )}
+                    </View>
+
+                    <View style={styles.postProofDivider} />
+
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Notes</Text>
+                        <Text
+                            style={[
+                                styles.postProofNotes,
+                                !notes ? styles.postProofValueMuted : null,
+                            ]}
+                        >
+                            {notes || "—"}
+                        </Text>
+                    </View>
                 </View>
             </View>
         );
@@ -214,6 +350,10 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
 
             {renderRevisionNotesSection()}
 
+            {renderProductReceivedProofSection()}
+
+            {renderPostProofSection()}
+
             <UserResponse
                 application={props.applicationData}
                 influencerQuestions={
@@ -323,6 +463,10 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
 
                 {renderRevisionNotesSection()}
 
+                {renderProductReceivedProofSection()}
+
+                {renderPostProofSection()}
+
                 <MemberContainer
                     //@ts-ignore
                     channelId={props.contractData.streamChannelId}
@@ -406,6 +550,15 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 contractId={props.contractData.streamChannelId}
                 refreshData={props.refreshData}
             />
+
+            {previewImage && (
+                <AssetPreviewModal
+                    previewImage={previewImage}
+                    previewImageUrl={previewImageUrl}
+                    setPreviewImage={setPreviewImage}
+                    theme={theme}
+                />
+            )}
         </ScrollView>
     );
 };
@@ -521,6 +674,10 @@ function createStyles(
             width: "100%",
             gap: 12,
         },
+        postProofSection: {
+            width: "100%",
+            gap: 12,
+        },
         sectionLabel: {
             fontSize: 12,
             fontWeight: "600",
@@ -548,6 +705,56 @@ function createStyles(
             gap: 10,
             borderWidth: StyleSheet.hairlineWidth,
             borderColor: colors.secondaryBorder,
+        },
+        postProofCard: {
+            width: "100%",
+            backgroundColor: colors.secondarySurface,
+            borderRadius: 8,
+            padding: 12,
+            gap: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
+        },
+        postProofRow: {
+            gap: 8,
+        },
+        postProofLabel: {
+            fontSize: 12,
+            color: colors.textSecondary,
+        },
+        postProofValueMuted: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            opacity: 0.85,
+        },
+        postProofImageWrap: {
+            alignSelf: "flex-start",
+            borderRadius: 10,
+            overflow: "hidden",
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
+            backgroundColor: colors.card,
+        },
+        postProofImage: {
+            width: 160,
+            height: 160,
+        } as const,
+        postProofDivider: {
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: colors.secondaryBorder,
+        },
+        postProofLinkPressable: {
+            alignSelf: "flex-start",
+        },
+        postProofLinkText: {
+            fontSize: 14,
+            color: colors.primary,
+            textDecorationLine: "underline",
+        },
+        postProofNotes: {
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.text,
         },
         revisionItem: {
             flexDirection: "row",
