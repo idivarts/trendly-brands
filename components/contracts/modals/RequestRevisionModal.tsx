@@ -1,4 +1,3 @@
-import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { faClose } from "@fortawesome/free-solid-svg-icons";
@@ -10,11 +9,9 @@ import {
     KeyboardAvoidingView,
     Platform,
     Pressable,
-    ScrollView,
     StyleSheet,
     View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import TextInput from "../../ui/text-input";
@@ -35,15 +32,8 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
     onSuccess,
 }) => {
     const theme = useTheme();
-    const insets = useSafeAreaInsets();
-    const { xl, width } = useBreakpoints();
     const colors = Colors(theme);
-    const modalMaxWidth = useMemo(() => {
-        const horizontalMargin = 48;
-        const cap = xl ? 1120 : 520;
-        return Math.max(280, Math.min(cap, width - horizontalMargin));
-    }, [xl, width]);
-    const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [notes, setNotes] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
@@ -93,35 +83,28 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
                     </Pressable>
                 </View>
                 <Text style={styles.label}>Revision notes for the influencer</Text>
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <TextInput
-                        value={notes}
-                        onChangeText={setNotes}
-                        placeholder="Describe what changes you need..."
-                        multiline
-                        numberOfLines={4}
-                        style={styles.input}
-                    />
-                    <View style={styles.actions}>
-                        <Button mode="outlined" style={styles.button} onPress={handleClose}>
-                            Cancel
-                        </Button>
-                        <Button
-                            mode="contained"
-                            style={styles.button}
-                            onPress={handleSend}
-                            disabled={submitting}
-                            loading={submitting}
-                        >
-                            Send Request
-                        </Button>
-                    </View>
-                </ScrollView>
+                <TextInput
+                    value={notes}
+                    onChangeText={setNotes}
+                    placeholder="Describe what changes you need..."
+                    multiline
+                    numberOfLines={6}
+                    style={styles.input}
+                />
+                <View style={styles.actions}>
+                    <Button mode="outlined" style={styles.button} onPress={handleClose}>
+                        Cancel
+                    </Button>
+                    <Button
+                        mode="contained"
+                        style={styles.button}
+                        onPress={handleSend}
+                        disabled={submitting}
+                        loading={submitting}
+                    >
+                        Send Request
+                    </Button>
+                </View>
             </Pressable>
         </KeyboardAvoidingView>
     );
@@ -131,25 +114,24 @@ const RequestRevisionModal: React.FC<RequestRevisionModalProps> = ({
             visible={visible}
             onClose={handleClose}
             mode="modal"
-            modalMaxWidth={modalMaxWidth}
         >
             <View style={styles.modalContainer}>{modalContent}</View>
         </ContractActionOverlay>
     );
 };
 
-function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
+function createStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
         modalContainer: {
+            flex: 1,
+            width: "100%",
             backgroundColor: colors.background,
             padding: 24,
-            paddingTop: Math.max(safeAreaTop, 16),
+            paddingTop: 16,
             overflow: "hidden",
         },
         keyboardView: { flex: 1, width: "100%" },
         modalInner: { flex: 1, width: "100%" },
-        scrollView: { flex: 1 },
-        scrollContent: { paddingBottom: 24 },
         header: {
             flexDirection: "row",
             justifyContent: "space-between",
@@ -163,10 +145,13 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         },
         label: {
             fontSize: 14,
-            color: colors.gray300,
+            color: colors.textSecondary ?? colors.text,
             marginBottom: 8,
         },
-        input: { marginBottom: 16 },
+        input: {
+            marginBottom: 16,
+            minHeight: 140,
+        },
         actions: {
             flexDirection: "row",
             gap: 12,

@@ -54,6 +54,7 @@ export default function ContractActionOverlay({
             <BottomSheetScrollContainer
                 isVisible={visible}
                 snapPointsRange={snapPointsRange}
+                fullScreen={Platform.OS !== "web"}
                 onClose={onClose}
             >
                 <View style={styles.sheetContainer}>{children}</View>
