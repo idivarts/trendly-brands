@@ -2,9 +2,12 @@ import { ContractStatus, RELEASE_DATE_MAX_DAYS } from "@/shared-constants/contra
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import DatePickerModal from "../../modals/DatePickerModal";
+import React, { useEffect, useMemo, useState } from "react";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
+import DatePickerModal, {
+    formatDateForWebInput,
+    parseWebInputDate,
+} from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import { changeReleaseDate as changeReleaseDateState7 } from "../api/posting-pending.api";
@@ -40,6 +43,21 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const webDateInputStyle = useMemo(
+        () => ({
+            width: "100%" as const,
+            height: 44,
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            border: `1px solid ${colors.budgetCardBorder}`,
+            backgroundColor: colors.secondarySurface ?? colors.card,
+            color: colors.text,
+            fontSize: 15,
+            boxSizing: "border-box" as const,
+        }),
+        [colors.budgetCardBorder, colors.card, colors.secondarySurface, colors.text]
+    );
 
     const [date, setDate] = useState(() =>
         initialDate ? new Date(initialDate) : (() => {
@@ -50,6 +68,27 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
     );
     const [submitting, setSubmitting] = useState(false);
     const [dateModalVisible, setDateModalVisible] = useState(false);
+
+    /** Keep local date in sync when reopening with a new initialDate from the contract. */
+    useEffect(() => {
+        if (!visible) return;
+        if (initialDate) {
+            setDate(new Date(initialDate));
+        }
+    }, [visible, initialDate]);
+
+    /**
+     * Native: open the system date UI as soon as this sheet is shown (same flow as Approve Video).
+     * Web: use inline `input type="date"` below — no second modal.
+     */
+    useEffect(() => {
+        if (!visible) {
+            setDateModalVisible(false);
+            return;
+        }
+        if (Platform.OS === "web") return;
+        setDateModalVisible(true);
+    }, [visible]);
 
     const handleConfirm = async () => {
         if (contractStatus !== ContractStatus.PostingPending) return;
@@ -82,29 +121,63 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
         <View style={styles.container}>
             <Text style={styles.title}>Change Release Date</Text>
             <Text style={styles.subtitle}>Max 30 days from today</Text>
-            <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setDateModalVisible(true)}
-            >
-                <Text style={styles.dateButtonText}>
-                    {date.toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
+
+            {Platform.OS === "web" ? (
+                <View style={styles.webDateSection}>
+                    <Text style={styles.dateFieldLabel}>Release date</Text>
+                    {React.createElement("input", {
+                        type: "date",
+                        value: formatDateForWebInput(date),
+                        min: formatDateForWebInput(new Date()),
+                        max: formatDateForWebInput(maxReleaseDate()),
+                        onChange: (e: { target?: { value?: string } }) => {
+                            const raw = e?.target?.value ?? "";
+                            const parsed = parseWebInputDate(raw);
+                            if (!parsed) return;
+                            const capped = Math.min(
+                                parsed.getTime(),
+                                maxReleaseDate().getTime()
+                            );
+                            setDate(new Date(capped));
+                        },
+                        style: webDateInputStyle,
                     })}
-                </Text>
-            </TouchableOpacity>
-            <DatePickerModal
-                visible={dateModalVisible}
-                title="Select release date"
-                value={date}
-                onChange={setDate}
-                onClose={() => setDateModalVisible(false)}
-                minimumDate={new Date()}
-                maximumDate={maxReleaseDate()}
-                submitText="Done"
-                cancelText="Cancel"
-            />
+                </View>
+            ) : (
+                <>
+                    {!dateModalVisible ? (
+                        <Pressable
+                            onPress={() => setDateModalVisible(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Change release date"
+                            style={({ pressed }) => [
+                                styles.dateButton,
+                                pressed && styles.dateButtonPressed,
+                            ]}
+                        >
+                            <Text style={styles.dateButtonText}>
+                                {date.toLocaleDateString(undefined, {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                })}
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                    <DatePickerModal
+                        visible={dateModalVisible}
+                        title="Select release date"
+                        value={date}
+                        onChange={setDate}
+                        onClose={() => setDateModalVisible(false)}
+                        minimumDate={new Date()}
+                        maximumDate={maxReleaseDate()}
+                        submitText="Done"
+                        cancelText="Cancel"
+                    />
+                </>
+            )}
+
             <View style={styles.actions}>
                 <Button mode="outlined" style={styles.button} onPress={onClose}>
                     Cancel
@@ -114,8 +187,9 @@ const ChangeReleaseDateSheet: React.FC<ChangeReleaseDateSheetProps> = ({
                     style={styles.button}
                     onPress={handleConfirm}
                     disabled={submitting}
+                    loading={submitting}
                 >
-                    Update Date
+                    {submitting ? "Updating…" : "Update Date"}
                 </Button>
             </View>
         </View>
@@ -148,15 +222,27 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         subtitle: {
             fontSize: 14,
-            color: colors.gray300,
+            color: colors.textSecondary ?? colors.text,
             marginBottom: 12,
+        },
+        webDateSection: {
+            marginBottom: 20,
+        },
+        dateFieldLabel: {
+            fontSize: 14,
+            fontWeight: "500",
+            color: colors.text,
+            marginBottom: 6,
         },
         dateButton: {
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 8,
-            backgroundColor: colors.tag ?? "rgba(0,0,0,0.06)",
+            backgroundColor: colors.tag ?? colors.gray200,
             marginBottom: 20,
+        },
+        dateButtonPressed: {
+            opacity: 0.85,
         },
         dateButtonText: {
             fontSize: 15,
