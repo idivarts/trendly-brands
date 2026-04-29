@@ -70,7 +70,7 @@ Both apps read the **same** Firestore `contracts` doc and **same** collaboration
   - `actor` (`"brand"` | `"influencer"`),  
   - `scheduledReleaseAt?` (timestamp for PostScheduled; e.g. from `contract.posting?.scheduledDate`),  
   - `showDescription?`,  
-  - `overrideLabel?` / `overrideDescription?` (e.g. legacy “Active” in Brands app).
+  - `overrideLabel?` / `overrideDescription?` (optional display overrides).
 - **Behavior:**  
   - Renders a **badge** with the status label (from `CONTRACT_STATUS_LABELS` or override).  
   - If `showDescription`, shows the line from `getContractStatusDescription(status, actor)`.  
@@ -117,10 +117,9 @@ Both apps read the **same** Firestore `contracts` doc and **same** collaboration
   - `paymentStatus`: from contract (or payments collection); used for payment states.
 - **KYC gate:** **`kycBlocked = (status === Pending) && isContractBlockedByKYC(userData)`**. When true, show “The influencer must complete KYC before the contract can start” and do not show “Make Payment” or “Start Contract”. KYC is not a contract state.
 - **Status handling:**  
-  - **`normalizeStatus(contract.status)`:** Pass-through 0–10; legacy 2/3 map to DeliverableSent/Settled if needed.  
-  - **`isLegacyFlow`:** When `contract.status` is 0 or 1 and `collaborationData` is not passed, keeps old “Start Contract” / “End Contract” / “Go to Messages” behavior and uses override label “Active” for status 1.
+  - **`normalizeStatus(contract.status)`:** Pass-through 0–10; legacy 2/3 map to DeliverableSent/Settled if needed.
 - **Rendering:**  
-  - Always shows **ContractStatusView** with `actor="brand"`, `status` (0–10), `scheduledReleaseAt={contract.posting?.scheduledDate}`, and optional overrides for legacy.  
+  - Always shows **ContractStatusView** with `actor="brand"`, `status` (0–10), `scheduledReleaseAt={contract.posting?.scheduledDate}`.  
   - When **kycBlocked**, show only the KYC message (no Make Payment / Start Contract).  
   - Then, per **normalized status**, shows the right **brand** buttons:
     - Pending (0) and !kycBlocked → “Make Payment”

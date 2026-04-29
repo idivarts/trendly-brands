@@ -10,7 +10,6 @@ import { IContracts, PaymentStatus } from "@/shared-libs/firestore/trendly-pro/m
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     ContractActionsWithMessage,
@@ -28,7 +27,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
 import { getShipmentStatus } from "./api/shipment-pending.api";
@@ -118,6 +117,10 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
     const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
     const [deliveryStatusLoading, setDeliveryStatusLoading] = useState(false);
+    const [goToMessagesLoading, setGoToMessagesLoading] = useState(false);
+    const goToMessagesInFlightRef = useRef(false);
+    const [requestVideoLoading, setRequestVideoLoading] = useState(false);
+    const requestVideoInFlightRef = useRef(false);
 
     const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
     const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
@@ -173,11 +176,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const productShipping = isProductShipping(collaborationData);
     /** KYC is a gate: block Make Payment / Start Contract until influencer KYC is done. Not a contract state. */
     const kycBlocked = (status === ContractStatus.Pending || contract.status === ContractStatus.Pending) && isContractBlockedByKYC(userData);
-    const isLegacyFlow =
-        devOverrideStatus == null &&
-        contract.status <= 1 &&
-        contract.status >= 0 &&
-        !collaborationData;
 
     const brandSubmittedFeedback = brandHasSubmittedFeedback(contract);
     const canShowReviewsByStatus =
@@ -229,7 +227,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         fetchManager();
     }, [contract.feedbackFromBrand?.managerId]);
 
-    const { openModal } = useConfirmationModel();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -251,7 +248,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
     const handleStartContractPress = useCallback(() => {
         // KYC gate: prefetch order side-effects if any, then show blocking modal (no payment summary).
-        if (!isLegacyFlow && kycBlocked) {
+        if (kycBlocked) {
             void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
             setShowKycBlockedStartContractModal(true);
             return;
@@ -261,7 +258,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         openStartContractPaymentSheet();
     }, [
         handlePendingPayment,
-        isLegacyFlow,
         kycBlocked,
         openStartContractPaymentSheet,
         showContinueContractPayment,
@@ -289,14 +285,37 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
 
-    const goToMessages = async () => {
-        if (Platform.OS === "web")
-            router.navigate(`/messages?channelId=${contract.streamChannelId}`);
-        else {
-            const channelCid = await fetchChannelCid(contract.streamChannelId);
-            router.navigate(`/channel/${channelCid}`);
+    const goToMessages = useCallback(async () => {
+        if (goToMessagesInFlightRef.current) return;
+        goToMessagesInFlightRef.current = true;
+        setGoToMessagesLoading(true);
+        try {
+            if (Platform.OS === "web") {
+                router.navigate(`/messages?channelId=${contract.streamChannelId}`);
+            } else {
+                const channelCid = await fetchChannelCid(contract.streamChannelId);
+                router.navigate(`/channel/${channelCid}`);
+            }
+        } finally {
+            goToMessagesInFlightRef.current = false;
+            setGoToMessagesLoading(false);
         }
-    };
+    }, [fetchChannelCid, contract.streamChannelId]);
+
+    const handleRequestDeliverable = useCallback(async () => {
+        if (requestVideoInFlightRef.current) return;
+        requestVideoInFlightRef.current = true;
+        setRequestVideoLoading(true);
+        try {
+            await requestDeliverableWithUX(
+                { contractId: contractIdForApi },
+                { onSuccess: refreshData }
+            );
+        } finally {
+            requestVideoInFlightRef.current = false;
+            setRequestVideoLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
 
     const actionsConfig = useMemo((): {
         buttons: [] | [ContractActionButton] | [ContractActionButton, ContractActionButton];
@@ -304,7 +323,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     } => {
         const infoIcon = <FontAwesomeIcon icon={faCircleInfo} size={18} color={colors.primary} />;
         const messageForStatus = (): ContractActionsMessage => {
-            if (!isLegacyFlow && kycBlocked)
+            if (kycBlocked)
                 return {
                     variant: "warning",
                     text: "You cannot start the contract with the influencer unless they are verified with us. You can nudge them for the same in the chat.",
@@ -363,10 +382,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
             };
         };
 
-        if (isLegacyFlow && contract.status === 0) {
+        if (status === ContractStatus.Pending) {
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Start contract",
                         variant: "contained",
@@ -381,76 +405,28 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 },
             };
         }
-        if (isLegacyFlow && contract.status === 1) {
-            if (showContinueContractPayment) {
-                return {
-                    buttons: [
-                        {
-                            label: "Continue payment",
-                            variant: "contained",
-                            onPress: () => {
-                                void handlePendingPayment({ resumeExistingOrder: true });
-                            },
-                            loading: paymentButtonLoading,
-                        },
-                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
-                    ],
-                    message: messageForStatus(),
-                };
-            }
+        if (status === ContractStatus.PaymentFailed) {
             return {
                 buttons: [
                     {
-                        label: "End Contract",
-                        variant: "contained-tonal",
-                        onPress: () => {
-                            openModal({
-                                confirmAction: feedbackModalVisible,
-                                confirmText: "End Contract",
-                                title: "End your contract?",
-                                description:
-                                    "Are you sure you want to end the contract? This action cant be reversed.",
-                            });
-                        },
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
                     },
-                    { label: "Go to Messages", variant: "contained", onPress: goToMessages },
-                ],
-                message: messageForStatus(),
-            };
-        }
-        if (!isLegacyFlow && status === ContractStatus.Pending) {
-            return {
-                buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
-                    {
-                        label: "Start contract",
-                        variant: "contained",
-                        onPress: handleStartContractPress,
-                        loading: paymentButtonLoading,
-                    },
-                ],
-                message: {
-                    variant: "warning",
-                    text: "The contract is still not funded. Once you communicate with the influencer and everything aligns you can fund and start the contract.",
-                    icon: infoIcon,
-                },
-            };
-        }
-        if (!isLegacyFlow && status === ContractStatus.PaymentFailed) {
-            return {
-                buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
                     {
                         label: "Retry Payment",
                         variant: "contained",
-                        onPress: handlePendingPayment,
+                        onPress: () => {
+                            void handlePendingPayment();
+                        },
                         loading: paymentButtonLoading,
                     },
                 ],
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.Started) {
+        if (status === ContractStatus.Started) {
             // Backend OrderCreated (1): after order exists, payment may still be open in Razorpay.
             if (showContinueContractPayment) {
                 return {
@@ -463,7 +439,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             },
                             loading: paymentButtonLoading,
                         },
-                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                        {
+                            label: "Go to Messages",
+                            variant: "outlined",
+                            onPress: goToMessages,
+                            loading: goToMessagesLoading,
+                        },
                     ],
                     message: messageForStatus(),
                 };
@@ -479,6 +460,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                                 setShowShippingModal(false);
                                 setShowViewAddress(true);
                             },
+                            loading: showViewAddress && shippingAddressLoading,
                         },
                         {
                             label: "Add Shipment Details",
@@ -490,22 +472,25 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         },
                     ]
                     : [
-                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                        {
+                            label: "Go to Messages",
+                            variant: "outlined",
+                            onPress: goToMessages,
+                            loading: goToMessagesLoading,
+                        },
                         {
                             label: "Request for Video",
                             variant: "contained",
-                            onPress: async () => {
-                                await requestDeliverableWithUX(
-                                    { contractId: contractIdForApi },
-                                    { onSuccess: refreshData }
-                                );
+                            onPress: () => {
+                                void handleRequestDeliverable();
                             },
+                            loading: requestVideoLoading,
                         },
                     ],
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.ShipmentPending) {
+        if (status === ContractStatus.ShipmentPending) {
             return {
                 buttons: [
                     {
@@ -515,6 +500,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                             setShowShippingModal(false);
                             setShowViewAddress(true);
                         },
+                        loading: showViewAddress && shippingAddressLoading,
                     },
                     {
                         label: "Add Shipment Details",
@@ -532,10 +518,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 },
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.DeliveryPending) {
+        if (status === ContractStatus.DeliveryPending) {
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Mark as Delivered",
                         variant: "contained",
@@ -545,10 +536,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.DeliveryAcknowledgementPending) {
+        if (status === ContractStatus.DeliveryAcknowledgementPending) {
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Get Delivery Status",
                         variant: "contained",
@@ -561,25 +557,28 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.VideoPending) {
+        if (status === ContractStatus.VideoPending) {
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Request for Video",
                         variant: "contained",
-                        onPress: async () => {
-                            await requestDeliverableWithUX(
-                                { contractId: contractIdForApi },
-                                { onSuccess: refreshData }
-                            );
+                        onPress: () => {
+                            void handleRequestDeliverable();
                         },
+                        loading: requestVideoLoading,
                     },
                 ],
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.ReviewPending) {
+        if (status === ContractStatus.ReviewPending) {
             return {
                 buttons: [
                     {
@@ -596,10 +595,15 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.PostingPending) {
+        if (status === ContractStatus.PostingPending) {
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Change Release Date",
                         variant: "contained",
@@ -609,11 +613,16 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.SettlementPending) {
+        if (status === ContractStatus.SettlementPending) {
             if (brandSubmittedFeedback) {
                 return {
                     buttons: [
-                        { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                        {
+                            label: "Go to Messages",
+                            variant: "outlined",
+                            onPress: goToMessages,
+                            loading: goToMessagesLoading,
+                        },
                         {
                             label: "Feedback",
                             variant: "contained",
@@ -626,7 +635,12 @@ const ActionContainer: FC<ActionContainerProps> = ({
 
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Give Feedback",
                         variant: "contained",
@@ -636,18 +650,28 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
-        if (!isLegacyFlow && status === ContractStatus.Settled) {
+        if (status === ContractStatus.Settled) {
             if (brandSubmittedFeedback) {
                 return {
                     buttons: [
-                        { label: "Go to Messages", variant: "contained", onPress: goToMessages },
+                        {
+                            label: "Go to Messages",
+                            variant: "contained",
+                            onPress: goToMessages,
+                            loading: goToMessagesLoading,
+                        },
                     ],
                     message: messageForStatus(),
                 };
             }
             return {
                 buttons: [
-                    { label: "Go to Messages", variant: "outlined", onPress: goToMessages },
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
                     {
                         label: "Feedback",
                         variant: "contained",
@@ -660,7 +684,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         return { buttons: [], message: messageForStatus() };
     }, [
         status,
-        isLegacyFlow,
         kycBlocked,
         productShipping,
         contract.status,
@@ -669,9 +692,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
         contract.streamChannelId,
         contract.posting?.scheduledDate,
         colors.primary,
-        openModal,
         feedbackModalVisible,
         goToMessages,
+        goToMessagesLoading,
+        handleRequestDeliverable,
+        requestVideoLoading,
+        showViewAddress,
+        shippingAddressLoading,
         handlePendingPayment,
         handleStartContractPress,
         contract.shipment,
