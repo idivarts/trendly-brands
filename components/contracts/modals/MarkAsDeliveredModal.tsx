@@ -2,7 +2,7 @@ import { useAWSContext } from "@/contexts";
 import { processRawAttachment } from "@/shared-libs/utils/attachments";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
-import { faBox, faCircleInfo, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faBox, faCircleInfo, faClose, faCloudArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
@@ -17,7 +17,6 @@ import {
     View,
 } from "react-native";
 import { Checkbox } from "react-native-paper";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import TextInput from "../../ui/text-input";
@@ -40,9 +39,8 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     onSuccess,
 }) => {
     const theme = useTheme();
-    const insets = useSafeAreaInsets();
     const colors = Colors(theme);
-    const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const { uploadFile, uploadFileUri } = useAWSContext();
 
     const webFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -211,12 +209,15 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
             >
                 {webHiddenFileInput}
                 <View style={styles.header}>
-                    <View style={styles.iconCircle}>
-                        <FontAwesomeIcon icon={faBox} size={28} color={colors.onPrimary ?? colors.surface} />
-                    </View>
-                    <Text style={styles.title}>Requesting for update</Text>
-                    <Text style={styles.subtitle}>Are you sure the product is delivered?</Text>
+                    <Text style={styles.title}>Mark as delivered</Text>
+                    <Pressable onPress={handleClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+                        <FontAwesomeIcon icon={faClose} color={colors.primary} size={22} />
+                    </Pressable>
                 </View>
+                <Text style={styles.sectionHint}>
+                    Confirm the product is delivered and add proof. You can include a short note for the
+                    influencer.
+                </Text>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
@@ -251,7 +252,11 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                         style={styles.noteInput}
                     />
                     <View style={styles.helperRow}>
-                        <FontAwesomeIcon icon={faCircleInfo} size={14} color={colors.gray300} />
+                        <FontAwesomeIcon
+                            icon={faCircleInfo}
+                            size={14}
+                            color={colors.textSecondary ?? colors.text}
+                        />
                         <Text style={styles.helperText}>
                             Supporting text: provide specific delivery instructions or location details.
                         </Text>
@@ -272,11 +277,7 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                     </Pressable>
 
                     <View style={styles.actions}>
-                        <Button
-                            mode="outlined"
-                            style={styles.button}
-                            onPress={handleClose}
-                        >
+                        <Button mode="outlined" style={styles.button} onPress={handleClose}>
                             Cancel
                         </Button>
                         <Button
@@ -285,7 +286,7 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
                             onPress={handleSubmit}
                             disabled={submitting}
                         >
-                            {submitting ? "Updating…" : "Confirm Update"}
+                            {submitting ? "Updating…" : "Confirm"}
                         </Button>
                     </View>
                 </ScrollView>
@@ -300,13 +301,12 @@ const MarkAsDeliveredModal: React.FC<MarkAsDeliveredModalProps> = ({
     );
 };
 
-function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
+function createStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
         modalContainer: {
             backgroundColor: colors.background,
             flex: 1,
             padding: 24,
-            paddingTop: Math.max(safeAreaTop, 16),
             overflow: "hidden",
         },
         keyboardView: { flex: 1, width: "100%" },
@@ -314,39 +314,33 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         scrollView: { flex: 1 },
         scrollContent: { paddingBottom: 24 },
         header: {
+            flexDirection: "row",
+            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 24,
-        },
-        iconCircle: {
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: colors.primary,
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 12,
+            marginBottom: 8,
         },
         title: {
             fontSize: 18,
-            fontWeight: "700",
+            fontWeight: "600",
             color: colors.text,
-            marginBottom: 4,
         },
-        subtitle: {
+        sectionHint: {
             fontSize: 14,
-            color: colors.gray300,
+            color: colors.textSecondary ?? colors.text,
+            marginBottom: 20,
+            lineHeight: 20,
         },
         label: {
             fontSize: 12,
             fontWeight: "600",
-            color: colors.gray300,
+            color: colors.textSecondary ?? colors.text,
             letterSpacing: 0.5,
             marginBottom: 8,
         },
         uploadBox: {
             borderWidth: 1,
             borderStyle: "dashed",
-            borderColor: colors.gray300,
+            borderColor: colors.border ?? colors.budgetCardBorder,
             borderRadius: 12,
             padding: 24,
             alignItems: "center",
@@ -362,7 +356,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         },
         uploadHint: {
             fontSize: 12,
-            color: colors.gray300,
+            color: colors.textSecondary ?? colors.text,
             marginTop: 4,
         },
         uploadPreview: {
@@ -387,7 +381,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         },
         helperText: {
             fontSize: 12,
-            color: colors.gray300,
+            color: colors.textSecondary ?? colors.text,
             flex: 1,
         },
         checkboxRow: {
@@ -403,11 +397,12 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             marginLeft: 8,
         },
         actions: {
-            flexDirection: "column",
+            flexDirection: "row",
             gap: 12,
+            marginTop: 20,
         },
         button: {
-            width: "100%",
+            flex: 1,
         },
     });
 }
