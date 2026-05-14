@@ -31,6 +31,7 @@ import {
     useThemeOverride
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
+import MarketingPixels from "@/shared-libs/marketing/MarketingPixels";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { GlobalErrorFallback } from "@/shared-uis/components/GlobalErrorFallback";
 import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
@@ -79,6 +80,7 @@ export default function RootLayout() {
 
     return (
         <GestureHandlerRootView>
+            <MarketingPixels />
             <UpdateProvider force={true}>
                 <AuthContextProvider>
                     <ThemeOverrideProvider>
