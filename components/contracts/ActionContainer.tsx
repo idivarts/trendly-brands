@@ -39,8 +39,12 @@ import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
 import KycBlockedStartContractModal from "./modals/KycBlockedStartContractModal";
 import MarkAsDeliveredModal from "./modals/MarkAsDeliveredModal";
 import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
+import { type ContractActionsMenuItem } from "./ContractActionsMenu";
+import RaiseDisputeModal from "./modals/RaiseDisputeModal";
 import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
+import RequestCancellationModal from "./modals/RequestCancellationModal";
 import RequestRevisionModal from "./modals/RequestRevisionModal";
+import RespondToCancellationModal from "./modals/RespondToCancellationModal";
 import ShippingAddressModal from "./modals/ShippingAddressModal";
 import StartContractPaymentBottomSheet, {
     formatContractMoneyLabel,
@@ -86,6 +90,7 @@ interface ActionContainerProps {
     slot?: "all" | "buttons" | "feedback-and-info";
     /** Dev only: override status for UI testing (no Firestore write) */
     devOverrideStatus?: number | null;
+    onMenuItemsChange?: (items: ContractActionsMenuItem[]) => void;
 }
 
 const ActionContainer: FC<ActionContainerProps> = ({
@@ -97,6 +102,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     applicationQuotation = null,
     slot = "all",
     devOverrideStatus = null,
+    onMenuItemsChange,
 }) => {
     const theme = useTheme();
     const [manager, setManager] = useState<IManagers>();
@@ -116,6 +122,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
     const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
     const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
+    const [showRaiseDisputeModal, setShowRaiseDisputeModal] = useState(false);
+    const [showRequestCancellationModal, setShowRequestCancellationModal] = useState(false);
+    const [showRespondToCancellationModal, setShowRespondToCancellationModal] = useState(false);
     const [deliveryStatusLoading, setDeliveryStatusLoading] = useState(false);
     const [goToMessagesLoading, setGoToMessagesLoading] = useState(false);
     const goToMessagesInFlightRef = useRef(false);
@@ -176,6 +185,22 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const productShipping = isProductShipping(collaborationData);
     /** KYC is a gate: block Make Payment / Start Contract until influencer KYC is done. Not a contract state. */
     const kycBlocked = (status === ContractStatus.Pending || contract.status === ContractStatus.Pending) && isContractBlockedByKYC(userData);
+
+    const hasPendingCancellationFromInfluencer =
+        contract.cancellationRequest?.status === "pending" &&
+        contract.cancellationRequest?.requestedByRole === "influencer";
+
+    const canRaiseDispute =
+        status >= ContractStatus.ShipmentPending &&
+        status <= ContractStatus.SettlementPending;
+
+    const canRequestCancellation =
+        status >= ContractStatus.Pending &&
+        status <= ContractStatus.ReviewPending;
+
+    const maxRevisions = (collaborationData as any)?.maxRevisions ?? 3;
+    const revisionCount = contract.deliverable?.revisionCount ?? 0;
+    const isRevisionLimitExceeded = revisionCount > 0 && revisionCount >= maxRevisions;
 
     const brandSubmittedFeedback = brandHasSubmittedFeedback(contract);
     const canShowReviewsByStatus =
@@ -550,7 +575,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         onPress: () => setShowApproveVideoSheet(true),
                     },
                 ],
-                message: messageForStatus(),
+                message: isRevisionLimitExceeded
+                    ? {
+                          variant: "warning",
+                          text: `You have requested ${revisionCount} revisions — exceeding the agreed limit of ${maxRevisions}. Further requests may allow the influencer to escalate.`,
+                          icon: infoIcon,
+                      }
+                    : messageForStatus(),
             };
         }
         if (status === ContractStatus.PostingPending) {
@@ -634,6 +665,36 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 message: messageForStatus(),
             };
         }
+        if (status === ContractStatus.Cancelled) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "contained",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                ],
+                message: { variant: "warning", text: "This contract has been cancelled.", icon: infoIcon },
+            };
+        }
+        if (status === ContractStatus.Disputed) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "contained",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                ],
+                message: {
+                    variant: "warning",
+                    text: "A dispute is open on this contract. It is on hold while our team reviews.",
+                    icon: infoIcon,
+                },
+            };
+        }
         return { buttons: [], message: messageForStatus() };
     }, [
         status,
@@ -669,7 +730,43 @@ const ActionContainer: FC<ActionContainerProps> = ({
         showContinueContractPayment,
         handleGetDeliveryStatus,
         deliveryStatusLoading,
+        isRevisionLimitExceeded,
+        revisionCount,
+        maxRevisions,
     ]);
+
+    const overflowMenuItems = useMemo((): ContractActionsMenuItem[] => {
+        if (
+            status === ContractStatus.Cancelled ||
+            status === ContractStatus.Disputed ||
+            status === ContractStatus.Settled
+        ) return [];
+        const items: ContractActionsMenuItem[] = [];
+        if (hasPendingCancellationFromInfluencer) {
+            items.push({
+                label: "Respond to Cancellation Request",
+                onPress: () => setShowRespondToCancellationModal(true),
+            });
+        }
+        if (canRaiseDispute) {
+            items.push({ label: "Raise a Dispute", onPress: () => setShowRaiseDisputeModal(true), destructive: true });
+        }
+        if (canRequestCancellation && !hasPendingCancellationFromInfluencer) {
+            items.push({ label: "Request Cancellation", onPress: () => setShowRequestCancellationModal(true), destructive: true });
+        }
+        return items;
+    }, [
+        status,
+        hasPendingCancellationFromInfluencer,
+        canRaiseDispute,
+        canRequestCancellation,
+    ]);
+
+    useEffect(() => {
+        if (showButtons) {
+            onMenuItemsChange?.(overflowMenuItems);
+        }
+    }, [overflowMenuItems, onMenuItemsChange, showButtons]);
 
     return (
         <View style={styles.root}>
@@ -680,6 +777,14 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 onClose={razorpayModalProps.onClose}
                 onError={razorpayModalProps.onError}
             />
+            {hasPendingCancellationFromInfluencer && showButtons && (
+                <View style={styles.cancellationBanner}>
+                    <Text style={styles.cancellationBannerTitle}>Cancellation Requested</Text>
+                    <Text style={styles.cancellationBannerText}>
+                        The influencer has requested to cancel this contract. Tap ⋮ to respond.
+                    </Text>
+                </View>
+            )}
             {(showButtons || showFeedbackAndInfo) && (
                 <ContractActionsWithMessage
                     buttons={showButtons ? actionsConfig.buttons : []}
@@ -822,6 +927,28 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 visible={showKycBlockedStartContractModal}
                 onClose={() => setShowKycBlockedStartContractModal(false)}
             />
+            <RaiseDisputeModal
+                visible={showRaiseDisputeModal}
+                onClose={() => setShowRaiseDisputeModal(false)}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <RequestCancellationModal
+                visible={showRequestCancellationModal}
+                onClose={() => setShowRequestCancellationModal(false)}
+                contractId={contractIdForApi}
+                contractStatus={status}
+                onSuccess={refreshData}
+            />
+            {contract.cancellationRequest && (
+                <RespondToCancellationModal
+                    visible={showRespondToCancellationModal}
+                    onClose={() => setShowRespondToCancellationModal(false)}
+                    contractId={contractIdForApi}
+                    cancellationRequest={contract.cancellationRequest}
+                    onSuccess={refreshData}
+                />
+            )}
         </View>
     );
 }
@@ -833,6 +960,25 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             flexDirection: "column",
             gap: 16,
             backgroundColor: "transparent",
+        },
+        cancellationBanner: {
+            width: "100%",
+            backgroundColor: colors.errorBannerBg,
+            borderWidth: 1,
+            borderColor: colors.errorBannerBorder,
+            borderRadius: 8,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            gap: 4,
+        },
+        cancellationBannerTitle: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.errorBannerText,
+        },
+        cancellationBannerText: {
+            fontSize: 13,
+            color: colors.errorBannerText,
         },
         reviewsHeading: {
             fontSize: 16,

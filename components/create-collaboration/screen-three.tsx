@@ -236,6 +236,46 @@ const ScreenThree: React.FC<ScreenThreeProps> = ({
                             ))}
                         </View>
                     </View>
+                    <View style={styles.section}>
+                        <ContentWrapper
+                            description="Maximum number of video revisions the influencer may be asked to make."
+                            theme={theme}
+                            title="Max Revisions"
+                            titleStyle={styles.sectionTitle}
+                        >
+                            <View style={styles.revisionStepperRow}>
+                                <Button
+                                    mode="outlined"
+                                    onPress={() =>
+                                        setCollaboration((prev) => ({
+                                            ...prev,
+                                            maxRevisions: Math.max(1, (prev.maxRevisions ?? 3) - 1),
+                                        }))
+                                    }
+                                    size="small"
+                                    style={styles.stepperButton}
+                                >
+                                    -
+                                </Button>
+                                <Text style={styles.stepperValue}>
+                                    {collaboration.maxRevisions ?? 3}
+                                </Text>
+                                <Button
+                                    mode="outlined"
+                                    onPress={() =>
+                                        setCollaboration((prev) => ({
+                                            ...prev,
+                                            maxRevisions: Math.min(10, (prev.maxRevisions ?? 3) + 1),
+                                        }))
+                                    }
+                                    size="small"
+                                    style={styles.stepperButton}
+                                >
+                                    +
+                                </Button>
+                            </View>
+                        </ContentWrapper>
+                    </View>
                     <View
                         style={{
                             gap: 16,
