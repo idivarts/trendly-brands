@@ -251,26 +251,26 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
                     });
                 }
             }
-            PersistentStorage.clear("streamToken")
+            PersistentStorage.clear("streamToken");
         } catch (e) {
-            Console.error(e, "Sign out Error")
+            Console.error(e, "Sign out Error");
         }
+
         PersistentStorage.setItemWithExpiry("suppress_lets_start", "true", 0.25); // 0.25 hours
 
-        signOut(AuthApp)
-            .then(() => {
-                setSession("");
-                setManager(null);
-
-                analyticsLogEvent("signed_out", {
-                    id: manager?.id,
-                    email: manager?.email,
-                });
-                Toaster.success("Signed Out Successfully!");
-            })
-            .catch((error) => {
-                Console.error(error, "Error signing out");
+        try {
+            await signOut(AuthApp);
+            analyticsLogEvent("signed_out", {
+                id: manager?.id,
+                email: manager?.email,
             });
+            Toaster.success("Signed Out Successfully!");
+        } catch (error) {
+            Console.error(error, "Error signing out");
+        } finally {
+            setSession("");
+            setManager(null);
+        }
     };
 
     const getManager = async (managerId: string): Promise<Manager | null> => {
