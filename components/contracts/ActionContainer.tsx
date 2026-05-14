@@ -326,7 +326,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             if (kycBlocked)
                 return {
                     variant: "warning",
-                    text: "You cannot start the contract with the influencer unless they are verified with us. You can nudge them for the same in the chat.",
+                    text: "You cannot start the contract with the influencer unless they are verified with us. You can remind them via chat.",
                     icon: infoIcon,
                 };
             if (status === ContractStatus.Pending)
@@ -350,7 +350,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
             if (status === ContractStatus.SettlementPending)
                 return {
                     variant: "info",
-                    text: "Contract closed. Please submit feedback to finish.",
+                    text: "Contract is wrapping up. Please submit your feedback to close it.",
                     icon: infoIcon,
                 };
             if (status === ContractStatus.PostingPending) {
@@ -392,7 +392,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         loading: goToMessagesLoading,
                     },
                     {
-                        label: "Start contract",
+                        label: "Start Contract",
                         variant: "contained",
                         onPress: handleStartContractPress,
                         loading: paymentButtonLoading,
@@ -471,7 +471,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                 ],
                 message: {
                     variant: "warning",
-                    text: "Please get the shipping address and ship the product to the influencer. Don't forget to mark it as shipped once you have done.",
+                    text: "Please get the shipping address and ship the product to the influencer. Don't forget to mark it as shipped once the product is dispatched.",
                     icon: infoIcon,
                 },
             };
@@ -504,7 +504,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         loading: goToMessagesLoading,
                     },
                     {
-                        label: "Get Delivery Status",
+                        label: "Nudge Influencer",
                         variant: "contained",
                         onPress: () => {
                             void handleGetDeliveryStatus();
@@ -525,7 +525,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                         loading: goToMessagesLoading,
                     },
                     {
-                        label: "Request for Video",
+                        label: "Request Video",
                         variant: "contained",
                         onPress: () => {
                             void handleRequestDeliverable();

@@ -40,8 +40,7 @@ const KycBlockedStartContractModal: React.FC<KycBlockedStartContractModalProps> 
             <View style={styles.container}>
                 <Text style={styles.title}>Influencer not verified</Text>
                 <Text style={styles.body}>
-                    You can’t start the contract with this influencer as they are not verified with us. We
-                    don’t allow starting contracts with unverified influencers.
+                    Please wait for the influencer to complete their verification before starting the contract.
                 </Text>
                 <View style={styles.actions}>
                     <Button mode="contained" style={styles.button} onPress={handleUnderstood}>
