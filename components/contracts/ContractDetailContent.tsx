@@ -40,6 +40,7 @@ interface CollaborationDetailsContentProps {
     refreshData: () => void;
     /** Dev only: override contract status for UI testing */
     devOverrideStatus?: number | null;
+    onMenuItemsChange?: (items: import("./ContractActionsMenu").ContractActionsMenuItem[]) => void;
 }
 
 const CONTENT_MAX_WIDTH = 720;
@@ -324,6 +325,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     paymentStatus={props.contractData.payment?.status}
                     slot="buttons"
                     devOverrideStatus={props.devOverrideStatus}
+                    onMenuItemsChange={props.onMenuItemsChange}
                 />
             ) : null}
 
@@ -459,6 +461,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     applicationQuotation={props.applicationData?.quotation ?? null}
                     paymentStatus={props.contractData.payment?.status}
                     devOverrideStatus={props.devOverrideStatus}
+                    onMenuItemsChange={props.onMenuItemsChange}
                 />
 
                 {renderRevisionNotesSection()}

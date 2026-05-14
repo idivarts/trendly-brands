@@ -46,6 +46,20 @@ const stylesFn = (
     mainSection: { flexGrow: 1, gap: 16 },
     section: { gap: 16 },
     sectionGap8: { gap: 8 },
+    revisionStepperRow: {
+        flexDirection: "row" as const,
+        alignItems: "center" as const,
+        gap: 16,
+        marginTop: 8,
+    },
+    stepperButton: { minWidth: 40, height: 40 },
+    stepperValue: {
+        fontSize: 20,
+        fontWeight: "700" as const,
+        color: colors.text,
+        minWidth: 30,
+        textAlign: "center" as const,
+    },
     addLinkIcon: { marginTop: -2, marginRight: 8 },
     linkItem: {
         alignItems: "center",

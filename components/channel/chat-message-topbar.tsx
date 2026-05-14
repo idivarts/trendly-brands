@@ -11,38 +11,48 @@ interface ChatMessageTopbarProps {
     contract: Contract;
 }
 
-const ChatMessageTopbar: React.FC<ChatMessageTopbarProps> = ({
-    contract,
-}) => {
-    const [status, setStatus] = useState(contract.status);
+const BUTTON_LABELS: Partial<Record<ContractStatus, string>> = {
+    [ContractStatus.Pending]: "Open Application",
+    [ContractStatus.ShipmentPending]: "Add Shipment Details",
+    [ContractStatus.ReviewPending]: "Review Deliverable",
+    [ContractStatus.SettlementPending]: "Give Feedback",
+};
+
+const ChatMessageTopbar: React.FC<ChatMessageTopbarProps> = ({ contract }) => {
+    const [status] = useState(contract.status);
     const router = useRouter();
 
-    if (status === ContractStatus.Pending) {
-        return <MessageTopbar
+    const description = CHAT_MESSAGE_TOPBAR_DESCRIPTION[status as ContractStatus];
+    if (!description) return null;
+
+    const buttonLabel = BUTTON_LABELS[status as ContractStatus];
+
+    return (
+        <MessageTopbar
             actions={
-                <View
-                    style={{
-                        flexDirection: 'row-reverse',
-                        gap: 16,
-                        justifyContent: 'space-between',
-                    }}
-                >
-                    <Button
-                        size="small"
-                        mode="text"
-                        onPress={() => {
-                            router.push(`/contract-details/${contract.streamChannelId}`)
+                buttonLabel ? (
+                    <View
+                        style={{
+                            flexDirection: "row-reverse",
+                            gap: 16,
+                            justifyContent: "space-between",
                         }}
                     >
-                        {"Open Application"}
-                    </Button>
-                </View>
+                        <Button
+                            size="small"
+                            mode="text"
+                            onPress={() => {
+                                router.push(`/contract-details/${contract.streamChannelId}`);
+                            }}
+                        >
+                            {buttonLabel}
+                        </Button>
+                    </View>
+                ) : undefined
             }
-            description={CHAT_MESSAGE_TOPBAR_DESCRIPTION.first}
+            description={description}
         />
-    } else {
-        return null;
-    }
-}
+    );
+};
 
 export default ChatMessageTopbar;

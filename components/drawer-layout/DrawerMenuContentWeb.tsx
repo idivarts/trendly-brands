@@ -26,6 +26,7 @@ import {
     faPlus,
     faSliders,
     faStar as faStarSolid,
+    faTriangleExclamation,
     faUsers,
     faUserShield
 } from "@fortawesome/free-solid-svg-icons";
@@ -184,6 +185,11 @@ const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
         href: "/applications",
         icon: ({ focused }) => <DrawerIcon href="/applications" icon={faEye} focused={focused} />,
         label: "All Applications",
+    },
+    {
+        href: "/admin-escalations",
+        icon: ({ focused }) => <DrawerIcon href="/admin-escalations" icon={faTriangleExclamation} focused={focused} />,
+        label: "Escalations",
     },
 ];
 

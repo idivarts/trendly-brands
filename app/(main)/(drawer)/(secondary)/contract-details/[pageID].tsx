@@ -2,6 +2,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import ContractDetailsContent from "@/components/contracts/ContractDetailContent";
+import ContractActionsMenu, { type ContractActionsMenuItem } from "@/components/contracts/ContractActionsMenu";
 import ContractStatusDevTools from "@/components/contracts/ContractStatusDevTools";
 import { Text, View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -66,7 +67,7 @@ const ContractScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const [isVisible, setIsVisible] = useState(false);
+    const [contractMenuItems, setContractMenuItems] = useState<ContractActionsMenuItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const { manager } = useAuthContext()
@@ -235,6 +236,7 @@ const ContractScreen = () => {
                 title="Contract Details"
                 subtitle={contractSubtitle}
                 showBackButton
+                mobileActions="notification-only"
                 actionButtons={[
                     <Button
                         key="view-profile"
@@ -245,6 +247,7 @@ const ContractScreen = () => {
                         View Profile
                     </Button>,
                 ]}
+                rightComponent={<ContractActionsMenu items={contractMenuItems} />}
             />
             {__DEV__ && (
                 <ContractStatusDevTools
@@ -262,6 +265,7 @@ const ContractScreen = () => {
                 contractData={contract}
                 refreshData={fetchProposals}
                 devOverrideStatus={devOverrideStatus}
+                onMenuItemsChange={setContractMenuItems}
             />
             {xl && (
                 <View style={styles.footer}>
