@@ -77,7 +77,7 @@ export const DEFAULT_CAMPAIGN: Partial<ICampaign> = {
     description: "",
     platforms: [],
     campaignType: "retainer",
-    budgetType: "fixed",
+    budgetType: "needs-based",
     totalBudget: 0,
     contentFrequency: { count: 4, period: "month" },
     features: DEFAULT_CAMPAIGN_FEATURES,

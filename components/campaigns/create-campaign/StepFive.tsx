@@ -27,7 +27,7 @@ interface SpendBreakdown {
 }
 
 function buildSpendBreakdown(campaign: Partial<ICampaign>): SpendBreakdown {
-    const trendlyFee = campaign.estimatedBudget ?? campaign.totalBudget ?? 0;
+    const trendlyFee = campaign.estimatedBudget ?? 0;
     const influencerBudget =
         campaign.features?.contentCreation.enabled
             ? (campaign.features.contentCreation.influencerBudget ?? 0)
@@ -162,11 +162,7 @@ const StepFive: React.FC<StepFiveProps> = ({
             <View style={styles.budgetSection}>
                 {/* Trendly fee */}
                 <View style={styles.trendlyFeeCard}>
-                    <Text style={styles.budgetLabel}>
-                        {campaign.budgetType === "fixed"
-                            ? "Your Declared Budget Cap"
-                            : "Trendly's Management Fee"}
-                    </Text>
+                    <Text style={styles.budgetLabel}>Trendly's Management Fee</Text>
                     <Text style={styles.budgetAmount}>{fmt(spend.trendlyFee)}</Text>
                 </View>
 

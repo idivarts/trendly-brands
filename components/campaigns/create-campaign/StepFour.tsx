@@ -7,13 +7,15 @@ import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-exten
 import Colors from "@/shared-uis/constants/Colors";
 import {
     CampaignFeatures,
+    ContentFrequency,
+    ContentFrequencyPeriod,
     FEATURE_COSTS,
     FEATURE_MIN_BUDGETS,
     ICampaign,
 } from "@/types/Campaign";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo } from "react";
-import { ScrollView, StyleSheet, Switch } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Pressable, ScrollView, StyleSheet, Switch } from "react-native";
 import StepLayout from "./StepLayout";
 
 const CURRENCY = "₹";
@@ -81,8 +83,8 @@ function calcBreakdown(campaign: Partial<ICampaign>): BudgetBreakdown {
             monthlyPosts <= 8
                 ? FEATURE_COSTS.contentStrategyPerPost.low
                 : monthlyPosts <= 20
-                ? FEATURE_COSTS.contentStrategyPerPost.mid
-                : FEATURE_COSTS.contentStrategyPerPost.high;
+                    ? FEATURE_COSTS.contentStrategyPerPost.mid
+                    : FEATURE_COSTS.contentStrategyPerPost.high;
     }
 
     if (f.contentCreation.enabled && influencerBudget) {
@@ -97,9 +99,6 @@ function calcBreakdown(campaign: Partial<ICampaign>): BudgetBreakdown {
         trendlyFee += FEATURE_COSTS.performanceMarketing;
     }
 
-    // Fixed budget: Trendly fee = the cap the user declared
-    if (isFixed) trendlyFee = campaign.totalBudget ?? 0;
-
     return {
         trendlyFee,
         influencerBudget,
@@ -110,6 +109,102 @@ function calcBreakdown(campaign: Partial<ICampaign>): BudgetBreakdown {
 
 function calcBudget(campaign: Partial<ICampaign>): number {
     return calcBreakdown(campaign).trendlyFee;
+}
+
+// ─── Auto-suggest features for fixed-budget campaigns ────────────────────────
+// Budget tiers decide which features to enable and what influencer tier to target.
+// The goal is for totalSpend ≈ declaredBudget; user can adjust after.
+function autoSuggestFeatures(
+    totalBudget: number,
+    monthlyPosts: number,
+    isRetainer: boolean
+): CampaignFeatures {
+    const posts = Math.max(monthlyPosts, 1);
+
+    // Tier 1: < ₹25k — content creation only, nano influencers
+    if (totalBudget < 25_000) {
+        const range: [number, number] = [1_000, 10_000];
+        return {
+            conversionAudit: isRetainer,
+            contentStrategy: false,
+            contentCreation: {
+                enabled: true,
+                influencerFollowerRange: range,
+                minReach: undefined,
+                influencerBudget: calcInfluencerBudgetFromInputs(range, undefined, posts),
+            },
+            adSpend: { enabled: false },
+            performanceMarketing: { enabled: false },
+        };
+    }
+
+    // Tier 2: ₹25k–₹60k — content creation + strategy, micro influencers
+    if (totalBudget < 60_000) {
+        const range: [number, number] = [5_000, 30_000];
+        return {
+            conversionAudit: isRetainer,
+            contentStrategy: true,
+            contentCreation: {
+                enabled: true,
+                influencerFollowerRange: range,
+                minReach: 1_000,
+                influencerBudget: calcInfluencerBudgetFromInputs(range, 1_000, posts),
+            },
+            adSpend: { enabled: false },
+            performanceMarketing: { enabled: false },
+        };
+    }
+
+    // Tier 3: ₹60k–₹1.2L — content + strategy + audit, mid-tier influencers
+    if (totalBudget < 120_000) {
+        const range: [number, number] = [10_000, 50_000];
+        return {
+            conversionAudit: true,
+            contentStrategy: true,
+            contentCreation: {
+                enabled: true,
+                influencerFollowerRange: range,
+                minReach: 3_000,
+                influencerBudget: calcInfluencerBudgetFromInputs(range, 3_000, posts),
+            },
+            adSpend: { enabled: false },
+            performanceMarketing: { enabled: false },
+        };
+    }
+
+    // Tier 4: ₹1.2L–₹2.5L — all above + ad spend (~25% of budget), established influencers
+    if (totalBudget < 250_000) {
+        const range: [number, number] = [20_000, 100_000];
+        const adSpend = Math.round(totalBudget * 0.25);
+        return {
+            conversionAudit: true,
+            contentStrategy: true,
+            contentCreation: {
+                enabled: true,
+                influencerFollowerRange: range,
+                minReach: 5_000,
+                influencerBudget: calcInfluencerBudgetFromInputs(range, 5_000, posts),
+            },
+            adSpend: { enabled: true, totalAdSpend: adSpend },
+            performanceMarketing: { enabled: false },
+        };
+    }
+
+    // Tier 5: ₹2.5L+ — all features, macro influencers, ~30% to ads
+    const range: [number, number] = [50_000, 300_000];
+    const adSpend = Math.round(totalBudget * 0.3);
+    return {
+        conversionAudit: true,
+        contentStrategy: true,
+        contentCreation: {
+            enabled: true,
+            influencerFollowerRange: range,
+            minReach: 10_000,
+            influencerBudget: calcInfluencerBudgetFromInputs(range, 10_000, posts),
+        },
+        adSpend: { enabled: true, totalAdSpend: adSpend },
+        performanceMarketing: { enabled: true },
+    };
 }
 
 function calcROI(campaign: Partial<ICampaign>) {
@@ -142,6 +237,41 @@ function calcROI(campaign: Partial<ICampaign>) {
     }
     return { organicReach, clickThrough, conversions, roas };
 }
+
+// ─── PeriodPill ───────────────────────────────────────────────────────────────
+interface PeriodPillProps {
+    label: string;
+    selected: boolean;
+    onPress: () => void;
+    colors: ReturnType<typeof Colors>;
+}
+
+const PeriodPill: React.FC<PeriodPillProps> = ({ label, selected, onPress, colors }) => {
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                pill: {
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 999,
+                    borderWidth: 2,
+                    borderColor: selected ? colors.primary : colors.border,
+                    backgroundColor: selected ? colors.budgetCardBg : colors.card,
+                },
+                label: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: selected ? colors.primary : colors.textSecondary,
+                },
+            }),
+        [selected, colors]
+    );
+    return (
+        <Pressable onPress={onPress} style={styles.pill}>
+            <Text style={styles.label}>{label}</Text>
+        </Pressable>
+    );
+};
 
 // ─── FeatureRow ───────────────────────────────────────────────────────────────
 interface FeatureRowProps {
@@ -274,6 +404,8 @@ interface BudgetPanelProps {
     breakdown: BudgetBreakdown;
     roi: ReturnType<typeof calcROI>;
     isFixed: boolean;
+    isRetainer: boolean;
+    declaredBudget?: number;
     colors: ReturnType<typeof Colors>;
 }
 
@@ -281,6 +413,8 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({
     breakdown,
     roi,
     isFixed,
+    isRetainer,
+    declaredBudget,
     colors,
 }) => {
     const styles = useMemo(
@@ -401,11 +535,36 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({
                     color: colors.primary,
                     fontSize: 16,
                 },
-                fixedNote: {
+                declaredRef: {
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    backgroundColor: colors.aliceBlue,
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                },
+                declaredRefLabel: {
                     fontSize: 12,
                     color: colors.textSecondary,
+                    fontWeight: "500",
+                },
+                declaredRefValue: {
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: colors.text,
+                },
+                overBudgetBox: {
+                    backgroundColor: colors.errorBannerBg,
+                    borderWidth: 1,
+                    borderColor: colors.errorBannerBorder,
+                    borderRadius: 10,
+                    padding: 10,
+                },
+                overBudgetText: {
+                    fontSize: 12,
+                    color: colors.errorBannerText,
                     lineHeight: 18,
-                    fontStyle: "italic",
                 },
             }),
         [colors]
@@ -414,6 +573,7 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({
     const { trendlyFee, influencerBudget, adBudget, totalSpend } = breakdown;
     const hasDirectSpend = influencerBudget > 0 || adBudget > 0;
     const hasROI = roi.organicReach || roi.clickThrough || roi.conversions || roi.roas;
+    const isOverBudget = isFixed && declaredBudget && totalSpend > declaredBudget;
 
     const fmtROAS = (r: number) => {
         const v = Math.round(r * 10) / 10;
@@ -422,14 +582,21 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({
 
     return (
         <View style={styles.panel}>
+            {/* Declared budget reference for fixed-budget campaigns */}
+            {isFixed && declaredBudget ? (
+                <View style={styles.declaredRef}>
+                    <Text style={styles.declaredRefLabel}>Your budget target</Text>
+                    <Text style={styles.declaredRefValue}>{fmt(declaredBudget)}</Text>
+                </View>
+            ) : null}
+
             {/* Trendly's estimate */}
             <View style={styles.trendlyCard}>
-                <Text style={styles.trendlyLabel}>Trendly's Estimate</Text>
+                <Text style={styles.trendlyLabel}>Trendly's Cost</Text>
                 <Text style={styles.trendlyAmount}>{fmt(trendlyFee)}</Text>
                 <Text style={styles.trendlySub}>
-                    {isFixed
-                        ? "Your declared budget cap"
-                        : "Our management fee for selected services"}
+                    Our management fee for selected services
+                    {isRetainer ? " · per month" : " · one-off"}
                 </Text>
             </View>
 
@@ -469,10 +636,12 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({
                 </>
             )}
 
-            {isFixed && hasDirectSpend && (
-                <Text style={styles.fixedNote}>
-                    Direct ad and influencer spends are in addition to your declared budget.
-                </Text>
+            {isOverBudget && (
+                <View style={styles.overBudgetBox}>
+                    <Text style={styles.overBudgetText}>
+                        ⚠️ Your selected services total {fmt(totalSpend)}, which exceeds your declared budget of {fmt(declaredBudget!)}. You can adjust the features or increase your budget in the previous step.
+                    </Text>
+                </View>
             )}
 
             {/* ROI card */}
@@ -572,6 +741,20 @@ const StepFour: React.FC<StepFourProps> = ({
         }
     }, [isRetainer]);
 
+    // Auto-suggest a feature mix for fixed-budget campaigns on first entry
+    const autoSuggestDone = useRef(false);
+    useEffect(() => {
+        if (!isFixed || autoSuggestDone.current) return;
+        if (!campaign.totalBudget || campaign.totalBudget <= 0) return;
+        autoSuggestDone.current = true;
+        const suggested = autoSuggestFeatures(campaign.totalBudget, monthlyPosts, isRetainer);
+        setCampaign((prev) => {
+            const updated = { ...prev, features: suggested };
+            const bd = calcBreakdown(updated);
+            return { ...updated, estimatedBudget: bd.trendlyFee, estimatedROI: calcROI(updated) };
+        });
+    }, [isFixed, campaign.totalBudget, monthlyPosts]);
+
     const patchFeatures = useCallback(
         (patch: Partial<CampaignFeatures>) =>
             setCampaign((prev) => {
@@ -601,8 +784,32 @@ const StepFour: React.FC<StepFourProps> = ({
         [setCampaign, monthlyPosts]
     );
 
+    const setFreq = useCallback(
+        (patch: Partial<ContentFrequency>) =>
+            setCampaign((prev) => {
+                const newFreq = { ...prev.contentFrequency!, ...patch };
+                const newMonthlyPosts =
+                    newFreq.period === "week" ? newFreq.count * 4 : newFreq.count;
+                const newFeatures = { ...prev.features! };
+                if (newFeatures.contentCreation.enabled) {
+                    newFeatures.contentCreation = {
+                        ...newFeatures.contentCreation,
+                        influencerBudget: calcInfluencerBudgetFromInputs(
+                            newFeatures.contentCreation.influencerFollowerRange,
+                            newFeatures.contentCreation.minReach,
+                            newMonthlyPosts
+                        ),
+                    };
+                }
+                const updated = { ...prev, contentFrequency: newFreq, features: newFeatures };
+                const bd = calcBreakdown(updated);
+                return { ...updated, estimatedBudget: bd.trendlyFee, estimatedROI: calcROI(updated) };
+            }),
+        [setCampaign]
+    );
+
     const isDisabled = (minBudget: number) =>
-        isFixed && breakdown.trendlyFee < minBudget;
+        isFixed && ((campaign.totalBudget ?? 10000) < minBudget);
 
     const genderOptions = ["Male", "Female", "Non-binary"];
 
@@ -612,19 +819,6 @@ const StepFour: React.FC<StepFourProps> = ({
 
     const FeaturesPanel = (
         <View style={styles.featuresList}>
-            {/* Conversion Audit */}
-            <FeatureRow
-                title="Conversion Audit"
-                description="End-to-end audit of your IG page aesthetic, website load speed, and remarketing setup to identify drop-off points."
-                enabled={features.conversionAudit}
-                onToggle={(v) => patchFeatures({ conversionAudit: v })}
-                disabled={!isRetainer && isDisabled(FEATURE_MIN_BUDGETS.conversionAudit)}
-                disabledReason={`Requires budget ≥ ${fmt(FEATURE_MIN_BUDGETS.conversionAudit)}`}
-                lockedEnabled={isRetainer}
-                lockedBadge="✦ Included free for Monthly Retainer"
-                colors={colors}
-            />
-
             {/* Content Strategy */}
             <FeatureRow
                 title="Content Strategy Creation"
@@ -648,6 +842,46 @@ const StepFour: React.FC<StepFourProps> = ({
                 }
                 colors={colors}
             >
+                {/* Content frequency — how many posts/month */}
+                <View style={styles.freqRow}>
+                    <TextInput
+                        label="Posts count"
+                        mode="outlined"
+                        keyboardType="number-pad"
+                        style={styles.freqCountInput}
+                        value={
+                            (campaign.contentFrequency?.count ?? 0) > 0
+                                ? campaign.contentFrequency!.count.toString()
+                                : ""
+                        }
+                        onChangeText={(text) =>
+                            setFreq({ count: parseInt(text) || 0 })
+                        }
+                    />
+                    <View style={styles.freqPills}>
+                        <PeriodPill
+                            label="/ week"
+                            selected={
+                                (campaign.contentFrequency?.period ?? "month") === "week"
+                            }
+                            onPress={() =>
+                                setFreq({ period: "week" as ContentFrequencyPeriod })
+                            }
+                            colors={colors}
+                        />
+                        <PeriodPill
+                            label="/ month"
+                            selected={
+                                (campaign.contentFrequency?.period ?? "month") === "month"
+                            }
+                            onPress={() =>
+                                setFreq({ period: "month" as ContentFrequencyPeriod })
+                            }
+                            colors={colors}
+                        />
+                    </View>
+                </View>
+
                 <View style={styles.subRow}>
                     <TextInput
                         label="Min Followers"
@@ -802,6 +1036,19 @@ const StepFour: React.FC<StepFourProps> = ({
                 )}
             </FeatureRow>
 
+            {/* Conversion Audit */}
+            <FeatureRow
+                title="Conversion Audit"
+                description="End-to-end audit of your IG page aesthetic, website load speed, and remarketing setup to identify drop-off points."
+                enabled={features.conversionAudit}
+                onToggle={(v) => patchFeatures({ conversionAudit: v })}
+                disabled={!isRetainer && isDisabled(FEATURE_MIN_BUDGETS.conversionAudit)}
+                disabledReason={`Requires budget ≥ ${fmt(FEATURE_MIN_BUDGETS.conversionAudit)}`}
+                lockedEnabled={isRetainer}
+                lockedBadge="✦ Included free for Monthly Retainer"
+                colors={colors}
+            />
+
             {/* Performance Marketing */}
             <FeatureRow
                 title="Performance Marketing + Multi-Platform Ads"
@@ -879,6 +1126,8 @@ const StepFour: React.FC<StepFourProps> = ({
                             breakdown={breakdown}
                             roi={roi}
                             isFixed={isFixed}
+                            isRetainer={isRetainer}
+                            declaredBudget={isFixed ? campaign.totalBudget : undefined}
                             colors={colors}
                         />
                     </View>
@@ -909,6 +1158,7 @@ const StepFour: React.FC<StepFourProps> = ({
                 breakdown={breakdown}
                 roi={roi}
                 isFixed={isFixed}
+                isRetainer={isRetainer}
                 colors={colors}
             />
 
@@ -928,6 +1178,20 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
     StyleSheet.create({
         featuresList: {
             gap: 12,
+            backgroundColor: "transparent",
+        },
+        freqRow: {
+            flexDirection: "row",
+            gap: 10,
+            alignItems: "center",
+            backgroundColor: "transparent",
+        },
+        freqCountInput: {
+            width: 100,
+        },
+        freqPills: {
+            flexDirection: "row",
+            gap: 8,
             backgroundColor: "transparent",
         },
         subRow: {
