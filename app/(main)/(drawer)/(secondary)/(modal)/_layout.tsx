@@ -7,6 +7,13 @@ const CreateLayout = () => {
             headerShown: false
         }}>
             <Stack.Screen
+                name="create-campaign"
+                options={{
+                    presentation: "formSheet",
+                    gestureEnabled: true,
+                }}
+            />
+            <Stack.Screen
                 name="create-collaboration"
                 options={{
                     presentation: "formSheet",

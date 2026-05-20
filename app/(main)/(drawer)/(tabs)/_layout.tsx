@@ -180,11 +180,18 @@ const TabLayout = () => {
                 }}
             />
             <Tabs.Screen
-                name="collaborations"
+                name="campaigns"
                 options={{
                     title: "Campaigns",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => campaignsTabButton(color, focused),
+                }}
+            />
+            {/* Deprecated: kept for reference, hidden from tab bar */}
+            <Tabs.Screen
+                name="collaborations"
+                options={{
+                    href: null,
                 }}
             />
             <Tabs.Screen
