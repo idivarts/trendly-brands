@@ -2,7 +2,7 @@ import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { Campaign, FEATURE_COSTS, ICampaign } from "@/types/Campaign";
+import { FEATURE_COSTS, ICampaign } from "@/types/Campaign";
 import {
     faCheck,
     faPhone,
@@ -17,7 +17,7 @@ import StepLayout from "./StepLayout";
 const CURRENCY = "₹";
 const fmt = (n: number) => CURRENCY + n.toLocaleString("en-IN");
 
-const RELATIONSHIP_MANAGER = "+91 98765 43210";
+const RELATIONSHIP_MANAGER = "+91 76040 07256";
 
 interface SpendBreakdown {
     trendlyFee: number;
@@ -59,8 +59,8 @@ function buildSummaryLines(campaign: Partial<ICampaign>): string[] {
             monthlyPosts <= 8
                 ? FEATURE_COSTS.contentStrategyPerPost.low
                 : monthlyPosts <= 20
-                ? FEATURE_COSTS.contentStrategyPerPost.mid
-                : FEATURE_COSTS.contentStrategyPerPost.high;
+                    ? FEATURE_COSTS.contentStrategyPerPost.mid
+                    : FEATURE_COSTS.contentStrategyPerPost.high;
         lines.push(`Content Strategy — ${fmt(cost)}`);
     }
 

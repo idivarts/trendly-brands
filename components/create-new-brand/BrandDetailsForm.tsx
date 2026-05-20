@@ -10,7 +10,7 @@ import { TextInput } from "react-native-paper";
 const HELPER_NAME = "This will be visible on your public profile.";
 const PLACEHOLDER_NAME = "Enter your brand name";
 const PLACEHOLDER_ABOUT = "Briefly describe what your brand does...";
-const PLACEHOLDER_PHONE = "+91 98765 43210";
+const PLACEHOLDER_PHONE = "+91 76040 07256";
 const PLACEHOLDER_WEBSITE = "https://yourbrand.com";
 
 export interface BrandDetailsFormProps {
@@ -38,8 +38,8 @@ const BrandDetailsForm: React.FC<BrandDetailsFormProps> = ({
                         setBrandData({ ...brandData, name: value })
                     }
                     placeholder={PLACEHOLDER_NAME}
-                outlineColor={colors.formBorder}
-                activeOutlineColor={colors.primary}
+                    outlineColor={colors.formBorder}
+                    activeOutlineColor={colors.primary}
                     style={styles.input}
                     outlineStyle={styles.outline}
                     contentStyle={styles.inputContent}
@@ -64,8 +64,8 @@ const BrandDetailsForm: React.FC<BrandDetailsFormProps> = ({
                     placeholder={PLACEHOLDER_ABOUT}
                     multiline
                     numberOfLines={4}
-                outlineColor={colors.formBorder}
-                activeOutlineColor={colors.primary}
+                    outlineColor={colors.formBorder}
+                    activeOutlineColor={colors.primary}
                     style={styles.input}
                     outlineStyle={styles.outline}
                     contentStyle={styles.inputContent}
@@ -90,8 +90,8 @@ const BrandDetailsForm: React.FC<BrandDetailsFormProps> = ({
                         placeholder={PLACEHOLDER_PHONE}
                         keyboardType="phone-pad"
                         autoCapitalize="none"
-                outlineColor={colors.formBorder}
-                activeOutlineColor={colors.primary}
+                        outlineColor={colors.formBorder}
+                        activeOutlineColor={colors.primary}
                         style={styles.input}
                         outlineStyle={styles.outline}
                         contentStyle={styles.inputContent}
@@ -114,8 +114,8 @@ const BrandDetailsForm: React.FC<BrandDetailsFormProps> = ({
                         placeholder={PLACEHOLDER_WEBSITE}
                         keyboardType="url"
                         autoCapitalize="none"
-                outlineColor={colors.formBorder}
-                activeOutlineColor={colors.primary}
+                        outlineColor={colors.formBorder}
+                        activeOutlineColor={colors.primary}
                         style={styles.input}
                         outlineStyle={styles.outline}
                         contentStyle={styles.inputContent}
