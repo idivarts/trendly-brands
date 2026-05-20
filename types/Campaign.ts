@@ -39,6 +39,7 @@ export interface CampaignEstimatedROI {
     organicReach?: number;
     clickThrough?: number;
     conversions?: number;
+    roas?: number;
 }
 
 export interface ICampaign {

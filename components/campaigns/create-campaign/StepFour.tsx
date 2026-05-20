@@ -1,6 +1,7 @@
 import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import TextInput from "@/components/ui/text-input";
+import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
 import { useBreakpoints } from "@/hooks";
 import { MultiSelectExtendable } from "@/shared-uis/components/multiselect-extendable";
 import Colors from "@/shared-uis/constants/Colors";
@@ -10,58 +11,120 @@ import {
     FEATURE_MIN_BUDGETS,
     ICampaign,
 } from "@/types/Campaign";
-import { INFLUENCER_CATEGORIES } from "@/constants/ItemsList";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { ScrollView, StyleSheet, Switch } from "react-native";
 import StepLayout from "./StepLayout";
 
 const CURRENCY = "₹";
-const fmt = (n: number) =>
-    CURRENCY + n.toLocaleString("en-IN");
+const fmt = (n: number) => CURRENCY + n.toLocaleString("en-IN");
 
-function calcBudget(campaign: Partial<ICampaign>): number {
-    if (campaign.budgetType === "fixed") return campaign.totalBudget ?? 0;
+// ─── Influencer budget calculator ────────────────────────────────────────────
+// Template logic: rate per post derived from avg follower count + reach premium.
+// User can refine this later by adjusting inputs.
+function calcInfluencerBudgetFromInputs(
+    followerRange: [number, number] | undefined,
+    minReach: number | undefined,
+    monthlyPosts: number
+): number {
+    if (!followerRange || !monthlyPosts) return 0;
+    const [minF, maxF] = followerRange;
+    const avgFollowers = (minF + maxF) / 2;
+    if (avgFollowers === 0) return 0;
 
+    // Base rate per post by follower tier
+    let ratePerPost: number;
+    if (avgFollowers < 10_000) ratePerPost = 1_500;
+    else if (avgFollowers < 50_000) ratePerPost = 5_000;
+    else if (avgFollowers < 100_000) ratePerPost = 12_000;
+    else if (avgFollowers < 500_000) ratePerPost = 35_000;
+    else ratePerPost = 80_000;
+
+    // Reach premium: higher-than-usual reach expectations bump the rate
+    if (minReach) {
+        const reachRatio = minReach / avgFollowers;
+        if (reachRatio > 0.3) ratePerPost = Math.round(ratePerPost * 1.5);
+        else if (reachRatio > 0.15) ratePerPost = Math.round(ratePerPost * 1.2);
+    }
+
+    return Math.round(ratePerPost * monthlyPosts);
+}
+
+// ─── Budget breakdown ─────────────────────────────────────────────────────────
+interface BudgetBreakdown {
+    trendlyFee: number;        // What Trendly charges
+    influencerBudget: number;  // Goes directly to influencers
+    adBudget: number;          // Goes directly to ad platforms
+    totalSpend: number;        // Grand total
+}
+
+function calcBreakdown(campaign: Partial<ICampaign>): BudgetBreakdown {
     const freq = campaign.contentFrequency ?? { count: 4, period: "month" };
-    const monthlyPosts =
-        freq.period === "week" ? freq.count * 4 : freq.count;
+    const monthlyPosts = freq.period === "week" ? freq.count * 4 : freq.count;
     const f = campaign.features!;
-    let cost = 0;
+    const isRetainer = campaign.campaignType === "retainer";
+    const isFixed = campaign.budgetType === "fixed";
 
-    if (f.conversionAudit) cost += FEATURE_COSTS.conversionAudit;
+    let trendlyFee = 0;
+    const influencerBudget = f.contentCreation.enabled
+        ? (f.contentCreation.influencerBudget ?? 0)
+        : 0;
+    const adBudget = f.adSpend.enabled ? (f.adSpend.totalAdSpend ?? 0) : 0;
+
+    // Audit: free for retainer clients
+    if (f.conversionAudit && !isRetainer) {
+        trendlyFee += FEATURE_COSTS.conversionAudit;
+    }
+
     if (f.contentStrategy) {
-        cost +=
+        trendlyFee +=
             monthlyPosts <= 8
                 ? FEATURE_COSTS.contentStrategyPerPost.low
                 : monthlyPosts <= 20
                 ? FEATURE_COSTS.contentStrategyPerPost.mid
                 : FEATURE_COSTS.contentStrategyPerPost.high;
     }
-    if (f.contentCreation.enabled && f.contentCreation.influencerBudget) {
-        cost += f.contentCreation.influencerBudget * FEATURE_COSTS.contentCreationPct;
+
+    if (f.contentCreation.enabled && influencerBudget) {
+        trendlyFee += Math.round(influencerBudget * FEATURE_COSTS.contentCreationPct);
     }
-    if (f.adSpend.enabled && f.adSpend.totalAdSpend) {
-        cost += f.adSpend.totalAdSpend * FEATURE_COSTS.adSpendPct;
+
+    if (f.adSpend.enabled && adBudget) {
+        trendlyFee += Math.round(adBudget * FEATURE_COSTS.adSpendPct);
     }
+
     if (f.performanceMarketing.enabled) {
-        cost += FEATURE_COSTS.performanceMarketing;
+        trendlyFee += FEATURE_COSTS.performanceMarketing;
     }
-    return Math.round(cost);
+
+    // Fixed budget: Trendly fee = the cap the user declared
+    if (isFixed) trendlyFee = campaign.totalBudget ?? 0;
+
+    return {
+        trendlyFee,
+        influencerBudget,
+        adBudget,
+        totalSpend: trendlyFee + influencerBudget + adBudget,
+    };
+}
+
+function calcBudget(campaign: Partial<ICampaign>): number {
+    return calcBreakdown(campaign).trendlyFee;
 }
 
 function calcROI(campaign: Partial<ICampaign>) {
     const f = campaign.features!;
     const freq = campaign.contentFrequency ?? { count: 4, period: "month" };
-    const monthlyPosts =
-        freq.period === "week" ? freq.count * 4 : freq.count;
+    const monthlyPosts = freq.period === "week" ? freq.count * 4 : freq.count;
+    const influencerBudget = f.contentCreation.influencerBudget ?? 0;
 
     let organicReach: number | undefined;
     let clickThrough: number | undefined;
     let conversions: number | undefined;
+    let roas: number | undefined;
 
-    if (f.contentCreation.enabled) {
-        const minReach = f.contentCreation.minReach ?? 5000;
+    if (f.contentCreation.enabled && influencerBudget) {
+        const minReach = f.contentCreation.minReach ?? 5_000;
         organicReach = minReach * monthlyPosts;
     }
     if (f.adSpend.enabled && f.adSpend.totalAdSpend) {
@@ -70,16 +133,28 @@ function calcROI(campaign: Partial<ICampaign>) {
     if (f.performanceMarketing.enabled && clickThrough) {
         conversions = Math.floor(clickThrough * 0.02);
     }
-    return { organicReach, clickThrough, conversions };
+    if (f.performanceMarketing.enabled && conversions && f.performanceMarketing.avgSaleValue) {
+        const revenue = conversions * f.performanceMarketing.avgSaleValue;
+        const { totalSpend } = calcBreakdown(campaign);
+        if (totalSpend > 0) {
+            roas = revenue / totalSpend;
+        }
+    }
+    return { organicReach, clickThrough, conversions, roas };
 }
 
+// ─── FeatureRow ───────────────────────────────────────────────────────────────
 interface FeatureRowProps {
     title: string;
     description: string;
     enabled: boolean;
     onToggle: (v: boolean) => void;
+    /** Greyed out — budget too low */
     disabled?: boolean;
     disabledReason?: string;
+    /** Forced on and non-interactive (e.g. retainer freebie) */
+    lockedEnabled?: boolean;
+    lockedBadge?: string;
     children?: React.ReactNode;
     colors: ReturnType<typeof Colors>;
 }
@@ -91,16 +166,20 @@ const FeatureRow: React.FC<FeatureRowProps> = ({
     onToggle,
     disabled,
     disabledReason,
+    lockedEnabled,
+    lockedBadge,
     children,
     colors,
 }) => {
+    const isOn = lockedEnabled || (enabled && !disabled);
+
     const styles = useMemo(
         () =>
             StyleSheet.create({
                 card: {
                     borderWidth: 1,
                     borderRadius: 14,
-                    borderColor: enabled && !disabled ? colors.primary : colors.border,
+                    borderColor: isOn ? colors.primary : colors.border,
                     backgroundColor: disabled ? colors.aliceBlue : colors.card,
                     padding: 16,
                     gap: 8,
@@ -132,13 +211,28 @@ const FeatureRow: React.FC<FeatureRowProps> = ({
                     color: colors.errorBannerText,
                     marginTop: 4,
                 },
+                lockedBadgeView: {
+                    alignSelf: "flex-start",
+                    marginTop: 6,
+                    backgroundColor: colors.reachCardBg,
+                    borderWidth: 1,
+                    borderColor: colors.reachCardBorder,
+                    borderRadius: 999,
+                    paddingHorizontal: 10,
+                    paddingVertical: 3,
+                },
+                lockedBadgeText: {
+                    fontSize: 11,
+                    fontWeight: "700",
+                    color: colors.green,
+                },
                 subfields: {
                     marginTop: 4,
                     gap: 10,
                     backgroundColor: "transparent",
                 },
             }),
-        [enabled, disabled, colors]
+        [isOn, disabled, colors]
     );
 
     return (
@@ -150,29 +244,45 @@ const FeatureRow: React.FC<FeatureRowProps> = ({
                     {disabled && disabledReason ? (
                         <Text style={styles.disabledHint}>{disabledReason}</Text>
                     ) : null}
+                    {lockedEnabled && lockedBadge ? (
+                        <View style={styles.lockedBadgeView}>
+                            <Text style={styles.lockedBadgeText}>{lockedBadge}</Text>
+                        </View>
+                    ) : null}
                 </View>
-                <Switch
-                    value={enabled && !disabled}
-                    onValueChange={(v) => !disabled && onToggle(v)}
-                    trackColor={{ true: colors.primary }}
-                    disabled={disabled}
-                />
+                {lockedEnabled ? (
+                    // Non-interactive locked switch
+                    <Switch value={true} disabled trackColor={{ true: colors.green }} />
+                ) : (
+                    <Switch
+                        value={isOn}
+                        onValueChange={(v) => !disabled && onToggle(v)}
+                        trackColor={{ true: colors.primary }}
+                        disabled={disabled}
+                    />
+                )}
             </View>
-            {enabled && !disabled && children ? (
+            {isOn && children ? (
                 <View style={styles.subfields}>{children}</View>
             ) : null}
         </View>
     );
 };
 
+// ─── BudgetPanel ──────────────────────────────────────────────────────────────
 interface BudgetPanelProps {
-    budget: number;
+    breakdown: BudgetBreakdown;
     roi: ReturnType<typeof calcROI>;
-    campaign: Partial<ICampaign>;
+    isFixed: boolean;
     colors: ReturnType<typeof Colors>;
 }
 
-const BudgetPanel: React.FC<BudgetPanelProps> = ({ budget, roi, campaign, colors }) => {
+const BudgetPanel: React.FC<BudgetPanelProps> = ({
+    breakdown,
+    roi,
+    isFixed,
+    colors,
+}) => {
     const styles = useMemo(
         () =>
             StyleSheet.create({
@@ -180,28 +290,79 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({ budget, roi, campaign, colors
                     gap: 16,
                     backgroundColor: "transparent",
                 },
-                budgetCard: {
+                // Trendly fee card
+                trendlyCard: {
                     backgroundColor: colors.budgetCardBg,
                     borderWidth: 1,
                     borderColor: colors.budgetCardBorder,
                     borderRadius: 16,
                     padding: 20,
-                    gap: 6,
+                    gap: 4,
                 },
-                budgetLabel: {
-                    fontSize: 13,
+                trendlyLabel: {
+                    fontSize: 12,
+                    fontWeight: "600",
                     color: colors.textSecondary,
-                    fontWeight: "500",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.8,
                 },
-                budgetAmount: {
-                    fontSize: 28,
+                trendlyAmount: {
+                    fontSize: 30,
                     fontWeight: "800",
                     color: colors.primary,
                 },
-                budgetSub: {
+                trendlySub: {
                     fontSize: 12,
                     color: colors.textSecondary,
+                    marginTop: 2,
                 },
+                // Direct spend rows
+                directSection: {
+                    gap: 6,
+                    backgroundColor: "transparent",
+                },
+                directRow: {
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    paddingVertical: 4,
+                    backgroundColor: "transparent",
+                },
+                directLabel: {
+                    fontSize: 13,
+                    color: colors.textSecondary,
+                },
+                directValue: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.text,
+                },
+                // Total card
+                totalCard: {
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 14,
+                    padding: 16,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    backgroundColor: colors.card,
+                },
+                totalLabel: {
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.text,
+                },
+                totalAmount: {
+                    fontSize: 20,
+                    fontWeight: "800",
+                    color: colors.text,
+                },
+                divider: {
+                    height: 1,
+                    backgroundColor: colors.border,
+                },
+                // ROI card
                 roiCard: {
                     backgroundColor: colors.reachCardBg,
                     borderWidth: 1,
@@ -224,6 +385,7 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({ budget, roi, campaign, colors
                 roiMetric: {
                     fontSize: 13,
                     color: colors.textSecondary,
+                    flex: 1,
                 },
                 roiValue: {
                     fontSize: 14,
@@ -235,28 +397,85 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({ budget, roi, campaign, colors
                     color: colors.textSecondary,
                     fontStyle: "italic",
                 },
+                roasValue: {
+                    color: colors.primary,
+                    fontSize: 16,
+                },
+                fixedNote: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    lineHeight: 18,
+                    fontStyle: "italic",
+                },
             }),
         [colors]
     );
 
-    const hasROI = roi.organicReach || roi.clickThrough || roi.conversions;
+    const { trendlyFee, influencerBudget, adBudget, totalSpend } = breakdown;
+    const hasDirectSpend = influencerBudget > 0 || adBudget > 0;
+    const hasROI = roi.organicReach || roi.clickThrough || roi.conversions || roi.roas;
+
+    const fmtROAS = (r: number) => {
+        const v = Math.round(r * 10) / 10;
+        return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + "X";
+    };
 
     return (
         <View style={styles.panel}>
-            <View style={styles.budgetCard}>
-                <Text style={styles.budgetLabel}>
-                    {campaign.budgetType === "fixed"
-                        ? "Your Total Budget"
-                        : "Estimated Monthly Cost"}
-                </Text>
-                <Text style={styles.budgetAmount}>{fmt(budget)}</Text>
-                <Text style={styles.budgetSub}>
-                    {campaign.budgetType === "fixed"
-                        ? "Select features to see what fits in your budget"
-                        : "Based on features selected"}
+            {/* Trendly's estimate */}
+            <View style={styles.trendlyCard}>
+                <Text style={styles.trendlyLabel}>Trendly's Estimate</Text>
+                <Text style={styles.trendlyAmount}>{fmt(trendlyFee)}</Text>
+                <Text style={styles.trendlySub}>
+                    {isFixed
+                        ? "Your declared budget cap"
+                        : "Our management fee for selected services"}
                 </Text>
             </View>
 
+            {/* Direct spend breakdown — shown in small text below */}
+            {hasDirectSpend && (
+                <>
+                    <View style={styles.directSection}>
+                        {influencerBudget > 0 && (
+                            <View style={styles.directRow}>
+                                <Text style={styles.directLabel}>
+                                    → Towards Influencers
+                                </Text>
+                                <Text style={styles.directValue}>
+                                    {fmt(influencerBudget)}
+                                </Text>
+                            </View>
+                        )}
+                        {adBudget > 0 && (
+                            <View style={styles.directRow}>
+                                <Text style={styles.directLabel}>
+                                    → Towards Ads
+                                </Text>
+                                <Text style={styles.directValue}>
+                                    {fmt(adBudget)}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    {/* Total marketing spend */}
+                    <View style={styles.totalCard}>
+                        <Text style={styles.totalLabel}>Total Marketing Spend</Text>
+                        <Text style={styles.totalAmount}>{fmt(totalSpend)}</Text>
+                    </View>
+                </>
+            )}
+
+            {isFixed && hasDirectSpend && (
+                <Text style={styles.fixedNote}>
+                    Direct ad and influencer spends are in addition to your declared budget.
+                </Text>
+            )}
+
+            {/* ROI card */}
             <View style={styles.roiCard}>
                 <Text style={styles.roiTitle}>Approx. Monthly ROI</Text>
                 {hasROI ? (
@@ -291,11 +510,21 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({ budget, roi, campaign, colors
                                 </Text>
                             </View>
                         ) : null}
+                        {roi.roas ? (
+                            <View style={styles.roiRow}>
+                                <Text style={styles.roiMetric}>
+                                    Return on Ad Spend (ROAS)
+                                </Text>
+                                <Text style={[styles.roiValue, styles.roasValue]}>
+                                    {fmtROAS(roi.roas)}
+                                </Text>
+                            </View>
+                        ) : null}
                     </>
                 ) : (
                     <Text style={styles.roiEmpty}>
-                        Enable content creation, ad spend or performance marketing to see
-                        estimated returns.
+                        Enable content creation, ad spend, or performance marketing to
+                        see estimated returns.
                     </Text>
                 )}
             </View>
@@ -303,6 +532,7 @@ const BudgetPanel: React.FC<BudgetPanelProps> = ({ budget, roi, campaign, colors
     );
 };
 
+// ─── Main component ───────────────────────────────────────────────────────────
 interface StepFourProps {
     campaign: Partial<ICampaign>;
     setCampaign: React.Dispatch<React.SetStateAction<Partial<ICampaign>>>;
@@ -322,31 +552,63 @@ const StepFour: React.FC<StepFourProps> = ({
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const features = campaign.features!;
-    const budget = calcBudget(campaign);
-    const roi = calcROI(campaign);
+    const isRetainer = campaign.campaignType === "retainer";
     const isFixed = campaign.budgetType === "fixed";
+    const breakdown = calcBreakdown(campaign);
+    const roi = calcROI(campaign);
+
+    const monthlyPosts = useMemo(() => {
+        const freq = campaign.contentFrequency ?? { count: 4, period: "month" };
+        return freq.period === "week" ? freq.count * 4 : freq.count;
+    }, [campaign.contentFrequency]);
+
+    // Auto-enable conversion audit for retainer clients (free perk)
+    useEffect(() => {
+        if (isRetainer && !features.conversionAudit) {
+            setCampaign((prev) => ({
+                ...prev,
+                features: { ...prev.features!, conversionAudit: true },
+            }));
+        }
+    }, [isRetainer]);
 
     const patchFeatures = useCallback(
         (patch: Partial<CampaignFeatures>) =>
-            setCampaign((prev) => ({
-                ...prev,
-                features: { ...prev.features!, ...patch },
-                estimatedBudget: calcBudget({
-                    ...prev,
-                    features: { ...prev.features!, ...patch },
-                }),
-                estimatedROI: calcROI({
-                    ...prev,
-                    features: { ...prev.features!, ...patch },
-                }),
-            })),
-        [setCampaign]
+            setCampaign((prev) => {
+                const newFeatures = { ...prev.features!, ...patch };
+
+                // Recalculate influencer budget whenever content creation inputs change
+                if (newFeatures.contentCreation.enabled) {
+                    const calculated = calcInfluencerBudgetFromInputs(
+                        newFeatures.contentCreation.influencerFollowerRange,
+                        newFeatures.contentCreation.minReach,
+                        monthlyPosts
+                    );
+                    newFeatures.contentCreation = {
+                        ...newFeatures.contentCreation,
+                        influencerBudget: calculated,
+                    };
+                }
+
+                const updated = { ...prev, features: newFeatures };
+                const bd = calcBreakdown(updated);
+                return {
+                    ...updated,
+                    estimatedBudget: bd.trendlyFee,
+                    estimatedROI: calcROI(updated),
+                };
+            }),
+        [setCampaign, monthlyPosts]
     );
 
     const isDisabled = (minBudget: number) =>
-        isFixed && budget < minBudget;
+        isFixed && breakdown.trendlyFee < minBudget;
 
     const genderOptions = ["Male", "Female", "Non-binary"];
+
+    const calculatedInfluencerBudget = features.contentCreation.enabled
+        ? (features.contentCreation.influencerBudget ?? 0)
+        : 0;
 
     const FeaturesPanel = (
         <View style={styles.featuresList}>
@@ -356,8 +618,10 @@ const StepFour: React.FC<StepFourProps> = ({
                 description="End-to-end audit of your IG page aesthetic, website load speed, and remarketing setup to identify drop-off points."
                 enabled={features.conversionAudit}
                 onToggle={(v) => patchFeatures({ conversionAudit: v })}
-                disabled={isDisabled(FEATURE_MIN_BUDGETS.conversionAudit)}
+                disabled={!isRetainer && isDisabled(FEATURE_MIN_BUDGETS.conversionAudit)}
                 disabledReason={`Requires budget ≥ ${fmt(FEATURE_MIN_BUDGETS.conversionAudit)}`}
+                lockedEnabled={isRetainer}
+                lockedBadge="✦ Included free for Monthly Retainer"
                 colors={colors}
             />
 
@@ -375,7 +639,7 @@ const StepFour: React.FC<StepFourProps> = ({
             {/* Content Creation */}
             <FeatureRow
                 title="Content Creation End-to-End"
-                description="We shortlist and coordinate with influencers/creators to deliver content. Our fee is 15% of your influencer budget."
+                description={`We shortlist and coordinate with influencers to deliver content. Our fee is 15% of the influencer budget — we calculate the budget from your follower and reach requirements. Total content target: ${monthlyPosts} posts/month.`}
                 enabled={features.contentCreation.enabled}
                 onToggle={(v) =>
                     patchFeatures({
@@ -384,27 +648,9 @@ const StepFour: React.FC<StepFourProps> = ({
                 }
                 colors={colors}
             >
-                <TextInput
-                    label="Total Influencer Budget (₹)"
-                    mode="outlined"
-                    keyboardType="number-pad"
-                    value={
-                        features.contentCreation.influencerBudget
-                            ? features.contentCreation.influencerBudget.toString()
-                            : ""
-                    }
-                    onChangeText={(text) =>
-                        patchFeatures({
-                            contentCreation: {
-                                ...features.contentCreation,
-                                influencerBudget: parseInt(text) || 0,
-                            },
-                        })
-                    }
-                />
                 <View style={styles.subRow}>
                     <TextInput
-                        label="Min Followers (e.g. 10000)"
+                        label="Min Followers"
                         mode="outlined"
                         keyboardType="number-pad"
                         style={styles.halfInput}
@@ -419,7 +665,7 @@ const StepFour: React.FC<StepFourProps> = ({
                                     ...features.contentCreation,
                                     influencerFollowerRange: [
                                         parseInt(text) || 0,
-                                        features.contentCreation.influencerFollowerRange?.[1] ?? 100000,
+                                        features.contentCreation.influencerFollowerRange?.[1] ?? 100_000,
                                     ],
                                 },
                             })
@@ -441,7 +687,7 @@ const StepFour: React.FC<StepFourProps> = ({
                                     ...features.contentCreation,
                                     influencerFollowerRange: [
                                         features.contentCreation.influencerFollowerRange?.[0] ?? 0,
-                                        parseInt(text) || 100000,
+                                        parseInt(text) || 100_000,
                                     ],
                                 },
                             })
@@ -483,7 +729,7 @@ const StepFour: React.FC<StepFourProps> = ({
                     theme={theme}
                 />
                 <MultiSelectExtendable
-                    buttonLabel="Add Gender"
+                    buttonLabel="Add Gender Preference"
                     closeOnSelect
                     initialMultiselectItemsList={genderOptions}
                     initialItemsList={genderOptions}
@@ -498,12 +744,27 @@ const StepFour: React.FC<StepFourProps> = ({
                     selectedItems={features.contentCreation.genderPreference || []}
                     theme={theme}
                 />
+                {/* Calculated influencer budget display */}
+                {calculatedInfluencerBudget > 0 && (
+                    <View style={styles.calcBudgetBox}>
+                        <Text style={styles.calcBudgetLabel}>
+                            Estimated Influencer Budget
+                        </Text>
+                        <Text style={styles.calcBudgetValue}>
+                            {fmt(calculatedInfluencerBudget)} / month
+                        </Text>
+                        <Text style={styles.calcBudgetNote}>
+                            Based on your follower range &amp; reach requirements ×{" "}
+                            {monthlyPosts} posts. Our fee: {fmt(Math.round(calculatedInfluencerBudget * 0.15))}.
+                        </Text>
+                    </View>
+                )}
             </FeatureRow>
 
             {/* Ad Spend */}
             <FeatureRow
                 title="Strategic Ad Spend & Running Ads"
-                description="We manage your ad campaigns with 10% of your ad spend as our service fee."
+                description="We manage your ad campaigns. Enter your total ad budget — 10% goes to Trendly as the management fee, 90% runs directly as ads."
                 enabled={features.adSpend.enabled}
                 onToggle={(v) =>
                     patchFeatures({ adSpend: { ...features.adSpend, enabled: v } })
@@ -528,6 +789,17 @@ const StepFour: React.FC<StepFourProps> = ({
                         })
                     }
                 />
+                {(features.adSpend.totalAdSpend ?? 0) > 0 && (
+                    <View style={styles.adBreakdownBox}>
+                        <Text style={styles.adBreakdownText}>
+                            Trendly management:{" "}
+                            {fmt(Math.round((features.adSpend.totalAdSpend ?? 0) * 0.1))}
+                            {"  ·  "}
+                            Actual ad spend:{" "}
+                            {fmt(Math.round((features.adSpend.totalAdSpend ?? 0) * 0.9))}
+                        </Text>
+                    </View>
+                )}
             </FeatureRow>
 
             {/* Performance Marketing */}
@@ -537,7 +809,10 @@ const StepFour: React.FC<StepFourProps> = ({
                 enabled={features.performanceMarketing.enabled}
                 onToggle={(v) =>
                     patchFeatures({
-                        performanceMarketing: { ...features.performanceMarketing, enabled: v },
+                        performanceMarketing: {
+                            ...features.performanceMarketing,
+                            enabled: v,
+                        },
                     })
                 }
                 disabled={isDisabled(FEATURE_MIN_BUDGETS.performanceMarketing)}
@@ -569,7 +844,6 @@ const StepFour: React.FC<StepFourProps> = ({
     if (xl) {
         return (
             <View style={styles.rootXL}>
-                {/* Header row */}
                 <View style={styles.xlHeader}>
                     <Text style={styles.xlStepLabel}>Step 4 of 5</Text>
                     <View style={styles.xlProgressRow}>
@@ -578,18 +852,20 @@ const StepFour: React.FC<StepFourProps> = ({
                                 key={i}
                                 style={[
                                     styles.xlProgressSeg,
-                                    { backgroundColor: 4 > i ? colors.primary : colors.aliceBlue },
+                                    {
+                                        backgroundColor:
+                                            4 > i ? colors.primary : colors.aliceBlue,
+                                    },
                                 ]}
                             />
                         ))}
                     </View>
                     <Text style={styles.xlTitle}>Features & Budget</Text>
                     <Text style={styles.xlSubtitle}>
-                        Select the services you need. Budget updates in real-time.
+                        Select services. Budget and totals update in real-time.
                     </Text>
                 </View>
 
-                {/* Split columns */}
                 <View style={styles.splitRow}>
                     <ScrollView
                         style={styles.leftCol}
@@ -599,11 +875,15 @@ const StepFour: React.FC<StepFourProps> = ({
                         {FeaturesPanel}
                     </ScrollView>
                     <View style={styles.rightCol}>
-                        <BudgetPanel budget={budget} roi={roi} campaign={campaign} colors={colors} />
+                        <BudgetPanel
+                            breakdown={breakdown}
+                            roi={roi}
+                            isFixed={isFixed}
+                            colors={colors}
+                        />
                     </View>
                 </View>
 
-                {/* Bottom buttons */}
                 <View style={styles.xlButtons}>
                     <Button mode="outlined" onPress={onBack} style={styles.backBtn}>
                         Back
@@ -620,12 +900,17 @@ const StepFour: React.FC<StepFourProps> = ({
         <StepLayout
             step={4}
             title="Features & Budget"
-            subtitle="Select services and see your budget"
+            subtitle="Select services — budget updates live"
             onBack={onBack}
         >
             {FeaturesPanel}
 
-            <BudgetPanel budget={budget} roi={roi} campaign={campaign} colors={colors} />
+            <BudgetPanel
+                breakdown={breakdown}
+                roi={roi}
+                isFixed={isFixed}
+                colors={colors}
+            />
 
             <View style={styles.buttons}>
                 <Button mode="outlined" onPress={onBack} style={styles.backBtn}>
@@ -651,6 +936,41 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             backgroundColor: "transparent",
         },
         halfInput: { flex: 1 },
+        calcBudgetBox: {
+            backgroundColor: colors.budgetCardBg,
+            borderWidth: 1,
+            borderColor: colors.budgetCardBorder,
+            borderRadius: 10,
+            padding: 12,
+            gap: 2,
+        },
+        calcBudgetLabel: {
+            fontSize: 11,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+        },
+        calcBudgetValue: {
+            fontSize: 17,
+            fontWeight: "800",
+            color: colors.primary,
+        },
+        calcBudgetNote: {
+            fontSize: 11,
+            color: colors.textSecondary,
+            lineHeight: 16,
+            marginTop: 2,
+        },
+        adBreakdownBox: {
+            backgroundColor: colors.aliceBlue,
+            borderRadius: 8,
+            padding: 10,
+        },
+        adBreakdownText: {
+            fontSize: 12,
+            color: colors.textSecondary,
+        },
         buttons: {
             flexDirection: "row",
             gap: 12,

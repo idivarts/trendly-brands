@@ -19,6 +19,31 @@ const fmt = (n: number) => CURRENCY + n.toLocaleString("en-IN");
 
 const RELATIONSHIP_MANAGER = "+91 98765 43210";
 
+interface SpendBreakdown {
+    trendlyFee: number;
+    influencerBudget: number;
+    adBudget: number;
+    totalSpend: number;
+}
+
+function buildSpendBreakdown(campaign: Partial<ICampaign>): SpendBreakdown {
+    const trendlyFee = campaign.estimatedBudget ?? campaign.totalBudget ?? 0;
+    const influencerBudget =
+        campaign.features?.contentCreation.enabled
+            ? (campaign.features.contentCreation.influencerBudget ?? 0)
+            : 0;
+    const adBudget =
+        campaign.features?.adSpend.enabled
+            ? (campaign.features.adSpend.totalAdSpend ?? 0)
+            : 0;
+    return {
+        trendlyFee,
+        influencerBudget,
+        adBudget,
+        totalSpend: trendlyFee + influencerBudget + adBudget,
+    };
+}
+
 function buildSummaryLines(campaign: Partial<ICampaign>): string[] {
     const lines: string[] = [];
     const f = campaign.features!;
@@ -82,8 +107,9 @@ const StepFive: React.FC<StepFiveProps> = ({
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const summaryLines = buildSummaryLines(campaign);
-    const budget = campaign.estimatedBudget || campaign.totalBudget || 0;
+    const spend = buildSpendBreakdown(campaign);
     const roi = campaign.estimatedROI ?? {};
+    const hasDirectSpend = spend.influencerBudget > 0 || spend.adBudget > 0;
 
     return (
         <StepLayout
@@ -132,18 +158,61 @@ const StepFive: React.FC<StepFiveProps> = ({
                 </View>
             )}
 
-            {/* Budget */}
-            <View style={styles.budgetCard}>
-                <Text style={styles.budgetLabel}>
-                    {campaign.budgetType === "fixed"
-                        ? "Your Total Budget"
-                        : "Estimated Monthly Investment"}
-                </Text>
-                <Text style={styles.budgetAmount}>{fmt(budget)}</Text>
+            {/* Budget breakdown */}
+            <View style={styles.budgetSection}>
+                {/* Trendly fee */}
+                <View style={styles.trendlyFeeCard}>
+                    <Text style={styles.budgetLabel}>
+                        {campaign.budgetType === "fixed"
+                            ? "Your Declared Budget Cap"
+                            : "Trendly's Management Fee"}
+                    </Text>
+                    <Text style={styles.budgetAmount}>{fmt(spend.trendlyFee)}</Text>
+                </View>
+
+                {/* Direct spend rows */}
+                {hasDirectSpend && (
+                    <>
+                        <View style={styles.directSpendSection}>
+                            {spend.influencerBudget > 0 && (
+                                <View style={styles.directSpendRow}>
+                                    <Text style={styles.directSpendLabel}>
+                                        → Towards Influencers
+                                    </Text>
+                                    <Text style={styles.directSpendValue}>
+                                        {fmt(spend.influencerBudget)}
+                                    </Text>
+                                </View>
+                            )}
+                            {spend.adBudget > 0 && (
+                                <View style={styles.directSpendRow}>
+                                    <Text style={styles.directSpendLabel}>
+                                        → Towards Ads
+                                    </Text>
+                                    <Text style={styles.directSpendValue}>
+                                        {fmt(spend.adBudget)}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={styles.spendDivider} />
+
+                        {/* Total marketing spend */}
+                        <View style={styles.totalSpendCard}>
+                            <Text style={styles.totalSpendLabel}>
+                                Total Marketing Spend
+                            </Text>
+                            <Text style={styles.totalSpendAmount}>
+                                {fmt(spend.totalSpend)}
+                            </Text>
+                        </View>
+                    </>
+                )}
             </View>
 
             {/* ROI */}
-            {(roi.organicReach || roi.clickThrough || roi.conversions) && (
+            {(roi.organicReach || roi.clickThrough || roi.conversions || roi.roas) && (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Projected Monthly Returns</Text>
                     {roi.organicReach ? (
@@ -154,6 +223,17 @@ const StepFive: React.FC<StepFiveProps> = ({
                     ) : null}
                     {roi.conversions ? (
                         <ROIRow label="Guaranteed Conversions" value={`~${roi.conversions.toLocaleString("en-IN")}`} colors={colors} />
+                    ) : null}
+                    {roi.roas ? (
+                        <ROIRow
+                            label="Return on Ad Spend (ROAS)"
+                            value={(() => {
+                                const v = Math.round(roi.roas * 10) / 10;
+                                return (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)) + "X";
+                            })()}
+                            highlight
+                            colors={colors}
+                        />
                     ) : null}
                 </View>
             )}
@@ -233,8 +313,9 @@ const MetaChip: React.FC<{ label: string; colors: ReturnType<typeof Colors> }> =
 const ROIRow: React.FC<{
     label: string;
     value: string;
+    highlight?: boolean;
     colors: ReturnType<typeof Colors>;
-}> = ({ label, value, colors }) => {
+}> = ({ label, value, highlight, colors }) => {
     const styles = useMemo(
         () =>
             StyleSheet.create({
@@ -249,13 +330,14 @@ const ROIRow: React.FC<{
                 },
                 label: { fontSize: 13, color: colors.textSecondary },
                 value: { fontSize: 14, fontWeight: "700", color: colors.text },
+                valueHighlight: { fontSize: 16, fontWeight: "800", color: colors.primary },
             }),
         [colors]
     );
     return (
         <View style={styles.row}>
             <Text style={styles.label}>{label}</Text>
-            <Text style={styles.value}>{value}</Text>
+            <Text style={highlight ? styles.valueHighlight : styles.value}>{value}</Text>
         </View>
     );
 };
@@ -314,7 +396,11 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             color: colors.text,
             lineHeight: 20,
         },
-        budgetCard: {
+        budgetSection: {
+            gap: 12,
+            backgroundColor: "transparent",
+        },
+        trendlyFeeCard: {
             backgroundColor: colors.budgetCardBg,
             borderWidth: 1,
             borderColor: colors.budgetCardBorder,
@@ -331,6 +417,50 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             fontSize: 32,
             fontWeight: "800",
             color: colors.primary,
+        },
+        directSpendSection: {
+            gap: 6,
+            paddingHorizontal: 4,
+            backgroundColor: "transparent",
+        },
+        directSpendRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: "transparent",
+        },
+        directSpendLabel: {
+            fontSize: 13,
+            color: colors.textSecondary,
+        },
+        directSpendValue: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.text,
+        },
+        spendDivider: {
+            height: 1,
+            backgroundColor: colors.border,
+        },
+        totalSpendCard: {
+            borderWidth: 2,
+            borderColor: colors.primary,
+            borderRadius: 14,
+            padding: 16,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: colors.card,
+        },
+        totalSpendLabel: {
+            fontSize: 15,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        totalSpendAmount: {
+            fontSize: 22,
+            fontWeight: "800",
+            color: colors.text,
         },
         rmCard: {
             flexDirection: "row",
