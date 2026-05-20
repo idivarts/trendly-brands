@@ -8,9 +8,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
-    faAddressCard,
     faComment,
-    faEye,
     faFileLines,
     faGem,
     faStar
@@ -21,14 +19,11 @@ import {
     faChevronUp,
     faComment as faCommentSolid,
     faCreditCard,
-    faDiagramProject,
     faGem as faGemSolid,
     faPlus,
     faSliders,
     faStar as faStarSolid,
-    faTriangleExclamation,
     faUsers,
-    faUserShield
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
@@ -91,11 +86,6 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
         href: "/members",
         icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
         label: "Members",
-    },
-    {
-        href: "/contracts",
-        icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
-        label: "Contracts",
     },
     {
         href: "/billing",
@@ -165,34 +155,6 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     },
 ];
 
-const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
-    {
-        href: "/admin-invites",
-        icon: ({ focused }) => <DrawerIcon href="/kanban-board" icon={faUserShield} focused={focused} />,
-        label: "Invites Management",
-    },
-    {
-        href: "/brand-crm",
-        icon: ({ focused }) => <DrawerIcon href="/brand-crm" icon={faAddressCard} focused={focused} />,
-        label: "Brands CRM",
-    },
-    {
-        href: "/collaboration-cms",
-        icon: ({ focused }) => <DrawerIcon href="/collaboration-cms" icon={faDiagramProject} focused={focused} />,
-        label: "Collaboration CMS",
-    },
-    {
-        href: "/applications",
-        icon: ({ focused }) => <DrawerIcon href="/applications" icon={faEye} focused={focused} />,
-        label: "All Applications",
-    },
-    {
-        href: "/admin-escalations",
-        icon: ({ focused }) => <DrawerIcon href="/admin-escalations" icon={faTriangleExclamation} focused={focused} />,
-        label: "Escalations",
-    },
-];
-
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const nav = useMyNavigation();
     const { bottom } = useSafeAreaInsets();
@@ -223,7 +185,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     );
 
     const [isBrandHovered, setIsBrandHovered] = useState(false);
-    const [isAdminHovered, setIsAdminHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
 
     const handleBrandSelect = (brand: Brand) => {
@@ -457,33 +418,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             </View>
                         </View>
 
-                        {/* Admin Section */}
-                        {manager?.isAdmin && (
-                            <View style={styles.brandDetailsSection}>
-                                <Pressable
-                                    onPress={() => { }}
-                                    onHoverIn={() => setIsAdminHovered(true)}
-                                    onHoverOut={() => setIsAdminHovered(false)}
-                                >
-                                    <View
-                                        style={[
-                                            styles.sectionHeaderRow,
-                                            isAdminHovered && styles.sectionHeaderRowHover,
-                                        ]}
-                                    >
-                                        <Text style={styles.sectionTitle}>Admin Portal</Text>
-                                        <DrawerIcon icon={faChevronRight} size={12} />
-                                    </View>
-                                </Pressable>
-
-                                <View style={styles.divider} />
-                                <View style={styles.menuItems}>
-                                    {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
-                                    ))}
-                                </View>
-                            </View>
-                        )}
                     </ScrollView>
 
                     <View style={styles.bottomActions}>

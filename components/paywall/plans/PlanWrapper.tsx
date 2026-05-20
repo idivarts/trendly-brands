@@ -1,5 +1,4 @@
 //  import pricingPage from "@/app/(landing)/pricing-page";
-import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
@@ -20,7 +19,6 @@ import {
     Text,
     View
 } from "react-native";
-import { CreateCustomLinkModal, IAdminData } from "../CustomPlanModal";
 
 export type PlanKey = 'starter' | 'growth' | 'pro' | 'enterprise'
 export type BillingCycle = "yearly" | "monthly";
@@ -103,19 +101,15 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const isYearly = billing === "yearly";
 
     const [modalVisible, setModalVisible] = useState(false);
-    const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error" | "admin">("loading");
+    const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error">("loading");
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-    const [customModalVisible, setCustomModalVisible] = useState(false);
-    const [customPlanKey, setCustomPlanKey] = useState<PlanKey | null>(null);
-    const [adminData, setAdminData] = useState<IAdminData & { userExists: boolean } | null>(null)
 
     const { openModal } = useConfirmationModel()
     const router = useMyNavigation()
-    const { manager } = useAuthContext()
 
-    const handleSubmit = async (planKey: typeof PLANS[number]["key"], adminData?: IAdminData) => {
+    const handleSubmit = async (planKey: typeof PLANS[number]["key"]) => {
         try {
-            if (planKey == "enterprise" && !manager?.isAdmin) {
+            if (planKey == "enterprise") {
                 openModal({
                     title: "Upgrade to Enterprise",
                     description: "Enterprise upgrade is subject to custom pricing as per the requirements from the customers. Contact support for details",
@@ -130,15 +124,9 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                 return
             }
 
-            if (manager?.isAdmin && !adminData) {
-                Toaster.error("Admin Data not provided for the subscription")
-                return
-            }
-
             setModalVisible(true);
             setModalState("loading");
             setPaymentUrl(null);
-            // Placeholder API call; you will replace this later
             const res = await HttpWrapper.fetch(`/razorpay/subscriptions/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -146,24 +134,14 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                     brandId: selectedBrand?.id,
                     planKey,
                     planCycle: billing,
-                    adminData
                 }),
             });
             if (!res.ok) throw new Error("Failed to create payment link");
             const data = await res.json();
             const url: string | undefined = data?.link;
-            const userExists: boolean = data?.userExists;
             if (!url) throw new Error("No payment URL in response");
             setPaymentUrl(url);
-            if (adminData) {
-                setAdminData({
-                    ...adminData,
-                    userExists
-                })
-                setModalState("admin");
-            } else {
-                setModalState("ready");
-            }
+            setModalState("ready");
         } catch (e) {
             setModalState("error");
         }
@@ -201,59 +179,6 @@ const PlanWrapper = (props: PlanWrapperProps) => {
         } catch { }
     };
 
-    // --- Copy text helper and formatted message for admin modal ---
-    const copyText = async (text: string) => {
-        try {
-            // Web first
-            if (typeof navigator !== 'undefined' && (navigator as any).clipboard?.writeText) {
-                await (navigator as any).clipboard.writeText(text);
-            } else if (Platform.OS !== 'web') {
-                // // Lazy-load expo-clipboard on native if available
-                // try {
-                //     const mod: any = await import('expo-clipboard');
-                //     if (mod?.setStringAsync) await mod.setStringAsync(text);
-                // } catch { }
-            }
-            Toaster.success('Copied');
-        } catch {
-            Toaster.error('Failed to copy');
-        }
-    };
-
-    const formattedAdminMessage = React.useMemo(() => {
-        if (!paymentUrl || !adminData) return '';
-        const loginUrl = 'https://brands.trendly.now/login';
-        if (adminData.userExists) {
-            return [
-                'Subject: Trendly subscription link',
-                '',
-                'Hi,',
-                '',
-                `Payment link: ${paymentUrl}`,
-                `Registered email: ${adminData.email}`,
-                'Your account already exists on Trendly. Use your existing password or reset it from the login page.',
-                `Login: ${loginUrl}`,
-                '',
-                'Thanks,',
-                'Trendly Support'
-            ].join('\n');
-        }
-        return [
-            'Subject: Trendly subscription link',
-            '',
-            'Hi,',
-            '',
-            `Payment link: ${paymentUrl}`,
-            `Email: ${adminData.email}`,
-            `Temporary password: ${adminData.password}`,
-            `Login: ${loginUrl}`,
-            '',
-            'You can change the password after signing in.',
-            '',
-            'Thanks,',
-            'Trendly Support'
-        ].join('\n');
-    }, [paymentUrl, adminData]);
 
     return (
         <View style={styles.rootWrap}>
@@ -328,9 +253,6 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         onPress={() => {
                             if (currentPlan) {
                                 window.open(selectedBrand?.billing?.subscriptionUrl, "_blank");
-                            } else if (manager?.isAdmin) {
-                                setCustomPlanKey(plan.key as PlanKey);
-                                setCustomModalVisible(true);
                             } else {
                                 handleSubmit(plan.key);
                             }
@@ -342,8 +264,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                         ]}
                     >
                         <Text style={currentPlan ? styles.buyTextCurrent : (plan.preferred ? styles.buyText : styles.buyTextAlt)}>
-                            {currentPlan ? "Current Plan" :
-                                (manager?.isAdmin ? `Create Custom Link` : `Start ${plan.name} Plan`)}
+                            {currentPlan ? "Current Plan" : `Start ${plan.name} Plan`}
                         </Text>
                     </Pressable>)
                     return (
@@ -440,89 +361,6 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                 </Pressable>
                             </>
                         )}
-                        {modalState === 'admin' && (
-                            <>
-                                <Text style={styles.modalTitle}>Payment Link Generated</Text>
-                                <Text style={styles.modalText}>
-                                    After payment, please return to this page. It might take 3 to 5 minutes for your payment to reflect on the account.
-                                </Text>
-
-                                {/* Payment link with copy */}
-                                {paymentUrl && (
-                                    <View style={[styles.copyWrap, styles.copyWrapTop]}>
-                                        <Text style={styles.label}>Payment link</Text>
-                                        <View style={styles.copyRow}>
-                                            <Text style={styles.copyTextMono} numberOfLines={1} selectable>{paymentUrl}</Text>
-                                            <Pressable accessibilityRole="button" onPress={() => copyText(paymentUrl)} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                <Text style={styles.copyBtnText}>Copy</Text>
-                                            </Pressable>
-                                        </View>
-                                    </View>
-                                )}
-
-                                {/* User details depending on existence */}
-                                {!!adminData && (
-                                    <View style={styles.modalBlockSpaced}>
-                                        {adminData.userExists ? (
-                                            <>
-                                                <Text style={styles.label}>User account</Text>
-                                                <Text style={styles.modalText}>User already exists on Trendly with this email:</Text>
-                                                <View style={styles.copyRow}>
-                                                    <Text style={styles.copyTextMono} selectable>{adminData.email}</Text>
-                                                    <Pressable accessibilityRole="button" onPress={() => copyText(adminData.email)} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.copyBtnText}>Copy</Text>
-                                                    </Pressable>
-                                                </View>
-                                                <Text style={styles.modalTextTight}>Password is not included because the user previously registered.</Text>
-                                                <View style={[styles.copyRow, styles.copyRowTight]}>
-                                                    <Text style={styles.copyTextMono} selectable>https://brands.trendly.now/login</Text>
-                                                    <Pressable accessibilityRole="button" onPress={() => copyText('https://brands.trendly.now/login')} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.copyBtnText}>Copy</Text>
-                                                    </Pressable>
-                                                </View>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Text style={styles.label}>New user credentials</Text>
-                                                <View style={styles.copyRow}>
-                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoLabel]}>Email:</Text>
-                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoValue]} selectable>{adminData.email}</Text>
-                                                    <Pressable accessibilityRole="button" onPress={() => copyText(adminData.email)} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.copyBtnText}>Copy</Text>
-                                                    </Pressable>
-                                                </View>
-                                                <View style={[styles.copyRow, styles.copyRowTight]}>
-                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoLabel]}>Password:</Text>
-                                                    <Text style={[styles.copyTextMono, styles.copyTextMonoValue]} selectable>{adminData.password}</Text>
-                                                    <Pressable accessibilityRole="button" onPress={() => copyText(adminData.password || '')} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.copyBtnText}>Copy</Text>
-                                                    </Pressable>
-                                                </View>
-                                                <View style={[styles.copyRow, styles.copyRowTight]}>
-                                                    <Text style={styles.copyTextMono} selectable>https://brands.trendly.now/login</Text>
-                                                    <Pressable accessibilityRole="button" onPress={() => copyText('https://brands.trendly.now/login')} style={({ pressed }) => [styles.copyBtnSmall, pressed && styles.pressed]}>
-                                                        <Text style={styles.copyBtnText}>Copy</Text>
-                                                    </Pressable>
-                                                </View>
-                                            </>
-                                        )}
-                                    </View>
-                                )}
-
-                                {/* Copy formatted message */}
-                                {!!formattedAdminMessage && (
-                                    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.modalBtnCopyMessage, pressed && styles.pressed]} onPress={() => copyText(formattedAdminMessage)}>
-                                        <Text style={styles.modalBtnText}>Copy message for customer</Text>
-                                    </Pressable>
-                                )}
-
-                                <Pressable style={({ pressed }) => [styles.modalBtnAlt, pressed && styles.pressed]} onPress={() => setModalVisible(false)}>
-                                    <Text style={styles.modalBtnAltText}>Got it</Text>
-                                </Pressable>
-                            </>
-                        )}
-
-
                         {modalState === "opened" && (
                             <>
                                 <Text style={styles.modalTitle}>Complete your payment</Text>
@@ -552,17 +390,6 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                     </View>
                 </View>
             </Modal>
-            {/* Custom Link Modal for Admins */}
-            <CreateCustomLinkModal
-                visible={customModalVisible}
-                onClose={() => setCustomModalVisible(false)}
-                planKey={customPlanKey ?? (PLANS[0].key as PlanKey)}
-                planCycle={billing}
-                onSubmit={(adminData, planKey, planCycle) => {
-                    handleSubmit(planKey, adminData)
-                    setCustomModalVisible(false);
-                }}
-            />
         </View>
     );
 };

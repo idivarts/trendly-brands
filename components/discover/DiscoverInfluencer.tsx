@@ -176,10 +176,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
-    const [adminMenuVisible, setAdminMenuVisible] = useState(false);
     const [selectedInfluencer, setSelectedInfluencer] =
         useState<InfluencerItem | null>(null);
-    const [isRescraping, setIsRescraping] = useState(false);
     const [openProfileModal, setOpenProfileModal] = useState(false);
     const [trendlyAnalytics, setTrendlyAnalytics] = useState<ISocialAnalytics | null>(null);
     const [trendlySocial, setTrendlySocial] = useState<ISocials | null>(null);
@@ -851,37 +849,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             influencerIds={[selectedInfluencer.id]}
                                             influencerName={selectedInfluencer.name}
                                         />
-                                        {manager?.isAdmin && (
-                                            <Menu
-                                                visible={adminMenuVisible}
-                                                onDismiss={() => setAdminMenuVisible(false)}
-                                                anchor={
-                                                    <IconButton
-                                                        icon="dots-vertical"
-                                                        onPress={() => setAdminMenuVisible(true)}
-                                                        accessibilityLabel="Admin actions"
-                                                    />
-                                                }
-                                                contentStyle={{ zIndex: 99999, elevation: 99999 }}
-                                            >
-                                                <Menu.Item
-                                                    onPress={() => {
-                                                        setAdminMenuVisible(false);
-                                                        trendlyAnalyticsRef.current?.openEditModal();
-                                                    }}
-                                                    title="Edit Metrics"
-                                                    leadingIcon="pencil"
-                                                />
-                                                <Menu.Item
-                                                    onPress={() => {
-                                                        setAdminMenuVisible(false);
-                                                        trendlyAnalyticsRef.current?.handleRescrape();
-                                                    }}
-                                                    title="Re-scrape"
-                                                    disabled={isRescraping}
-                                                />
-                                            </Menu>
-                                        )}
                                     </View>
                                 }
                                 FireStoreDB={FirestoreDB}

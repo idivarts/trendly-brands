@@ -56,7 +56,6 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
         const [saveError, setSaveError] = useState<string | null>(null);
         const [editedSocial, setEditedSocial] = useState<Partial<ISocials>>({});
         const [isRescraping, setIsRescraping] = useState(false);
-        const isAdmin = manager?.isAdmin === true;
         const hasChanges = Object.keys(editedSocial).length > 0;
         const theme = useTheme();
         const colors = Colors(theme);
@@ -203,10 +202,9 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
             () => ({
                 handleEditClick,
                 handleRescrape,
-                isAdmin,
                 openEditModal: handleEditClick,
             }),
-            [handleEditClick, handleRescrape, isAdmin]
+            [handleEditClick, handleRescrape]
         );
 
         useEffect(() => {

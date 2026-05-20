@@ -1,6 +1,5 @@
 import { faCreditCard } from "@fortawesome/free-regular-svg-icons";
 import {
-    faFileLines,
     faGears,
     faSliders,
     faUsers
@@ -20,12 +19,6 @@ export const MENU_ITEMS: { id: string, icon: any, title: string, href: Href }[] 
         icon: faUsers,
         title: "Manage Brand Members",
         href: "/members",
-    },
-    {
-        id: "5",
-        icon: faFileLines,
-        title: "Contracts",
-        href: "/contracts",
     },
     ...(Platform.OS == "web" ? [{
         id: "3",
