@@ -1,14 +1,20 @@
 import InvitationCard from "@/components/card/collaboration-details/invitation-card";
 import { InvitationCard as ProfileInvitationCard } from "@/components/card/profile-modal/invitation-card";
-import Discover from "@/components/discover/Discover";
+import InviteToCampaignButton from "@/components/collaboration/InviteToCampaignButton";
+import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { Text, View } from "@/components/theme/Themed";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
+import PageHeader from "@/components/ui/page-header";
 import Button from "@/components/ui/button";
 import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
+import { useNicheSearch } from "@/hooks";
+import AppLayout from "@/layouts/app-layout";
+import Discover from "@/shared-uis/components/discover/Discover";
 import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
@@ -67,7 +73,9 @@ const InvitationsTabContent = (props: any) => {
 
     const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
     const { manager } = useAuthContext();
-    const { isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { selectedBrand, updateBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { features } = useMyGrowthBook();
+    const { handleSearch, getAllNiches, isLoading: isLoadingNiches, niches } = useNicheSearch();
 
     // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
     // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -249,6 +257,26 @@ const InvitationsTabContent = (props: any) => {
                                     defaultAdvanceFilters={collaboration?.preferences}
                                     useStoredFilters={false}
                                     skipGuideTour={true}
+                                    config={{
+                                        managerId: manager?.id ?? null,
+                                        isAdmin: false,
+                                        selectedBrand: selectedBrand ?? null,
+                                        updateBrand,
+                                        isOnFreeTrial: isOnFreeTrial ?? false,
+                                        isProfileLocked,
+                                        niches,
+                                        searchNiches: handleSearch,
+                                        getAllNiches,
+                                        isLoadingNiches,
+                                        demoLink: features?.demoLink,
+                                        components: {
+                                            AppLayout,
+                                            PageHeader,
+                                            InfluencerCard,
+                                            InviteToCampaignButton,
+                                            BottomSheetScrollContainer,
+                                        },
+                                    }}
                                 />
                             </ScrollView>
                         ) : (
@@ -259,6 +287,26 @@ const InvitationsTabContent = (props: any) => {
                                 defaultAdvanceFilters={collaboration?.preferences}
                                 useStoredFilters={false}
                                 skipGuideTour={true}
+                                config={{
+                                    managerId: manager?.id ?? null,
+                                    isAdmin: false,
+                                    selectedBrand: selectedBrand ?? null,
+                                    updateBrand,
+                                    isOnFreeTrial: isOnFreeTrial ?? false,
+                                    isProfileLocked,
+                                    niches,
+                                    searchNiches: handleSearch,
+                                    getAllNiches,
+                                    isLoadingNiches,
+                                    demoLink: features?.demoLink,
+                                    components: {
+                                        AppLayout,
+                                        PageHeader,
+                                        InfluencerCard,
+                                        InviteToCampaignButton,
+                                        BottomSheetScrollContainer,
+                                    },
+                                }}
                             />
                         )}
                     </View>

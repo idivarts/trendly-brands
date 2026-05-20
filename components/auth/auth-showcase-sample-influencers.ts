@@ -1,4 +1,4 @@
-import type { InfluencerItem } from "@/components/discover/discover-types";
+import type { InfluencerItem } from "@/shared-uis/components/discover/discover-types";
 
 /** First N items feed the upward column; the rest feed the downward column in `AuthPageLayout`. */
 export const AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX = 3;

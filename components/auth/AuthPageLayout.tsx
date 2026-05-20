@@ -2,7 +2,7 @@ import {
     AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX,
     authShowcaseSampleInfluencers,
 } from "@/components/auth/auth-showcase-sample-influencers";
-import type { InfluencerItem } from "@/components/discover/discover-types";
+import type { InfluencerItem } from "@/shared-uis/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import { useBreakpoints } from "@/hooks";
 import { getConstrainedHeight } from "@/shared-libs/contexts/mobile-layout-context.provider";

@@ -1,4 +1,4 @@
-import type { InfluencerInviteUnit } from "@/components/discover/discover-types";
+import type { InfluencerInviteUnit } from "@/shared-uis/components/discover/discover-types";
 import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
 import EmptyState from "@/components/ui/empty-state";
 import { useCollapseContext } from "@/contexts/CollapseContext";
@@ -11,7 +11,6 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { ActivityIndicator, Chip, Menu } from "react-native-paper";
-//  import Discover from "@/components/discover/Discover"; // unused
 
 const InvitedMemberTabContent = (props: any) => {
     const theme = useTheme();
