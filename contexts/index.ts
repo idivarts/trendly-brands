@@ -1,5 +1,9 @@
 import { AWSContextProvider, useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import {
+    LocationContextProvider,
+    useLocationContext,
+} from "./location-context.provider";
+import {
     CloudMessagingContextProvider,
     useCloudMessagingContext,
 } from "../shared-libs/contexts/cloud-messaging.provider";
@@ -37,6 +41,7 @@ import {
 export {
     AuthContextProvider,
     AWSContextProvider,
+    LocationContextProvider,
     ChatContextProvider,
     CloudMessagingContextProvider,
     CollaborationContextProvider,
@@ -56,5 +61,6 @@ export {
     useNiche,
     useNotificationContext,
     useThemeOverride,
-    useTransition
+    useTransition,
+    useLocationContext,
 };

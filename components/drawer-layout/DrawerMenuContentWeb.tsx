@@ -1,5 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
-import { useAuthContext } from "@/contexts";
+import { useAuthContext, useLocationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -13,9 +13,13 @@ import {
     faEye,
     faFileLines,
     faGem,
-    faStar
+    faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
+    faArrowTrendUp,
+    faBullseye,
+    faCalendarDays,
+    faChartLine,
     faChevronDown,
     faChevronRight,
     faChevronUp,
@@ -23,12 +27,13 @@ import {
     faCreditCard,
     faDiagramProject,
     faGem as faGemSolid,
+    faLayerGroup,
+    faPenRuler,
     faPlus,
-    faSliders,
     faStar as faStarSolid,
     faTriangleExclamation,
     faUsers,
-    faUserShield
+    faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
@@ -47,7 +52,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreditDisplayCard from "./CreditDisplayCard";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
-//  import BrandActionItem from "./BrandActionItem";
+
 // Bottom menu items factory
 const BOTTOM_MENU_ITEMS = (
     theme: Theme,
@@ -75,51 +80,27 @@ const BOTTOM_MENU_ITEMS = (
             label: name || "Profile",
         },
     ];
-// Brand Details menu items
-const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
-    // {
-    //   href: "/preferences",
-    //   icon: () => <DrawerIcon href="" icon={faSliders} />,
-    //   label: "Influencer Preferences",
-    // },
+
+// Content Creation section
+const CONTENT_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
-        href: "/brand-profile",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
-        label: "Brand Profile",
+        href: "/content-strategies",
+        icon: ({ focused }) => <DrawerIcon href="/content-strategies" icon={faPenRuler} focused={focused} />,
+        label: "Content Strategy",
     },
     {
-        href: "/members",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
-        label: "Members",
+        href: "/content-calendar",
+        icon: ({ focused }) => <DrawerIcon href="/content-calendar" icon={faCalendarDays} focused={focused} />,
+        label: "Content Calendar",
     },
     {
-        href: "/contracts",
-        icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
-        label: "Contracts",
-    },
-    {
-        href: "/billing",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faCreditCard} focused={focused} />,
-        label: "Billing",
+        href: "/contents",
+        icon: ({ focused }) => <DrawerIcon href="/contents" icon={faLayerGroup} focused={focused} />,
+        label: "All Content",
     },
 ];
 
-// Showcase menu items
-const SHOWCASE_MENU_ITEMS = (theme: Theme): Tab[] => [
-    {
-        href: "/explore-influencers",
-        icon: ({ focused }) => <DrawerIcon href="/explore-influencers" icon={faStar} focused={focused} />,
-        label: "Influencer Spotlights",
-    },
-    {
-        href: "/preferences",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faSliders} focused={focused} />,
-        label: "Preferences",
-    },
-];
-
-interface DrawerMenuContentProps { }
-
+// Campaign section (India only)
 const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
         href: "/discover",
@@ -129,7 +110,7 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
             ) : (
                 <DrawerIcon href="/discover" icon={faGem} focused={focused} />
             ),
-        label: "Discovery",
+        label: "Discover Influencers",
         pro: true,
     },
     {
@@ -140,18 +121,12 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
             ) : (
                 <DrawerIcon href="/collaborations" icon={faStar} focused={focused} />
             ),
-        label: "Campaigns",
+        label: "Collaboration Requests",
     },
-    // {
-    //   href: "/explore-influencers",
-    //   icon: ({ focused }: IconPropFn) =>
-    //     focused ? (
-    //       <DrawerIcon href="/explore-influencers" icon={faHeartSolid} />
-    //     ) : (
-    //       <DrawerIcon href="/explore-influencers" icon={faHeart} />
-    //     ),
-    //   label: "Spotlights",
-    // },
+];
+
+// Execution section
+const EXECUTION_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
         href: "/messages",
         icon: ({ focused }: IconPropFn) =>
@@ -163,8 +138,57 @@ const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
         label: "Messages",
         showUnreadCount: true,
     },
+    {
+        href: "/contracts",
+        icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
+        label: "Influencer Contracts",
+    },
+    {
+        href: "/analytics",
+        icon: ({ focused }) => <DrawerIcon href="/analytics" icon={faChartLine} focused={focused} />,
+        label: "Reporting & Analytics",
+    },
 ];
 
+// Brand Management section
+const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
+    {
+        href: "/brand-profile",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
+        label: "Brand Profile",
+    },
+    {
+        href: "/members",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
+        label: "Members",
+    },
+    {
+        href: "/billing",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faCreditCard} focused={focused} />,
+        label: "Billing",
+    },
+];
+
+// Growth section
+const GROWTH_MENU_ITEMS = (theme: Theme): Tab[] => [
+    {
+        href: "/organic-growth",
+        icon: ({ focused }) => <DrawerIcon href="/organic-growth" icon={faArrowTrendUp} focused={focused} />,
+        label: "Organic Conversions",
+    },
+    {
+        href: "/paid-growth",
+        icon: ({ focused }) => <DrawerIcon href="/paid-growth" icon={faBullseye} focused={focused} />,
+        label: "Paid Mediums",
+    },
+    {
+        href: "/performance-marketing",
+        icon: ({ focused }) => <DrawerIcon href="/performance-marketing" icon={faChartLine} focused={focused} />,
+        label: "Performance Marketing",
+    },
+];
+
+// Admin Portal section
 const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
         href: "/admin-invites",
@@ -193,7 +217,9 @@ const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
     },
 ];
 
-const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
+interface DrawerMenuContentWebProps { }
+
+const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const nav = useMyNavigation();
     const { bottom } = useSafeAreaInsets();
     const theme = useTheme();
@@ -201,6 +227,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
     const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
+    const { isIndiaBased } = useLocationContext();
     const { xl } = useBreakpoints();
 
     const planKey = selectedBrand?.billing?.planKey || "";
@@ -224,12 +251,32 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
 
     const [isBrandHovered, setIsBrandHovered] = useState(false);
     const [isAdminHovered, setIsAdminHovered] = useState(false);
+    const [isBrandMgmtHovered, setIsBrandMgmtHovered] = useState(false);
+    const [isGrowthHovered, setIsGrowthHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
         setBrandListExpanded(false);
     };
+
+    // Content Creation items — add Collaboration Requests if outside India
+    const contentItems = useMemo(() => {
+        const base = CONTENT_MENU_ITEMS(theme);
+        if (!isIndiaBased) {
+            base.push({
+                href: "/collaborations",
+                icon: ({ focused }: IconPropFn) =>
+                    focused ? (
+                        <DrawerIcon href="/collaborations" icon={faStarSolid} focused={focused} />
+                    ) : (
+                        <DrawerIcon href="/collaborations" icon={faStar} focused={focused} />
+                    ),
+                label: "Collaboration Requests",
+            });
+        }
+        return base;
+    }, [isIndiaBased, theme]);
 
     const brandHeaderContent = (
         <View style={styles.header}>
@@ -344,32 +391,49 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
                     >
+                        {/* 1. CONTENT CREATION */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>CONNECT</Text>
-                            <View style={styles.campaignItems}>
-                                {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) =>
-                                    idx === 1 && xl ? (
-                                        <CoachmarkAnchor
-                                            key={`campaign-${idx}`}
-                                            id="guide-tour-campaigns-web"
-                                            shape="rect"
-                                        >
-                                            <DrawerMenuItem
-                                                tab={tab}
-                                                proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
-                                            />
-                                        </CoachmarkAnchor>
-                                    ) : (
+                            <Text style={styles.sectionTitle}>CONTENT CREATION</Text>
+                            <View style={styles.menuItems}>
+                                {contentItems.map((tab, idx) => (
+                                    <DrawerMenuItem key={`content-${idx}`} tab={tab} />
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* 2. CAMPAIGN (India only) */}
+                        {isIndiaBased && (
+                            <View style={styles.brandDetailsSection}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>CAMPAIGN</Text>
+                                </View>
+                                <View style={styles.divider} />
+                                <View style={styles.menuItems}>
+                                    {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
                                         <DrawerMenuItem
                                             key={`campaign-${idx}`}
                                             tab={tab}
                                             proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
                                         />
-                                    )
-                                )}
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* 3. EXECUTION */}
+                        <View style={styles.brandDetailsSection}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>EXECUTION</Text>
+                            </View>
+                            <View style={styles.divider} />
+                            <View style={styles.menuItems}>
+                                {EXECUTION_MENU_ITEMS(theme).map((tab, idx) => (
+                                    <DrawerMenuItem key={`execution-${idx}`} tab={tab} />
+                                ))}
                             </View>
                         </View>
 
+                        {/* 4. CREDITS */}
                         {selectedBrand && !selectedBrand.isBillingDisabled &&
                             (xl ? (
                                 <CoachmarkAnchor
@@ -386,7 +450,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             <>
                                 {(!selectedBrand.billing || selectedBrand?.billing?.planKey === "starter") && (
                                     <RenderBanner
-                                        title="You’re on a Free Plan"
+                                        title="You're on a Free Plan"
                                         description="Upgrade now to enjoy all the premium features and grow your brand."
                                         buttonText="Upgrade Now"
                                     />
@@ -394,7 +458,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                 {selectedBrand.billing?.isOnTrial &&
                                     (selectedBrand.billing?.trialEnds || 0) > Date.now() && (
                                         <RenderBanner
-                                            title={`You’re on ${selectedBrand.billing.planKey} plan's Trial`}
+                                            title={`You're on ${selectedBrand.billing.planKey} plan's Trial`}
                                             description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
                                                 ((selectedBrand.billing?.trialEnds || 0) - Date.now()) /
                                                 (1000 * 60 * 60)
@@ -406,7 +470,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                 {selectedBrand.billing?.isOnTrial &&
                                     (selectedBrand.billing?.trialEnds || 0) <= Date.now() && (
                                         <RenderBanner
-                                            title={`You’re Trial has Ended`}
+                                            title={`You're Trial has Ended`}
                                             description={`To keep using the platform, please pay for the subscription plan`}
                                             buttonText="Pay Now"
                                             customUrl={selectedBrand.billing.subscriptionUrl}
@@ -415,24 +479,23 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                             </>
                         )}
 
-                        {/* BRAND MANAGEMENT */}
+                        {/* 5. BRAND MANAGEMENT */}
                         <View style={styles.brandDetailsSection}>
                             <Pressable
                                 onPress={() => nav.push("/menu")}
-                                onHoverIn={() => setIsBrandHovered(true)}
-                                onHoverOut={() => setIsBrandHovered(false)}
+                                onHoverIn={() => setIsBrandMgmtHovered(true)}
+                                onHoverOut={() => setIsBrandMgmtHovered(false)}
                             >
                                 <View
                                     style={[
                                         styles.sectionHeaderRow,
-                                        isBrandHovered && styles.sectionHeaderRowHover,
+                                        isBrandMgmtHovered && styles.sectionHeaderRowHover,
                                     ]}
                                 >
                                     <Text style={styles.sectionTitle}>BRAND MANAGEMENT</Text>
                                     <DrawerIcon icon={faChevronRight} size={12} />
                                 </View>
                             </Pressable>
-
                             <View style={styles.divider} />
                             <View style={styles.menuItems}>
                                 {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
@@ -440,24 +503,33 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentProps> = () => {
                                 ))}
                             </View>
                         </View>
-                        {/* INSIGHTS */}
+
+                        {/* 6. GROWTH */}
                         <View style={styles.brandDetailsSection}>
-                            <Pressable onPress={() => nav.push("/menu")}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>INSIGHTS</Text>
+                            <Pressable
+                                onPress={() => { }}
+                                onHoverIn={() => setIsGrowthHovered(true)}
+                                onHoverOut={() => setIsGrowthHovered(false)}
+                            >
+                                <View
+                                    style={[
+                                        styles.sectionHeaderRow,
+                                        isGrowthHovered && styles.sectionHeaderRowHover,
+                                    ]}
+                                >
+                                    <Text style={styles.sectionTitle}>GROWTH</Text>
                                     <DrawerIcon icon={faChevronRight} size={12} />
                                 </View>
                             </Pressable>
-
                             <View style={styles.divider} />
                             <View style={styles.menuItems}>
-                                {SHOWCASE_MENU_ITEMS(theme).map((tab, idx) => (
-                                    <DrawerMenuItem key={`showcase-${idx}`} tab={tab} />
+                                {GROWTH_MENU_ITEMS(theme).map((tab, idx) => (
+                                    <DrawerMenuItem key={`growth-${idx}`} tab={tab} />
                                 ))}
                             </View>
                         </View>
 
-                        {/* Admin Section */}
+                        {/* 7. ADMIN PORTAL */}
                         {manager?.isAdmin && (
                             <View style={styles.brandDetailsSection}>
                                 <Pressable
@@ -549,7 +621,6 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             overflow: "visible",
             paddingTop: Platform.OS === "web" ? 8 : 64,
             backgroundColor: sidebarSurfaceBg,
-            // Subtle elevation so the drawer feels slightly "raised"
             shadowColor: colors.panelShadow,
             shadowOffset: { width: 0, height: 6 },
             shadowRadius: 16,
@@ -633,7 +704,6 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             paddingHorizontal: 12,
             borderRadius: 8,
             marginBottom: 2,
-
         },
         brandListItemSelected: {
             backgroundColor: colors.primary,
@@ -645,7 +715,6 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             fontSize: 14,
             color: colors.drawerText,
             fontWeight: "500",
-
         },
         brandListItemTextSelected: {
             color: colors.white,
@@ -668,10 +737,6 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             color: sectionLabelColor,
             backgroundColor: "transparent",
         },
-        campaignItems: {
-            rowGap: 2,
-            backgroundColor: "transparent",
-        },
         brandDetailsSection: {
             marginTop: 16,
             gap: 8,
@@ -686,18 +751,14 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             paddingVertical: 12,
             backgroundColor: "transparent",
         },
-        sectionHeaderRowHover: {
-            // borderWidth: StyleSheet.hairlineWidth,z
-            // borderColor: colors.drawerBorder,
-
-        },
+        sectionHeaderRowHover: {},
         divider: {
             borderTopColor: sidebarDividerColor,
             borderTopWidth: StyleSheet.hairlineWidth,
         },
         menuItems: {
             gap: 0,
-            backgroundColor: "transparent"
+            backgroundColor: "transparent",
         },
         bottomActions: {
             paddingHorizontal: 8,

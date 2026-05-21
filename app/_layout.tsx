@@ -24,6 +24,7 @@ import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
     AWSContextProvider,
+    LocationContextProvider,
     NicheProvider,
     ThemeOverrideProvider,
     TransitionProvider,
@@ -83,9 +84,11 @@ export default function RootLayout() {
             <MarketingPixels />
             <UpdateProvider force={true}>
                 <AuthContextProvider>
-                    <ThemeOverrideProvider>
-                        <RootLayoutStack />
-                    </ThemeOverrideProvider>
+                    <LocationContextProvider>
+                        <ThemeOverrideProvider>
+                            <RootLayoutStack />
+                        </ThemeOverrideProvider>
+                    </LocationContextProvider>
                 </AuthContextProvider>
             </UpdateProvider>
         </GestureHandlerRootView>
