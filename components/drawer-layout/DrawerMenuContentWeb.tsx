@@ -255,6 +255,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const [isGrowthHovered, setIsGrowthHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
 
+    const showCreditsSystem = false
+
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
         setBrandListExpanded(false);
@@ -421,50 +423,52 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         )}
 
                         {/* 3. CREDITS */}
-                        {selectedBrand && !selectedBrand.isBillingDisabled &&
-                            (xl ? (
-                                <CoachmarkAnchor
-                                    id="guide-tour-credits-web"
-                                    shape="rect"
-                                >
+                        {showCreditsSystem && <>
+                            {selectedBrand && !selectedBrand.isBillingDisabled &&
+                                (xl ? (
+                                    <CoachmarkAnchor
+                                        id="guide-tour-credits-web"
+                                        shape="rect"
+                                    >
+                                        <CreditDisplayCard />
+                                    </CoachmarkAnchor>
+                                ) : (
                                     <CreditDisplayCard />
-                                </CoachmarkAnchor>
-                            ) : (
-                                <CreditDisplayCard />
-                            )
-                            )}
-                        {selectedBrand && !selectedBrand.isBillingDisabled && (
-                            <>
-                                {(!selectedBrand.billing || selectedBrand?.billing?.planKey === "starter") && (
-                                    <RenderBanner
-                                        title="You're on a Free Plan"
-                                        description="Upgrade now to enjoy all the premium features and grow your brand."
-                                        buttonText="Upgrade Now"
-                                    />
+                                )
                                 )}
-                                {selectedBrand.billing?.isOnTrial &&
-                                    (selectedBrand.billing?.trialEnds || 0) > Date.now() && (
+                            {selectedBrand && !selectedBrand.isBillingDisabled && (
+                                <>
+                                    {(!selectedBrand.billing || selectedBrand?.billing?.planKey === "starter") && (
                                         <RenderBanner
-                                            title={`You're on ${selectedBrand.billing.planKey} plan's Trial`}
-                                            description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
-                                                ((selectedBrand.billing?.trialEnds || 0) - Date.now()) /
-                                                (1000 * 60 * 60)
-                                            )} hours`}
-                                            buttonText="Pay Now"
-                                            customUrl={selectedBrand.billing.subscriptionUrl}
+                                            title="You're on a Free Plan"
+                                            description="Upgrade now to enjoy all the premium features and grow your brand."
+                                            buttonText="Upgrade Now"
                                         />
                                     )}
-                                {selectedBrand.billing?.isOnTrial &&
-                                    (selectedBrand.billing?.trialEnds || 0) <= Date.now() && (
-                                        <RenderBanner
-                                            title={`You're Trial has Ended`}
-                                            description={`To keep using the platform, please pay for the subscription plan`}
-                                            buttonText="Pay Now"
-                                            customUrl={selectedBrand.billing.subscriptionUrl}
-                                        />
-                                    )}
-                            </>
-                        )}
+                                    {selectedBrand.billing?.isOnTrial &&
+                                        (selectedBrand.billing?.trialEnds || 0) > Date.now() && (
+                                            <RenderBanner
+                                                title={`You're on ${selectedBrand.billing.planKey} plan's Trial`}
+                                                description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
+                                                    ((selectedBrand.billing?.trialEnds || 0) - Date.now()) /
+                                                    (1000 * 60 * 60)
+                                                )} hours`}
+                                                buttonText="Pay Now"
+                                                customUrl={selectedBrand.billing.subscriptionUrl}
+                                            />
+                                        )}
+                                    {selectedBrand.billing?.isOnTrial &&
+                                        (selectedBrand.billing?.trialEnds || 0) <= Date.now() && (
+                                            <RenderBanner
+                                                title={`You're Trial has Ended`}
+                                                description={`To keep using the platform, please pay for the subscription plan`}
+                                                buttonText="Pay Now"
+                                                customUrl={selectedBrand.billing.subscriptionUrl}
+                                            />
+                                        )}
+                                </>
+                            )}
+                        </>}
 
                         {/* 4. EXECUTION */}
                         <View style={styles.brandDetailsSection}>
