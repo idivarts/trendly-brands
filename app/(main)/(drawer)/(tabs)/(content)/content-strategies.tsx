@@ -1,4 +1,4 @@
-import ChatPanel from "@/components/content-strategy/ChatPanel";
+import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import EmptyPromptView from "@/components/content-strategy/EmptyPromptView";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
@@ -29,7 +29,7 @@ const ContentStrategiesScreen = () => {
     const [strategies, setStrategies] = useState<ContentStrategy[]>(MOCK_STRATEGIES);
     const [activeStrategyId, setActiveStrategyId] = useState<string | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const [chatAttachment, setChatAttachment] = useState<string | null>(null);
+    const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
     const [isAITyping, setIsAITyping] = useState(false);
 
     // 0 = collecting layout (left:narrow, right:wide), 1 = strategy-ready layout (left:wide, right:narrow)
@@ -96,19 +96,24 @@ const ContentStrategiesScreen = () => {
     const handleChatSend = useCallback(
         (text: string) => {
             if (isAITyping) return;
-            const fullText = chatAttachment ? `[Ref: "${chatAttachment}"]\n${text}` : text;
+            const refs = chatFocusItems.map((f) => `[Ref: "${f.label}"]`).join(" ");
+            const fullText = refs ? `${refs}\n${text}` : text;
             addMessage("user", fullText);
-            setChatAttachment(null);
+            setChatFocusItems([]);
 
             const nextIndex = questionIndex + 1;
             setQuestionIndex(nextIndex);
             askNextQuestion(nextIndex);
         },
-        [isAITyping, chatAttachment, questionIndex, addMessage, askNextQuestion]
+        [isAITyping, chatFocusItems, questionIndex, addMessage, askNextQuestion]
     );
 
     const handleSendToChat = useCallback((text: string) => {
-        setChatAttachment(text.length > 120 ? text.slice(0, 120) + "..." : text);
+        const label = text.length > 120 ? text.slice(0, 120) + "..." : text;
+        setChatFocusItems((prev) => {
+            const id = `focus-${Date.now()}`;
+            return [...prev, { id, label }];
+        });
     }, []);
 
     const handleNewStrategy = useCallback(() => {
@@ -116,7 +121,7 @@ const ContentStrategiesScreen = () => {
         setMessages([]);
         setQuestionIndex(0);
         setActiveStrategyId(null);
-        setChatAttachment(null);
+        setChatFocusItems([]);
         panelRatio.setValue(0);
     }, [panelRatio]);
 
@@ -196,12 +201,15 @@ const ContentStrategiesScreen = () => {
                     </Animated.View>
 
                     <Animated.View style={[styles.rightPanel, { flex: rightFlex }]}>
-                        <ChatPanel
+                        <AIChatPanel
                             messages={messages}
                             onSend={handleChatSend}
-                            attachment={chatAttachment}
-                            onClearAttachment={() => setChatAttachment(null)}
+                            focusItems={chatFocusItems}
+                            onRemoveFocusItem={(id) =>
+                                setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                            }
                             isCompact={screenState === "strategy-ready"}
+                            isAITyping={isAITyping}
                         />
                     </Animated.View>
                 </View>

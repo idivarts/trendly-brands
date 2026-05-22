@@ -1,11 +1,8 @@
-export type ScreenState = 'empty' | 'collecting' | 'strategy-ready';
+import type { ChatMessage, FocusItem } from "@/components/shared/AIChatPanel";
 
-export interface ChatMessage {
-    id: string;
-    sender: 'ai' | 'user';
-    text: string;
-    timestamp: number;
-}
+export type { ChatMessage, FocusItem };
+
+export type ScreenState = 'empty' | 'collecting' | 'strategy-ready';
 
 export interface ContentStrategy {
     id: string;
