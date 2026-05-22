@@ -109,7 +109,7 @@ const TabLayout = () => {
             <Tabs.Screen
                 name="(content)/content-strategies"
                 options={{
-                    title: "Content",
+                    title: "Strategy",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
@@ -163,7 +163,7 @@ const TabLayout = () => {
             <Tabs.Screen
                 name="discover"
                 options={{
-                    title: "Discovery",
+                    title: "Discover",
                     headerShown: false,
                     tabBarItemStyle: { display: showDiscover ? "flex" : "none" },
                     tabBarIcon: ({ color, focused }) => (
