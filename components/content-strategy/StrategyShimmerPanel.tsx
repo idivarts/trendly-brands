@@ -41,8 +41,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 container: {
                     flex: 1,
                     padding: 24,
-                    borderRightWidth: 1,
-                    borderRightColor: colors.border,
                 },
                 label: {
                     fontSize: 13,

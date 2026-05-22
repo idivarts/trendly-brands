@@ -41,12 +41,12 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
         }).start();
     }, [visible]);
 
+    if (!visible) return null;
+
     const translateX = slideAnim.interpolate({
         inputRange: [0, 1],
         outputRange: [320, 0],
     });
-
-    if (!visible) return null;
 
     return (
         <View style={styles.overlay} pointerEvents={visible ? "auto" : "none"}>
@@ -74,7 +74,7 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
                                     onClose();
                                 }}
                             >
-                                <View style={styles.strategyIcon}>
+                                <View style={[styles.strategyIcon, isActive && styles.strategyIconActive]}>
                                     <FontAwesomeIcon
                                         icon={faPenToSquare}
                                         size={14}
@@ -88,7 +88,9 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
                                     >
                                         {strategy.title}
                                     </Text>
-                                    <Text style={styles.strategyDate}>{strategy.createdAt}</Text>
+                                    <Text style={[styles.strategyDate, isActive && styles.strategyDateActive]}>
+                                        {strategy.createdAt}
+                                    </Text>
                                 </View>
                                 <FontAwesomeIcon
                                     icon={faChevronRight}
@@ -121,20 +123,26 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 drawer: {
                     width: 300,
                     backgroundColor: colors.modalBackground,
-                    shadowColor: colors.panelShadow,
-                    shadowOffset: { width: -4, height: 0 },
-                    shadowRadius: 20,
-                    shadowOpacity: 1,
-                    elevation: 12,
+                    // Shadow on the left edge of the drawer
+                    shadowColor: "#000",
+                    shadowOffset: { width: -8, height: 0 },
+                    shadowRadius: 24,
+                    shadowOpacity: 0.18,
+                    elevation: 16,
                 },
                 drawerHeader: {
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between",
                     paddingHorizontal: 20,
-                    paddingVertical: 16,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
+                    paddingVertical: 18,
+                    // Shadow below header to separate from list
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.06,
+                    elevation: 2,
+                    backgroundColor: colors.modalBackground,
                 },
                 drawerTitle: {
                     fontSize: 17,
@@ -156,14 +164,19 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     alignItems: "center",
                     gap: 12,
                     padding: 14,
-                    borderRadius: 10,
-                    borderWidth: 1,
-                    borderColor: colors.border,
+                    borderRadius: 12,
                     backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.06,
+                    elevation: 2,
                 },
                 strategyItemActive: {
                     backgroundColor: colors.primary,
-                    borderColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOpacity: 0.3,
+                    elevation: 4,
                 },
                 strategyIcon: {
                     width: 32,
@@ -172,6 +185,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: colors.aliceBlue,
+                },
+                strategyIconActive: {
+                    backgroundColor: "rgba(255,255,255,0.2)",
                 },
                 strategyInfo: {
                     flex: 1,
@@ -188,6 +204,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 strategyDate: {
                     fontSize: 12,
                     color: colors.textSecondary,
+                },
+                strategyDateActive: {
+                    color: colors.onPrimary,
+                    opacity: 0.75,
                 },
             }),
         [colors]

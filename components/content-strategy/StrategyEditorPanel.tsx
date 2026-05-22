@@ -103,6 +103,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
     return (
         <View style={styles.container}>
+            {/* Formatting toolbar */}
             <View style={styles.toolbar}>
                 {TOOLBAR_ACTIONS.map((action) => (
                     <Pressable
@@ -115,6 +116,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 ))}
             </View>
 
+            {/* Text selection floating actions */}
             {hasSelection && (
                 <View style={styles.selectionToolbar}>
                     <Text style={styles.selectionHint}>
@@ -124,12 +126,12 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                         style={styles.selectionAction}
                         onPress={() => setQuickEditVisible(true)}
                     >
-                        <FontAwesomeIcon icon={faPen} size={12} color={colors.primary} />
+                        <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
                         <Text style={styles.selectionActionText}>Quick Edit</Text>
                     </Pressable>
-                    <View style={styles.selectionDivider} />
+                    <View style={styles.selectionDot} />
                     <Pressable style={styles.selectionAction} onPress={handleSendToChat}>
-                        <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.primary} />
+                        <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.onPrimary} />
                         <Text style={styles.selectionActionText}>Send to Chatbot</Text>
                     </Pressable>
                 </View>
@@ -167,45 +169,57 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             StyleSheet.create({
                 container: {
                     flex: 1,
-                    borderRightWidth: 1,
-                    borderRightColor: colors.border,
                 },
                 toolbar: {
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 4,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
+                    gap: 6,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
                     backgroundColor: colors.card,
+                    // Shadow below to lift toolbar above editor
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
                 },
                 toolbarBtn: {
                     width: 32,
                     height: 32,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: colors.background,
-                    borderWidth: 1,
-                    borderColor: colors.border,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.06,
+                    elevation: 1,
                 },
                 toolbarBtnPressed: {
                     backgroundColor: colors.aliceBlue,
+                    shadowOpacity: 0,
+                    elevation: 0,
                 },
                 selectionToolbar: {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 8,
                     paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    backgroundColor: colors.aliceBlue,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
+                    paddingVertical: 9,
+                    backgroundColor: colors.primary,
+                    // Shadow below selection toolbar
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 10,
+                    shadowOpacity: 0.25,
+                    elevation: 4,
                 },
                 selectionHint: {
                     fontSize: 12,
-                    color: colors.textSecondary,
+                    color: colors.onPrimary,
+                    opacity: 0.8,
                     marginRight: 4,
                 },
                 selectionAction: {
@@ -215,19 +229,19 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingHorizontal: 10,
                     paddingVertical: 5,
                     borderRadius: 6,
-                    backgroundColor: colors.background,
-                    borderWidth: 1,
-                    borderColor: colors.primary,
+                    backgroundColor: "rgba(255,255,255,0.2)",
                 },
                 selectionActionText: {
                     fontSize: 12,
                     fontWeight: "600",
-                    color: colors.primary,
+                    color: colors.onPrimary,
                 },
-                selectionDivider: {
-                    width: 1,
-                    height: 16,
-                    backgroundColor: colors.border,
+                selectionDot: {
+                    width: 4,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: colors.onPrimary,
+                    opacity: 0.5,
                 },
                 editorScroll: {
                     flex: 1,

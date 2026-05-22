@@ -82,7 +82,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             />
 
             {attachment && (
-                <View style={styles.attachmentChip}>
+                <View style={styles.attachmentRow}>
+                    <View style={styles.attachmentAccent} />
                     <Text style={styles.attachmentLabel} numberOfLines={2}>
                         {attachment}
                     </Text>
@@ -124,8 +125,13 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
             StyleSheet.create({
                 container: {
                     flex: 1,
-                    borderLeftWidth: 1,
-                    borderLeftColor: colors.border,
+                    backgroundColor: colors.card,
+                    // Shadow on the left edge to separate from the editor panel
+                    shadowColor: "#000",
+                    shadowOffset: { width: -6, height: 0 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.07,
+                    elevation: 8,
                 },
                 messageList: {
                     padding: isCompact ? 12 : 16,
@@ -156,19 +162,27 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                 },
                 bubble: {
                     maxWidth: "80%",
-                    borderRadius: 12,
+                    borderRadius: 14,
                     paddingHorizontal: isCompact ? 10 : 14,
                     paddingVertical: isCompact ? 8 : 10,
                 },
                 aiBubble: {
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.background,
                     borderTopLeftRadius: 4,
-                    borderWidth: 1,
-                    borderColor: colors.border,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.06,
+                    elevation: 2,
                 },
                 userBubble: {
                     backgroundColor: colors.primary,
                     borderTopRightRadius: 4,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
                 },
                 bubbleText: {
                     fontSize: isCompact ? 13 : 14,
@@ -180,49 +194,65 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                 userText: {
                     color: colors.onPrimary,
                 },
-                attachmentChip: {
+                attachmentRow: {
                     flexDirection: "row",
                     alignItems: "center",
                     marginHorizontal: 12,
                     marginBottom: 6,
                     backgroundColor: colors.aliceBlue,
-                    borderRadius: 8,
-                    borderLeftWidth: 3,
-                    borderLeftColor: colors.primary,
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                    gap: 8,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.06,
+                    elevation: 1,
+                },
+                attachmentAccent: {
+                    width: 4,
+                    alignSelf: "stretch",
+                    backgroundColor: colors.primary,
                 },
                 attachmentLabel: {
                     flex: 1,
                     fontSize: 12,
                     color: colors.textSecondary,
                     fontStyle: "italic",
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
                 },
                 attachmentClose: {
-                    padding: 2,
+                    padding: 8,
                 },
                 inputArea: {
                     flexDirection: "row",
                     alignItems: "flex-end",
                     gap: 10,
                     padding: isCompact ? 10 : 14,
-                    borderTopWidth: 1,
-                    borderTopColor: colors.border,
+                    // Subtle shadow lifting the input area above message list
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.05,
+                    elevation: 4,
+                    backgroundColor: colors.card,
                 },
                 input: {
                     flex: 1,
                     minHeight: 40,
                     maxHeight: 120,
                     borderRadius: 20,
-                    borderWidth: 1.5,
-                    borderColor: colors.border,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.tag,
                     color: colors.text,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                     fontSize: 14,
                     textAlignVertical: "center",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
                 },
                 sendBtn: {
                     width: 40,
@@ -231,12 +261,19 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     backgroundColor: colors.primary,
                     alignItems: "center",
                     justifyContent: "center",
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
                 },
                 sendBtnPressed: {
                     opacity: 0.75,
                 },
                 sendBtnDisabled: {
                     opacity: 0.4,
+                    shadowOpacity: 0,
+                    elevation: 0,
                 },
             }),
         [colors, isCompact]

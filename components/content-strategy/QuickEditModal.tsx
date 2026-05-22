@@ -56,10 +56,14 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
 
                     {selectedText.length > 0 && (
                         <View style={styles.selectedPreview}>
-                            <Text style={styles.selectedLabel}>Selected text</Text>
-                            <Text style={styles.selectedText} numberOfLines={3}>
-                                {selectedText}
-                            </Text>
+                            {/* Accent strip replacing borderLeft */}
+                            <View style={styles.selectedAccent} />
+                            <View style={styles.selectedContent}>
+                                <Text style={styles.selectedLabel}>Selected text</Text>
+                                <Text style={styles.selectedText} numberOfLines={3}>
+                                    {selectedText}
+                                </Text>
+                            </View>
                         </View>
                     )}
 
@@ -111,13 +115,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     width: "100%",
                     maxWidth: 480,
                     backgroundColor: colors.modalBackground,
-                    borderRadius: 16,
+                    borderRadius: 20,
                     padding: 24,
-                    shadowColor: colors.panelShadow,
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowRadius: 24,
-                    shadowOpacity: 1,
-                    elevation: 8,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 16 },
+                    shadowRadius: 40,
+                    shadowOpacity: 0.2,
+                    elevation: 16,
                 },
                 header: {
                     flexDirection: "row",
@@ -134,12 +138,25 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     padding: 4,
                 },
                 selectedPreview: {
+                    flexDirection: "row",
                     backgroundColor: colors.aliceBlue,
-                    borderRadius: 8,
-                    borderLeftWidth: 3,
-                    borderLeftColor: colors.primary,
-                    padding: 10,
+                    borderRadius: 10,
                     marginBottom: 16,
+                    overflow: "hidden",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.05,
+                    elevation: 1,
+                },
+                selectedAccent: {
+                    width: 4,
+                    backgroundColor: colors.primary,
+                    alignSelf: "stretch",
+                },
+                selectedContent: {
+                    flex: 1,
+                    padding: 10,
                 },
                 selectedLabel: {
                     fontSize: 11,
@@ -162,10 +179,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     marginBottom: 10,
                 },
                 input: {
-                    borderRadius: 10,
-                    borderWidth: 1.5,
-                    borderColor: colors.border,
-                    backgroundColor: colors.background,
+                    borderRadius: 12,
+                    backgroundColor: colors.tag,
                     color: colors.text,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
@@ -174,6 +189,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     minHeight: 80,
                     textAlignVertical: "top",
                     marginBottom: 16,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.05,
+                    elevation: 2,
                 },
                 actions: {
                     flexDirection: "row",
@@ -184,8 +204,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: colors.border,
                 },
                 cancelText: {
                     fontSize: 14,
@@ -198,11 +216,18 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 8,
                     paddingHorizontal: 16,
                     paddingVertical: 10,
-                    borderRadius: 8,
+                    borderRadius: 10,
                     backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
                 },
                 applyBtnDisabled: {
                     opacity: 0.4,
+                    shadowOpacity: 0,
+                    elevation: 0,
                 },
                 applyText: {
                     fontSize: 14,
