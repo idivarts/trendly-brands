@@ -10,7 +10,7 @@ import {
     useLocalSearchParams,
     usePathname,
     useRouter,
-    useSegments,
+    useSegments
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -20,6 +20,7 @@ import "react-native-reanimated";
 
 import DownloadApp from "@/components/download";
 import { useColorScheme } from "@/components/theme/useColorScheme";
+import { DEFAULT_MEMBER_LANDING_PAGE } from "@/constants/App";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
@@ -121,7 +122,7 @@ const RootLayoutStack = () => {
 
         if (session && (inAuthGroup || pathname === "/")) {
             // On boot up, session exist and user is in auth group or /, redirect to collaborations
-            resetAndNavigate("/discover");
+            resetAndNavigate(DEFAULT_MEMBER_LANDING_PAGE);
         } else if (!session && (inMainGroup || pathname === "/")) {
             // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
             // resetAndNavigate("/pre-signin");
