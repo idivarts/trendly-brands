@@ -13,6 +13,7 @@ import { useCollaborationContext } from "@/contexts/collaboration-context.provid
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
 import { useInfluencers } from "@/hooks/request";
+import { CREATORS_FE_URL } from "@/shared-constants/app";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
 import { Console } from "@/shared-libs/utils/console";
@@ -28,7 +29,10 @@ import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/collaboration-details/CollaborationDetails.styles";
 import { User } from "@/types/User";
 import { processRawAttachment } from "@/utils/attachments";
+import { faCopy, faLink } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import * as Clipboard from "expo-clipboard";
 import { collection, doc, setDoc } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Platform, ScrollView, StyleSheet } from "react-native";
@@ -41,6 +45,7 @@ const InvitationsTabContent = (props: any) => {
     const stylesFromFn = stylesFn(theme);
     const { isCollapsed } = useCollapseContext();
     const styles = useMemo(() => useLocalStyles(theme, isCollapsed), [theme, isCollapsed]);
+    const colors = Colors(theme);
     const [isActionModalVisible, setIsActionModalVisible] = useState(false);
     const [selectedInfluencer, setSelectedInfluencer] = useState<
         (User & { documentId: string }) | null
@@ -49,11 +54,25 @@ const InvitationsTabContent = (props: any) => {
         useState(false);
     const [message, setMessage] = useState("");
     const [isInviting, setIsInviting] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
     const { getCollaborationById } = useCollaborationContext();
     const collaborationId = props.pageID;
     const [collaboration, setCollaboration] = useState<ICollaboration | null>(
         null
     );
+
+    const collabShareLink = `${CREATORS_FE_URL}/collaboration/${collaborationId}`;
+
+    const handleCopyLink = async () => {
+        try {
+            await Clipboard.setStringAsync(collabShareLink);
+            setLinkCopied(true);
+            Toaster.success("Link copied to clipboard");
+            setTimeout(() => setLinkCopied(false), 3000);
+        } catch {
+            Toaster.error("Failed to copy link");
+        }
+    };
 
     const {
         checkIfAlreadyInvited,
@@ -170,65 +189,49 @@ const InvitationsTabContent = (props: any) => {
     //   );
     // }
 
-    if (influencers.length === 0 && !isLoading) {
-        return (
-            <EmptyState
-                subtitle="No invitations yet. Check back later."
-                image={require("@/assets/images/illustration5.png")}
-                hideAction
-            />
-        );
-    }
-
     const width = bpWidth;
     const height = Math.min(APPROX_CARD_HEIGHT, bpHeight);
 
     console.log("Default Advance Filters", collaboration?.preferences);
 
+    const renderShareLinkCard = () => (
+        <View style={styles.shareLinkCard}>
+            <View style={styles.shareLinkHeader}>
+                <View style={styles.shareLinkIconWrap}>
+                    <FontAwesomeIcon icon={faLink} size={18} color={colors.primary} />
+                </View>
+                <View style={styles.shareLinkTitleBlock}>
+                    <Text style={styles.shareLinkTitle}>Share this Collaboration</Text>
+                    <Text style={styles.shareLinkSubtitle}>
+                        Copy the link and share with influencers you think are a good fit.
+                    </Text>
+                </View>
+            </View>
+            <View style={styles.shareLinkRow}>
+                <Text style={styles.shareLinkUrl} numberOfLines={1} ellipsizeMode="middle">
+                    {collabShareLink}
+                </Text>
+                <Button
+                    mode="contained"
+                    onPress={handleCopyLink}
+                    size="small"
+                    icon={() => (
+                        <FontAwesomeIcon
+                            icon={faCopy}
+                            size={13}
+                            color={colors.onPrimary}
+                        />
+                    )}
+                >
+                    {linkCopied ? "Copied!" : "Copy"}
+                </Button>
+            </View>
+        </View>
+    );
 
     return (
         <View style={styles.root}>
-            {/* Toggle Bar */}
-            {/* <View
-        style={{
-          paddingHorizontal: 16,
-          maxWidth: 800,
-          width: "100%",
-          alignSelf: "center",
-          marginTop: 8,
-          marginBottom: 12,
-        }}
-      >
-        
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "flex-end",
-            marginBottom: 8,
-          }}
-        >
-          <Button mode="outlined" onPress={() => router.push("/discover")}>
-            Advance Filter
-          </Button>
-        </View>
-
-        <ToggleBar
-          options={[
-            { key: "discover", label: "Suggested Spotlight" },
-            { key: "invitations", label: "Spotlight Influencer" },
-          ]}
-          value={viewMode}
-          onChange={(k) => setViewMode(k as "discover" | "invitations")}
-          style={{
-            height: 40,
-            backgroundColor: Colors(theme).border,
-            borderRadius: 12,
-            overflow: "hidden",
-            shadowColor: Colors(theme).modalBackground,
-            shadowOpacity: 0.2,
-          }}
-        />
-      </View> */}
+            {renderShareLinkCard()}
 
             {viewMode === "discover" ? (
                 collaboration ? (
@@ -384,6 +387,7 @@ const InvitationsTabContent = (props: any) => {
 };
 
 function useLocalStyles(theme: ReturnType<typeof useTheme>, isCollapsed: boolean) {
+    const colors = Colors(theme);
     return StyleSheet.create({
         root: {
             alignSelf: "stretch",
@@ -391,6 +395,83 @@ function useLocalStyles(theme: ReturnType<typeof useTheme>, isCollapsed: boolean
             height: "100%",
             minHeight: 0,
             ...(Platform.OS === "web" && { overflow: "hidden" as const }),
+        },
+        shareLinkCard: {
+            marginHorizontal: 16,
+            marginTop: 12,
+            marginBottom: 4,
+            backgroundColor: colors.card,
+            borderRadius: 14,
+            padding: 16,
+            gap: 12,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        shareLinkHeader: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 12,
+        },
+        shareLinkIconWrap: {
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            backgroundColor: colors.aliceBlue,
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 6,
+            shadowOpacity: 0.15,
+            elevation: 2,
+        },
+        shareLinkTitleBlock: {
+            flex: 1,
+            gap: 3,
+        },
+        shareLinkTitle: {
+            fontSize: 15,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        shareLinkSubtitle: {
+            fontSize: 12,
+            color: colors.textSecondary,
+            lineHeight: 17,
+        },
+        shareLinkRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            backgroundColor: colors.tag,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        shareLinkUrl: {
+            flex: 1,
+            fontSize: 12,
+            color: colors.textSecondary,
+            fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+        },
+        indiaInviteLabel: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            letterSpacing: 0.5,
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: 4,
+            textTransform: "uppercase",
         },
         discoverWrapper: {
             flex: 1,

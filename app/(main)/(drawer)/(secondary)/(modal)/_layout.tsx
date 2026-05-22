@@ -5,16 +5,7 @@ const CreateLayout = () => {
     return (
         <Stack screenOptions={{
             headerShown: false
-        }}>
-            <Stack.Screen
-                name="create-collaboration"
-                options={{
-                    presentation: "formSheet",
-                    gestureEnabled: true,
-                }}
-            />
-            <Stack.Screen name="edit-collaboration" />
-        </Stack>
+        }} />
     )
 }
 

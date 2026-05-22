@@ -25,15 +25,13 @@ import {
     faPaperPlane,
     faShareNodes,
     faSliders,
-    faUser,
     faUsers,
-    faVideo,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
 import { Portal, Text } from "react-native-paper";
 import { CollaborationDetail } from ".";
 import BrandModal from "./modal/BrandModal";
@@ -105,8 +103,6 @@ function preferencesHasAny(p?: IAdvanceFilters): boolean {
 
 interface CollaborationDetailsContentProps {
     collaboration: CollaborationDetail;
-    /** When provided and draft + !xl, Edit and Publish buttons are shown below Ready to Launch */
-    onEditPress?: () => void;
     onPublishPress?: () => void;
 }
 
@@ -133,16 +129,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const [activeCollaborations, setActiveCollaborations] = useState<number | null>(null);
 
     const isDraft = props.collaboration.status === "draft";
-    const imageAttachments =
-        props.collaboration.attachments
-            ?.filter(
-                (attachment) =>
-                    attachment.type === "image" &&
-                    (attachment.imageUrl ||
-                        attachment.appleUrl ||
-                        attachment.playUrl)
-            )
-            .slice(0, 6) || [];
     const fetchManagerDetails = async () => {
         if (!props.collaboration.managerId || !props.collaboration.brandId) return;
         const managerRef = doc(
@@ -230,66 +216,12 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
         ? faLocationDot
         : faHouseLaptop;
 
-    const videoAttachments =
-        c.attachments?.filter(
-            (a) =>
-                (a.type === "video" || a.type === "reel") &&
-                (a.appleUrl || a.playUrl)
-        ) ?? [];
-
     const openExternalUrl = (url: string) => {
         Linking.openURL(normalizeExternalUrl(url)).catch(() => { });
     };
 
     const renderDetailsCard = () => (
         <View style={styles.card}>
-            {imageAttachments.length > 0 ? (
-                xl ? (
-                    <View style={styles.campaignImagesGrid}>
-                        {imageAttachments.map((attachment, index) => (
-                            <View style={styles.campaignImageItem} key={index}>
-                                <ImageComponent
-                                    shape="square"
-                                    size="large"
-                                    url={
-                                        attachment.imageUrl ||
-                                        attachment.appleUrl ||
-                                        attachment.playUrl ||
-                                        ""
-                                    }
-                                    altText={props.collaboration.name || "Campaign image"}
-                                    style={styles.campaignImage}
-                                />
-                            </View>
-                        ))}
-                    </View>
-                ) : (
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.campaignImagesScrollContent}
-                    >
-                        <View style={styles.campaignImagesRow}>
-                            {imageAttachments.map((attachment, index) => (
-                                <View style={styles.campaignImageItemHorizontal} key={index}>
-                                    <ImageComponent
-                                        shape="square"
-                                        size="large"
-                                        url={
-                                            attachment.imageUrl ||
-                                            attachment.appleUrl ||
-                                            attachment.playUrl ||
-                                            ""
-                                        }
-                                        altText={props.collaboration.name || "Campaign image"}
-                                        style={styles.campaignImageHorizontal}
-                                    />
-                                </View>
-                            ))}
-                        </View>
-                    </ScrollView>
-                )
-            ) : null}
             <View style={styles.detailsHeaderRow}>
                 <Text variant="headlineMedium" style={styles.title} numberOfLines={1}>
                     {props.collaboration.name}
@@ -329,23 +261,11 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             <View style={styles.metricsRow}>
                 <View style={styles.metricBlock}>
                     <FontAwesomeIcon
-                        icon={faUser}
-                        size={18}
-                        color={colors.textSecondary}
-                    />
-                    <Text style={styles.metricLabel}>Influencers Needed</Text>
-                    <Text style={styles.metricValue}>
-                        {props.collaboration.numberOfInfluencersNeeded ?? 0}
-                    </Text>
-                </View>
-                <View style={styles.metricDivider} />
-                <View style={styles.metricBlock}>
-                    <FontAwesomeIcon
                         icon={faUsers}
                         size={18}
                         color={colors.textSecondary}
                     />
-                    <Text style={styles.metricLabel}>Influencers Applied</Text>
+                    <Text style={styles.metricLabel}>Applied</Text>
                     <Text style={styles.metricValue}>{applicationCount}</Text>
                 </View>
                 <View style={styles.metricDivider} />
@@ -355,7 +275,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         size={18}
                         color={colors.textSecondary}
                     />
-                    <Text style={styles.metricLabel}>Invitations Sent</Text>
+                    <Text style={styles.metricLabel}>Invited</Text>
                     <Text style={styles.metricValue}>{invitationCount}</Text>
                 </View>
             </View>
@@ -377,29 +297,16 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         able to discover and apply to work with you.
                     </Text>
                 </View>
-                {!xl && (props.onEditPress != null || props.onPublishPress != null) ? (
+                {!xl && props.onPublishPress != null ? (
                     <View style={styles.readyToLaunchActions}>
-                        {props.onEditPress != null ? (
-                            <Button
-                                mode="contained"
-                                onPress={props.onEditPress}
-                                size="small"
-                                style={styles.draftActionButton}
-                                textColor={colors.text}
-                            >
-                                Edit
-                            </Button>
-                        ) : null}
-                        {props.onPublishPress != null ? (
-                            <Button
-                                mode="contained"
-                                onPress={props.onPublishPress}
-                                size="small"
-                                style={styles.publishActionButton}
-                            >
-                                Publish
-                            </Button>
-                        ) : null}
+                        <Button
+                            mode="contained"
+                            onPress={props.onPublishPress}
+                            size="small"
+                            style={styles.publishActionButton}
+                        >
+                            Publish
+                        </Button>
                     </View>
                 ) : null}
             </View>
@@ -506,10 +413,11 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             budget &&
             (budget.min != null || budget.max != null);
         const subjectLabel = humanizePromotionSubject(c.promotionSubject);
+        const fulfillmentType = c.collaborationFulfillmentType?.trim();
         const hasProducts =
             (c.products?.length ?? 0) > 0 &&
             c.products?.some((p) => p.name != null || p.cost != null);
-        if (!hasBudget && !subjectLabel && !hasProducts) return null;
+        if (!hasBudget && !subjectLabel && !fulfillmentType && !hasProducts) return null;
 
         const budgetText =
             hasBudget && budget
@@ -521,6 +429,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                 <Text style={styles.sectionLabel}>CAMPAIGN & OFFER</Text>
                 {budgetText ? renderKeyValueRow("Budget range", budgetText, "budget") : null}
                 {subjectLabel ? renderKeyValueRow("Promoting", subjectLabel, "promo-subj") : null}
+                {fulfillmentType ? renderKeyValueRow("Fulfilment type", fulfillmentType, "fulfillment") : null}
                 {hasProducts
                     ? c.products?.map((product, index) => (
                         <View
@@ -647,71 +556,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
                         </Pressable>
                     </View>
                 ) : null}
-            </View>
-        );
-    };
-
-    const renderVideoAttachmentsCard = () => {
-        if (!videoAttachments.length) return null;
-
-        return (
-            <View style={styles.card}>
-                <Text style={styles.sectionLabel}>VIDEO ATTACHMENTS</Text>
-                {videoAttachments.map((att, index) => {
-                    const url = att.appleUrl || att.playUrl || "";
-                    const kind = att.type === "reel" ? "Reel" : "Video";
-                    return (
-                        <Pressable
-                            key={`vid-${index}`}
-                            style={styles.linkRow}
-                            onPress={() => openExternalUrl(url)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Open ${kind} ${index + 1}`}
-                        >
-                            <FontAwesomeIcon
-                                icon={faVideo}
-                                size={16}
-                                color={colors.primary}
-                            />
-                            <Text style={styles.linkRowText}>
-                                {kind} {index + 1}
-                            </Text>
-                            <FontAwesomeIcon
-                                icon={faLink}
-                                size={12}
-                                color={colors.textSecondary}
-                            />
-                        </Pressable>
-                    );
-                })}
-            </View>
-        );
-    };
-
-    const renderExternalLinksCard = () => {
-        const links = c.externalLinks ?? [];
-        if (!links.length) return null;
-
-        return (
-            <View style={styles.card}>
-                <Text style={styles.sectionLabel}>EXTERNAL LINKS</Text>
-                {links.map((link, index) => (
-                    <Pressable
-                        key={`ext-${index}`}
-                        style={styles.linkRow}
-                        onPress={() => openExternalUrl(link.link)}
-                        accessibilityRole="link"
-                    >
-                        <FontAwesomeIcon
-                            icon={faLink}
-                            size={16}
-                            color={colors.primary}
-                        />
-                        <Text style={styles.linkRowText} numberOfLines={2}>
-                            {link.name?.trim() ? link.name : link.link}
-                        </Text>
-                    </Pressable>
-                ))}
             </View>
         );
     };
@@ -959,8 +803,6 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
             {renderCampaignAndBudgetCard()}
             {renderContentAndChannelsCard()}
             {renderLocationDetailsCard()}
-            {renderVideoAttachmentsCard()}
-            {renderExternalLinksCard()}
             {renderQuestionsCard()}
             {renderInfluencerPreferencesCard()}
             {/* {renderActivityInsightsCard()} */}

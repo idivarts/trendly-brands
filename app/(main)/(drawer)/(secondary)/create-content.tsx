@@ -1,4 +1,4 @@
-import { CONTENT_TYPE_LABELS } from "@/components/content-calendar/types";
+import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
@@ -6,6 +6,7 @@ import {
     ContentStatus,
     POPULAR_POSTING_TIMES,
 } from "@/components/contents/types";
+import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
 import DatePickerModal, {
     formatDateForWebInput,
 } from "@/components/modals/DatePickerModal";
@@ -25,7 +26,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
     Alert,
@@ -265,8 +266,14 @@ const CreateContentScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const router = useRouter();
-    const { contentId } = useLocalSearchParams<{ contentId?: string }>();
+    const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
+        useLocalSearchParams<{
+            contentId?: string;
+            title?: string;
+            idea?: string;
+            type?: string;
+            date?: string;
+        }>();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const seedItem = useMemo(
@@ -274,10 +281,14 @@ const CreateContentScreen = () => {
         [contentId]
     );
 
-    const [title, setTitle] = useState(seedItem?.title ?? "");
-    const [idea, setIdea] = useState(seedItem?.idea ?? "");
+    const [title, setTitle] = useState(seedItem?.title ?? paramTitle ?? "");
+    const [idea, setIdea] = useState(seedItem?.idea ?? paramIdea ?? "");
     const [date, setDate] = useState<Date>(
-        seedItem?.date ? new Date(seedItem.date + "T00:00:00") : new Date()
+        seedItem?.date
+            ? new Date(seedItem.date + "T00:00:00")
+            : paramDate
+            ? new Date(paramDate + "T00:00:00")
+            : new Date()
     );
     const [status, setStatus] = useState<ContentStatus>(seedItem?.status ?? "draft");
     const [caption, setCaption] = useState(seedItem?.caption ?? "");
@@ -289,22 +300,31 @@ const CreateContentScreen = () => {
     const [customTime, setCustomTime] = useState("");
     const [showCustomTime, setShowCustomTime] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showCollabModal, setShowCollabModal] = useState(false);
 
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-    const contentType = seedItem?.type ?? "post";
+    const contentType = (seedItem?.type ?? paramType ?? "post") as ContentType;
     const isReel = contentType === "reel";
     const isImageBased = contentType === "post" || contentType === "carousel";
+
+    const collabSource: CollabContentSource = {
+        contentId: contentId ?? `content-${Date.now()}`,
+        title,
+        idea,
+        type: contentType,
+        date: formatDateForWebInput(date),
+    };
 
     const handleSave = useCallback(() => {
         Alert.alert("Saved", "Content saved successfully (test mode).");
     }, []);
 
     const handleCreateCollab = useCallback(() => {
-        router.push("/(main)/(drawer)/(secondary)/(modal)/create-collaboration" as any);
-    }, [router]);
+        setShowCollabModal(true);
+    }, []);
 
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
@@ -781,6 +801,12 @@ const CreateContentScreen = () => {
                 }
                 onClose={() => setMagicTarget(null)}
                 onGenerate={handleMagicGenerate}
+            />
+
+            <CreateCollabFromContentModal
+                visible={showCollabModal}
+                content={collabSource}
+                onClose={() => setShowCollabModal(false)}
             />
         </AppLayout>
     );
