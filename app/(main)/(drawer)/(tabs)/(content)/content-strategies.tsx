@@ -3,10 +3,11 @@ import EmptyPromptView from "@/components/content-strategy/EmptyPromptView";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
-import { CHATBOT_QUESTIONS, MOCK_STRATEGIES, MOCK_STRATEGY_CONTENT } from "@/components/content-strategy/mock-data";
+import { CHATBOT_QUESTIONS } from "@/components/content-strategy/mock-data";
 import { ChatMessage, ContentStrategy, ScreenState } from "@/components/content-strategy/types";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { faBars, faCalendarDays, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -22,11 +23,12 @@ const ContentStrategiesScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
 
+    const { strategies, addStrategy, updateStrategyContent } = useStrategies();
+
     const [screenState, setScreenState] = useState<ScreenState>("empty");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [questionIndex, setQuestionIndex] = useState(0);
-    const [strategyContent, setStrategyContent] = useState(MOCK_STRATEGY_CONTENT);
-    const [strategies, setStrategies] = useState<ContentStrategy[]>(MOCK_STRATEGIES);
+    const [strategyContent, setStrategyContent] = useState("");
     const [activeStrategyId, setActiveStrategyId] = useState<string | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
@@ -46,23 +48,18 @@ const ContentStrategiesScreen = () => {
             if (index >= CHATBOT_QUESTIONS.length) {
                 setIsAITyping(true);
                 addMessage("ai", "Perfect! I have everything I need. Generating your content strategy now...");
-                setTimeout(() => {
+                setTimeout(async () => {
                     setIsAITyping(false);
-                    const newStrategyId = `strategy-${Date.now()}`;
-                    const newStrategy: ContentStrategy = {
-                        id: newStrategyId,
-                        title: "New Strategy",
-                        content: MOCK_STRATEGY_CONTENT,
-                        createdAt: new Date().toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                        }),
-                        chatMessages: [],
-                    };
-                    setStrategies((prev) => [newStrategy, ...prev]);
-                    setActiveStrategyId(newStrategyId);
-                    setStrategyContent(MOCK_STRATEGY_CONTENT);
+                    // In future: call an AI API here to generate real content.
+                    // For now, use a placeholder markdown body that the brand can edit.
+                    const generatedContent = `# New Content Strategy\n\n*AI-generated strategy based on your inputs.*\n\nEdit this document to refine your strategy.`;
+                    const title = "New Strategy";
+
+                    // Persist to Firestore — the onSnapshot listener updates `strategies` reactively
+                    const newId = await addStrategy(title, generatedContent);
+
+                    setActiveStrategyId(newId);
+                    setStrategyContent(generatedContent);
                     setScreenState("strategy-ready");
                     Animated.timing(panelRatio, {
                         toValue: 1,
@@ -79,7 +76,7 @@ const ContentStrategiesScreen = () => {
                 addMessage("ai", CHATBOT_QUESTIONS[index]);
             }, 800);
         },
-        [addMessage, panelRatio]
+        [addMessage, panelRatio, addStrategy]
     );
 
     const handleFirstPromit = useCallback(
@@ -121,6 +118,7 @@ const ContentStrategiesScreen = () => {
         setMessages([]);
         setQuestionIndex(0);
         setActiveStrategyId(null);
+        setStrategyContent("");
         setChatFocusItems([]);
         panelRatio.setValue(0);
     }, [panelRatio]);
@@ -131,6 +129,17 @@ const ContentStrategiesScreen = () => {
         setScreenState("strategy-ready");
         panelRatio.setValue(1);
     }, [panelRatio]);
+
+    // Persist editor changes back to Firestore when the user edits the markdown
+    const handleStrategyContentChange = useCallback(
+        async (newContent: string) => {
+            setStrategyContent(newContent);
+            if (activeStrategyId) {
+                await updateStrategyContent(activeStrategyId, newContent);
+            }
+        },
+        [activeStrategyId, updateStrategyContent]
+    );
 
     const leftFlex = panelRatio.interpolate({
         inputRange: [0, 1],
@@ -194,7 +203,7 @@ const ContentStrategiesScreen = () => {
                         ) : (
                             <StrategyEditorPanel
                                 content={strategyContent}
-                                onChange={setStrategyContent}
+                                onChange={handleStrategyContentChange}
                                 onSendToChat={handleSendToChat}
                             />
                         )}

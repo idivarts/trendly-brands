@@ -2,11 +2,11 @@ import AddContentModal from "@/components/content-calendar/AddContentModal";
 import { CalendarItem } from "@/components/content-calendar/types";
 import ContentCard from "@/components/contents/ContentCard";
 import EmptyContentsView from "@/components/contents/EmptyContentsView";
-import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import { ContentItem } from "@/components/contents/types";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
+import { useContents } from "@/hooks/use-contents";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -25,7 +25,7 @@ const ContentsScreen = () => {
     const router = useRouter();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
-    const [items, setItems] = useState<ContentItem[]>(MOCK_CONTENT_ITEMS);
+    const { items, addContent } = useContents();
     const [activeTab, setActiveTab] = useState<Tab>("active");
     const [showAddModal, setShowAddModal] = useState(false);
 
@@ -34,18 +34,12 @@ const ContentsScreen = () => {
         [items, activeTab]
     );
 
-    const handleAddFromFresh = (calItem: Omit<CalendarItem, "id">) => {
-        const newItem: ContentItem = {
-            ...calItem,
-            id: `content-${Date.now()}`,
-            status: "draft",
-            isArchived: false,
-            createdAt: new Date().toISOString().split("T")[0],
-        };
-        setItems((prev) => [newItem, ...prev]);
+    const handleAddFromFresh = async (calItem: Omit<CalendarItem, "id">) => {
+        const newId = await addContent(calItem);
+        if (!newId) return;
         router.push({
             pathname: "/(main)/(drawer)/(secondary)/create-content" as any,
-            params: { contentId: newItem.id },
+            params: { contentId: newId },
         });
     };
 

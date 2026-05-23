@@ -5,7 +5,15 @@ const CreateLayout = () => {
     return (
         <Stack screenOptions={{
             headerShown: false
-        }} />
+        }}>
+            <Stack.Screen
+                name="hire-us"
+                options={{
+                    presentation: "formSheet",
+                    gestureEnabled: true,
+                }}
+            />
+        </Stack>
     )
 }
 

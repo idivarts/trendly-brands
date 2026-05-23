@@ -3,11 +3,11 @@ import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
 import QuickCommentModal from "@/components/content-calendar/QuickCommentModal";
 import WeekView from "@/components/content-calendar/WeekView";
-import { MOCK_CALENDAR_ITEMS } from "@/components/content-calendar/mock-data";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
 import AIChatPanel, { ChatMessage, FocusItem } from "@/components/shared/AIChatPanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useContents } from "@/hooks/use-contents";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { faCalendarDays, faCalendarWeek, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -33,11 +33,18 @@ const ContentCalendarScreen = () => {
     const router = useRouter();
     const styles = useMemo(() => useStyles(colors), [colors]);
 
+    // Only items that have a postingTimestamp are shown on the calendar.
+    // The hook subscribes to Firestore in real-time so the calendar stays live.
+    const { items: allContents, addContent } = useContents();
+    const items = useMemo<CalendarItem[]>(
+        () => allContents.filter((i) => !!i.date),
+        [allContents]
+    );
+
     const today = new Date();
     const [calView, setCalView] = useState<CalendarView>("month");
     const [calYear, setCalYear] = useState(today.getFullYear());
     const [calMonth, setCalMonth] = useState(today.getMonth());
-    const [items, setItems] = useState<CalendarItem[]>(MOCK_CALENDAR_ITEMS);
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [addInitialDate, setAddInitialDate] = useState<string | undefined>();
@@ -90,13 +97,11 @@ const ContentCalendarScreen = () => {
     }, []);
 
     const handleAddItem = useCallback(
-        (newItem: Omit<CalendarItem, "id">) => {
-            setItems((prev) => [
-                ...prev,
-                { ...newItem, id: `item-${Date.now()}` },
-            ]);
+        async (newItem: Omit<CalendarItem, "id">) => {
+            // Persists to Firestore; the onSnapshot in useContents updates `items` reactively
+            await addContent(newItem);
         },
-        []
+        [addContent]
     );
 
     const handleOpenAddModal = useCallback((date?: string) => {
