@@ -1,10 +1,10 @@
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import EmptyPromptView from "@/components/content-strategy/EmptyPromptView";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
 import { CHATBOT_QUESTIONS } from "@/components/content-strategy/mock-data";
 import { ChatMessage, ContentStrategy, ScreenState } from "@/components/content-strategy/types";
+import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useStrategies } from "@/hooks/use-strategies";
@@ -151,24 +151,24 @@ const ContentStrategiesScreen = () => {
     });
 
     const headerActionButtons = useMemo(() => {
-        if (screenState !== "strategy-ready") return [];
+        // if (screenState !== "strategy-ready") return [];
         return [
-            <Pressable
+            screenState === "strategy-ready" ? <Pressable
                 key="seal"
                 style={({ pressed }) => [styles.headerBtn, styles.headerBtnOutline, pressed && styles.headerBtnPressed]}
                 onPress={() => { }}
             >
                 <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
                 <Text style={styles.headerBtnOutlineText}>Seal → Calendar</Text>
-            </Pressable>,
-            <Pressable
+            </Pressable> : null,
+            screenState === "strategy-ready" ? <Pressable
                 key="new"
                 style={({ pressed }) => [styles.headerBtn, styles.headerBtnPrimary, pressed && styles.headerBtnPressed]}
                 onPress={handleNewStrategy}
             >
                 <FontAwesomeIcon icon={faPlus} size={14} color={colors.onPrimary} />
                 <Text style={styles.headerBtnPrimaryText}>New Strategy</Text>
-            </Pressable>,
+            </Pressable> : null,
             strategies.length > 0 ? (
                 <Pressable
                     key="hamburger"
