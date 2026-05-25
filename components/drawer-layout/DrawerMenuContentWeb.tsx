@@ -471,17 +471,18 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         </>}
 
                         {/* 4. EXECUTION */}
-                        <View style={styles.brandDetailsSection}>
-                            <View style={styles.sectionHeaderRow}>
-                                <Text style={styles.sectionTitle}>EXECUTION</Text>
-                            </View>
-                            <View style={styles.divider} />
-                            <View style={styles.menuItems}>
-                                {EXECUTION_MENU_ITEMS(theme).map((tab, idx) => (
-                                    <DrawerMenuItem key={`execution-${idx}`} tab={tab} />
-                                ))}
-                            </View>
-                        </View>
+                        {manager?.isChatConnected &&
+                            <View style={styles.brandDetailsSection}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>EXECUTION</Text>
+                                </View>
+                                <View style={styles.divider} />
+                                <View style={styles.menuItems}>
+                                    {EXECUTION_MENU_ITEMS(theme).map((tab, idx) => (
+                                        <DrawerMenuItem key={`execution-${idx}`} tab={tab} />
+                                    ))}
+                                </View>
+                            </View>}
 
 
 
