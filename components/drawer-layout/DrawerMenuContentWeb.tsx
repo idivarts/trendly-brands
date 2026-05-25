@@ -74,6 +74,7 @@ const BOTTOM_MENU_ITEMS = (
                     shape="circle"
                     size="small"
                     altText="Image"
+                    initialsSize={12}
                     style={styles?.profileImageSize}
                 />
             ),
@@ -646,6 +647,8 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             shadowOffset: { width: 0, height: 6 },
             shadowRadius: 16,
             elevation: 6,
+            borderRightWidth: StyleSheet.hairlineWidth,
+            borderRightColor: (colors as any).drawerRightBorder ?? "transparent",
         },
         accentLine: {
             position: "absolute",
