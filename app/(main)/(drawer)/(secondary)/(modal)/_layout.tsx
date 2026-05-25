@@ -7,13 +7,12 @@ const CreateLayout = () => {
             headerShown: false
         }}>
             <Stack.Screen
-                name="create-collaboration"
+                name="hire-us"
                 options={{
                     presentation: "formSheet",
                     gestureEnabled: true,
                 }}
             />
-            <Stack.Screen name="edit-collaboration" />
         </Stack>
     )
 }

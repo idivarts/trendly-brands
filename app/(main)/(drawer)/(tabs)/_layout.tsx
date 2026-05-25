@@ -5,28 +5,28 @@ import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import NotificationIcon from "@/components/notifications/notification-icon";
 import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import { useChatContext } from "@/contexts";
+import { useAuthContext, useChatContext, useLocationContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faComment,
     faGem,
-    faHeart,
-    faStar
+    faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
+    faCalendarDays,
     faComment as faCommentSolid,
     faGem as faGemSolid,
-    faHeart as faHeartSolid,
-    faStar as faStarSolid
+    faPenRuler,
+    faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 import { Badge } from "react-native-paper";
 
-const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
+const useStyles = (theme: ReturnType<typeof useTheme>) =>
     StyleSheet.create({
         headerRightRowSimple: {
             flexDirection: "row",
@@ -45,31 +45,17 @@ const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
-    const styles = React.useMemo(() => useStyles(theme, xl), [theme, xl]);
+    const styles = React.useMemo(() => useStyles(theme), [theme]);
     const { unreadCount } = useChatContext();
+    const { isIndiaBased } = useLocationContext();
+    const { manager } = useAuthContext();
 
-    const campaignsTabButton = (color: string, focused: boolean) =>
-        !xl ? (
-            <CoachmarkAnchor
-                id="guide-tour-campaigns-mobile"
-                shape="pill"
-                style={{ flex: 1 }}
-            >
-                <FontAwesomeIcon
-                    color={color}
-                    icon={focused ? faStarSolid : faStar}
-                    size={22}
-                />
-            </CoachmarkAnchor>
-        ) : (
-            <FontAwesomeIcon
-                color={color}
-                icon={focused ? faStarSolid : faStar}
-                size={22}
-            />
-        );
+    // 4th dynamic tab logic:
+    // India + not chat connected → show Discover
+    // India + chat connected OR outside India → show Messages
+    const showDiscover = isIndiaBased && !manager?.isChatConnected;
 
-    const menuTabButton = (color: string, focused: boolean) =>
+    const menuTabButton = () =>
         !xl ? (
             <CoachmarkAnchor
                 id="guide-tour-menu-mobile"
@@ -119,23 +105,82 @@ const TabLayout = () => {
                 },
             }}
         >
+            {/* Tab 1: Content Strategy */}
             <Tabs.Screen
-                name="explore-influencers"
+                name="(content)/content-strategies"
                 options={{
-                    title: xl ? "Influencer Spotlights" : "Spotlights",
+                    title: "Strategy",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
-                            icon={focused ? faHeartSolid : faHeart}
+                            icon={faPenRuler}
                             size={22}
                         />
                     ),
                 }}
             />
+
+            {/* Tab 2: Content Calendar */}
+            <Tabs.Screen
+                name="(content)/content-calendar"
+                options={{
+                    title: "Calendar",
+                    headerShown: false,
+                    tabBarIcon: ({ color, focused }) => (
+                        <FontAwesomeIcon
+                            color={color}
+                            icon={faCalendarDays}
+                            size={22}
+                        />
+                    ),
+                }}
+            />
+
+            {/* Tab 3: Collaboration Requests */}
+            <Tabs.Screen
+                name="collaborations"
+                options={{
+                    title: "Collabs",
+                    headerShown: false,
+                    tabBarIcon: ({ color, focused }) => (
+                        <CoachmarkAnchor
+                            id="guide-tour-campaigns-mobile"
+                            shape="pill"
+                            style={{ flex: 1 }}
+                        >
+                            <FontAwesomeIcon
+                                color={color}
+                                icon={focused ? faStarSolid : faStar}
+                                size={22}
+                            />
+                        </CoachmarkAnchor>
+                    ),
+                }}
+            />
+
+            {/* Tab 4a: Discover (India + not chat connected) */}
+            <Tabs.Screen
+                name="discover"
+                options={{
+                    title: "Discover",
+                    headerShown: false,
+                    tabBarItemStyle: { display: showDiscover ? "flex" : "none" },
+                    tabBarIcon: ({ color, focused }) => (
+                        <FontAwesomeIcon
+                            color={color}
+                            icon={focused ? faGemSolid : faGem}
+                            size={22}
+                        />
+                    ),
+                }}
+            />
+
+            {/* Tab 4b: Messages (India + chat connected, or outside India) */}
             <Tabs.Screen
                 name="messages"
                 options={{
+                    tabBarItemStyle: { display: showDiscover ? "none" : "flex" },
                     tabBarIcon: ({ color, focused }) => (
                         <>
                             <FontAwesomeIcon
@@ -143,7 +188,7 @@ const TabLayout = () => {
                                 icon={focused ? faCommentSolid : faComment}
                                 size={22}
                             />
-                            {(unreadCount > 0) && (
+                            {unreadCount > 0 && (
                                 <Badge
                                     visible={true}
                                     size={16}
@@ -165,34 +210,22 @@ const TabLayout = () => {
                 }}
             />
 
-            <Tabs.Screen
-                name="discover"
-                options={{
-                    title: xl ? "Discover Influencers" : "Discover",
-                    headerShown: false,
-                    tabBarIcon: ({ color, focused }) => (
-                        <FontAwesomeIcon
-                            color={color}
-                            icon={focused ? faGemSolid : faGem}
-                            size={22}
-                        />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="collaborations"
-                options={{
-                    title: "Campaigns",
-                    headerShown: false,
-                    tabBarIcon: ({ color, focused }) => campaignsTabButton(color, focused),
-                }}
-            />
+            {/* Tab 5: Brand Menu */}
             <Tabs.Screen
                 name="menu"
                 options={{
                     title: "My Brand",
                     headerShown: false,
-                    tabBarIcon: ({ color, focused }) => menuTabButton(color, focused),
+                    tabBarIcon: () => menuTabButton(),
+                }}
+            />
+
+            {/* Hidden: explore-influencers (kept as route, not in tab bar) */}
+            <Tabs.Screen
+                name="(content)/contents"
+                options={{
+                    tabBarItemStyle: { display: "none" },
+                    headerShown: false,
                 }}
             />
         </Tabs>

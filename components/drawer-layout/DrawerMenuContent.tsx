@@ -1,10 +1,10 @@
 import { Text, View } from "@/components/theme/Themed";
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import ImageComponent from "@/shared-uis/components/image-component";
+import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
 import {
     faPlus
@@ -136,6 +136,7 @@ const DrawerMenuContent: React.FC<DrawerMenuContentProps> = () => {
                         shape="circle"
                         size="small"
                         altText="Image"
+                        initialsSize={12}
                         style={{ width: 30, height: 30 }}
                     />}
                     showChevron={false}

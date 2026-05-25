@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Href, usePathname, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View as RNView } from "react-native";
 import { Badge } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
 
@@ -41,9 +41,18 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     const colorSet = Colors(theme);
     const inactiveBg = drawerColors?.inactiveBg ?? (drawerColors ? colorSet.drawerBackground : colorSet.background);
     const inactiveText = drawerColors ? drawerColors.inactiveColor : colorSet.text;
-    const activeBg = colorSet.primary;
+    const activeBg = (colorSet as any).drawerActiveBg ?? colorSet.primary;
+    const activeBorderColor = (colorSet as any).drawerActiveBorder ?? colorSet.primary;
     const activeText = drawerColors ? drawerColors.activeColor : colorSet.onPrimary;
-    const hoverBg = inactiveBg === "transparent" ? colorSet.primary + "22" : inactiveBg + "F2";
+    // primary/inactiveBg may be rgb() strings — hex-suffix trick ("+ '22'") is invalid on them.
+    // Use explicit rgba values for hover tint instead.
+    const hoverBg = theme.dark
+        ? "rgba(83, 139, 166, 0.10)"   // faint teal glow on dark sidebar
+        : "rgba(5, 68, 99, 0.05)";     // whisper navy tint on alice-blue sidebar
+    // Hover text is midway between inactive and active — clearly highlighted but not identical to selected
+    const hoverText = theme.dark
+        ? (colorSet as any).drawerText ?? colorSet.text     // near-white — readable on dark hover bg
+        : drawerColors?.activeColor ?? colorSet.primary;    // navy — same as active on light (fine, bg differs)
 
     return (
         <Pressable
@@ -61,13 +70,17 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                         : pressed || hovered
                             ? hoverBg
                             : inactiveBg,
-                    borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
+                    // Dark mode: use surrounding border for active/hover feedback.
+                    // Light mode: left accent bar handles active — no surrounding border needed.
+                    borderWidth: theme.dark
+                        ? (isActive ? 1 : hovered ? StyleSheet.hairlineWidth : 0)
+                        : 0,
                     borderColor: isActive
-                        ? colorSet.primary
+                        ? activeBorderColor
                         : drawerColors
                           ? theme.dark
                               ? colorSet.border
-                              : colorSet.drawerBorder
+                              : (colorSet as any).drawerBorder ?? colorSet.border
                           : colorSet.border,
                 },
             ]}
@@ -75,12 +88,19 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
             accessibilityState={{ selected: isActive }}
             hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
         >
+            {/* Light theme active state: 3px left accent bar */}
+            {isActive && !theme.dark && (
+                <RNView style={styles.activeAccentBar} />
+            )}
             <View style={styles.innerContainer}>
-                {tab.icon({ focused: isActive || hovered })}
+                {tab.icon({ focused: isActive })}
                 <Text
                     style={[
                         styles.label,
-                        { color: isActive || hovered ? activeText : inactiveText, fontWeight: isActive ? "600" : "500" },
+                        {
+                            color: isActive ? activeText : hovered ? hoverText : inactiveText,
+                            fontWeight: isActive ? "600" : "500",
+                        },
                     ]}
                     numberOfLines={1}
                 >
@@ -141,6 +161,16 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         flex: 1,
+    },
+    activeAccentBar: {
+        position: "absolute",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 3,
+        backgroundColor: "rgb(5, 68, 99)", // always navy — light theme only
+        borderTopLeftRadius: 10,
+        borderBottomLeftRadius: 10,
     },
 });
 

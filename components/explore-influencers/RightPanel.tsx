@@ -80,7 +80,7 @@ const RightPanel: React.FC<IProps> = () => {
                         mode="contained"
                         icon="bullhorn"
                         style={styles.ctaBtn}
-                        onPress={() => router.push('/create-collaboration')}
+                        onPress={() => router.push('/(main)/(drawer)/(tabs)/collaborations' as any)}
                     >
                         Create campaign
                     </Button>

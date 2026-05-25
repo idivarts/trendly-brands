@@ -22,6 +22,14 @@ import { CREDIT_THRESHOLDS, CreditThreshold } from "./credit-thresholds";
 import CreditUsageModal from "./CreditUsageModal";
 
 type CreditContext = "discovery" | "campaigns" | "contracts";
+
+// Reasonable credit capacity caps (used only for progress bar width, not billing logic)
+const CREDIT_DISPLAY_MAX: Record<string, number> = {
+    discovery: 100,
+    invites: 30,
+    campaigns: 20,
+    contracts: 20,
+};
 type CreditStatus = "normal" | "warning" | "critical";
 
 function getCreditContext(pathname: string): CreditContext {
@@ -129,6 +137,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
             iconColor,
             status,
             meta,
+            maxKey,
         }: {
             label: string;
             count: number;
@@ -136,35 +145,61 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
             iconColor: string;
             status: CreditStatus;
             meta?: string;
-        }) => (
-            <Pressable
-                onPress={handleCardPress}
-                style={({ pressed }) => [
-                    styles.creditRowCard,
-                    pressed && styles.creditsCardPressed,
-                ]}
-            >
-                <RNView style={styles.creditRowLeft}>
-                    <FontAwesomeIcon
-                        icon={icon}
-                        size={18}
-                        color={iconColor}
-                        style={styles.creditsIcon}
-                    />
-                    <RNView style={styles.creditTextWrap}>
-                        <Text style={styles.creditPrimaryText}>
-                            {count} {label}
-                        </Text>
-                        {!!meta && (
-                            <Text style={styles.creditSecondaryText}>
-                                {meta}
-                            </Text>
-                        )}
+            maxKey: string;
+        }) => {
+            const max = CREDIT_DISPLAY_MAX[maxKey] ?? 100;
+            const fillPct = Math.min(100, Math.round((count / max) * 100));
+            const barColor =
+                status === "critical"
+                    ? colors.red
+                    : status === "warning"
+                    ? colors.yellow
+                    : colors.drawerProgressFill;
+
+            return (
+                <Pressable
+                    onPress={handleCardPress}
+                    style={({ pressed }) => [
+                        styles.creditRowCard,
+                        pressed && styles.creditsCardPressed,
+                    ]}
+                >
+                    <RNView style={styles.creditRowTop}>
+                        <RNView style={styles.creditRowLeft}>
+                            <FontAwesomeIcon
+                                icon={icon}
+                                size={18}
+                                color={iconColor}
+                                style={styles.creditsIcon}
+                            />
+                            <RNView style={styles.creditTextWrap}>
+                                <Text style={styles.creditPrimaryText}>
+                                    {count} {label}
+                                </Text>
+                                {!!meta && (
+                                    <Text style={styles.creditSecondaryText}>
+                                        {meta}
+                                    </Text>
+                                )}
+                            </RNView>
+                        </RNView>
+                        {renderStatusIndicator(status)}
                     </RNView>
-                </RNView>
-                {renderStatusIndicator(status)}
-            </Pressable>
-        );
+                    {/* Progress bar */}
+                    <RNView style={styles.progressTrack}>
+                        <RNView
+                            style={[
+                                styles.progressFill,
+                                {
+                                    width: `${fillPct}%` as any,
+                                    backgroundColor: barColor,
+                                },
+                            ]}
+                        />
+                    </RNView>
+                </Pressable>
+            );
+        };
 
         const renderCardContent = () => {
             if (creditContext === "discovery") {
@@ -176,6 +211,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                             icon: faGemSolid,
                             iconColor: colors.gold,
                             status: discoveryStatus,
+                            maxKey: "discovery",
                         })}
                         {renderCreditRow({
                             label: "Invites",
@@ -184,6 +220,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                             iconColor: colors.drawerInvitesIcon,
                             status: inviteStatus,
                             meta: "Monthly refresh",
+                            maxKey: "invites",
                         })}
                         {renderRefillFooter()}
                     </>
@@ -199,6 +236,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                             icon: faFileContract,
                             iconColor: colors.gold,
                             status: contractStatus,
+                            maxKey: "contracts",
                         })}
                         {renderRefillFooter()}
                     </>
@@ -214,6 +252,7 @@ const CreditDisplayCard = React.forwardRef<RNView, CreditDisplayCardProps>(
                         icon: faDiagramProject,
                         iconColor: colors.gold,
                         status: campaignStatus,
+                        maxKey: "campaigns",
                     })}
                     {renderRefillFooter()}
                 </>
@@ -243,32 +282,49 @@ const createStyles = (theme: Theme) => {
     const colors = Colors(theme);
     return StyleSheet.create({
         creditsCard: {
-            backgroundColor: colors.drawerCardBg,
+            backgroundColor: (colors as any).drawerCardBg ?? colors.drawerCardBg,
             borderRadius: 12,
             padding: 12,
             marginHorizontal: 8,
             gap: 8,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: (colors as any).drawerBorder ?? "transparent",
         },
         creditsCardPressed: {
             opacity: 0.9,
         },
         creditRowCard: {
-            minHeight: 42,
             borderRadius: 8,
             paddingHorizontal: 10,
-            paddingVertical: 8,
+            paddingTop: 8,
+            paddingBottom: 6,
             backgroundColor: colors.glassSurface,
             borderWidth: StyleSheet.hairlineWidth,
             borderColor: colors.drawerBorder,
+            flexDirection: "column",
+        },
+        creditRowTop: {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
+            minHeight: 26,
         },
         creditRowLeft: {
             flex: 1,
             flexDirection: "row",
             alignItems: "center",
             marginRight: 8,
+        },
+        progressTrack: {
+            marginTop: 6,
+            height: 3,
+            borderRadius: 99,
+            backgroundColor: (colors as any).drawerProgressTrack ?? "rgba(0,0,0,0.08)",
+            overflow: "hidden",
+        },
+        progressFill: {
+            height: 3,
+            borderRadius: 99,
         },
         creditTextWrap: {
             flex: 1,
@@ -278,13 +334,13 @@ const createStyles = (theme: Theme) => {
         },
         creditPrimaryText: {
             fontSize: 14,
-            color: colors.drawerText,
+            color: (colors as any).drawerText ?? colors.text,
             fontWeight: "600",
         },
         creditSecondaryText: {
             marginTop: 2,
             fontSize: 11,
-            color: colors.drawerTextMuted,
+            color: (colors as any).drawerTextMuted ?? colors.drawerTextMuted,
         },
         refillFooterButton: {
             paddingVertical: 4,
@@ -293,12 +349,13 @@ const createStyles = (theme: Theme) => {
             alignSelf: "flex-end",
         },
         refillButtonPressed: {
-            backgroundColor: colors.glassSurface,
+            backgroundColor: (colors as any).drawerActiveBg ?? colors.glassSurface,
         },
         refillLink: {
             fontSize: 12,
             fontWeight: "600",
-            color: colors.aliceBlue,
+            letterSpacing: 0.5,
+            color: (colors as any).drawerTextMuted ?? colors.aliceBlue,
         },
         statusDot: {
             width: 10,

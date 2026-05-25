@@ -36,6 +36,60 @@ These rules apply to every UI component touched or created in this project. Chec
 - **Do not** use `Dimensions.get("window")` directly inside components for responsive layout.
 - For module-level utility code (where hooks can't be used), use `getConstrainedWidth()` / `getConstrainedHeight()` from `shared-libs/contexts/mobile-layout-context.provider.tsx`.
 
+### Depth & Separation — Shadows over Borders
+**Never use borders to create visual separation between UI elements.** Borders look dated. Use shadows and background contrast instead.
+
+#### Rules
+- **No `borderWidth`, `borderTopWidth`, `borderBottomWidth`, `borderLeftWidth`, `borderRightWidth` for structural separation.** This includes panel dividers, section headers, toolbar dividers, card outlines, and input field outlines.
+- **Cards and list items** lift off the surface with a shadow, not a box border:
+  ```ts
+  shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 8, shadowOpacity: 0.07, elevation: 3,
+  ```
+- **Panel dividers** (e.g. left/right split layouts): give the elevated panel a directional shadow toward the lower panel. Example — chat panel on the right casting a shadow leftward:
+  ```ts
+  shadowColor: "#000", shadowOffset: { width: -6, height: 0 },
+  shadowRadius: 16, shadowOpacity: 0.07, elevation: 8,
+  ```
+- **Toolbars and sticky headers** cast a downward shadow over the content below:
+  ```ts
+  shadowColor: "#000", shadowOffset: { width: 0, height: 3 },
+  shadowRadius: 8, shadowOpacity: 0.07, elevation: 3,
+  ```
+- **Floating input areas** (fixed at screen bottom) cast an upward shadow:
+  ```ts
+  shadowColor: "#000", shadowOffset: { width: 0, height: -4 },
+  shadowRadius: 8, shadowOpacity: 0.05, elevation: 4,
+  ```
+- **Input fields** use `backgroundColor: colors.tag` (a subtle off-white/off-black depending on theme) instead of a border to signal interactivity. Add a micro shadow:
+  ```ts
+  backgroundColor: colors.tag,
+  shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+  shadowRadius: 3, shadowOpacity: 0.04, elevation: 1,
+  ```
+- **Primary/CTA buttons** get a coloured shadow matching `colors.primary` to feel tactile:
+  ```ts
+  shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 12, shadowOpacity: 0.35, elevation: 4,
+  ```
+- **Active items** (selected state in a list) use `backgroundColor: colors.primary` + a primary-coloured shadow — no border highlight needed.
+- **Accent stripes** (e.g. quote callouts, attachment chips) — use a narrow `<View>` with a background colour instead of `borderLeftWidth`:
+  ```tsx
+  // ✅ Do this
+  <View style={{ flexDirection: "row", overflow: "hidden", borderRadius: 10 }}>
+    <View style={{ width: 4, backgroundColor: colors.primary }} />
+    <View style={{ flex: 1, padding: 10 }}><Text>...</Text></View>
+  </View>
+
+  // ❌ Not this
+  <View style={{ borderLeftWidth: 3, borderLeftColor: colors.primary }}>
+  ```
+- **Slide-in drawers and modals** cast a large directional shadow toward the page content they overlay — no border needed on the edge.
+
+#### Exceptions — when a border IS acceptable
+- Form inputs showing a **validation error** may use a coloured `borderWidth: 1.5` with `borderColor: colors.error` to indicate the problem field.
+- Decorative **dashed or dotted outlines** (e.g. upload drop zones) where the dashed pattern itself is the affordance.
+
 ### Stylesheet Structure
 - Keep `StyleSheet.create(...)` at the **bottom** of the file — never at the top or mid-file.
 - Keep styles **colocated** in the same file as the component — no external stylesheet files.
@@ -57,6 +111,9 @@ const styles = useMemo(() => useStyles(colors, xl, width), [colors, xl, width]);
 - [ ] `StyleSheet.create(...)` is at the bottom of the file
 - [ ] No inline style objects in JSX
 - [ ] No external stylesheet imports
+- [ ] No `borderWidth` / directional border used for visual separation — shadows used instead
+- [ ] Input fields use `backgroundColor: colors.tag` (not a border) to signal interactivity
+- [ ] Accent stripes use a `<View width={4}>` child element, not `borderLeftWidth`
 
 ---
 

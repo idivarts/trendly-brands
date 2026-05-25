@@ -386,19 +386,6 @@ const BottomSheetActions = ({
                             }}
                         />
                         <List.Item
-                            title="Edit Collaboration"
-                            titleStyle={styles.actionTitle}
-                            onPress={() => {
-                                handleClose();
-                                router.push({
-                                    pathname: "/edit-collaboration",
-                                    params: {
-                                        id: cardId,
-                                    },
-                                });
-                            }}
-                        />
-                        <List.Item
                             title="Copy Link"
                             titleStyle={styles.actionTitle}
                             onPress={async () => {
