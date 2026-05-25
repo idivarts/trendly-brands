@@ -237,16 +237,18 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         () =>
             theme.dark
                 ? {
-                    inactiveColor: colors.text,
-                    activeColor: colors.onPrimary,
+                    inactiveColor: (colors as any).drawerTextMuted ?? colors.text,
+                    activeColor: colors.drawerText,
                     inactiveBg: "transparent",
                 }
                 : {
-                    inactiveColor: colors.primary,
-                    activeColor: colors.white,
+                    // Light mode: inactive text is dark enough to read on white (#506878)
+                    inactiveColor: (colors as any).drawerTextMuted ?? "#506878",
+                    // Light mode: active text is full navy so it pops on the glass bg
+                    activeColor: colors.primary,
                     inactiveBg: "transparent",
                 },
-        [theme.dark, colors.primary, colors.white, colors.text, colors.onPrimary]
+        [theme.dark, colors.primary, colors.drawerText, (colors as any).drawerTextMuted]
     );
 
     const [isBrandHovered, setIsBrandHovered] = useState(false);
@@ -305,7 +307,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 <Text style={styles.brandName} numberOfLines={1}>
                                     {selectedBrand?.name ?? "Brand"}
                                 </Text>
-                                <Text style={styles.brandSubtitle}>BRAND PORTAL</Text>
+                                <Text style={styles.brandSubtitle}>Brand Portal</Text>
                             </View>
                             {hasMultipleBrands ? (
                                 <FontAwesomeIcon
@@ -388,6 +390,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         <>
             <DrawerColorsContext.Provider value={drawerColors}>
                 <View style={styles.root}>
+                    {/* Gradient accent top line */}
+                    <LinearGradient
+                        colors={["#054463", "#538BA6", "#ff6d2d"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.accentLine}
+                        pointerEvents="none"
+                    />
                     {brandHeaderContent}
 
                     <ScrollView
@@ -396,7 +406,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                     >
                         {/* 1. CONTENT CREATION */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>CONTENT CREATION</Text>
+                            <Text style={styles.sectionTitle}>Create</Text>
                             <View style={styles.menuItems}>
                                 {contentItems.map((tab, idx) => (
                                     <DrawerMenuItem key={`content-${idx}`} tab={tab} />
@@ -456,7 +466,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         {isIndiaBased && (
                             <View style={styles.brandDetailsSection}>
                                 <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>CAMPAIGN</Text>
+                                    <Text style={styles.sectionTitle}>Campaign</Text>
                                 </View>
                                 <View style={styles.divider} />
                                 <View style={styles.menuItems}>
@@ -476,7 +486,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         {manager?.isChatConnected && showExecution &&
                             <View style={styles.brandDetailsSection}>
                                 <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>EXECUTION</Text>
+                                    <Text style={styles.sectionTitle}>Manage</Text>
                                 </View>
                                 <View style={styles.divider} />
                                 <View style={styles.menuItems}>
@@ -501,7 +511,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                         isBrandMgmtHovered && styles.sectionHeaderRowHover,
                                     ]}
                                 >
-                                    <Text style={styles.sectionTitle}>BRAND MANAGEMENT</Text>
+                                    <Text style={styles.sectionTitle}>Brand</Text>
                                     <DrawerIcon icon={faChevronRight} size={12} />
                                 </View>
                             </Pressable>
@@ -526,7 +536,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                         isGrowthHovered && styles.sectionHeaderRowHover,
                                     ]}
                                 >
-                                    <Text style={styles.sectionTitle}>GROWTH</Text>
+                                    <Text style={styles.sectionTitle}>Growth</Text>
                                     <DrawerIcon icon={faChevronRight} size={12} />
                                 </View>
                             </Pressable>
@@ -573,6 +583,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
                             )
                         )}
+                        {/* Presence indicator */}
+                        <RNView style={styles.presenceDot} />
                     </View>
                 </View>
             </DrawerColorsContext.Provider>
@@ -621,9 +633,9 @@ const RenderBanner = (props: {
 
 const createStyles = (theme: Theme, bottom: number = 0) => {
     const colors = Colors(theme);
-    const sidebarSurfaceBg = colors.card;
-    const sectionLabelColor = theme.dark ? colors.textSecondary : colors.drawerTextMuted;
-    const sidebarDividerColor = theme.dark ? colors.border : colors.drawerBorder;
+    const sidebarSurfaceBg = (colors as any).drawerBackground ?? colors.card;
+    const sectionLabelColor = (colors as any).drawerSectionLabel ?? (theme.dark ? colors.textSecondary : colors.drawerTextMuted);
+    const sidebarDividerColor = theme.dark ? "rgba(83, 139, 166, 0.12)" : "rgba(5, 68, 99, 0.08)";
     return StyleSheet.create({
         root: {
             flex: 1,
@@ -635,6 +647,14 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             shadowRadius: 16,
             elevation: 6,
         },
+        accentLine: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            zIndex: 10,
+        },
         header: {
             position: "relative",
             overflow: "visible",
@@ -642,10 +662,12 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             elevation: 100,
             paddingHorizontal: 12,
             paddingVertical: 12,
-            backgroundColor: colors.primary,
+            backgroundColor: (colors as any).drawerHeaderCardBg ?? colors.primary,
             marginHorizontal: 8,
             marginBottom: 4,
             borderRadius: 12,
+            borderWidth: 1,
+            borderColor: (colors as any).drawerHeaderCardBorder ?? "transparent",
         },
         headerPressable: {
             flex: 1,
@@ -675,14 +697,17 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             backgroundColor: "transparent",
         },
         brandName: {
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: "700",
-            color: colors.drawerText,
+            letterSpacing: -0.3,
+            color: theme.dark ? colors.drawerText : colors.primary,
         },
         brandSubtitle: {
-            fontSize: 11,
-            color: colors.drawerTextMuted,
+            fontSize: 9,
+            color: (colors as any).drawerTextMuted ?? colors.drawerTextMuted,
             marginTop: 2,
+            textTransform: "uppercase" as const,
+            letterSpacing: 0.8,
         },
         brandListDropdown: {
             position: "absolute",
@@ -690,14 +715,14 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             left: 0,
             right: 0,
             zIndex: 1000,
-            backgroundColor: colors.primary,
+            backgroundColor: (colors as any).drawerHeaderCardBg ?? colors.primary,
             borderBottomLeftRadius: 12,
             borderBottomRightRadius: 12,
             marginTop: 4,
             maxHeight: 220,
             overflow: "hidden",
             borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: colors.drawerBorder,
+            borderTopColor: (colors as any).drawerHeaderCardBorder ?? colors.drawerBorder,
         },
         brandListScroll: {
             maxHeight: 220,
@@ -736,28 +761,32 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             backgroundColor: sidebarSurfaceBg,
         },
         section: {
-            gap: 8,
+            gap: 4,
             backgroundColor: "transparent",
         },
         sectionTitle: {
-            fontSize: 12,
-            fontWeight: "600",
+            fontSize: 10,
+            fontWeight: "700",
             paddingHorizontal: 8,
+            paddingTop: 6,
+            paddingBottom: 2,
             color: sectionLabelColor,
             backgroundColor: "transparent",
+            textTransform: "uppercase" as const,
+            letterSpacing: 0.9,
         },
         brandDetailsSection: {
-            marginTop: 16,
-            gap: 8,
+            marginTop: 12,
+            gap: 4,
             backgroundColor: "transparent",
         },
         sectionHeaderRow: {
             flexDirection: "row",
             alignItems: "center",
             gap: 8,
-            marginBottom: -10,
+            marginBottom: -6,
             paddingHorizontal: 8,
-            paddingVertical: 12,
+            paddingVertical: 10,
             backgroundColor: "transparent",
         },
         sectionHeaderRowHover: {},
@@ -772,11 +801,24 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         bottomActions: {
             paddingHorizontal: 8,
             paddingTop: 12,
-            paddingBottom: bottom,
+            paddingBottom: Math.max(bottom, 12),
             backgroundColor: sidebarSurfaceBg,
             borderTopColor: sidebarDividerColor,
             borderTopWidth: StyleSheet.hairlineWidth,
             gap: 4,
+        },
+        presenceDot: {
+            width: 7,
+            height: 7,
+            borderRadius: 99,
+            backgroundColor: "#2ecc71",
+            alignSelf: "flex-end",
+            marginRight: 18,
+            marginBottom: 4,
+            shadowColor: "#2ecc71",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.9,
+            shadowRadius: 4,
         },
         profileImageSize: {
             width: 24,

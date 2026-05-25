@@ -243,11 +243,13 @@ const createStyles = (theme: Theme) => {
     const colors = Colors(theme);
     return StyleSheet.create({
         creditsCard: {
-            backgroundColor: colors.drawerCardBg,
+            backgroundColor: (colors as any).drawerCardBg ?? colors.drawerCardBg,
             borderRadius: 12,
             padding: 12,
             marginHorizontal: 8,
             gap: 8,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: (colors as any).drawerBorder ?? "transparent",
         },
         creditsCardPressed: {
             opacity: 0.9,
@@ -278,13 +280,13 @@ const createStyles = (theme: Theme) => {
         },
         creditPrimaryText: {
             fontSize: 14,
-            color: colors.drawerText,
+            color: (colors as any).drawerText ?? colors.text,
             fontWeight: "600",
         },
         creditSecondaryText: {
             marginTop: 2,
             fontSize: 11,
-            color: colors.drawerTextMuted,
+            color: (colors as any).drawerTextMuted ?? colors.drawerTextMuted,
         },
         refillFooterButton: {
             paddingVertical: 4,
@@ -293,12 +295,13 @@ const createStyles = (theme: Theme) => {
             alignSelf: "flex-end",
         },
         refillButtonPressed: {
-            backgroundColor: colors.glassSurface,
+            backgroundColor: (colors as any).drawerActiveBg ?? colors.glassSurface,
         },
         refillLink: {
             fontSize: 12,
             fontWeight: "600",
-            color: colors.aliceBlue,
+            letterSpacing: 0.5,
+            color: (colors as any).drawerTextMuted ?? colors.aliceBlue,
         },
         statusDot: {
             width: 10,

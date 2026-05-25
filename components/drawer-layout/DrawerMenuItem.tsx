@@ -41,9 +41,14 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     const colorSet = Colors(theme);
     const inactiveBg = drawerColors?.inactiveBg ?? (drawerColors ? colorSet.drawerBackground : colorSet.background);
     const inactiveText = drawerColors ? drawerColors.inactiveColor : colorSet.text;
-    const activeBg = colorSet.primary;
+    const activeBg = (colorSet as any).drawerActiveBg ?? colorSet.primary;
+    const activeBorderColor = (colorSet as any).drawerActiveBorder ?? colorSet.primary;
     const activeText = drawerColors ? drawerColors.activeColor : colorSet.onPrimary;
     const hoverBg = inactiveBg === "transparent" ? colorSet.primary + "22" : inactiveBg + "F2";
+    // Hover text is midway between inactive and active — clearly highlighted but not identical to selected
+    const hoverText = theme.dark
+        ? (colorSet as any).drawerText ?? colorSet.text     // near-white — readable on dark hover bg
+        : drawerColors?.activeColor ?? colorSet.primary;    // navy — same as active on light (fine, bg differs)
 
     return (
         <Pressable
@@ -61,13 +66,13 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                         : pressed || hovered
                             ? hoverBg
                             : inactiveBg,
-                    borderWidth: isActive || hovered ? StyleSheet.hairlineWidth : 0,
+                    borderWidth: isActive ? 1 : hovered ? StyleSheet.hairlineWidth : 0,
                     borderColor: isActive
-                        ? colorSet.primary
+                        ? activeBorderColor
                         : drawerColors
                           ? theme.dark
                               ? colorSet.border
-                              : colorSet.drawerBorder
+                              : (colorSet as any).drawerBorder ?? colorSet.border
                           : colorSet.border,
                 },
             ]}
@@ -76,11 +81,14 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
             hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
         >
             <View style={styles.innerContainer}>
-                {tab.icon({ focused: isActive || hovered })}
+                {tab.icon({ focused: isActive })}
                 <Text
                     style={[
                         styles.label,
-                        { color: isActive || hovered ? activeText : inactiveText, fontWeight: isActive ? "600" : "500" },
+                        {
+                            color: isActive ? activeText : hovered ? hoverText : inactiveText,
+                            fontWeight: isActive ? "600" : "500",
+                        },
                     ]}
                     numberOfLines={1}
                 >
