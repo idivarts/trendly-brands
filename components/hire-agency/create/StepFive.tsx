@@ -113,31 +113,31 @@ const StepFive: React.FC<StepFiveProps> = ({
 
     return (
         <StepLayout
-            step={5}
+            step={3}
             title="Hire Summary"
             subtitle="Review your request before submitting"
             onBack={onBack}
         >
             {/* Overview card */}
             <View style={styles.overviewCard}>
-                <Text style={styles.projectName}>{hire.name}</Text>
-                {hire.description ? (
-                    <Text style={styles.projectDesc}>{hire.description}</Text>
-                ) : null}
+                <Text style={styles.overviewHeading}>Your Agency Partnership</Text>
+                <Text style={styles.overviewSub}>
+                    Here's a summary of the plan you've configured. A Trendly POC will
+                    review this and reach out within 24 hours.
+                </Text>
 
                 <View style={styles.metaRow}>
-                    <MetaChip label={hire.hireType === "retainer" ? "Monthly Retainer" : "One-off Project"} colors={colors} />
-                    <MetaChip label={hire.budgetType === "fixed" ? "Fixed Budget" : "Needs-Based"} colors={colors} />
-                    {hire.platforms?.map((p) => (
-                        <MetaChip key={p} label={p} colors={colors} />
-                    ))}
-                </View>
-
-                <View style={styles.freqRow}>
-                    <Text style={styles.freqText}>
-                        {hire.contentFrequency?.count} posts /{" "}
-                        {hire.contentFrequency?.period}
-                    </Text>
+                    <MetaChip label="Monthly Retainer" colors={colors} />
+                    <MetaChip
+                        label={hire.budgetType === "fixed" ? "Fixed Budget" : "Custom Requirements"}
+                        colors={colors}
+                    />
+                    {hire.contentFrequency ? (
+                        <MetaChip
+                            label={`${hire.contentFrequency.count} posts / ${hire.contentFrequency.period}`}
+                            colors={colors}
+                        />
+                    ) : null}
                 </View>
             </View>
 
@@ -348,13 +348,13 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean, width: number
             shadowOpacity: 0.35,
             elevation: 4,
         },
-        projectName: {
-            fontSize: 22,
+        overviewHeading: {
+            fontSize: 20,
             fontWeight: "800",
             color: colors.text,
         },
-        projectDesc: {
-            fontSize: 14,
+        overviewSub: {
+            fontSize: 13,
             color: colors.textSecondary,
             lineHeight: 20,
         },
@@ -363,13 +363,6 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean, width: number
             flexWrap: "wrap",
             gap: 8,
             backgroundColor: "transparent",
-        },
-        freqRow: {
-            backgroundColor: "transparent",
-        },
-        freqText: {
-            fontSize: 13,
-            color: colors.textSecondary,
         },
         section: {
             gap: 10,

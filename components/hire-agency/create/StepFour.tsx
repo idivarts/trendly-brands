@@ -13,6 +13,8 @@ import {
     FEATURE_MIN_BUDGETS,
     IAgencyHire,
 } from "@/types/AgencyHire";
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch } from "react-native";
@@ -370,12 +372,20 @@ const FeatureRow: React.FC<FeatureRowProps> = ({
                     ) : null}
                 </View>
                 {lockedEnabled ? (
-                    <Switch value={true} disabled trackColor={{ true: colors.green }} />
+                    <Switch
+                        value={true}
+                        disabled
+                        trackColor={{ false: colors.border, true: colors.green }}
+                        thumbColor={colors.white}
+                        ios_backgroundColor={colors.border}
+                    />
                 ) : (
                     <Switch
                         value={isOn}
                         onValueChange={(v) => { if (!disabled) onToggle(v); }}
-                        trackColor={{ true: colors.primary }}
+                        trackColor={{ false: colors.border, true: colors.primary }}
+                        thumbColor={colors.white}
+                        ios_backgroundColor={colors.border}
                         disabled={disabled}
                     />
                 )}
@@ -808,6 +818,18 @@ const StepFour: React.FC<StepFourProps> = ({
     const FeaturesPanel = (
         <View style={styles.featuresList}>
             <FeatureRow
+                title="Conversion Audit"
+                description="End-to-end audit of your IG page aesthetic, website load speed, and remarketing setup to identify drop-off points."
+                enabled={features.conversionAudit}
+                onToggle={(v) => patchFeatures({ conversionAudit: v })}
+                disabled={!isRetainer && isDisabled(FEATURE_MIN_BUDGETS.conversionAudit)}
+                disabledReason={`Requires budget ≥ ${fmt(FEATURE_MIN_BUDGETS.conversionAudit)}`}
+                lockedEnabled={isRetainer}
+                lockedBadge="✦ Included free for Monthly Retainer"
+                colors={colors}
+            />
+
+            <FeatureRow
                 title="Content Strategy Creation"
                 description="A tailored content calendar and strategy aligned to your brand voice and campaign goals. Cost varies from ₹15k–50k based on monthly content volume."
                 enabled={features.contentStrategy}
@@ -1020,18 +1042,6 @@ const StepFour: React.FC<StepFourProps> = ({
             </FeatureRow>
 
             <FeatureRow
-                title="Conversion Audit"
-                description="End-to-end audit of your IG page aesthetic, website load speed, and remarketing setup to identify drop-off points."
-                enabled={features.conversionAudit}
-                onToggle={(v) => patchFeatures({ conversionAudit: v })}
-                disabled={!isRetainer && isDisabled(FEATURE_MIN_BUDGETS.conversionAudit)}
-                disabledReason={`Requires budget ≥ ${fmt(FEATURE_MIN_BUDGETS.conversionAudit)}`}
-                lockedEnabled={isRetainer}
-                lockedBadge="✦ Included free for Monthly Retainer"
-                colors={colors}
-            />
-
-            <FeatureRow
                 title="Performance Marketing + Multi-Platform Ads"
                 description="Full-funnel: Google, Meta, YouTube, LinkedIn, blog ads, remarketing, and conversion-optimised campaigns. We add ₹35,000/month for this service."
                 enabled={features.performanceMarketing.enabled}
@@ -1072,27 +1082,28 @@ const StepFour: React.FC<StepFourProps> = ({
     if (xl) {
         return (
             <View style={styles.rootXL}>
+                {/* Header — matches StepLayout structure */}
                 <View style={styles.xlHeader}>
-                    <Text style={styles.xlStepLabel}>Step 4 of 5</Text>
-                    <View style={styles.xlProgressRow}>
-                        {[1, 2, 3, 4, 5].map((_, i) => (
-                            <View
-                                key={i}
-                                style={[
-                                    styles.xlProgressSeg,
-                                    {
-                                        backgroundColor:
-                                            4 > i ? colors.primary : colors.aliceBlue,
-                                    },
-                                ]}
-                            />
-                        ))}
+                    <Pressable onPress={onBack} style={styles.xlBackButton} hitSlop={8}>
+                        <FontAwesomeIcon icon={faArrowLeft} size={20} color={colors.text} />
+                    </Pressable>
+                    <View style={styles.xlHeaderText}>
+                        <Text style={styles.xlTitle}>Features & Budget</Text>
+                        <Text style={styles.xlSubtitle}>Select services — budget updates live</Text>
                     </View>
-                    <Text style={styles.xlTitle}>Features & Budget</Text>
-                    <Text style={styles.xlSubtitle}>
-                        Select services. Budget and totals update in real-time.
-                    </Text>
                 </View>
+                <View style={styles.xlProgressRow}>
+                    {[1, 2, 3].map((_, i) => (
+                        <View
+                            key={i}
+                            style={[
+                                styles.xlProgressSeg,
+                                { backgroundColor: 2 > i ? colors.primary : colors.aliceBlue },
+                            ]}
+                        />
+                    ))}
+                </View>
+                <Text style={styles.xlStepLabel}>Step 2 of 3</Text>
 
                 <View style={styles.splitRow}>
                     <ScrollView
@@ -1128,7 +1139,7 @@ const StepFour: React.FC<StepFourProps> = ({
 
     return (
         <StepLayout
-            step={4}
+            step={2}
             title="Features & Budget"
             subtitle="Select services — budget updates live"
             onBack={onBack}
@@ -1233,18 +1244,39 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean, width: number
             backgroundColor: colors.background,
         },
         xlHeader: {
+            flexDirection: "row",
+            alignItems: "center",
             paddingHorizontal: 24,
-            paddingTop: 16,
-            paddingBottom: 12,
-            gap: 6,
+            paddingTop: 12,
+            paddingBottom: 8,
+            backgroundColor: colors.background,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        xlBackButton: {
+            padding: 8,
+            marginRight: 8,
+        },
+        xlHeaderText: {
+            flex: 1,
             backgroundColor: "transparent",
         },
-        xlStepLabel: {
-            fontSize: 11,
+        xlTitle: {
+            fontSize: 20,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        xlSubtitle: {
+            fontSize: 12,
             color: colors.textSecondary,
+            marginTop: 2,
         },
         xlProgressRow: {
             flexDirection: "row",
+            paddingHorizontal: 24,
             gap: 6,
             backgroundColor: "transparent",
         },
@@ -1253,15 +1285,12 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean, width: number
             height: 4,
             borderRadius: 2,
         },
-        xlTitle: {
-            fontSize: 22,
-            fontWeight: "700",
-            color: colors.text,
-            marginTop: 4,
-        },
-        xlSubtitle: {
-            fontSize: 14,
+        xlStepLabel: {
+            fontSize: 11,
             color: colors.textSecondary,
+            paddingHorizontal: 24,
+            paddingTop: 6,
+            paddingBottom: 2,
         },
         splitRow: {
             flex: 1,

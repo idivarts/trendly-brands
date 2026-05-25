@@ -9,10 +9,14 @@ import { addDoc, collection } from "firebase/firestore";
 import React, { useState } from "react";
 import StepFive from "./StepFive";
 import StepFour from "./StepFour";
-import StepOne from "./StepOne";
-import StepThree from "./StepThree";
 import StepTwo from "./StepTwo";
 
+/**
+ * 3-step hire-us wizard:
+ *   Step 1 (StepTwo)  — Engagement model education + budget type selection
+ *   Step 2 (StepFour) — Feature toggles + live budget/ROI calculator
+ *   Step 3 (StepFive) — Summary + submit
+ */
 const HireAgency: React.FC = () => {
     const { selectedBrand } = useBrandContext();
     const [step, setStep] = useState(1);
@@ -60,24 +64,13 @@ const HireAgency: React.FC = () => {
     };
 
     // Persist draft silently before moving to the summary step
-    const handleNext = async () => {
-        if (step === 4) {
-            await saveDraft(hire).catch(() => {});
-        }
+    const handleNextFromFeatures = async () => {
+        await saveDraft(hire).catch(() => {});
         next();
     };
 
+    // Step 1 — Engagement model + budget type
     if (step === 1)
-        return (
-            <StepOne
-                hire={hire}
-                setHire={setHire}
-                onNext={next}
-                onBack={back}
-            />
-        );
-
-    if (step === 2)
         return (
             <StepTwo
                 hire={hire}
@@ -87,26 +80,18 @@ const HireAgency: React.FC = () => {
             />
         );
 
-    if (step === 3)
-        return (
-            <StepThree
-                hire={hire}
-                setHire={setHire}
-                onNext={next}
-                onBack={back}
-            />
-        );
-
-    if (step === 4)
+    // Step 2 — Features & budget calculator
+    if (step === 2)
         return (
             <StepFour
                 hire={hire}
                 setHire={setHire}
-                onNext={handleNext}
+                onNext={handleNextFromFeatures}
                 onBack={back}
             />
         );
 
+    // Step 3 — Summary & submit
     return (
         <StepFive
             hire={hire}

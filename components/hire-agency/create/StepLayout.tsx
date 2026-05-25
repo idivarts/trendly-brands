@@ -14,7 +14,7 @@ import {
     StyleSheet,
 } from "react-native";
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3;
 
 interface StepLayoutProps {
     children: React.ReactNode;
