@@ -618,7 +618,7 @@ const RenderBanner = (props: {
 
 const createStyles = (theme: Theme, bottom: number = 0) => {
     const colors = Colors(theme);
-    const sidebarSurfaceBg = theme.dark ? colors.card : colors.drawerBackground;
+    const sidebarSurfaceBg = colors.card;
     const sectionLabelColor = theme.dark ? colors.textSecondary : colors.drawerTextMuted;
     const sidebarDividerColor = theme.dark ? colors.border : colors.drawerBorder;
     return StyleSheet.create({
