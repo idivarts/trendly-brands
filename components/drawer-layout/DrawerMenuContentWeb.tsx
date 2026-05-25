@@ -255,7 +255,8 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const [isGrowthHovered, setIsGrowthHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
 
-    const showCreditsSystem = false
+    const showCreditsSystem = true
+    const showExecution = true;
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
@@ -403,26 +404,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 2. CAMPAIGN (India only) */}
-                        {isIndiaBased && (
-                            <View style={styles.brandDetailsSection}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>CAMPAIGN</Text>
-                                </View>
-                                <View style={styles.divider} />
-                                <View style={styles.menuItems}>
-                                    {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem
-                                            key={`campaign-${idx}`}
-                                            tab={tab}
-                                            proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
-                                        />
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {/* 3. CREDITS */}
+                        {/* 2. CREDITS */}
                         {showCreditsSystem && <>
                             {selectedBrand && !selectedBrand.isBillingDisabled &&
                                 (xl ? (
@@ -470,8 +452,28 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             )}
                         </>}
 
+                        {/* 3. CAMPAIGN (India only) */}
+                        {isIndiaBased && (
+                            <View style={styles.brandDetailsSection}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>CAMPAIGN</Text>
+                                </View>
+                                <View style={styles.divider} />
+                                <View style={styles.menuItems}>
+                                    {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
+                                        <DrawerMenuItem
+                                            key={`campaign-${idx}`}
+                                            tab={tab}
+                                            proLock={tab.pro && planKey !== "pro" && planKey !== "enterprise"}
+                                        />
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+
                         {/* 4. EXECUTION */}
-                        {manager?.isChatConnected &&
+                        {manager?.isChatConnected && showExecution &&
                             <View style={styles.brandDetailsSection}>
                                 <View style={styles.sectionHeaderRow}>
                                     <Text style={styles.sectionTitle}>EXECUTION</Text>
