@@ -1,4 +1,6 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
+import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
+import CommentsSection from "@/components/contents/CommentsSection";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
@@ -6,7 +8,7 @@ import {
     ContentStatus,
     POPULAR_POSTING_TIMES,
 } from "@/components/contents/types";
-import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
+import { useContents } from "@/hooks/use-contents";
 import DatePickerModal, {
     formatDateForWebInput,
 } from "@/components/modals/DatePickerModal";
@@ -318,9 +320,28 @@ const CreateContentScreen = () => {
         date: formatDateForWebInput(date),
     };
 
-    const handleSave = useCallback(() => {
-        Alert.alert("Saved", "Content saved successfully (test mode).");
-    }, []);
+    const { updateContent } = useContents();
+    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleSave = useCallback(async () => {
+        if (!contentId || saveState === "saving") return;
+        setSaveState("saving");
+        await updateContent(contentId, {
+            title,
+            description: idea,
+            status: status as any,
+            caption,
+            hashtags,
+            timeOfPosting,
+            script,
+            imagePrompt,
+            postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
+        });
+        setSaveState("saved");
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
+    }, [contentId, saveState, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, date]);
 
     const handleCreateCollab = useCallback(() => {
         setShowCollabModal(true);
@@ -378,14 +399,30 @@ const CreateContentScreen = () => {
         () => [
             <Pressable
                 key="save"
-                style={({ pressed }) => [styles.saveBtn, pressed && styles.btnPressed]}
+                style={({ pressed }) => [
+                    styles.saveBtn,
+                    saveState === "saved" && styles.saveBtnSaved,
+                    pressed && styles.btnPressed,
+                ]}
                 onPress={handleSave}
+                disabled={saveState === "saving"}
             >
-                <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                <Text style={styles.saveBtnText}>Save</Text>
+                {saveState === "saving" ? (
+                    <Text style={styles.saveBtnText}>Saving…</Text>
+                ) : saveState === "saved" ? (
+                    <>
+                        <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
+                        <Text style={styles.saveBtnText}>Saved</Text>
+                    </>
+                ) : (
+                    <>
+                        <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
+                        <Text style={styles.saveBtnText}>Save</Text>
+                    </>
+                )}
             </Pressable>,
         ],
-        [styles, colors, handleSave]
+        [styles, colors, handleSave, saveState]
     );
 
     return (
@@ -775,6 +812,11 @@ const CreateContentScreen = () => {
                         </View>
                     )}
 
+                    {/* ── Comments ─────────────────────────────────────── */}
+                    <View style={styles.section}>
+                        <CommentsSection contentId={contentId ?? null} />
+                    </View>
+
                     <View style={styles.bottomPad} />
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -1127,6 +1169,10 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowRadius: 8,
                     shadowOpacity: 0.3,
                     elevation: 3,
+                },
+                saveBtnSaved: {
+                    backgroundColor: "#1A7A3A",
+                    shadowColor: "#1A7A3A",
                 },
                 saveBtnText: {
                     fontSize: 13,

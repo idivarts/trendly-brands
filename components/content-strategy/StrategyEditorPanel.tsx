@@ -1,6 +1,7 @@
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBold,
+    faCommentDots,
     faHeading,
     faItalic,
     faListUl,
@@ -26,6 +27,8 @@ interface StrategyEditorPanelProps {
     content: string;
     onChange: (text: string) => void;
     onSendToChat: (text: string) => void;
+    /** Called when the user clicks "Comment" on a selected snippet */
+    onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
 }
 
 interface ToolbarAction {
@@ -47,6 +50,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     content,
     onChange,
     onSendToChat,
+    onSnippetComment,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -133,6 +137,17 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                                 <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.secondaryText} />
                                 <Text style={styles.selectionActionText}>Send to Chat</Text>
                             </Pressable>
+                            {onSnippetComment && (
+                                <Pressable
+                                    style={styles.selectionAction}
+                                    onPress={() =>
+                                        onSnippetComment(selectedText, selection.start, selection.end)
+                                    }
+                                >
+                                    <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.secondaryText} />
+                                    <Text style={styles.selectionActionText}>Comment</Text>
+                                </Pressable>
+                            )}
                         </View>
                     </>
                 )}

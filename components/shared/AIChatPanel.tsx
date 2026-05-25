@@ -33,24 +33,26 @@ interface AIChatPanelProps {
     focusItems?: FocusItem[];
     onRemoveFocusItem?: (id: string) => void;
     isCompact?: boolean;
-    isCollapsible?: boolean;
-    isCollapsed?: boolean;
-    onToggleCollapse?: () => void;
     placeholder?: string;
     isAITyping?: boolean;
+    /** Called when the user taps the collapse chevron in the panel header. */
+    onCollapse?: () => void;
 }
 
+/**
+ * Pure content component — handles only the chat UI.
+ * Collapse/expand and the left-edge handle are managed by the
+ * parent RightSidePanel wrapper, keeping concerns cleanly separated.
+ */
 const AIChatPanel: React.FC<AIChatPanelProps> = ({
     messages,
     onSend,
     focusItems = [],
     onRemoveFocusItem,
     isCompact = false,
-    isCollapsible = false,
-    isCollapsed = false,
-    onToggleCollapse,
     placeholder = "Ask the AI Expert...",
     isAITyping = false,
+    onCollapse,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -89,27 +91,26 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         );
     };
 
-    if (isCollapsible && isCollapsed) {
-        return (
-            <Pressable style={styles.collapsedTab} onPress={onToggleCollapse}>
-                <FontAwesomeIcon icon={faRobot} size={15} color={colors.primary} />
-                <Text style={styles.collapsedTabLabel}>AI</Text>
-            </Pressable>
-        );
-    }
-
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-            {isCollapsible && (
-                <Pressable style={styles.panelHeader} onPress={onToggleCollapse}>
-                    <FontAwesomeIcon icon={faRobot} size={14} color={colors.primary} />
-                    <Text style={styles.panelHeaderLabel}>AI Content Expert</Text>
-                    <FontAwesomeIcon icon={faChevronRight} size={12} color={colors.textSecondary} />
-                </Pressable>
-            )}
+            {/* Panel header — collapse chevron + label */}
+            <View style={styles.panelHeader}>
+                {onCollapse && (
+                    <Pressable
+                        onPress={onCollapse}
+                        style={({ pressed }) => [styles.collapseBtn, pressed && styles.collapseBtnPressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Collapse panel"
+                    >
+                        <FontAwesomeIcon icon={faChevronRight} size={11} color={colors.textSecondary} />
+                    </Pressable>
+                )}
+                <FontAwesomeIcon icon={faRobot} size={14} color={colors.primary} />
+                <Text style={styles.panelHeaderLabel}>AI Content Expert</Text>
+            </View>
 
             <FlatList
                 ref={listRef}
@@ -190,42 +191,28 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                 container: {
                     flex: 1,
                     backgroundColor: colors.card,
-                    shadowColor: "#000",
-                    shadowOffset: { width: -6, height: 0 },
-                    shadowRadius: 16,
-                    shadowOpacity: 0.07,
-                    elevation: 8,
-                },
-                collapsedTab: {
-                    width: 40,
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    backgroundColor: colors.card,
-                    shadowColor: "#000",
-                    shadowOffset: { width: -4, height: 0 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.06,
-                    elevation: 4,
-                },
-                collapsedTabLabel: {
-                    fontSize: 10,
-                    fontWeight: "700",
-                    color: colors.primary,
-                    letterSpacing: 0.5,
                 },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 8,
-                    paddingHorizontal: isCompact ? 10 : 14,
+                    paddingLeft: isCompact ? 6 : 8,
+                    paddingRight: isCompact ? 10 : 14,
                     paddingVertical: 12,
+                    backgroundColor: colors.card,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 3 },
                     shadowRadius: 8,
-                    shadowOpacity: 0.05,
-                    elevation: 2,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                    zIndex: 1,
+                },
+                collapseBtn: {
+                    padding: 6,
+                    borderRadius: 6,
+                },
+                collapseBtnPressed: {
+                    backgroundColor: colors.tag,
                 },
                 panelHeaderLabel: {
                     flex: 1,
@@ -244,12 +231,8 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     alignItems: "flex-start",
                     gap: 8,
                 },
-                aiRow: {
-                    justifyContent: "flex-start",
-                },
-                userRow: {
-                    justifyContent: "flex-end",
-                },
+                aiRow: { justifyContent: "flex-start" },
+                userRow: { justifyContent: "flex-end" },
                 avatarContainer: {
                     width: 28,
                     height: 28,
@@ -288,12 +271,8 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     fontSize: isCompact ? 13 : 14,
                     lineHeight: isCompact ? 19 : 21,
                 },
-                aiText: {
-                    color: colors.text,
-                },
-                userText: {
-                    color: colors.onPrimary,
-                },
+                aiText: { color: colors.text },
+                userText: { color: colors.onPrimary },
                 typingRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",
@@ -354,20 +333,18 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     paddingHorizontal: 8,
                     paddingVertical: 6,
                 },
-                focusChipClose: {
-                    padding: 8,
-                },
+                focusChipClose: { padding: 8 },
                 inputArea: {
                     flexDirection: "row",
                     alignItems: "flex-end",
                     gap: 10,
                     padding: isCompact ? 10 : 14,
+                    backgroundColor: colors.card,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: -4 },
                     shadowRadius: 8,
                     shadowOpacity: 0.05,
                     elevation: 4,
-                    backgroundColor: colors.card,
                 },
                 input: {
                     flex: 1,
@@ -399,9 +376,7 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                sendBtnPressed: {
-                    opacity: 0.75,
-                },
+                sendBtnPressed: { opacity: 0.75 },
                 sendBtnDisabled: {
                     opacity: 0.4,
                     shadowOpacity: 0,

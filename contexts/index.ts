@@ -1,5 +1,10 @@
 import { AWSContextProvider, useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import {
+    BrandSocialContextProvider,
+    useBrandSocialContext,
+    type ISocialAccount,
+} from "./brand-social-context.provider";
+import {
     LocationContextProvider,
     useLocationContext,
 } from "./location-context.provider";
@@ -41,6 +46,9 @@ import {
 export {
     AuthContextProvider,
     AWSContextProvider,
+    BrandSocialContextProvider,
+    useBrandSocialContext,
+    type ISocialAccount,
     LocationContextProvider,
     ChatContextProvider,
     CloudMessagingContextProvider,

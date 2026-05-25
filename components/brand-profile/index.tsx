@@ -9,6 +9,7 @@ import { Surface } from "react-native-paper";
 import BrandAge from "./BrandAge";
 import BrandDetails from "./BrandDetails";
 import BrandIndustry from "./BrandIndustry";
+import BrandSocials from "./BrandSocials";
 
 const STEP_ANIM_DURATION = 280;
 
@@ -72,8 +73,10 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         });
     };
 
+    const TOTAL_STEPS = 4;
+
     const handleNext = () => {
-        if (currentStep >= 3) return;
+        if (currentStep >= TOTAL_STEPS) return;
         runStepTransition("next", () => setCurrentStep((s) => s + 1));
     };
 
@@ -138,6 +141,10 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                             plainSection
                             compactLayout
                         />
+                        <BrandSocials
+                            brandId={brandData.id as string | undefined}
+                            plainSection
+                        />
                     </View>
                 </View>
             </ScrollView>
@@ -155,7 +162,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
         >
             {isCreate && !webOnboarding && (
                 <View style={styles.stepRow}>
-                    {[1, 2, 3].map((step) => (
+                    {[1, 2, 3, 4].map((step) => (
                         <View
                             key={step}
                             style={[
@@ -213,7 +220,13 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                             plainSection={usePlainLayout}
                         />
                     )}
-                    {showSection(3) && action && (
+                    {showSection(4) && (
+                        <BrandSocials
+                            brandId={brandData.id as string | undefined}
+                            plainSection={usePlainLayout || useTwoColumnForm}
+                        />
+                    )}
+                    {showSection(4) && action && (
                         usePlainLayout ? (
                             <View style={[styles.actionSurface, styles.actionSurfacePlain, styles.actionSurfaceMarginTop]}>
                                 {action}

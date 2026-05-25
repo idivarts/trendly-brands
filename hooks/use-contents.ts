@@ -48,6 +48,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         script: data.script,
         imagePrompt: data.imagePrompt,
         isArchived: data.isArchived ?? false,
+        commentCount: data.commentCount ?? 0,
         createdAt: epochToIsoDate(data.createdAt),
     };
 }
@@ -67,23 +68,28 @@ function toIContent(
         ? new Date(item.date + "T00:00:00Z").getTime()
         : undefined;
 
-    return {
+    const doc: IContent = {
         title: item.title,
         managerId,
         description: item.idea,
         platform: "Instagram", // Default — no platform selector in AddContentModal yet
         contentFormat: item.type,
         status: FSContentStatus.Draft,
-        postingTimeStamp: postingTs,
         isArchived: false,
-        caption: extra.caption,
-        hashtags: extra.hashtags,
-        timeOfPosting: extra.timeOfPosting,
-        script: extra.script,
-        imagePrompt: extra.imagePrompt,
         createdAt: now,
         updatedAt: now,
     };
+
+    // Only include optional fields when they have a real value — Firestore
+    // rejects documents that contain `undefined` as a field value.
+    if (postingTs !== undefined)       doc.postingTimeStamp = postingTs;
+    if (extra.caption !== undefined)   doc.caption = extra.caption;
+    if (extra.hashtags !== undefined)  doc.hashtags = extra.hashtags;
+    if (extra.timeOfPosting !== undefined) doc.timeOfPosting = extra.timeOfPosting;
+    if (extra.script !== undefined)    doc.script = extra.script;
+    if (extra.imagePrompt !== undefined) doc.imagePrompt = extra.imagePrompt;
+
+    return doc;
 }
 
 // ---------------------------------------------------------------------------

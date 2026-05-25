@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faChevronRight, faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
@@ -16,6 +16,8 @@ interface MonthViewProps {
     onDayPress: (dateStr: string) => void;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
+    /** Opens the month-level comment modal */
+    onMonthComment?: () => void;
 }
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -61,6 +63,7 @@ const MonthView: React.FC<MonthViewProps> = ({
     onDayPress,
     onFocusChat,
     onComment,
+    onMonthComment,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -113,6 +116,15 @@ const MonthView: React.FC<MonthViewProps> = ({
                 >
                     <FontAwesomeIcon icon={faChevronRight} size={14} color={colors.text} />
                 </Pressable>
+
+                {onMonthComment && (
+                    <Pressable
+                        style={({ pressed }) => [styles.arrowBtn, pressed && styles.arrowBtnPressed]}
+                        onPress={onMonthComment}
+                    >
+                        <FontAwesomeIcon icon={faCommentDots} size={15} color={colors.textSecondary} />
+                    </Pressable>
+                )}
             </View>
 
             <View style={styles.dayLabelsRow}>
