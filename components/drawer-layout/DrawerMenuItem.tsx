@@ -1,14 +1,14 @@
-import Colors from "@/shared-uis/constants/Colors";
-import { useChatContext } from "@/contexts";
 import { useDrawerColors } from "@/components/drawer-layout/drawer-colors-context";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
+import { useChatContext } from "@/contexts";
+import Colors from "@/shared-uis/constants/Colors";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Href, usePathname, useRouter } from "expo-router";
-import React, { useState } from "react";
-import { Platform, Pressable, StyleSheet, View as RNView } from "react-native";
+import React, { JSX, useState } from "react";
+import { Platform, Pressable, View as RNView, StyleSheet } from "react-native";
 import { Badge } from "react-native-paper";
 import { Text, View } from "../theme/Themed";
 
@@ -124,10 +124,10 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                     borderColor: isActive
                         ? activeBorderColor
                         : drawerColors
-                          ? theme.dark
-                              ? colorSet.border
-                              : (colorSet as any).drawerBorder ?? colorSet.border
-                          : colorSet.border,
+                            ? theme.dark
+                                ? colorSet.border
+                                : (colorSet as any).drawerBorder ?? colorSet.border
+                            : colorSet.border,
                 },
             ]}
             accessibilityRole="button"
@@ -277,21 +277,24 @@ interface DrawerIconProps {
     focused?: boolean;
 }
 
-const DrawerIcon: React.FC<DrawerIconProps> = ({ href, icon, size = 20, focused: focusedProp }) => {
+const DrawerIcon: React.FC<DrawerIconProps> = ({ href, icon, size, focused: focusedProp }) => {
     const theme = useTheme();
     const pathname = usePathname();
     const drawerColors = useDrawerColors();
+    const { isCollapsed } = useSidebarCollapsed();
 
     const active = focusedProp !== undefined ? focusedProp : (!!href && pathname.startsWith(href));
     const color = active
         ? (drawerColors ? drawerColors.activeColor : Colors(theme).white)
         : (drawerColors ? drawerColors.inactiveColor : Colors(theme).text);
 
+    const resolvedSize = size ?? (isCollapsed ? 18 : 16);
+
     return (
         <FontAwesomeIcon
             icon={icon}
             color={color}
-            size={size}
+            size={resolvedSize}
         />
     );
 };

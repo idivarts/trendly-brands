@@ -1,5 +1,5 @@
-import { Text, View } from "@/components/theme/Themed";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
+import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext, useLocationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -46,9 +46,9 @@ import {
     Linking,
     Platform,
     Pressable,
+    View as RNView,
     ScrollView,
     StyleSheet,
-    View as RNView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreditDisplayCard from "./CreditDisplayCard";
@@ -260,7 +260,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const [brandListExpanded, setBrandListExpanded] = useState(false);
     const [toggleHovered, setToggleHovered] = useState(false);
 
-    const showCreditsSystem = true;
+    const showCreditsSystem = false;
     const showExecution = true;
 
     const handleBrandSelect = (brand: Brand) => {
@@ -285,26 +285,31 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         return base;
     }, [isIndiaBased, theme]);
 
-    // ─── Shared toggle button ───────────────────────────────────────────────
-    const toggleButton = (
-        <RNView style={[styles.toggleRow, isCollapsed && styles.toggleRowCollapsed]}>
-            <Pressable
-                onPress={toggle}
-                onHoverIn={() => setToggleHovered(true)}
-                onHoverOut={() => setToggleHovered(false)}
-                style={[
-                    styles.toggleButton,
-                    toggleHovered && styles.toggleButtonHover,
-                ]}
-                accessibilityLabel={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                accessibilityRole="button"
-            >
-                <FontAwesomeIcon
-                    icon={isCollapsed ? faChevronRight : faChevronLeft}
-                    size={12}
-                    color={(colors as any).drawerTextMuted ?? colors.textSecondary}
-                />
-            </Pressable>
+    // ─── Toggle button (bare Pressable, positioned by caller) ──────────────
+    const toggleButtonBare = (
+        <Pressable
+            onPress={toggle}
+            onHoverIn={() => setToggleHovered(true)}
+            onHoverOut={() => setToggleHovered(false)}
+            style={[
+                styles.toggleButton,
+                toggleHovered && styles.toggleButtonHover,
+            ]}
+            accessibilityLabel={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            accessibilityRole="button"
+        >
+            <FontAwesomeIcon
+                icon={isCollapsed ? faChevronRight : faChevronLeft}
+                size={12}
+                color={(colors as any).drawerTextMuted ?? colors.textSecondary}
+            />
+        </Pressable>
+    );
+
+    // ─── Collapsed-mode toggle row (standalone, centered) ───────────────────
+    const toggleButtonCollapsed = (
+        <RNView style={[styles.toggleRow, styles.toggleRowCollapsed]}>
+            {toggleButtonBare}
         </RNView>
     );
 
@@ -350,7 +355,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                     />
 
                     {/* Toggle button — centered in collapsed bar */}
-                    {toggleButton}
+                    {toggleButtonCollapsed}
 
                     {/* Brand logo only */}
                     <RNView style={styles.collapsedHeader}>
@@ -407,8 +412,17 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     }
 
     // ─── Expanded mode render (existing layout) ─────────────────────────────
+    const headerGradientColors: [string, string] = theme.dark
+        ? [(colors as any).drawerHeaderCardBg ?? colors.primary, (colors as any).drawerCardBg ?? colors.card]
+        : [(colors as any).drawerHeaderCardBg ?? "#ffffff", (colors as any).drawerHeaderCardBgLight ?? "#E9F1F7"];
+
     const brandHeaderContent = (
-        <View style={styles.header}>
+        <LinearGradient
+            colors={headerGradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.header}
+        >
             {xl ? (
                 <CoachmarkAnchor id="guide-tour-brand-switcher-web" shape="rect">
                     <Pressable
@@ -504,7 +518,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                     </ScrollView>
                 </RNView>
             )}
-        </View>
+        </LinearGradient>
     );
 
     return (
@@ -520,10 +534,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         pointerEvents="none"
                     />
 
-                    {/* Toggle button — right-aligned in expanded mode */}
-                    {toggleButton}
-
-                    {brandHeaderContent}
+                    {/* Brand switcher + collapse button on a single row */}
+                    <RNView style={styles.headerWithToggleRow}>
+                        <RNView style={styles.headerWrap}>
+                            {brandHeaderContent}
+                        </RNView>
+                        {toggleButtonBare}
+                    </RNView>
 
                     <ScrollView
                         contentContainerStyle={styles.scrollContent}
@@ -554,12 +571,12 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                     <>
                                         {(!selectedBrand.billing ||
                                             selectedBrand?.billing?.planKey === "starter") && (
-                                            <RenderBanner
-                                                title="You're on a Free Plan"
-                                                description="Upgrade now to enjoy all the premium features and grow your brand."
-                                                buttonText="Upgrade Now"
-                                            />
-                                        )}
+                                                <RenderBanner
+                                                    title="You're on a Free Plan"
+                                                    description="Upgrade now to enjoy all the premium features and grow your brand."
+                                                    buttonText="Upgrade Now"
+                                                />
+                                            )}
                                         {selectedBrand.billing?.isOnTrial &&
                                             (selectedBrand.billing?.trialEnds || 0) > Date.now() && (
                                                 <RenderBanner
@@ -799,6 +816,17 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         toggleRowCollapsed: {
             justifyContent: "center",
         },
+        headerWithToggleRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            paddingRight: 8,
+            backgroundColor: "transparent",
+        },
+        headerWrap: {
+            flex: 1,
+            minWidth: 0,
+            backgroundColor: "transparent",
+        },
         toggleButton: {
             width: 28,
             height: 28,
@@ -820,7 +848,6 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             elevation: 100,
             paddingHorizontal: 12,
             paddingVertical: 12,
-            backgroundColor: (colors as any).drawerHeaderCardBg ?? colors.primary,
             marginHorizontal: 8,
             marginBottom: 4,
             borderRadius: 12,
