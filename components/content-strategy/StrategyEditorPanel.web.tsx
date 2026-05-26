@@ -3,10 +3,12 @@ import { ensureHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCommentDots,
+    faEraser,
     faItalic,
     faListOl,
     faListUl,
     faPen,
+    faQuoteLeft,
     faShareNodes,
     faStrikethrough,
     faUnderline,
@@ -24,11 +26,70 @@ export interface StrategyEditorPanelProps {
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
 }
 
-/**
- * WYSIWYG strategy editor — web platform.
- * Uses the browser's native contentEditable + execCommand APIs.
- * No external library required; zero peer-dep conflicts.
- */
+const QUILL_STYLE_ID = "trendly-quill-core-css";
+
+function injectQuillStyles() {
+    if (typeof document === "undefined") return;
+    if (document.getElementById(QUILL_STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = QUILL_STYLE_ID;
+    style.textContent = `
+        .trendly-quill-container { position: relative; flex: 1; display: flex; flex-direction: column; }
+        .trendly-quill-container .ql-editor {
+            box-sizing: border-box;
+            flex: 1;
+            line-height: 1.6;
+            min-height: 400px;
+            outline: none;
+            overflow-y: auto;
+            padding: 20px;
+            tab-size: 4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .trendly-quill-container .ql-editor.ql-blank::before {
+            color: rgba(128,128,128,0.6);
+            content: attr(data-placeholder);
+            left: 20px;
+            pointer-events: none;
+            position: absolute;
+            right: 20px;
+            font-style: italic;
+        }
+        .trendly-quill-container .ql-editor p { margin: 0 0 6px 0; }
+        .trendly-quill-container .ql-editor h1 { font-size: 2em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
+        .trendly-quill-container .ql-editor h2 { font-size: 1.5em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.3; }
+        .trendly-quill-container .ql-editor h3 { font-size: 1.17em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
+        .trendly-quill-container .ql-editor h4 { font-size: 1em; font-weight: 700; margin: 0 0 6px 0; }
+        .trendly-quill-container .ql-editor h5 { font-size: 0.83em; font-weight: 700; margin: 0 0 6px 0; }
+        .trendly-quill-container .ql-size-small { font-size: 0.75em; }
+        .trendly-quill-container .ql-editor ul,
+        .trendly-quill-container .ql-editor ol { padding-left: 1.5em; margin: 0 0 6px 0; }
+        .trendly-quill-container .ql-editor ul li { list-style-type: disc; }
+        .trendly-quill-container .ql-editor ol li { list-style-type: decimal; }
+        .trendly-quill-container .ql-editor blockquote {
+            border-left: 4px solid #ccc;
+            margin: 0 0 8px 0;
+            padding-left: 16px;
+            opacity: 0.8;
+            font-style: italic;
+        }
+        .trendly-quill-container .ql-editor strong { font-weight: 700; }
+        .trendly-quill-container .ql-editor em { font-style: italic; }
+        .trendly-quill-container .ql-editor u { text-decoration: underline; }
+        .trendly-quill-container .ql-editor s { text-decoration: line-through; }
+    `;
+    document.head.appendChild(style);
+}
+
+function getDropdownValue(formats: Record<string, any>): string {
+    if (formats.header) return `h${formats.header}`;
+    if (formats.size === "small") return "small";
+    return "normal";
+}
+
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     content,
     onChange,
@@ -37,132 +98,272 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const editorRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const quillRef = useRef<any>(null);
+    const lastHtmlRef = useRef("");
     const [quickEditVisible, setQuickEditVisible] = useState(false);
     const [selectedText, setSelectedText] = useState("");
-    const [selectionRange, setSelectionRange] = useState<{ from: number; to: number } | null>(null);
-    const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+    const [selectionRange, setSelectionRange] = useState<{ index: number; length: number } | null>(null);
+    const [activeFormats, setActiveFormats] = useState<Record<string, any>>({});
+    const [dropdownValue, setDropdownValue] = useState("normal");
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
-    // ── Initialise / sync content into the editor ─────────────────────────────
-    const lastHtmlRef = useRef<string>("");
-
+    // Inject minimal Quill CSS once on mount
     useEffect(() => {
-        if (!editorRef.current) return;
+        injectQuillStyles();
+    }, []);
+
+    // Initialise Quill once
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const QuillClass = require("quill").default;
+
+        // Register size class format for "small" text
+        try {
+            const SizeClass = QuillClass.import("attributors/class/size");
+            SizeClass.whitelist = ["small"];
+            QuillClass.register(SizeClass, true);
+        } catch (_) { /* already registered or unavailable */ }
+
+        const quill = new QuillClass(containerRef.current, {
+            modules: { toolbar: false },
+            theme: false,
+            placeholder: "Write your content strategy...",
+        });
+
+        // Apply theme colours to the editor element
+        const editorEl = containerRef.current.querySelector(".ql-editor") as HTMLElement | null;
+        if (editorEl) {
+            editorEl.style.color = colors.text as string;
+            editorEl.style.backgroundColor = colors.background as string;
+        }
+
+        const initialHtml = ensureHtml(content || "");
+        quill.clipboard.dangerouslyPasteHTML(initialHtml);
+        lastHtmlRef.current = quill.getSemanticHTML();
+
+        quill.on("text-change", () => {
+            const html = quill.getSemanticHTML();
+            lastHtmlRef.current = html;
+            onChange(html);
+        });
+
+        quill.on("selection-change", (range: any) => {
+            if (!range) return;
+            const formats = quill.getFormat(range.index, range.length);
+            setActiveFormats(formats);
+            setDropdownValue(getDropdownValue(formats));
+            if (range.length > 0) {
+                const text = quill.getText(range.index, range.length);
+                setSelectedText(text.trim());
+                setSelectionRange({ index: range.index, length: range.length });
+            } else {
+                setSelectedText("");
+                setSelectionRange(null);
+            }
+        });
+
+        quillRef.current = quill;
+
+        return () => {
+            quill.off("text-change");
+            quill.off("selection-change");
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Sync external content changes without causing update loops
+    useEffect(() => {
+        const quill = quillRef.current;
+        if (!quill) return;
         const incoming = ensureHtml(content || "");
-        // Only update DOM if content changed externally (not from user typing)
         if (incoming !== lastHtmlRef.current) {
-            editorRef.current.innerHTML = incoming;
-            lastHtmlRef.current = incoming;
+            const sel = quill.getSelection();
+            quill.clipboard.dangerouslyPasteHTML(incoming);
+            lastHtmlRef.current = quill.getSemanticHTML();
+            if (sel) quill.setSelection(sel.index, sel.length);
         }
     }, [content]);
 
-    // ── Handle user edits ─────────────────────────────────────────────────────
-    const handleInput = useCallback(() => {
-        if (!editorRef.current) return;
-        const html = editorRef.current.innerHTML;
-        lastHtmlRef.current = html;
-        onChange(html);
-    }, [onChange]);
+    // ── Format helpers ────────────────────────────────────────────────────────
 
-    // ── Track selection for context toolbar ──────────────────────────────────
-    const updateSelectionState = useCallback(() => {
-        const sel = window.getSelection();
-        if (!sel || sel.isCollapsed) {
-            setSelectedText("");
-            setSelectionRange(null);
-        } else {
-            const text = sel.toString();
-            setSelectedText(text);
-
-            // Approximate character offsets relative to editor text content
-            if (editorRef.current && sel.rangeCount > 0) {
-                const range = sel.getRangeAt(0);
-                const preRange = document.createRange();
-                preRange.selectNodeContents(editorRef.current);
-                preRange.setEnd(range.startContainer, range.startOffset);
-                const from = preRange.toString().length;
-                setSelectionRange({ from, to: from + text.length });
-            }
-        }
-
-        // Update active format states
-        setActiveFormats({
-            bold: document.queryCommandState("bold"),
-            italic: document.queryCommandState("italic"),
-            underline: document.queryCommandState("underline"),
-            strikeThrough: document.queryCommandState("strikeThrough"),
-            insertUnorderedList: document.queryCommandState("insertUnorderedList"),
-            insertOrderedList: document.queryCommandState("insertOrderedList"),
-        });
+    const handleInlineFormat = useCallback((format: string) => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const current = quill.getFormat();
+        quill.format(format, !current[format]);
+        setActiveFormats(quill.getFormat());
     }, []);
 
-    // ── Execute a formatting command ──────────────────────────────────────────
-    const execFormat = useCallback((command: string) => {
-        editorRef.current?.focus();
-        document.execCommand(command, false);
-        handleInput();
-        updateSelectionState();
-    }, [handleInput, updateSelectionState]);
+    const handleList = useCallback((type: "bullet" | "ordered") => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const current = quill.getFormat();
+        quill.format("list", current.list === type ? false : type);
+        setActiveFormats(quill.getFormat());
+    }, []);
+
+    const handleBlockquote = useCallback(() => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const current = quill.getFormat();
+        quill.format("blockquote", !current.blockquote);
+        setActiveFormats(quill.getFormat());
+    }, []);
+
+    const handleClearFormat = useCallback(() => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const range = quill.getSelection();
+        if (range) quill.removeFormat(range.index, range.length);
+        setActiveFormats({});
+        setDropdownValue("normal");
+    }, []);
+
+    const handleTextSize = useCallback((value: string) => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        quill.format("header", false);
+        quill.format("size", false);
+        if (value.startsWith("h")) {
+            quill.format("header", parseInt(value[1], 10));
+        } else if (value === "small") {
+            quill.format("size", "small");
+        }
+        const updated = quill.getFormat();
+        setActiveFormats(updated);
+        setDropdownValue(value);
+    }, []);
 
     // ── Selection-aware actions ───────────────────────────────────────────────
+
     const handleSendToChat = useCallback(() => {
         if (selectedText) onSendToChat(selectedText);
     }, [selectedText, onSendToChat]);
 
     const handleSnippetComment = useCallback(() => {
         if (onSnippetComment && selectedText && selectionRange) {
-            onSnippetComment(selectedText, selectionRange.from, selectionRange.to);
+            onSnippetComment(selectedText, selectionRange.index, selectionRange.index + selectionRange.length);
         }
     }, [onSnippetComment, selectedText, selectionRange]);
 
-    const handleQuickEditApply = useCallback((prompt: string) => {
-        if (!editorRef.current) return;
-        const sel = window.getSelection();
-        if (sel && !sel.isCollapsed && sel.rangeCount > 0) {
-            const range = sel.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(document.createTextNode(`[Quick Edit: "${prompt}"]\n${selectedText}`));
-        }
-        handleInput();
+    const handleQuickEditApply = useCallback((_prompt: string) => {
         setQuickEditVisible(false);
-    }, [selectedText, handleInput]);
+    }, []);
 
     // ── Toolbar button definitions ────────────────────────────────────────────
-    const formatButtons = [
-        { icon: faBold, label: "Bold", command: "bold" },
-        { icon: faItalic, label: "Italic", command: "italic" },
-        { icon: faUnderline, label: "Underline", command: "underline" },
-        { icon: faStrikethrough, label: "Strike", command: "strikeThrough" },
-        { icon: faListUl, label: "Bullet list", command: "insertUnorderedList" },
-        { icon: faListOl, label: "Ordered list", command: "insertOrderedList" },
+
+    const inlineButtons = [
+        { icon: faBold, label: "Bold", format: "bold" },
+        { icon: faItalic, label: "Italic", format: "italic" },
+        { icon: faUnderline, label: "Underline", format: "underline" },
+        { icon: faStrikethrough, label: "Strike", format: "strike" },
     ];
 
     const hasSelection = selectedText.length > 0;
+
+    const selectStyle: React.CSSProperties = {
+        height: 30,
+        borderRadius: 6,
+        border: `1px solid ${colors.outline as string}`,
+        paddingLeft: 6,
+        paddingRight: 4,
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.textSecondary as string,
+        backgroundColor: colors.background as string,
+        cursor: "pointer",
+        outline: "none",
+        marginRight: 6,
+    };
 
     return (
         <View style={styles.container}>
             {/* ── Toolbar ──────────────────────────────────────────────────── */}
             <View style={styles.toolbar}>
                 <View style={styles.toolbarLeft}>
-                    {formatButtons.map((btn) => {
-                        const isActive = activeFormats[btn.command] ?? false;
+                    {/* Text size / header dropdown */}
+                    <select value={dropdownValue} onChange={(e) => handleTextSize(e.target.value)} style={selectStyle}>
+                        <option value="normal">Normal</option>
+                        <option value="h1">H1</option>
+                        <option value="h2">H2</option>
+                        <option value="h3">H3</option>
+                        <option value="h4">H4</option>
+                        <option value="h5">H5</option>
+                        <option value="small">Small</option>
+                    </select>
+
+                    {/* Inline format buttons */}
+                    {inlineButtons.map((btn) => {
+                        const isActive = !!activeFormats[btn.format];
                         return (
                             <Pressable
                                 key={btn.label}
                                 style={[styles.toolbarBtn, isActive && styles.toolbarBtnActive]}
-                                onPress={() => execFormat(btn.command)}
+                                onPress={() => handleInlineFormat(btn.format)}
                                 accessibilityLabel={btn.label}
                             >
                                 <FontAwesomeIcon
                                     icon={btn.icon}
                                     size={13}
-                                    color={isActive ? colors.onPrimary : colors.textSecondary}
+                                    color={isActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
                                 />
                             </Pressable>
                         );
                     })}
+
+                    <View style={styles.toolbarDivider} />
+
+                    {/* List buttons */}
+                    <Pressable
+                        style={[styles.toolbarBtn, activeFormats.list === "bullet" && styles.toolbarBtnActive]}
+                        onPress={() => handleList("bullet")}
+                        accessibilityLabel="Bullet list"
+                    >
+                        <FontAwesomeIcon
+                            icon={faListUl}
+                            size={13}
+                            color={activeFormats.list === "bullet" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                        />
+                    </Pressable>
+                    <Pressable
+                        style={[styles.toolbarBtn, activeFormats.list === "ordered" && styles.toolbarBtnActive]}
+                        onPress={() => handleList("ordered")}
+                        accessibilityLabel="Ordered list"
+                    >
+                        <FontAwesomeIcon
+                            icon={faListOl}
+                            size={13}
+                            color={activeFormats.list === "ordered" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                        />
+                    </Pressable>
+
+                    <View style={styles.toolbarDivider} />
+
+                    {/* Blockquote */}
+                    <Pressable
+                        style={[styles.toolbarBtn, activeFormats.blockquote && styles.toolbarBtnActive]}
+                        onPress={handleBlockquote}
+                        accessibilityLabel="Blockquote"
+                    >
+                        <FontAwesomeIcon
+                            icon={faQuoteLeft}
+                            size={13}
+                            color={activeFormats.blockquote ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                        />
+                    </Pressable>
+
+                    {/* Clear formatting */}
+                    <Pressable
+                        style={styles.toolbarBtn}
+                        onPress={handleClearFormat}
+                        accessibilityLabel="Clear formatting"
+                    >
+                        <FontAwesomeIcon icon={faEraser} size={13} color={colors.textSecondary as string} />
+                    </Pressable>
                 </View>
 
                 {hasSelection && (
@@ -171,16 +372,16 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                         <View style={styles.toolbarRight}>
                             <Text style={styles.selectionHint}>{selectedText.length} chars</Text>
                             <Pressable style={styles.selectionAction} onPress={() => setQuickEditVisible(true)}>
-                                <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText} />
+                                <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText as string} />
                                 <Text style={styles.selectionActionText}>Quick Edit</Text>
                             </Pressable>
                             <Pressable style={styles.selectionAction} onPress={handleSendToChat}>
-                                <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.secondaryText} />
+                                <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.secondaryText as string} />
                                 <Text style={styles.selectionActionText}>Send to Chat</Text>
                             </Pressable>
                             {onSnippetComment && (
                                 <Pressable style={styles.selectionAction} onPress={handleSnippetComment}>
-                                    <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.secondaryText} />
+                                    <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.secondaryText as string} />
                                     <Text style={styles.selectionActionText}>Comment</Text>
                                 </Pressable>
                             )}
@@ -189,30 +390,20 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 )}
             </View>
 
-            {/* ── Editor (contentEditable div) ─────────────────────────────── */}
+            {/* ── Quill editor container ───────────────────────────────────── */}
             <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleInput}
-                onKeyUp={updateSelectionState}
-                onMouseUp={updateSelectionState}
-                onSelect={updateSelectionState}
+                ref={containerRef}
+                className="trendly-quill-container"
                 style={{
                     flex: 1,
-                    minHeight: 400,
-                    padding: 20,
-                    fontSize: 14,
-                    lineHeight: "1.6",
-                    color: colors.text,
-                    backgroundColor: colors.background,
-                    outline: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    backgroundColor: colors.background as string,
                     overflowY: "auto",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                }}
+                } as React.CSSProperties}
             />
 
+            {/* ── Quick Edit modal ─────────────────────────────────────────── */}
             <QuickEditModal
                 visible={quickEditVisible}
                 selectedText={selectedText}
@@ -238,23 +429,34 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             shadowOpacity: 0.07,
             elevation: 3,
         },
-        toolbarLeft: { flexDirection: "row", alignItems: "center", gap: 4 },
-        toolbarDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 8 },
-        toolbarRight: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 },
+        toolbarLeft: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, flex: 1 },
+        toolbarDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 6 },
+        toolbarRight: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 6 },
         toolbarBtn: {
-            width: 30, height: 30, borderRadius: 6,
-            alignItems: "center", justifyContent: "center",
+            width: 30,
+            height: 30,
+            borderRadius: 6,
+            alignItems: "center",
+            justifyContent: "center",
             backgroundColor: colors.background,
-            shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-            shadowRadius: 3, shadowOpacity: 0.06, elevation: 1,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.06,
+            elevation: 1,
         },
         toolbarBtnActive: { backgroundColor: colors.primary, shadowOpacity: 0, elevation: 0 },
         selectionHint: { fontSize: 11, color: colors.textSecondary },
         selectionAction: {
-            flexDirection: "row", alignItems: "center", gap: 5,
-            paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 6,
             backgroundColor: colors.secondarySurface,
-            borderWidth: 1, borderColor: colors.secondaryBorder,
+            borderWidth: 1,
+            borderColor: colors.secondaryBorder,
         },
         selectionActionText: { fontSize: 12, fontWeight: "600", color: colors.secondaryText },
     });

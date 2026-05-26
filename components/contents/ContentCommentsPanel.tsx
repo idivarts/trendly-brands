@@ -1,27 +1,32 @@
 /**
- * CommentsPanel (Strategy)
+ * ContentCommentsPanel
  *
- * Thin wrapper around SharedCommentsPanel for the strategy screen.
- * Connects useStrategyComments and enables all features:
- *  - Threading (replies)
- *  - Resolve / unresolve
- *  - Snippet quotes (shown when a comment has a .snippet field)
+ * Thin wrapper around SharedCommentsPanel for the Content Detail screen.
+ * Connects useContentComments — enables threading and resolve since content
+ * comments support the full feature set.
+ *
+ * Because this hook writes to the same Firestore path that the Calendar's
+ * item-level comments use, comments posted from the Calendar automatically
+ * appear here too (and vice versa) with no extra sync needed.
  */
 import SharedCommentsPanel from "@/components/shared/CommentsPanel";
 import { useAuthContext } from "@/contexts/auth-context.provider";
-import { useStrategyComments } from "@/hooks/use-strategy-comments";
+import { useContentComments } from "@/hooks/use-content-comments";
 import { faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import React from "react";
 
-interface CommentsPanelProps {
-    strategyId: string | null;
+interface ContentCommentsPanelProps {
+    contentId: string | null;
     onCollapse?: () => void;
 }
 
-const CommentsPanel: React.FC<CommentsPanelProps> = ({ strategyId, onCollapse }) => {
+const ContentCommentsPanel: React.FC<ContentCommentsPanelProps> = ({
+    contentId,
+    onCollapse,
+}) => {
     const { manager } = useAuthContext();
     const { comments, loading, addComment, addReply, resolveComment, deleteComment } =
-        useStrategyComments(strategyId);
+        useContentComments(contentId);
 
     return (
         <SharedCommentsPanel
@@ -36,9 +41,9 @@ const CommentsPanel: React.FC<CommentsPanelProps> = ({ strategyId, onCollapse })
             onCollapse={onCollapse}
             currentUserId={manager?.id ?? ""}
             placeholder="Add a comment..."
-            emptyText="No comments yet. Select text in the editor to leave an inline note, or add one below."
+            emptyText="No comments yet. Notes added from the calendar also appear here."
         />
     );
 };
 
-export default CommentsPanel;
+export default ContentCommentsPanel;

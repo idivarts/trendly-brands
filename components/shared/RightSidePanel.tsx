@@ -2,7 +2,7 @@
  * RightSidePanel
  *
  * Shared layout wrapper for the collapsible right-side panel used on the
- * Strategy and Calendar screens. Manages:
+ * Strategy, Calendar, and Content Detail screens. Manages:
  *
  *  - Left-casting shadow that visually separates the panel from the main content
  *  - Mode switching: 'none' | 'comments' | 'chat'
@@ -10,16 +10,26 @@
  *    • 'comments' → renders commentsSlot (chevron lives in that panel's header)
  *    • 'chat'     → renders chatSlot (chevron lives in that panel's header)
  *
+ * Both slots are optional — pass only what the screen uses. Passing only
+ * commentsSlot (no chatSlot) is valid and gives a comments-only panel.
+ *
  * The parent screen owns `mode` state and passes `onModeChange`.
  * Each panel slot receives an `onCollapse` callback and renders the chevron
  * inline in its own header — no separate handle column needed when expanded.
  *
- * Usage:
+ * Usage (both slots):
  *   <RightSidePanel
  *     mode={rightPanelMode}
  *     onModeChange={setRightPanelMode}
  *     commentsSlot={<CommentsPanel onCollapse={...} ... />}
  *     chatSlot={<AIChatPanel onCollapse={...} ... />}
+ *   />
+ *
+ * Usage (comments only):
+ *   <RightSidePanel
+ *     mode={rightPanelMode}
+ *     onModeChange={setRightPanelMode}
+ *     commentsSlot={<ContentCommentsPanel onCollapse={...} ... />}
  *   />
  */
 import Colors from "@/shared-uis/constants/Colors";
@@ -37,8 +47,9 @@ interface RightSidePanelProps {
     /** Content to show when mode === 'comments'. The slot should accept
      *  an onCollapse prop and render the chevron in its own header. */
     commentsSlot?: React.ReactNode;
-    /** Content to show when mode === 'chat'. Same convention as commentsSlot. */
-    chatSlot: React.ReactNode;
+    /** Content to show when mode === 'chat'. Same convention as commentsSlot.
+     *  Optional — omit on screens that have no AI chat panel. */
+    chatSlot?: React.ReactNode;
 }
 
 const RightSidePanel: React.FC<RightSidePanelProps> = ({
@@ -51,8 +62,11 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    // Default to whichever slot is available.
+    const defaultMode: "comments" | "chat" = commentsSlot ? "comments" : "chat";
+
     // Remember the last active mode so the collapsed strip can restore it on tap.
-    const lastModeRef = useRef<"comments" | "chat">("chat");
+    const lastModeRef = useRef<"comments" | "chat">(defaultMode);
     useEffect(() => {
         if (mode !== "none") lastModeRef.current = mode;
     }, [mode]);
@@ -60,12 +74,22 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     const isExpanded = mode !== "none";
 
     const handleExpand = () => {
-        // Expand to last mode, falling back to 'chat' if comments slot not provided.
-        const target = lastModeRef.current === "comments" && commentsSlot
-            ? "comments"
-            : "chat";
-        onModeChange(target);
+        // Expand to last active mode, respecting which slots actually exist.
+        const last = lastModeRef.current;
+        if (last === "comments" && commentsSlot) {
+            onModeChange("comments");
+        } else if (last === "chat" && chatSlot) {
+            onModeChange("chat");
+        } else if (commentsSlot) {
+            onModeChange("comments");
+        } else if (chatSlot) {
+            onModeChange("chat");
+        }
     };
+
+    // Which icon to show on the collapsed strip
+    const collapsedIcon =
+        lastModeRef.current === "chat" && chatSlot ? faRobot : faCommentDots;
 
     return (
         <View style={styles.outerContainer}>
@@ -84,11 +108,7 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
                     accessibilityLabel="Expand panel"
                 >
                     <FontAwesomeIcon icon={faChevronLeft} size={10} color={colors.textSecondary} />
-                    <FontAwesomeIcon
-                        icon={lastModeRef.current === "comments" ? faCommentDots : faRobot}
-                        size={14}
-                        color={colors.primary}
-                    />
+                    <FontAwesomeIcon icon={collapsedIcon} size={14} color={colors.primary} />
                 </Pressable>
             )}
         </View>

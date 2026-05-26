@@ -1,6 +1,7 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
-import CommentsSection from "@/components/contents/CommentsSection";
+import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
@@ -21,6 +22,7 @@ import {
     faCalendarDays,
     faCheck,
     faClock,
+    faCommentDots,
     faHandshake,
     faMagicWandSparkles,
     faPaperPlane,
@@ -304,6 +306,9 @@ const CreateContentScreen = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCollabModal, setShowCollabModal] = useState(false);
 
+    // ── Right side panel (comments) ───────────────────────────────────────────
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -397,6 +402,25 @@ const CreateContentScreen = () => {
 
     const headerActions = useMemo(
         () => [
+            // 💬 Comments toggle
+            <Pressable
+                key="comments"
+                style={({ pressed }) => [
+                    styles.iconBtn,
+                    rightPanelMode === "comments" && styles.iconBtnActive,
+                    pressed && styles.iconBtnPressed,
+                ]}
+                onPress={() =>
+                    setRightPanelMode((m) => (m === "comments" ? "none" : "comments"))
+                }
+            >
+                <FontAwesomeIcon
+                    icon={faCommentDots}
+                    size={15}
+                    color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
+                />
+            </Pressable>,
+            // Save
             <Pressable
                 key="save"
                 style={({ pressed }) => [
@@ -422,7 +446,7 @@ const CreateContentScreen = () => {
                 )}
             </Pressable>,
         ],
-        [styles, colors, handleSave, saveState]
+        [styles, colors, handleSave, saveState, rightPanelMode]
     );
 
     return (
@@ -435,10 +459,13 @@ const CreateContentScreen = () => {
                 mobileActions="all"
             />
 
-            <KeyboardAvoidingView
-                style={styles.flex1}
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
-            >
+            {/* ── Split layout: form (left) + comments panel (right) ─────── */}
+            <View style={styles.splitContainer}>
+                {/* Left: scrollable form */}
+                <KeyboardAvoidingView
+                    style={styles.flex1}
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                >
                 <ScrollView
                     contentContainerStyle={styles.scroll}
                     showsVerticalScrollIndicator={false}
@@ -812,14 +839,27 @@ const CreateContentScreen = () => {
                         </View>
                     )}
 
-                    {/* ── Comments ─────────────────────────────────────── */}
-                    <View style={styles.section}>
-                        <CommentsSection contentId={contentId ?? null} />
-                    </View>
-
                     <View style={styles.bottomPad} />
                 </ScrollView>
-            </KeyboardAvoidingView>
+                </KeyboardAvoidingView>
+
+                {/* Right: comments side panel */}
+                <View style={[
+                    styles.rightPanel,
+                    rightPanelMode === "none" && styles.rightPanelCollapsed,
+                ]}>
+                    <RightSidePanel
+                        mode={rightPanelMode}
+                        onModeChange={setRightPanelMode}
+                        commentsSlot={
+                            <ContentCommentsPanel
+                                contentId={contentId ?? null}
+                                onCollapse={() => setRightPanelMode("none")}
+                            />
+                        }
+                    />
+                </View>
+            </View>
 
             <DatePickerModal
                 visible={showDatePicker}
@@ -871,6 +911,36 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 section: {
                     marginBottom: 20,
                 },
+                // ── Split layout ──────────────────────────────────────────────
+                splitContainer: {
+                    flex: 1,
+                    flexDirection: "row",
+                },
+                rightPanel: {
+                    flex: 1,
+                },
+                rightPanelCollapsed: {
+                    flex: 0,
+                    width: 24,
+                },
+                // ── Header icon button (comments toggle) ──────────────────────
+                iconBtn: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                iconBtnActive: {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                iconBtnPressed: { opacity: 0.75 },
                 sectionLabel: {
                     fontSize: 11,
                     fontWeight: "700",
