@@ -106,6 +106,8 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     const [selectionRange, setSelectionRange] = useState<{ index: number; length: number } | null>(null);
     const [activeFormats, setActiveFormats] = useState<Record<string, any>>({});
     const [dropdownValue, setDropdownValue] = useState("normal");
+    const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; placement: "top" | "bottom" } | null>(null);
+    const popoverRef = useRef<View | null>(null);
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -151,6 +153,44 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             onChange(html);
         });
 
+        const computePopoverPosition = (range: any) => {
+            const container = containerRef.current;
+            if (!container || !range || range.length === 0) {
+                setPopoverPos(null);
+                return;
+            }
+            const editor = container.querySelector(".ql-editor") as HTMLElement | null;
+            if (!editor) return;
+            const bounds = quill.getBounds(range.index, range.length);
+            if (!bounds) return;
+
+            const POPOVER_HEIGHT_ESTIMATE = 40;
+            const POPOVER_WIDTH_ESTIMATE = 320;
+            const GAP = 8;
+
+            // Coordinates of selection rect relative to the outer container.
+            const selTop = editor.offsetTop + bounds.top - editor.scrollTop;
+            const selLeft = editor.offsetLeft + bounds.left - editor.scrollLeft;
+            const selCenterX = selLeft + bounds.width / 2;
+
+            // Default: place above the selection; flip below if not enough room.
+            let placement: "top" | "bottom" = "top";
+            let top = selTop - POPOVER_HEIGHT_ESTIMATE - GAP;
+            if (top < editor.offsetTop + 4) {
+                placement = "bottom";
+                top = selTop + bounds.height + GAP;
+            }
+
+            // Clamp left within container.
+            const containerWidth = container.clientWidth;
+            let left = selCenterX - POPOVER_WIDTH_ESTIMATE / 2;
+            const minLeft = 8;
+            const maxLeft = Math.max(minLeft, containerWidth - POPOVER_WIDTH_ESTIMATE - 8);
+            left = Math.max(minLeft, Math.min(maxLeft, left));
+
+            setPopoverPos({ top, left, placement });
+        };
+
         quill.on("selection-change", (range: any) => {
             if (!range) return;
             const formats = quill.getFormat(range.index, range.length);
@@ -160,17 +200,28 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 const text = quill.getText(range.index, range.length);
                 setSelectedText(text.trim());
                 setSelectionRange({ index: range.index, length: range.length });
+                computePopoverPosition(range);
             } else {
                 setSelectedText("");
                 setSelectionRange(null);
+                setPopoverPos(null);
             }
         });
+
+        // Reposition popover when the editor scrolls while a selection is active.
+        const editorEl2 = containerRef.current.querySelector(".ql-editor") as HTMLElement | null;
+        const onEditorScroll = () => {
+            const r = quill.getSelection();
+            if (r && r.length > 0) computePopoverPosition(r);
+        };
+        editorEl2?.addEventListener("scroll", onEditorScroll);
 
         quillRef.current = quill;
 
         return () => {
             quill.off("text-change");
             quill.off("selection-change");
+            editorEl2?.removeEventListener("scroll", onEditorScroll);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -366,28 +417,6 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     </Pressable>
                 </View>
 
-                {hasSelection && (
-                    <>
-                        <View style={styles.toolbarDivider} />
-                        <View style={styles.toolbarRight}>
-                            <Text style={styles.selectionHint}>{selectedText.length} chars</Text>
-                            <Pressable style={styles.selectionAction} onPress={() => setQuickEditVisible(true)}>
-                                <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText as string} />
-                                <Text style={styles.selectionActionText}>Quick Edit</Text>
-                            </Pressable>
-                            <Pressable style={styles.selectionAction} onPress={handleSendToChat}>
-                                <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.secondaryText as string} />
-                                <Text style={styles.selectionActionText}>Send to Chat</Text>
-                            </Pressable>
-                            {onSnippetComment && (
-                                <Pressable style={styles.selectionAction} onPress={handleSnippetComment}>
-                                    <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.secondaryText as string} />
-                                    <Text style={styles.selectionActionText}>Comment</Text>
-                                </Pressable>
-                            )}
-                        </View>
-                    </>
-                )}
             </View>
 
             {/* ── Quill editor container ───────────────────────────────────── */}
@@ -400,8 +429,58 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     flexDirection: "column",
                     backgroundColor: colors.background as string,
                     overflowY: "auto",
+                    position: "relative",
                 } as React.CSSProperties}
-            />
+            >
+                {hasSelection && popoverPos && (
+                    <View
+                        ref={popoverRef as any}
+                        // @ts-ignore - web-only DOM event used to keep Quill selection intact
+                        onMouseDown={(e: any) => e.preventDefault()}
+                        style={[
+                            styles.floatingPopover,
+                            { top: popoverPos.top, left: popoverPos.left },
+                        ]}
+                    >
+                        <Pressable
+                            style={({ hovered, pressed }: any) => [
+                                styles.popoverAction,
+                                (hovered || pressed) && styles.popoverActionHover,
+                            ]}
+                            onPress={() => setQuickEditVisible(true)}
+                        >
+                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary as string} />
+                            <Text style={styles.popoverActionText}>Quick Edit</Text>
+                        </Pressable>
+                        <View style={styles.popoverDivider} />
+                        <Pressable
+                            style={({ hovered, pressed }: any) => [
+                                styles.popoverAction,
+                                (hovered || pressed) && styles.popoverActionHover,
+                            ]}
+                            onPress={handleSendToChat}
+                        >
+                            <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.onPrimary as string} />
+                            <Text style={styles.popoverActionText}>Send to Chat</Text>
+                        </Pressable>
+                        {onSnippetComment && (
+                            <>
+                                <View style={styles.popoverDivider} />
+                                <Pressable
+                                    style={({ hovered, pressed }: any) => [
+                                        styles.popoverAction,
+                                        (hovered || pressed) && styles.popoverActionHover,
+                                    ]}
+                                    onPress={handleSnippetComment}
+                                >
+                                    <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.onPrimary as string} />
+                                    <Text style={styles.popoverActionText}>Comment</Text>
+                                </Pressable>
+                            </>
+                        )}
+                    </View>
+                )}
+            </div>
 
             {/* ── Quick Edit modal ─────────────────────────────────────────── */}
             <QuickEditModal
@@ -431,7 +510,43 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         toolbarLeft: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, flex: 1 },
         toolbarDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 6 },
-        toolbarRight: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 6 },
+        floatingPopover: {
+            position: "absolute",
+            flexDirection: "row",
+            alignItems: "center",
+            padding: 5,
+            borderRadius: 14,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 10 },
+            shadowRadius: 28,
+            shadowOpacity: 0.38,
+            elevation: 14,
+            zIndex: 50,
+        },
+        popoverAction: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            paddingHorizontal: 11,
+            paddingVertical: 7,
+            borderRadius: 9,
+        },
+        popoverActionHover: {
+            backgroundColor: "rgba(255,255,255,0.14)",
+        },
+        popoverActionText: {
+            fontSize: 12.5,
+            fontWeight: "600",
+            color: colors.onPrimary,
+            letterSpacing: 0.2,
+        },
+        popoverDivider: {
+            width: 1,
+            height: 16,
+            backgroundColor: "rgba(255,255,255,0.18)",
+            marginHorizontal: 1,
+        },
         toolbarBtn: {
             width: 30,
             height: 30,
@@ -446,7 +561,6 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 1,
         },
         toolbarBtnActive: { backgroundColor: colors.primary, shadowOpacity: 0, elevation: 0 },
-        selectionHint: { fontSize: 11, color: colors.textSecondary },
         selectionAction: {
             flexDirection: "row",
             alignItems: "center",
