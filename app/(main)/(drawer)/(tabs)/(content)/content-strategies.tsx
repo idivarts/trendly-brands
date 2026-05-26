@@ -6,8 +6,7 @@ import SnippetCommentPopover from "@/components/content-strategy/SnippetCommentP
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
-import { CHATBOT_QUESTIONS } from "@/components/content-strategy/mock-data";
-import { ChatMessage, ContentStrategy, ReviewStatus, ScreenState } from "@/components/content-strategy/types";
+import { ContentStrategy, ReviewStatus, ScreenState } from "@/components/content-strategy/types";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
@@ -31,9 +30,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text } from "react-native";
-
-let msgCounter = 0;
-const newId = () => `msg-${++msgCounter}-${Date.now()}`;
 
 // ─── Review Status Banner ─────────────────────────────────────────────────────
 
@@ -145,13 +141,13 @@ const ContentStrategiesScreen = () => {
         useStrategies();
 
     const [screenState, setScreenState] = useState<ScreenState>("empty");
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [questionIndex, setQuestionIndex] = useState(0);
     const [strategyContent, setStrategyContent] = useState("");
     const [activeStrategyId, setActiveStrategyId] = useState<string | null>(null);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
-    const [isAITyping, setIsAITyping] = useState(false);
+    // Initial prompt to send into the AI chat once the strategy + panel mount.
+    // The panel owns thread state — we just hand off the first message.
+    const [initialChatMessage, setInitialChatMessage] = useState<string | undefined>();
 
     // ── Right panel — single mode state replaces showComments + chatCollapsed ──
     // 'chat'     → AI chat panel (default when collecting/generating)
@@ -184,63 +180,24 @@ const ContentStrategiesScreen = () => {
         return () => clearInterval(interval);
     }, [activeStrategyId, updatePresence]);
 
-    const addMessage = useCallback((sender: "ai" | "user", text: string) => {
-        setMessages((prev) => [...prev, { id: newId(), sender, text, timestamp: Date.now() }]);
-    }, []);
-
-    const askNextQuestion = useCallback(
-        (index: number) => {
-            if (index >= CHATBOT_QUESTIONS.length) {
-                setIsAITyping(true);
-                addMessage("ai", "Perfect! I have everything I need. Generating your content strategy now...");
-                setTimeout(async () => {
-                    setIsAITyping(false);
-                    const generatedContent = `# New Content Strategy\n\n*AI-generated strategy based on your inputs.*\n\nEdit this document to refine your strategy.`;
-                    const title = "New Strategy";
-                    const newStratId = await addStrategy(title, generatedContent);
-                    setActiveStrategyId(newStratId);
-                    setStrategyContent(generatedContent);
-                    setScreenState("strategy-ready");
-                    Animated.timing(panelRatio, {
-                        toValue: 1,
-                        duration: 500,
-                        useNativeDriver: false,
-                    }).start();
-                }, 2500);
-                return;
-            }
-            setIsAITyping(true);
-            setTimeout(() => {
-                setIsAITyping(false);
-                addMessage("ai", CHATBOT_QUESTIONS[index]);
-            }, 800);
-        },
-        [addMessage, panelRatio, addStrategy]
-    );
-
     const handleFirstPromit = useCallback(
-        (prompt: string) => {
-            addMessage("user", prompt);
-            setScreenState("collecting");
-            panelRatio.setValue(0);
-            setQuestionIndex(0);
-            askNextQuestion(0);
+        async (prompt: string) => {
+            // Create a draft strategy so the AI conversation has a real contextId.
+            const newStratId = await addStrategy("New Strategy", "");
+            if (!newStratId) return;
+            setActiveStrategyId(newStratId);
+            setStrategyContent("");
+            // Hand the first message off to the panel — it will create the
+            // conversation against this strategyId and dispatch the message.
+            setInitialChatMessage(prompt);
+            setScreenState("strategy-ready");
+            Animated.timing(panelRatio, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: false,
+            }).start();
         },
-        [addMessage, askNextQuestion, panelRatio]
-    );
-
-    const handleChatSend = useCallback(
-        (text: string) => {
-            if (isAITyping) return;
-            const refs = chatFocusItems.map((f) => `[Ref: "${f.label}"]`).join(" ");
-            const fullText = refs ? `${refs}\n${text}` : text;
-            addMessage("user", fullText);
-            setChatFocusItems([]);
-            const nextIndex = questionIndex + 1;
-            setQuestionIndex(nextIndex);
-            askNextQuestion(nextIndex);
-        },
-        [isAITyping, chatFocusItems, questionIndex, addMessage, askNextQuestion]
+        [addStrategy, panelRatio]
     );
 
     const handleSendToChat = useCallback((text: string) => {
@@ -253,11 +210,10 @@ const ContentStrategiesScreen = () => {
 
     const handleNewStrategy = useCallback(() => {
         setScreenState("empty");
-        setMessages([]);
-        setQuestionIndex(0);
         setActiveStrategyId(null);
         setStrategyContent("");
         setChatFocusItems([]);
+        setInitialChatMessage(undefined);
         setRightPanelMode("chat");
         panelRatio.setValue(0);
     }, [panelRatio]);
@@ -486,6 +442,7 @@ const ContentStrategiesScreen = () => {
                                 onChange={handleStrategyContentChange}
                                 onSendToChat={handleSendToChat}
                                 onSnippetComment={handleSnippetComment}
+                                strategyId={activeStrategyId ?? undefined}
                             />
                         )}
                     </Animated.View>
@@ -507,14 +464,15 @@ const ContentStrategiesScreen = () => {
                             }
                             chatSlot={
                                 <AIChatPanel
-                                    messages={messages}
-                                    onSend={handleChatSend}
+                                    module="strategy"
+                                    contextId={activeStrategyId ?? undefined}
+                                    initialMessage={initialChatMessage}
+                                    onInitialMessageSent={() => setInitialChatMessage(undefined)}
                                     focusItems={chatFocusItems}
                                     onRemoveFocusItem={(id) =>
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
                                     isCompact={screenState === "strategy-ready"}
-                                    isAITyping={isAITyping}
                                     onCollapse={() => setRightPanelMode("none")}
                                 />
                             }

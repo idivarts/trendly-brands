@@ -17,13 +17,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import QuickEditModal from "./QuickEditModal";
+import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 
 export interface StrategyEditorPanelProps {
     content: string;
     onChange: (text: string) => void;
     onSendToChat: (text: string) => void;
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
+    /** Strategy ID — used as AI conversation context for Quick Edit. */
+    strategyId?: string;
 }
 
 const QUILL_STYLE_ID = "trendly-quill-core-css";
@@ -95,6 +97,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     onChange,
     onSendToChat,
     onSnippetComment,
+    strategyId,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -301,9 +304,24 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         }
     }, [onSnippetComment, selectedText, selectionRange]);
 
-    const handleQuickEditApply = useCallback((_prompt: string) => {
-        setQuickEditVisible(false);
-    }, []);
+    // Replace the current Quill selection with AI-generated text, then sync to parent.
+    const handleAIQuickEditAccept = useCallback(
+        (newText: string) => {
+            const quill = quillRef.current;
+            if (!quill || !selectionRange) {
+                setQuickEditVisible(false);
+                return;
+            }
+            quill.deleteText(selectionRange.index, selectionRange.length);
+            quill.insertText(selectionRange.index, newText);
+            quill.setSelection(selectionRange.index + newText.length, 0);
+            const html = quill.root.innerHTML;
+            lastHtmlRef.current = html;
+            onChange(html);
+            setQuickEditVisible(false);
+        },
+        [selectionRange, onChange]
+    );
 
     // ── Toolbar button definitions ────────────────────────────────────────────
 
@@ -482,12 +500,14 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 )}
             </div>
 
-            {/* ── Quick Edit modal ─────────────────────────────────────────── */}
-            <QuickEditModal
+            {/* ── AI Quick Edit modal — streaming, with Accept/Discard ──── */}
+            <AIQuickEditModal
                 visible={quickEditVisible}
-                selectedText={selectedText}
                 onClose={() => setQuickEditVisible(false)}
-                onApply={handleQuickEditApply}
+                selectedText={selectedText}
+                module="strategy"
+                contextId={strategyId}
+                onAccept={handleAIQuickEditAccept}
             />
         </View>
     );

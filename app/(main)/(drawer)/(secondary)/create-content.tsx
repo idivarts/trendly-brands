@@ -9,6 +9,7 @@ import {
     ContentStatus,
     POPULAR_POSTING_TIMES,
 } from "@/components/contents/types";
+import { useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
 import DatePickerModal, {
     formatDateForWebInput,
@@ -31,7 +32,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
     KeyboardAvoidingView,
@@ -329,6 +330,20 @@ const CreateContentScreen = () => {
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Real AI generation hooks — backed by /api/ai + OpenRouter.
+    const {
+        captions: aiCaptions,
+        generateCaption,
+        hashtags: aiHashtags,
+        generateHashtags,
+        script: aiScript,
+        scriptStreaming,
+        generateScript,
+        images: aiImages,
+        imagesStreaming,
+        generateImage,
+    } = useAIGenerate();
+
     const handleSave = useCallback(async () => {
         if (!contentId || saveState === "saving") return;
         setSaveState("saving");
@@ -354,45 +369,101 @@ const CreateContentScreen = () => {
 
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
+            const platform = "Instagram";
             if (magicTarget === "caption") {
-                setCaption(
-                    `✨ [AI-generated caption for: "${prompt}"]\n\nReplace this with the real AI output once the backend is connected.`
-                );
+                generateCaption({
+                    topic: prompt,
+                    platform,
+                    format: contentType,
+                    contextId: contentId,
+                });
             } else if (magicTarget === "hashtags") {
-                setHashtags(
-                    `#AIGenerated #ContentCreation #BrandMarketing #IndianBrand #D2C`
-                );
+                generateHashtags({
+                    topic: prompt,
+                    platform,
+                    contextId: contentId,
+                });
             }
-            setMagicTarget(null);
         },
-        [magicTarget]
+        [magicTarget, contentType, contentId, generateCaption, generateHashtags]
     );
 
     const handleScriptAiEnhance = useCallback(() => {
-        if (!scriptAiPrompt.trim()) return;
+        const keyMessage = scriptAiPrompt.trim();
+        if (!keyMessage) return;
         setIsGeneratingScript(true);
-        setTimeout(() => {
-            setScript(
-                (prev) =>
-                    prev +
-                    `\n\n[✨ AI Enhancement for: "${scriptAiPrompt}"]\nReplace this with the real AI output once the backend is connected.`
-            );
-            setScriptAiPrompt("");
-            setIsGeneratingScript(false);
-        }, 1200);
-    }, [scriptAiPrompt]);
+        generateScript({
+            videoType: isReel ? "Reel" : "Video",
+            topic: title || idea || "Brand content",
+            keyMessage,
+            tone: "friendly",
+            contextId: contentId,
+        });
+    }, [scriptAiPrompt, isReel, title, idea, contentId, generateScript]);
 
     const handleImageGenerate = useCallback(() => {
         if (!imagePrompt.trim()) return;
         setIsGeneratingImage(true);
-        setTimeout(() => {
-            Alert.alert(
-                "Image Generation",
-                `Image generated for prompt: "${imagePrompt}"\n\nReal image output will show here once the backend is connected.`
-            );
-            setIsGeneratingImage(false);
-        }, 1400);
-    }, [imagePrompt]);
+        generateImage({
+            description: imagePrompt,
+            aspectRatio: contentType === "reel" ? "9:16" : "1:1",
+            count: 1,
+        });
+    }, [imagePrompt, contentType, generateImage]);
+
+    // React to AI generation results streaming back from the backend.
+
+    // Captions: take the first variant and apply it. The MagicPromptModal closes
+    // on apply via its own onGenerate flow; we just clear magicTarget when done.
+    useEffect(() => {
+        if (magicTarget !== "caption" || aiCaptions.length === 0) return;
+        setCaption(aiCaptions[0].text);
+        setMagicTarget(null);
+    }, [aiCaptions, magicTarget]);
+
+    // Hashtags: flatten all tier groups into a single space-separated #tag string.
+    useEffect(() => {
+        if (magicTarget !== "hashtags" || aiHashtags.length === 0) return;
+        const joined = aiHashtags
+            .flatMap((g) => g.tags)
+            .map((t) => `#${t}`)
+            .join(" ");
+        setHashtags(joined);
+        setMagicTarget(null);
+    }, [aiHashtags, magicTarget]);
+
+    // Script: stream into the script field. Append on first run; replace the
+    // streamed block on subsequent token updates so the user sees it grow live.
+    const scriptStreamStartRef = useRef<number | null>(null);
+    useEffect(() => {
+        if (!isGeneratingScript) return;
+        if (!aiScript) return;
+        if (scriptStreamStartRef.current === null) {
+            // Mark insertion point right before the streamed content lands.
+            scriptStreamStartRef.current = (script ? script.length + 2 : 0);
+        }
+        const start = scriptStreamStartRef.current;
+        setScript((prev) => {
+            const base = prev.slice(0, start);
+            return (base ? base + (base.endsWith("\n\n") ? "" : "\n\n") : "") + aiScript;
+        });
+        if (!scriptStreaming) {
+            setScriptAiPrompt("");
+            setIsGeneratingScript(false);
+            scriptStreamStartRef.current = null;
+        }
+    }, [aiScript, scriptStreaming, isGeneratingScript]);
+
+    // Image: alert with the result URL on completion. The existing UI doesn't
+    // host an image preview slot, so this preserves the original mock behavior
+    // but now shows a real S3 URL.
+    useEffect(() => {
+        if (!isGeneratingImage) return;
+        if (imagesStreaming) return;
+        if (aiImages.length === 0) return;
+        Alert.alert("Image generated", aiImages[aiImages.length - 1].s3Url);
+        setIsGeneratingImage(false);
+    }, [aiImages, imagesStreaming, isGeneratingImage]);
 
     const formattedDate = date.toLocaleDateString("en-IN", {
         day: "2-digit",

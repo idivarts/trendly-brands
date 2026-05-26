@@ -26,13 +26,15 @@ import {
     type EnrichedTextInputInstance,
     type OnChangeStateEvent,
 } from "react-native-enriched";
-import QuickEditModal from "./QuickEditModal";
+import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 
 export interface StrategyEditorPanelProps {
     content: string;
     onChange: (text: string) => void;
     onSendToChat: (text: string) => void;
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
+    /** Strategy ID — used as AI conversation context for Quick Edit. */
+    strategyId?: string;
 }
 
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
@@ -40,6 +42,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     onChange,
     onSendToChat,
     onSnippetComment,
+    strategyId,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -51,13 +54,15 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
     // react-native-enriched does not expose selected text directly via state,
     // so selection-based actions (Send to Chat, Comment) are limited on native.
-    // Quick Edit is still available — it prompts the user then applies via the editor.
-    const handleQuickEditApply = useCallback((prompt: string) => {
-        // Placeholder: on native, we can't easily target a selection, so we
-        // append the edit prompt as a note. Full AI integration to be done later.
-        const note = `\n[Quick Edit requested: "${prompt}"]`;
-        onChange(content + note);
-    }, [content, onChange]);
+    // Quick Edit takes the entire current content as the "selected text" and
+    // applies the AI-rewritten result as the new content.
+    const handleAIQuickEditAccept = useCallback(
+        (newText: string) => {
+            onChange(newText);
+            setQuickEditVisible(false);
+        },
+        [onChange]
+    );
 
     const formatButtons = [
         {
@@ -163,12 +168,14 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* ── Quick Edit modal ─────────────────────────────────────────── */}
-            <QuickEditModal
+            {/* ── AI Quick Edit modal — streaming, with Accept/Discard ──── */}
+            <AIQuickEditModal
                 visible={quickEditVisible}
-                selectedText=""
                 onClose={() => setQuickEditVisible(false)}
-                onApply={handleQuickEditApply}
+                selectedText={content}
+                module="strategy"
+                contextId={strategyId}
+                onAccept={handleAIQuickEditAccept}
             />
         </View>
     );

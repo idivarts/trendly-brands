@@ -4,7 +4,7 @@ import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
-import AIChatPanel, { ChatMessage, FocusItem } from "@/components/shared/AIChatPanel";
+import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -24,15 +24,8 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
-let msgId = 0;
-const newId = () => `cmsg-${++msgId}-${Date.now()}`;
-
-const AI_WELCOME: ChatMessage = {
-    id: newId(),
-    sender: "ai",
-    text: "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.",
-    timestamp: Date.now(),
-};
+const CALENDAR_WELCOME =
+    "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.";
 
 const ContentCalendarScreen = () => {
     const theme = useTheme();
@@ -64,36 +57,9 @@ const ContentCalendarScreen = () => {
     // null = month-level comments; set = item-level comments.
     const [selectedCommentItem, setSelectedCommentItem] = useState<CalendarItem | null>(null);
 
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([AI_WELCOME]);
     const [focusItems, setFocusItems] = useState<FocusItem[]>([]);
-    const [isAITyping, setIsAITyping] = useState(false);
 
     const hasItems = items.length > 0;
-
-    const addMessage = useCallback((sender: "ai" | "user", text: string) => {
-        setChatMessages((prev) => [
-            ...prev,
-            { id: newId(), sender, text, timestamp: Date.now() },
-        ]);
-    }, []);
-
-    const handleChatSend = useCallback(
-        (text: string) => {
-            const refs = focusItems.map((f) => `[Ref: "${f.label}"]`).join(" ");
-            const fullText = refs ? `${refs}\n${text}` : text;
-            addMessage("user", fullText);
-            setFocusItems([]);
-            setIsAITyping(true);
-            setTimeout(() => {
-                setIsAITyping(false);
-                addMessage(
-                    "ai",
-                    "Got it! I've noted your request. Once the backend is connected, I'll apply your changes directly to the calendar."
-                );
-            }, 1600);
-        },
-        [focusItems, addMessage]
-    );
 
     // Sending an item to chat: focuses it in the chat panel and opens chat if closed.
     const handleFocusChat = useCallback((item: CalendarItem) => {
@@ -303,14 +269,14 @@ const ContentCalendarScreen = () => {
                             }
                             chatSlot={
                                 <AIChatPanel
-                                    messages={chatMessages}
-                                    onSend={handleChatSend}
+                                    module="calendar"
+                                    contextId={selectedCommentItem?.id}
                                     focusItems={focusItems}
                                     onRemoveFocusItem={(id) =>
                                         setFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
                                     isCompact
-                                    isAITyping={isAITyping}
+                                    welcomeText={CALENDAR_WELCOME}
                                     placeholder="Ask the AI Expert..."
                                     onCollapse={() => setRightPanelMode("none")}
                                 />
