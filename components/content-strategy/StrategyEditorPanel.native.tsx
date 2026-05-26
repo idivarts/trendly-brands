@@ -1,0 +1,265 @@
+import Colors from "@/shared-uis/constants/Colors";
+import { ensureHtml } from "@/utils/rich-text";
+import {
+    faBold,
+    faItalic,
+    faListOl,
+    faListUl,
+    faPen,
+    faStrikethrough,
+    faUnderline
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import {
+    EnrichedTextInput,
+    type EnrichedTextInputInstance,
+    type OnChangeStateEvent,
+} from "react-native-enriched";
+import QuickEditModal from "./QuickEditModal";
+
+export interface StrategyEditorPanelProps {
+    content: string;
+    onChange: (text: string) => void;
+    onSendToChat: (text: string) => void;
+    onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
+}
+
+const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
+    content,
+    onChange,
+    onSendToChat,
+    onSnippetComment,
+}) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const editorRef = useRef<EnrichedTextInputInstance>(null);
+    const [stylesState, setStylesState] = useState<OnChangeStateEvent | null>(null);
+    const [quickEditVisible, setQuickEditVisible] = useState(false);
+
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+
+    // react-native-enriched does not expose selected text directly via state,
+    // so selection-based actions (Send to Chat, Comment) are limited on native.
+    // Quick Edit is still available — it prompts the user then applies via the editor.
+    const handleQuickEditApply = useCallback((prompt: string) => {
+        // Placeholder: on native, we can't easily target a selection, so we
+        // append the edit prompt as a note. Full AI integration to be done later.
+        const note = `\n[Quick Edit requested: "${prompt}"]`;
+        onChange(content + note);
+    }, [content, onChange]);
+
+    const formatButtons = [
+        {
+            icon: faBold,
+            label: "Bold",
+            isActive: stylesState?.isBold ?? false,
+            onPress: () => editorRef.current?.toggleBold(),
+        },
+        {
+            icon: faItalic,
+            label: "Italic",
+            isActive: stylesState?.isItalic ?? false,
+            onPress: () => editorRef.current?.toggleItalic(),
+        },
+        {
+            icon: faUnderline,
+            label: "Underline",
+            isActive: stylesState?.isUnderline ?? false,
+            onPress: () => editorRef.current?.toggleUnderline(),
+        },
+        {
+            icon: faStrikethrough,
+            label: "Strike",
+            isActive: stylesState?.isStrikeThrough ?? false,
+            onPress: () => editorRef.current?.toggleStrikeThrough(),
+        },
+        {
+            icon: faListUl,
+            label: "Bullet list",
+            isActive: stylesState?.isUnorderedList ?? false,
+            onPress: () => editorRef.current?.toggleUnorderedList(),
+        },
+        {
+            icon: faListOl,
+            label: "Ordered list",
+            isActive: stylesState?.isOrderedList ?? false,
+            onPress: () => editorRef.current?.toggleOrderedList(),
+        },
+    ];
+
+    return (
+        <View style={styles.container}>
+            {/* ── Toolbar ──────────────────────────────────────────────────── */}
+            <View style={styles.toolbar}>
+                <View style={styles.toolbarLeft}>
+                    {formatButtons.map((btn) => (
+                        <Pressable
+                            key={btn.label}
+                            style={({ pressed }) => [
+                                styles.toolbarBtn,
+                                btn.isActive && styles.toolbarBtnActive,
+                                pressed && styles.toolbarBtnPressed,
+                            ]}
+                            onPress={btn.onPress}
+                            accessibilityLabel={btn.label}
+                        >
+                            <FontAwesomeIcon
+                                icon={btn.icon}
+                                size={13}
+                                color={btn.isActive ? colors.onPrimary : colors.textSecondary}
+                            />
+                        </Pressable>
+                    ))}
+                </View>
+
+                {/* Quick Edit always available on native (no selection required) */}
+                <View style={styles.toolbarRight}>
+                    <Pressable
+                        style={styles.selectionAction}
+                        onPress={() => setQuickEditVisible(true)}
+                    >
+                        <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText} />
+                        <Text style={styles.selectionActionText}>Quick Edit</Text>
+                    </Pressable>
+                </View>
+            </View>
+
+            {/* ── Editor ───────────────────────────────────────────────────── */}
+            <KeyboardAvoidingView
+                style={styles.kavContainer}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 180 : 0}
+            >
+                <ScrollView
+                    style={styles.editorScroll}
+                    contentContainerStyle={styles.editorScrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <EnrichedTextInput
+                        ref={editorRef}
+                        defaultValue={ensureHtml(content || "")}
+                        onChangeHtml={(event) => onChange(event.nativeEvent.value)}
+                        onChangeState={(event) => setStylesState(event.nativeEvent)}
+                        placeholder="Write your content strategy..."
+                        placeholderTextColor={colors.textSecondary}
+                        style={{
+                            ...styles.editor,
+                            backgroundColor: colors.background,
+                            borderColor: colors.outline,
+                            color: colors.text,
+                        }}
+                    />
+                </ScrollView>
+            </KeyboardAvoidingView>
+
+            {/* ── Quick Edit modal ─────────────────────────────────────────── */}
+            <QuickEditModal
+                visible={quickEditVisible}
+                selectedText=""
+                onClose={() => setQuickEditVisible(false)}
+                onApply={handleQuickEditApply}
+            />
+        </View>
+    );
+};
+
+function makeStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+        },
+        toolbar: {
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            backgroundColor: colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        toolbarLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+        },
+        toolbarRight: {
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 6,
+        },
+        toolbarBtn: {
+            width: 30,
+            height: 30,
+            borderRadius: 6,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.background,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.06,
+            elevation: 1,
+        },
+        toolbarBtnActive: {
+            backgroundColor: colors.primary,
+            shadowOpacity: 0,
+            elevation: 0,
+        },
+        toolbarBtnPressed: {
+            backgroundColor: colors.aliceBlue,
+            shadowOpacity: 0,
+            elevation: 0,
+        },
+        selectionAction: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 6,
+            backgroundColor: colors.secondarySurface,
+            borderWidth: 1,
+            borderColor: colors.secondaryBorder,
+        },
+        selectionActionText: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.secondaryText,
+        },
+        kavContainer: {
+            flex: 1,
+        },
+        editorScroll: {
+            flex: 1,
+        },
+        editorScrollContent: {
+            flexGrow: 1,
+        },
+        editor: {
+            flex: 1,
+            minHeight: 400,
+            padding: 20,
+            fontSize: 14,
+            lineHeight: 22,
+            textAlignVertical: "top",
+        },
+    });
+}
+
+export default StrategyEditorPanel;
