@@ -467,7 +467,11 @@ const ContentStrategiesScreen = () => {
             )}
 
             {screenState === "empty" && (
-                <EmptyPromptView onSubmit={handleFirstPromit} />
+                <EmptyPromptView
+                    onSubmit={handleFirstPromit}
+                    strategies={strategies}
+                    onSelectStrategy={handleSelectStrategy}
+                />
             )}
 
             {(screenState === "collecting" || screenState === "strategy-ready") && (

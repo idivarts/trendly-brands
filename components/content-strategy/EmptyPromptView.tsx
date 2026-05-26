@@ -1,12 +1,16 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { faArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { formatTimeToNow } from "@/utils/date";
+import { faArrowUp, faChevronRight, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ContentStrategy, ReviewStatus } from "./types";
 
 interface EmptyPromptViewProps {
     onSubmit: (prompt: string) => void;
+    strategies?: ContentStrategy[];
+    onSelectStrategy?: (strategy: ContentStrategy) => void;
 }
 
 const SUGGESTIONS = [
@@ -16,11 +20,38 @@ const SUGGESTIONS = [
     "Grow engagement on Instagram Reels",
 ];
 
-const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({ onSubmit }) => {
+const RESUME_LIMIT = 3;
+
+// States that mean "user still has work to do" — approved strategies are
+// excluded since they need no further action from the brand manager.
+const ACTIONABLE_STATUSES: ReviewStatus[] = ["draft", "in_review", "changes_requested"];
+
+const STATUS_PILL: Record<ReviewStatus, { label: string; bg: string; text: string }> = {
+    draft: { label: "Draft", bg: "rgba(120,120,120,0.12)", text: "#6B6B6B" },
+    in_review: { label: "In Review", bg: "rgba(224,122,0,0.12)", text: "#E07A00" },
+    changes_requested: { label: "Changes Requested", bg: "rgba(220,38,38,0.12)", text: "#DC2626" },
+    approved: { label: "Approved", bg: "rgba(26,122,58,0.12)", text: "#1A7A3A" },
+};
+
+const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
+    onSubmit,
+    strategies = [],
+    onSelectStrategy,
+}) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const [prompt, setPrompt] = useState("");
     const styles = useMemo(() => useStyles(colors), [colors]);
+
+    const resumeStrategies = useMemo(() => {
+        return strategies
+            .filter((s) => ACTIONABLE_STATUSES.includes(s.reviewStatus))
+            .slice()
+            .sort((a, b) => (b.lastEditedAt ?? 0) - (a.lastEditedAt ?? 0))
+            .slice(0, RESUME_LIMIT);
+    }, [strategies]);
+
+    const hasResume = resumeStrategies.length > 0 && !!onSelectStrategy;
 
     const handleSubmit = () => {
         const trimmed = prompt.trim();
@@ -42,17 +73,19 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({ onSubmit }) => {
                 </Text>
             </View>
 
-            <View style={styles.suggestionsRow}>
-                {SUGGESTIONS.map((s) => (
-                    <Pressable
-                        key={s}
-                        style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-                        onPress={() => handleSuggestion(s)}
-                    >
-                        <Text style={styles.chipText}>{s}</Text>
-                    </Pressable>
-                ))}
-            </View>
+            {!hasResume && (
+                <View style={styles.suggestionsRow}>
+                    {SUGGESTIONS.map((s) => (
+                        <Pressable
+                            key={s}
+                            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+                            onPress={() => handleSuggestion(s)}
+                        >
+                            <Text style={styles.chipText}>{s}</Text>
+                        </Pressable>
+                    ))}
+                </View>
+            )}
 
             <View style={styles.inputContainer}>
                 <TextInput
@@ -76,6 +109,60 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({ onSubmit }) => {
                     <FontAwesomeIcon icon={faArrowUp} size={16} color={colors.onPrimary} />
                 </Pressable>
             </View>
+
+            {hasResume && (
+                <View style={styles.resumeSection}>
+                    <Text style={styles.resumeLabel}>PICK UP WHERE YOU LEFT OFF</Text>
+                    <View style={styles.resumeList}>
+                        {resumeStrategies.map((s) => {
+                            const pill = STATUS_PILL[s.reviewStatus];
+                            const editedAt = s.lastEditedAt
+                                ? formatTimeToNow(new Date(s.lastEditedAt))
+                                : s.createdAt;
+                            return (
+                                <Pressable
+                                    key={s.id}
+                                    style={({ pressed }) => [
+                                        styles.resumeItem,
+                                        pressed && styles.resumeItemPressed,
+                                    ]}
+                                    onPress={() => onSelectStrategy?.(s)}
+                                >
+                                    <View style={styles.resumeIcon}>
+                                        <FontAwesomeIcon
+                                            icon={faPenToSquare}
+                                            size={14}
+                                            color={colors.primary}
+                                        />
+                                    </View>
+                                    <View style={styles.resumeInfo}>
+                                        <Text style={styles.resumeTitle} numberOfLines={1}>
+                                            {s.title}
+                                        </Text>
+                                        <View style={styles.resumeMetaRow}>
+                                            <Text style={styles.resumeDate} numberOfLines={1}>
+                                                {editedAt}
+                                            </Text>
+                                            <View
+                                                style={[styles.statusPill, { backgroundColor: pill.bg }]}
+                                            >
+                                                <Text style={[styles.statusPillText, { color: pill.text }]}>
+                                                    {pill.label}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                    <FontAwesomeIcon
+                                        icon={faChevronRight}
+                                        size={12}
+                                        color={colors.textSecondary}
+                                    />
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                </View>
+            )}
         </View>
     );
 };
@@ -179,6 +266,75 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.35,
                     shadowOpacity: 0,
                     elevation: 0,
+                },
+                resumeSection: {
+                    width: "100%",
+                    maxWidth: 680,
+                    gap: 12,
+                },
+                resumeLabel: {
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 1,
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                },
+                resumeList: {
+                    gap: 8,
+                },
+                resumeItem: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: 14,
+                    minHeight: 64,
+                    borderRadius: 12,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                resumeItemPressed: {
+                    opacity: 0.75,
+                },
+                resumeIcon: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.aliceBlue,
+                },
+                resumeInfo: {
+                    flex: 1,
+                    gap: 4,
+                },
+                resumeTitle: {
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.text,
+                },
+                resumeMetaRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                },
+                resumeDate: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    flexShrink: 1,
+                },
+                statusPill: {
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 10,
+                },
+                statusPillText: {
+                    fontSize: 10,
+                    fontWeight: "700",
+                    letterSpacing: 0.3,
                 },
             }),
         [colors]
