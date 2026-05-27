@@ -128,6 +128,7 @@ const TabLayout = () => {
                     tabBarItemStyle: { display: "none" },
                     headerShown: false,
                 }}
+                getId={({ params }) => params?.strategyId as string}
             />
 
             {/* Tab 2: Content Calendar */}
