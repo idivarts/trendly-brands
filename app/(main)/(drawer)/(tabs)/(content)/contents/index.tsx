@@ -38,14 +38,14 @@ const ContentsScreen = () => {
         const newId = await addContent(calItem);
         if (!newId) return;
         router.push({
-            pathname: "/(main)/(drawer)/(secondary)/create-content" as any,
+            pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
             params: { contentId: newId },
         });
     };
 
     const handleOpenContent = (item: ContentItem) => {
         router.push({
-            pathname: "/(main)/(drawer)/(secondary)/create-content" as any,
+            pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
             params: { contentId: item.id },
         });
     };
@@ -74,7 +74,9 @@ const ContentsScreen = () => {
             {items.length === 0 ? (
                 <EmptyContentsView
                     onGoToStrategy={() =>
-                        router.push("/(main)/(drawer)/(tabs)/(content)/content-strategies" as any)
+                        router.push(
+                            "/(main)/(drawer)/(tabs)/(content)/content-strategies" as any
+                        )
                     }
                     onCreateContent={() => setShowAddModal(true)}
                 />

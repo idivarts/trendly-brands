@@ -61,7 +61,7 @@ const CollaborationsV2 = () => {
     const handleAddContent = (item: Omit<CalendarItem, "id">) => {
         const newId = `content-${Date.now()}`;
         router.push({
-            pathname: "/(main)/(drawer)/(secondary)/create-content" as any,
+            pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
             params: { contentId: newId, title: item.title, idea: item.idea, type: item.type, date: item.date },
         });
     };

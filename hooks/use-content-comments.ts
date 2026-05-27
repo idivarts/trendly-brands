@@ -5,7 +5,7 @@
  * helpers to add, resolve, and delete comments.
  *
  * This is the shared hook used by BOTH the Content Calendar (QuickCommentModal)
- * and the Content detail page (create-content.tsx / CommentsSection).
+ * and the Content detail page (contents/[contentId].tsx / CommentsSection).
  * They write to the exact same Firestore subcollection, so comments appear
  * on both surfaces automatically via onSnapshot — no sync logic required.
  */

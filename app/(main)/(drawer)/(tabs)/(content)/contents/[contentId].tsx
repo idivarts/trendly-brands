@@ -274,7 +274,7 @@ const CreateContentScreen = () => {
     const { xl } = useBreakpoints();
     const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
         useLocalSearchParams<{
-            contentId?: string;
+            contentId: string;
             title?: string;
             idea?: string;
             type?: string;
@@ -282,9 +282,16 @@ const CreateContentScreen = () => {
         }>();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
+    const { items, updateContent } = useContents();
+
+    // Resolve the live item from the real contents list first; fall back to
+    // mock data so demo/test contentIds still work in dev.
     const seedItem = useMemo(
-        () => MOCK_CONTENT_ITEMS.find((i) => i.id === contentId) ?? null,
-        [contentId]
+        () =>
+            items.find((i) => i.id === contentId) ??
+            MOCK_CONTENT_ITEMS.find((i) => i.id === contentId) ??
+            null,
+        [items, contentId]
     );
 
     const [title, setTitle] = useState(seedItem?.title ?? paramTitle ?? "");
@@ -308,6 +315,29 @@ const CreateContentScreen = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCollabModal, setShowCollabModal] = useState(false);
 
+    // Firestore items arrive after first render. Hydrate local form state the
+    // first time the real item shows up for this contentId. Tracked per-id so
+    // navigating to a different content reseeds the form, but subsequent edits
+    // on the same id aren't clobbered by snapshot replays.
+    const hydratedForRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!seedItem) return;
+        if (hydratedForRef.current === seedItem.id) return;
+        hydratedForRef.current = seedItem.id;
+
+        setTitle(seedItem.title ?? "");
+        setIdea(seedItem.idea ?? "");
+        setStatus(seedItem.status ?? "draft");
+        setCaption(seedItem.caption ?? "");
+        setHashtags(seedItem.hashtags ?? "");
+        setScript(seedItem.script ?? "");
+        setImagePrompt(seedItem.imagePrompt ?? "");
+        setTimeOfPosting(seedItem.timeOfPosting ?? "");
+        if (seedItem.date) {
+            setDate(new Date(seedItem.date + "T00:00:00"));
+        }
+    }, [seedItem]);
+
     // ── Right side panel (comments) ───────────────────────────────────────────
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
 
@@ -326,8 +356,6 @@ const CreateContentScreen = () => {
         type: contentType,
         date: formatDateForWebInput(date),
     };
-
-    const { updateContent } = useContents();
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

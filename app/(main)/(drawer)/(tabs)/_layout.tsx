@@ -105,9 +105,9 @@ const TabLayout = () => {
                 },
             }}
         >
-            {/* Tab 1: Content Strategy */}
+            {/* Tab 1: Content Strategy (index) */}
             <Tabs.Screen
-                name="(content)/content-strategies"
+                name="(content)/content-strategies/index"
                 options={{
                     title: "Strategy",
                     headerShown: false,
@@ -118,6 +118,15 @@ const TabLayout = () => {
                             size={22}
                         />
                     ),
+                }}
+            />
+
+            {/* Hidden: content-strategies detail route */}
+            <Tabs.Screen
+                name="(content)/content-strategies/[strategyId]"
+                options={{
+                    tabBarItemStyle: { display: "none" },
+                    headerShown: false,
                 }}
             />
 
@@ -220,9 +229,16 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Hidden: explore-influencers (kept as route, not in tab bar) */}
+            {/* Hidden: contents list + detail (not in tab bar) */}
             <Tabs.Screen
-                name="(content)/contents"
+                name="(content)/contents/index"
+                options={{
+                    tabBarItemStyle: { display: "none" },
+                    headerShown: false,
+                }}
+            />
+            <Tabs.Screen
+                name="(content)/contents/[contentId]"
                 options={{
                     tabBarItemStyle: { display: "none" },
                     headerShown: false,
