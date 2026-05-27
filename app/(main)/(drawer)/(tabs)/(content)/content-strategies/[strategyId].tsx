@@ -251,7 +251,7 @@ function toolbarStyles(
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-
+// .replace(/<[^>]*>/g, "").trim()
 const hasRealContent = (html: string) => !!html.replace(/<[^>]*>/g, "").trim();
 
 const ContentStrategyDetail = () => {
@@ -280,7 +280,7 @@ const ContentStrategyDetail = () => {
     );
 
     const [screenState, setScreenState] = useState<ScreenState>(
-        (initialPrompt || !hasRealContent(strategyContent)) ? "collecting" : "strategy-ready"
+        "collecting"
     );
 
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
@@ -312,6 +312,9 @@ const ContentStrategyDetail = () => {
     useEffect(() => {
         if (screenState === "collecting" && hasRealContent(strategyContent)) {
             setScreenState("strategy-ready");
+        }
+        if (screenState === "strategy-ready" && !hasRealContent(strategyContent)) {
+            setScreenState("collecting");
         }
     }, [screenState, strategyContent]);
 
@@ -392,6 +395,14 @@ const ContentStrategyDetail = () => {
     const handleChatToggle = useCallback(() => {
         setRightPanelMode((m) => (m === "chat" ? "none" : "chat"));
     }, []);
+
+    // Collecting state: chat is the primary surface (70% on xl, 100% on !xl)
+    // and not collapsible. Pin mode to "chat" while collecting so neither the
+    // user nor a stale state can close it.
+    const isCollecting = screenState === "collecting";
+    useEffect(() => {
+        if (isCollecting) setRightPanelMode("chat");
+    }, [isCollecting]);
 
     const leftFlex = panelRatio.interpolate({
         inputRange: [0, 1],
@@ -509,31 +520,53 @@ const ContentStrategyDetail = () => {
             )}
 
             <View style={styles.splitContainer}>
-                {/* ── Left: editor ─────────────────────────────────────────── */}
-                <Animated.View style={[styles.leftPanel, { flex: xl ? leftFlex : 1 }]}>
-                    {screenState === "collecting" ? (
-                        <StrategyShimmerPanel />
-                    ) : (
-                        <StrategyEditorPanel
-                            content={strategyContent}
-                            onChange={handleStrategyContentChange}
-                            onSendToChat={handleSendToChat}
-                            onSnippetComment={handleSnippetComment}
-                            strategyId={strategyId ?? undefined}
-                        />
-                    )}
-                </Animated.View>
+                {/* ── Left: editor ──────────────────────────────────────────
+                    On !xl while collecting, the chat takes the whole screen,
+                    so we skip rendering the left panel entirely. */}
+                {!(isCollecting && !xl) && (
+                    <Animated.View
+                        style={[
+                            styles.leftPanel,
+                            {
+                                flex: xl
+                                    ? isCollecting
+                                        ? 3
+                                        : leftFlex
+                                    : 1,
+                            },
+                        ]}
+                    >
+                        {screenState === "collecting" ? (
+                            <StrategyShimmerPanel />
+                        ) : (
+                            <StrategyEditorPanel
+                                content={strategyContent}
+                                onChange={handleStrategyContentChange}
+                                onSendToChat={handleSendToChat}
+                                onSnippetComment={handleSnippetComment}
+                                strategyId={strategyId ?? undefined}
+                            />
+                        )}
+                    </Animated.View>
+                )}
 
-                {/* ── Right: split-pane on desktop ─────────────────────────── */}
+                {/* ── Right: split-pane on desktop, plus full-width inline
+                      chat on mobile while collecting. RightSidePanel renders
+                      as a 92%-wide overlay on !xl, so for !xl + collecting we
+                      mount AIChatPanel directly to get true 100% width. ─── */}
                 {xl && (
-                    <Animated.View style={[
-                        styles.rightPanel,
-                        { flex: rightFlex },
-                        rightPanelMode === "none" ? styles.rightPanelCollapsed : null,
-                    ]}>
+                    <Animated.View
+                        style={[
+                            styles.rightPanel,
+                            { flex: isCollecting ? 7 : rightFlex },
+                            !isCollecting && rightPanelMode === "none"
+                                ? styles.rightPanelCollapsed
+                                : null,
+                        ]}
+                    >
                         <RightSidePanel
-                            mode={rightPanelMode}
-                            onModeChange={setRightPanelMode}
+                            mode={isCollecting ? "chat" : rightPanelMode}
+                            onModeChange={isCollecting ? () => { } : setRightPanelMode}
                             commentsSlot={
                                 <CommentsPanel
                                     strategyId={strategyId ?? null}
@@ -551,16 +584,35 @@ const ContentStrategyDetail = () => {
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
                                     isCompact={screenState === "strategy-ready"}
-                                    onCollapse={() => setRightPanelMode("none")}
+                                    onCollapse={
+                                        isCollecting ? undefined : () => setRightPanelMode("none")
+                                    }
                                 />
                             }
                         />
                     </Animated.View>
                 )}
+
+                {!xl && isCollecting && (
+                    <View style={styles.fullScreenChat}>
+                        <AIChatPanel
+                            module="strategy"
+                            contextId={strategyId ?? undefined}
+                            initialMessage={initialChatMessage}
+                            onInitialMessageSent={() => setInitialChatMessage(undefined)}
+                            focusItems={chatFocusItems}
+                            onRemoveFocusItem={(id) =>
+                                setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                            }
+                            isCompact={false}
+                        />
+                    </View>
+                )}
             </View>
 
-            {/* Mobile floating overlay */}
-            {!xl && (
+            {/* Mobile floating overlay — only when not collecting (the chat
+                already fills the screen inline in that case). */}
+            {!xl && !isCollecting && (
                 <RightSidePanel
                     mode={rightPanelMode}
                     onModeChange={setRightPanelMode}
@@ -635,6 +687,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 rightPanelCollapsed: {
                     flex: 0,
                     width: 24,
+                },
+                fullScreenChat: {
+                    flex: 1,
+                    backgroundColor: colors.background,
                 },
                 headerBtn: {
                     flexDirection: "row",

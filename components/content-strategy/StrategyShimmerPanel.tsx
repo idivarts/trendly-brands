@@ -1,11 +1,18 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { faComments, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faComments, faFileLines, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 
-const StrategyShimmerPanel: React.FC = () => {
+interface StrategyShimmerPanelProps {
+    /** Optional escape hatch — when provided, renders a secondary "Write
+     *  manually" button beneath the hint text. Lets the user bypass the AI
+     *  conversation and seed the editor with an empty paragraph. */
+    onWriteManually?: () => void;
+}
+
+const StrategyShimmerPanel: React.FC<StrategyShimmerPanelProps> = ({ onWriteManually }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
@@ -64,6 +71,21 @@ const StrategyShimmerPanel: React.FC = () => {
                     <Animated.View style={[styles.dot, { opacity: dot3 }]} />
                 </View>
             </View>
+
+            {onWriteManually && (
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.secondaryBtn,
+                        pressed && styles.secondaryBtnPressed,
+                    ]}
+                    onPress={onWriteManually}
+                    accessibilityRole="button"
+                    accessibilityLabel="Write the strategy manually"
+                >
+                    <FontAwesomeIcon icon={faPenToSquare} size={13} color={colors.primary} />
+                    <Text style={styles.secondaryBtnText}>Write the strategy manually</Text>
+                </Pressable>
+            )}
         </View>
     );
 };
