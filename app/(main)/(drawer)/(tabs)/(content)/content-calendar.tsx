@@ -273,7 +273,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexDirection: "row",
                 },
                 calendarPanel: {
-                    flex: xl ? 3 : 1,
+                    flex: xl ? 2 : 1,
                     overflow: "hidden",
                 },
                 rightPanel: {

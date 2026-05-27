@@ -402,11 +402,11 @@ const ContentStrategiesScreen = () => {
 
     const leftFlex = panelRatio.interpolate({
         inputRange: [0, 1],
-        outputRange: [1, 3],
+        outputRange: [1, 2],
     });
     const rightFlex = panelRatio.interpolate({
         inputRange: [0, 1],
-        outputRange: [3, 1],
+        outputRange: [2, 1],
     });
 
     // Hamburger sits on the LEFT of the title — it's a sibling-document

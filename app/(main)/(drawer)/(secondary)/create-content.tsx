@@ -1001,7 +1001,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexDirection: "row",
                 },
                 rightPanel: {
-                    flex: 1,
+                    flex: 0.5,
                 },
                 rightPanelCollapsed: {
                     flex: 0,
