@@ -32,6 +32,7 @@
  *     commentsSlot={<ContentCommentsPanel onCollapse={...} ... />}
  *   />
  */
+import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { faChevronLeft, faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -60,7 +61,8 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const { xl } = useBreakpoints();
+    const styles = useMemo(() => createStyles(colors, xl), [colors, xl]);
 
     // Default to whichever slot is available.
     const defaultMode: "comments" | "chat" = commentsSlot ? "comments" : "chat";
@@ -91,6 +93,29 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     const collapsedIcon =
         lastModeRef.current === "chat" && chatSlot ? faRobot : faCommentDots;
 
+    // On mobile (!xl) the panel floats over the page: when closed we render
+    // nothing (no 24px strip), when open we absolutely-position a near-full-
+    // width overlay with a scrim. Parent screens don't need to know — they
+    // still render <RightSidePanel /> in their flex layout, but on mobile it
+    // claims zero layout width and paints over everything via position:absolute.
+    if (!xl) {
+        if (!isExpanded) return null;
+        return (
+            <View style={styles.mobileOverlayRoot} pointerEvents="box-none">
+                <Pressable
+                    style={styles.mobileScrim}
+                    onPress={() => onModeChange("none")}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close panel"
+                />
+                <View style={styles.mobileSheet}>
+                    {mode === "comments" && commentsSlot}
+                    {mode === "chat" && chatSlot}
+                </View>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.outerContainer}>
             {isExpanded ? (
@@ -115,7 +140,7 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     );
 };
 
-function createStyles(colors: ReturnType<typeof Colors>) {
+function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         outerContainer: {
             flex: 1,
@@ -143,6 +168,33 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         stripPressed: {
             backgroundColor: colors.tag,
+        },
+        // ── Mobile (!xl) floating overlay ───────────────────────────────────
+        // Root spans the screen but lets touches through to the scrim/sheet.
+        mobileOverlayRoot: {
+            ...StyleSheet.absoluteFillObject,
+            zIndex: 100,
+            elevation: 100,
+        },
+        mobileScrim: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: "rgba(0,0,0,0.4)",
+        },
+        mobileSheet: {
+            position: "absolute",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: "92%",
+            backgroundColor: colors.card,
+            // Left-casting shadow separates the floating sheet from the scrim
+            // and the page beneath it.
+            shadowColor: "#000",
+            shadowOffset: { width: -8, height: 0 },
+            shadowRadius: 20,
+            shadowOpacity: 0.2,
+            elevation: 16,
+            overflow: "hidden",
         },
     });
 }

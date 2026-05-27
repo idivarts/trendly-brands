@@ -254,15 +254,26 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     {viewMode === "history" ? "Chat history" : "AI Content Expert"}
                 </Text>
                 {viewMode === "chat" ? (
-                    <Pressable
-                        onPress={() => setViewMode("history")}
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Open past conversations"
-                        hitSlop={6}
-                    >
-                        <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
-                    </Pressable>
+                    <>
+                        <Pressable
+                            onPress={() => setViewMode("history")}
+                            style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Open past conversations"
+                            hitSlop={6}
+                        >
+                            <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
+                        </Pressable>
+                        <Pressable
+                            onPress={onNewChat}
+                            style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Start a new chat"
+                            hitSlop={6}
+                        >
+                            <FontAwesomeIcon icon={faPenToSquare} size={14} color={colors.text} />
+                        </Pressable>
+                    </>
                 ) : (
                     <Pressable
                         onPress={() => setViewMode("chat")}

@@ -14,6 +14,7 @@ import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -21,6 +22,7 @@ import {
     faCalendarDays,
     faCheck,
     faCommentDots,
+    faPaperPlane,
     faPlus,
     faRobot,
     faRotateLeft,
@@ -33,11 +35,15 @@ import { Animated, Pressable, StyleSheet, Text } from "react-native";
 
 // ─── Review Status Banner ─────────────────────────────────────────────────────
 
-interface ReviewBannerProps {
+interface StrategyToolbarProps {
     strategy: ContentStrategy;
     currentManagerId: string;
+    xl: boolean;
     onApprove: () => void;
     onRequestChanges: () => void;
+    onInvite: () => void;
+    onSendForReview: () => void;
+    onPushToCalendar: () => void;
     colors: ReturnType<typeof Colors>;
 }
 
@@ -48,93 +54,212 @@ const REVIEW_STATUS_CONFIG: Record<ReviewStatus, { bg: string; text: string; lab
     changes_requested: { bg: "rgba(220,38,38,0.1)", text: "#DC2626", label: "Changes Requested" },
 };
 
-const ReviewBanner: React.FC<ReviewBannerProps> = ({
+// Toolbar row that sits directly under PageHeader whenever a strategy is
+// active. Hosts both the review status (when non-draft) and the high-stakes
+// workflow buttons — Invite, Send for Review, Push to Calendar — that used
+// to live in the header. Keeps the header itself uncluttered on mobile.
+const StrategyToolbar: React.FC<StrategyToolbarProps> = ({
     strategy,
     currentManagerId,
+    xl,
     onApprove,
     onRequestChanges,
+    onInvite,
+    onSendForReview,
+    onPushToCalendar,
     colors,
 }) => {
-    if (!strategy.reviewStatus || strategy.reviewStatus === "draft") return null;
-
-    const config = REVIEW_STATUS_CONFIG[strategy.reviewStatus];
+    const reviewStatus = strategy.reviewStatus ?? "draft";
+    const config = REVIEW_STATUS_CONFIG[reviewStatus];
+    const isDraft = reviewStatus === "draft";
     const isReviewer =
-        strategy.reviewStatus === "in_review" &&
+        reviewStatus === "in_review" &&
         strategy.collaboratorIds?.includes(currentManagerId) &&
         strategy.reviewRequestedBy !== currentManagerId;
+    const canSendForReview = reviewStatus === "draft" || reviewStatus === "changes_requested";
+
+    const styles = toolbarStyles(colors, xl, isDraft ? "transparent" : config.bg);
 
     return (
-        <View
-            style={{
-                backgroundColor: config.bg,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-            }}
-        >
-            <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: config.text }}>
-                    {config.label}
-                </Text>
-                {strategy.reviewStatus === "in_review" && (
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                        {isReviewer
-                            ? "This strategy has been sent to you for review."
-                            : "Awaiting review from collaborators."}
-                    </Text>
-                )}
-            </View>
-            {isReviewer && (
-                <>
-                    <Pressable
-                        style={({ pressed }) => ({
-                            flexDirection: "row" as const,
-                            alignItems: "center" as const,
-                            gap: 5,
-                            paddingHorizontal: 12,
-                            paddingVertical: 7,
-                            borderRadius: 8,
-                            backgroundColor: "#1A7A3A",
-                            opacity: pressed ? 0.75 : 1,
-                        })}
-                        onPress={onApprove}
-                    >
-                        <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Approve</Text>
-                    </Pressable>
-                    <Pressable
-                        style={({ pressed }) => ({
-                            flexDirection: "row" as const,
-                            alignItems: "center" as const,
-                            gap: 5,
-                            paddingHorizontal: 12,
-                            paddingVertical: 7,
-                            borderRadius: 8,
-                            backgroundColor: "rgba(220,38,38,0.12)",
-                            opacity: pressed ? 0.75 : 1,
-                        })}
-                        onPress={onRequestChanges}
-                    >
-                        <FontAwesomeIcon icon={faRotateLeft} size={12} color="#DC2626" />
-                        <Text style={{ fontSize: 12, fontWeight: "700", color: "#DC2626" }}>
-                            Request Changes
+        <View style={styles.row}>
+            {!isDraft && (
+                <View style={styles.statusBlock}>
+                    <Text style={[styles.statusLabel, { color: config.text }]}>{config.label}</Text>
+                    {reviewStatus === "in_review" && (
+                        <Text style={styles.statusSub}>
+                            {isReviewer
+                                ? "This strategy has been sent to you for review."
+                                : "Awaiting review from collaborators."}
                         </Text>
-                    </Pressable>
-                </>
+                    )}
+                </View>
             )}
+            <View style={styles.actions}>
+                {isReviewer && (
+                    <>
+                        <Pressable
+                            style={({ pressed }) => [styles.approveBtn, pressed && styles.btnPressed]}
+                            onPress={onApprove}
+                            accessibilityLabel="Approve"
+                        >
+                            <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
+                            {xl && <Text style={styles.approveBtnText}>Approve</Text>}
+                        </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [styles.rejectBtn, pressed && styles.btnPressed]}
+                            onPress={onRequestChanges}
+                            accessibilityLabel="Request Changes"
+                        >
+                            <FontAwesomeIcon icon={faRotateLeft} size={12} color="#DC2626" />
+                            {xl && <Text style={styles.rejectBtnText}>Request Changes</Text>}
+                        </Pressable>
+                    </>
+                )}
+
+                <Pressable
+                    style={({ pressed }) => [
+                        xl ? styles.outlineBtn : styles.iconBtn,
+                        pressed && styles.btnPressed,
+                    ]}
+                    onPress={onInvite}
+                    accessibilityLabel="Invite collaborators"
+                >
+                    <FontAwesomeIcon icon={faUserGroup} size={14} color={colors.primary} />
+                    {xl && <Text style={styles.outlineBtnText}>Invite</Text>}
+                </Pressable>
+
+                {canSendForReview && (
+                    <Pressable
+                        style={({ pressed }) => [
+                            xl ? styles.outlineBtn : styles.iconBtn,
+                            pressed && styles.btnPressed,
+                        ]}
+                        onPress={onSendForReview}
+                        accessibilityLabel="Send for Review"
+                    >
+                        <FontAwesomeIcon icon={faPaperPlane} size={14} color={colors.primary} />
+                        {xl && <Text style={styles.outlineBtnText}>Send for Review</Text>}
+                    </Pressable>
+                )}
+
+                <Pressable
+                    style={({ pressed }) => [
+                        xl ? styles.outlineBtn : styles.iconBtn,
+                        pressed && styles.btnPressed,
+                    ]}
+                    onPress={onPushToCalendar}
+                    accessibilityLabel="Push to Calendar"
+                >
+                    <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
+                    {xl && <Text style={styles.outlineBtnText}>Push to Calendar</Text>}
+                </Pressable>
+            </View>
         </View>
     );
 };
+
+function toolbarStyles(
+    colors: ReturnType<typeof Colors>,
+    xl: boolean,
+    bg: string,
+) {
+    return StyleSheet.create({
+        row: {
+            backgroundColor: bg === "transparent" ? colors.background : bg,
+            paddingHorizontal: xl ? 16 : 12,
+            paddingVertical: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 6,
+            shadowOpacity: 0.05,
+            elevation: 1,
+        },
+        statusBlock: {
+            flex: 1,
+            minWidth: 0,
+        },
+        statusLabel: {
+            fontSize: 13,
+            fontWeight: "700",
+        },
+        statusSub: {
+            fontSize: 12,
+            color: colors.textSecondary,
+            marginTop: 2,
+        },
+        actions: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: xl ? 8 : 6,
+            marginLeft: "auto",
+        },
+        approveBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            paddingHorizontal: xl ? 12 : 10,
+            paddingVertical: 7,
+            borderRadius: 8,
+            backgroundColor: "#1A7A3A",
+        },
+        approveBtnText: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: "#fff",
+        },
+        rejectBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            paddingHorizontal: xl ? 12 : 10,
+            paddingVertical: 7,
+            borderRadius: 8,
+            backgroundColor: "rgba(220,38,38,0.12)",
+        },
+        rejectBtnText: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: "#DC2626",
+        },
+        outlineBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 7,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.primary,
+        },
+        outlineBtnText: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.primary,
+        },
+        iconBtn: {
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: colors.primary,
+        },
+        btnPressed: {
+            opacity: 0.72,
+        },
+    });
+}
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 const ContentStrategiesScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const { xl } = useBreakpoints();
     const { manager } = useAuthContext();
 
     const { strategies, addStrategy, updateStrategyContent, updateReviewStatus, updatePresence } =
@@ -150,10 +275,11 @@ const ContentStrategiesScreen = () => {
     const [initialChatMessage, setInitialChatMessage] = useState<string | undefined>();
 
     // ── Right panel — single mode state replaces showComments + chatCollapsed ──
-    // 'chat'     → AI chat panel (default when collecting/generating)
+    // 'chat'     → AI chat panel (default when collecting/generating on desktop)
     // 'comments' → Strategy comments panel
-    // 'none'     → collapsed to 28px handle
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("chat");
+    // 'none'     → collapsed (24px strip on desktop, hidden on mobile)
+    // On !xl the panel floats over the page, so we open closed by default.
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
 
     const [showCollaborators, setShowCollaborators] = useState(false);
     const [snippetSelection, setSnippetSelection] = useState<{
@@ -214,9 +340,9 @@ const ContentStrategiesScreen = () => {
         setStrategyContent("");
         setChatFocusItems([]);
         setInitialChatMessage(undefined);
-        setRightPanelMode("chat");
+        setRightPanelMode(xl ? "chat" : "none");
         panelRatio.setValue(0);
-    }, [panelRatio]);
+    }, [panelRatio, xl]);
 
     const handleSelectStrategy = useCallback((strategy: ContentStrategy) => {
         setActiveStrategyId(strategy.id);
@@ -283,17 +409,33 @@ const ContentStrategiesScreen = () => {
         outputRange: [3, 1],
     });
 
-    const headerActionButtons = useMemo(() => {
-        const isStrategyReady = screenState === "strategy-ready";
-        const reviewStatus = activeStrategy?.reviewStatus ?? "draft";
+    // Hamburger sits on the LEFT of the title — it's a sibling-document
+    // switcher (list of strategies), so it belongs with navigation, not
+    // with actions. Visible in every screen state as long as strategies exist.
+    const headerLeftAction = useMemo(() => {
+        if (strategies.length === 0) return null;
+        return (
+            <Pressable
+                style={({ pressed }) => [styles.iconBtn, pressed && styles.headerBtnPressed]}
+                onPress={() => setDrawerOpen(true)}
+            >
+                <FontAwesomeIcon icon={faBars} size={18} color={colors.text} />
+            </Pressable>
+        );
+    }, [strategies.length, colors.text, styles]);
 
+    // Viewing tools: lightweight, navigation-style toggles that affect what
+    // the user *sees* but never commit state. Plus the primary "New Strategy"
+    // CTA — it stays in row 1 on mobile so the most common action is always
+    // a thumb-tap away. Invite/Review/Push-to-Calendar drop to row 2 on !xl
+    // via workflowActionButtons below.
+    const viewingActionButtons = useMemo(() => {
+        const isStrategyReady = screenState === "strategy-ready";
         return [
-            // Presence avatars
             activeStrategyId ? (
                 <PresenceAvatars key="presence" strategyId={activeStrategyId} />
             ) : null,
 
-            // 💬 Comments toggle — active state filled when comments panel is open
             isStrategyReady ? (
                 <Pressable
                     key="comments"
@@ -312,7 +454,6 @@ const ContentStrategiesScreen = () => {
                 </Pressable>
             ) : null,
 
-            // 🤖 AI Chat toggle — active state filled when chat panel is open
             isStrategyReady ? (
                 <Pressable
                     key="chat"
@@ -331,93 +472,57 @@ const ContentStrategiesScreen = () => {
                 </Pressable>
             ) : null,
 
-            // Collaborators
-            isStrategyReady ? (
-                <Pressable
-                    key="collaborators"
-                    style={({ pressed }) => [styles.iconBtn, pressed && styles.headerBtnPressed]}
-                    onPress={() => setShowCollaborators(true)}
-                >
-                    <FontAwesomeIcon icon={faUserGroup} size={16} color={colors.text} />
-                </Pressable>
-            ) : null,
-
-            // Send for Review
-            isStrategyReady && (reviewStatus === "draft" || reviewStatus === "changes_requested") ? (
-                <Pressable
-                    key="review"
-                    style={({ pressed }) => [styles.headerBtn, styles.headerBtnOutline, pressed && styles.headerBtnPressed]}
-                    onPress={handleSendForReview}
-                >
-                    <Text style={styles.headerBtnOutlineText}>Send for Review</Text>
-                </Pressable>
-            ) : null,
-
-            // Push to Calendar
-            isStrategyReady ? (
-                <Pressable
-                    key="seal"
-                    style={({ pressed }) => [styles.headerBtn, styles.headerBtnOutline, pressed && styles.headerBtnPressed]}
-                    onPress={() => { }}
-                >
-                    <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
-                    <Text style={styles.headerBtnOutlineText}>Push to Calendar</Text>
-                </Pressable>
-            ) : null,
-
-            // New Strategy
-            isStrategyReady ? (
-                <Pressable
-                    key="new"
-                    style={({ pressed }) => [styles.headerBtn, styles.headerBtnPrimary, pressed && styles.headerBtnPressed]}
-                    onPress={handleNewStrategy}
-                >
-                    <FontAwesomeIcon icon={faPlus} size={14} color={colors.onPrimary} />
-                    <Text style={styles.headerBtnPrimaryText}>New Strategy</Text>
-                </Pressable>
-            ) : null,
-
-            // Hamburger drawer
-            strategies.length > 0 ? (
-                <Pressable
-                    key="hamburger"
-                    style={({ pressed }) => [styles.iconBtn, pressed && styles.headerBtnPressed]}
-                    onPress={() => setDrawerOpen(true)}
-                >
-                    <FontAwesomeIcon icon={faBars} size={18} color={colors.text} />
-                </Pressable>
-            ) : null,
+            <Pressable
+                key="new"
+                style={({ pressed }) => [
+                    xl ? styles.headerBtn : styles.iconBtn,
+                    styles.headerBtnPrimary,
+                    pressed && styles.headerBtnPressed,
+                ]}
+                onPress={handleNewStrategy}
+                accessibilityLabel="New Strategy"
+            >
+                <FontAwesomeIcon icon={faPlus} size={14} color={colors.onPrimary} />
+                {xl && <Text style={styles.headerBtnPrimaryText}>New Strategy</Text>}
+            </Pressable>,
         ].filter(Boolean) as React.ReactElement[];
     }, [
         screenState,
-        strategies.length,
         activeStrategyId,
-        activeStrategy?.reviewStatus,
         rightPanelMode,
         colors,
         styles,
-        handleNewStrategy,
-        handleSendForReview,
+        xl,
         handleCommentsToggle,
         handleChatToggle,
+        handleNewStrategy,
     ]);
+
+    // Workflow buttons (Invite, Send for Review, Push to Calendar) now live
+    // in StrategyToolbar below — see the JSX after PageHeader. Keeping the
+    // header free for navigation-style toggles plus the primary "New" CTA.
 
     return (
         <AppLayout>
             <PageHeader
-                title="Content Strategy"
+                title={xl ? "Content Strategy" : "Strategy"}
                 subtitle="Form a strategy before putting it in actionable content"
                 showBackButton={false}
-                actionButtons={headerActionButtons}
+                leftAction={headerLeftAction}
+                viewingActionButtons={viewingActionButtons}
                 mobileActions="all"
             />
 
-            {activeStrategy && (
-                <ReviewBanner
+            {activeStrategy && screenState === "strategy-ready" && (
+                <StrategyToolbar
                     strategy={activeStrategy}
                     currentManagerId={manager?.id ?? ""}
+                    xl={xl}
                     onApprove={handleApprove}
                     onRequestChanges={handleRequestChanges}
+                    onInvite={() => setShowCollaborators(true)}
+                    onSendForReview={handleSendForReview}
+                    onPushToCalendar={() => { }}
                     colors={colors}
                 />
             )}
@@ -433,7 +538,7 @@ const ContentStrategiesScreen = () => {
             {(screenState === "collecting" || screenState === "strategy-ready") && (
                 <View style={styles.splitContainer}>
                     {/* ── Left: editor ─────────────────────────────────────────── */}
-                    <Animated.View style={[styles.leftPanel, { flex: leftFlex }]}>
+                    <Animated.View style={[styles.leftPanel, { flex: xl ? leftFlex : 1 }]}>
                         {screenState === "collecting" ? (
                             <StrategyShimmerPanel />
                         ) : (
@@ -447,38 +552,71 @@ const ContentStrategiesScreen = () => {
                         )}
                     </Animated.View>
 
-                    {/* ── Right: RightSidePanel (comments OR chat) ──────────────── */}
-                    <Animated.View style={[
-                        styles.rightPanel,
-                        { flex: rightFlex },
-                        rightPanelMode === "none" ? styles.rightPanelCollapsed : null,
-                    ]}>
-                        <RightSidePanel
-                            mode={rightPanelMode}
-                            onModeChange={setRightPanelMode}
-                            commentsSlot={
-                                <CommentsPanel
-                                    strategyId={activeStrategyId}
-                                    onCollapse={() => setRightPanelMode("none")}
-                                />
-                            }
-                            chatSlot={
-                                <AIChatPanel
-                                    module="strategy"
-                                    contextId={activeStrategyId ?? undefined}
-                                    initialMessage={initialChatMessage}
-                                    onInitialMessageSent={() => setInitialChatMessage(undefined)}
-                                    focusItems={chatFocusItems}
-                                    onRemoveFocusItem={(id) =>
-                                        setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
-                                    }
-                                    isCompact={screenState === "strategy-ready"}
-                                    onCollapse={() => setRightPanelMode("none")}
-                                />
-                            }
-                        />
-                    </Animated.View>
+                    {/* ── Right: split-pane on desktop; mobile renders as a
+                          floating overlay sibling below. ──────────────────── */}
+                    {xl && (
+                        <Animated.View style={[
+                            styles.rightPanel,
+                            { flex: rightFlex },
+                            rightPanelMode === "none" ? styles.rightPanelCollapsed : null,
+                        ]}>
+                            <RightSidePanel
+                                mode={rightPanelMode}
+                                onModeChange={setRightPanelMode}
+                                commentsSlot={
+                                    <CommentsPanel
+                                        strategyId={activeStrategyId}
+                                        onCollapse={() => setRightPanelMode("none")}
+                                    />
+                                }
+                                chatSlot={
+                                    <AIChatPanel
+                                        module="strategy"
+                                        contextId={activeStrategyId ?? undefined}
+                                        initialMessage={initialChatMessage}
+                                        onInitialMessageSent={() => setInitialChatMessage(undefined)}
+                                        focusItems={chatFocusItems}
+                                        onRemoveFocusItem={(id) =>
+                                            setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                                        }
+                                        isCompact={screenState === "strategy-ready"}
+                                        onCollapse={() => setRightPanelMode("none")}
+                                    />
+                                }
+                            />
+                        </Animated.View>
+                    )}
                 </View>
+            )}
+
+            {/* On mobile, the panel floats over the page as a full-height
+                overlay anchored to AppLayout. RightSidePanel returns null when
+                closed so nothing renders. */}
+            {!xl && (screenState === "collecting" || screenState === "strategy-ready") && (
+                <RightSidePanel
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    commentsSlot={
+                        <CommentsPanel
+                            strategyId={activeStrategyId}
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                    chatSlot={
+                        <AIChatPanel
+                            module="strategy"
+                            contextId={activeStrategyId ?? undefined}
+                            initialMessage={initialChatMessage}
+                            onInitialMessageSent={() => setInitialChatMessage(undefined)}
+                            focusItems={chatFocusItems}
+                            onRemoveFocusItem={(id) =>
+                                setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                            }
+                            isCompact={screenState === "strategy-ready"}
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                />
             )}
 
             <StrategiesDrawer
@@ -542,6 +680,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 headerBtnPrimary: {
                     backgroundColor: colors.primary,
+                    borderColor: colors.primary,
                 },
                 headerBtnPrimaryText: {
                     fontSize: 13,
@@ -571,6 +710,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 iconBtnActive: {
                     backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                },
+                iconBtnOutline: {
                     borderColor: colors.primary,
                 },
             }),

@@ -34,6 +34,7 @@ import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
     Modal,
@@ -495,29 +496,25 @@ const CreateContentScreen = () => {
             <Pressable
                 key="save"
                 style={({ pressed }) => [
-                    styles.saveBtn,
+                    xl ? styles.saveBtn : styles.saveBtnIcon,
                     saveState === "saved" && styles.saveBtnSaved,
                     pressed && styles.btnPressed,
                 ]}
                 onPress={handleSave}
                 disabled={saveState === "saving"}
+                accessibilityLabel="Save"
             >
                 {saveState === "saving" ? (
-                    <Text style={styles.saveBtnText}>Saving…</Text>
-                ) : saveState === "saved" ? (
-                    <>
-                        <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                        <Text style={styles.saveBtnText}>Saved</Text>
-                    </>
+                    xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
                     <>
                         <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                        <Text style={styles.saveBtnText}>Save</Text>
+                        {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : "Save"}</Text>}
                     </>
                 )}
             </Pressable>,
         ],
-        [styles, colors, handleSave, saveState, rightPanelMode]
+        [styles, colors, handleSave, saveState, rightPanelMode, xl]
     );
 
     return (
@@ -914,23 +911,39 @@ const CreateContentScreen = () => {
                 </ScrollView>
                 </KeyboardAvoidingView>
 
-                {/* Right: comments side panel */}
-                <View style={[
-                    styles.rightPanel,
-                    rightPanelMode === "none" && styles.rightPanelCollapsed,
-                ]}>
-                    <RightSidePanel
-                        mode={rightPanelMode}
-                        onModeChange={setRightPanelMode}
-                        commentsSlot={
-                            <ContentCommentsPanel
-                                contentId={contentId ?? null}
-                                onCollapse={() => setRightPanelMode("none")}
-                            />
-                        }
-                    />
-                </View>
+                {/* Right: split-pane comments on desktop only. Mobile uses
+                    the floating overlay rendered below. */}
+                {xl && (
+                    <View style={[
+                        styles.rightPanel,
+                        rightPanelMode === "none" && styles.rightPanelCollapsed,
+                    ]}>
+                        <RightSidePanel
+                            mode={rightPanelMode}
+                            onModeChange={setRightPanelMode}
+                            commentsSlot={
+                                <ContentCommentsPanel
+                                    contentId={contentId ?? null}
+                                    onCollapse={() => setRightPanelMode("none")}
+                                />
+                            }
+                        />
+                    </View>
+                )}
             </View>
+
+            {!xl && (
+                <RightSidePanel
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    commentsSlot={
+                        <ContentCommentsPanel
+                            contentId={contentId ?? null}
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                />
+            )}
 
             <DatePickerModal
                 visible={showDatePicker}
@@ -1304,6 +1317,19 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     paddingHorizontal: 14,
                     paddingVertical: 8,
                     borderRadius: 10,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                saveBtnIcon: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
                     backgroundColor: colors.primary,
                     shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 3 },

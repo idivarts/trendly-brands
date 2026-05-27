@@ -8,12 +8,11 @@ import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
-    faCalendarDays,
-    faCalendarWeek,
     faCommentDots,
     faPlus,
     faRobot,
@@ -30,8 +29,9 @@ const CALENDAR_WELCOME =
 const ContentCalendarScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const { xl } = useBreakpoints();
     const router = useRouter();
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const { items: allContents, addContent } = useContents();
     const items = useMemo<CalendarItem[]>(
@@ -40,7 +40,9 @@ const ContentCalendarScreen = () => {
     );
 
     const today = new Date();
-    const [calView, setCalView] = useState<CalendarView>("month");
+    // Weekly is the readable default on phones — month cells become unreadable
+    // squares below ~600px. Desktop keeps month overview.
+    const [calView, setCalView] = useState<CalendarView>(xl ? "month" : "week");
     const [calYear, setCalYear] = useState(today.getFullYear());
     const [calMonth, setCalMonth] = useState(today.getMonth());
 
@@ -48,10 +50,10 @@ const ContentCalendarScreen = () => {
     const [addInitialDate, setAddInitialDate] = useState<string | undefined>();
 
     // ── Right panel ───────────────────────────────────────────────────────────
-    // 'chat'     → AI chat panel
+    // 'chat'     → AI chat panel (desktop default)
     // 'comments' → Calendar comments panel (month or item level)
-    // 'none'     → collapsed to 28px handle
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("chat");
+    // 'none'     → collapsed; on mobile the panel floats over the page when open
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
 
     // Which content item's comments are currently in focus.
     // null = month-level comments; set = item-level comments.
@@ -74,12 +76,6 @@ const ContentCalendarScreen = () => {
     // Tapping the 💬 icon on a content chip: opens item-level comments.
     const handleComment = useCallback((item: CalendarItem) => {
         setSelectedCommentItem(item);
-        setRightPanelMode("comments");
-    }, []);
-
-    // Month-level comment button in the calendar header.
-    const handleMonthComment = useCallback(() => {
-        setSelectedCommentItem(null); // no item = month mode
         setRightPanelMode("comments");
     }, []);
 
@@ -106,54 +102,6 @@ const ContentCalendarScreen = () => {
 
     const headerActionButtons = useMemo(
         () => [
-            // Week / Month view toggles
-            <Pressable
-                key="week"
-                style={({ pressed }) => [
-                    styles.viewToggleBtn,
-                    calView === "week" && styles.viewToggleBtnActive,
-                    pressed && styles.viewToggleBtnPressed,
-                ]}
-                onPress={() => setCalView("week")}
-            >
-                <FontAwesomeIcon
-                    icon={faCalendarWeek}
-                    size={13}
-                    color={calView === "week" ? colors.onPrimary : colors.textSecondary}
-                />
-                <Text
-                    style={[
-                        styles.viewToggleText,
-                        calView === "week" && styles.viewToggleTextActive,
-                    ]}
-                >
-                    Week
-                </Text>
-            </Pressable>,
-            <Pressable
-                key="month"
-                style={({ pressed }) => [
-                    styles.viewToggleBtn,
-                    calView === "month" && styles.viewToggleBtnActive,
-                    pressed && styles.viewToggleBtnPressed,
-                ]}
-                onPress={() => setCalView("month")}
-            >
-                <FontAwesomeIcon
-                    icon={faCalendarDays}
-                    size={13}
-                    color={calView === "month" ? colors.onPrimary : colors.textSecondary}
-                />
-                <Text
-                    style={[
-                        styles.viewToggleText,
-                        calView === "month" && styles.viewToggleTextActive,
-                    ]}
-                >
-                    Month
-                </Text>
-            </Pressable>,
-
             // 💬 Comments toggle
             <Pressable
                 key="comments"
@@ -192,21 +140,55 @@ const ContentCalendarScreen = () => {
             hasItems ? (
                 <Pressable
                     key="add"
-                    style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
+                    style={({ pressed }) => [
+                        xl ? styles.addBtn : styles.iconBtnPrimary,
+                        pressed && styles.addBtnPressed,
+                    ]}
                     onPress={() => handleOpenAddModal()}
+                    accessibilityLabel="Add Content"
                 >
                     <FontAwesomeIcon icon={faPlus} size={14} color={colors.onPrimary} />
-                    <Text style={styles.addBtnText}>Add Content</Text>
+                    {xl && <Text style={styles.addBtnText}>Add Content</Text>}
                 </Pressable>
             ) : null,
         ].filter(Boolean) as React.ReactElement[],
-        [calView, hasItems, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles]
+        [hasItems, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
+    );
+
+    const rightSidePanel = (
+        <RightSidePanel
+            mode={rightPanelMode}
+            onModeChange={setRightPanelMode}
+            commentsSlot={
+                <CalendarCommentsPanel
+                    year={calYear}
+                    month={calMonth}
+                    selectedItem={selectedCommentItem}
+                    onClearSelectedItem={() => setSelectedCommentItem(null)}
+                    onCollapse={() => setRightPanelMode("none")}
+                />
+            }
+            chatSlot={
+                <AIChatPanel
+                    module="calendar"
+                    contextId={selectedCommentItem?.id}
+                    focusItems={focusItems}
+                    onRemoveFocusItem={(id) =>
+                        setFocusItems((prev) => prev.filter((f) => f.id !== id))
+                    }
+                    isCompact
+                    welcomeText={CALENDAR_WELCOME}
+                    placeholder="Ask the AI Expert..."
+                    onCollapse={() => setRightPanelMode("none")}
+                />
+            }
+        />
     );
 
     return (
         <AppLayout>
             <PageHeader
-                title="Content Calendar"
+                title={xl ? "Content Calendar" : "Calendar"}
                 subtitle="Plan and visualise your entire content schedule"
                 showBackButton={false}
                 actionButtons={headerActionButtons}
@@ -229,6 +211,12 @@ const ContentCalendarScreen = () => {
                                 year={calYear}
                                 month={calMonth}
                                 items={items}
+                                view={calView}
+                                onViewChange={setCalView}
+                                onMonthChange={(y, m) => {
+                                    setCalYear(y);
+                                    setCalMonth(m);
+                                }}
                                 onAddWeek={(weekStartDate) => handleOpenAddModal(weekStartDate)}
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
@@ -238,6 +226,8 @@ const ContentCalendarScreen = () => {
                                 year={calYear}
                                 month={calMonth}
                                 items={items}
+                                view={calView}
+                                onViewChange={setCalView}
                                 onMonthChange={(y, m) => {
                                     setCalYear(y);
                                     setCalMonth(m);
@@ -245,46 +235,24 @@ const ContentCalendarScreen = () => {
                                 onDayPress={(dateStr) => handleOpenAddModal(dateStr)}
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
-                                onMonthComment={handleMonthComment}
                             />
                         )}
                     </View>
 
-                    {/* ── Right: RightSidePanel (comments OR chat) ──────────────── */}
-                    <View style={[
-                        styles.rightPanel,
-                        rightPanelMode === "none" && styles.rightPanelCollapsed,
-                    ]}>
-                        <RightSidePanel
-                            mode={rightPanelMode}
-                            onModeChange={setRightPanelMode}
-                            commentsSlot={
-                                <CalendarCommentsPanel
-                                    year={calYear}
-                                    month={calMonth}
-                                    selectedItem={selectedCommentItem}
-                                    onClearSelectedItem={() => setSelectedCommentItem(null)}
-                                    onCollapse={() => setRightPanelMode("none")}
-                                />
-                            }
-                            chatSlot={
-                                <AIChatPanel
-                                    module="calendar"
-                                    contextId={selectedCommentItem?.id}
-                                    focusItems={focusItems}
-                                    onRemoveFocusItem={(id) =>
-                                        setFocusItems((prev) => prev.filter((f) => f.id !== id))
-                                    }
-                                    isCompact
-                                    welcomeText={CALENDAR_WELCOME}
-                                    placeholder="Ask the AI Expert..."
-                                    onCollapse={() => setRightPanelMode("none")}
-                                />
-                            }
-                        />
-                    </View>
+                    {/* ── Right: split-pane on desktop only. Mobile uses the
+                          floating overlay rendered below. ──────────────────── */}
+                    {xl && (
+                        <View style={[
+                            styles.rightPanel,
+                            rightPanelMode === "none" && styles.rightPanelCollapsed,
+                        ]}>
+                            {rightSidePanel}
+                        </View>
+                    )}
                 </View>
             )}
+
+            {!xl && hasItems && rightSidePanel}
 
             <AddContentModal
                 visible={showAddModal}
@@ -296,7 +264,7 @@ const ContentCalendarScreen = () => {
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>) {
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return useMemo(
         () =>
             StyleSheet.create({
@@ -305,7 +273,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     flexDirection: "row",
                 },
                 calendarPanel: {
-                    flex: 3,
+                    flex: xl ? 3 : 1,
                     overflow: "hidden",
                 },
                 rightPanel: {
@@ -316,30 +284,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     flex: 0,
                     width: 24,
                 },
-                viewToggleBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 5,
-                    paddingHorizontal: 11,
-                    paddingVertical: 7,
-                    borderRadius: 8,
-                    backgroundColor: colors.tag,
-                },
-                viewToggleBtnActive: {
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                viewToggleBtnPressed: { opacity: 0.75 },
-                viewToggleText: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                },
-                viewToggleTextActive: { color: colors.onPrimary },
                 iconBtn: {
                     width: 34,
                     height: 34,
@@ -357,6 +301,19 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 iconBtnPressed: { opacity: 0.75 },
+                iconBtnPrimary: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
                 addBtn: {
                     flexDirection: "row",
                     alignItems: "center",
