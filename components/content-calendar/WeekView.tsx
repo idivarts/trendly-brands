@@ -4,13 +4,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import CalendarHeader from "./CalendarHeader";
 import ContentItemChip from "./ContentItemChip";
-import { CalendarItem } from "./types";
+import { CalendarItem, CalendarView } from "./types";
 
 interface WeekViewProps {
     year: number;
     month: number; // 0-indexed
     items: CalendarItem[];
+    view: CalendarView;
+    onViewChange: (next: CalendarView) => void;
+    onMonthChange: (year: number, month: number) => void;
     onAddWeek: (weekStartDate: string) => void;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
@@ -81,6 +85,9 @@ const WeekView: React.FC<WeekViewProps> = ({
     year,
     month,
     items,
+    view,
+    onViewChange,
+    onMonthChange,
     onAddWeek,
     onFocusChat,
     onComment,
@@ -94,49 +101,59 @@ const WeekView: React.FC<WeekViewProps> = ({
     );
 
     return (
-        <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-        >
-            {buckets.map((bucket) => (
-                <View key={bucket.label} style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionLabel} numberOfLines={1}>
-                            {bucket.label}
-                        </Text>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.addBtn,
-                                pressed && styles.addBtnPressed,
-                            ]}
-                            onPress={() => onAddWeek(toIso(bucket.startDate))}
-                        >
-                            <FontAwesomeIcon icon={faPlus} size={12} color={colors.primary} />
-                        </Pressable>
-                    </View>
+        <View style={styles.container}>
+            <CalendarHeader
+                year={year}
+                month={month}
+                view={view}
+                onMonthChange={onMonthChange}
+                onViewChange={onViewChange}
+            />
 
-                    {bucket.items.length === 0 ? (
-                        <View style={styles.emptyWeek}>
-                            <Text style={styles.emptyWeekText}>No content planned</Text>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {buckets.map((bucket) => (
+                    <View key={bucket.label} style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionLabel} numberOfLines={1}>
+                                {bucket.label}
+                            </Text>
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.addBtn,
+                                    pressed && styles.addBtnPressed,
+                                ]}
+                                onPress={() => onAddWeek(toIso(bucket.startDate))}
+                            >
+                                <FontAwesomeIcon icon={faPlus} size={12} color={colors.primary} />
+                            </Pressable>
                         </View>
-                    ) : (
-                        <View style={styles.itemsContainer}>
-                            {bucket.items
-                                .sort((a, b) => a.date.localeCompare(b.date))
-                                .map((item) => (
-                                    <ContentItemChip
-                                        key={item.id}
-                                        item={item}
-                                        onFocusChat={onFocusChat}
-                                        onComment={onComment}
-                                    />
-                                ))}
-                        </View>
-                    )}
-                </View>
-            ))}
-        </ScrollView>
+
+                        {bucket.items.length === 0 ? (
+                            <View style={styles.emptyWeek}>
+                                <Text style={styles.emptyWeekText}>No content planned</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.itemsContainer}>
+                                {bucket.items
+                                    .sort((a, b) => a.date.localeCompare(b.date))
+                                    .map((item) => (
+                                        <ContentItemChip
+                                            key={item.id}
+                                            item={item}
+                                            onFocusChat={onFocusChat}
+                                            onComment={onComment}
+                                        />
+                                    ))}
+                            </View>
+                        )}
+                    </View>
+                ))}
+            </ScrollView>
+        </View>
     );
 };
 
@@ -144,6 +161,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
     return useMemo(
         () =>
             StyleSheet.create({
+                container: {
+                    flex: 1,
+                },
                 scroll: {
                     flex: 1,
                 },

@@ -6,6 +6,8 @@ export interface CalendarItem {
     idea: string;
     date: string; // ISO date YYYY-MM-DD
     type: ContentType;
+    /** Cached comment count — incremented on the content doc when a comment is added */
+    commentCount?: number;
 }
 
 export type CalendarView = "week" | "month";

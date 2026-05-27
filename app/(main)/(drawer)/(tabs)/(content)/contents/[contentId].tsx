@@ -1,4 +1,7 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
+import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
+import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
@@ -6,7 +9,8 @@ import {
     ContentStatus,
     POPULAR_POSTING_TIMES,
 } from "@/components/contents/types";
-import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
+import { useAIGenerate } from "@/hooks/use-ai-generate";
+import { useContents } from "@/hooks/use-contents";
 import DatePickerModal, {
     formatDateForWebInput,
 } from "@/components/modals/DatePickerModal";
@@ -19,6 +23,7 @@ import {
     faCalendarDays,
     faCheck,
     faClock,
+    faCommentDots,
     faHandshake,
     faMagicWandSparkles,
     faPaperPlane,
@@ -27,8 +32,9 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
     Modal,
@@ -268,7 +274,7 @@ const CreateContentScreen = () => {
     const { xl } = useBreakpoints();
     const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
         useLocalSearchParams<{
-            contentId?: string;
+            contentId: string;
             title?: string;
             idea?: string;
             type?: string;
@@ -276,9 +282,16 @@ const CreateContentScreen = () => {
         }>();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
+    const { items, updateContent } = useContents();
+
+    // Resolve the live item from the real contents list first; fall back to
+    // mock data so demo/test contentIds still work in dev.
     const seedItem = useMemo(
-        () => MOCK_CONTENT_ITEMS.find((i) => i.id === contentId) ?? null,
-        [contentId]
+        () =>
+            items.find((i) => i.id === contentId) ??
+            MOCK_CONTENT_ITEMS.find((i) => i.id === contentId) ??
+            null,
+        [items, contentId]
     );
 
     const [title, setTitle] = useState(seedItem?.title ?? paramTitle ?? "");
@@ -302,6 +315,32 @@ const CreateContentScreen = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCollabModal, setShowCollabModal] = useState(false);
 
+    // Firestore items arrive after first render. Hydrate local form state the
+    // first time the real item shows up for this contentId. Tracked per-id so
+    // navigating to a different content reseeds the form, but subsequent edits
+    // on the same id aren't clobbered by snapshot replays.
+    const hydratedForRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!seedItem) return;
+        if (hydratedForRef.current === seedItem.id) return;
+        hydratedForRef.current = seedItem.id;
+
+        setTitle(seedItem.title ?? "");
+        setIdea(seedItem.idea ?? "");
+        setStatus(seedItem.status ?? "draft");
+        setCaption(seedItem.caption ?? "");
+        setHashtags(seedItem.hashtags ?? "");
+        setScript(seedItem.script ?? "");
+        setImagePrompt(seedItem.imagePrompt ?? "");
+        setTimeOfPosting(seedItem.timeOfPosting ?? "");
+        if (seedItem.date) {
+            setDate(new Date(seedItem.date + "T00:00:00"));
+        }
+    }, [seedItem]);
+
+    // ── Right side panel (comments) ───────────────────────────────────────────
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -317,10 +356,41 @@ const CreateContentScreen = () => {
         type: contentType,
         date: formatDateForWebInput(date),
     };
+    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleSave = useCallback(() => {
-        Alert.alert("Saved", "Content saved successfully (test mode).");
-    }, []);
+    // Real AI generation hooks — backed by /api/ai + OpenRouter.
+    const {
+        captions: aiCaptions,
+        generateCaption,
+        hashtags: aiHashtags,
+        generateHashtags,
+        script: aiScript,
+        scriptStreaming,
+        generateScript,
+        images: aiImages,
+        imagesStreaming,
+        generateImage,
+    } = useAIGenerate();
+
+    const handleSave = useCallback(async () => {
+        if (!contentId || saveState === "saving") return;
+        setSaveState("saving");
+        await updateContent(contentId, {
+            title,
+            description: idea,
+            status: status as any,
+            caption,
+            hashtags,
+            timeOfPosting,
+            script,
+            imagePrompt,
+            postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
+        });
+        setSaveState("saved");
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
+    }, [contentId, saveState, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, date]);
 
     const handleCreateCollab = useCallback(() => {
         setShowCollabModal(true);
@@ -328,45 +398,101 @@ const CreateContentScreen = () => {
 
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
+            const platform = "Instagram";
             if (magicTarget === "caption") {
-                setCaption(
-                    `✨ [AI-generated caption for: "${prompt}"]\n\nReplace this with the real AI output once the backend is connected.`
-                );
+                generateCaption({
+                    topic: prompt,
+                    platform,
+                    format: contentType,
+                    contextId: contentId,
+                });
             } else if (magicTarget === "hashtags") {
-                setHashtags(
-                    `#AIGenerated #ContentCreation #BrandMarketing #IndianBrand #D2C`
-                );
+                generateHashtags({
+                    topic: prompt,
+                    platform,
+                    contextId: contentId,
+                });
             }
-            setMagicTarget(null);
         },
-        [magicTarget]
+        [magicTarget, contentType, contentId, generateCaption, generateHashtags]
     );
 
     const handleScriptAiEnhance = useCallback(() => {
-        if (!scriptAiPrompt.trim()) return;
+        const keyMessage = scriptAiPrompt.trim();
+        if (!keyMessage) return;
         setIsGeneratingScript(true);
-        setTimeout(() => {
-            setScript(
-                (prev) =>
-                    prev +
-                    `\n\n[✨ AI Enhancement for: "${scriptAiPrompt}"]\nReplace this with the real AI output once the backend is connected.`
-            );
-            setScriptAiPrompt("");
-            setIsGeneratingScript(false);
-        }, 1200);
-    }, [scriptAiPrompt]);
+        generateScript({
+            videoType: isReel ? "Reel" : "Video",
+            topic: title || idea || "Brand content",
+            keyMessage,
+            tone: "friendly",
+            contextId: contentId,
+        });
+    }, [scriptAiPrompt, isReel, title, idea, contentId, generateScript]);
 
     const handleImageGenerate = useCallback(() => {
         if (!imagePrompt.trim()) return;
         setIsGeneratingImage(true);
-        setTimeout(() => {
-            Alert.alert(
-                "Image Generation",
-                `Image generated for prompt: "${imagePrompt}"\n\nReal image output will show here once the backend is connected.`
-            );
-            setIsGeneratingImage(false);
-        }, 1400);
-    }, [imagePrompt]);
+        generateImage({
+            description: imagePrompt,
+            aspectRatio: contentType === "reel" ? "9:16" : "1:1",
+            count: 1,
+        });
+    }, [imagePrompt, contentType, generateImage]);
+
+    // React to AI generation results streaming back from the backend.
+
+    // Captions: take the first variant and apply it. The MagicPromptModal closes
+    // on apply via its own onGenerate flow; we just clear magicTarget when done.
+    useEffect(() => {
+        if (magicTarget !== "caption" || aiCaptions.length === 0) return;
+        setCaption(aiCaptions[0].text);
+        setMagicTarget(null);
+    }, [aiCaptions, magicTarget]);
+
+    // Hashtags: flatten all tier groups into a single space-separated #tag string.
+    useEffect(() => {
+        if (magicTarget !== "hashtags" || aiHashtags.length === 0) return;
+        const joined = aiHashtags
+            .flatMap((g) => g.tags)
+            .map((t) => `#${t}`)
+            .join(" ");
+        setHashtags(joined);
+        setMagicTarget(null);
+    }, [aiHashtags, magicTarget]);
+
+    // Script: stream into the script field. Append on first run; replace the
+    // streamed block on subsequent token updates so the user sees it grow live.
+    const scriptStreamStartRef = useRef<number | null>(null);
+    useEffect(() => {
+        if (!isGeneratingScript) return;
+        if (!aiScript) return;
+        if (scriptStreamStartRef.current === null) {
+            // Mark insertion point right before the streamed content lands.
+            scriptStreamStartRef.current = (script ? script.length + 2 : 0);
+        }
+        const start = scriptStreamStartRef.current;
+        setScript((prev) => {
+            const base = prev.slice(0, start);
+            return (base ? base + (base.endsWith("\n\n") ? "" : "\n\n") : "") + aiScript;
+        });
+        if (!scriptStreaming) {
+            setScriptAiPrompt("");
+            setIsGeneratingScript(false);
+            scriptStreamStartRef.current = null;
+        }
+    }, [aiScript, scriptStreaming, isGeneratingScript]);
+
+    // Image: alert with the result URL on completion. The existing UI doesn't
+    // host an image preview slot, so this preserves the original mock behavior
+    // but now shows a real S3 URL.
+    useEffect(() => {
+        if (!isGeneratingImage) return;
+        if (imagesStreaming) return;
+        if (aiImages.length === 0) return;
+        Alert.alert("Image generated", aiImages[aiImages.length - 1].s3Url);
+        setIsGeneratingImage(false);
+    }, [aiImages, imagesStreaming, isGeneratingImage]);
 
     const formattedDate = date.toLocaleDateString("en-IN", {
         day: "2-digit",
@@ -376,16 +502,47 @@ const CreateContentScreen = () => {
 
     const headerActions = useMemo(
         () => [
+            // 💬 Comments toggle
+            <Pressable
+                key="comments"
+                style={({ pressed }) => [
+                    styles.iconBtn,
+                    rightPanelMode === "comments" && styles.iconBtnActive,
+                    pressed && styles.iconBtnPressed,
+                ]}
+                onPress={() =>
+                    setRightPanelMode((m) => (m === "comments" ? "none" : "comments"))
+                }
+            >
+                <FontAwesomeIcon
+                    icon={faCommentDots}
+                    size={15}
+                    color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
+                />
+            </Pressable>,
+            // Save
             <Pressable
                 key="save"
-                style={({ pressed }) => [styles.saveBtn, pressed && styles.btnPressed]}
+                style={({ pressed }) => [
+                    xl ? styles.saveBtn : styles.saveBtnIcon,
+                    saveState === "saved" && styles.saveBtnSaved,
+                    pressed && styles.btnPressed,
+                ]}
                 onPress={handleSave}
+                disabled={saveState === "saving"}
+                accessibilityLabel="Save"
             >
-                <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                <Text style={styles.saveBtnText}>Save</Text>
+                {saveState === "saving" ? (
+                    xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
+                ) : (
+                    <>
+                        <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
+                        {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : "Save"}</Text>}
+                    </>
+                )}
             </Pressable>,
         ],
-        [styles, colors, handleSave]
+        [styles, colors, handleSave, saveState, rightPanelMode, xl]
     );
 
     return (
@@ -398,10 +555,13 @@ const CreateContentScreen = () => {
                 mobileActions="all"
             />
 
-            <KeyboardAvoidingView
-                style={styles.flex1}
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
-            >
+            {/* ── Split layout: form (left) + comments panel (right) ─────── */}
+            <View style={styles.splitContainer}>
+                {/* Left: scrollable form */}
+                <KeyboardAvoidingView
+                    style={styles.flex1}
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                >
                 <ScrollView
                     contentContainerStyle={styles.scroll}
                     showsVerticalScrollIndicator={false}
@@ -777,7 +937,41 @@ const CreateContentScreen = () => {
 
                     <View style={styles.bottomPad} />
                 </ScrollView>
-            </KeyboardAvoidingView>
+                </KeyboardAvoidingView>
+
+                {/* Right: split-pane comments on desktop only. Mobile uses
+                    the floating overlay rendered below. */}
+                {xl && (
+                    <View style={[
+                        styles.rightPanel,
+                        rightPanelMode === "none" && styles.rightPanelCollapsed,
+                    ]}>
+                        <RightSidePanel
+                            mode={rightPanelMode}
+                            onModeChange={setRightPanelMode}
+                            commentsSlot={
+                                <ContentCommentsPanel
+                                    contentId={contentId ?? null}
+                                    onCollapse={() => setRightPanelMode("none")}
+                                />
+                            }
+                        />
+                    </View>
+                )}
+            </View>
+
+            {!xl && (
+                <RightSidePanel
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    commentsSlot={
+                        <ContentCommentsPanel
+                            contentId={contentId ?? null}
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                />
+            )}
 
             <DatePickerModal
                 visible={showDatePicker}
@@ -829,6 +1023,36 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 section: {
                     marginBottom: 20,
                 },
+                // ── Split layout ──────────────────────────────────────────────
+                splitContainer: {
+                    flex: 1,
+                    flexDirection: "row",
+                },
+                rightPanel: {
+                    flex: 0.5,
+                },
+                rightPanelCollapsed: {
+                    flex: 0,
+                    width: 24,
+                },
+                // ── Header icon button (comments toggle) ──────────────────────
+                iconBtn: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                iconBtnActive: {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                iconBtnPressed: { opacity: 0.75 },
                 sectionLabel: {
                     fontSize: 11,
                     fontWeight: "700",
@@ -1127,6 +1351,23 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowRadius: 8,
                     shadowOpacity: 0.3,
                     elevation: 3,
+                },
+                saveBtnIcon: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                saveBtnSaved: {
+                    backgroundColor: "#1A7A3A",
+                    shadowColor: "#1A7A3A",
                 },
                 saveBtnText: {
                     fontSize: 13,

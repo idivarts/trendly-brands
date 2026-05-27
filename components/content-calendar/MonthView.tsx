@@ -1,17 +1,17 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useMemo } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import CalendarHeader from "./CalendarHeader";
 import ContentItemChip from "./ContentItemChip";
-import MonthPickerModal from "./MonthPickerModal";
-import { CalendarItem } from "./types";
+import { CalendarItem, CalendarView } from "./types";
 
 interface MonthViewProps {
     year: number;
     month: number; // 0-indexed
     items: CalendarItem[];
+    view: CalendarView;
+    onViewChange: (next: CalendarView) => void;
     onMonthChange: (year: number, month: number) => void;
     onDayPress: (dateStr: string) => void;
     onFocusChat: (item: CalendarItem) => void;
@@ -19,10 +19,6 @@ interface MonthViewProps {
 }
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-];
 
 function buildCalendarGrid(year: number, month: number) {
     const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
@@ -57,6 +53,8 @@ const MonthView: React.FC<MonthViewProps> = ({
     year,
     month,
     items,
+    view,
+    onViewChange,
     onMonthChange,
     onDayPress,
     onFocusChat,
@@ -65,7 +63,6 @@ const MonthView: React.FC<MonthViewProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
-    const [showMonthPicker, setShowMonthPicker] = useState(false);
 
     const rows = useMemo(() => buildCalendarGrid(year, month), [year, month]);
 
@@ -78,42 +75,15 @@ const MonthView: React.FC<MonthViewProps> = ({
         return map;
     }, [items]);
 
-    const prevMonth = () => {
-        if (month === 0) onMonthChange(year - 1, 11);
-        else onMonthChange(year, month - 1);
-    };
-
-    const nextMonth = () => {
-        if (month === 11) onMonthChange(year + 1, 0);
-        else onMonthChange(year, month + 1);
-    };
-
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <Pressable
-                    style={({ pressed }) => [styles.arrowBtn, pressed && styles.arrowBtnPressed]}
-                    onPress={prevMonth}
-                >
-                    <FontAwesomeIcon icon={faChevronLeft} size={14} color={colors.text} />
-                </Pressable>
-
-                <Pressable
-                    style={({ pressed }) => [styles.monthLabel, pressed && styles.monthLabelPressed]}
-                    onPress={() => setShowMonthPicker(true)}
-                >
-                    <Text style={styles.monthLabelText}>
-                        {MONTH_NAMES[month]} {year}
-                    </Text>
-                </Pressable>
-
-                <Pressable
-                    style={({ pressed }) => [styles.arrowBtn, pressed && styles.arrowBtnPressed]}
-                    onPress={nextMonth}
-                >
-                    <FontAwesomeIcon icon={faChevronRight} size={14} color={colors.text} />
-                </Pressable>
-            </View>
+            <CalendarHeader
+                year={year}
+                month={month}
+                view={view}
+                onMonthChange={onMonthChange}
+                onViewChange={onViewChange}
+            />
 
             <View style={styles.dayLabelsRow}>
                 {DAY_LABELS.map((d) => (
@@ -123,11 +93,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                 ))}
             </View>
 
-            <ScrollView
-                style={styles.gridScroll}
-                contentContainerStyle={styles.gridContent}
-                showsVerticalScrollIndicator={false}
-            >
+            <View style={styles.gridContent}>
                 {rows.map((row, ri) => (
                     <View key={ri} style={styles.weekRow}>
                         {row.map((day, di) => {
@@ -176,15 +142,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                         })}
                     </View>
                 ))}
-            </ScrollView>
-
-            <MonthPickerModal
-                visible={showMonthPicker}
-                year={year}
-                month={month}
-                onSelect={onMonthChange}
-                onClose={() => setShowMonthPicker(false)}
-            />
+            </View>
         </View>
     );
 };
@@ -195,42 +153,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             StyleSheet.create({
                 container: {
                     flex: 1,
-                },
-                header: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.05,
-                    elevation: 2,
-                },
-                arrowBtn: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.tag,
-                },
-                arrowBtnPressed: {
-                    opacity: 0.6,
-                },
-                monthLabel: {
-                    flex: 1,
-                    alignItems: "center",
-                    paddingVertical: 6,
-                    borderRadius: 8,
-                },
-                monthLabelPressed: {
-                    backgroundColor: colors.tag,
-                },
-                monthLabelText: {
-                    fontSize: 16,
-                    fontWeight: "700",
-                    color: colors.text,
                 },
                 dayLabelsRow: {
                     flexDirection: "row",
@@ -244,15 +166,14 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
-                gridScroll: {
-                    flex: 1,
-                },
                 gridContent: {
+                    flex: 1,
                     paddingHorizontal: 8,
-                    paddingBottom: 16,
+                    paddingBottom: 8,
                     gap: 4,
                 },
                 weekRow: {
+                    flex: 1,
                     flexDirection: "row",
                     gap: 4,
                     minHeight: 80,
