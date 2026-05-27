@@ -358,6 +358,13 @@ const ContentStrategyDetail = () => {
         [strategyId, updateStrategyContent]
     );
 
+    // Escape hatch from the shimmer: seed the editor with a placeholder
+    // paragraph. The hasRealContent effect picks this up and flips the
+    // screen state to "strategy-ready" on the next render.
+    const handleWriteManually = useCallback(() => {
+        handleStrategyContentChange("<p>Write your strategy here</p>");
+    }, [handleStrategyContentChange]);
+
     const handleSendForReview = useCallback(async () => {
         if (!strategyId) return;
         await updateReviewStatus(strategyId, "in_review");
@@ -537,7 +544,7 @@ const ContentStrategyDetail = () => {
                         ]}
                     >
                         {screenState === "collecting" ? (
-                            <StrategyShimmerPanel />
+                            <StrategyShimmerPanel onWriteManually={handleWriteManually} />
                         ) : (
                             <StrategyEditorPanel
                                 content={strategyContent}

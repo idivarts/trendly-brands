@@ -173,6 +173,28 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 3,
                     backgroundColor: colors.primary,
                 },
+                secondaryBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.05,
+                    elevation: 1,
+                },
+                secondaryBtnPressed: {
+                    opacity: 0.72,
+                },
+                secondaryBtnText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.primary,
+                },
             }),
         [colors]
     );
