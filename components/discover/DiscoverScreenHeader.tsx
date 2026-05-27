@@ -3,7 +3,6 @@ import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import Colors from "@/shared-uis/constants/Colors";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
@@ -224,33 +223,12 @@ const DiscoverScreenHeader: React.FC = () => {
                 title="Discover Influencer"
                 showBackButton={false}
                 customMainContent={<View style={styles.mobileTitleRow}>
-                    <CoachmarkAnchor id="guide-tour-header" shape="rect">
-                        <Pressable
-                            onPress={() => OpenDrawerSubject.next(true)}
-                            style={{ flex: 1, minWidth: 0 }}
-                        >
-                            <View
-                                style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <Text style={styles.mobileTitle}>Discover Influencer</Text>
-                                <FontAwesomeIcon
-                                    color={colors.text}
-                                    icon={faChevronDown}
-                                    size={16}
-                                    style={{
-                                        marginLeft: 6,
-                                        marginBottom: -2,
-                                    }}
-                                />
-                            </View>
-                            <Text style={styles.mobileSubtitle}>
-                                {`Total ${String(totalCount ?? "0").trim()}+ found`}
-                            </Text>
-                        </Pressable>
-                    </CoachmarkAnchor>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={styles.mobileTitle}>Discover Influencer</Text>
+                        <Text style={styles.mobileSubtitle}>
+                            {`Total ${String(totalCount ?? "0").trim()}+ found`}
+                        </Text>
+                    </View>
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
                         {filterButton}
                         {sortComponent}
