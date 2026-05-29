@@ -1,25 +1,24 @@
-import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
+import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
-import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
-    ContentItem,
     ContentStatus,
-    POPULAR_POSTING_TIMES,
+    POPULAR_POSTING_TIMES
 } from "@/components/contents/types";
-import { useAIGenerate } from "@/hooks/use-ai-generate";
-import { useContents } from "@/hooks/use-contents";
-import RichTextEditor from "@/components/rich-text-editor";
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import DatePickerModal, {
     formatDateForWebInput,
 } from "@/components/modals/DatePickerModal";
+import RichTextEditor from "@/components/rich-text-editor";
+import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
-import AppLayout from "@/layouts/app-layout";
 import { useBreakpoints } from "@/hooks";
+import { useAIGenerate } from "@/hooks/use-ai-generate";
+import { useContents } from "@/hooks/use-contents";
+import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCalendarDays,
@@ -303,8 +302,8 @@ const CreateContentScreen = () => {
         seedItem?.date
             ? new Date(seedItem.date + "T00:00:00")
             : paramDate
-            ? new Date(paramDate + "T00:00:00")
-            : new Date()
+                ? new Date(paramDate + "T00:00:00")
+                : new Date()
     );
     const [status, setStatus] = useState<ContentStatus>(seedItem?.status ?? "draft");
     const [caption, setCaption] = useState(seedItem?.caption ?? "");
@@ -428,6 +427,7 @@ const CreateContentScreen = () => {
     );
 
     const handleScriptAiEnhance = useCallback(() => {
+        setScript("");
         const keyMessage = scriptAiPrompt.trim();
         if (!keyMessage) return;
         setIsGeneratingScript(true);
@@ -593,381 +593,390 @@ const CreateContentScreen = () => {
                     style={styles.flex1}
                     behavior={Platform.OS === "ios" ? "padding" : undefined}
                 >
-                <ScrollView
-                    contentContainerStyle={styles.scroll}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {/* ── Status Row ──────────────────────────────────────── */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>STATUS</Text>
-                        <View style={styles.statusRow}>
-                            {STATUS_ORDER.map((s) => (
-                                <Pressable
-                                    key={s}
-                                    style={({ pressed }) => [
-                                        styles.statusChip,
-                                        {
-                                            backgroundColor:
-                                                status === s ? STATUS_BG[s] : colors.tag,
-                                        },
-                                        pressed && styles.btnPressed,
-                                    ]}
-                                    onPress={() => setStatus(s)}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.statusChipText,
+                    <ScrollView
+                        contentContainerStyle={styles.scroll}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* ── Status Row ──────────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>STATUS</Text>
+                            <View style={styles.statusRow}>
+                                {STATUS_ORDER.map((s) => (
+                                    <Pressable
+                                        key={s}
+                                        style={({ pressed }) => [
+                                            styles.statusChip,
                                             {
-                                                color:
-                                                    status === s
-                                                        ? STATUS_COLOR[s]
-                                                        : colors.textSecondary,
-                                                fontWeight: status === s ? "700" : "500",
+                                                backgroundColor:
+                                                    status === s ? STATUS_BG[s] : colors.tag,
                                             },
+                                            pressed && styles.btnPressed,
                                         ]}
+                                        onPress={() => setStatus(s)}
                                     >
-                                        {CONTENT_STATUS_LABELS[s]}
-                                    </Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                    </View>
-
-                    {/* ── Calendar Stage Fields ────────────────────────────── */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>CONTENT INFO</Text>
-                        <View style={styles.card}>
-                            <View style={styles.fieldRow}>
-                                <Text style={styles.fieldLabel}>Type</Text>
-                                <View style={styles.typeTag}>
-                                    <Text style={styles.typeTagText}>
-                                        {CONTENT_TYPE_LABELS[contentType]}
-                                    </Text>
-                                </View>
+                                        <Text
+                                            style={[
+                                                styles.statusChipText,
+                                                {
+                                                    color:
+                                                        status === s
+                                                            ? STATUS_COLOR[s]
+                                                            : colors.textSecondary,
+                                                    fontWeight: status === s ? "700" : "500",
+                                                },
+                                            ]}
+                                        >
+                                            {CONTENT_STATUS_LABELS[s]}
+                                        </Text>
+                                    </Pressable>
+                                ))}
                             </View>
-
-                            <View style={styles.fieldDivider} />
-
-                            <View style={styles.fieldRow}>
-                                <Text style={styles.fieldLabel}>Date of Posting</Text>
-                                <Pressable
-                                    style={styles.dateBtn}
-                                    onPress={() => setShowDatePicker(true)}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faCalendarDays}
-                                        size={12}
-                                        color={colors.primary}
-                                    />
-                                    <Text style={styles.dateBtnText}>{formattedDate}</Text>
-                                </Pressable>
-                            </View>
-
-                            <View style={styles.fieldDivider} />
-
-                            <Text style={styles.fieldLabel}>Title</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="E.g. Founder Story Launch Reel"
-                                placeholderTextColor={colors.textSecondary}
-                                value={title}
-                                onChangeText={setTitle}
-                                maxLength={120}
-                            />
-
-                            <Text style={[styles.fieldLabel, styles.mt12]}>Idea / Vision</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                placeholder="Describe the concept, mood, or key message..."
-                                placeholderTextColor={colors.textSecondary}
-                                value={idea}
-                                onChangeText={setIdea}
-                                multiline
-                                maxLength={500}
-                                textAlignVertical="top"
-                            />
                         </View>
-                    </View>
 
-                    {/* ── Content Format ───────────────────────────────────── */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>CONTENT FORMAT</Text>
-
-                        {isReel ? (
+                        {/* ── Calendar Stage Fields ────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>CONTENT INFO</Text>
                             <View style={styles.card}>
-                                <Text style={styles.cardTitle}>Reel Script</Text>
-                                <Text style={styles.cardSub}>
-                                    Write your full reel script with scene transitions, dialogue, and
-                                    direction notes.
-                                </Text>
-                                <View style={styles.scriptEditorContainer}>
-                                    <RichTextEditor
-                                        content={script}
-                                        onChange={setScript}
-                                        onSendToChat={handleSendToChat}
-                                        strategyId={contentId}
-                                        module="content"
-                                    />
+                                <View style={styles.fieldRow}>
+                                    <Text style={styles.fieldLabel}>Type</Text>
+                                    <View style={styles.typeTag}>
+                                        <Text style={styles.typeTagText}>
+                                            {CONTENT_TYPE_LABELS[contentType]}
+                                        </Text>
+                                    </View>
                                 </View>
 
-                                <View style={styles.aiPromptRow}>
-                                    <TextInput
-                                        style={[styles.input, styles.aiPromptInput]}
-                                        placeholder="Describe changes or ask AI to generate script..."
+                                <View style={styles.fieldDivider} />
+
+                                <View style={styles.fieldRow}>
+                                    <Text style={styles.fieldLabel}>Date of Posting</Text>
+                                    <Pressable
+                                        style={styles.dateBtn}
+                                        onPress={() => setShowDatePicker(true)}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={faCalendarDays}
+                                            size={12}
+                                            color={colors.primary}
+                                        />
+                                        <Text style={styles.dateBtnText}>{formattedDate}</Text>
+                                    </Pressable>
+                                </View>
+
+                                <View style={styles.fieldDivider} />
+
+                                <Text style={styles.fieldLabel}>Title</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="E.g. Founder Story Launch Reel"
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={title}
+                                    onChangeText={setTitle}
+                                    maxLength={120}
+                                />
+
+                                <Text style={[styles.fieldLabel, styles.mt12]}>Idea / Vision</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    placeholder="Describe the concept, mood, or key message..."
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={idea}
+                                    onChangeText={setIdea}
+                                    multiline
+                                    maxLength={500}
+                                    textAlignVertical="top"
+                                />
+                            </View>
+                        </View>
+
+                        {/* ── Content Format ───────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>CONTENT FORMAT</Text>
+
+                            {isReel ? (
+                                <View style={styles.card}>
+                                    <Text style={styles.cardTitle}>Reel Script</Text>
+                                    <Text style={styles.cardSub}>
+                                        Write your full reel script with scene transitions, dialogue, and
+                                        direction notes.
+                                    </Text>
+                                    {isGeneratingScript ? <TextInput
+                                        style={[styles.input, styles.scriptEditorContainer]}
+                                        placeholder={"[Scene 1 - Hook]\nHey everyone...\n\n[Scene 2 - Main content]\n...\n\n[Scene 3 - CTA]\nFollow for more!"}
                                         placeholderTextColor={colors.textSecondary}
-                                        value={scriptAiPrompt}
-                                        onChangeText={setScriptAiPrompt}
+                                        value={script}
+                                        onChangeText={() => { }}
+                                        multiline
+                                        textAlignVertical="top"
+                                    /> :
+                                        <View style={styles.scriptEditorContainer}>
+                                            <RichTextEditor
+                                                content={script}
+                                                onChange={setScript}
+                                                onSendToChat={handleSendToChat}
+                                                strategyId={contentId}
+                                                module="content"
+                                            />
+                                        </View>}
+
+                                    <View style={styles.aiPromptRow}>
+                                        <TextInput
+                                            style={[styles.input, styles.aiPromptInput]}
+                                            placeholder="Describe changes or ask AI to generate script..."
+                                            placeholderTextColor={colors.textSecondary}
+                                            value={scriptAiPrompt}
+                                            onChangeText={setScriptAiPrompt}
+                                        />
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.aiSendBtn,
+                                                !scriptAiPrompt.trim() && styles.aiSendBtnDisabled,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={handleScriptAiEnhance}
+                                            disabled={!scriptAiPrompt.trim() || isGeneratingScript}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faMagicWandSparkles}
+                                                size={14}
+                                                color={colors.onPrimary}
+                                            />
+                                            <Text style={styles.aiSendBtnText}>
+                                                {isGeneratingScript ? "Generating..." : "Enhance"}
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            ) : isImageBased ? (
+                                <View style={styles.card}>
+                                    <Text style={styles.cardTitle}>Image Generation</Text>
+                                    <Text style={styles.cardSub}>
+                                        Describe the visual you want. Add iterative instructions to
+                                        refine and generate variations.
+                                    </Text>
+                                    <TextInput
+                                        style={[styles.input, styles.textArea]}
+                                        placeholder="E.g. Bold minimal design, product centred on white background, brand colours: deep blue and white..."
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={imagePrompt}
+                                        onChangeText={setImagePrompt}
+                                        multiline
+                                        maxLength={600}
+                                        textAlignVertical="top"
                                     />
                                     <Pressable
                                         style={({ pressed }) => [
-                                            styles.aiSendBtn,
-                                            !scriptAiPrompt.trim() && styles.aiSendBtnDisabled,
+                                            styles.generateImgBtn,
+                                            !imagePrompt.trim() && styles.generateImgBtnDisabled,
                                             pressed && styles.btnPressed,
                                         ]}
-                                        onPress={handleScriptAiEnhance}
-                                        disabled={!scriptAiPrompt.trim() || isGeneratingScript}
+                                        onPress={handleImageGenerate}
+                                        disabled={!imagePrompt.trim() || isGeneratingImage}
                                     >
                                         <FontAwesomeIcon
                                             icon={faMagicWandSparkles}
                                             size={14}
                                             color={colors.onPrimary}
                                         />
-                                        <Text style={styles.aiSendBtnText}>
-                                            {isGeneratingScript ? "Generating..." : "Enhance"}
+                                        <Text style={styles.generateImgBtnText}>
+                                            {isGeneratingImage
+                                                ? "Generating Image..."
+                                                : "Generate Image"}
                                         </Text>
                                     </Pressable>
                                 </View>
-                            </View>
-                        ) : isImageBased ? (
-                            <View style={styles.card}>
-                                <Text style={styles.cardTitle}>Image Generation</Text>
-                                <Text style={styles.cardSub}>
-                                    Describe the visual you want. Add iterative instructions to
-                                    refine and generate variations.
-                                </Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    placeholder="E.g. Bold minimal design, product centred on white background, brand colours: deep blue and white..."
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={imagePrompt}
-                                    onChangeText={setImagePrompt}
-                                    multiline
-                                    maxLength={600}
-                                    textAlignVertical="top"
-                                />
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.generateImgBtn,
-                                        !imagePrompt.trim() && styles.generateImgBtnDisabled,
-                                        pressed && styles.btnPressed,
-                                    ]}
-                                    onPress={handleImageGenerate}
-                                    disabled={!imagePrompt.trim() || isGeneratingImage}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faMagicWandSparkles}
-                                        size={14}
-                                        color={colors.onPrimary}
-                                    />
-                                    <Text style={styles.generateImgBtnText}>
-                                        {isGeneratingImage
-                                            ? "Generating Image..."
-                                            : "Generate Image"}
+                            ) : (
+                                <View style={styles.card}>
+                                    <Text style={styles.cardSub}>
+                                        Content format tooling is not available for{" "}
+                                        <Text style={{ fontWeight: "700" }}>
+                                            {CONTENT_TYPE_LABELS[contentType]}
+                                        </Text>{" "}
+                                        type yet.
                                     </Text>
-                                </Pressable>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* ── Caption ──────────────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>CAPTION</Text>
+                            <View style={styles.card}>
+                                <View style={styles.inputWithWand}>
+                                    <TextInput
+                                        style={[styles.input, styles.inputFlex, styles.textAreaShort]}
+                                        placeholder="Write a compelling caption for this post..."
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={caption}
+                                        onChangeText={setCaption}
+                                        multiline
+                                        maxLength={2200}
+                                        textAlignVertical="top"
+                                    />
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.wandBtn,
+                                            pressed && styles.btnPressed,
+                                        ]}
+                                        onPress={() => setMagicTarget("caption")}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={faMagicWandSparkles}
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                    </Pressable>
+                                </View>
                             </View>
-                        ) : (
+                        </View>
+
+                        {/* ── Hashtags ──────────────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>HASHTAGS</Text>
+                            <View style={styles.card}>
+                                <View style={styles.inputWithWand}>
+                                    <TextInput
+                                        style={[styles.input, styles.inputFlex]}
+                                        placeholder="#YourBrand #Product #Niche"
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={hashtags}
+                                        onChangeText={setHashtags}
+                                        maxLength={500}
+                                    />
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.wandBtn,
+                                            pressed && styles.btnPressed,
+                                        ]}
+                                        onPress={() => setMagicTarget("hashtags")}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={faMagicWandSparkles}
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* ── Time of Posting ───────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>TIME OF POSTING</Text>
                             <View style={styles.card}>
                                 <Text style={styles.cardSub}>
-                                    Content format tooling is not available for{" "}
-                                    <Text style={{ fontWeight: "700" }}>
-                                        {CONTENT_TYPE_LABELS[contentType]}
-                                    </Text>{" "}
-                                    type yet.
+                                    Pick a popular time or set your own.
                                 </Text>
-                            </View>
-                        )}
-                    </View>
-
-                    {/* ── Caption ──────────────────────────────────────────── */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>CAPTION</Text>
-                        <View style={styles.card}>
-                            <View style={styles.inputWithWand}>
-                                <TextInput
-                                    style={[styles.input, styles.inputFlex, styles.textAreaShort]}
-                                    placeholder="Write a compelling caption for this post..."
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={caption}
-                                    onChangeText={setCaption}
-                                    multiline
-                                    maxLength={2200}
-                                    textAlignVertical="top"
-                                />
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.wandBtn,
-                                        pressed && styles.btnPressed,
-                                    ]}
-                                    onPress={() => setMagicTarget("caption")}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faMagicWandSparkles}
-                                        size={16}
-                                        color={colors.primary}
-                                    />
-                                </Pressable>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* ── Hashtags ──────────────────────────────────────────── */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>HASHTAGS</Text>
-                        <View style={styles.card}>
-                            <View style={styles.inputWithWand}>
-                                <TextInput
-                                    style={[styles.input, styles.inputFlex]}
-                                    placeholder="#YourBrand #Product #Niche"
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={hashtags}
-                                    onChangeText={setHashtags}
-                                    maxLength={500}
-                                />
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.wandBtn,
-                                        pressed && styles.btnPressed,
-                                    ]}
-                                    onPress={() => setMagicTarget("hashtags")}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faMagicWandSparkles}
-                                        size={16}
-                                        color={colors.primary}
-                                    />
-                                </Pressable>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* ── Time of Posting ───────────────────────────────────── */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>TIME OF POSTING</Text>
-                        <View style={styles.card}>
-                            <Text style={styles.cardSub}>
-                                Pick a popular time or set your own.
-                            </Text>
-                            <View style={styles.timeRow}>
-                                {POPULAR_POSTING_TIMES.map((t) => (
+                                <View style={styles.timeRow}>
+                                    {POPULAR_POSTING_TIMES.map((t) => (
+                                        <Pressable
+                                            key={t.value}
+                                            style={({ pressed }) => [
+                                                styles.timeChip,
+                                                timeOfPosting === t.value && styles.timeChipActive,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={() => {
+                                                setTimeOfPosting(t.value);
+                                                setShowCustomTime(false);
+                                            }}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faClock}
+                                                size={11}
+                                                color={
+                                                    timeOfPosting === t.value
+                                                        ? colors.onPrimary
+                                                        : colors.textSecondary
+                                                }
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.timeChipText,
+                                                    timeOfPosting === t.value &&
+                                                    styles.timeChipTextActive,
+                                                ]}
+                                            >
+                                                {t.label}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
                                     <Pressable
-                                        key={t.value}
                                         style={({ pressed }) => [
                                             styles.timeChip,
-                                            timeOfPosting === t.value && styles.timeChipActive,
+                                            showCustomTime && styles.timeChipActive,
                                             pressed && styles.btnPressed,
                                         ]}
                                         onPress={() => {
-                                            setTimeOfPosting(t.value);
-                                            setShowCustomTime(false);
+                                            setShowCustomTime((v) => !v);
+                                            if (!showCustomTime) setTimeOfPosting("");
                                         }}
                                     >
-                                        <FontAwesomeIcon
-                                            icon={faClock}
-                                            size={11}
-                                            color={
-                                                timeOfPosting === t.value
-                                                    ? colors.onPrimary
-                                                    : colors.textSecondary
-                                            }
-                                        />
                                         <Text
                                             style={[
                                                 styles.timeChipText,
-                                                timeOfPosting === t.value &&
-                                                    styles.timeChipTextActive,
+                                                showCustomTime && styles.timeChipTextActive,
                                             ]}
                                         >
-                                            {t.label}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.timeChip,
-                                        showCustomTime && styles.timeChipActive,
-                                        pressed && styles.btnPressed,
-                                    ]}
-                                    onPress={() => {
-                                        setShowCustomTime((v) => !v);
-                                        if (!showCustomTime) setTimeOfPosting("");
-                                    }}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.timeChipText,
-                                            showCustomTime && styles.timeChipTextActive,
-                                        ]}
-                                    >
-                                        Custom
-                                    </Text>
-                                </Pressable>
-                            </View>
-
-                            {showCustomTime && (
-                                <TextInput
-                                    style={[styles.input, styles.mt12]}
-                                    placeholder="HH:MM (e.g. 08:30)"
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={customTime}
-                                    onChangeText={(v) => {
-                                        setCustomTime(v);
-                                        setTimeOfPosting(v);
-                                    }}
-                                    maxLength={5}
-                                    keyboardType="numbers-and-punctuation"
-                                />
-                            )}
-                        </View>
-                    </View>
-
-                    {/* ── Reel Collab CTA ───────────────────────────────────── */}
-                    {isReel && (
-                        <View style={styles.section}>
-                            <View style={styles.collabBanner}>
-                                <View style={styles.collabAccent} />
-                                <View style={styles.collabBody}>
-                                    <Text style={styles.collabTitle}>
-                                        Want influencers to create this reel?
-                                    </Text>
-                                    <Text style={styles.collabSub}>
-                                        Post this reel as a collaboration requirement so creators can
-                                        discover it, apply, and bring your script to life.
-                                    </Text>
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.collabBtn,
-                                            pressed && styles.btnPressed,
-                                        ]}
-                                        onPress={handleCreateCollab}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faHandshake}
-                                            size={14}
-                                            color={colors.onPrimary}
-                                        />
-                                        <Text style={styles.collabBtnText}>
-                                            Create Collab Requirement
+                                            Custom
                                         </Text>
                                     </Pressable>
                                 </View>
+
+                                {showCustomTime && (
+                                    <TextInput
+                                        style={[styles.input, styles.mt12]}
+                                        placeholder="HH:MM (e.g. 08:30)"
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={customTime}
+                                        onChangeText={(v) => {
+                                            setCustomTime(v);
+                                            setTimeOfPosting(v);
+                                        }}
+                                        maxLength={5}
+                                        keyboardType="numbers-and-punctuation"
+                                    />
+                                )}
                             </View>
                         </View>
-                    )}
 
-                    <View style={styles.bottomPad} />
-                </ScrollView>
+                        {/* ── Reel Collab CTA ───────────────────────────────────── */}
+                        {isReel && (
+                            <View style={styles.section}>
+                                <View style={styles.collabBanner}>
+                                    <View style={styles.collabAccent} />
+                                    <View style={styles.collabBody}>
+                                        <Text style={styles.collabTitle}>
+                                            Want influencers to create this reel?
+                                        </Text>
+                                        <Text style={styles.collabSub}>
+                                            Post this reel as a collaboration requirement so creators can
+                                            discover it, apply, and bring your script to life.
+                                        </Text>
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.collabBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={handleCreateCollab}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faHandshake}
+                                                size={14}
+                                                color={colors.onPrimary}
+                                            />
+                                            <Text style={styles.collabBtnText}>
+                                                Create Collab Requirement
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
+                        <View style={styles.bottomPad} />
+                    </ScrollView>
                 </KeyboardAvoidingView>
 
                 {/* Right: split-pane comments on desktop only. Mobile uses
