@@ -42,6 +42,7 @@ jobs:
     - name: Build Web
       env:
         EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
+        EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ env.STAGE == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
       run: npm run build
 
     - name: Deploy with Serverless
