@@ -34,11 +34,12 @@
  */
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronLeft, faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export type RightPanelMode = "none" | "comments" | "chat";
 
@@ -52,6 +53,149 @@ interface RightSidePanelProps {
      *  Optional — omit on screens that have no AI chat panel. */
     chatSlot?: React.ReactNode;
 }
+
+/**
+ * Persistent rail width (desktop). Wide enough for an icon + a 32px active
+ * pill + a 6px badge in the top-right corner of an icon. Below 40px these
+ * stop fitting cleanly.
+ */
+export const RIGHT_PANEL_RAIL_WIDTH = 44;
+
+/**
+ * Reusable rail button — handles hover state and renders a leftward tooltip.
+ * Used by both the collapse chevron and the mode-toggle icons so the hover
+ * behaviour stays consistent.
+ */
+interface RailButtonProps {
+    tooltip: string;
+    accessibilityLabel?: string;
+    selected?: boolean;
+    onPress: () => void;
+    colors: ReturnType<typeof Colors>;
+    children: React.ReactNode;
+}
+
+const RailButton: React.FC<RailButtonProps> = ({
+    tooltip,
+    accessibilityLabel,
+    selected,
+    onPress,
+    colors,
+    children,
+}) => {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <View style={railStyles.itemWrap}>
+            <Pressable
+                style={({ pressed }) => [
+                    railStyles.iconBtn,
+                    pressed && railStyles.iconBtnPressed,
+                ]}
+                onPress={onPress}
+                onHoverIn={() => setHovered(true)}
+                onHoverOut={() => setHovered(false)}
+                accessibilityRole="button"
+                accessibilityLabel={accessibilityLabel ?? tooltip}
+                accessibilityState={selected !== undefined ? { selected } : undefined}
+            >
+                {children}
+            </Pressable>
+            {hovered && (
+                <View
+                    style={[railStyles.tooltip, { backgroundColor: colors.text }]}
+                    pointerEvents="none"
+                >
+                    <Text
+                        numberOfLines={1}
+                        style={[railStyles.tooltipText, { color: colors.background }]}
+                    >
+                        {tooltip}
+                    </Text>
+                </View>
+            )}
+        </View>
+    );
+};
+
+interface RailIconProps {
+    icon: IconDefinition;
+    label: string;
+    active: boolean;
+    onPress: () => void;
+    colors: ReturnType<typeof Colors>;
+}
+
+const RailIcon: React.FC<RailIconProps> = ({ icon, label, active, onPress, colors }) => {
+    const pillStyle = useMemo(
+        () => ({
+            backgroundColor: active ? colors.tag : "transparent",
+        }),
+        [active, colors.tag]
+    );
+    return (
+        <RailButton
+            tooltip={label}
+            selected={active}
+            onPress={onPress}
+            colors={colors}
+        >
+            <View style={[railStyles.iconPill, pillStyle]}>
+                <FontAwesomeIcon
+                    icon={icon}
+                    size={16}
+                    color={active ? colors.primary : colors.textSecondary}
+                />
+            </View>
+        </RailButton>
+    );
+};
+
+const railStyles = StyleSheet.create({
+    itemWrap: {
+        position: "relative",
+    },
+    iconBtn: {
+        width: RIGHT_PANEL_RAIL_WIDTH,
+        height: 44,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    iconBtnPressed: {
+        opacity: 0.7,
+    },
+    iconPill: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    tooltip: {
+        position: "absolute",
+        // Anchor the tooltip's right edge at the LEFT edge of the rail item
+        // (right: '100%' relative to itemWrap), then offset 8px further left
+        // via marginRight. This keeps width intrinsic to the label — using a
+        // numeric `right` plus the default `left: 0` would force width to
+        // (itemWrap.width - right), collapsing multi-word labels to tiny
+        // wrapped boxes inside the 44px rail.
+        right: "100%",
+        marginRight: 8,
+        top: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 6,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
+        shadowOpacity: 0.18,
+        elevation: 6,
+        zIndex: 100,
+    },
+    tooltipText: {
+        fontSize: 12,
+        fontWeight: "500",
+    },
+});
 
 const RightSidePanel: React.FC<RightSidePanelProps> = ({
     mode,
@@ -67,7 +211,9 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     // Default to whichever slot is available.
     const defaultMode: "comments" | "chat" = commentsSlot ? "comments" : "chat";
 
-    // Remember the last active mode so the collapsed strip can restore it on tap.
+    // Remember the last active mode so an external trigger (e.g. mobile header
+    // icons that get retained under Option C) can restore the user's last
+    // surface preference if it ever decides to.
     const lastModeRef = useRef<"comments" | "chat">(defaultMode);
     useEffect(() => {
         if (mode !== "none") lastModeRef.current = mode;
@@ -75,29 +221,25 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
 
     const isExpanded = mode !== "none";
 
-    const handleExpand = () => {
-        // Expand to last active mode, respecting which slots actually exist.
-        const last = lastModeRef.current;
-        if (last === "comments" && commentsSlot) {
-            onModeChange("comments");
-        } else if (last === "chat" && chatSlot) {
-            onModeChange("chat");
-        } else if (commentsSlot) {
-            onModeChange("comments");
-        } else if (chatSlot) {
-            onModeChange("chat");
+    /**
+     * VS Code rule: tapping an icon opens to that mode if collapsed, switches
+     * to that mode if a different surface is open, and collapses the panel
+     * if its own mode is already active. One predictable rule across states.
+     */
+    const handleToggle = (target: "comments" | "chat") => {
+        if (mode === target) {
+            onModeChange("none");
+        } else {
+            onModeChange(target);
         }
     };
 
-    // Which icon to show on the collapsed strip
-    const collapsedIcon =
-        lastModeRef.current === "chat" && chatSlot ? faRobot : faCommentDots;
-
-    // On mobile (!xl) the panel floats over the page: when closed we render
-    // nothing (no 24px strip), when open we absolutely-position a near-full-
-    // width overlay with a scrim. Parent screens don't need to know — they
-    // still render <RightSidePanel /> in their flex layout, but on mobile it
-    // claims zero layout width and paints over everything via position:absolute.
+    // On mobile (!xl) the panel floats over the page: the persistent rail is
+    // *not* used (Option C keeps the toggle icons in the PageHeader on mobile
+    // to avoid eating ~10% of horizontal content width). When closed we render
+    // nothing; when open we paint an absolutely-positioned overlay with a
+    // scrim. Parent screens still render <RightSidePanel /> in their flex
+    // layout, but on mobile it claims zero width and paints via absolute.
     if (!xl) {
         if (!isExpanded) return null;
         return (
@@ -116,25 +258,53 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
         );
     }
 
+    /**
+     * Desktop layout: persistent rail on the LEFT of the panel, content area
+     * to its right when expanded. When collapsed the panel is just the rail
+     * (44px); parent screens detect this via the same `mode === "none"` check
+     * and may apply their `rightPanelCollapsed` style to shrink the
+     * outer container width to match.
+     */
     return (
         <View style={styles.outerContainer}>
-            {isExpanded ? (
-                /* ── Expanded: full-width content, chevron lives in each panel's header */
+            <View style={styles.rail}>
+                {isExpanded && (
+                    <RailButton
+                        tooltip="Collapse panel"
+                        onPress={() => onModeChange("none")}
+                        colors={colors}
+                    >
+                        <FontAwesomeIcon
+                            icon={faChevronRight}
+                            size={12}
+                            color={colors.textSecondary}
+                        />
+                    </RailButton>
+                )}
+                {commentsSlot && (
+                    <RailIcon
+                        icon={faCommentDots}
+                        label="Comments"
+                        active={mode === "comments"}
+                        onPress={() => handleToggle("comments")}
+                        colors={colors}
+                    />
+                )}
+                {chatSlot && (
+                    <RailIcon
+                        icon={faRobot}
+                        label="AI Chat"
+                        active={mode === "chat"}
+                        onPress={() => handleToggle("chat")}
+                        colors={colors}
+                    />
+                )}
+            </View>
+            {isExpanded && (
                 <View style={styles.content}>
                     {mode === "comments" && commentsSlot}
                     {mode === "chat" && chatSlot}
                 </View>
-            ) : (
-                /* ── Collapsed: slim 24px strip — mode icon signals what will reopen */
-                <Pressable
-                    style={({ pressed }) => [styles.collapsedStrip, pressed && styles.stripPressed]}
-                    onPress={handleExpand}
-                    accessibilityRole="button"
-                    accessibilityLabel="Expand panel"
-                >
-                    <FontAwesomeIcon icon={faChevronLeft} size={10} color={colors.textSecondary} />
-                    <FontAwesomeIcon icon={collapsedIcon} size={14} color={colors.primary} />
-                </Pressable>
             )}
         </View>
     );
@@ -144,6 +314,7 @@ function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         outerContainer: {
             flex: 1,
+            flexDirection: "row",
             backgroundColor: colors.card,
             // Left-casting shadow creates depth between the panel and main content.
             // shadowOffset.width is negative to cast LEFT (toward the main panel).
@@ -153,21 +324,16 @@ function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             shadowOpacity: 0.09,
             elevation: 10,
         },
+        rail: {
+            width: RIGHT_PANEL_RAIL_WIDTH,
+            paddingTop: 8,
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: colors.card,
+        },
         content: {
             flex: 1,
             overflow: "hidden",
-        },
-        // Shown only when collapsed — 24px slim strip with the mode icon.
-        collapsedStrip: {
-            flex: 1,
-            width: 24,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            backgroundColor: colors.card,
-        },
-        stripPressed: {
-            backgroundColor: colors.tag,
         },
         // ── Mobile (!xl) floating overlay ───────────────────────────────────
         // Root spans the screen but lets touches through to the scrim/sheet.

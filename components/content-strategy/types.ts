@@ -2,7 +2,7 @@ import type { ChatMessage, FocusItem } from "@/components/shared/AIChatPanel";
 
 export type { ChatMessage, FocusItem };
 
-export type ScreenState = 'empty' | 'collecting' | 'strategy-ready';
+export type ScreenState = 'empty' | 'loading' | 'collecting' | 'strategy-ready';
 
 export type ReviewStatus = "draft" | "in_review" | "approved" | "changes_requested";
 
