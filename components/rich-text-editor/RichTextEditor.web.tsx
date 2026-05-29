@@ -24,8 +24,10 @@ export interface StrategyEditorPanelProps {
     onChange: (text: string) => void;
     onSendToChat: (text: string) => void;
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
-    /** Strategy ID — used as AI conversation context for Quick Edit. */
+    /** Context ID passed to AI features (Quick Edit, Chat). */
     strategyId?: string;
+    /** AI module used for Quick Edit context. Defaults to "content". */
+    module?: string;
 }
 
 const QUILL_STYLE_ID = "trendly-quill-core-css";
@@ -98,6 +100,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     onSendToChat,
     onSnippetComment,
     strategyId,
+    module: aiModule = "content",
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -505,7 +508,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 visible={quickEditVisible}
                 onClose={() => setQuickEditVisible(false)}
                 selectedText={selectedText}
-                module="strategy"
+                module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
             />

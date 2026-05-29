@@ -11,6 +11,8 @@ import {
 } from "@/components/contents/types";
 import { useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
+import RichTextEditor from "@/components/rich-text-editor";
+import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import DatePickerModal, {
     formatDateForWebInput,
 } from "@/components/modals/DatePickerModal";
@@ -27,6 +29,7 @@ import {
     faHandshake,
     faMagicWandSparkles,
     faPaperPlane,
+    faRobot,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -338,8 +341,15 @@ const CreateContentScreen = () => {
         }
     }, [seedItem]);
 
-    // ── Right side panel (comments) ───────────────────────────────────────────
+    // ── Right side panel (comments + AI chat) ────────────────────────────────
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+    const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
+
+    const handleSendToChat = useCallback((text: string) => {
+        const label = text.length > 120 ? text.slice(0, 120) + "…" : text;
+        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
+        setRightPanelMode("chat");
+    }, []);
 
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
@@ -502,7 +512,7 @@ const CreateContentScreen = () => {
 
     const headerActions = useMemo(
         () => [
-            // 💬 Comments toggle — mobile only; desktop lives in the RightSidePanel rail
+            // 💬 Comments + 🤖 Chat toggles — mobile only; desktop lives in the RightSidePanel rail
             !xl ? (
                 <Pressable
                     key="comments"
@@ -519,6 +529,25 @@ const CreateContentScreen = () => {
                         icon={faCommentDots}
                         size={15}
                         color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
+                    />
+                </Pressable>
+            ) : null,
+            !xl ? (
+                <Pressable
+                    key="chat"
+                    style={({ pressed }) => [
+                        styles.iconBtn,
+                        rightPanelMode === "chat" && styles.iconBtnActive,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={() =>
+                        setRightPanelMode((m) => (m === "chat" ? "none" : "chat"))
+                    }
+                >
+                    <FontAwesomeIcon
+                        icon={faRobot}
+                        size={15}
+                        color={rightPanelMode === "chat" ? colors.onPrimary : colors.textSecondary}
                     />
                 </Pressable>
             ) : null,
@@ -672,15 +701,15 @@ const CreateContentScreen = () => {
                                     Write your full reel script with scene transitions, dialogue, and
                                     direction notes.
                                 </Text>
-                                <TextInput
-                                    style={[styles.input, styles.scriptArea]}
-                                    placeholder={"[Scene 1 - Hook]\nHey everyone...\n\n[Scene 2 - Main content]\n...\n\n[Scene 3 - CTA]\nFollow for more!"}
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={script}
-                                    onChangeText={setScript}
-                                    multiline
-                                    textAlignVertical="top"
-                                />
+                                <View style={styles.scriptEditorContainer}>
+                                    <RichTextEditor
+                                        content={script}
+                                        onChange={setScript}
+                                        onSendToChat={handleSendToChat}
+                                        strategyId={contentId}
+                                        module="content"
+                                    />
+                                </View>
 
                                 <View style={styles.aiPromptRow}>
                                     <TextInput
@@ -952,9 +981,19 @@ const CreateContentScreen = () => {
                             mode={rightPanelMode}
                             onModeChange={setRightPanelMode}
                             commentsSlot={
-                                // Desktop — rail chevron handles collapse.
                                 <ContentCommentsPanel
                                     contentId={contentId ?? null}
+                                />
+                            }
+                            chatSlot={
+                                <AIChatPanel
+                                    module="content"
+                                    contextId={contentId}
+                                    focusItems={chatFocusItems}
+                                    onRemoveFocusItem={(id) =>
+                                        setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                                    }
+                                    isCompact
                                 />
                             }
                         />
@@ -969,6 +1008,18 @@ const CreateContentScreen = () => {
                     commentsSlot={
                         <ContentCommentsPanel
                             contentId={contentId ?? null}
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                    chatSlot={
+                        <AIChatPanel
+                            module="content"
+                            contextId={contentId}
+                            focusItems={chatFocusItems}
+                            onRemoveFocusItem={(id) =>
+                                setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                            }
+                            isCompact
                             onCollapse={() => setRightPanelMode("none")}
                         />
                     }
@@ -1157,13 +1208,16 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     minHeight: 70,
                     maxHeight: 140,
                 },
-                scriptArea: {
-                    minHeight: 200,
-                    maxHeight: 380,
-                    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-                    fontSize: 13,
-                    lineHeight: 20,
+                scriptEditorContainer: {
+                    height: 360,
+                    borderRadius: 10,
+                    overflow: "hidden",
                     marginBottom: 12,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
                 },
                 aiPromptRow: {
                     flexDirection: "row",
