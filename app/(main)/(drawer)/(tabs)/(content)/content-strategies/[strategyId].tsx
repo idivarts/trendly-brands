@@ -1,9 +1,11 @@
+import ChatLoadingPanel from "@/components/content-strategy/ChatLoadingPanel";
 import CollaboratorsModal from "@/components/content-strategy/CollaboratorsModal";
 import CommentsPanel from "@/components/content-strategy/CommentsPanel";
 import PresenceAvatars from "@/components/content-strategy/PresenceAvatars";
 import SnippetCommentPopover from "@/components/content-strategy/SnippetCommentPopover";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
+import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
 import { ContentStrategy, ReviewStatus, ScreenState } from "@/components/content-strategy/types";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
@@ -31,7 +33,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet, Text } from "react-native";
 
 // ─── Review Status Banner ─────────────────────────────────────────────────────
 
@@ -265,12 +267,16 @@ const ContentStrategyDetail = () => {
         initialPrompt?: string;
     }>();
 
-    const { strategies, updateStrategyContent, updateReviewStatus, updatePresence } =
-        useStrategies();
+    const {
+        strategies,
+        loading: strategiesLoading,
+        updateStrategyContent,
+        updateReviewStatus,
+        updatePresence,
+    } = useStrategies();
 
-    // If the user arrived with an `initialPrompt` query param, we begin in
-    // "collecting" — the shimmer plays while the AI chat ramps up. Otherwise
-    // we go straight to the editor.
+    // Start in "loading" until Firestore tells us whether this strategy has
+    // content. Only then do we resolve to "collecting" or "strategy-ready".
 
     const [strategyContent, setStrategyContent] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -279,9 +285,7 @@ const ContentStrategyDetail = () => {
         initialPrompt
     );
 
-    const [screenState, setScreenState] = useState<ScreenState>(
-        "collecting"
-    );
+    const [screenState, setScreenState] = useState<ScreenState>("loading");
 
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
     const [showCollaborators, setShowCollaborators] = useState(false);
@@ -291,7 +295,18 @@ const ContentStrategyDetail = () => {
         anchorEnd: number;
     } | null>(null);
 
-    const panelRatio = useRef(new Animated.Value(1)).current;
+    // Two animated drivers — interpolated to derive every visual property.
+    // We drive everything off interpolations because RN Web doesn't reliably
+    // propagate direct Animated.Value updates to opacity/transform inline
+    // styles, whereas interpolated values flow through correctly (verified).
+    //
+    // transitionProgress: 0 = collecting/loading layout (chat-heavy),
+    //                     1 = strategy-ready layout (editor-heavy).
+    // loadedProgress:     1 = still loading (skeleton),
+    //                     0 = resolved (collecting or strategy-ready).
+    const transitionProgress = useRef(new Animated.Value(0)).current;
+    const loadedProgress = useRef(new Animated.Value(1)).current;
+
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const activeStrategy = useMemo(
@@ -308,6 +323,23 @@ const ContentStrategyDetail = () => {
         }
     }, [activeStrategy]);
 
+    // Resolve the loading state once Firestore returns. If the strategy already
+    // has content, jump straight to "strategy-ready"; otherwise enter
+    // "collecting". After that, the screenState is driven by content edits.
+    useEffect(() => {
+        if (screenState !== "loading") return;
+        if (strategiesLoading) return;
+        if (activeStrategy) {
+            setScreenState(
+                hasRealContent(activeStrategy.content) ? "strategy-ready" : "collecting"
+            );
+        } else {
+            // Strategy not found in the snapshot yet (e.g. just-created with an
+            // initialPrompt). Fall through to collecting — chat will lead.
+            setScreenState("collecting");
+        }
+    }, [screenState, strategiesLoading, activeStrategy]);
+
     // Once content arrives on a collecting page, flip to strategy-ready.
     useEffect(() => {
         if (screenState === "collecting" && hasRealContent(strategyContent)) {
@@ -317,6 +349,26 @@ const ContentStrategyDetail = () => {
             setScreenState("collecting");
         }
     }, [screenState, strategyContent]);
+
+    // Drive the coordinated transition whenever screenState changes.
+    useEffect(() => {
+        const isLoading = screenState === "loading";
+        const isReady = screenState === "strategy-ready";
+
+        Animated.timing(loadedProgress, {
+            toValue: isLoading ? 1 : 0,
+            duration: 220,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+        }).start();
+
+        Animated.timing(transitionProgress, {
+            toValue: isReady ? 1 : 0,
+            duration: 350,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+        }).start();
+    }, [screenState, loadedProgress, transitionProgress]);
 
     // Presence heartbeat
     useEffect(() => {
@@ -407,17 +459,81 @@ const ContentStrategyDetail = () => {
     // and not collapsible. Pin mode to "chat" while collecting so neither the
     // user nor a stale state can close it.
     const isCollecting = screenState === "collecting";
+    const isLoading = screenState === "loading";
+    const isReady = screenState === "strategy-ready";
     useEffect(() => {
         if (isCollecting) setRightPanelMode("chat");
     }, [isCollecting]);
 
-    const leftFlex = panelRatio.interpolate({
-        inputRange: [0, 1],
-        outputRange: [1, 2],
+    // Track which left-panel children to keep in the tree. Inactive children
+    // are unmounted after the crossfade completes so their animation loops
+    // (shimmer, skeleton) don't keep running off-screen.
+    const [mountFlags, setMountFlags] = useState({
+        loading: true,
+        shimmer: false,
+        editor: false,
     });
-    const rightFlex = panelRatio.interpolate({
+    useEffect(() => {
+        setMountFlags((prev) => ({
+            loading: prev.loading || isLoading,
+            shimmer: prev.shimmer || isCollecting,
+            editor: prev.editor || isReady,
+        }));
+        const t = setTimeout(() => {
+            setMountFlags({
+                loading: isLoading,
+                shimmer: isCollecting,
+                editor: isReady,
+            });
+        }, 420);
+        return () => clearTimeout(t);
+    }, [isLoading, isCollecting, isReady]);
+
+    // Keep the mobile full-screen chat mounted briefly after collecting ends so
+    // its opacity fade can play before it leaves the tree.
+    const [mobileChatMounted, setMobileChatMounted] = useState(false);
+    useEffect(() => {
+        if (isCollecting) {
+            setMobileChatMounted(true);
+            return;
+        }
+        const t = setTimeout(() => setMobileChatMounted(false), 240);
+        return () => clearTimeout(t);
+    }, [isCollecting]);
+
+    // Panel flex: collecting (3 : 7) → strategy-ready (2 : 1).
+    const leftFlex = transitionProgress.interpolate({
         inputRange: [0, 1],
-        outputRange: [2, 1],
+        outputRange: [3, 2],
+    });
+    const rightFlex = transitionProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [7, 1],
+    });
+
+    // Derived opacities. While loadedProgress > 0, only the loading skeleton
+    // is visible; once it crosses to 0, transitionProgress determines whether
+    // the shimmer or editor shows.
+    const loadingOpacity = loadedProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+    });
+    const shimmerOpacity = Animated.multiply(
+        loadedProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+        transitionProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
+    );
+    const editorOpacity = Animated.multiply(
+        loadedProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+        transitionProgress
+    );
+    const toolbarOpacity = editorOpacity;
+    const toolbarTranslateY = transitionProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-8, 0],
+    });
+    const mobileChatOpacity = transitionProgress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 0],
     });
 
     const headerLeftAction = useMemo(() => {
@@ -512,96 +628,132 @@ const ContentStrategyDetail = () => {
                 mobileActions="all"
             />
 
-            {activeStrategy && screenState === "strategy-ready" && (
-                <StrategyToolbar
-                    strategy={activeStrategy}
-                    currentManagerId={manager?.id ?? ""}
-                    xl={xl}
-                    onApprove={handleApprove}
-                    onRequestChanges={handleRequestChanges}
-                    onInvite={() => setShowCollaborators(true)}
-                    onSendForReview={handleSendForReview}
-                    onPushToCalendar={() => { }}
-                    colors={colors}
-                />
+            {activeStrategy && (
+                <Animated.View
+                    style={{
+                        opacity: toolbarOpacity,
+                        transform: [{ translateY: toolbarTranslateY }],
+                    }}
+                    pointerEvents={isReady ? "auto" : "none"}
+                >
+                    <StrategyToolbar
+                        strategy={activeStrategy}
+                        currentManagerId={manager?.id ?? ""}
+                        xl={xl}
+                        onApprove={handleApprove}
+                        onRequestChanges={handleRequestChanges}
+                        onInvite={() => setShowCollaborators(true)}
+                        onSendForReview={handleSendForReview}
+                        onPushToCalendar={() => { }}
+                        colors={colors}
+                    />
+                </Animated.View>
             )}
 
             <View style={styles.splitContainer}>
-                {/* ── Left: editor ──────────────────────────────────────────
+                {/* ── Left: layered loading-skeleton / shimmer / editor.
+                    All three states cross-fade via opacity. Inactive children
+                    are unmounted after the transition completes (mountFlags).
                     On !xl while collecting, the chat takes the whole screen,
                     so we skip rendering the left panel entirely. */}
                 {!(isCollecting && !xl) && (
                     <Animated.View
                         style={[
                             styles.leftPanel,
-                            {
-                                flex: xl
-                                    ? isCollecting
-                                        ? 3
-                                        : leftFlex
-                                    : 1,
-                            },
+                            { flex: xl ? leftFlex : 1 },
                         ]}
                     >
-                        {screenState === "collecting" ? (
-                            <StrategyShimmerPanel onWriteManually={handleWriteManually} />
+                        {mountFlags.loading && (
+                            <Animated.View
+                                style={[styles.layered, { opacity: loadingOpacity }]}
+                                pointerEvents={isLoading ? "auto" : "none"}
+                            >
+                                <StrategyLoadingPanel animating={isLoading} />
+                            </Animated.View>
+                        )}
+                        {mountFlags.shimmer && (
+                            <Animated.View
+                                style={[styles.layered, { opacity: shimmerOpacity }]}
+                                pointerEvents={isCollecting ? "auto" : "none"}
+                            >
+                                <StrategyShimmerPanel onWriteManually={handleWriteManually} />
+                            </Animated.View>
+                        )}
+                        {mountFlags.editor && (
+                            <Animated.View
+                                style={[styles.layered, { opacity: editorOpacity }]}
+                                pointerEvents={isReady ? "auto" : "none"}
+                            >
+                                <StrategyEditorPanel
+                                    content={strategyContent}
+                                    onChange={handleStrategyContentChange}
+                                    onSendToChat={handleSendToChat}
+                                    onSnippetComment={handleSnippetComment}
+                                    strategyId={strategyId ?? undefined}
+                                />
+                            </Animated.View>
+                        )}
+                    </Animated.View>
+                )}
+
+                {/* ── Right: split-pane on desktop. During loading we show a
+                      chat-bubble skeleton instead of mounting the real chat
+                      so we don't trigger network calls before we know which
+                      state to land in. ─────────────────────────────────── */}
+                {xl && (
+                    <Animated.View
+                        style={[
+                            styles.rightPanel,
+                            { flex: rightFlex },
+                            !isCollecting && !isLoading && rightPanelMode === "none"
+                                ? styles.rightPanelCollapsed
+                                : null,
+                        ]}
+                    >
+                        {isLoading ? (
+                            <ChatLoadingPanel animating />
                         ) : (
-                            <StrategyEditorPanel
-                                content={strategyContent}
-                                onChange={handleStrategyContentChange}
-                                onSendToChat={handleSendToChat}
-                                onSnippetComment={handleSnippetComment}
-                                strategyId={strategyId ?? undefined}
+                            <RightSidePanel
+                                mode={isCollecting ? "chat" : rightPanelMode}
+                                onModeChange={isCollecting ? () => { } : setRightPanelMode}
+                                commentsSlot={
+                                    <CommentsPanel
+                                        strategyId={strategyId ?? null}
+                                        onCollapse={() => setRightPanelMode("none")}
+                                    />
+                                }
+                                chatSlot={
+                                    <AIChatPanel
+                                        module="strategy"
+                                        contextId={strategyId ?? undefined}
+                                        initialMessage={initialChatMessage}
+                                        onInitialMessageSent={() =>
+                                            setInitialChatMessage(undefined)
+                                        }
+                                        focusItems={chatFocusItems}
+                                        onRemoveFocusItem={(id) =>
+                                            setChatFocusItems((prev) =>
+                                                prev.filter((f) => f.id !== id)
+                                            )
+                                        }
+                                        isCompact={screenState === "strategy-ready"}
+                                        onCollapse={
+                                            isCollecting
+                                                ? undefined
+                                                : () => setRightPanelMode("none")
+                                        }
+                                    />
+                                }
                             />
                         )}
                     </Animated.View>
                 )}
 
-                {/* ── Right: split-pane on desktop, plus full-width inline
-                      chat on mobile while collecting. RightSidePanel renders
-                      as a 92%-wide overlay on !xl, so for !xl + collecting we
-                      mount AIChatPanel directly to get true 100% width. ─── */}
-                {xl && (
+                {!xl && mobileChatMounted && (
                     <Animated.View
-                        style={[
-                            styles.rightPanel,
-                            { flex: isCollecting ? 7 : rightFlex },
-                            !isCollecting && rightPanelMode === "none"
-                                ? styles.rightPanelCollapsed
-                                : null,
-                        ]}
+                        style={[styles.fullScreenChat, { opacity: mobileChatOpacity }]}
+                        pointerEvents={isCollecting ? "auto" : "none"}
                     >
-                        <RightSidePanel
-                            mode={isCollecting ? "chat" : rightPanelMode}
-                            onModeChange={isCollecting ? () => { } : setRightPanelMode}
-                            commentsSlot={
-                                <CommentsPanel
-                                    strategyId={strategyId ?? null}
-                                    onCollapse={() => setRightPanelMode("none")}
-                                />
-                            }
-                            chatSlot={
-                                <AIChatPanel
-                                    module="strategy"
-                                    contextId={strategyId ?? undefined}
-                                    initialMessage={initialChatMessage}
-                                    onInitialMessageSent={() => setInitialChatMessage(undefined)}
-                                    focusItems={chatFocusItems}
-                                    onRemoveFocusItem={(id) =>
-                                        setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
-                                    }
-                                    isCompact={screenState === "strategy-ready"}
-                                    onCollapse={
-                                        isCollecting ? undefined : () => setRightPanelMode("none")
-                                    }
-                                />
-                            }
-                        />
-                    </Animated.View>
-                )}
-
-                {!xl && isCollecting && (
-                    <View style={styles.fullScreenChat}>
                         <AIChatPanel
                             module="strategy"
                             contextId={strategyId ?? undefined}
@@ -613,13 +765,14 @@ const ContentStrategyDetail = () => {
                             }
                             isCompact={false}
                         />
-                    </View>
+                    </Animated.View>
                 )}
             </View>
 
             {/* Mobile floating overlay — only when not collecting (the chat
-                already fills the screen inline in that case). */}
-            {!xl && !isCollecting && (
+                already fills the screen inline in that case). Suppressed
+                during loading to avoid the chevron strip flashing in. */}
+            {!xl && !isCollecting && !isLoading && (
                 <RightSidePanel
                     mode={rightPanelMode}
                     onModeChange={setRightPanelMode}
@@ -688,6 +841,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 leftPanel: {
                     overflow: "hidden",
+                    position: "relative",
+                },
+                layered: {
+                    ...StyleSheet.absoluteFillObject,
                 },
                 rightPanel: {
                 },
