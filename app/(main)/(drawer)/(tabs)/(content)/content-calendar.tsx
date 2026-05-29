@@ -102,39 +102,43 @@ const ContentCalendarScreen = () => {
 
     const headerActionButtons = useMemo(
         () => [
-            // 💬 Comments toggle
-            <Pressable
-                key="comments"
-                style={({ pressed }) => [
-                    styles.iconBtn,
-                    rightPanelMode === "comments" && styles.iconBtnActive,
-                    pressed && styles.iconBtnPressed,
-                ]}
-                onPress={handleCommentsToggle}
-            >
-                <FontAwesomeIcon
-                    icon={faCommentDots}
-                    size={15}
-                    color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
-                />
-            </Pressable>,
+            // 💬 Comments toggle — mobile only; desktop lives in the RightSidePanel rail
+            !xl ? (
+                <Pressable
+                    key="comments"
+                    style={({ pressed }) => [
+                        styles.iconBtn,
+                        rightPanelMode === "comments" && styles.iconBtnActive,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={handleCommentsToggle}
+                >
+                    <FontAwesomeIcon
+                        icon={faCommentDots}
+                        size={15}
+                        color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
+                    />
+                </Pressable>
+            ) : null,
 
-            // 🤖 AI Chat toggle
-            <Pressable
-                key="chat"
-                style={({ pressed }) => [
-                    styles.iconBtn,
-                    rightPanelMode === "chat" && styles.iconBtnActive,
-                    pressed && styles.iconBtnPressed,
-                ]}
-                onPress={handleChatToggle}
-            >
-                <FontAwesomeIcon
-                    icon={faRobot}
-                    size={15}
-                    color={rightPanelMode === "chat" ? colors.onPrimary : colors.textSecondary}
-                />
-            </Pressable>,
+            // 🤖 AI Chat toggle — mobile only; desktop lives in the RightSidePanel rail
+            !xl ? (
+                <Pressable
+                    key="chat"
+                    style={({ pressed }) => [
+                        styles.iconBtn,
+                        rightPanelMode === "chat" && styles.iconBtnActive,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={handleChatToggle}
+                >
+                    <FontAwesomeIcon
+                        icon={faRobot}
+                        size={15}
+                        color={rightPanelMode === "chat" ? colors.onPrimary : colors.textSecondary}
+                    />
+                </Pressable>
+            ) : null,
 
             // Add content
             hasItems ? (
@@ -155,6 +159,8 @@ const ContentCalendarScreen = () => {
         [hasItems, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
     );
 
+    // Slot chevrons are intentionally not wired — desktop uses the rail's
+    // chevron and mobile uses the scrim-tap-to-close affordance.
     const rightSidePanel = (
         <RightSidePanel
             mode={rightPanelMode}
@@ -165,7 +171,6 @@ const ContentCalendarScreen = () => {
                     month={calMonth}
                     selectedItem={selectedCommentItem}
                     onClearSelectedItem={() => setSelectedCommentItem(null)}
-                    onCollapse={() => setRightPanelMode("none")}
                 />
             }
             chatSlot={
@@ -179,7 +184,6 @@ const ContentCalendarScreen = () => {
                     isCompact
                     welcomeText={CALENDAR_WELCOME}
                     placeholder="Ask the AI Expert..."
-                    onCollapse={() => setRightPanelMode("none")}
                 />
             }
         />
@@ -281,8 +285,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     // overflow: visible so RightSidePanel's shadow renders unclipped.
                 },
                 rightPanelCollapsed: {
-                    flex: 0,
-                    width: 24,
+                    // `flex: 0` ⇒ `flex: 0 1 0%` collapses width to 0; use
+                    // explicit grow/shrink/basis so the 44px rail is honored.
+                    flexGrow: 0,
+                    flexShrink: 0,
+                    flexBasis: 44,
+                    width: 44,
                 },
                 iconBtn: {
                     width: 34,

@@ -502,24 +502,26 @@ const CreateContentScreen = () => {
 
     const headerActions = useMemo(
         () => [
-            // 💬 Comments toggle
-            <Pressable
-                key="comments"
-                style={({ pressed }) => [
-                    styles.iconBtn,
-                    rightPanelMode === "comments" && styles.iconBtnActive,
-                    pressed && styles.iconBtnPressed,
-                ]}
-                onPress={() =>
-                    setRightPanelMode((m) => (m === "comments" ? "none" : "comments"))
-                }
-            >
-                <FontAwesomeIcon
-                    icon={faCommentDots}
-                    size={15}
-                    color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
-                />
-            </Pressable>,
+            // 💬 Comments toggle — mobile only; desktop lives in the RightSidePanel rail
+            !xl ? (
+                <Pressable
+                    key="comments"
+                    style={({ pressed }) => [
+                        styles.iconBtn,
+                        rightPanelMode === "comments" && styles.iconBtnActive,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={() =>
+                        setRightPanelMode((m) => (m === "comments" ? "none" : "comments"))
+                    }
+                >
+                    <FontAwesomeIcon
+                        icon={faCommentDots}
+                        size={15}
+                        color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
+                    />
+                </Pressable>
+            ) : null,
             // Save
             <Pressable
                 key="save"
@@ -950,9 +952,9 @@ const CreateContentScreen = () => {
                             mode={rightPanelMode}
                             onModeChange={setRightPanelMode}
                             commentsSlot={
+                                // Desktop — rail chevron handles collapse.
                                 <ContentCommentsPanel
                                     contentId={contentId ?? null}
-                                    onCollapse={() => setRightPanelMode("none")}
                                 />
                             }
                         />
@@ -1032,8 +1034,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flex: 0.5,
                 },
                 rightPanelCollapsed: {
-                    flex: 0,
-                    width: 24,
+                    // `flex: 0` ⇒ `flex: 0 1 0%` collapses width to 0; use
+                    // explicit grow/shrink/basis so the 44px rail is honored.
+                    flexGrow: 0,
+                    flexShrink: 0,
+                    flexBasis: 44,
+                    width: 44,
                 },
                 // ── Header icon button (comments toggle) ──────────────────────
                 iconBtn: {

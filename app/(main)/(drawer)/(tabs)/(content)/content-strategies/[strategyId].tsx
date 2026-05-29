@@ -328,7 +328,10 @@ const ContentStrategyDetail = () => {
                 <PresenceAvatars key="presence" strategyId={strategyId} />
             ) : null,
 
-            isStrategyReady ? (
+            // On desktop the comments/chat toggles live in the RightSidePanel
+            // rail. On mobile (Option C) we keep them in the header because
+            // the rail isn't rendered there.
+            !xl && isStrategyReady ? (
                 <Pressable
                     key="comments"
                     style={({ pressed }) => [
@@ -346,7 +349,7 @@ const ContentStrategyDetail = () => {
                 </Pressable>
             ) : null,
 
-            isStrategyReady ? (
+            !xl && isStrategyReady ? (
                 <Pressable
                     key="chat"
                     style={({ pressed }) => [
@@ -449,7 +452,7 @@ const ContentStrategyDetail = () => {
                                         onRequestChanges: handleRequestChanges,
                                         onInvite: () => setShowCollaborators(true),
                                         onSendForReview: handleSendForReview,
-                                        onPushToCalendar: () => {},
+                                        onPushToCalendar: () => { },
                                     } : undefined}
                                 />
                             </Animated.View>
@@ -461,54 +464,64 @@ const ContentStrategyDetail = () => {
                       chat-bubble skeleton instead of mounting the real chat
                       so we don't trigger network calls before we know which
                       state to land in. ─────────────────────────────────── */}
-                {xl && (
-                    <Animated.View
-                        style={[
-                            styles.rightPanel,
-                            { flex: rightFlex },
-                            !isCollecting && !isLoading && rightPanelMode === "none"
-                                ? styles.rightPanelCollapsed
-                                : null,
-                        ]}
-                    >
-                        {isLoading ? (
-                            <ChatLoadingPanel animating />
-                        ) : (
-                            <RightSidePanel
-                                mode={isCollecting ? "chat" : rightPanelMode}
-                                onModeChange={isCollecting ? () => { } : setRightPanelMode}
-                                commentsSlot={
-                                    <CommentsPanel
-                                        strategyId={strategyId ?? null}
-                                        onCollapse={() => setRightPanelMode("none")}
-                                    />
-                                }
-                                chatSlot={
-                                    <AIChatPanel
-                                        module="strategy"
-                                        contextId={strategyId ?? undefined}
-                                        initialMessage={initialChatMessage}
-                                        onInitialMessageSent={() =>
-                                            setInitialChatMessage(undefined)
-                                        }
-                                        focusItems={chatFocusItems}
-                                        onRemoveFocusItem={(id) =>
-                                            setChatFocusItems((prev) =>
-                                                prev.filter((f) => f.id !== id)
-                                            )
-                                        }
-                                        isCompact={screenState === "strategy-ready"}
-                                        onCollapse={
-                                            isCollecting
-                                                ? undefined
-                                                : () => setRightPanelMode("none")
-                                        }
-                                    />
-                                }
-                            />
-                        )}
-                    </Animated.View>
-                )}
+                {xl && (() => {
+                    const isPanelCollapsed =
+                        !isCollecting && !isLoading && rightPanelMode === "none";
+                    return (
+                        <Animated.View
+                            style={[
+                                styles.rightPanel,
+                                // When collapsed we skip the animated flex so the
+                                // static width: 44 (via rightPanelCollapsed) isn't
+                                // overridden by an inline `flex` style — inline
+                                // beats classes in RN Web, so an inline `flex: 1`
+                                // would expand basis: 0% and erase the 44px width.
+                                isPanelCollapsed ? null : { flex: rightFlex },
+                                isPanelCollapsed ? styles.rightPanelCollapsed : null,
+                            ]}
+                        >
+                            {isLoading ? (
+                                <ChatLoadingPanel animating />
+                            ) : (
+                                <RightSidePanel
+                                    mode={isCollecting ? "chat" : rightPanelMode}
+                                    onModeChange={isCollecting ? () => { } : setRightPanelMode}
+                                    // Comments aren't available during collecting —
+                                    // suppressing the slot also hides the rail icon
+                                    // so users don't tap a no-op control.
+                                    // Desktop path — the rail's chevron handles
+                                    // collapse, so the slot headers don't render
+                                    // their own. (Mobile mount still passes
+                                    // onCollapse below for the in-sheet chevron.)
+                                    commentsSlot={
+                                        isCollecting ? undefined : (
+                                            <CommentsPanel
+                                                strategyId={strategyId ?? null}
+                                            />
+                                        )
+                                    }
+                                    chatSlot={
+                                        <AIChatPanel
+                                            module="strategy"
+                                            contextId={strategyId ?? undefined}
+                                            initialMessage={initialChatMessage}
+                                            onInitialMessageSent={() =>
+                                                setInitialChatMessage(undefined)
+                                            }
+                                            focusItems={chatFocusItems}
+                                            onRemoveFocusItem={(id) =>
+                                                setChatFocusItems((prev) =>
+                                                    prev.filter((f) => f.id !== id)
+                                                )
+                                            }
+                                            isCompact={screenState === "strategy-ready"}
+                                        />
+                                    }
+                                />
+                            )}
+                        </Animated.View>
+                    );
+                })()}
 
                 {!xl && mobileChatMounted && (
                     <Animated.View
@@ -610,8 +623,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 rightPanel: {
                 },
                 rightPanelCollapsed: {
-                    flex: 0,
-                    width: 24,
+                    // `flex: 0` compiles to `flex: 0 1 0%` which makes basis
+                    // 0% override the explicit width and collapse the box to
+                    // 0px. Use flexShrink: 0 + width so the rail stays 44px.
+                    flexGrow: 0,
+                    flexShrink: 0,
+                    flexBasis: 44,
+                    width: 44,
                 },
                 fullScreenChat: {
                     flex: 1,
@@ -643,8 +661,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 8,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderWidth: 1,
-                    borderColor: colors.border,
+                    // borderWidth: 1,
+                    // borderColor: colors.border,
                 },
                 iconBtnActive: {
                     backgroundColor: colors.primary,
