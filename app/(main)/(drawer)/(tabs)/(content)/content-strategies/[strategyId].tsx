@@ -2,7 +2,11 @@ import ChatLoadingPanel from "@/components/content-strategy/ChatLoadingPanel";
 import CollaboratorsModal from "@/components/content-strategy/CollaboratorsModal";
 import CommentsPanel from "@/components/content-strategy/CommentsPanel";
 import PresenceAvatars from "@/components/content-strategy/PresenceAvatars";
+import PushToCalendarModal, {
+    PushToCalendarConfirm,
+} from "@/components/content-strategy/PushToCalendarModal";
 import SnippetCommentPopover from "@/components/content-strategy/SnippetCommentPopover";
+import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
@@ -67,6 +71,7 @@ const ContentStrategyDetail = () => {
 
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
     const [showCollaborators, setShowCollaborators] = useState(false);
+    const [showPushToCalendar, setShowPushToCalendar] = useState(false);
     const [snippetSelection, setSnippetSelection] = useState<{
         snippet: string;
         anchorStart: number;
@@ -209,6 +214,37 @@ const ContentStrategyDetail = () => {
         if (!strategyId) return;
         await updateReviewStatus(strategyId, "changes_requested", manager?.id);
     }, [strategyId, updateReviewStatus, manager?.id]);
+
+    // Confirmed "Push to Calendar": persist the schedule server-side, then land
+    // the user on the calendar at the month they chose as the start date.
+    const handlePushToCalendarConfirm = useCallback(
+        (opts: PushToCalendarConfirm) => {
+            setShowPushToCalendar(false);
+
+            // TODO(API): POST /api/content-strategy/:strategyId/push-to-calendar
+            //   body: { startDate, durationDays, overrideExisting }
+            //   See components/content-strategy/README.md → "Push Strategy to Calendar".
+            //   Wire the real call here once the endpoint ships.
+
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/content-calendar" as any,
+                params: { focusDate: formatDateForWebInput(opts.startDate) },
+            });
+        },
+        [router]
+    );
+
+    // Re-derive the campaign length from the (possibly hand-edited) strategy body.
+    const handleRefreshDuration = useCallback(async (): Promise<number | null> => {
+        if (!strategyId) return null;
+
+        // TODO(API): POST /api/content-strategy/:strategyId/recheck-duration
+        //   AI re-reads the strategy body and returns the corrected length in days,
+        //   persisting it back to the strategy timeline. See
+        //   components/content-strategy/README.md → "Re-check Strategy Duration".
+        //   Until the endpoint ships, fall back to the recorded duration.
+        return activeStrategy?.durationDays ?? null;
+    }, [strategyId, activeStrategy?.durationDays]);
 
     const handleSnippetComment = useCallback(
         (snippet: string, anchorStart: number, anchorEnd: number) => {
@@ -452,7 +488,7 @@ const ContentStrategyDetail = () => {
                                         onRequestChanges: handleRequestChanges,
                                         onInvite: () => setShowCollaborators(true),
                                         onSendForReview: handleSendForReview,
-                                        onPushToCalendar: () => { },
+                                        onPushToCalendar: () => setShowPushToCalendar(true),
                                     } : undefined}
                                 />
                             </Animated.View>
@@ -587,6 +623,17 @@ const ContentStrategyDetail = () => {
                     strategyId={strategyId}
                     collaboratorIds={activeStrategy.collaboratorIds}
                     onClose={() => setShowCollaborators(false)}
+                />
+            )}
+
+            {activeStrategy && (
+                <PushToCalendarModal
+                    visible={showPushToCalendar}
+                    strategyTitle={activeStrategy.title}
+                    durationDays={activeStrategy.durationDays}
+                    onClose={() => setShowPushToCalendar(false)}
+                    onConfirm={handlePushToCalendarConfirm}
+                    onRefreshDuration={handleRefreshDuration}
                 />
             )}
 

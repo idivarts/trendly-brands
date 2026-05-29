@@ -31,6 +31,14 @@ function epochToDisplayDate(epoch: number): string {
     });
 }
 
+const DAY_MS = 86_400_000;
+
+function timelineDurationDays(timeline?: IStrategy["timeline"]): number | undefined {
+    if (!timeline?.startDate || !timeline?.endDate) return undefined;
+    const days = Math.round((timeline.endDate - timeline.startDate) / DAY_MS);
+    return days > 0 ? days : undefined;
+}
+
 function toContentStrategy(id: string, data: IStrategy): ContentStrategy {
     return {
         id,
@@ -38,6 +46,7 @@ function toContentStrategy(id: string, data: IStrategy): ContentStrategy {
         content: data.markdownContent ?? "",
         createdAt: epochToDisplayDate(data.createdAt),
         chatMessages: [],
+        durationDays: timelineDurationDays(data.timeline),
         // Collaboration fields
         collaboratorIds: data.collaboratorIds ?? [],
         lastEditedBy: data.lastEditedBy,

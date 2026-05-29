@@ -12,6 +12,9 @@ export interface ContentStrategy {
     content: string;
     createdAt: string;
     chatMessages: ChatMessage[];
+    // Campaign window length (days) fixed at strategy creation. Used to
+    // pre-fill the calendar from a chosen start date through to the end.
+    durationDays?: number;
     // Collaboration
     collaboratorIds: string[];
     lastEditedBy?: string;

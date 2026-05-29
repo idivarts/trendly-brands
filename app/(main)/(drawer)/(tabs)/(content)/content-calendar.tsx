@@ -19,8 +19,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import { parseWebInputDate } from "@/components/modals/DatePickerModal";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
 const CALENDAR_WELCOME =
@@ -39,12 +40,27 @@ const ContentCalendarScreen = () => {
         [allContents]
     );
 
+    // `focusDate` (YYYY-MM-DD) lands the calendar on a specific month — e.g. when
+    // arriving from "Push strategy to calendar" with the chosen start date.
+    const { focusDate } = useLocalSearchParams<{ focusDate?: string }>();
+    const focusParsed = useMemo(
+        () => (focusDate ? parseWebInputDate(focusDate) : null),
+        [focusDate]
+    );
+
     const today = new Date();
     // Weekly is the readable default on phones — month cells become unreadable
     // squares below ~600px. Desktop keeps month overview.
     const [calView, setCalView] = useState<CalendarView>(xl ? "month" : "week");
-    const [calYear, setCalYear] = useState(today.getFullYear());
-    const [calMonth, setCalMonth] = useState(today.getMonth());
+    const [calYear, setCalYear] = useState(focusParsed?.getFullYear() ?? today.getFullYear());
+    const [calMonth, setCalMonth] = useState(focusParsed?.getMonth() ?? today.getMonth());
+
+    // Re-focus the month if we navigate here again with a different focusDate.
+    useEffect(() => {
+        if (!focusParsed) return;
+        setCalYear(focusParsed.getFullYear());
+        setCalMonth(focusParsed.getMonth());
+    }, [focusParsed]);
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [addInitialDate, setAddInitialDate] = useState<string | undefined>();
