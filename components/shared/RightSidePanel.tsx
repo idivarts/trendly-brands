@@ -105,7 +105,10 @@ const RailButton: React.FC<RailButtonProps> = ({
                     style={[railStyles.tooltip, { backgroundColor: colors.text }]}
                     pointerEvents="none"
                 >
-                    <Text style={[railStyles.tooltipText, { color: colors.background }]}>
+                    <Text
+                        numberOfLines={1}
+                        style={[railStyles.tooltipText, { color: colors.background }]}
+                    >
                         {tooltip}
                     </Text>
                 </View>
@@ -169,7 +172,14 @@ const railStyles = StyleSheet.create({
     },
     tooltip: {
         position: "absolute",
-        right: RIGHT_PANEL_RAIL_WIDTH + 4,
+        // Anchor the tooltip's right edge at the LEFT edge of the rail item
+        // (right: '100%' relative to itemWrap), then offset 8px further left
+        // via marginRight. This keeps width intrinsic to the label — using a
+        // numeric `right` plus the default `left: 0` would force width to
+        // (itemWrap.width - right), collapsing multi-word labels to tiny
+        // wrapped boxes inside the 44px rail.
+        right: "100%",
+        marginRight: 8,
         top: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
@@ -184,9 +194,6 @@ const railStyles = StyleSheet.create({
     tooltipText: {
         fontSize: 12,
         fontWeight: "500",
-        // RN Text doesn't expose whiteSpace, but on web no width constraint =
-        // no wrap. We don't set width above, so multi-word labels stay on
-        // one line.
     },
 });
 
