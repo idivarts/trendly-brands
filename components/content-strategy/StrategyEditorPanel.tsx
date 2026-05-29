@@ -1,16 +1,21 @@
 import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/types";
 import Colors from "@/shared-uis/constants/Colors";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     faCalendarDays,
     faCheck,
+    faCircleCheck,
+    faEllipsis,
+    faLock,
     faPaperPlane,
     faRotateLeft,
     faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
+import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 // ── Platform-specific editor (resolved once at module level) ──────────────────
 
@@ -44,14 +49,108 @@ export interface StrategyEditorPanelProps extends EditorProps {
     toolbar?: ToolbarProps;
 }
 
-// ── Review Status Toolbar ─────────────────────────────────────────────────────
+// ── Status pill config (token-driven, theme-aware) ────────────────────────────
 
-const REVIEW_STATUS_CONFIG: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
-    draft: { bg: "transparent", text: "transparent", label: "" },
-    in_review: { bg: "rgba(224,122,0,0.1)", text: "#E07A00", label: "Pending Review" },
-    approved: { bg: "rgba(26,122,58,0.1)", text: "#1A7A3A", label: "Approved" },
-    changes_requested: { bg: "rgba(220,38,38,0.1)", text: "#DC2626", label: "Changes Requested" },
+type StatusVisual = { bg: string; text: string; label: string };
+
+function statusVisual(
+    status: ReviewStatus,
+    colors: ReturnType<typeof Colors>
+): StatusVisual {
+    switch (status) {
+        case "in_review":
+            return { bg: colors.toastWarningBg, text: colors.toastWarning, label: "Pending Review" };
+        case "approved":
+            return { bg: colors.toastSuccessBg, text: colors.toastSuccess, label: "Approved" };
+        case "changes_requested":
+            return { bg: colors.toastErrorBg, text: colors.toastError, label: "Changes Requested" };
+        case "draft":
+        default:
+            return { bg: colors.tag, text: colors.textSecondary, label: "Draft" };
+    }
+}
+
+// ── Overflow ("⋯") menu — anchored dropdown, cross-platform ───────────────────
+
+interface MenuItem {
+    label: string;
+    icon: IconDefinition;
+    onPress: () => void;
+    destructive?: boolean;
+}
+
+const MENU_WIDTH = 220;
+
+const OverflowMenu: React.FC<{
+    items: MenuItem[];
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof toolbarStyles>;
+}> = ({ items, colors, styles }) => {
+    const [open, setOpen] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0 });
+    const triggerRef = useRef<View>(null);
+
+    if (items.length === 0) return null;
+
+    const openMenu = () => {
+        const node = triggerRef.current;
+        if (node && typeof node.measureInWindow === "function") {
+            node.measureInWindow((x, y, w, h) => {
+                setPos({ top: y + h + 6, left: Math.max(8, x + w - MENU_WIDTH) });
+                setOpen(true);
+            });
+        } else {
+            setOpen(true);
+        }
+    };
+
+    return (
+        <>
+            <Pressable
+                ref={triggerRef}
+                style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}
+                onPress={openMenu}
+                hitSlop={6}
+                accessibilityLabel="More actions"
+            >
+                <FontAwesomeIcon icon={faEllipsis} size={16} color={colors.textSecondary} />
+            </Pressable>
+
+            <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
+                <Pressable style={styles.menuBackdrop} onPress={() => setOpen(false)}>
+                    <View style={[styles.menuCard, { top: pos.top, left: pos.left }]}>
+                        {items.map((item) => (
+                            <Pressable
+                                key={item.label}
+                                style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+                                onPress={() => {
+                                    setOpen(false);
+                                    item.onPress();
+                                }}
+                            >
+                                <FontAwesomeIcon
+                                    icon={item.icon}
+                                    size={14}
+                                    color={item.destructive ? colors.toastError : colors.textSecondary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.menuItemText,
+                                        item.destructive && { color: colors.toastError },
+                                    ]}
+                                >
+                                    {item.label}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                </Pressable>
+            </Modal>
+        </>
+    );
 };
+
+// ── Strategy Toolbar ──────────────────────────────────────────────────────────
 
 const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Colors> }> = ({
     strategy,
@@ -65,170 +164,223 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     colors,
 }) => {
     const reviewStatus = strategy.reviewStatus ?? "draft";
-    const config = REVIEW_STATUS_CONFIG[reviewStatus];
-    const isDraft = reviewStatus === "draft";
+    const status = statusVisual(reviewStatus, colors);
     const isReviewer =
         reviewStatus === "in_review" &&
         strategy.collaboratorIds?.includes(currentManagerId) &&
         strategy.reviewRequestedBy !== currentManagerId;
     const canSendForReview = reviewStatus === "draft" || reviewStatus === "changes_requested";
 
-    const styles = toolbarStyles(colors, xl, isDraft ? "transparent" : config.bg);
+    const inviteCount = strategy.collaboratorIds?.length ?? 0;
+    const isShared = inviteCount > 0;
+
+    const styles = toolbarStyles(colors, xl);
+
+    // Autosave is silent and instant — intercept Cmd/Ctrl+S so the manual-save
+    // reflex lands on a reassuring toast instead of the browser's save dialog.
+    useEffect(() => {
+        if (Platform.OS !== "web" || typeof document === "undefined") return;
+        const onKey = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+                e.preventDefault();
+                Toaster.info(
+                    "Already saved",
+                    "This strategy autosaves as you type — no need to save manually."
+                );
+            }
+        };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+    }, []);
+
+    const overflowItems: MenuItem[] = [
+        { label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar },
+    ];
 
     return (
         <View style={styles.row}>
-            {!isDraft && (
-                <View style={styles.statusBlock}>
-                    <Text style={[styles.statusLabel, { color: config.text }]}>{config.label}</Text>
-                    {reviewStatus === "in_review" && (
-                        <Text style={styles.statusSub}>
-                            {isReviewer
-                                ? "This strategy has been sent to you for review."
-                                : "Awaiting review from collaborators."}
-                        </Text>
-                    )}
+            {/* ── Left: identity + autosave assurance ──────────────────────── */}
+            <View style={styles.infoCluster}>
+                <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+                    <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
+                        {status.label}
+                    </Text>
                 </View>
-            )}
-            <View style={styles.actions}>
-                {isReviewer && (
-                    <>
-                        <Pressable
-                            style={({ pressed }) => [styles.approveBtn, pressed && styles.btnPressed]}
-                            onPress={onApprove}
-                            accessibilityLabel="Approve"
-                        >
-                            <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
-                            {xl && <Text style={styles.approveBtnText}>Approve</Text>}
-                        </Pressable>
-                        <Pressable
-                            style={({ pressed }) => [styles.rejectBtn, pressed && styles.btnPressed]}
-                            onPress={onRequestChanges}
-                            accessibilityLabel="Request Changes"
-                        >
-                            <FontAwesomeIcon icon={faRotateLeft} size={12} color="#DC2626" />
-                            {xl && <Text style={styles.rejectBtnText}>Request Changes</Text>}
-                        </Pressable>
-                    </>
-                )}
 
+                <View style={styles.savedBlock}>
+                    <View style={styles.savedRow}>
+                        <FontAwesomeIcon icon={faCircleCheck} size={12} color={colors.toastSuccess} />
+                        <Text style={styles.savedLabel}>Saved</Text>
+                    </View>
+                    {xl && <Text style={styles.savedSub}>Autosaves as you type</Text>}
+                </View>
+            </View>
+
+            {/* ── Right: collaborators + decision + overflow ───────────────── */}
+            <View style={styles.actions}>
                 <Pressable
-                    style={({ pressed }) => [
-                        xl ? styles.outlineBtn : styles.iconBtn,
-                        pressed && styles.btnPressed,
-                    ]}
+                    style={({ pressed }) => [styles.collabChip, pressed && styles.btnPressed]}
                     onPress={onInvite}
-                    accessibilityLabel="Invite collaborators"
+                    accessibilityLabel={isShared ? `Shared with ${inviteCount}` : "Private — invite collaborators"}
                 >
-                    <FontAwesomeIcon icon={faUserGroup} size={14} color={colors.primary} />
-                    {xl && <Text style={styles.outlineBtnText}>Invite</Text>}
+                    <FontAwesomeIcon
+                        icon={isShared ? faUserGroup : faLock}
+                        size={12}
+                        color={isShared ? colors.primary : colors.textSecondary}
+                    />
+                    <Text
+                        style={[styles.collabChipText, isShared && { color: colors.primary }]}
+                        numberOfLines={1}
+                    >
+                        {isShared ? `${inviteCount} invited` : "Private"}
+                    </Text>
                 </Pressable>
 
-                {canSendForReview && (
+                {isReviewer && (
                     <Pressable
-                        style={({ pressed }) => [
-                            xl ? styles.outlineBtn : styles.iconBtn,
-                            pressed && styles.btnPressed,
-                        ]}
-                        onPress={onSendForReview}
-                        accessibilityLabel="Send for Review"
+                        style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
+                        onPress={onRequestChanges}
+                        accessibilityLabel="Request Changes"
                     >
-                        <FontAwesomeIcon icon={faPaperPlane} size={14} color={colors.primary} />
-                        {xl && <Text style={styles.outlineBtnText}>Send for Review</Text>}
+                        <FontAwesomeIcon icon={faRotateLeft} size={12} color={colors.toastError} />
+                        {xl && <Text style={[styles.ghostBtnText, { color: colors.toastError }]}>Request Changes</Text>}
                     </Pressable>
                 )}
 
-                <Pressable
-                    style={({ pressed }) => [
-                        xl ? styles.outlineBtn : styles.iconBtn,
-                        pressed && styles.btnPressed,
-                    ]}
-                    onPress={onPushToCalendar}
-                    accessibilityLabel="Push to Calendar"
-                >
-                    <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
-                    {xl && <Text style={styles.outlineBtnText}>Push to Calendar</Text>}
-                </Pressable>
+                {isReviewer && (
+                    <Pressable
+                        style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+                        onPress={onApprove}
+                        accessibilityLabel="Approve"
+                    >
+                        <FontAwesomeIcon icon={faCheck} size={12} color={colors.onPrimary} />
+                        <Text style={styles.primaryBtnText}>Approve</Text>
+                    </Pressable>
+                )}
+
+                {!isReviewer && canSendForReview && (
+                    <Pressable
+                        style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+                        onPress={onSendForReview}
+                        accessibilityLabel="Send for Review"
+                    >
+                        <FontAwesomeIcon icon={faPaperPlane} size={12} color={colors.onPrimary} />
+                        {xl && <Text style={styles.primaryBtnText}>Send for Review</Text>}
+                    </Pressable>
+                )}
+
+                <OverflowMenu items={overflowItems} colors={colors} styles={styles} />
             </View>
         </View>
     );
 };
 
-function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean, bg: string) {
+function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         row: {
-            backgroundColor: bg === "transparent" ? colors.background : bg,
+            backgroundColor: colors.card,
             paddingHorizontal: xl ? 16 : 12,
             paddingVertical: 10,
             flexDirection: "row",
             alignItems: "center",
-            gap: 8,
+            gap: 10,
             shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowRadius: 6,
-            shadowOpacity: 0.05,
-            elevation: 1,
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+            zIndex: 2,
         },
-        statusBlock: {
+        infoCluster: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
             flex: 1,
             minWidth: 0,
         },
-        statusLabel: {
-            fontSize: 13,
+        statusPill: {
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 999,
+        },
+        statusPillText: {
+            fontSize: 12,
             fontWeight: "700",
         },
-        statusSub: {
-            fontSize: 12,
+        savedBlock: {
+            minWidth: 0,
+        },
+        savedRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+        },
+        savedLabel: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.text,
+        },
+        savedSub: {
+            fontSize: 11,
             color: colors.textSecondary,
-            marginTop: 2,
+            marginTop: 1,
         },
         actions: {
             flexDirection: "row",
             alignItems: "center",
-            gap: xl ? 8 : 6,
+            gap: 8,
             marginLeft: "auto",
         },
-        approveBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: xl ? 12 : 10,
-            paddingVertical: 7,
-            borderRadius: 8,
-            backgroundColor: "#1A7A3A",
-        },
-        approveBtnText: {
-            fontSize: 12,
-            fontWeight: "700",
-            color: "#fff",
-        },
-        rejectBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: xl ? 12 : 10,
-            paddingVertical: 7,
-            borderRadius: 8,
-            backgroundColor: "rgba(220,38,38,0.12)",
-        },
-        rejectBtnText: {
-            fontSize: 12,
-            fontWeight: "700",
-            color: "#DC2626",
-        },
-        outlineBtn: {
+        collabChip: {
             flexDirection: "row",
             alignItems: "center",
             gap: 6,
-            paddingHorizontal: 12,
+            paddingHorizontal: 10,
             paddingVertical: 7,
             borderRadius: 8,
-            borderWidth: 1,
-            borderColor: colors.primary,
+            backgroundColor: colors.tag,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
         },
-        outlineBtnText: {
+        collabChipText: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
+        },
+        primaryBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 8,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            shadowOpacity: 0.35,
+            elevation: 4,
+        },
+        primaryBtnText: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.onPrimary,
+        },
+        ghostBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: xl ? 12 : 9,
+            paddingVertical: 8,
+            borderRadius: 8,
+            backgroundColor: colors.toastErrorBg,
+        },
+        ghostBtnText: {
             fontSize: 13,
             fontWeight: "600",
-            color: colors.primary,
         },
         iconBtn: {
             width: 34,
@@ -236,11 +388,41 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean, bg: strin
             borderRadius: 8,
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 1,
-            borderColor: colors.primary,
+            backgroundColor: colors.tag,
         },
         btnPressed: {
             opacity: 0.72,
+        },
+        menuBackdrop: {
+            flex: 1,
+            backgroundColor: colors.transparent,
+        },
+        menuCard: {
+            position: "absolute",
+            width: MENU_WIDTH,
+            paddingVertical: 6,
+            borderRadius: 12,
+            backgroundColor: colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 8 },
+            shadowRadius: 24,
+            shadowOpacity: 0.16,
+            elevation: 12,
+        },
+        menuItem: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 11,
+        },
+        menuItemPressed: {
+            backgroundColor: colors.secondarySurface,
+        },
+        menuItemText: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.text,
         },
     });
 }
