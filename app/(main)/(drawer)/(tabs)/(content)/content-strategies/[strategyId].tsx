@@ -7,7 +7,7 @@ import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
-import { ContentStrategy, ReviewStatus, ScreenState } from "@/components/content-strategy/types";
+import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
@@ -20,237 +20,15 @@ import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBars,
-    faCalendarDays,
-    faCheck,
     faCommentDots,
-    faPaperPlane,
     faPlus,
     faRobot,
-    faRotateLeft,
-    faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text } from "react-native";
-
-// ─── Review Status Banner ─────────────────────────────────────────────────────
-
-interface StrategyToolbarProps {
-    strategy: ContentStrategy;
-    currentManagerId: string;
-    xl: boolean;
-    onApprove: () => void;
-    onRequestChanges: () => void;
-    onInvite: () => void;
-    onSendForReview: () => void;
-    onPushToCalendar: () => void;
-    colors: ReturnType<typeof Colors>;
-}
-
-const REVIEW_STATUS_CONFIG: Record<ReviewStatus, { bg: string; text: string; label: string }> = {
-    draft: { bg: "transparent", text: "transparent", label: "" },
-    in_review: { bg: "rgba(224,122,0,0.1)", text: "#E07A00", label: "Pending Review" },
-    approved: { bg: "rgba(26,122,58,0.1)", text: "#1A7A3A", label: "Approved" },
-    changes_requested: { bg: "rgba(220,38,38,0.1)", text: "#DC2626", label: "Changes Requested" },
-};
-
-const StrategyToolbar: React.FC<StrategyToolbarProps> = ({
-    strategy,
-    currentManagerId,
-    xl,
-    onApprove,
-    onRequestChanges,
-    onInvite,
-    onSendForReview,
-    onPushToCalendar,
-    colors,
-}) => {
-    const reviewStatus = strategy.reviewStatus ?? "draft";
-    const config = REVIEW_STATUS_CONFIG[reviewStatus];
-    const isDraft = reviewStatus === "draft";
-    const isReviewer =
-        reviewStatus === "in_review" &&
-        strategy.collaboratorIds?.includes(currentManagerId) &&
-        strategy.reviewRequestedBy !== currentManagerId;
-    const canSendForReview = reviewStatus === "draft" || reviewStatus === "changes_requested";
-
-    const styles = toolbarStyles(colors, xl, isDraft ? "transparent" : config.bg);
-
-    return (
-        <View style={styles.row}>
-            {!isDraft && (
-                <View style={styles.statusBlock}>
-                    <Text style={[styles.statusLabel, { color: config.text }]}>{config.label}</Text>
-                    {reviewStatus === "in_review" && (
-                        <Text style={styles.statusSub}>
-                            {isReviewer
-                                ? "This strategy has been sent to you for review."
-                                : "Awaiting review from collaborators."}
-                        </Text>
-                    )}
-                </View>
-            )}
-            <View style={styles.actions}>
-                {isReviewer && (
-                    <>
-                        <Pressable
-                            style={({ pressed }) => [styles.approveBtn, pressed && styles.btnPressed]}
-                            onPress={onApprove}
-                            accessibilityLabel="Approve"
-                        >
-                            <FontAwesomeIcon icon={faCheck} size={12} color="#fff" />
-                            {xl && <Text style={styles.approveBtnText}>Approve</Text>}
-                        </Pressable>
-                        <Pressable
-                            style={({ pressed }) => [styles.rejectBtn, pressed && styles.btnPressed]}
-                            onPress={onRequestChanges}
-                            accessibilityLabel="Request Changes"
-                        >
-                            <FontAwesomeIcon icon={faRotateLeft} size={12} color="#DC2626" />
-                            {xl && <Text style={styles.rejectBtnText}>Request Changes</Text>}
-                        </Pressable>
-                    </>
-                )}
-
-                <Pressable
-                    style={({ pressed }) => [
-                        xl ? styles.outlineBtn : styles.iconBtn,
-                        pressed && styles.btnPressed,
-                    ]}
-                    onPress={onInvite}
-                    accessibilityLabel="Invite collaborators"
-                >
-                    <FontAwesomeIcon icon={faUserGroup} size={14} color={colors.primary} />
-                    {xl && <Text style={styles.outlineBtnText}>Invite</Text>}
-                </Pressable>
-
-                {canSendForReview && (
-                    <Pressable
-                        style={({ pressed }) => [
-                            xl ? styles.outlineBtn : styles.iconBtn,
-                            pressed && styles.btnPressed,
-                        ]}
-                        onPress={onSendForReview}
-                        accessibilityLabel="Send for Review"
-                    >
-                        <FontAwesomeIcon icon={faPaperPlane} size={14} color={colors.primary} />
-                        {xl && <Text style={styles.outlineBtnText}>Send for Review</Text>}
-                    </Pressable>
-                )}
-
-                <Pressable
-                    style={({ pressed }) => [
-                        xl ? styles.outlineBtn : styles.iconBtn,
-                        pressed && styles.btnPressed,
-                    ]}
-                    onPress={onPushToCalendar}
-                    accessibilityLabel="Push to Calendar"
-                >
-                    <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
-                    {xl && <Text style={styles.outlineBtnText}>Push to Calendar</Text>}
-                </Pressable>
-            </View>
-        </View>
-    );
-};
-
-function toolbarStyles(
-    colors: ReturnType<typeof Colors>,
-    xl: boolean,
-    bg: string,
-) {
-    return StyleSheet.create({
-        row: {
-            backgroundColor: bg === "transparent" ? colors.background : bg,
-            paddingHorizontal: xl ? 16 : 12,
-            paddingVertical: 10,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowRadius: 6,
-            shadowOpacity: 0.05,
-            elevation: 1,
-        },
-        statusBlock: {
-            flex: 1,
-            minWidth: 0,
-        },
-        statusLabel: {
-            fontSize: 13,
-            fontWeight: "700",
-        },
-        statusSub: {
-            fontSize: 12,
-            color: colors.textSecondary,
-            marginTop: 2,
-        },
-        actions: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: xl ? 8 : 6,
-            marginLeft: "auto",
-        },
-        approveBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: xl ? 12 : 10,
-            paddingVertical: 7,
-            borderRadius: 8,
-            backgroundColor: "#1A7A3A",
-        },
-        approveBtnText: {
-            fontSize: 12,
-            fontWeight: "700",
-            color: "#fff",
-        },
-        rejectBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: xl ? 12 : 10,
-            paddingVertical: 7,
-            borderRadius: 8,
-            backgroundColor: "rgba(220,38,38,0.12)",
-        },
-        rejectBtnText: {
-            fontSize: 12,
-            fontWeight: "700",
-            color: "#DC2626",
-        },
-        outlineBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 7,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: colors.primary,
-        },
-        outlineBtnText: {
-            fontSize: 13,
-            fontWeight: "600",
-            color: colors.primary,
-        },
-        iconBtn: {
-            width: 34,
-            height: 34,
-            borderRadius: 8,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: colors.primary,
-        },
-        btnPressed: {
-            opacity: 0.72,
-        },
-    });
-}
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 // .replace(/<[^>]*>/g, "").trim()
@@ -526,11 +304,6 @@ const ContentStrategyDetail = () => {
         loadedProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
         transitionProgress
     );
-    const toolbarOpacity = editorOpacity;
-    const toolbarTranslateY = transitionProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-8, 0],
-    });
     const mobileChatOpacity = transitionProgress.interpolate({
         inputRange: [0, 1],
         outputRange: [1, 0],
@@ -628,28 +401,6 @@ const ContentStrategyDetail = () => {
                 mobileActions="all"
             />
 
-            {activeStrategy && (
-                <Animated.View
-                    style={{
-                        opacity: toolbarOpacity,
-                        transform: [{ translateY: toolbarTranslateY }],
-                    }}
-                    pointerEvents={isReady ? "auto" : "none"}
-                >
-                    <StrategyToolbar
-                        strategy={activeStrategy}
-                        currentManagerId={manager?.id ?? ""}
-                        xl={xl}
-                        onApprove={handleApprove}
-                        onRequestChanges={handleRequestChanges}
-                        onInvite={() => setShowCollaborators(true)}
-                        onSendForReview={handleSendForReview}
-                        onPushToCalendar={() => { }}
-                        colors={colors}
-                    />
-                </Animated.View>
-            )}
-
             <View style={styles.splitContainer}>
                 {/* ── Left: layered loading-skeleton / shimmer / editor.
                     All three states cross-fade via opacity. Inactive children
@@ -690,6 +441,16 @@ const ContentStrategyDetail = () => {
                                     onSendToChat={handleSendToChat}
                                     onSnippetComment={handleSnippetComment}
                                     strategyId={strategyId ?? undefined}
+                                    toolbar={activeStrategy ? {
+                                        strategy: activeStrategy,
+                                        currentManagerId: manager?.id ?? "",
+                                        xl,
+                                        onApprove: handleApprove,
+                                        onRequestChanges: handleRequestChanges,
+                                        onInvite: () => setShowCollaborators(true),
+                                        onSendForReview: handleSendForReview,
+                                        onPushToCalendar: () => {},
+                                    } : undefined}
                                 />
                             </Animated.View>
                         )}
