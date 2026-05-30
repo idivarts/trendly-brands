@@ -1,6 +1,8 @@
 import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/types";
-import Colors from "@/shared-uis/constants/Colors";
+import RichTextEditor from "@/components/rich-text-editor";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
+import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
     faBars,
     faCalendarDays,
@@ -15,12 +17,10 @@ import {
     faRotateLeft,
     faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
-import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import { Modal, NativeSyntheticEvent, Platform, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputKeyPressEventData, View, ViewStyle } from "react-native";
-import RichTextEditor from "@/components/rich-text-editor";
 
 const PlatformEditor: React.ComponentType<EditorProps> = RichTextEditor;
 
@@ -261,7 +261,7 @@ const EditableTitle: React.FC<{
 // so the hint's meaning survives for screen readers and on touch, where there is
 // no hover. The card is pointer-transparent so it never eats the next tap.
 
-const TOOLTIP_MAX_WIDTH = 220;
+const TOOLTIP_MAX_WIDTH = 260;
 
 const Tooltip: React.FC<{
     text: string;
@@ -550,7 +550,7 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             position: "absolute",
             top: "100%",
             marginTop: 6,
-            maxWidth: TOOLTIP_MAX_WIDTH,
+            width: TOOLTIP_MAX_WIDTH,
             paddingHorizontal: 12,
             paddingVertical: 8,
             borderRadius: 10,
