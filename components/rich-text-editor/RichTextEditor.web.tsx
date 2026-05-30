@@ -46,6 +46,9 @@ function injectQuillStyles() {
         .trendly-quill-container .ql-editor {
             box-sizing: border-box;
             flex: 1;
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
             line-height: 1.6;
             min-height: 400px;
             outline: none;

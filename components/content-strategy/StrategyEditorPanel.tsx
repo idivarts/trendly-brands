@@ -6,6 +6,7 @@ import {
     faCalendarDays,
     faCheck,
     faCircleCheck,
+    faClock,
     faEllipsis,
     faLock,
     faPaperPlane,
@@ -18,7 +19,7 @@ import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
-import { Modal, NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, TextInput, TextInputKeyPressEventData, View } from "react-native";
+import { Modal, NativeSyntheticEvent, Platform, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputKeyPressEventData, View, ViewStyle } from "react-native";
 import RichTextEditor from "@/components/rich-text-editor";
 
 const PlatformEditor: React.ComponentType<EditorProps> = RichTextEditor;
@@ -53,7 +54,7 @@ export interface StrategyEditorPanelProps extends EditorProps {
 
 // ── Status pill config (token-driven, theme-aware) ────────────────────────────
 
-type StatusVisual = { bg: string; text: string; label: string };
+type StatusVisual = { bg: string; text: string; label: string; icon: IconDefinition };
 
 function statusVisual(
     status: ReviewStatus,
@@ -61,14 +62,14 @@ function statusVisual(
 ): StatusVisual {
     switch (status) {
         case "in_review":
-            return { bg: colors.toastWarningBg, text: colors.toastWarning, label: "Pending Review" };
+            return { bg: colors.toastWarningBg, text: colors.toastWarning, label: "Pending Review", icon: faClock };
         case "approved":
-            return { bg: colors.toastSuccessBg, text: colors.toastSuccess, label: "Approved" };
+            return { bg: colors.toastSuccessBg, text: colors.toastSuccess, label: "Approved", icon: faCircleCheck };
         case "changes_requested":
-            return { bg: colors.toastErrorBg, text: colors.toastError, label: "Changes Requested" };
+            return { bg: colors.toastErrorBg, text: colors.toastError, label: "Changes Requested", icon: faRotateLeft };
         case "draft":
         default:
-            return { bg: colors.tag, text: colors.textSecondary, label: "Draft" };
+            return { bg: colors.tag, text: colors.textSecondary, label: "Draft", icon: faPen };
     }
 }
 
@@ -255,6 +256,48 @@ const EditableTitle: React.FC<{
     );
 };
 
+// ── Tooltip — hover (web) / tap (touch) hint ──────────────────────────────────
+// Lifts on a shadow (no border). The trigger always carries an accessibilityLabel
+// so the hint's meaning survives for screen readers and on touch, where there is
+// no hover. The card is pointer-transparent so it never eats the next tap.
+
+const TOOLTIP_MAX_WIDTH = 220;
+
+const Tooltip: React.FC<{
+    text: string;
+    accessibilityLabel: string;
+    align: "left" | "right";
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof toolbarStyles>;
+    triggerStyle?: StyleProp<ViewStyle>;
+    children: React.ReactNode;
+}> = ({ text, accessibilityLabel, align, styles, triggerStyle, children }) => {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <View style={styles.tooltipWrap}>
+            <Pressable
+                onPress={() => setOpen((o) => !o)}
+                onHoverIn={() => setOpen(true)}
+                onHoverOut={() => setOpen(false)}
+                hitSlop={8}
+                style={triggerStyle}
+                accessibilityLabel={accessibilityLabel}
+            >
+                {children}
+            </Pressable>
+            {open && (
+                <View
+                    pointerEvents="none"
+                    style={[styles.tooltipCard, align === "left" ? styles.tooltipLeft : styles.tooltipRight]}
+                >
+                    <Text style={styles.tooltipText}>{text}</Text>
+                </View>
+            )}
+        </View>
+    );
+};
+
 // ── Strategy Toolbar ──────────────────────────────────────────────────────────
 
 const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Colors> }> = ({
@@ -319,23 +362,40 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                     styles={styles}
                 />
 
-                <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-                    <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
-                        {status.label}
-                    </Text>
-                </View>
-
-                <View style={styles.savedBlock}>
-                    <View style={styles.savedRow}>
-                        <FontAwesomeIcon icon={faCircleCheck} size={12} color={colors.toastSuccess} />
-                        <Text style={styles.savedLabel}>Saved</Text>
+                {xl ? (
+                    <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+                        <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
+                            {status.label}
+                        </Text>
                     </View>
-                    {xl && <Text style={styles.savedSub}>Autosaves as you type</Text>}
-                </View>
+                ) : (
+                    <Tooltip
+                        text={status.label}
+                        accessibilityLabel={`Status: ${status.label}`}
+                        align="left"
+                        colors={colors}
+                        styles={styles}
+                        triggerStyle={[styles.statusIcon, { backgroundColor: status.bg }]}
+                    >
+                        <FontAwesomeIcon icon={status.icon} size={12} color={status.text} />
+                    </Tooltip>
+                )}
             </View>
 
-            {/* ── Right: collaborators + decision + overflow ───────────────── */}
+            {/* ── Right: autosave status + collaborators + decision + overflow ─ */}
             <View style={styles.actions}>
+                {/* Passive autosave status — kept apart from the active commands below */}
+                <Tooltip
+                    text="Autosaves as you type — no need to save manually."
+                    accessibilityLabel="Saved — autosaves as you type"
+                    align="right"
+                    colors={colors}
+                    styles={styles}
+                    triggerStyle={styles.savedTrigger}
+                >
+                    <FontAwesomeIcon icon={faCircleCheck} size={16} color={colors.toastSuccess} />
+                </Tooltip>
+
                 <Pressable
                     style={({ pressed }) => [styles.collabChip, pressed && styles.btnPressed]}
                     onPress={onInvite}
@@ -346,12 +406,14 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                         size={12}
                         color={isShared ? colors.primary : colors.textSecondary}
                     />
-                    <Text
-                        style={[styles.collabChipText, isShared && { color: colors.primary }]}
-                        numberOfLines={1}
-                    >
-                        {isShared ? `${inviteCount} invited` : "Private"}
-                    </Text>
+                    {(isShared || xl) && (
+                        <Text
+                            style={[styles.collabChipText, isShared && { color: colors.primary }]}
+                            numberOfLines={1}
+                        >
+                            {isShared ? (xl ? `${inviteCount} invited` : `${inviteCount}`) : "Private"}
+                        </Text>
+                    )}
                 </Pressable>
 
                 {isReviewer && (
@@ -465,24 +527,52 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             fontSize: 12,
             fontWeight: "700",
         },
-        savedBlock: {
+        statusIcon: {
             flexShrink: 0,
-            minWidth: 0,
-        },
-        savedRow: {
-            flexDirection: "row",
+            width: 30,
+            height: 30,
+            borderRadius: 999,
             alignItems: "center",
-            gap: 5,
+            justifyContent: "center",
         },
-        savedLabel: {
-            fontSize: 13,
+        savedTrigger: {
+            flexShrink: 0,
+            width: 34,
+            height: 34,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        tooltipWrap: {
+            position: "relative",
+            flexShrink: 0,
+        },
+        tooltipCard: {
+            position: "absolute",
+            top: "100%",
+            marginTop: 6,
+            maxWidth: TOOLTIP_MAX_WIDTH,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 10,
+            backgroundColor: colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 16,
+            shadowOpacity: 0.16,
+            elevation: 12,
+            zIndex: 50,
+        },
+        tooltipLeft: {
+            left: 0,
+        },
+        tooltipRight: {
+            right: 0,
+        },
+        tooltipText: {
+            fontSize: 12,
             fontWeight: "600",
             color: colors.text,
-        },
-        savedSub: {
-            fontSize: 11,
-            color: colors.textSecondary,
-            marginTop: 1,
+            lineHeight: 16,
         },
         actions: {
             flexDirection: "row",

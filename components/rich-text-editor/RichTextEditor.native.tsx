@@ -366,6 +366,9 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         editor: {
             flex: 1,
+            width: "100%",
+            maxWidth: 760,
+            alignSelf: "center",
             minHeight: 400,
             padding: 20,
             fontSize: 16,
