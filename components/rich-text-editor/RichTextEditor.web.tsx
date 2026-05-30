@@ -1,5 +1,6 @@
+import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureHtml } from "@/utils/rich-text";
+import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCommentDots,
@@ -17,15 +18,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 
 export interface StrategyEditorPanelProps {
     content: string;
     onChange: (text: string) => void;
     onSendToChat: (text: string) => void;
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
-    /** Strategy ID — used as AI conversation context for Quick Edit. */
+    /** Context ID passed to AI features (Quick Edit, Chat). */
     strategyId?: string;
+    /** AI module used for Quick Edit context. Defaults to "content". */
+    module?: string;
 }
 
 const QUILL_STYLE_ID = "trendly-quill-core-css";
@@ -48,7 +50,7 @@ function injectQuillStyles() {
             tab-size: 4;
             white-space: pre-wrap;
             word-wrap: break-word;
-            font-size: 14px;
+            font-size: 16px;
             font-family: inherit;
         }
         .trendly-quill-container .ql-editor.ql-blank::before {
@@ -60,7 +62,7 @@ function injectQuillStyles() {
             right: 20px;
             font-style: italic;
         }
-        .trendly-quill-container .ql-editor p { margin: 0 0 6px 0; }
+        .trendly-quill-container .ql-editor p { margin: 0 0 6px 0; font-size: 16px; }
         .trendly-quill-container .ql-editor h1 { font-size: 2em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
         .trendly-quill-container .ql-editor h2 { font-size: 1.5em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.3; }
         .trendly-quill-container .ql-editor h3 { font-size: 1.17em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
@@ -98,6 +100,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     onSendToChat,
     onSnippetComment,
     strategyId,
+    module: aiModule = "content",
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -146,12 +149,16 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             editorEl.style.backgroundColor = colors.background as string;
         }
 
-        const initialHtml = ensureHtml(content || "");
+        const initialHtml = ensureEnrichedHtml(content || "");
         quill.clipboard.dangerouslyPasteHTML(initialHtml);
-        lastHtmlRef.current = quill.getSemanticHTML();
+        // Store the canonical (enriched-vocabulary) form so the sync effect's
+        // comparison below is stable across the Quill ⇄ canonical round-trip.
+        lastHtmlRef.current = ensureEnrichedHtml(quill.getSemanticHTML());
 
         quill.on("text-change", () => {
-            const html = quill.getSemanticHTML();
+            // Normalise Quill's output (<strong>/<em>/<h4…>) into the shared
+            // canonical format so web and native export identical rich text.
+            const html = ensureEnrichedHtml(quill.getSemanticHTML());
             lastHtmlRef.current = html;
             onChange(html);
         });
@@ -233,11 +240,11 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     useEffect(() => {
         const quill = quillRef.current;
         if (!quill) return;
-        const incoming = ensureHtml(content || "");
+        const incoming = ensureEnrichedHtml(content || "");
         if (incoming !== lastHtmlRef.current) {
             const sel = quill.getSelection();
             quill.clipboard.dangerouslyPasteHTML(incoming);
-            lastHtmlRef.current = quill.getSemanticHTML();
+            lastHtmlRef.current = ensureEnrichedHtml(quill.getSemanticHTML());
             if (sel) quill.setSelection(sel.index, sel.length);
         }
     }, [content]);
@@ -315,7 +322,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             quill.deleteText(selectionRange.index, selectionRange.length);
             quill.insertText(selectionRange.index, newText);
             quill.setSelection(selectionRange.index + newText.length, 0);
-            const html = quill.root.innerHTML;
+            const html = ensureEnrichedHtml(quill.getSemanticHTML());
             lastHtmlRef.current = html;
             onChange(html);
             setQuickEditVisible(false);
@@ -505,7 +512,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 visible={quickEditVisible}
                 onClose={() => setQuickEditVisible(false)}
                 selectedText={selectedText}
-                module="strategy"
+                module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
             />

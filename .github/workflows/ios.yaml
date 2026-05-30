@@ -53,6 +53,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
+          EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ env.STAGE == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
         run: npm run build-ios
 
       - name: Submit to App Store

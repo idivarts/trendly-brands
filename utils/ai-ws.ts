@@ -5,7 +5,14 @@ const DEFAULT_WS_URL = IS_DEV
     ? "wss://cuowcrxmii.execute-api.us-east-1.amazonaws.com/dev"
     : "wss://cuowcrxmii.execute-api.us-east-1.amazonaws.com/prod";
 
-const WS_URL = process.env.EXPO_PUBLIC_AI_WS_URL || DEFAULT_WS_URL;
+// EXPO_PUBLIC_WEBSOCKET_TRENDLY is the schema-less WS host (e.g.
+// cuowcrxmii.execute-api.us-east-1.amazonaws.com/dev) injected per-stage at build
+// time from the org-level action variables WEBSOCKET_DEV_TRENDLY / WEBSOCKET_PROD_TRENDLY.
+const WS_HOST = process.env.EXPO_PUBLIC_WEBSOCKET_TRENDLY;
+
+const WS_URL = WS_HOST
+    ? `wss://${WS_HOST}`
+    : process.env.EXPO_PUBLIC_AI_WS_URL || DEFAULT_WS_URL;
 
 type Listener = (msg: any) => void;
 

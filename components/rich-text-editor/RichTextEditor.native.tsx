@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureHtml } from "@/utils/rich-text";
+import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
     faItalic,
@@ -33,8 +33,10 @@ export interface StrategyEditorPanelProps {
     onChange: (text: string) => void;
     onSendToChat: (text: string) => void;
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
-    /** Strategy ID — used as AI conversation context for Quick Edit. */
+    /** Context ID passed to AI features (Quick Edit, Chat). */
     strategyId?: string;
+    /** AI module used for Quick Edit context. Defaults to "content". */
+    module?: string;
 }
 
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
@@ -43,6 +45,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     onSendToChat,
     onSnippetComment,
     strategyId,
+    module: aiModule = "content",
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -153,8 +156,12 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 >
                     <EnrichedTextInput
                         ref={editorRef}
-                        defaultValue={ensureHtml(content || "")}
-                        onChangeHtml={(event) => onChange(event.nativeEvent.value)}
+                        defaultValue={ensureEnrichedHtml(content || "")}
+                        // Run native output through the same canonical normaliser
+                        // the web editor uses, so both export identical rich text.
+                        onChangeHtml={(event) =>
+                            onChange(ensureEnrichedHtml(event.nativeEvent.value))
+                        }
                         onChangeState={(event) => setStylesState(event.nativeEvent)}
                         placeholder="Write your content strategy..."
                         placeholderTextColor={colors.textSecondary}
@@ -173,7 +180,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 visible={quickEditVisible}
                 onClose={() => setQuickEditVisible(false)}
                 selectedText={content}
-                module="strategy"
+                module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
             />
@@ -262,8 +269,8 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
             minHeight: 400,
             padding: 20,
-            fontSize: 14,
-            lineHeight: 22,
+            fontSize: 16,
+            lineHeight: 24,
             textAlignVertical: "top",
         },
     });

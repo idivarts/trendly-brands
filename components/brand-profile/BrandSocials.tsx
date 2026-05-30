@@ -1,17 +1,16 @@
-import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { ISocialAccount, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import useConnectBrandSocial from "@/hooks/request/use-connect-brand-social";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
-import { faFacebook, faInstagram, faLinkedin, faYoutube } from "@fortawesome/free-brands-svg-icons";
-import { faXTwitter } from "@fortawesome/free-brands-svg-icons";
+import { faFacebook, faInstagram, faLinkedin, faXTwitter, faYoutube } from "@fortawesome/free-brands-svg-icons";
 import { faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useMemo } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button, Divider, Surface, Text } from "react-native-paper";
-import { ISocialAccount } from "@/contexts/brand-social-context.provider";
 
 const platformIcon = (platform: ISocialAccount["platform"]) => {
     switch (platform) {
@@ -47,6 +46,7 @@ const BrandSocials: React.FC<BrandSocialsProps> = ({ brandId, plainSection = fal
 
     const { socialAccounts, isFetchingSocials, refreshSocials } = useBrandSocialContext();
     const { connectSocial } = useConnectBrandSocial();
+    const { openModal } = useConfirmationModel();
 
     const handleDisconnect = async (socialId: string) => {
         if (!brandId) return;
@@ -59,6 +59,15 @@ const BrandSocials: React.FC<BrandSocialsProps> = ({ brandId, plainSection = fal
         } catch {
             Toaster.error("Failed to disconnect social account");
         }
+    };
+
+    const confirmDisconnect = (socialId: string) => {
+        openModal({
+            title: "Disconnect account?",
+            description: "This will remove the social account from your Trendly profile.",
+            confirmText: "Disconnect",
+            confirmAction: () => handleDisconnect(socialId),
+        });
     };
 
     const content = (
@@ -107,10 +116,10 @@ const BrandSocials: React.FC<BrandSocialsProps> = ({ brandId, plainSection = fal
                             </View>
                             <Button
                                 mode="text"
-                                onPress={() => handleDisconnect(account.id)}
+                                onPress={() => confirmDisconnect(account.id)}
                                 compact
                                 icon={() => (
-                                    <FontAwesomeIcon icon={faTrash} size={14} color={colors.error} />
+                                    <FontAwesomeIcon icon={faTrash} size={14} color={colors.errorBorder} />
                                 )}
                             >
                                 {""}

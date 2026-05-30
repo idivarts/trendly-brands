@@ -16,13 +16,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import RichTextEditor from "@/components/rich-text-editor";
 
-// ── Platform-specific editor (resolved once at module level) ──────────────────
-
-const PlatformEditor: React.ComponentType<EditorProps> = Platform.select({
-    native: () => require("./StrategyEditorPanelNative").default,
-    default: () => require("./StrategyEditorPanelWeb").default,
-})();
+const PlatformEditor: React.ComponentType<EditorProps> = RichTextEditor;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

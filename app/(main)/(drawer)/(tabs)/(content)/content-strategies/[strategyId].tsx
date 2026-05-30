@@ -6,12 +6,12 @@ import PushToCalendarModal, {
     PushToCalendarConfirm,
 } from "@/components/content-strategy/PushToCalendarModal";
 import SnippetCommentPopover from "@/components/content-strategy/SnippetCommentPopover";
-import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
+import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
@@ -197,7 +197,7 @@ const ContentStrategyDetail = () => {
     // paragraph. The hasRealContent effect picks this up and flips the
     // screen state to "strategy-ready" on the next render.
     const handleWriteManually = useCallback(() => {
-        handleStrategyContentChange("<p>Write your strategy here</p>");
+        handleStrategyContentChange("<html><p>Write your strategy here</p></html>");
     }, [handleStrategyContentChange]);
 
     const handleSendForReview = useCallback(async () => {

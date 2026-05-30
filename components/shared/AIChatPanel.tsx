@@ -1,6 +1,7 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import { AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
+import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faChevronLeft,
@@ -27,6 +28,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Public types (kept for backward compatibility with existing screens) ─────
 
@@ -109,7 +111,17 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors, isCompact), [colors, isCompact]);
+    const { xl } = useBreakpoints();
+    const insets = useSafeAreaInsets();
+    // On mobile (!xl) the panel mounts edge-to-edge (full-screen chat or the
+    // floating sheet), so it must inset for the notch/home-indicator itself.
+    // On desktop the surrounding AppLayout already handles safe area.
+    const safeTop = xl ? 0 : insets.top;
+    const safeBottom = xl ? 0 : insets.bottom;
+    const styles = useMemo(
+        () => useStyles(colors, isCompact, safeTop, safeBottom),
+        [colors, isCompact, safeTop, safeBottom]
+    );
 
     // ── Real AI thread state ─────────────────────────────────────────────────
     const {
@@ -235,7 +247,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
             {/* ── Header — capped at 3 elements (per design critique) ───── */}
             <View style={styles.panelHeader}>
@@ -475,7 +487,12 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
 export default AIChatPanel;
 
-function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
+function useStyles(
+    colors: ReturnType<typeof Colors>,
+    isCompact: boolean,
+    safeTop: number,
+    safeBottom: number
+) {
     return useMemo(
         () =>
             StyleSheet.create({
@@ -485,7 +502,8 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     alignItems: "center",
                     gap: 8,
                     paddingHorizontal: isCompact ? 8 : 12,
-                    paddingVertical: 10,
+                    paddingTop: 10 + safeTop,
+                    paddingBottom: 10,
                     backgroundColor: colors.card,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 3 },
@@ -618,7 +636,7 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     alignItems: "flex-end",
                     gap: 10,
                     paddingHorizontal: isCompact ? 10 : 14,
-                    paddingBottom: isCompact ? 10 : 14,
+                    paddingBottom: (isCompact ? 10 : 14) + safeBottom,
                     paddingTop: 6,
                     backgroundColor: colors.card,
                     shadowColor: "#000",
@@ -660,7 +678,7 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                 sendBtnPressed: { opacity: 0.75 },
                 sendBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
                 // ── History view ─────────────────────────────────────────────
-                historyWrap: { flex: 1, padding: 12, gap: 10 },
+                historyWrap: { flex: 1, padding: 12, paddingBottom: 12 + safeBottom, gap: 10 },
                 newChatBtn: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -736,6 +754,6 @@ function useStyles(colors: ReturnType<typeof Colors>, isCompact: boolean) {
                     fontSize: 13,
                 },
             }),
-        [colors, isCompact]
+        [colors, isCompact, safeTop, safeBottom]
     );
 }
