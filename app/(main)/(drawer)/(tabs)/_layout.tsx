@@ -69,6 +69,7 @@ const TabLayout = () => {
 
     return (
         <Tabs
+            backBehavior="history"
             screenOptions={{
                 tabBarActiveTintColor: Colors(theme).primary,
                 tabBarInactiveTintColor: Colors(theme).text,
