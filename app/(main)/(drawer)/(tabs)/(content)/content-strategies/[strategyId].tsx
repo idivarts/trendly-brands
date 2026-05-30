@@ -53,6 +53,7 @@ const ContentStrategyDetail = () => {
         strategies,
         loading: strategiesLoading,
         updateStrategyContent,
+        updateStrategyName,
         updateReviewStatus,
         updatePresence,
     } = useStrategies();
@@ -214,6 +215,10 @@ const ContentStrategyDetail = () => {
         if (!strategyId) return;
         await updateReviewStatus(strategyId, "changes_requested", manager?.id);
     }, [strategyId, updateReviewStatus, manager?.id]);
+
+    const handleRename = useCallback((name: string) => {
+        if (strategyId) updateStrategyName(strategyId, name);
+    }, [strategyId, updateStrategyName]);
 
     // Confirmed "Push to Calendar": persist the schedule server-side, then land
     // the user on the calendar at the month they chose as the start date.
@@ -489,6 +494,7 @@ const ContentStrategyDetail = () => {
                                         onInvite: () => setShowCollaborators(true),
                                         onSendForReview: handleSendForReview,
                                         onPushToCalendar: () => setShowPushToCalendar(true),
+                                        onRename: handleRename,
                                     } : undefined}
                                 />
                             </Animated.View>

@@ -8,6 +8,7 @@ import {
     faEllipsis,
     faLock,
     faPaperPlane,
+    faPen,
     faRotateLeft,
     faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
@@ -15,7 +16,7 @@ import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useRef, useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, TextInput, TextInputKeyPressEventData, View } from "react-native";
 import RichTextEditor from "@/components/rich-text-editor";
 
 const PlatformEditor: React.ComponentType<EditorProps> = RichTextEditor;
@@ -39,6 +40,7 @@ export interface ToolbarProps {
     onInvite: () => void;
     onSendForReview: () => void;
     onPushToCalendar: () => void;
+    onRename: (name: string) => void;
 }
 
 export interface StrategyEditorPanelProps extends EditorProps {
@@ -146,6 +148,109 @@ const OverflowMenu: React.FC<{
     );
 };
 
+// ── Editable strategy name ────────────────────────────────────────────────────
+// Click-to-edit inline title. Display ⇆ edit swap is metric-matched so the
+// toolbar height never jumps. Commits on blur / Enter; Escape cancels; empty or
+// unchanged input reverts (a strategy is never left blank). Read-only for pure
+// reviewers — they still see which strategy they're reviewing.
+
+const EditableTitle: React.FC<{
+    name: string;
+    editable: boolean;
+    onRename: (name: string) => void;
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof toolbarStyles>;
+}> = ({ name, editable, onRename, colors, styles }) => {
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState(name);
+    const [hovered, setHovered] = useState(false);
+    const inputRef = useRef<TextInput>(null);
+
+    // Mirror upstream renames (e.g. a collaborator changed it) while idle.
+    useEffect(() => {
+        if (!editing) setDraft(name);
+    }, [name, editing]);
+
+    const beginEdit = () => {
+        if (!editable) return;
+        setDraft(name);
+        setEditing(true);
+    };
+
+    const commit = () => {
+        if (!editing) return;
+        setEditing(false);
+        const trimmed = draft.trim();
+        if (!trimmed || trimmed === name) {
+            setDraft(name);
+            return;
+        }
+        onRename(trimmed);
+    };
+
+    const cancel = () => {
+        setEditing(false);
+        setDraft(name);
+    };
+
+    // Select-all on focus so the chosen "type to replace" rename flow works.
+    const handleFocus = () => {
+        const node = inputRef.current as unknown as
+            | { setSelection?: (s: number, e: number) => void; select?: () => void }
+            | null;
+        if (node?.setSelection) node.setSelection(0, draft.length);
+        else if (Platform.OS === "web" && node?.select) node.select();
+    };
+
+    const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+        if (e.nativeEvent.key === "Escape") cancel();
+    };
+
+    if (editing) {
+        return (
+            <TextInput
+                ref={inputRef}
+                style={styles.titleInput}
+                value={draft}
+                onChangeText={setDraft}
+                onFocus={handleFocus}
+                onBlur={commit}
+                onSubmitEditing={commit}
+                onKeyPress={handleKeyPress}
+                autoFocus
+                blurOnSubmit
+                multiline={false}
+                numberOfLines={1}
+                returnKeyType="done"
+                selectTextOnFocus
+                placeholder="Strategy name"
+                placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Strategy name"
+            />
+        );
+    }
+
+    return (
+        <Pressable
+            onPress={beginEdit}
+            onHoverIn={() => setHovered(true)}
+            onHoverOut={() => setHovered(false)}
+            disabled={!editable}
+            hitSlop={8}
+            style={[styles.titleButton, editable && hovered && styles.titleButtonHovered]}
+            accessibilityRole={editable ? "button" : "text"}
+            accessibilityLabel={editable ? `Rename strategy, ${name}` : name}
+        >
+            <Text style={styles.titleText} numberOfLines={1}>
+                {name || "Untitled strategy"}
+            </Text>
+            {editable && (
+                <FontAwesomeIcon icon={faPen} size={11} color={colors.textSecondary} />
+            )}
+        </Pressable>
+    );
+};
+
 // ── Strategy Toolbar ──────────────────────────────────────────────────────────
 
 const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Colors> }> = ({
@@ -157,6 +262,7 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     onInvite,
     onSendForReview,
     onPushToCalendar,
+    onRename,
     colors,
 }) => {
     const reviewStatus = strategy.reviewStatus ?? "draft";
@@ -197,6 +303,14 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
         <View style={styles.row}>
             {/* ── Left: identity + autosave assurance ──────────────────────── */}
             <View style={styles.infoCluster}>
+                <EditableTitle
+                    name={strategy.title}
+                    editable={!isReviewer}
+                    onRename={onRename}
+                    colors={colors}
+                    styles={styles}
+                />
+
                 <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
                     <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
                         {status.label}
@@ -294,7 +408,47 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             flex: 1,
             minWidth: 0,
         },
+        titleButton: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 1,
+            minWidth: 0,
+            paddingVertical: 4,
+            paddingHorizontal: 6,
+            borderRadius: 6,
+        },
+        titleButtonHovered: {
+            backgroundColor: colors.tag,
+        },
+        titleText: {
+            fontSize: 15,
+            fontWeight: "700",
+            color: colors.text,
+            lineHeight: 20,
+            flexShrink: 1,
+        },
+        titleInput: {
+            fontSize: 15,
+            fontWeight: "700",
+            color: colors.text,
+            lineHeight: 20,
+            paddingVertical: 4,
+            paddingHorizontal: 6,
+            borderRadius: 6,
+            backgroundColor: colors.tag,
+            flexGrow: 1,
+            flexShrink: 1,
+            minWidth: 80,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 6,
+            shadowOpacity: 0.25,
+            elevation: 2,
+            ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null),
+        },
         statusPill: {
+            flexShrink: 0,
             paddingHorizontal: 10,
             paddingVertical: 5,
             borderRadius: 999,
@@ -304,6 +458,7 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             fontWeight: "700",
         },
         savedBlock: {
+            flexShrink: 0,
             minWidth: 0,
         },
         savedRow: {

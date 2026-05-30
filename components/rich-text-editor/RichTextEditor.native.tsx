@@ -2,7 +2,9 @@ import Colors from "@/shared-uis/constants/Colors";
 import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
+    faImage,
     faItalic,
+    faLink,
     faListOl,
     faListUl,
     faPen,
@@ -13,6 +15,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
+    Image,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -27,6 +30,26 @@ import {
     type OnChangeStateEvent,
 } from "react-native-enriched";
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
+import ImageInsertModal from "./ImageInsertModal";
+import LinkInsertModal from "./LinkInsertModal";
+
+/** Largest width (px) an inserted image is scaled to inside the editor. */
+const MAX_IMAGE_WIDTH = 320;
+
+/** Resolves an image URL's display dimensions, capped to the editor width. */
+async function resolveImageSize(url: string): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+        Image.getSize(
+            url,
+            (w, h) => {
+                if (!w || !h) return resolve({ width: MAX_IMAGE_WIDTH, height: 200 });
+                const ratio = w > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / w : 1;
+                resolve({ width: Math.round(w * ratio), height: Math.round(h * ratio) });
+            },
+            () => resolve({ width: MAX_IMAGE_WIDTH, height: 200 })
+        );
+    });
+}
 
 export interface StrategyEditorPanelProps {
     content: string;
@@ -52,6 +75,15 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     const editorRef = useRef<EnrichedTextInputInstance>(null);
     const [stylesState, setStylesState] = useState<OnChangeStateEvent | null>(null);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
+    const [linkModalVisible, setLinkModalVisible] = useState(false);
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    // Latest editor selection — captured here because opening a modal blurs the
+    // editor and clears the live selection by the time we need start/end.
+    const selectionRef = useRef<{ start: number; end: number; text: string }>({
+        start: 0,
+        end: 0,
+        text: "",
+    });
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -66,6 +98,18 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         },
         [onChange]
     );
+
+    // Apply a link to the captured selection, or insert a new link at the caret.
+    const handleInsertLink = useCallback((text: string, url: string) => {
+        const { start, end } = selectionRef.current;
+        editorRef.current?.setLink(start, end, text, url);
+    }, []);
+
+    // Resolve display size, then embed the (already uploaded) image URL.
+    const handleInsertImage = useCallback(async (imageUrl: string) => {
+        const { width, height } = await resolveImageSize(imageUrl);
+        editorRef.current?.setImage(imageUrl, width, height);
+    }, []);
 
     const formatButtons = [
         {
@@ -104,13 +148,31 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             isActive: stylesState?.isOrderedList ?? false,
             onPress: () => editorRef.current?.toggleOrderedList(),
         },
+        {
+            icon: faLink,
+            label: "Insert link",
+            isActive: stylesState?.isLink ?? false,
+            onPress: () => setLinkModalVisible(true),
+        },
+        {
+            icon: faImage,
+            label: "Insert image",
+            isActive: false,
+            onPress: () => setImageModalVisible(true),
+        },
     ];
 
     return (
         <View style={styles.container}>
             {/* ── Toolbar ──────────────────────────────────────────────────── */}
             <View style={styles.toolbar}>
-                <View style={styles.toolbarLeft}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.toolbarScroll}
+                    contentContainerStyle={styles.toolbarLeft}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {formatButtons.map((btn) => (
                         <Pressable
                             key={btn.label}
@@ -129,7 +191,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                             />
                         </Pressable>
                     ))}
-                </View>
+                </ScrollView>
 
                 {/* Quick Edit always available on native (no selection required) */}
                 <View style={styles.toolbarRight}>
@@ -163,6 +225,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                             onChange(ensureEnrichedHtml(event.nativeEvent.value))
                         }
                         onChangeState={(event) => setStylesState(event.nativeEvent)}
+                        onChangeSelection={(event) => {
+                            selectionRef.current = event.nativeEvent;
+                        }}
                         placeholder="Write your content strategy..."
                         placeholderTextColor={colors.textSecondary}
                         style={{
@@ -183,6 +248,21 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
+            />
+
+            {/* ── Link insertion ──────────────────────────────────────────── */}
+            <LinkInsertModal
+                visible={linkModalVisible}
+                initialText={selectionRef.current.text}
+                onClose={() => setLinkModalVisible(false)}
+                onInsert={handleInsertLink}
+            />
+
+            {/* ── Image insertion (upload via AWS or paste URL) ───────────── */}
+            <ImageInsertModal
+                visible={imageModalVisible}
+                onClose={() => setImageModalVisible(false)}
+                onInsert={handleInsertImage}
             />
         </View>
     );
@@ -205,17 +285,21 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             shadowOpacity: 0.07,
             elevation: 3,
         },
+        toolbarScroll: {
+            flex: 1,
+        },
         toolbarLeft: {
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
+            paddingRight: 8,
         },
         toolbarRight: {
-            flex: 1,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "flex-end",
             gap: 6,
+            paddingLeft: 8,
         },
         toolbarBtn: {
             width: 30,

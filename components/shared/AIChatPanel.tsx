@@ -136,7 +136,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         renameThread,
         deleteThread,
         refreshThreads,
-    } = useAIChat({ module, contextId });
+    } = useAIChat({ module, contextId, autoOpenLatest: !initialMessage });
 
     const { models, selectedModel, setSelectedModel } = useAIModels();
 

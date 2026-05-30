@@ -86,6 +86,8 @@ interface UseStrategiesReturn {
     addStrategy: (title: string, markdownContent: string) => Promise<string | null>;
     /** Debounced — waits 1.5 s after the last call before writing to Firestore */
     updateStrategyContent: (strategyId: string, markdownContent: string) => Promise<void>;
+    /** Rename a strategy — discrete commit (on blur / Enter), not debounced */
+    updateStrategyName: (strategyId: string, name: string) => Promise<void>;
     /** Add a manager (by their manager doc ID) as a collaborator on a strategy */
     addCollaborator: (strategyId: string, managerId: string) => Promise<void>;
     /** Update review status — used for Send for Review / Approve / Request Changes */
@@ -191,6 +193,25 @@ export function useStrategies(): UseStrategiesReturn {
         [selectedBrand?.id, manager?.id]
     );
 
+    // Rename is a discrete commit (on blur / Enter), not a debounced stream
+    // like content edits — so it writes straight through.
+    const updateStrategyName = useCallback(
+        async (strategyId: string, name: string): Promise<void> => {
+            const brandId = selectedBrand?.id;
+            const managerId = manager?.id;
+            if (!brandId) return;
+
+            const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+            await updateDoc(docRef, {
+                name,
+                updatedAt: Date.now(),
+                lastEditedBy: managerId ?? null,
+                lastEditedAt: Date.now(),
+            });
+        },
+        [selectedBrand?.id, manager?.id]
+    );
+
     const addCollaborator = useCallback(
         async (strategyId: string, collaboratorManagerId: string): Promise<void> => {
             const brandId = selectedBrand?.id;
@@ -271,6 +292,7 @@ export function useStrategies(): UseStrategiesReturn {
         loading,
         addStrategy,
         updateStrategyContent,
+        updateStrategyName,
         addCollaborator,
         updateReviewStatus,
         updatePresence,

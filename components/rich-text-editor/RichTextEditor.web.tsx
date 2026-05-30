@@ -5,7 +5,9 @@ import {
     faBold,
     faCommentDots,
     faEraser,
+    faImage,
     faItalic,
+    faLink,
     faListOl,
     faListUl,
     faPen,
@@ -18,6 +20,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import ImageInsertModal from "./ImageInsertModal";
+import LinkInsertModal from "./LinkInsertModal";
 
 export interface StrategyEditorPanelProps {
     content: string;
@@ -84,6 +88,8 @@ function injectQuillStyles() {
         .trendly-quill-container .ql-editor em { font-style: italic; }
         .trendly-quill-container .ql-editor u { text-decoration: underline; }
         .trendly-quill-container .ql-editor s { text-decoration: line-through; }
+        .trendly-quill-container .ql-editor a { color: #1d6fb8; text-decoration: underline; cursor: pointer; }
+        .trendly-quill-container .ql-editor img { max-width: 100%; height: auto; border-radius: 8px; margin: 4px 0; }
     `;
     document.head.appendChild(style);
 }
@@ -107,7 +113,13 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const quillRef = useRef<any>(null);
     const lastHtmlRef = useRef("");
+    // Quill selection captured at the moment a toolbar button is pressed, so the
+    // insert survives the modal stealing focus from the editor.
+    const savedRangeRef = useRef<{ index: number; length: number } | null>(null);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
+    const [linkModalVisible, setLinkModalVisible] = useState(false);
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [linkInitialText, setLinkInitialText] = useState("");
     const [selectedText, setSelectedText] = useState("");
     const [selectionRange, setSelectionRange] = useState<{ index: number; length: number } | null>(null);
     const [activeFormats, setActiveFormats] = useState<Record<string, any>>({});
@@ -299,6 +311,61 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         setDropdownValue(value);
     }, []);
 
+    // ── Link & image insertion ────────────────────────────────────────────────
+
+    // Capture the live selection (Quill keeps it after the click) before the
+    // modal opens, and prefill the link label with any selected text.
+    const captureRange = useCallback(() => {
+        const quill = quillRef.current;
+        const range = quill?.getSelection();
+        savedRangeRef.current = range
+            ? { index: range.index, length: range.length }
+            : { index: quill ? quill.getLength() - 1 : 0, length: 0 };
+        return savedRangeRef.current;
+    }, []);
+
+    const openLinkModal = useCallback(() => {
+        const range = captureRange();
+        const quill = quillRef.current;
+        const text = range && range.length > 0 && quill ? quill.getText(range.index, range.length).trim() : "";
+        setLinkInitialText(text);
+        setLinkModalVisible(true);
+    }, [captureRange]);
+
+    const openImageModal = useCallback(() => {
+        captureRange();
+        setImageModalVisible(true);
+    }, [captureRange]);
+
+    const handleInsertLink = useCallback((text: string, url: string) => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const range = savedRangeRef.current ?? { index: quill.getLength() - 1, length: 0 };
+        if (range.length > 0) {
+            // Replace selection with the (possibly edited) label, linked.
+            quill.deleteText(range.index, range.length);
+            quill.insertText(range.index, text, { link: url });
+            quill.setSelection(range.index + text.length, 0);
+        } else {
+            quill.insertText(range.index, text, { link: url });
+            quill.setSelection(range.index + text.length, 0);
+        }
+        const html = ensureEnrichedHtml(quill.getSemanticHTML());
+        lastHtmlRef.current = html;
+        onChange(html);
+    }, [onChange]);
+
+    const handleInsertImage = useCallback((imageUrl: string) => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const range = savedRangeRef.current ?? { index: quill.getLength() - 1, length: 0 };
+        quill.insertEmbed(range.index, "image", imageUrl, "user");
+        quill.setSelection(range.index + 1, 0);
+        const html = ensureEnrichedHtml(quill.getSemanticHTML());
+        lastHtmlRef.current = html;
+        onChange(html);
+    }, [onChange]);
+
     // ── Selection-aware actions ───────────────────────────────────────────────
 
     const handleSendToChat = useCallback(() => {
@@ -440,6 +507,30 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     >
                         <FontAwesomeIcon icon={faEraser} size={13} color={colors.textSecondary as string} />
                     </Pressable>
+
+                    <View style={styles.toolbarDivider} />
+
+                    {/* Insert link */}
+                    <Pressable
+                        style={[styles.toolbarBtn, activeFormats.link && styles.toolbarBtnActive]}
+                        onPress={openLinkModal}
+                        accessibilityLabel="Insert link"
+                    >
+                        <FontAwesomeIcon
+                            icon={faLink}
+                            size={13}
+                            color={activeFormats.link ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                        />
+                    </Pressable>
+
+                    {/* Insert image */}
+                    <Pressable
+                        style={styles.toolbarBtn}
+                        onPress={openImageModal}
+                        accessibilityLabel="Insert image"
+                    >
+                        <FontAwesomeIcon icon={faImage} size={13} color={colors.textSecondary as string} />
+                    </Pressable>
                 </View>
 
             </View>
@@ -515,6 +606,21 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
+            />
+
+            {/* ── Link insertion ──────────────────────────────────────────── */}
+            <LinkInsertModal
+                visible={linkModalVisible}
+                initialText={linkInitialText}
+                onClose={() => setLinkModalVisible(false)}
+                onInsert={handleInsertLink}
+            />
+
+            {/* ── Image insertion (upload via AWS or paste URL) ───────────── */}
+            <ImageInsertModal
+                visible={imageModalVisible}
+                onClose={() => setImageModalVisible(false)}
+                onInsert={handleInsertImage}
             />
         </View>
     );
