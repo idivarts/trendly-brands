@@ -157,7 +157,11 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     <EnrichedTextInput
                         ref={editorRef}
                         defaultValue={ensureEnrichedHtml(content || "")}
-                        onChangeHtml={(event) => onChange(event.nativeEvent.value)}
+                        // Run native output through the same canonical normaliser
+                        // the web editor uses, so both export identical rich text.
+                        onChangeHtml={(event) =>
+                            onChange(ensureEnrichedHtml(event.nativeEvent.value))
+                        }
                         onChangeState={(event) => setStylesState(event.nativeEvent)}
                         placeholder="Write your content strategy..."
                         placeholderTextColor={colors.textSecondary}

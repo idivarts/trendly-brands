@@ -1,6 +1,6 @@
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureEnrichedHtml, ensureHtml } from "@/utils/rich-text";
+import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCommentDots,
@@ -151,10 +151,14 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
         const initialHtml = ensureEnrichedHtml(content || "");
         quill.clipboard.dangerouslyPasteHTML(initialHtml);
-        lastHtmlRef.current = quill.getSemanticHTML();
+        // Store the canonical (enriched-vocabulary) form so the sync effect's
+        // comparison below is stable across the Quill ⇄ canonical round-trip.
+        lastHtmlRef.current = ensureEnrichedHtml(quill.getSemanticHTML());
 
         quill.on("text-change", () => {
-            const html = quill.getSemanticHTML();
+            // Normalise Quill's output (<strong>/<em>/<h4…>) into the shared
+            // canonical format so web and native export identical rich text.
+            const html = ensureEnrichedHtml(quill.getSemanticHTML());
             lastHtmlRef.current = html;
             onChange(html);
         });
@@ -236,11 +240,11 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     useEffect(() => {
         const quill = quillRef.current;
         if (!quill) return;
-        const incoming = ensureHtml(content || "");
+        const incoming = ensureEnrichedHtml(content || "");
         if (incoming !== lastHtmlRef.current) {
             const sel = quill.getSelection();
             quill.clipboard.dangerouslyPasteHTML(incoming);
-            lastHtmlRef.current = quill.getSemanticHTML();
+            lastHtmlRef.current = ensureEnrichedHtml(quill.getSemanticHTML());
             if (sel) quill.setSelection(sel.index, sel.length);
         }
     }, [content]);
@@ -318,7 +322,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             quill.deleteText(selectionRange.index, selectionRange.length);
             quill.insertText(selectionRange.index, newText);
             quill.setSelection(selectionRange.index + newText.length, 0);
-            const html = quill.root.innerHTML;
+            const html = ensureEnrichedHtml(quill.getSemanticHTML());
             lastHtmlRef.current = html;
             onChange(html);
             setQuickEditVisible(false);
