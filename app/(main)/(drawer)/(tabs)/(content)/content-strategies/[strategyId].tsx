@@ -1,7 +1,6 @@
 import ChatLoadingPanel from "@/components/content-strategy/ChatLoadingPanel";
 import CollaboratorsModal from "@/components/content-strategy/CollaboratorsModal";
 import CommentsPanel from "@/components/content-strategy/CommentsPanel";
-import PresenceAvatars from "@/components/content-strategy/PresenceAvatars";
 import PushToCalendarModal, {
     PushToCalendarConfirm,
 } from "@/components/content-strategy/PushToCalendarModal";
@@ -15,24 +14,16 @@ import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
-import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
-import {
-    faBars,
-    faCommentDots,
-    faPlus,
-    faRobot,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text } from "react-native";
+import { Animated, Easing, StyleSheet } from "react-native";
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 // .replace(/<[^>]*>/g, "").trim()
@@ -266,13 +257,6 @@ const ContentStrategyDetail = () => {
         [addSnippetComment]
     );
 
-    const handleCommentsToggle = useCallback(() => {
-        setRightPanelMode((m) => (m === "comments" ? "none" : "comments"));
-    }, []);
-
-    const handleChatToggle = useCallback(() => {
-        setRightPanelMode((m) => (m === "chat" ? "none" : "chat"));
-    }, []);
 
     // Collecting state: chat is the primary surface (70% on xl, 100% on !xl)
     // and not collapsible. Pin mode to "chat" while collecting so neither the
@@ -350,101 +334,8 @@ const ContentStrategyDetail = () => {
         outputRange: [1, 0],
     });
 
-    const headerLeftAction = useMemo(() => {
-        if (strategies.length === 0) return null;
-        return (
-            <Pressable
-                style={({ pressed }) => [styles.iconBtn, pressed && styles.headerBtnPressed]}
-                onPress={() => setDrawerOpen(true)}
-            >
-                <FontAwesomeIcon icon={faBars} size={18} color={colors.text} />
-            </Pressable>
-        );
-    }, [strategies.length, colors.text, styles]);
-
-    const viewingActionButtons = useMemo(() => {
-        const isStrategyReady = screenState === "strategy-ready";
-        return [
-            strategyId ? (
-                <PresenceAvatars key="presence" strategyId={strategyId} />
-            ) : null,
-
-            // On desktop the comments/chat toggles live in the RightSidePanel
-            // rail. On mobile (Option C) we keep them in the header because
-            // the rail isn't rendered there.
-            !xl && isStrategyReady ? (
-                <Pressable
-                    key="comments"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "comments" && styles.iconBtnActive,
-                        pressed && styles.headerBtnPressed,
-                    ]}
-                    onPress={handleCommentsToggle}
-                >
-                    <FontAwesomeIcon
-                        icon={faCommentDots}
-                        size={16}
-                        color={rightPanelMode === "comments" ? colors.onPrimary : colors.text}
-                    />
-                </Pressable>
-            ) : null,
-
-            !xl && isStrategyReady ? (
-                <Pressable
-                    key="chat"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "chat" && styles.iconBtnActive,
-                        pressed && styles.headerBtnPressed,
-                    ]}
-                    onPress={handleChatToggle}
-                >
-                    <FontAwesomeIcon
-                        icon={faRobot}
-                        size={16}
-                        color={rightPanelMode === "chat" ? colors.onPrimary : colors.text}
-                    />
-                </Pressable>
-            ) : null,
-
-            <Pressable
-                key="new"
-                style={({ pressed }) => [
-                    xl ? styles.headerBtn : styles.iconBtn,
-                    styles.headerBtnPrimary,
-                    pressed && styles.headerBtnPressed,
-                ]}
-                onPress={handleNewStrategy}
-                accessibilityLabel="New Strategy"
-            >
-                <FontAwesomeIcon icon={faPlus} size={14} color={colors.onPrimary} />
-                {xl && <Text style={styles.headerBtnPrimaryText}>New Strategy</Text>}
-            </Pressable>,
-        ].filter(Boolean) as React.ReactElement[];
-    }, [
-        screenState,
-        strategyId,
-        rightPanelMode,
-        colors,
-        styles,
-        xl,
-        handleCommentsToggle,
-        handleChatToggle,
-        handleNewStrategy,
-    ]);
-
     return (
         <AppLayout>
-            <PageHeader
-                title={xl ? "Content Strategy" : "Strategy"}
-                subtitle="Form a strategy before putting it in actionable content"
-                showBackButton={false}
-                leftAction={headerLeftAction}
-                viewingActionButtons={viewingActionButtons}
-                mobileActions="all"
-            />
-
             <View style={styles.splitContainer}>
                 {/* ── Left: layered loading-skeleton / shimmer / editor.
                     All three states cross-fade via opacity. Inactive children
@@ -495,6 +386,8 @@ const ContentStrategyDetail = () => {
                                         onSendForReview: handleSendForReview,
                                         onPushToCalendar: () => setShowPushToCalendar(true),
                                         onRename: handleRename,
+                                        onOpenDrawer: strategies.length > 0 ? () => setDrawerOpen(true) : undefined,
+                                        onNewStrategy: handleNewStrategy,
                                     } : undefined}
                                 />
                             </Animated.View>
@@ -687,39 +580,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 fullScreenChat: {
                     flex: 1,
                     backgroundColor: colors.background,
-                },
-                headerBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 8,
-                },
-                headerBtnPrimary: {
-                    backgroundColor: colors.primary,
-                    borderColor: colors.primary,
-                },
-                headerBtnPrimaryText: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.onPrimary,
-                },
-                headerBtnPressed: {
-                    opacity: 0.7,
-                },
-                iconBtn: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    // borderWidth: 1,
-                    // borderColor: colors.border,
-                },
-                iconBtnActive: {
-                    backgroundColor: colors.primary,
-                    borderColor: colors.primary,
                 },
             }),
         [colors]

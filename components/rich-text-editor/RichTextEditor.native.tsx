@@ -30,23 +30,31 @@ import {
     type OnChangeStateEvent,
 } from "react-native-enriched";
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
+import { useBreakpoints } from "@/hooks";
 import ImageInsertModal from "./ImageInsertModal";
 import LinkInsertModal from "./LinkInsertModal";
 
-/** Largest width (px) an inserted image is scaled to inside the editor. */
-const MAX_IMAGE_WIDTH = 320;
+/** Hard ceiling (px) for an inserted image's display width. */
+const MAX_IMAGE_WIDTH = 720;
 
-/** Resolves an image URL's display dimensions, capped to the editor width. */
-async function resolveImageSize(url: string): Promise<{ width: number; height: number }> {
+/**
+ * Resolves an image URL's display dimensions, scaled down to fit `maxWidth`
+ * (and never upscaled past the source). Returns a sane fallback if the size
+ * can't be read.
+ */
+async function resolveImageSize(
+    url: string,
+    maxWidth: number
+): Promise<{ width: number; height: number }> {
     return new Promise((resolve) => {
         Image.getSize(
             url,
             (w, h) => {
-                if (!w || !h) return resolve({ width: MAX_IMAGE_WIDTH, height: 200 });
-                const ratio = w > MAX_IMAGE_WIDTH ? MAX_IMAGE_WIDTH / w : 1;
+                if (!w || !h) return resolve({ width: maxWidth, height: Math.round(maxWidth * 0.6) });
+                const ratio = w > maxWidth ? maxWidth / w : 1;
                 resolve({ width: Math.round(w * ratio), height: Math.round(h * ratio) });
             },
-            () => resolve({ width: MAX_IMAGE_WIDTH, height: 200 })
+            () => resolve({ width: maxWidth, height: Math.round(maxWidth * 0.6) })
         );
     });
 }
@@ -72,6 +80,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const { width } = useBreakpoints();
     const editorRef = useRef<EnrichedTextInputInstance>(null);
     const [stylesState, setStylesState] = useState<OnChangeStateEvent | null>(null);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
@@ -105,11 +114,17 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         editorRef.current?.setLink(start, end, text, url);
     }, []);
 
-    // Resolve display size, then embed the (already uploaded) image URL.
-    const handleInsertImage = useCallback(async (imageUrl: string) => {
-        const { width, height } = await resolveImageSize(imageUrl);
-        editorRef.current?.setImage(imageUrl, width, height);
-    }, []);
+    // Resolve display size (capped to 720px, but never wider than the editor),
+    // then embed the (already uploaded) image URL.
+    const handleInsertImage = useCallback(
+        async (imageUrl: string) => {
+            // 40 ≈ editor's 20px horizontal padding on each side.
+            const maxWidth = Math.min(MAX_IMAGE_WIDTH, Math.max(120, width - 40));
+            const size = await resolveImageSize(imageUrl, maxWidth);
+            editorRef.current?.setImage(imageUrl, size.width, size.height);
+        },
+        [width]
+    );
 
     const formatButtons = [
         {

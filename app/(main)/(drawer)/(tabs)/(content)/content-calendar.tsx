@@ -27,6 +27,11 @@ import { Pressable, StyleSheet, Text } from "react-native";
 const CALENDAR_WELCOME =
     "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.";
 
+// One stable chat per brand for the Calendar module. brandId already scopes the
+// conversation query, so a constant contextId keeps the calendar on a single
+// thread regardless of which item (if any) is selected.
+const CALENDAR_CONTEXT_ID = "calendar";
+
 const ContentCalendarScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -204,7 +209,7 @@ const ContentCalendarScreen = () => {
             chatSlot={
                 <AIChatPanel
                     module="calendar"
-                    contextId={selectedCommentItem?.id}
+                    contextId={CALENDAR_CONTEXT_ID}
                     focusItems={focusItems}
                     onRemoveFocusItem={(id) =>
                         setFocusItems((prev) => prev.filter((f) => f.id !== id))

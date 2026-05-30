@@ -2,6 +2,7 @@ import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/typ
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
+    faBars,
     faCalendarDays,
     faCheck,
     faCircleCheck,
@@ -9,6 +10,7 @@ import {
     faLock,
     faPaperPlane,
     faPen,
+    faPlus,
     faRotateLeft,
     faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
@@ -41,6 +43,8 @@ export interface ToolbarProps {
     onSendForReview: () => void;
     onPushToCalendar: () => void;
     onRename: (name: string) => void;
+    onOpenDrawer?: () => void;
+    onNewStrategy: () => void;
 }
 
 export interface StrategyEditorPanelProps extends EditorProps {
@@ -263,6 +267,8 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     onSendForReview,
     onPushToCalendar,
     onRename,
+    onOpenDrawer,
+    onNewStrategy,
     colors,
 }) => {
     const reviewStatus = strategy.reviewStatus ?? "draft";
@@ -296,6 +302,8 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     }, []);
 
     const overflowItems: MenuItem[] = [
+        ...(onOpenDrawer ? [{ label: "All Strategies", icon: faBars, onPress: onOpenDrawer }] : []),
+        { label: "New Strategy", icon: faPlus, onPress: onNewStrategy },
         { label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar },
     ];
 

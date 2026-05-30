@@ -89,7 +89,7 @@ function injectQuillStyles() {
         .trendly-quill-container .ql-editor u { text-decoration: underline; }
         .trendly-quill-container .ql-editor s { text-decoration: line-through; }
         .trendly-quill-container .ql-editor a { color: #1d6fb8; text-decoration: underline; cursor: pointer; }
-        .trendly-quill-container .ql-editor img { max-width: 100%; height: auto; border-radius: 8px; margin: 4px 0; }
+        .trendly-quill-container .ql-editor img { display: block; max-width: min(720px, 100%); height: auto; border-radius: 8px; margin: 8px auto; }
     `;
     document.head.appendChild(style);
 }
