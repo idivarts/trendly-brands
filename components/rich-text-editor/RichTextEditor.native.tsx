@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureHtml } from "@/utils/rich-text";
+import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
     faItalic,
@@ -156,7 +156,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 >
                     <EnrichedTextInput
                         ref={editorRef}
-                        defaultValue={ensureHtml(content || "")}
+                        defaultValue={ensureEnrichedHtml(content || "")}
                         onChangeHtml={(event) => onChange(event.nativeEvent.value)}
                         onChangeState={(event) => setStylesState(event.nativeEvent)}
                         placeholder="Write your content strategy..."
@@ -265,8 +265,8 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
             minHeight: 400,
             padding: 20,
-            fontSize: 14,
-            lineHeight: 22,
+            fontSize: 16,
+            lineHeight: 24,
             textAlignVertical: "top",
         },
     });

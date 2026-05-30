@@ -95,6 +95,18 @@ const ContentCalendarScreen = () => {
         setRightPanelMode("comments");
     }, []);
 
+    // Tapping a content chip body: opens the content details page for editing.
+    const handleOpenItem = useCallback(
+        (item: CalendarItem) => {
+            router.push({
+                pathname:
+                    "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
+                params: { contentId: item.id },
+            });
+        },
+        [router]
+    );
+
     const handleAddItem = useCallback(
         async (newItem: Omit<CalendarItem, "id">) => {
             await addContent(newItem);
@@ -240,6 +252,7 @@ const ContentCalendarScreen = () => {
                                 onAddWeek={(weekStartDate) => handleOpenAddModal(weekStartDate)}
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
+                                onOpenItem={handleOpenItem}
                             />
                         ) : (
                             <MonthView
@@ -255,6 +268,7 @@ const ContentCalendarScreen = () => {
                                 onDayPress={(dateStr) => handleOpenAddModal(dateStr)}
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
+                                onOpenItem={handleOpenItem}
                             />
                         )}
                     </View>

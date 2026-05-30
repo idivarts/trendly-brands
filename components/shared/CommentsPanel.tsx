@@ -39,6 +39,8 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBreakpoints } from "@/hooks";
 
 // ─── Public Types ─────────────────────────────────────────────────────────────
 
@@ -229,7 +231,16 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const panelSty = useMemo(() => panelStyles(colors), [colors]);
+    const { xl } = useBreakpoints();
+    const insets = useSafeAreaInsets();
+    // On mobile (!xl) the panel mounts edge-to-edge inside the floating sheet,
+    // so it insets for the notch/home-indicator. Desktop relies on AppLayout.
+    const safeTop = xl ? 0 : insets.top;
+    const safeBottom = xl ? 0 : insets.bottom;
+    const panelSty = useMemo(
+        () => panelStyles(colors, safeTop, safeBottom),
+        [colors, safeTop, safeBottom]
+    );
     const bubbleSty = useMemo(() => bubbleStyles(colors), [colors]);
 
     const [draft, setDraft] = useState("");
@@ -333,7 +344,7 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
             )}
 
             {/* ── Compose ─────────────────────────────────────────────────────── */}
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
                 {replyingTo && (
                     <View style={panelSty.replyBanner}>
                         <Text style={panelSty.replyBannerText}>Replying to thread</Text>
@@ -375,7 +386,11 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-function panelStyles(colors: ReturnType<typeof Colors>) {
+function panelStyles(
+    colors: ReturnType<typeof Colors>,
+    safeTop: number,
+    safeBottom: number
+) {
     return StyleSheet.create({
         container: {
             flex: 1,
@@ -387,7 +402,8 @@ function panelStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
             paddingLeft: 8,
             paddingRight: 14,
-            paddingVertical: 12,
+            paddingTop: 12 + safeTop,
+            paddingBottom: 12,
             backgroundColor: colors.card,
             // Downward shadow separates header from scrolling content below
             shadowColor: "#000",
@@ -468,6 +484,7 @@ function panelStyles(colors: ReturnType<typeof Colors>) {
             alignItems: "flex-end",
             gap: 8,
             padding: 10,
+            paddingBottom: 10 + safeBottom,
             backgroundColor: colors.card,
             // Upward shadow floats compose area above scroll content
             shadowColor: "#000",

@@ -16,6 +16,7 @@ interface MonthViewProps {
     onDayPress: (dateStr: string) => void;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
+    onOpenItem: (item: CalendarItem) => void;
 }
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -59,6 +60,7 @@ const MonthView: React.FC<MonthViewProps> = ({
     onDayPress,
     onFocusChat,
     onComment,
+    onOpenItem,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -130,6 +132,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                                             compact
                                             onFocusChat={onFocusChat}
                                             onComment={onComment}
+                                            onOpen={onOpenItem}
                                         />
                                     ))}
                                     {dayItems.length > 2 && (

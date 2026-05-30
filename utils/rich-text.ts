@@ -35,3 +35,24 @@ export function ensureHtml(content: string): string {
     // Fallback: wrap in a <p> if something unexpected happened.
     return `<p>${content}</p>`;
 }
+
+/**
+ * Prepares content for the native `<EnrichedTextInput />` (react-native-enriched).
+ *
+ * The native editor only treats its `defaultValue` as rich content when the
+ * string is wrapped in `<html>…</html>` (it checks `startsWith("<html>")` /
+ * `endsWith("</html>")` on both iOS and Android). Bare HTML like `<p>…</p>` —
+ * which is what `ensureHtml()` and the web Quill editor produce — falls through
+ * to the plain-text branch and renders the raw tags as literal text.
+ *
+ * This wraps the (markdown-normalised) HTML in `<html>…</html>` so the native
+ * editor parses and renders it. Content the native editor saves is already
+ * wrapped this way, so the round-trip stays consistent. Returns "" for empty
+ * content so the placeholder shows cleanly.
+ */
+export function ensureEnrichedHtml(content: string): string {
+    const html = ensureHtml(content || "").trim();
+    if (!html) return "";
+    if (/^<html>/i.test(html) && /<\/html>$/i.test(html)) return html;
+    return `<html>\n${html}\n</html>`;
+}

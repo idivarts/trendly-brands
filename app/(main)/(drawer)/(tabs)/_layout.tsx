@@ -12,14 +12,13 @@ import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faComment,
     faGem,
-    faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
     faCalendarDays,
     faComment as faCommentSolid,
+    faFileLines,
     faGem as faGemSolid,
     faPenRuler,
-    faStar as faStarSolid,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -147,11 +146,13 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Tab 3: Collaboration Requests */}
+            {/* Tab 3 (center): Content — the contents list. Collaborations was
+                moved off the center tab because it logically follows content;
+                it now lives on the /menu page alongside the other pages. */}
             <Tabs.Screen
-                name="collaborations"
+                name="(content)/contents/index"
                 options={{
-                    title: "Collabs",
+                    title: "Content",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <CoachmarkAnchor
@@ -161,11 +162,21 @@ const TabLayout = () => {
                         >
                             <FontAwesomeIcon
                                 color={color}
-                                icon={focused ? faStarSolid : faStar}
+                                icon={faFileLines}
                                 size={22}
                             />
                         </CoachmarkAnchor>
                     ),
+                }}
+            />
+
+            {/* Collaboration Requests — no longer a bottom tab; reachable from
+                the /menu page. Kept registered (hidden) so deep links still work. */}
+            <Tabs.Screen
+                name="collaborations"
+                options={{
+                    tabBarItemStyle: { display: "none" },
+                    headerShown: false,
                 }}
             />
 
@@ -230,14 +241,7 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Hidden: contents list + detail (not in tab bar) */}
-            <Tabs.Screen
-                name="(content)/contents/index"
-                options={{
-                    tabBarItemStyle: { display: "none" },
-                    headerShown: false,
-                }}
-            />
+            {/* Hidden: content detail (not in tab bar) */}
             <Tabs.Screen
                 name="(content)/contents/[contentId]"
                 options={{

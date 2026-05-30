@@ -1,5 +1,6 @@
+import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureHtml } from "@/utils/rich-text";
+import { ensureEnrichedHtml, ensureHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCommentDots,
@@ -17,7 +18,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 
 export interface StrategyEditorPanelProps {
     content: string;
@@ -50,7 +50,7 @@ function injectQuillStyles() {
             tab-size: 4;
             white-space: pre-wrap;
             word-wrap: break-word;
-            font-size: 14px;
+            font-size: 16px;
             font-family: inherit;
         }
         .trendly-quill-container .ql-editor.ql-blank::before {
@@ -62,7 +62,7 @@ function injectQuillStyles() {
             right: 20px;
             font-style: italic;
         }
-        .trendly-quill-container .ql-editor p { margin: 0 0 6px 0; }
+        .trendly-quill-container .ql-editor p { margin: 0 0 6px 0; font-size: 16px; }
         .trendly-quill-container .ql-editor h1 { font-size: 2em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
         .trendly-quill-container .ql-editor h2 { font-size: 1.5em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.3; }
         .trendly-quill-container .ql-editor h3 { font-size: 1.17em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
@@ -149,7 +149,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             editorEl.style.backgroundColor = colors.background as string;
         }
 
-        const initialHtml = ensureHtml(content || "");
+        const initialHtml = ensureEnrichedHtml(content || "");
         quill.clipboard.dangerouslyPasteHTML(initialHtml);
         lastHtmlRef.current = quill.getSemanticHTML();
 

@@ -11,6 +11,8 @@ interface ContentItemChipProps {
     compact?: boolean;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
+    /** Tapping the chip body opens the content details page for editing. */
+    onOpen?: (item: CalendarItem) => void;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -26,6 +28,7 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
     compact = false,
     onFocusChat,
     onComment,
+    onOpen,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -36,7 +39,11 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
     );
 
     return (
-        <View style={styles.chip}>
+        <Pressable
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+            onPress={onOpen ? () => onOpen(item) : undefined}
+            disabled={!onOpen}
+        >
             <View style={styles.accentBar} />
             <View style={styles.body}>
                 <Text style={styles.title} numberOfLines={compact ? 1 : 2}>
@@ -59,7 +66,7 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
                         >
                             <FontAwesomeIcon
                                 icon={faComment}
-                                size={11}
+                                size={16}
                                 color={colors.textSecondary}
                             />
                         </Pressable>
@@ -73,14 +80,14 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
                         >
                             <FontAwesomeIcon
                                 icon={faCrosshairs}
-                                size={11}
+                                size={16}
                                 color={colors.primary}
                             />
                         </Pressable>
                     </View>
                 </View>
             </View>
-        </View>
+        </Pressable>
     );
 };
 
@@ -103,6 +110,9 @@ function useStyles(
                     shadowOpacity: 0.07,
                     elevation: 2,
                     marginBottom: 4,
+                },
+                chipPressed: {
+                    opacity: 0.7,
                 },
                 accentBar: {
                     width: 4,
@@ -138,10 +148,10 @@ function useStyles(
                 },
                 actions: {
                     flexDirection: "row",
-                    gap: 4,
+                    // gap: 6,
                 },
                 actionBtn: {
-                    padding: 3,
+                    padding: 5,
                 },
                 actionBtnPressed: {
                     opacity: 0.6,

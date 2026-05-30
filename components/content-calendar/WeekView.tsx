@@ -18,6 +18,7 @@ interface WeekViewProps {
     onAddWeek: (weekStartDate: string) => void;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
+    onOpenItem: (item: CalendarItem) => void;
 }
 
 interface WeekBucket {
@@ -91,6 +92,7 @@ const WeekView: React.FC<WeekViewProps> = ({
     onAddWeek,
     onFocusChat,
     onComment,
+    onOpenItem,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -146,6 +148,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                                             item={item}
                                             onFocusChat={onFocusChat}
                                             onComment={onComment}
+                                            onOpen={onOpenItem}
                                         />
                                     ))}
                             </View>
