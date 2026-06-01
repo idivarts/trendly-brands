@@ -1,6 +1,6 @@
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
-import { useAuthContext, useLocationContext } from "@/contexts";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -10,11 +10,8 @@ import { Brand } from "@/types/Brand";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faAddressCard,
-    faComment,
     faEye,
     faFileLines,
-    faGem,
-    faStar,
 } from "@fortawesome/free-regular-svg-icons";
 import {
     faArrowTrendUp,
@@ -25,14 +22,12 @@ import {
     faChevronLeft,
     faChevronRight,
     faChevronUp,
-    faComment as faCommentSolid,
     faCreditCard,
     faDiagramProject,
-    faGem as faGemSolid,
     faLayerGroup,
     faPenRuler,
     faPlus,
-    faStar as faStarSolid,
+    faShareNodes,
     faTriangleExclamation,
     faUsers,
     faUserShield,
@@ -53,7 +48,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreditDisplayCard from "./CreditDisplayCard";
 import { DrawerColorsContext } from "./drawer-colors-context";
-import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
+import DrawerMenuItem, { DrawerIcon, Tab } from "./DrawerMenuItem";
+import { InfluencerLedGrowth, InfluencerLedGrowthSubDrawer } from "./influencer-led-growth";
 
 // ─── Width constants (kept in sync with _layout.tsx) ───────────────────────
 const COLLAPSED_WIDTH = 56;
@@ -106,59 +102,11 @@ const CONTENT_MENU_ITEMS = (theme: Theme): Tab[] => [
     },
 ];
 
-const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
-    {
-        href: "/discover",
-        icon: ({ focused }: IconPropFn) =>
-            focused ? (
-                <DrawerIcon href="/discover" icon={faGemSolid} focused={focused} />
-            ) : (
-                <DrawerIcon href="/discover" icon={faGem} focused={focused} />
-            ),
-        label: "Discover Influencers",
-        pro: true,
-    },
-    {
-        href: "/collaborations",
-        icon: ({ focused }: IconPropFn) =>
-            focused ? (
-                <DrawerIcon href="/collaborations" icon={faStarSolid} focused={focused} />
-            ) : (
-                <DrawerIcon href="/collaborations" icon={faStar} focused={focused} />
-            ),
-        label: "Collaboration Requests",
-    },
-];
-
-const EXECUTION_MENU_ITEMS = (theme: Theme): Tab[] => [
-    {
-        href: "/messages",
-        icon: ({ focused }: IconPropFn) =>
-            focused ? (
-                <DrawerIcon href="/messages" icon={faCommentSolid} focused={focused} />
-            ) : (
-                <DrawerIcon href="/messages" icon={faComment} focused={focused} />
-            ),
-        label: "Messages",
-        showUnreadCount: true,
-    },
-    {
-        href: "/contracts",
-        icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
-        label: "Influencer Contracts",
-    },
-    {
-        href: "/analytics",
-        icon: ({ focused }) => <DrawerIcon href="/analytics" icon={faChartLine} focused={focused} />,
-        label: "Reporting & Analytics",
-    },
-];
-
 const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
-        href: "/brand-profile",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
-        label: "Brand Profile",
+        href: "/connected-accounts",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faShareNodes} focused={focused} />,
+        label: "Connected Accounts",
     },
     {
         href: "/members",
@@ -169,6 +117,11 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
         href: "/billing",
         icon: ({ focused }) => <DrawerIcon href="" icon={faCreditCard} focused={focused} />,
         label: "Billing",
+    },
+    {
+        href: "/brand-profile",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
+        label: "Brand Profile",
     },
 ];
 
@@ -230,7 +183,6 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
     const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
-    const { isIndiaBased } = useLocationContext();
     const { xl } = useBreakpoints();
     const { isCollapsed, toggle } = useSidebarCollapsed();
 
@@ -261,29 +213,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const [toggleHovered, setToggleHovered] = useState(false);
 
     const showCreditsSystem = false;
-    const showExecution = true;
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
         setBrandListExpanded(false);
     };
 
-    const contentItems = useMemo(() => {
-        const base = CONTENT_MENU_ITEMS(theme);
-        if (!isIndiaBased) {
-            base.push({
-                href: "/collaborations",
-                icon: ({ focused }: IconPropFn) =>
-                    focused ? (
-                        <DrawerIcon href="/collaborations" icon={faStarSolid} focused={focused} />
-                    ) : (
-                        <DrawerIcon href="/collaborations" icon={faStar} focused={focused} />
-                    ),
-                label: "Collaboration Requests",
-            });
-        }
-        return base;
-    }, [isIndiaBased, theme]);
+    const contentItems = useMemo(() => CONTENT_MENU_ITEMS(theme), [theme]);
 
     // ─── Toggle button (bare Pressable, positioned by caller) ──────────────
     const toggleButtonBare = (
@@ -316,23 +252,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     // ─── Collapsed mode render ──────────────────────────────────────────────
     if (isCollapsed) {
         // Gather all visible sections as flat groups for the collapsed view
-        const campaignItems = isIndiaBased ? CAMPAIGN_MENU_ITEMS(theme) : [];
-        const executionItems = manager?.isChatConnected && showExecution
-            ? EXECUTION_MENU_ITEMS(theme)
-            : [];
         const adminItems = manager?.isAdmin ? ADMIN_MENU_ITEMS(theme) : [];
 
         const groups: { items: Tab[]; proLockMap?: Record<number, boolean> }[] = [
             { items: contentItems },
-            ...(campaignItems.length > 0
-                ? [{
-                    items: campaignItems,
-                    proLockMap: Object.fromEntries(
-                        campaignItems.map((t, i) => [i, !!(t.pro && planKey !== "pro" && planKey !== "enterprise")])
-                    ),
-                }]
-                : []),
-            ...(executionItems.length > 0 ? [{ items: executionItems }] : []),
             { items: BRAND_DETAILS_MENU_ITEMS(theme) },
             { items: GROWTH_MENU_ITEMS(theme) },
             ...(adminItems.length > 0 ? [{ items: adminItems }] : []),
@@ -344,69 +267,85 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
         return (
             <DrawerColorsContext.Provider value={drawerColors}>
-                <View style={[styles.root, styles.rootCollapsed]}>
-                    {/* Gradient accent top line */}
-                    <LinearGradient
-                        colors={["#054463", "#538BA6", "#ff6d2d"]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.accentLine}
-                        pointerEvents="none"
-                    />
-
-                    {/* Toggle button — centered in collapsed bar */}
-                    {toggleButtonCollapsed}
-
-                    {/* Brand logo only */}
-                    <RNView style={styles.collapsedHeader}>
-                        <ImageComponent
-                            url={selectedBrand?.image || ""}
-                            initials={selectedBrand?.name?.[0] ?? ""}
-                            shape="circle"
-                            size="small"
-                            altText={selectedBrand?.name || "Brand"}
-                            style={styles.logoCircle}
+                <RNView style={styles.collapsedWrapper}>
+                    <View style={[styles.root, styles.rootCollapsed]}>
+                        {/* Gradient accent top line */}
+                        <LinearGradient
+                            colors={["#054463", "#538BA6", "#ff6d2d"]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.accentLine}
+                            pointerEvents="none"
                         />
-                    </RNView>
 
-                    {/* All menu items — icon only, scrollable */}
-                    <ScrollView
-                        contentContainerStyle={styles.collapsedScrollContent}
-                        showsVerticalScrollIndicator={false}
-                        // Allow tooltip views to overflow on web
-                        style={Platform.OS === "web" ? ({ overflow: "visible" } as any) : undefined}
-                    >
-                        {groups.map((group, gIdx) => (
-                            <RNView key={gIdx}>
-                                {gIdx > 0 && (
-                                    <RNView
-                                        style={[
-                                            styles.collapsedDivider,
-                                            { borderTopColor: sidebarDividerColor },
-                                        ]}
-                                    />
-                                )}
-                                {group.items.map((tab, idx) => (
-                                    <DrawerMenuItem
-                                        key={`${gIdx}-${idx}`}
-                                        tab={tab}
-                                        proLock={group.proLockMap?.[idx]}
-                                    />
-                                ))}
-                            </RNView>
-                        ))}
-                    </ScrollView>
+                        {/* Toggle button — centered in collapsed bar */}
+                        {toggleButtonCollapsed}
 
-                    {/* Bottom actions — icons only */}
-                    <View style={[styles.bottomActions, styles.bottomActionsCollapsed]}>
-                        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
-                            (tab, idx) => (
-                                <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
-                            )
-                        )}
-                        <RNView style={styles.presenceDot} />
+                        {/* Brand logo only */}
+                        <RNView style={styles.collapsedHeader}>
+                            <ImageComponent
+                                url={selectedBrand?.image || ""}
+                                initials={selectedBrand?.name?.[0] ?? ""}
+                                shape="circle"
+                                size="small"
+                                altText={selectedBrand?.name || "Brand"}
+                                style={styles.logoCircle}
+                            />
+                        </RNView>
+
+                        {/* All menu items — icon only, scrollable */}
+                        <ScrollView
+                            contentContainerStyle={styles.collapsedScrollContent}
+                            showsVerticalScrollIndicator={false}
+                            // Allow tooltip views to overflow on web
+                            style={Platform.OS === "web" ? ({ overflow: "visible" } as any) : undefined}
+                        >
+                            {groups.map((group, gIdx) => (
+                                <RNView key={gIdx}>
+                                    {gIdx > 0 && (
+                                        <RNView
+                                            style={[
+                                                styles.collapsedDivider,
+                                                { borderTopColor: sidebarDividerColor },
+                                            ]}
+                                        />
+                                    )}
+                                    {group.items.map((tab, idx) => (
+                                        <DrawerMenuItem
+                                            key={`${gIdx}-${idx}`}
+                                            tab={tab}
+                                            proLock={group.proLockMap?.[idx]}
+                                        />
+                                    ))}
+                                </RNView>
+                            ))}
+
+                            {/* Influencer Led Growth — opens the sub-drawer */}
+                            <RNView
+                                style={[
+                                    styles.collapsedDivider,
+                                    { borderTopColor: sidebarDividerColor },
+                                ]}
+                            />
+                            <InfluencerLedGrowth variant="rail" />
+                        </ScrollView>
+
+                        {/* Bottom actions — icons only */}
+                        <View style={[styles.bottomActions, styles.bottomActionsCollapsed]}>
+                            {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
+                                (tab, idx) => (
+                                    <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
+                                )
+                            )}
+                            <RNView style={styles.presenceDot} />
+                        </View>
                     </View>
-                </View>
+
+                    {/* Influencer Led Growth sub-drawer — sits beside the rail and
+                    reserves real layout width so page content is pushed over,
+                    not hidden underneath. */}
+                    <InfluencerLedGrowthSubDrawer />
+                </RNView>
             </DrawerColorsContext.Provider>
         );
     }
@@ -603,45 +542,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </>
                         )}
 
-                        {/* 3. CAMPAIGN (India only) */}
-                        {isIndiaBased && (
-                            <View style={styles.brandDetailsSection}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>Campaign</Text>
-                                </View>
-                                <View style={styles.divider} />
-                                <View style={styles.menuItems}>
-                                    {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem
-                                            key={`campaign-${idx}`}
-                                            tab={tab}
-                                            proLock={
-                                                tab.pro &&
-                                                planKey !== "pro" &&
-                                                planKey !== "enterprise"
-                                            }
-                                        />
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {/* 4. EXECUTION */}
-                        {manager?.isChatConnected && showExecution && (
-                            <View style={styles.brandDetailsSection}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>Manage</Text>
-                                </View>
-                                <View style={styles.divider} />
-                                <View style={styles.menuItems}>
-                                    {EXECUTION_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem key={`execution-${idx}`} tab={tab} />
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {/* 5. BRAND MANAGEMENT */}
+                        {/* 3. BRAND MANAGEMENT */}
                         <View style={styles.brandDetailsSection}>
                             <Pressable
                                 onPress={() => nav.push("/menu")}
@@ -666,7 +567,18 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 6. GROWTH */}
+                        {/* 4. INFLUENCER LED GROWTH (independent component) */}
+                        <View style={styles.brandDetailsSection}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>Influencer Led Growth</Text>
+                            </View>
+                            <View style={styles.divider} />
+                            <View style={styles.menuItems}>
+                                <InfluencerLedGrowth variant="expanded" />
+                            </View>
+                        </View>
+
+                        {/* 5. GROWTH */}
                         <View style={styles.brandDetailsSection}>
                             <Pressable
                                 onPress={() => { }}
@@ -691,7 +603,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 7. ADMIN PORTAL */}
+                        {/* 6. ADMIN PORTAL */}
                         {manager?.isAdmin && (
                             <View style={styles.brandDetailsSection}>
                                 <Pressable
@@ -795,6 +707,16 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         },
         rootCollapsed: {
             alignItems: "center",
+            // Fixed-width rail so the sub-drawer can sit beside it in a row
+            width: COLLAPSED_WIDTH,
+            flexGrow: 0,
+            flexShrink: 0,
+            flexBasis: COLLAPSED_WIDTH,
+        },
+        collapsedWrapper: {
+            flex: 1,
+            flexDirection: "row",
+            backgroundColor: "transparent",
         },
         accentLine: {
             position: "absolute",

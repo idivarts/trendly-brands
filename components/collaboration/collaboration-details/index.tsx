@@ -290,7 +290,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 title="Campaign Details"
                 subtitle={collaboration.name}
                 showBackButton
-                onBackPress={() => expoRouter.replace("/(main)/(drawer)/(tabs)/collaborations")}
+                onBackPress={() => expoRouter.replace("/collaborations")}
                 actionButtons={campaignHeaderActions}
                 rightComponent={
                     <Pressable

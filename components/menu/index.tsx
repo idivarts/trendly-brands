@@ -20,6 +20,7 @@ import {
     faGem,
     faLayerGroup,
     faPenRuler,
+    faShareNodes,
     faStar,
     faTriangleExclamation,
     faUsers,
@@ -91,6 +92,7 @@ const Menu = () => {
 
         const brand: MenuItem[] = [
             { id: "brand-profile", icon: faAddressCard, title: "Brand Profile", href: "/brand-profile" },
+            { id: "connected-accounts", icon: faShareNodes, title: "Connected Accounts", href: "/connected-accounts" },
             { id: "members", icon: faUsers, title: "Members", href: "/members" },
             // Billing is web-only; native uses the Settings screen instead.
             ...(Platform.OS === "web"

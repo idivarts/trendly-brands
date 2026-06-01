@@ -2,57 +2,21 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
-import NotificationIcon from "@/components/notifications/notification-icon";
-import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import { useAuthContext, useChatContext, useLocationContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
-    faComment,
-    faGem,
-} from "@fortawesome/free-regular-svg-icons";
-import {
     faCalendarDays,
-    faComment as faCommentSolid,
     faFileLines,
-    faGem as faGemSolid,
     faPenRuler,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { StyleSheet } from "react-native";
-import { Badge } from "react-native-paper";
-
-const useStyles = (theme: ReturnType<typeof useTheme>) =>
-    StyleSheet.create({
-        headerRightRowSimple: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-        },
-        badge: {
-            backgroundColor: Colors(theme).red,
-            zIndex: 1,
-            position: "absolute",
-            top: 0,
-            right: 20,
-        },
-    });
 
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
-    const styles = React.useMemo(() => useStyles(theme), [theme]);
-    const { unreadCount } = useChatContext();
-    const { isIndiaBased } = useLocationContext();
-    const { manager } = useAuthContext();
-
-    // 4th dynamic tab logic:
-    // India + not chat connected → show Discover
-    // India + chat connected OR outside India → show Messages
-    const showDiscover = isIndiaBased && !manager?.isChatConnected;
 
     const menuTabButton = () =>
         !xl ? (
@@ -147,9 +111,7 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Tab 3 (center): Content — the contents list. Collaborations was
-                moved off the center tab because it logically follows content;
-                it now lives on the /menu page alongside the other pages. */}
+            {/* Tab 3 (center): Content — the contents list. */}
             <Tabs.Screen
                 name="(content)/contents/index"
                 options={{
@@ -171,68 +133,7 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Collaboration Requests — no longer a bottom tab; reachable from
-                the /menu page. Kept registered (hidden) so deep links still work. */}
-            <Tabs.Screen
-                name="collaborations"
-                options={{
-                    tabBarItemStyle: { display: "none" },
-                    headerShown: false,
-                }}
-            />
-
-            {/* Tab 4a: Discover (India + not chat connected) */}
-            <Tabs.Screen
-                name="discover"
-                options={{
-                    title: "Discover",
-                    headerShown: false,
-                    tabBarItemStyle: { display: showDiscover ? "flex" : "none" },
-                    tabBarIcon: ({ color, focused }) => (
-                        <FontAwesomeIcon
-                            color={color}
-                            icon={focused ? faGemSolid : faGem}
-                            size={22}
-                        />
-                    ),
-                }}
-            />
-
-            {/* Tab 4b: Messages (India + chat connected, or outside India) */}
-            <Tabs.Screen
-                name="messages"
-                options={{
-                    tabBarItemStyle: { display: showDiscover ? "none" : "flex" },
-                    tabBarIcon: ({ color, focused }) => (
-                        <>
-                            <FontAwesomeIcon
-                                color={color}
-                                icon={focused ? faCommentSolid : faComment}
-                                size={22}
-                            />
-                            {unreadCount > 0 && (
-                                <Badge
-                                    visible={true}
-                                    size={16}
-                                    selectionColor={Colors(theme).red}
-                                    style={styles.badge}
-                                >
-                                    {unreadCount}
-                                </Badge>
-                            )}
-                        </>
-                    ),
-                    title: "Messages",
-                    headerTitleAlign: "left",
-                    headerRight: () => (
-                        <View style={styles.headerRightRowSimple}>
-                            <NotificationIcon />
-                        </View>
-                    ),
-                }}
-            />
-
-            {/* Tab 5: Brand Menu */}
+            {/* Tab 4: Brand Menu */}
             <Tabs.Screen
                 name="menu"
                 options={{
