@@ -743,11 +743,21 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             alignItems: "center",
             paddingRight: 8,
             backgroundColor: "transparent",
+            // Lift the whole header row (and its absolutely-positioned brand
+            // switcher dropdown) above the menu ScrollView that follows it.
+            // Without this, the row sits at z-index auto and the later-painted
+            // ScrollView covers the open dropdown — the dropdown's own
+            // zIndex:1000 only competes inside this subtree, not against the
+            // sibling ScrollView.
+            zIndex: 100,
+            elevation: 100,
         },
         headerWrap: {
             flex: 1,
             minWidth: 0,
             backgroundColor: "transparent",
+            zIndex: 100,
+            elevation: 100,
         },
         toggleButton: {
             width: 28,
@@ -850,7 +860,15 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             backgroundColor: colors.primary,
         },
         brandListItemSelectedInDropdown: {
-            backgroundColor: colors.glassSurface,
+            // Saturated primary pill so the white selected-text stays legible on
+            // the light dropdown surface (glassSurface is near-white in light
+            // theme, which made the white text invisible).
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            shadowOpacity: 0.35,
+            elevation: 4,
         },
         brandListItemText: {
             fontSize: 14,
