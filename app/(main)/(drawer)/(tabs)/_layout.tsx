@@ -9,6 +9,7 @@ import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faCalendarDays,
     faFileLines,
+    faInbox,
     faPenRuler,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -133,7 +134,23 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Tab 4: Brand Menu */}
+            {/* Tab 4: Inbox — unified messages & comments */}
+            <Tabs.Screen
+                name="inbox"
+                options={{
+                    title: "Inbox",
+                    headerShown: false,
+                    tabBarIcon: ({ color, focused }) => (
+                        <FontAwesomeIcon
+                            color={color}
+                            icon={faInbox}
+                            size={22}
+                        />
+                    ),
+                }}
+            />
+
+            {/* Tab 5: Brand Menu */}
             <Tabs.Screen
                 name="menu"
                 options={{

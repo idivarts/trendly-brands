@@ -24,6 +24,7 @@ import {
     faChevronUp,
     faCreditCard,
     faDiagramProject,
+    faInbox,
     faLayerGroup,
     faPenRuler,
     faPlus,
@@ -102,12 +103,20 @@ const CONTENT_MENU_ITEMS = (theme: Theme): Tab[] => [
     },
 ];
 
-const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
+const MANAGE_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
         href: "/connected-accounts",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faShareNodes} focused={focused} />,
+        icon: ({ focused }) => <DrawerIcon href="/connected-accounts" icon={faShareNodes} focused={focused} />,
         label: "Connected Accounts",
     },
+    {
+        href: "/inbox",
+        icon: ({ focused }) => <DrawerIcon href="/inbox" icon={faInbox} focused={focused} />,
+        label: "Inbox",
+    },
+];
+
+const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
         href: "/members",
         icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
@@ -256,6 +265,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
         const groups: { items: Tab[]; proLockMap?: Record<number, boolean> }[] = [
             { items: contentItems },
+            { items: MANAGE_MENU_ITEMS(theme) },
             { items: BRAND_DETAILS_MENU_ITEMS(theme) },
             { items: GROWTH_MENU_ITEMS(theme) },
             ...(adminItems.length > 0 ? [{ items: adminItems }] : []),
@@ -495,7 +505,20 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 2. CREDITS */}
+                        {/* 2. MANAGE */}
+                        <View style={styles.brandDetailsSection}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>Manage</Text>
+                            </View>
+                            <View style={styles.divider} />
+                            <View style={styles.menuItems}>
+                                {MANAGE_MENU_ITEMS(theme).map((tab, idx) => (
+                                    <DrawerMenuItem key={`manage-${idx}`} tab={tab} />
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* 3. CREDITS */}
                         {showCreditsSystem && (
                             <>
                                 {selectedBrand && !selectedBrand.isBillingDisabled &&
@@ -542,7 +565,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </>
                         )}
 
-                        {/* 3. BRAND MANAGEMENT */}
+                        {/* 4. BRAND MANAGEMENT */}
                         <View style={styles.brandDetailsSection}>
                             <Pressable
                                 onPress={() => nav.push("/menu")}
@@ -567,7 +590,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 4. INFLUENCER LED GROWTH (independent component) */}
+                        {/* 5. INFLUENCER LED GROWTH (independent component) */}
                         <View style={styles.brandDetailsSection}>
                             <View style={styles.sectionHeaderRow}>
                                 <Text style={styles.sectionTitle}>Influencer Led Growth</Text>
@@ -578,7 +601,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 5. GROWTH */}
+                        {/* 6. GROWTH */}
                         <View style={styles.brandDetailsSection}>
                             <Pressable
                                 onPress={() => { }}
@@ -603,7 +626,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 6. ADMIN PORTAL */}
+                        {/* 7. ADMIN PORTAL */}
                         {manager?.isAdmin && (
                             <View style={styles.brandDetailsSection}>
                                 <Pressable
