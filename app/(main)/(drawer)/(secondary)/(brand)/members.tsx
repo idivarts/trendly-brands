@@ -1,6 +1,6 @@
-import { Text, View } from "@/components/theme/Themed";
 import MembersTab from "@/components/access/MembersTab";
 import TeamsTab from "@/components/access/TeamsTab";
+import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -30,15 +30,15 @@ const AccessScreen = () => {
     return (
         <AppLayout withWebPadding={false}>
             <PageHeader
-                title="Access"
+                title="User Management"
                 subtitle={selectedBrand?.name}
                 actionButtons={
                     activeTab === "members" && canManageMembers
                         ? [
-                              <Button key="add-member" onPress={() => setShowMemberModal(true)}>
-                                  Add Member
-                              </Button>,
-                          ]
+                            <Button key="add-member" onPress={() => setShowMemberModal(true)}>
+                                Add Member
+                            </Button>,
+                        ]
                         : []
                 }
             />
