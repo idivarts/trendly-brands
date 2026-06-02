@@ -51,17 +51,32 @@ function buildSummaryLines(hire: Partial<IAgencyHire>): string[] {
     const monthlyPosts =
         freq.period === "week" ? freq.count * 4 : freq.count;
 
+    const inHousePieces = f.inHouseContent?.enabled
+        ? (f.inHouseContent.period === "week"
+            ? (f.inHouseContent.count ?? 0) * 4
+            : (f.inHouseContent.count ?? 0))
+        : 0;
+    const totalContentVolume =
+        (f.contentCreation.enabled ? monthlyPosts : 0) + inHousePieces;
+
     if (f.conversionAudit)
         lines.push(`Conversion Audit — ${fmt(FEATURE_COSTS.conversionAudit)}`);
 
     if (f.contentStrategy) {
         const cost =
-            monthlyPosts <= 8
+            totalContentVolume <= 8
                 ? FEATURE_COSTS.contentStrategyPerPost.low
-                : monthlyPosts <= 20
+                : totalContentVolume <= 20
                     ? FEATURE_COSTS.contentStrategyPerPost.mid
                     : FEATURE_COSTS.contentStrategyPerPost.high;
         lines.push(`Content Strategy — ${fmt(cost)}`);
+    }
+
+    if (f.inHouseContent?.enabled && inHousePieces > 0) {
+        const fee = inHousePieces * FEATURE_COSTS.inHouseContentPerPiece;
+        lines.push(
+            `Trendly In-House Content (${inHousePieces} pieces/mo) — ${fmt(fee)}`
+        );
     }
 
     if (f.contentCreation.enabled && f.contentCreation.influencerBudget) {
@@ -69,7 +84,7 @@ function buildSummaryLines(hire: Partial<IAgencyHire>): string[] {
             f.contentCreation.influencerBudget * FEATURE_COSTS.contentCreationPct
         );
         lines.push(
-            `Content Creation (15% of ${fmt(f.contentCreation.influencerBudget)}) — ${fmt(fee)}`
+            `Influencer-led Content Creation (15% of ${fmt(f.contentCreation.influencerBudget)}) — ${fmt(fee)}`
         );
     }
 

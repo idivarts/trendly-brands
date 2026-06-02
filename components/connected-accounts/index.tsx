@@ -44,6 +44,9 @@ const ConnectedAccounts: React.FC = () => {
     const brandId = selectedBrand?.id;
 
     const [teams, setTeams] = useState<Team[]>([]);
+    // Which card's team dropdown is open — that card is lifted above its
+    // siblings so the floating menu isn't painted over by the next card.
+    const [openTeamCardId, setOpenTeamCardId] = useState<string | null>(null);
     useEffect(() => {
         if (!brandId || !canManageTeams) {
             setTeams([]);
@@ -120,21 +123,33 @@ const ConnectedAccounts: React.FC = () => {
                     </Text>
                 </View>
             ) : (
-                <View style={styles.connectedList}>
+                <View
+                    style={[
+                        styles.connectedList,
+                        openTeamCardId && styles.connectedListRaised,
+                    ]}
+                >
                     {socialAccounts.map((account) => {
                         const meta = SOCIAL_PLATFORM_MAP[account.platform];
                         const brandColor = meta
                             ? (colors[meta.colorKey] as string)
                             : colors.primary;
                         return (
-                            <View key={account.id} style={styles.accountBlock}>
-                            <View style={styles.connectedCard}>
+                            <View
+                                key={account.id}
+                                style={[
+                                    styles.connectedCard,
+                                    openTeamCardId === account.id &&
+                                        styles.connectedCardRaised,
+                                ]}
+                            >
                                 <View
                                     style={[
                                         styles.accentStripe,
                                         { backgroundColor: brandColor },
                                     ]}
                                 />
+                                <View style={styles.connectedColumn}>
                                 <View style={styles.connectedBody}>
                                     <View style={styles.avatarWrap}>
                                         <ImageComponent
@@ -209,19 +224,27 @@ const ConnectedAccounts: React.FC = () => {
                                         </Pressable>
                                     )}
                                 </View>
-                            </View>
-                            {canManageTeams && brandId && (
-                                <View style={styles.teamPickerWrap}>
-                                    <SocialTeamPicker
-                                        theme={theme}
-                                        brandId={brandId}
-                                        socialId={account.id}
-                                        currentTeamId={(account as any).teamId}
-                                        teams={teams}
-                                        onAssigned={refreshSocials}
-                                    />
+
+                                {canManageTeams && brandId && (
+                                    <View style={styles.teamPickerWrap}>
+                                        <SocialTeamPicker
+                                            theme={theme}
+                                            brandId={brandId}
+                                            socialId={account.id}
+                                            currentTeamId={
+                                                (account as any).teamId
+                                            }
+                                            teams={teams}
+                                            onAssigned={refreshSocials}
+                                            onOpenChange={(open) =>
+                                                setOpenTeamCardId(
+                                                    open ? account.id : null
+                                                )
+                                            }
+                                        />
+                                    </View>
+                                )}
                                 </View>
-                            )}
                             </View>
                         );
                     })}
@@ -379,17 +402,20 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         connectedList: {
             gap: 12,
         },
-        accountBlock: {
-            gap: 4,
+        // Lift the whole list above the "Add a platform" section below it so a
+        // card's open dropdown isn't painted over by that section.
+        connectedListRaised: {
+            zIndex: 100,
         },
         teamPickerWrap: {
-            paddingHorizontal: 14,
-            paddingBottom: 4,
+            paddingHorizontal: 16,
+            paddingBottom: 14,
+            // Sit above the next card so the dropdown menu is never clipped.
+            zIndex: 1,
         },
         connectedCard: {
             flexDirection: "row",
             borderRadius: 14,
-            overflow: "hidden",
             backgroundColor: colors.card,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 2 },
@@ -397,8 +423,20 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             shadowOpacity: 0.07,
             elevation: 3,
         },
+        // Raised above sibling cards while its team dropdown is open so the
+        // floating menu paints over the cards below it.
+        connectedCardRaised: {
+            zIndex: 100,
+            elevation: 100,
+        },
+        connectedColumn: {
+            flex: 1,
+            minWidth: 0,
+        },
         accentStripe: {
             width: 4,
+            borderTopLeftRadius: 14,
+            borderBottomLeftRadius: 14,
         },
         connectedBody: {
             flex: 1,

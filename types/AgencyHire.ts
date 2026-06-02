@@ -17,6 +17,14 @@ export interface ContentCreationFeature {
     genderPreference?: string[];
 }
 
+// Trendly in-house content production — designers & team create images,
+// videos and motion graphics. Priced per content piece (count × period).
+export interface InHouseContentFeature {
+    enabled: boolean;
+    count?: number;
+    period?: ContentFrequencyPeriod;
+}
+
 export interface AdSpendFeature {
     enabled: boolean;
     totalAdSpend?: number;
@@ -30,6 +38,7 @@ export interface PerformanceMarketingFeature {
 export interface AgencyHireFeatures {
     conversionAudit: boolean;
     contentStrategy: boolean;
+    inHouseContent: InHouseContentFeature;
     contentCreation: ContentCreationFeature;
     adSpend: AdSpendFeature;
     performanceMarketing: PerformanceMarketingFeature;
@@ -67,6 +76,7 @@ export interface AgencyHire extends IAgencyHire {
 export const DEFAULT_AGENCY_HIRE_FEATURES: AgencyHireFeatures = {
     conversionAudit: false,
     contentStrategy: false,
+    inHouseContent: { enabled: false, count: 4, period: "month" },
     contentCreation: { enabled: false },
     adSpend: { enabled: false },
     performanceMarketing: { enabled: false },
@@ -90,6 +100,7 @@ export const DEFAULT_AGENCY_HIRE: Partial<IAgencyHire> = {
 export const FEATURE_MIN_BUDGETS = {
     conversionAudit: 25000,
     contentStrategy: 15000,
+    inHouseContent: 10000,
     contentCreation: 10000,
     adSpend: 0,
     performanceMarketing: 35000,
@@ -99,6 +110,9 @@ export const FEATURE_MIN_BUDGETS = {
 export const FEATURE_COSTS = {
     conversionAudit: 20000,
     contentStrategyPerPost: { low: 15000, mid: 30000, high: 50000 },
+    // In-house production fee charged per content piece (image / video /
+    // motion graphic) produced by Trendly's design team.
+    inHouseContentPerPiece: 2500,
     contentCreationPct: 0.15,
     adSpendPct: 0.10,
     performanceMarketing: 35000,
