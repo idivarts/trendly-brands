@@ -118,14 +118,14 @@ const MANAGE_MENU_ITEMS = (theme: Theme): Tab[] => [
 
 const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
-        href: "/members",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
-        label: "Members",
-    },
-    {
         href: "/billing",
         icon: ({ focused }) => <DrawerIcon href="" icon={faCreditCard} focused={focused} />,
         label: "Billing",
+    },
+    {
+        href: "/members",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
+        label: "User Management",
     },
     {
         href: "/brand-profile",
