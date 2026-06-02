@@ -591,15 +591,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         </View>
 
                         {/* 5. INFLUENCER LED GROWTH (independent component) */}
-                        <View style={styles.brandDetailsSection}>
+                        {/* <View style={styles.brandDetailsSection}>
                             <View style={styles.sectionHeaderRow}>
                                 <Text style={styles.sectionTitle}>Influencer Led Growth</Text>
                             </View>
                             <View style={styles.divider} />
-                            <View style={styles.menuItems}>
-                                <InfluencerLedGrowth variant="expanded" />
-                            </View>
-                        </View>
+                            
+                        </View> */}
 
                         {/* 6. GROWTH */}
                         <View style={styles.brandDetailsSection}>
@@ -619,6 +617,9 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 </View>
                             </Pressable>
                             <View style={styles.divider} />
+                            <View style={styles.menuItems}>
+                                <InfluencerLedGrowth variant="expanded" />
+                            </View>
                             <View style={styles.menuItems}>
                                 {GROWTH_MENU_ITEMS(theme).map((tab, idx) => (
                                     <DrawerMenuItem key={`growth-${idx}`} tab={tab} />
