@@ -2,32 +2,29 @@
  * Inbox data source — THE SEAM.
  *
  * The entire Inbox UI consumes the inbox exclusively through `useInbox()`.
- * Right now it is fulfilled by the in-memory mock layer. To go live, replace
- * the body of this hook with a real backend-backed implementation that returns
- * the same `UseInboxResult` contract (see `../types.ts`), then delete the
- * `../mock` folder and the dev state-switcher.
+ * It is now backed by the live backend API (`useInboxApi`).
  *
- * 👉 Full removal steps: components/inbox/README.md
+ * `USE_MOCK_INBOX` flips back to the in-memory mock layer for offline demos /
+ * stakeholder reviews before Meta App Review is granted (the live API returns
+ * real data only once the connected accounts have approved messaging scopes).
+ * When the mock is no longer needed, set this to `false` permanently and delete
+ * the `../mock` folder + the dev state-switcher (see ../README.md).
  */
-import { UseInboxResult } from "../types";
 import { useInboxMock } from "../mock/use-inbox-mock";
+import { UseInboxResult } from "../types";
+import { useInboxApi } from "./use-inbox.api";
+
+/** Toggle: true = in-memory mock (offline demo), false = live backend API. */
+export const USE_MOCK_INBOX = false;
 
 export function useInbox(): UseInboxResult {
-    // ── MOCK IMPLEMENTATION (remove when wiring the real backend) ──
-    return useInboxMock();
-
-    // ── REAL IMPLEMENTATION (sketch) ────────────────────────────
-    // const { selectedBrand } = useBrandContext();
-    // const { data, isLoading } = useQuery(["inbox", selectedBrand?.id], () =>
-    //     fetchInbox(selectedBrand!.id)
-    // );
-    // return {
-    //     loading: isLoading,
-    //     connectedAccounts: data?.accounts ?? [],
-    //     conversations: data?.conversations ?? [],
-    //     sendReply: (id, text) => postReply(selectedBrand!.id, id, text),
-    //     setCommentHidden: (id, hidden) => patchComment(selectedBrand!.id, id, { hidden }),
-    //     deleteComment: (id) => removeComment(selectedBrand!.id, id),
-    //     markRead: (id) => patchConversation(selectedBrand!.id, id, { unread: false }),
-    // };
+    // Both hooks are called unconditionally is NOT allowed (rules of hooks),
+    // so we branch on a compile-time constant — only one hook is ever mounted
+    // for a given build.
+    if (USE_MOCK_INBOX) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        return useInboxMock();
+    }
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useInboxApi();
 }

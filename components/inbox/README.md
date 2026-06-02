@@ -5,12 +5,22 @@ connected **Instagram** and **Facebook** accounts. Modeled on Meta Business
 Suite's Inbox. Lives on the **Inbox bottom tab**
 (`app/(main)/(drawer)/(tabs)/inbox.tsx`).
 
-> **Status: UI prototype on MOCK DATA.** The whole feature renders from an
-> in-memory mock layer so the design can be reviewed before the backend exists.
-> A floating **dev state-switcher** (bottom-right) cycles the three states:
+> **Status: live backend wired, mock kept behind a flag.** The backend API
+> (Phases 1–4) is implemented. `data/use-inbox.ts` exposes a `USE_MOCK_INBOX`
+> flag:
+> - `true` (current default) → in-memory mock, for offline demos / stakeholder
+>   review before Meta App Review grants the messaging scopes.
+> - `false` → live backend API (`use-inbox.api.ts`) hitting
+>   `/api/v2/brands/:brandId/inbox`.
+>
+> A floating **dev state-switcher** (bottom-right, mock only) cycles the three states:
 > 1. **No socials** — empty conversion state → "Connect accounts"
 > 2. **Connected** — accounts linked, but no messages/comments yet
 > 3. **Populated** — real-feeling DMs + comments you can reply to / hide / delete
+>
+> Flip `USE_MOCK_INBOX = false` to run against the real backend (returns live
+> data only once the brand's connected IG/FB accounts have App-Review-approved
+> messaging scopes — see `backend-sls/docs/inbox-meta-permissions.md`).
 
 ---
 
@@ -32,7 +42,8 @@ components/inbox/
 ├── types.ts                  ← data contract (KEEP — backend must satisfy this)
 ├── utils.ts                  ← channel meta, time, filters (KEEP)
 ├── data/
-│   └── use-inbox.ts          ← THE SEAM. Currently returns the mock hook.
+│   ├── use-inbox.ts          ← THE SEAM. Branches on USE_MOCK_INBOX.
+│   └── use-inbox.api.ts      ← live backend implementation (KEEP)
 ├── InboxView.tsx             ← responsive 3→1 pane orchestrator (KEEP)
 ├── ConversationList.tsx      ← list + filters + search (KEEP)
 ├── ThreadView.tsx            ← DM bubbles / comment thread + moderation (KEEP)
@@ -59,17 +70,12 @@ components/inbox/
 
 Exact steps the AI should perform:
 
-1. **Delete the mock folder:** `components/inbox/mock/` (all 5 files).
-2. **Implement the seam** — rewrite the body of
-   `components/inbox/data/use-inbox.ts` so `useInbox()` returns a real
-   `UseInboxResult` (see the commented sketch in that file). It must:
-   - read the active brand from `useBrandContext()`,
-   - fetch connected IG/FB accounts + normalized conversations (DMs + comments)
-     from the backend inbox endpoints,
-   - implement `sendReply`, `setCommentHidden`, `deleteComment`, `markRead`
-     as real API calls,
-   - keep the **exact** `UseInboxResult` shape from `types.ts` — do not change
-     the contract or any consuming component.
+1. **Flip the flag:** set `USE_MOCK_INBOX = false` in
+   `components/inbox/data/use-inbox.ts` (and drop the mock branch so `useInbox()`
+   just returns `useInboxApi()`). The live implementation already exists in
+   `data/use-inbox.api.ts` and satisfies the `UseInboxResult` contract.
+2. **Delete the mock folder:** `components/inbox/mock/` (all 5 files) and remove
+   the now-unused `useInboxMock` import from `use-inbox.ts`.
 3. **Clean the screen** — in `app/(main)/(drawer)/(tabs)/inbox.tsx` remove the
    three `MOCK` blocks: the two mock imports, the `<MockScenarioProvider>`
    wrapper, and `<DevStateSwitcher />`. The screen then renders `<InboxView />`
