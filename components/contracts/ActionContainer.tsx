@@ -1,4 +1,5 @@
 import { useChatContext } from "@/contexts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     ContractStatus,
     isContractBlockedByKYC,
@@ -255,6 +256,20 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    const { hasCapability } = useBrandContext();
+    // Funding a contract requires the fund_contracts capability. Gate every
+    // payment entry point through this guard; the backend also enforces it.
+    const guardFund = useCallback(
+        (fn: () => void) => () => {
+            if (!hasCapability("fund_contracts")) {
+                Toaster.error("You don't have permission to fund contracts");
+                return;
+            }
+            fn();
+        },
+        [hasCapability]
+    );
+
     const { paymentButtonLoading, startPayment: handlePendingPayment, razorpayModalProps } =
         useRazorpayContractPayment({
             contractId: contractIdForApi,
@@ -419,7 +434,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Start Contract",
                         variant: "contained",
-                        onPress: handleStartContractPress,
+                        onPress: guardFund(handleStartContractPress),
                         loading: paymentButtonLoading,
                     },
                 ],
@@ -442,9 +457,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Retry Payment",
                         variant: "contained",
-                        onPress: () => {
+                        onPress: guardFund(() => {
                             void handlePendingPayment();
-                        },
+                        }),
                         loading: paymentButtonLoading,
                     },
                 ],
@@ -464,9 +479,9 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     {
                         label: "Continue payment",
                         variant: "contained",
-                        onPress: () => {
+                        onPress: guardFund(() => {
                             void handlePendingPayment({ resumeExistingOrder: true });
-                        },
+                        }),
                         loading: paymentButtonLoading,
                     },
                 ],

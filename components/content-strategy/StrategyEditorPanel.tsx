@@ -1,5 +1,6 @@
 import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/types";
 import RichTextEditor from "@/components/rich-text-editor";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -314,13 +315,16 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     onNewStrategy,
     colors,
 }) => {
+    const { hasCapability } = useBrandContext();
     const reviewStatus = strategy.reviewStatus ?? "draft";
     const status = statusVisual(reviewStatus, colors);
     const isReviewer =
         reviewStatus === "in_review" &&
         strategy.collaboratorIds?.includes(currentManagerId) &&
         strategy.reviewRequestedBy !== currentManagerId;
-    const canSendForReview = reviewStatus === "draft" || reviewStatus === "changes_requested";
+    const canSendForReview =
+        (reviewStatus === "draft" || reviewStatus === "changes_requested") &&
+        hasCapability("manage_content_strategy");
 
     const inviteCount = strategy.collaboratorIds?.length ?? 0;
     const isShared = inviteCount > 0;

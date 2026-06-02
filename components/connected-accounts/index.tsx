@@ -5,6 +5,8 @@ import {
     ISocialAccount,
     useBrandSocialContext,
 } from "@/contexts/brand-social-context.provider";
+import { listTeams, Team } from "@/components/access/api";
+import SocialTeamPicker from "@/components/access/SocialTeamPicker";
 import { useBreakpoints } from "@/hooks";
 import useConnectBrandSocial from "@/hooks/request/use-connect-brand-social";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -15,7 +17,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faCheck, faLinkSlash, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -31,13 +33,24 @@ const ConnectedAccounts: React.FC = () => {
     const { xl, width } = useBreakpoints();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, hasCapability } = useBrandContext();
+    const canConnectSocials = hasCapability("connect_socials");
+    const canManageTeams = hasCapability("manage_teams");
     const { socialAccounts, isFetchingSocials, refreshSocials } =
         useBrandSocialContext();
     const { connectSocial } = useConnectBrandSocial();
     const { openModal } = useConfirmationModel();
 
     const brandId = selectedBrand?.id;
+
+    const [teams, setTeams] = useState<Team[]>([]);
+    useEffect(() => {
+        if (!brandId || !canManageTeams) {
+            setTeams([]);
+            return;
+        }
+        listTeams(brandId).then(setTeams).catch(() => setTeams([]));
+    }, [brandId, canManageTeams]);
 
     // Responsive grid: tiles need room for icon + label + status; clamp 1–3 cols.
     const gridColumns = useMemo(() => {
@@ -114,7 +127,8 @@ const ConnectedAccounts: React.FC = () => {
                             ? (colors[meta.colorKey] as string)
                             : colors.primary;
                         return (
-                            <View key={account.id} style={styles.connectedCard}>
+                            <View key={account.id} style={styles.accountBlock}>
+                            <View style={styles.connectedCard}>
                                 <View
                                     style={[
                                         styles.accentStripe,
@@ -174,25 +188,40 @@ const ConnectedAccounts: React.FC = () => {
                                         )}
                                     </View>
 
-                                    <Pressable
-                                        onPress={() => confirmDisconnect(account)}
-                                        style={styles.disconnectBtn}
-                                        hitSlop={8}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`Disconnect ${meta?.label ?? account.platform}`}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faLinkSlash}
-                                            size={14}
-                                            color={colors.errorBorder}
-                                        />
-                                        {xl && (
-                                            <Text style={styles.disconnectLabel}>
-                                                Disconnect
-                                            </Text>
-                                        )}
-                                    </Pressable>
+                                    {canConnectSocials && (
+                                        <Pressable
+                                            onPress={() => confirmDisconnect(account)}
+                                            style={styles.disconnectBtn}
+                                            hitSlop={8}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`Disconnect ${meta?.label ?? account.platform}`}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faLinkSlash}
+                                                size={14}
+                                                color={colors.errorBorder}
+                                            />
+                                            {xl && (
+                                                <Text style={styles.disconnectLabel}>
+                                                    Disconnect
+                                                </Text>
+                                            )}
+                                        </Pressable>
+                                    )}
                                 </View>
+                            </View>
+                            {canManageTeams && brandId && (
+                                <View style={styles.teamPickerWrap}>
+                                    <SocialTeamPicker
+                                        theme={theme}
+                                        brandId={brandId}
+                                        socialId={account.id}
+                                        currentTeamId={(account as any).teamId}
+                                        teams={teams}
+                                        onAssigned={refreshSocials}
+                                    />
+                                </View>
+                            )}
                             </View>
                         );
                     })}
@@ -200,6 +229,8 @@ const ConnectedAccounts: React.FC = () => {
             )}
 
             {/* ── Zone 2: Add a platform ─────────────────────────────────── */}
+            {canConnectSocials && (
+            <>
             <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
                 Add a platform
             </Text>
@@ -279,6 +310,8 @@ const ConnectedAccounts: React.FC = () => {
                     );
                 })}
             </View>
+            </>
+            )}
         </ScrollView>
     );
 };
@@ -345,6 +378,13 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         // ── Connected cards ───────────────────────────────────────────
         connectedList: {
             gap: 12,
+        },
+        accountBlock: {
+            gap: 4,
+        },
+        teamPickerWrap: {
+            paddingHorizontal: 14,
+            paddingBottom: 4,
         },
         connectedCard: {
             flexDirection: "row",

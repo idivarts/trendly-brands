@@ -8,6 +8,7 @@ import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import AppLayout from "@/layouts/app-layout";
@@ -37,6 +38,8 @@ const ContentCalendarScreen = () => {
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const router = useRouter();
+    const { hasCapability } = useBrandContext();
+    const canManageContent = hasCapability("manage_content");
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const { items: allContents, addContent } = useContents();
@@ -174,7 +177,7 @@ const ContentCalendarScreen = () => {
             ) : null,
 
             // Add content
-            hasItems ? (
+            hasItems && canManageContent ? (
                 <Pressable
                     key="add"
                     style={({ pressed }) => [
@@ -189,7 +192,7 @@ const ContentCalendarScreen = () => {
                 </Pressable>
             ) : null,
         ].filter(Boolean) as React.ReactElement[],
-        [hasItems, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
+        [hasItems, canManageContent, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
     );
 
     // Slot chevrons are intentionally not wired — desktop uses the rail's
