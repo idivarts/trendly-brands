@@ -16,7 +16,7 @@ import { useMockScenario } from "./mock-scenario-context";
 import { INBOX_SCENARIOS } from "./scenario";
 
 /** Flip to false to hide the switcher without removing the mock. */
-export const SHOW_DEV_STATE_SWITCHER = true;
+export const SHOW_DEV_STATE_SWITCHER = false;
 
 const DevStateSwitcher: React.FC = () => {
     const theme = useTheme();
