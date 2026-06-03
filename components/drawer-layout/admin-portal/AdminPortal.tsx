@@ -1,7 +1,7 @@
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronRight, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faUserShield } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
@@ -10,17 +10,16 @@ import { Platform, Pressable, View as RNView, StyleSheet } from "react-native";
 type Variant = "expanded" | "rail";
 
 /**
- * The "Influencer Led Growth" trigger. In the expanded drawer it renders as a
- * labelled row; in the collapsed rail it renders as an icon button with a hover
- * tooltip. Pressing it opens the segmented sub-drawer
- * (see InfluencerLedGrowthSubDrawer).
+ * The "Admin Portal" trigger. Expanded variant renders a labelled row; rail
+ * variant renders an icon button with a hover tooltip. Pressing it opens the
+ * AdminPortalSubDrawer.
  */
-const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
+const AdminPortal: React.FC<{ variant: Variant }> = ({ variant }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(theme), [theme]);
     const { subDrawerKind, openSubDrawer, toggleSubDrawer } = useSidebarCollapsed();
-    const isActive = subDrawerKind === "ilg";
+    const isActive = subDrawerKind === "admin";
     const [hovered, setHovered] = useState(false);
 
     const drawerColors = useMemo(
@@ -40,13 +39,13 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
     if (variant === "rail") {
         return (
             <Pressable
-                onPress={() => toggleSubDrawer("ilg")}
+                onPress={() => toggleSubDrawer("admin")}
                 onHoverIn={() => setHovered(true)}
                 onHoverOut={() => setHovered(false)}
                 style={styles.railTriggerWrapper}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
-                accessibilityLabel="Influencer Led Growth"
+                accessibilityLabel="Admin Portal"
             >
                 <RNView
                     style={[
@@ -55,7 +54,7 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
                     ]}
                 >
                     <FontAwesomeIcon
-                        icon={faUsers}
+                        icon={faUserShield}
                         size={18}
                         color={isActive ? drawerColors.activeColor : drawerColors.inactiveColor}
                     />
@@ -63,7 +62,7 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
                 {hovered && !isActive && (
                     <RNView style={styles.railTooltip} pointerEvents="none">
                         <Text style={styles.railTooltipText} numberOfLines={1}>
-                            Influencer Led Growth
+                            Admin Portal
                         </Text>
                     </RNView>
                 )}
@@ -74,16 +73,16 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
     // Expanded row
     return (
         <Pressable
-            onPress={() => openSubDrawer("ilg")}
+            onPress={() => openSubDrawer("admin")}
             onHoverIn={() => setHovered(true)}
             onHoverOut={() => setHovered(false)}
             style={[styles.row, hovered && styles.rowHover]}
             accessibilityRole="button"
-            accessibilityLabel="Open Influencer Led Growth"
+            accessibilityLabel="Open Admin Portal"
         >
             <View style={styles.rowInner}>
                 <FontAwesomeIcon
-                    icon={faUsers}
+                    icon={faUserShield}
                     size={16}
                     color={hovered ? drawerColors.activeColor : drawerColors.inactiveColor}
                 />
@@ -94,7 +93,7 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
                     ]}
                     numberOfLines={1}
                 >
-                    Influencer Led Growth
+                    Admin Portal
                 </Text>
                 <FontAwesomeIcon icon={faChevronRight} size={12} color={drawerColors.inactiveColor} />
             </View>
@@ -104,7 +103,6 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
 
 const createStyles = (theme: Theme) => {
     return StyleSheet.create({
-        // ── Expanded row ───────────────────────────────────────────────────
         row: {
             marginHorizontal: 8,
             marginVertical: 2,
@@ -129,7 +127,6 @@ const createStyles = (theme: Theme) => {
             flex: 1,
             fontWeight: "500",
         },
-        // ── Collapsed rail icon ─────────────────────────────────────────────
         railTriggerWrapper: {
             marginHorizontal: 4,
             marginVertical: 2,
@@ -177,4 +174,4 @@ const createStyles = (theme: Theme) => {
     });
 };
 
-export default InfluencerLedGrowth;
+export default AdminPortal;

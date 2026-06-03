@@ -1,24 +1,30 @@
 import React, { createContext, useContext, useRef, useState } from "react";
 
+export type SubDrawerKind = "ilg" | "admin" | null;
+
 interface SidebarCollapsedContextType {
     isCollapsed: boolean;
     toggle: () => void;
     setCollapsed: (value: boolean) => void;
-    /** Whether the "Influencer Led Growth" sub-drawer is open. */
+    /** Which sub-drawer (if any) is currently open. */
+    subDrawerKind: SubDrawerKind;
+    /** True when any sub-drawer is open (derived from `subDrawerKind`). */
     subDrawerOpen: boolean;
+    /** Legacy boolean setter — opens "ilg" when true, closes when false. */
     setSubDrawerOpen: (value: boolean) => void;
-    /** Collapse the rail and open the sub-drawer (remembers prior collapse state). */
-    openSubDrawer: () => void;
-    /** Close the sub-drawer and restore the prior collapse state. */
+    /** Collapse the rail and open the named sub-drawer (defaults to "ilg"). */
+    openSubDrawer: (kind?: Exclude<SubDrawerKind, null>) => void;
+    /** Close the active sub-drawer and restore the prior collapse state. */
     closeSubDrawer: () => void;
-    /** Toggle the sub-drawer open/closed. */
-    toggleSubDrawer: () => void;
+    /** Toggle the named sub-drawer (defaults to "ilg"). */
+    toggleSubDrawer: (kind?: Exclude<SubDrawerKind, null>) => void;
 }
 
 export const SidebarCollapsedContext = createContext<SidebarCollapsedContextType>({
     isCollapsed: false,
     toggle: () => {},
     setCollapsed: () => {},
+    subDrawerKind: null,
     subDrawerOpen: false,
     setSubDrawerOpen: () => {},
     openSubDrawer: () => {},
@@ -28,31 +34,40 @@ export const SidebarCollapsedContext = createContext<SidebarCollapsedContextType
 
 export const SidebarCollapsedProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [subDrawerOpen, setSubDrawerOpen] = useState(false);
+    const [subDrawerKind, setSubDrawerKind] = useState<SubDrawerKind>(null);
     // Remembers whether the rail was collapsed before the sub-drawer was opened,
     // so closing restores the user's prior state.
     const collapsedBeforeSubDrawer = useRef(false);
+
+    const subDrawerOpen = subDrawerKind !== null;
 
     const setCollapsed = (value: boolean) => setIsCollapsed(value);
 
     // Expanding/collapsing the rail also dismisses the sub-drawer.
     const toggle = () => {
-        if (subDrawerOpen) setSubDrawerOpen(false);
+        if (subDrawerOpen) setSubDrawerKind(null);
         setIsCollapsed((v) => !v);
     };
 
-    const openSubDrawer = () => {
-        collapsedBeforeSubDrawer.current = isCollapsed;
+    const openSubDrawer = (kind: Exclude<SubDrawerKind, null> = "ilg") => {
+        if (!subDrawerOpen) {
+            collapsedBeforeSubDrawer.current = isCollapsed;
+        }
         setIsCollapsed(true);
-        setSubDrawerOpen(true);
+        setSubDrawerKind(kind);
     };
     const closeSubDrawer = () => {
-        setSubDrawerOpen(false);
+        setSubDrawerKind(null);
         setIsCollapsed(collapsedBeforeSubDrawer.current);
     };
-    const toggleSubDrawer = () => {
-        if (subDrawerOpen) closeSubDrawer();
-        else openSubDrawer();
+    const toggleSubDrawer = (kind: Exclude<SubDrawerKind, null> = "ilg") => {
+        if (subDrawerKind === kind) closeSubDrawer();
+        else openSubDrawer(kind);
+    };
+
+    const setSubDrawerOpen = (value: boolean) => {
+        if (value) openSubDrawer("ilg");
+        else closeSubDrawer();
     };
 
     return (
@@ -61,6 +76,7 @@ export const SidebarCollapsedProvider: React.FC<{ children: React.ReactNode }> =
                 isCollapsed,
                 toggle,
                 setCollapsed,
+                subDrawerKind,
                 subDrawerOpen,
                 setSubDrawerOpen,
                 openSubDrawer,

@@ -1,6 +1,8 @@
-import { SidebarCollapsedContext, useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
+import {
+    SidebarCollapsedContext,
+    useSidebarCollapsed,
+} from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
-import { useBrandContext } from "@/contexts/brand-context.provider";
 import Colors from "@/shared-uis/constants/Colors";
 import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -8,27 +10,24 @@ import { Theme, useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
 import DrawerMenuItem from "../DrawerMenuItem";
-import { INFLUENCER_LED_GROWTH_SEGMENTS } from "./menu-items";
+import { ADMIN_PORTAL_SEGMENTS } from "./menu-items";
 
 // Kept in sync with SUB_DRAWER_WIDTH in DrawerMenuContentWeb.tsx and _layout.tsx
 export const SUB_DRAWER_WIDTH = 248;
 
 /**
- * The slide-out panel that sits beside the collapsed rail when "Influencer Led
- * Growth" is opened. Content is split into two segments — Discovery and
- * Execution. Reserves real layout width (it is NOT an overlay), so the page
+ * The slide-out panel that sits beside the collapsed rail when "Admin Portal"
+ * is opened. Reserves real layout width (it is NOT an overlay), so the page
  * content is pushed over rather than hidden underneath.
  */
-const InfluencerLedGrowthSubDrawer: React.FC = () => {
+const AdminPortalSubDrawer: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(theme), [theme]);
     const sidebarCtx = useSidebarCollapsed();
     const { subDrawerKind, closeSubDrawer } = sidebarCtx;
-    const isOpen = subDrawerKind === "ilg";
-    const { selectedBrand } = useBrandContext();
+    const isOpen = subDrawerKind === "admin";
 
-    const planKey = selectedBrand?.billing?.planKey || "";
     const mutedColor = (colors as any).drawerTextMuted ?? (theme.dark ? colors.text : "#506878");
 
     // Close on Escape (web keyboard affordance).
@@ -44,7 +43,7 @@ const InfluencerLedGrowthSubDrawer: React.FC = () => {
 
     if (!isOpen) return null;
 
-    const segments = INFLUENCER_LED_GROWTH_SEGMENTS(theme);
+    const segments = ADMIN_PORTAL_SEGMENTS(theme);
 
     return (
         <View style={styles.subDrawer}>
@@ -56,7 +55,7 @@ const InfluencerLedGrowthSubDrawer: React.FC = () => {
             >
                 <FontAwesomeIcon icon={faChevronLeft} size={14} color={mutedColor} />
                 <Text style={styles.title} numberOfLines={1}>
-                    Influencer Led Growth
+                    Admin Portal
                 </Text>
             </Pressable>
             <ScrollView
@@ -75,7 +74,6 @@ const InfluencerLedGrowthSubDrawer: React.FC = () => {
                                 <DrawerMenuItem
                                     key={`${segment.title}-${idx}`}
                                     tab={tab}
-                                    proLock={!!(tab.pro && planKey !== "pro" && planKey !== "enterprise")}
                                 />
                             ))}
                         </View>
@@ -98,15 +96,12 @@ const createStyles = (theme: Theme) => {
 
     return StyleSheet.create({
         subDrawer: {
-            // In-flow column beside the rail (NOT absolute) so it reserves real
-            // layout width and the page content is pushed over.
             width: SUB_DRAWER_WIDTH,
             flexGrow: 0,
             flexShrink: 0,
             flexBasis: SUB_DRAWER_WIDTH,
             backgroundColor: sidebarSurfaceBg,
             paddingTop: Platform.OS === "web" ? 12 : 64,
-            // Directional shadow toward the page content the panel sits against
             shadowColor: "#000",
             shadowOffset: { width: 8, height: 0 },
             shadowRadius: 18,
@@ -156,4 +151,4 @@ const createStyles = (theme: Theme) => {
     });
 };
 
-export default InfluencerLedGrowthSubDrawer;
+export default AdminPortalSubDrawer;
