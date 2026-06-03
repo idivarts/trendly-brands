@@ -1,0 +1,309 @@
+import {
+    CONTENT_STATUS_LABELS,
+    ContentStatus,
+    EDITABLE_CONTENT_STATUSES,
+    contentStatusColors,
+} from "@/components/contents/types";
+import Colors from "@/shared-uis/constants/Colors";
+import { useBreakpoints } from "@/hooks";
+import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import React, { useMemo } from "react";
+import {
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
+
+// ─── ContentInfoModal ─────────────────────────────────────────────────────────
+// Title, idea/vision and status live here instead of cluttering the page, so the
+// page itself can stay focused on the content, caption and hashtags. Opened from
+// the info button in the page header.
+
+export interface ContentInfoModalProps {
+    visible: boolean;
+    title: string;
+    idea: string;
+    status: ContentStatus;
+    typeLabel: string;
+    onChangeTitle: (v: string) => void;
+    onChangeIdea: (v: string) => void;
+    onChangeStatus: (s: ContentStatus) => void;
+    onClose: () => void;
+}
+
+const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
+    visible,
+    title,
+    idea,
+    status,
+    typeLabel,
+    onChangeTitle,
+    onChangeIdea,
+    onChangeStatus,
+    onClose,
+}) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const { xl } = useBreakpoints();
+    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+
+    return (
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+            <View style={styles.backdrop}>
+                <Pressable
+                    style={StyleSheet.absoluteFill}
+                    onPress={onClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close content details"
+                />
+                <View style={styles.sheet} accessibilityViewIsModal>
+                    <View style={styles.header}>
+                        <View style={styles.headIcon}>
+                            <FontAwesomeIcon icon={faCircleInfo} size={15} color={colors.primary} />
+                        </View>
+                        <View style={styles.headText}>
+                            <Text style={styles.title}>Content details</Text>
+                            <Text style={styles.subtitle}>{typeLabel}</Text>
+                        </View>
+                        <Pressable
+                            onPress={onClose}
+                            style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close"
+                            hitSlop={8}
+                        >
+                            <FontAwesomeIcon icon={faXmark} size={16} color={colors.textSecondary} />
+                        </Pressable>
+                    </View>
+
+                    <ScrollView
+                        style={styles.body}
+                        contentContainerStyle={styles.bodyContent}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <Text style={styles.label} nativeID="ci-status">Status</Text>
+                        <View style={styles.statusRow} accessibilityLabel="Status" accessibilityRole="radiogroup">
+                            {EDITABLE_CONTENT_STATUSES.map((s) => {
+                                const sc = contentStatusColors(s, colors);
+                                const active = status === s;
+                                return (
+                                    <Pressable
+                                        key={s}
+                                        style={({ pressed }) => [
+                                            styles.statusChip,
+                                            { backgroundColor: active ? sc.bg : colors.tag },
+                                            pressed && styles.pressed,
+                                        ]}
+                                        onPress={() => onChangeStatus(s)}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{ selected: active }}
+                                        accessibilityLabel={CONTENT_STATUS_LABELS[s]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.statusChipText,
+                                                {
+                                                    color: active ? sc.fg : colors.textSecondary,
+                                                    fontWeight: active ? "700" : "600",
+                                                },
+                                            ]}
+                                        >
+                                            {CONTENT_STATUS_LABELS[s]}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={[styles.label, styles.mt18]} nativeID="ci-title">Title</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="E.g. Founder Story Launch Reel"
+                            placeholderTextColor={colors.textSecondary}
+                            value={title}
+                            onChangeText={onChangeTitle}
+                            maxLength={120}
+                            accessibilityLabel="Title"
+                            aria-labelledby="ci-title"
+                        />
+
+                        <Text style={[styles.label, styles.mt18]} nativeID="ci-idea">Idea / Vision</Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Describe the concept, mood, or key message…"
+                            placeholderTextColor={colors.textSecondary}
+                            value={idea}
+                            onChangeText={onChangeIdea}
+                            multiline
+                            maxLength={500}
+                            textAlignVertical="top"
+                            accessibilityLabel="Idea or vision"
+                            aria-labelledby="ci-idea"
+                        />
+                    </ScrollView>
+
+                    <View style={styles.footer}>
+                        <Pressable
+                            style={({ pressed }) => [styles.doneBtn, pressed && styles.pressed]}
+                            onPress={onClose}
+                            accessibilityRole="button"
+                            accessibilityLabel="Done"
+                        >
+                            <Text style={styles.doneText}>Done</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
+    return StyleSheet.create({
+        backdrop: {
+            flex: 1,
+            backgroundColor: colors.backdrop,
+            alignItems: "center",
+            justifyContent: xl ? "center" : "flex-end",
+            padding: xl ? 20 : 0,
+        },
+        sheet: {
+            width: "100%",
+            maxWidth: 480,
+            maxHeight: "86%",
+            backgroundColor: colors.card,
+            borderRadius: xl ? 18 : 20,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 12 },
+            shadowRadius: 32,
+            shadowOpacity: 0.18,
+            elevation: 14,
+        },
+        header: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingHorizontal: 18,
+            paddingTop: 16,
+            paddingBottom: 12,
+        },
+        headIcon: {
+            width: 32,
+            height: 32,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.aliceBlue,
+        },
+        headText: {
+            flex: 1,
+        },
+        title: {
+            fontSize: 16,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        subtitle: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            marginTop: 1,
+        },
+        closeBtn: {
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
+        },
+        body: {
+            flexGrow: 0,
+        },
+        bodyContent: {
+            paddingHorizontal: 18,
+            paddingBottom: 8,
+        },
+        label: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.textSecondary,
+            marginBottom: 8,
+        },
+        mt18: {
+            marginTop: 18,
+        },
+        statusRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 8,
+        },
+        statusChip: {
+            minHeight: 44,
+            paddingHorizontal: 16,
+            justifyContent: "center",
+            borderRadius: 10,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        statusChipText: {
+            fontSize: 13,
+        },
+        input: {
+            backgroundColor: colors.tag,
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            fontSize: 14,
+            color: colors.text,
+            minHeight: 48,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        textArea: {
+            minHeight: 110,
+            maxHeight: 200,
+        },
+        footer: {
+            paddingHorizontal: 18,
+            paddingTop: 12,
+            paddingBottom: 18,
+        },
+        doneBtn: {
+            minHeight: 48,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 12,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            shadowOpacity: 0.35,
+            elevation: 4,
+        },
+        doneText: {
+            fontSize: 15,
+            fontWeight: "700",
+            color: colors.onPrimary,
+        },
+        pressed: {
+            opacity: 0.72,
+        },
+    });
+}
+
+export default ContentInfoModal;

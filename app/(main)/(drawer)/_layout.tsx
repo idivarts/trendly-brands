@@ -11,14 +11,18 @@ import React from "react";
 
 const EXPANDED_WIDTH = 280;
 const COLLAPSED_WIDTH = 56;
+// Kept in sync with SUB_DRAWER_WIDTH in DrawerMenuContentWeb.tsx
+const SUB_DRAWER_WIDTH = 248;
 
 const DrawerLayoutInner = () => {
     const { xl, width: screenWidth } = useBreakpoints();
-    const { isCollapsed } = useSidebarCollapsed();
+    const { isCollapsed, subDrawerOpen } = useSidebarCollapsed();
 
     const drawerWidth = xl
         ? isCollapsed
-            ? COLLAPSED_WIDTH
+            ? subDrawerOpen
+                ? COLLAPSED_WIDTH + SUB_DRAWER_WIDTH
+                : COLLAPSED_WIDTH
             : EXPANDED_WIDTH
         : screenWidth * 0.75;
 

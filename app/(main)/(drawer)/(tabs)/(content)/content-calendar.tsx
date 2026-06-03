@@ -1,13 +1,16 @@
 import AddContentModal from "@/components/content-calendar/AddContentModal";
+import ContentDetailsModal from "@/components/content-calendar/ContentDetailsModal";
 import CalendarCommentsPanel from "@/components/content-calendar/CalendarCommentsPanel";
 import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import AppLayout from "@/layouts/app-layout";
@@ -27,11 +30,18 @@ import { Pressable, StyleSheet, Text } from "react-native";
 const CALENDAR_WELCOME =
     "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.";
 
+// One stable chat per brand for the Calendar module. brandId already scopes the
+// conversation query, so a constant contextId keeps the calendar on a single
+// thread regardless of which item (if any) is selected.
+const CALENDAR_CONTEXT_ID = "calendar";
+
 const ContentCalendarScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const router = useRouter();
+    const { hasCapability } = useBrandContext();
+    const canManageContent = hasCapability("manage_content");
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const { items: allContents, addContent } = useContents();
@@ -65,6 +75,9 @@ const ContentCalendarScreen = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [addInitialDate, setAddInitialDate] = useState<string | undefined>();
 
+    // Item whose short-details preview modal is open (tapping a content card).
+    const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
+
     // ── Right panel ───────────────────────────────────────────────────────────
     // 'chat'     → AI chat panel (desktop default)
     // 'comments' → Calendar comments panel (month or item level)
@@ -95,9 +108,26 @@ const ContentCalendarScreen = () => {
         setRightPanelMode("comments");
     }, []);
 
-    // Tapping a content chip body: opens the content details page for editing.
-    const handleOpenItem = useCallback(
+    // "Send to AI" on a comment: focus its text in the chat panel and open chat.
+    const handleSendCommentToAI = useCallback((comment: PanelComment) => {
+        const label =
+            comment.text.length > 80 ? comment.text.slice(0, 80) + "..." : comment.text;
+        setFocusItems((prev) => [
+            ...prev,
+            { id: `comment-${comment.id}-${Date.now()}`, label },
+        ]);
+        setRightPanelMode("chat");
+    }, []);
+
+    // Tapping a content chip body: first show a short-details preview modal.
+    const handleOpenItem = useCallback((item: CalendarItem) => {
+        setDetailItem(item);
+    }, []);
+
+    // From the preview modal: navigate to the full content page for editing.
+    const handleGoToContentPage = useCallback(
         (item: CalendarItem) => {
+            setDetailItem(null);
             router.push({
                 pathname:
                     "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
@@ -169,7 +199,7 @@ const ContentCalendarScreen = () => {
             ) : null,
 
             // Add content
-            hasItems ? (
+            hasItems && canManageContent ? (
                 <Pressable
                     key="add"
                     style={({ pressed }) => [
@@ -184,7 +214,7 @@ const ContentCalendarScreen = () => {
                 </Pressable>
             ) : null,
         ].filter(Boolean) as React.ReactElement[],
-        [hasItems, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
+        [hasItems, canManageContent, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
     );
 
     // Slot chevrons are intentionally not wired — desktop uses the rail's
@@ -199,12 +229,13 @@ const ContentCalendarScreen = () => {
                     month={calMonth}
                     selectedItem={selectedCommentItem}
                     onClearSelectedItem={() => setSelectedCommentItem(null)}
+                    onSendToAI={handleSendCommentToAI}
                 />
             }
             chatSlot={
                 <AIChatPanel
                     module="calendar"
-                    contextId={selectedCommentItem?.id}
+                    contextId={CALENDAR_CONTEXT_ID}
                     focusItems={focusItems}
                     onRemoveFocusItem={(id) =>
                         setFocusItems((prev) => prev.filter((f) => f.id !== id))
@@ -293,6 +324,13 @@ const ContentCalendarScreen = () => {
                 initialDate={addInitialDate}
                 onClose={() => setShowAddModal(false)}
                 onAdd={handleAddItem}
+            />
+
+            <ContentDetailsModal
+                visible={!!detailItem}
+                item={detailItem}
+                onClose={() => setDetailItem(null)}
+                onOpenContentPage={handleGoToContentPage}
             />
         </AppLayout>
     );

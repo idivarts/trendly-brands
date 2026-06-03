@@ -1,9 +1,9 @@
-import DatePickerModal, { formatDateForWebInput } from "@/components/modals/DatePickerModal";
+import DatePickerModal, { formatDateForWebInput, parseWebInputDate } from "@/components/modals/DatePickerModal";
 import Colors from "@/shared-uis/constants/Colors";
 import { faCalendarDays, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Modal,
     Pressable,
@@ -35,12 +35,23 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     const styles = useMemo(() => useStyles(colors), [colors]);
 
     const [date, setDate] = useState<Date>(
-        initialDate ? new Date(initialDate) : new Date()
+        () => (initialDate ? parseWebInputDate(initialDate) ?? new Date() : new Date())
     );
     const [type, setType] = useState<ContentType>("reel");
     const [title, setTitle] = useState("");
     const [idea, setIdea] = useState("");
     const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // The modal stays mounted and is toggled via `visible`, so the useState
+    // initialiser only runs once. Re-sync the date to the clicked day each time
+    // the modal opens (or the target date changes), otherwise it sticks to the
+    // first-opened / reset value. `parseWebInputDate` parses the YYYY-MM-DD
+    // string as a *local* date (plain `new Date("YYYY-MM-DD")` is UTC and can
+    // land on the previous day for negative-offset timezones).
+    useEffect(() => {
+        if (!visible) return;
+        setDate(initialDate ? parseWebInputDate(initialDate) ?? new Date() : new Date());
+    }, [visible, initialDate]);
 
     const reset = () => {
         setDate(new Date());

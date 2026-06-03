@@ -55,7 +55,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
     const styles = useMemo(() => useStyles(theme), [theme]);
-    const { isOnFreeTrial } = useBrandContext();
+    const { isOnFreeTrial, hasCapability } = useBrandContext();
     const { openModal } = useConfirmationModel();
     const nav = useMyNavigation();
     const expoRouter = useRouter();
@@ -269,7 +269,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         return null;
     }
 
-    const isDraft = collaboration.status === "draft";
+    const isDraft = collaboration.status === "draft" && hasCapability("manage_collaborations");
     const campaignHeaderActions = isDraft
         ? [
             <Button
@@ -290,7 +290,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 title="Campaign Details"
                 subtitle={collaboration.name}
                 showBackButton
-                onBackPress={() => expoRouter.replace("/(main)/(drawer)/(tabs)/collaborations")}
+                onBackPress={() => expoRouter.replace("/collaborations")}
                 actionButtons={campaignHeaderActions}
                 rightComponent={
                     <Pressable

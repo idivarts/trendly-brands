@@ -1,41 +1,29 @@
-import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
+import { SidebarCollapsedContext, useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
-import { useAuthContext, useLocationContext } from "@/contexts";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { useMyNavigation } from "@/shared-libs/utils/router";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
-import {
-    faAddressCard,
-    faComment,
-    faEye,
-    faFileLines,
-    faGem,
-    faStar,
-} from "@fortawesome/free-regular-svg-icons";
+import { faFileLines } from "@fortawesome/free-regular-svg-icons";
 import {
     faArrowTrendUp,
+    faBuilding,
     faBullseye,
     faCalendarDays,
-    faChartLine,
     faChevronDown,
     faChevronLeft,
     faChevronRight,
     faChevronUp,
-    faComment as faCommentSolid,
     faCreditCard,
-    faDiagramProject,
-    faGem as faGemSolid,
+    faInbox,
     faLayerGroup,
     faPenRuler,
     faPlus,
-    faStar as faStarSolid,
-    faTriangleExclamation,
+    faShareNodes,
     faUsers,
-    faUserShield,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
@@ -53,7 +41,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CreditDisplayCard from "./CreditDisplayCard";
 import { DrawerColorsContext } from "./drawer-colors-context";
-import DrawerMenuItem, { DrawerIcon, IconPropFn, Tab } from "./DrawerMenuItem";
+import DrawerMenuItem, { DrawerIcon, Tab } from "./DrawerMenuItem";
+import { AdminPortal, AdminPortalSubDrawer } from "./admin-portal";
+import { InfluencerLedGrowth, InfluencerLedGrowthSubDrawer } from "./influencer-led-growth";
 
 // ─── Width constants (kept in sync with _layout.tsx) ───────────────────────
 const COLLAPSED_WIDTH = 56;
@@ -106,69 +96,34 @@ const CONTENT_MENU_ITEMS = (theme: Theme): Tab[] => [
     },
 ];
 
-const CAMPAIGN_MENU_ITEMS = (theme: Theme): Tab[] => [
+const MANAGE_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
-        href: "/discover",
-        icon: ({ focused }: IconPropFn) =>
-            focused ? (
-                <DrawerIcon href="/discover" icon={faGemSolid} focused={focused} />
-            ) : (
-                <DrawerIcon href="/discover" icon={faGem} focused={focused} />
-            ),
-        label: "Discover Influencers",
-        pro: true,
+        href: "/connected-accounts",
+        icon: ({ focused }) => <DrawerIcon href="/connected-accounts" icon={faShareNodes} focused={focused} />,
+        label: "Connected Accounts",
     },
     {
-        href: "/collaborations",
-        icon: ({ focused }: IconPropFn) =>
-            focused ? (
-                <DrawerIcon href="/collaborations" icon={faStarSolid} focused={focused} />
-            ) : (
-                <DrawerIcon href="/collaborations" icon={faStar} focused={focused} />
-            ),
-        label: "Collaboration Requests",
-    },
-];
-
-const EXECUTION_MENU_ITEMS = (theme: Theme): Tab[] => [
-    {
-        href: "/messages",
-        icon: ({ focused }: IconPropFn) =>
-            focused ? (
-                <DrawerIcon href="/messages" icon={faCommentSolid} focused={focused} />
-            ) : (
-                <DrawerIcon href="/messages" icon={faComment} focused={focused} />
-            ),
-        label: "Messages",
-        showUnreadCount: true,
-    },
-    {
-        href: "/contracts",
-        icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
-        label: "Influencer Contracts",
-    },
-    {
-        href: "/analytics",
-        icon: ({ focused }) => <DrawerIcon href="/analytics" icon={faChartLine} focused={focused} />,
-        label: "Reporting & Analytics",
+        href: "/inbox",
+        icon: ({ focused }) => <DrawerIcon href="/inbox" icon={faInbox} focused={focused} />,
+        label: "Inbox",
     },
 ];
 
 const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
-        href: "/brand-profile",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
-        label: "Brand Profile",
+        href: "/billing",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faCreditCard} focused={focused} />,
+        label: "Billing",
     },
     {
         href: "/members",
         icon: ({ focused }) => <DrawerIcon href="" icon={faUsers} focused={focused} />,
-        label: "Members",
+        label: "User Management",
     },
     {
-        href: "/billing",
-        icon: ({ focused }) => <DrawerIcon href="" icon={faCreditCard} focused={focused} />,
-        label: "Billing",
+        href: "/brand-profile",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
+        label: "Brand Profile",
     },
 ];
 
@@ -183,39 +138,11 @@ const GROWTH_MENU_ITEMS = (theme: Theme): Tab[] => [
         icon: ({ focused }) => <DrawerIcon href="/paid-growth" icon={faBullseye} focused={focused} />,
         label: "Paid Mediums",
     },
-    {
-        href: "/performance-marketing",
-        icon: ({ focused }) => <DrawerIcon href="/performance-marketing" icon={faChartLine} focused={focused} />,
-        label: "Performance Marketing",
-    },
-];
-
-const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
-    {
-        href: "/admin-invites",
-        icon: ({ focused }) => <DrawerIcon href="/kanban-board" icon={faUserShield} focused={focused} />,
-        label: "Invites Management",
-    },
-    {
-        href: "/brand-crm",
-        icon: ({ focused }) => <DrawerIcon href="/brand-crm" icon={faAddressCard} focused={focused} />,
-        label: "Brands CRM",
-    },
-    {
-        href: "/collaboration-cms",
-        icon: ({ focused }) => <DrawerIcon href="/collaboration-cms" icon={faDiagramProject} focused={focused} />,
-        label: "Collaboration CMS",
-    },
-    {
-        href: "/applications",
-        icon: ({ focused }) => <DrawerIcon href="/applications" icon={faEye} focused={focused} />,
-        label: "All Applications",
-    },
-    {
-        href: "/admin-escalations",
-        icon: ({ focused }) => <DrawerIcon href="/admin-escalations" icon={faTriangleExclamation} focused={focused} />,
-        label: "Escalations",
-    },
+    // {
+    //     href: "/performance-marketing",
+    //     icon: ({ focused }) => <DrawerIcon href="/performance-marketing" icon={faChartLine} focused={focused} />,
+    //     label: "Performance Marketing",
+    // },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -223,16 +150,15 @@ const ADMIN_MENU_ITEMS = (theme: Theme): Tab[] => [
 interface DrawerMenuContentWebProps { }
 
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
-    const nav = useMyNavigation();
     const { bottom } = useSafeAreaInsets();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
     const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
-    const { isIndiaBased } = useLocationContext();
     const { xl } = useBreakpoints();
-    const { isCollapsed, toggle } = useSidebarCollapsed();
+    const sidebarCollapsedCtx = useSidebarCollapsed();
+    const { isCollapsed, toggle } = sidebarCollapsedCtx;
 
     const planKey = selectedBrand?.billing?.planKey || "";
     const hasMultipleBrands = brands.length > 1;
@@ -254,36 +180,20 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     );
 
     const [isBrandHovered, setIsBrandHovered] = useState(false);
-    const [isAdminHovered, setIsAdminHovered] = useState(false);
-    const [isBrandMgmtHovered, setIsBrandMgmtHovered] = useState(false);
     const [isGrowthHovered, setIsGrowthHovered] = useState(false);
     const [brandListExpanded, setBrandListExpanded] = useState(false);
     const [toggleHovered, setToggleHovered] = useState(false);
+    const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+    const [isOrgHovered, setIsOrgHovered] = useState(false);
 
     const showCreditsSystem = false;
-    const showExecution = true;
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
         setBrandListExpanded(false);
     };
 
-    const contentItems = useMemo(() => {
-        const base = CONTENT_MENU_ITEMS(theme);
-        if (!isIndiaBased) {
-            base.push({
-                href: "/collaborations",
-                icon: ({ focused }: IconPropFn) =>
-                    focused ? (
-                        <DrawerIcon href="/collaborations" icon={faStarSolid} focused={focused} />
-                    ) : (
-                        <DrawerIcon href="/collaborations" icon={faStar} focused={focused} />
-                    ),
-                label: "Collaboration Requests",
-            });
-        }
-        return base;
-    }, [isIndiaBased, theme]);
+    const contentItems = useMemo(() => CONTENT_MENU_ITEMS(theme), [theme]);
 
     // ─── Toggle button (bare Pressable, positioned by caller) ──────────────
     const toggleButtonBare = (
@@ -316,26 +226,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     // ─── Collapsed mode render ──────────────────────────────────────────────
     if (isCollapsed) {
         // Gather all visible sections as flat groups for the collapsed view
-        const campaignItems = isIndiaBased ? CAMPAIGN_MENU_ITEMS(theme) : [];
-        const executionItems = manager?.isChatConnected && showExecution
-            ? EXECUTION_MENU_ITEMS(theme)
-            : [];
-        const adminItems = manager?.isAdmin ? ADMIN_MENU_ITEMS(theme) : [];
-
         const groups: { items: Tab[]; proLockMap?: Record<number, boolean> }[] = [
             { items: contentItems },
-            ...(campaignItems.length > 0
-                ? [{
-                    items: campaignItems,
-                    proLockMap: Object.fromEntries(
-                        campaignItems.map((t, i) => [i, !!(t.pro && planKey !== "pro" && planKey !== "enterprise")])
-                    ),
-                }]
-                : []),
-            ...(executionItems.length > 0 ? [{ items: executionItems }] : []),
-            { items: BRAND_DETAILS_MENU_ITEMS(theme) },
+            { items: MANAGE_MENU_ITEMS(theme) },
             { items: GROWTH_MENU_ITEMS(theme) },
-            ...(adminItems.length > 0 ? [{ items: adminItems }] : []),
         ];
 
         const sidebarDividerColor = theme.dark
@@ -344,69 +238,195 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
         return (
             <DrawerColorsContext.Provider value={drawerColors}>
-                <View style={[styles.root, styles.rootCollapsed]}>
-                    {/* Gradient accent top line */}
-                    <LinearGradient
-                        colors={["#054463", "#538BA6", "#ff6d2d"]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.accentLine}
-                        pointerEvents="none"
-                    />
-
-                    {/* Toggle button — centered in collapsed bar */}
-                    {toggleButtonCollapsed}
-
-                    {/* Brand logo only */}
-                    <RNView style={styles.collapsedHeader}>
-                        <ImageComponent
-                            url={selectedBrand?.image || ""}
-                            initials={selectedBrand?.name?.[0] ?? ""}
-                            shape="circle"
-                            size="small"
-                            altText={selectedBrand?.name || "Brand"}
-                            style={styles.logoCircle}
+                <RNView style={styles.collapsedWrapper}>
+                    <View style={[styles.root, styles.rootCollapsed]}>
+                        {/* Gradient accent top line */}
+                        <LinearGradient
+                            colors={["#054463", "#538BA6", "#ff6d2d"]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.accentLine}
+                            pointerEvents="none"
                         />
-                    </RNView>
 
-                    {/* All menu items — icon only, scrollable */}
-                    <ScrollView
-                        contentContainerStyle={styles.collapsedScrollContent}
-                        showsVerticalScrollIndicator={false}
-                        // Allow tooltip views to overflow on web
-                        style={Platform.OS === "web" ? ({ overflow: "visible" } as any) : undefined}
-                    >
-                        {groups.map((group, gIdx) => (
-                            <RNView key={gIdx}>
-                                {gIdx > 0 && (
+                        {/* Toggle button — centered in collapsed bar */}
+                        {toggleButtonCollapsed}
+
+                        {/* Brand logo only */}
+                        <RNView style={styles.collapsedHeader}>
+                            <ImageComponent
+                                url={selectedBrand?.image || ""}
+                                initials={selectedBrand?.name?.[0] ?? ""}
+                                shape="circle"
+                                size="small"
+                                altText={selectedBrand?.name || "Brand"}
+                                style={styles.logoCircle}
+                            />
+                        </RNView>
+
+                        {/* All menu items — icon only, scrollable */}
+                        <ScrollView
+                            contentContainerStyle={styles.collapsedScrollContent}
+                            showsVerticalScrollIndicator={false}
+                            // Allow tooltip views to overflow on web
+                            style={Platform.OS === "web" ? ({ overflow: "visible" } as any) : undefined}
+                        >
+                            {groups.map((group, gIdx) => (
+                                <RNView key={gIdx}>
+                                    {gIdx > 0 && (
+                                        <RNView
+                                            style={[
+                                                styles.collapsedDivider,
+                                                { borderTopColor: sidebarDividerColor },
+                                            ]}
+                                        />
+                                    )}
+                                    {group.items.map((tab, idx) => (
+                                        <DrawerMenuItem
+                                            key={`${gIdx}-${idx}`}
+                                            tab={tab}
+                                            proLock={group.proLockMap?.[idx]}
+                                        />
+                                    ))}
+                                </RNView>
+                            ))}
+
+                            {/* Influencer Led Growth — opens the sub-drawer */}
+                            <RNView
+                                style={[
+                                    styles.collapsedDivider,
+                                    { borderTopColor: sidebarDividerColor },
+                                ]}
+                            />
+                            <InfluencerLedGrowth variant="rail" />
+
+                            {/* Admin Portal — opens the sub-drawer */}
+                            {manager?.isAdmin && (
+                                <>
                                     <RNView
                                         style={[
                                             styles.collapsedDivider,
                                             { borderTopColor: sidebarDividerColor },
                                         ]}
                                     />
-                                )}
-                                {group.items.map((tab, idx) => (
-                                    <DrawerMenuItem
-                                        key={`${gIdx}-${idx}`}
-                                        tab={tab}
-                                        proLock={group.proLockMap?.[idx]}
-                                    />
-                                ))}
-                            </RNView>
-                        ))}
-                    </ScrollView>
+                                    <AdminPortal variant="rail" />
+                                </>
+                            )}
+                        </ScrollView>
 
-                    {/* Bottom actions — icons only */}
-                    <View style={[styles.bottomActions, styles.bottomActionsCollapsed]}>
-                        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
-                            (tab, idx) => (
-                                <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
-                            )
-                        )}
-                        <RNView style={styles.presenceDot} />
+                        {/* Bottom actions — collapsed: single org button with popover */}
+                        <LinearGradient
+                            colors={
+                                theme.dark
+                                    ? [
+                                          "transparent",
+                                          (colors as any).drawerHeaderCardBg ?? colors.card,
+                                      ]
+                                    : [
+                                          "transparent",
+                                          (colors as any).drawerHeaderCardBgLight ?? "#E9F1F7",
+                                      ]
+                            }
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 0, y: 1 }}
+                            style={[styles.bottomActions, styles.bottomActionsCollapsed]}
+                        >
+                            <RNView style={styles.collapsedOrgWrap}>
+                                <Pressable
+                                    onPress={() => setOrgDropdownOpen((v) => !v)}
+                                    onHoverIn={() => setIsOrgHovered(true)}
+                                    onHoverOut={() => setIsOrgHovered(false)}
+                                    style={[
+                                        styles.collapsedOrgButton,
+                                        (isOrgHovered || orgDropdownOpen) &&
+                                            styles.collapsedOrgButtonHover,
+                                    ]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Organization menu"
+                                >
+                                    <RNView style={styles.orgIconCircle}>
+                                        <FontAwesomeIcon
+                                            icon={faBuilding}
+                                            size={14}
+                                            color={colors.white}
+                                        />
+                                    </RNView>
+                                    <RNView style={styles.collapsedPresenceDot} />
+                                </Pressable>
+
+                                {orgDropdownOpen && (
+                                    <SidebarCollapsedContext.Provider
+                                        value={{
+                                            ...sidebarCollapsedCtx,
+                                            isCollapsed: false,
+                                        }}
+                                    >
+                                        <RNView style={styles.collapsedOrgPopover}>
+                                            <Text
+                                                style={styles.collapsedOrgPopoverHeader}
+                                                numberOfLines={1}
+                                            >
+                                                {selectedBrand?.name ?? "Brand"}
+                                            </Text>
+                                            <RNView style={styles.orgDropdownDivider} />
+                                            {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
+                                                <RNView
+                                                    key={`c-org-brand-${idx}`}
+                                                    onTouchEnd={() => setOrgDropdownOpen(false)}
+                                                >
+                                                    <DrawerMenuItem tab={tab} />
+                                                </RNView>
+                                            ))}
+                                            <RNView style={styles.orgDropdownDivider} />
+                                            <RNView onTouchEnd={() => setOrgDropdownOpen(false)}>
+                                                <DrawerMenuItem
+                                                    tab={{
+                                                        href: "/onboarding-your-brand",
+                                                        icon: ({ focused }) => (
+                                                            <DrawerIcon
+                                                                href="/onboarding-your-brand"
+                                                                icon={faPlus}
+                                                                focused={focused}
+                                                            />
+                                                        ),
+                                                        label: "Create New Brand",
+                                                    }}
+                                                />
+                                            </RNView>
+                                            <RNView style={styles.orgDropdownDivider} />
+                                            {BOTTOM_MENU_ITEMS(
+                                                theme,
+                                                manager?.name,
+                                                manager?.profileImage,
+                                                styles
+                                            )
+                                                .filter(
+                                                    (tab) =>
+                                                        tab.href !== "/onboarding-your-brand"
+                                                )
+                                                .map((tab, idx) => (
+                                                    <RNView
+                                                        key={`c-org-profile-${idx}`}
+                                                        onTouchEnd={() =>
+                                                            setOrgDropdownOpen(false)
+                                                        }
+                                                    >
+                                                            <DrawerMenuItem tab={tab} />
+                                                    </RNView>
+                                                ))}
+                                        </RNView>
+                                    </SidebarCollapsedContext.Provider>
+                                )}
+                            </RNView>
+                        </LinearGradient>
                     </View>
-                </View>
+
+                    {/* Sub-drawers — sit beside the rail and reserve real layout
+                    width so page content is pushed over, not hidden underneath.
+                    Only one renders at a time based on subDrawerKind. */}
+                    <InfluencerLedGrowthSubDrawer />
+                    <AdminPortalSubDrawer />
+                </RNView>
             </DrawerColorsContext.Provider>
         );
     }
@@ -556,7 +576,20 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 2. CREDITS */}
+                        {/* 2. MANAGE */}
+                        <View style={styles.brandDetailsSection}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>Manage</Text>
+                            </View>
+                            <View style={styles.divider} />
+                            <View style={styles.menuItems}>
+                                {MANAGE_MENU_ITEMS(theme).map((tab, idx) => (
+                                    <DrawerMenuItem key={`manage-${idx}`} tab={tab} />
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* 3. CREDITS */}
                         {showCreditsSystem && (
                             <>
                                 {selectedBrand && !selectedBrand.isBillingDisabled &&
@@ -603,87 +636,36 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </>
                         )}
 
-                        {/* 3. CAMPAIGN (India only) */}
-                        {isIndiaBased && (
-                            <View style={styles.brandDetailsSection}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>Campaign</Text>
-                                </View>
-                                <View style={styles.divider} />
-                                <View style={styles.menuItems}>
-                                    {CAMPAIGN_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem
-                                            key={`campaign-${idx}`}
-                                            tab={tab}
-                                            proLock={
-                                                tab.pro &&
-                                                planKey !== "pro" &&
-                                                planKey !== "enterprise"
-                                            }
-                                        />
-                                    ))}
-                                </View>
+                        {/* 5. INFLUENCER LED GROWTH (independent component) */}
+                        {/* <View style={styles.brandDetailsSection}>
+                            <View style={styles.sectionHeaderRow}>
+                                <Text style={styles.sectionTitle}>Influencer Led Growth</Text>
                             </View>
-                        )}
-
-                        {/* 4. EXECUTION */}
-                        {manager?.isChatConnected && showExecution && (
-                            <View style={styles.brandDetailsSection}>
-                                <View style={styles.sectionHeaderRow}>
-                                    <Text style={styles.sectionTitle}>Manage</Text>
-                                </View>
-                                <View style={styles.divider} />
-                                <View style={styles.menuItems}>
-                                    {EXECUTION_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem key={`execution-${idx}`} tab={tab} />
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-
-                        {/* 5. BRAND MANAGEMENT */}
-                        <View style={styles.brandDetailsSection}>
-                            <Pressable
-                                onPress={() => nav.push("/menu")}
-                                onHoverIn={() => setIsBrandMgmtHovered(true)}
-                                onHoverOut={() => setIsBrandMgmtHovered(false)}
-                            >
-                                <View
-                                    style={[
-                                        styles.sectionHeaderRow,
-                                        isBrandMgmtHovered && styles.sectionHeaderRowHover,
-                                    ]}
-                                >
-                                    <Text style={styles.sectionTitle}>Brand</Text>
-                                    <DrawerIcon icon={faChevronRight} size={12} />
-                                </View>
-                            </Pressable>
                             <View style={styles.divider} />
-                            <View style={styles.menuItems}>
-                                {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
-                                    <DrawerMenuItem key={`brand-details-${idx}`} tab={tab} />
-                                ))}
-                            </View>
-                        </View>
+                            
+                        </View> */}
 
                         {/* 6. GROWTH */}
                         <View style={styles.brandDetailsSection}>
-                            <Pressable
+                            {/* <Pressable
                                 onPress={() => { }}
                                 onHoverIn={() => setIsGrowthHovered(true)}
                                 onHoverOut={() => setIsGrowthHovered(false)}
+                            > */}
+                            <View
+                                style={[
+                                    styles.sectionHeaderRow,
+                                    isGrowthHovered && styles.sectionHeaderRowHover,
+                                ]}
                             >
-                                <View
-                                    style={[
-                                        styles.sectionHeaderRow,
-                                        isGrowthHovered && styles.sectionHeaderRowHover,
-                                    ]}
-                                >
-                                    <Text style={styles.sectionTitle}>Growth</Text>
-                                    <DrawerIcon icon={faChevronRight} size={12} />
-                                </View>
-                            </Pressable>
+                                <Text style={styles.sectionTitle}>Growth</Text>
+                                {/* <DrawerIcon icon={faChevronRight} size={12} /> */}
+                            </View>
+                            {/* </Pressable> */}
                             <View style={styles.divider} />
+                            <View style={styles.menuItems}>
+                                <InfluencerLedGrowth variant="expanded" />
+                            </View>
                             <View style={styles.menuItems}>
                                 {GROWTH_MENU_ITEMS(theme).map((tab, idx) => (
                                     <DrawerMenuItem key={`growth-${idx}`} tab={tab} />
@@ -691,42 +673,122 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         </View>
 
-                        {/* 7. ADMIN PORTAL */}
+                        {/* 7. ADMIN PORTAL (sub-drawer trigger) */}
                         {manager?.isAdmin && (
                             <View style={styles.brandDetailsSection}>
-                                <Pressable
-                                    onPress={() => { }}
-                                    onHoverIn={() => setIsAdminHovered(true)}
-                                    onHoverOut={() => setIsAdminHovered(false)}
-                                >
-                                    <View
-                                        style={[
-                                            styles.sectionHeaderRow,
-                                            isAdminHovered && styles.sectionHeaderRowHover,
-                                        ]}
-                                    >
-                                        <Text style={styles.sectionTitle}>Admin Portal</Text>
-                                        <DrawerIcon icon={faChevronRight} size={12} />
-                                    </View>
-                                </Pressable>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>Admin</Text>
+                                </View>
                                 <View style={styles.divider} />
                                 <View style={styles.menuItems}>
-                                    {ADMIN_MENU_ITEMS(theme).map((tab, idx) => (
-                                        <DrawerMenuItem key={`admin-${idx}`} tab={tab} />
-                                    ))}
+                                    <AdminPortal variant="expanded" />
                                 </View>
                             </View>
                         )}
                     </ScrollView>
 
-                    <View style={styles.bottomActions}>
-                        {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
-                            (tab, idx) => (
-                                <DrawerMenuItem key={`bottom-${idx}`} tab={tab} />
-                            )
-                        )}
-                        <RNView style={styles.presenceDot} />
-                    </View>
+                    <LinearGradient
+                        colors={
+                            theme.dark
+                                ? [
+                                    "transparent",
+                                    (colors as any).drawerHeaderCardBg ?? colors.card,
+                                ]
+                                : [
+                                    "transparent",
+                                    (colors as any).drawerHeaderCardBgLight ?? "#E9F1F7",
+                                ]
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0, y: 1 }}
+                        style={styles.bottomActions}
+                    >
+                        {/* Org dropdown — opens upward */}
+                        <RNView style={styles.orgWrap}>
+                            {orgDropdownOpen && (
+                                <RNView style={styles.orgDropdown}>
+                                    {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
+                                        <RNView
+                                            key={`org-brand-${idx}`}
+                                            onTouchEnd={() => setOrgDropdownOpen(false)}
+                                        >
+                                            <DrawerMenuItem tab={tab} />
+                                        </RNView>
+                                    ))}
+                                    <RNView style={styles.orgDropdownDivider} />
+                                    <RNView onTouchEnd={() => setOrgDropdownOpen(false)}>
+                                        <DrawerMenuItem
+                                            tab={{
+                                                href: "/onboarding-your-brand",
+                                                icon: ({ focused }) => (
+                                                    <DrawerIcon
+                                                        href="/onboarding-your-brand"
+                                                        icon={faPlus}
+                                                        focused={focused}
+                                                    />
+                                                ),
+                                                label: "Create New Brand",
+                                            }}
+                                        />
+                                    </RNView>
+                                    <RNView style={styles.orgDropdownDivider} />
+                                    {BOTTOM_MENU_ITEMS(
+                                        theme,
+                                        manager?.name,
+                                        manager?.profileImage,
+                                        styles
+                                    )
+                                        .filter(
+                                            (tab) => tab.href !== "/onboarding-your-brand"
+                                        )
+                                        .map((tab, idx) => (
+                                            <RNView
+                                                key={`org-profile-${idx}`}
+                                                onTouchEnd={() => setOrgDropdownOpen(false)}
+                                            >
+                                                <DrawerMenuItem tab={tab} />
+                                            </RNView>
+                                        ))}
+                                </RNView>
+                            )}
+                            <Pressable
+                                onPress={() => setOrgDropdownOpen((v) => !v)}
+                                onHoverIn={() => setIsOrgHovered(true)}
+                                onHoverOut={() => setIsOrgHovered(false)}
+                                style={[
+                                    styles.orgButton,
+                                    (isOrgHovered || orgDropdownOpen) && styles.orgButtonHover,
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Organization menu"
+                            >
+                                <RNView style={styles.orgIconCircle}>
+                                    <FontAwesomeIcon
+                                        icon={faBuilding}
+                                        size={14}
+                                        color={colors.white}
+                                    />
+                                </RNView>
+                                <View style={styles.orgTextWrap}>
+                                    <Text style={styles.orgLabel} numberOfLines={1}>
+                                        My Organization
+                                    </Text>
+                                    <Text style={styles.orgSubtitle} numberOfLines={1}>
+                                        {selectedBrand?.name ?? "Brand"}
+                                    </Text>
+                                </View>
+                                <RNView style={styles.orgPresenceDot} />
+                                <FontAwesomeIcon
+                                    icon={orgDropdownOpen ? faChevronDown : faChevronUp}
+                                    size={12}
+                                    color={
+                                        (colors as any).drawerTextMuted ??
+                                        colors.textSecondary
+                                    }
+                                />
+                            </Pressable>
+                        </RNView>
+                    </LinearGradient>
                 </View>
             </DrawerColorsContext.Provider>
         </>
@@ -795,6 +857,16 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         },
         rootCollapsed: {
             alignItems: "center",
+            // Fixed-width rail so the sub-drawer can sit beside it in a row
+            width: COLLAPSED_WIDTH,
+            flexGrow: 0,
+            flexShrink: 0,
+            flexBasis: COLLAPSED_WIDTH,
+        },
+        collapsedWrapper: {
+            flex: 1,
+            flexDirection: "row",
+            backgroundColor: "transparent",
         },
         accentLine: {
             position: "absolute",
@@ -821,11 +893,21 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             alignItems: "center",
             paddingRight: 8,
             backgroundColor: "transparent",
+            // Lift the whole header row (and its absolutely-positioned brand
+            // switcher dropdown) above the menu ScrollView that follows it.
+            // Without this, the row sits at z-index auto and the later-painted
+            // ScrollView covers the open dropdown — the dropdown's own
+            // zIndex:1000 only competes inside this subtree, not against the
+            // sibling ScrollView.
+            zIndex: 100,
+            elevation: 100,
         },
         headerWrap: {
             flex: 1,
             minWidth: 0,
             backgroundColor: "transparent",
+            zIndex: 100,
+            elevation: 100,
         },
         toggleButton: {
             width: 28,
@@ -928,7 +1010,15 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             backgroundColor: colors.primary,
         },
         brandListItemSelectedInDropdown: {
-            backgroundColor: colors.glassSurface,
+            // Saturated primary pill so the white selected-text stays legible on
+            // the light dropdown surface (glassSurface is near-white in light
+            // theme, which made the white text invisible).
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            shadowOpacity: 0.35,
+            elevation: 4,
         },
         brandListItemText: {
             fontSize: 14,
@@ -1007,12 +1097,174 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         // ── Bottom actions ─────────────────────────────────────────────────
         bottomActions: {
             paddingHorizontal: 8,
-            paddingTop: 12,
+            paddingTop: 14,
             paddingBottom: Math.max(bottom, 12),
-            backgroundColor: sidebarSurfaceBg,
-            borderTopColor: sidebarDividerColor,
-            borderTopWidth: StyleSheet.hairlineWidth,
-            gap: 4,
+            gap: 6,
+            // Lift the bottom panel above the menu ScrollView using shadow
+            // (no top border, per design rules)
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -4 },
+            shadowRadius: 10,
+            shadowOpacity: theme.dark ? 0.25 : 0.06,
+            elevation: 6,
+        },
+        orgWrap: {
+            position: "relative",
+            backgroundColor: "transparent",
+        },
+        orgDropdown: {
+            position: "absolute",
+            bottom: "100%",
+            left: 0,
+            right: 0,
+            marginBottom: 6,
+            paddingVertical: 6,
+            borderRadius: 12,
+            backgroundColor:
+                (colors as any).drawerHeaderCardBg ?? colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 16,
+            shadowOpacity: theme.dark ? 0.35 : 0.12,
+            elevation: 10,
+            zIndex: 2000,
+        },
+        orgButton: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingHorizontal: 10,
+            paddingVertical: 10,
+            borderRadius: 12,
+            backgroundColor: theme.dark
+                ? "rgba(83, 139, 166, 0.10)"
+                : "rgba(5, 68, 99, 0.06)",
+        },
+        orgButtonHover: {
+            backgroundColor: theme.dark
+                ? "rgba(83, 139, 166, 0.20)"
+                : "rgba(5, 68, 99, 0.12)",
+        },
+        orgIconCircle: {
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.3,
+            elevation: 3,
+        },
+        orgTextWrap: {
+            flex: 1,
+            minWidth: 0,
+            backgroundColor: "transparent",
+        },
+        orgLabel: {
+            fontSize: 9,
+            fontWeight: "700",
+            color:
+                (colors as any).drawerTextMuted ?? colors.drawerTextMuted,
+            textTransform: "uppercase" as const,
+            letterSpacing: 0.8,
+            marginBottom: 1,
+        },
+        orgSubtitle: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: theme.dark ? colors.drawerText : colors.primary,
+            letterSpacing: -0.2,
+        },
+        orgDropdownDivider: {
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: sidebarDividerColor,
+            marginVertical: 6,
+            marginHorizontal: 12,
+        },
+        orgPresenceDot: {
+            width: 7,
+            height: 7,
+            borderRadius: 99,
+            backgroundColor: "#2ecc71",
+            marginRight: 6,
+            shadowColor: "#2ecc71",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.9,
+            shadowRadius: 4,
+        },
+        // ── Collapsed mode org button + popover ──────────────────────────
+        collapsedOrgWrap: {
+            position: "relative",
+            backgroundColor: "transparent",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "visible",
+        },
+        collapsedOrgButton: {
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: theme.dark
+                ? "rgba(83, 139, 166, 0.10)"
+                : "rgba(5, 68, 99, 0.06)",
+        },
+        collapsedOrgButtonHover: {
+            backgroundColor: theme.dark
+                ? "rgba(83, 139, 166, 0.22)"
+                : "rgba(5, 68, 99, 0.12)",
+        },
+        collapsedPresenceDot: {
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: 7,
+            height: 7,
+            borderRadius: 99,
+            backgroundColor: "#2ecc71",
+            shadowColor: "#2ecc71",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.9,
+            shadowRadius: 4,
+        },
+        collapsedOrgPopover: {
+            position: "absolute",
+            // Sit just to the right of the rail icon, aligned to its bottom
+            left: COLLAPSED_WIDTH - 4,
+            bottom: 0,
+            width: 240,
+            paddingVertical: 8,
+            borderRadius: 12,
+            backgroundColor:
+                (colors as any).drawerHeaderCardBg ?? colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 4, height: 6 },
+            shadowRadius: 18,
+            shadowOpacity: theme.dark ? 0.4 : 0.16,
+            elevation: 12,
+            zIndex: 99999,
+            ...Platform.select({
+                web: {
+                    boxShadow: theme.dark
+                        ? "0 8px 24px rgba(0,0,0,0.4)"
+                        : "0 8px 24px rgba(5, 68, 99, 0.16)",
+                } as any,
+            }),
+        },
+        collapsedOrgPopoverHeader: {
+            fontSize: 9,
+            fontWeight: "700",
+            paddingHorizontal: 14,
+            paddingTop: 4,
+            paddingBottom: 6,
+            color: theme.dark ? colors.drawerText : colors.primary,
+            textTransform: "uppercase" as const,
+            letterSpacing: 0.9,
+            backgroundColor: "transparent",
         },
         bottomActionsCollapsed: {
             paddingHorizontal: 0,

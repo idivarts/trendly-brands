@@ -1,3 +1,4 @@
+import { isLegacyRole, resolveCapability } from "@/constants/Access";
 import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
 import {
     IBrands,
@@ -55,7 +56,22 @@ interface BrandContextProps {
     loading: boolean;
     isOnFreeTrial?: boolean;
     isProfileLocked: (influencerId: string) => boolean;
+    /** The current manager's membership record for the selected brand. */
+    currentMember?: CurrentMember;
+    /**
+     * Whether the current member effectively holds a capability. Permissive on
+     * unknown/loading and on legacy (pre-migration) roles — the backend and
+     * Firestore rules remain the real enforcement boundary.
+     */
+    hasCapability: (cap: string) => boolean;
 }
+
+type CurrentMember = {
+    role?: string;
+    overrides?: Record<string, boolean>;
+    teamIds?: string[];
+    status?: number;
+};
 
 const BrandContext = createContext<BrandContextProps>({
     brands: [],
@@ -66,6 +82,8 @@ const BrandContext = createContext<BrandContextProps>({
     loading: true,
     isOnFreeTrial: true,
     isProfileLocked: (influencerId: string) => true,
+    currentMember: undefined,
+    hasCapability: () => true,
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -86,6 +104,7 @@ export const BrandContextProvider: React.FC<
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
+    const [currentMember, setCurrentMember] = useState<CurrentMember | undefined>(undefined);
     const { manager } = useAuthContext();
     const router = useMyNavigation();
     const pathName = usePathname();
@@ -128,6 +147,20 @@ export const BrandContextProvider: React.FC<
             unsubscribe();
         };
     }, [selectedBrand?.id]);
+
+    // Track the current manager's membership (role / overrides) for the selected
+    // brand so the UI can gate affordances by capability.
+    useEffect(() => {
+        if (!selectedBrand?.id || !manager?.id) {
+            setCurrentMember(undefined);
+            return;
+        }
+        const memberRef = doc(FirestoreDB, "brands", selectedBrand.id, "members", manager.id);
+        const unsubscribe = onSnapshot(memberRef, (snapshot) => {
+            setCurrentMember(snapshot.exists() ? (snapshot.data() as CurrentMember) : undefined);
+        });
+        return () => unsubscribe();
+    }, [selectedBrand?.id, manager?.id]);
 
     useEffect(() => {
         if (!manager?.id) return;
@@ -394,6 +427,17 @@ export const BrandContextProvider: React.FC<
         [selectedBrand, manager?.id]
     );
 
+    const hasCapability = useCallback(
+        (cap: string) => {
+            // Permissive while unknown/loading and for legacy roles — backend +
+            // Firestore rules enforce. Mirrors the server-side transition shim.
+            if (!currentMember) return true;
+            if (isLegacyRole(currentMember.role)) return true;
+            return resolveCapability(currentMember.role, currentMember.overrides, cap);
+        },
+        [currentMember]
+    );
+
     const createBrand = async (brand: Partial<IBrands>) => {
         if (!manager) return null;
 
@@ -473,6 +517,8 @@ export const BrandContextProvider: React.FC<
             loading,
             isOnFreeTrial,
             isProfileLocked,
+            currentMember,
+            hasCapability,
         }),
         [
             brands,
@@ -483,6 +529,8 @@ export const BrandContextProvider: React.FC<
             isOnFreeTrial,
             isProfileLocked,
             setSelectedBrandHandler,
+            currentMember,
+            hasCapability,
         ]
     );
 

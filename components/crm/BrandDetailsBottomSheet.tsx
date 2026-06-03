@@ -180,7 +180,7 @@ export default function BrandDetailsBottomSheet({
                                                 onPress={() => {
                                                     console.log("[BrandDetailsBottomSheet] Opening influencer:", inf.id);
                                                     router.push({
-                                                        pathname: "/(main)/(drawer)/(tabs)/discover",
+                                                        pathname: "/discover",
                                                         params: { influencerId: inf.id }
                                                     });
                                                 }}

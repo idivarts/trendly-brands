@@ -50,6 +50,13 @@ function calcInfluencerBudgetFromInputs(
     return Math.round(ratePerPost * monthlyPosts);
 }
 
+// Monthly count of in-house content pieces produced by Trendly's team.
+function inHouseMonthlyPieces(f: AgencyHireFeatures): number {
+    if (!f.inHouseContent?.enabled) return 0;
+    const count = f.inHouseContent.count ?? 0;
+    return f.inHouseContent.period === "week" ? count * 4 : count;
+}
+
 // ─── Budget breakdown ─────────────────────────────────────────────────────────
 interface BudgetBreakdown {
     trendlyFee: number;
@@ -70,17 +77,27 @@ function calcBreakdown(hire: Partial<IAgencyHire>): BudgetBreakdown {
         : 0;
     const adBudget = f.adSpend.enabled ? (f.adSpend.totalAdSpend ?? 0) : 0;
 
+    // Total monthly content volume drives content-strategy pricing — both the
+    // influencer-led posts and the in-house produced pieces count towards it.
+    const inHousePieces = inHouseMonthlyPieces(f);
+    const totalContentVolume =
+        (f.contentCreation.enabled ? monthlyPosts : 0) + inHousePieces;
+
     if (f.conversionAudit && !isRetainer) {
         trendlyFee += FEATURE_COSTS.conversionAudit;
     }
 
     if (f.contentStrategy) {
         trendlyFee +=
-            monthlyPosts <= 8
+            totalContentVolume <= 8
                 ? FEATURE_COSTS.contentStrategyPerPost.low
-                : monthlyPosts <= 20
+                : totalContentVolume <= 20
                     ? FEATURE_COSTS.contentStrategyPerPost.mid
                     : FEATURE_COSTS.contentStrategyPerPost.high;
+    }
+
+    if (f.inHouseContent?.enabled && inHousePieces) {
+        trendlyFee += inHousePieces * FEATURE_COSTS.inHouseContentPerPiece;
     }
 
     if (f.contentCreation.enabled && influencerBudget) {
@@ -120,6 +137,7 @@ function autoSuggestFeatures(
         return {
             conversionAudit: isRetainer,
             contentStrategy: false,
+            inHouseContent: { enabled: false, count: 4, period: "month" },
             contentCreation: {
                 enabled: true,
                 influencerFollowerRange: range,
@@ -136,6 +154,7 @@ function autoSuggestFeatures(
         return {
             conversionAudit: isRetainer,
             contentStrategy: true,
+            inHouseContent: { enabled: false, count: 4, period: "month" },
             contentCreation: {
                 enabled: true,
                 influencerFollowerRange: range,
@@ -152,6 +171,7 @@ function autoSuggestFeatures(
         return {
             conversionAudit: true,
             contentStrategy: true,
+            inHouseContent: { enabled: false, count: 4, period: "month" },
             contentCreation: {
                 enabled: true,
                 influencerFollowerRange: range,
@@ -169,6 +189,7 @@ function autoSuggestFeatures(
         return {
             conversionAudit: true,
             contentStrategy: true,
+            inHouseContent: { enabled: false, count: 4, period: "month" },
             contentCreation: {
                 enabled: true,
                 influencerFollowerRange: range,
@@ -185,6 +206,7 @@ function autoSuggestFeatures(
     return {
         conversionAudit: true,
         contentStrategy: true,
+        inHouseContent: { enabled: false, count: 4, period: "month" },
         contentCreation: {
             enabled: true,
             influencerFollowerRange: range,
@@ -815,6 +837,9 @@ const StepFour: React.FC<StepFourProps> = ({
         ? (features.contentCreation.influencerBudget ?? 0)
         : 0;
 
+    const inHousePieces = inHouseMonthlyPieces(features);
+    const inHouseCost = inHousePieces * FEATURE_COSTS.inHouseContentPerPiece;
+
     const FeaturesPanel = (
         <View style={styles.featuresList}>
             <FeatureRow
@@ -840,7 +865,92 @@ const StepFour: React.FC<StepFourProps> = ({
             />
 
             <FeatureRow
-                title="Content Creation End-to-End"
+                title="Trendly (In House) Content Creation"
+                description={`Hand over your content needs to our in-house designers & team. We produce images, videos, and motion graphics to advertise your brand — just tell us how much content you need. ${fmt(FEATURE_COSTS.inHouseContentPerPiece)} per content piece.`}
+                enabled={features.inHouseContent?.enabled ?? false}
+                onToggle={(v) =>
+                    patchFeatures({
+                        inHouseContent: { ...features.inHouseContent, enabled: v },
+                    })
+                }
+                disabled={isDisabled(FEATURE_MIN_BUDGETS.inHouseContent)}
+                disabledReason={`Requires budget ≥ ${fmt(FEATURE_MIN_BUDGETS.inHouseContent)}`}
+                colors={colors}
+            >
+                <View style={styles.freqRow}>
+                    <TextInput
+                        label="Content count"
+                        mode="outlined"
+                        keyboardType="number-pad"
+                        style={styles.freqCountInput}
+                        value={
+                            (features.inHouseContent?.count ?? 0) > 0
+                                ? features.inHouseContent!.count!.toString()
+                                : ""
+                        }
+                        onChangeText={(text) =>
+                            patchFeatures({
+                                inHouseContent: {
+                                    ...features.inHouseContent,
+                                    enabled: true,
+                                    count: parseInt(text) || 0,
+                                },
+                            })
+                        }
+                    />
+                    <View style={styles.freqPills}>
+                        <PeriodPill
+                            label="/ week"
+                            selected={
+                                (features.inHouseContent?.period ?? "month") === "week"
+                            }
+                            onPress={() =>
+                                patchFeatures({
+                                    inHouseContent: {
+                                        ...features.inHouseContent,
+                                        enabled: true,
+                                        period: "week" as ContentFrequencyPeriod,
+                                    },
+                                })
+                            }
+                            colors={colors}
+                        />
+                        <PeriodPill
+                            label="/ month"
+                            selected={
+                                (features.inHouseContent?.period ?? "month") === "month"
+                            }
+                            onPress={() =>
+                                patchFeatures({
+                                    inHouseContent: {
+                                        ...features.inHouseContent,
+                                        enabled: true,
+                                        period: "month" as ContentFrequencyPeriod,
+                                    },
+                                })
+                            }
+                            colors={colors}
+                        />
+                    </View>
+                </View>
+                {inHouseCost > 0 && (
+                    <View style={styles.calcBudgetBox}>
+                        <Text style={styles.calcBudgetLabel}>
+                            In-House Production Fee
+                        </Text>
+                        <Text style={styles.calcBudgetValue}>
+                            {fmt(inHouseCost)} / month
+                        </Text>
+                        <Text style={styles.calcBudgetNote}>
+                            {inHousePieces} content {inHousePieces === 1 ? "piece" : "pieces"} / month ×{" "}
+                            {fmt(FEATURE_COSTS.inHouseContentPerPiece)} per piece.
+                        </Text>
+                    </View>
+                )}
+            </FeatureRow>
+
+            <FeatureRow
+                title="Influencer led Content Creation"
                 description={`We shortlist and coordinate with influencers to deliver content. Our fee is 15% of the influencer budget — we calculate the budget from your follower and reach requirements. Total content target: ${monthlyPosts} posts/month.`}
                 enabled={features.contentCreation.enabled}
                 onToggle={(v) =>

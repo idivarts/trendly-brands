@@ -7,7 +7,7 @@
  *  - Resolve / unresolve
  *  - Snippet quotes (shown when a comment has a .snippet field)
  */
-import SharedCommentsPanel from "@/components/shared/CommentsPanel";
+import SharedCommentsPanel, { PanelComment } from "@/components/shared/CommentsPanel";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
 import { faCommentDots } from "@fortawesome/free-solid-svg-icons";
@@ -16,9 +16,10 @@ import React from "react";
 interface CommentsPanelProps {
     strategyId: string | null;
     onCollapse?: () => void;
+    onSendToAI?: (comment: PanelComment) => void;
 }
 
-const CommentsPanel: React.FC<CommentsPanelProps> = ({ strategyId, onCollapse }) => {
+const CommentsPanel: React.FC<CommentsPanelProps> = ({ strategyId, onCollapse, onSendToAI }) => {
     const { manager } = useAuthContext();
     const { comments, loading, addComment, addReply, resolveComment, deleteComment } =
         useStrategyComments(strategyId);
@@ -31,6 +32,7 @@ const CommentsPanel: React.FC<CommentsPanelProps> = ({ strategyId, onCollapse })
             onAddReply={addReply}
             onResolveComment={resolveComment}
             onDeleteComment={deleteComment}
+            onSendToAI={onSendToAI}
             title="Comments"
             titleIcon={faCommentDots}
             onCollapse={onCollapse}

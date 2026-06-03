@@ -1,5 +1,5 @@
 import { CalendarItem, ContentType } from "@/components/content-calendar/types";
-import { ContentItem, ContentStatus } from "@/components/contents/types";
+import { ContentItem, ContentStatus, SocialDestination } from "@/components/contents/types";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
@@ -47,6 +47,10 @@ function toContentItem(id: string, data: IContent): ContentItem {
         timeOfPosting: data.timeOfPosting,
         script: data.script,
         imagePrompt: data.imagePrompt,
+        attachments: data.attachments,
+        destinations: data.destinations as SocialDestination[] | undefined,
+        scheduleMode: data.scheduleMode,
+        scheduledAt: data.scheduledAt,
         isArchived: data.isArchived ?? false,
         commentCount: data.commentCount ?? 0,
         createdAt: epochToIsoDate(data.createdAt),
@@ -88,6 +92,10 @@ function toIContent(
     if (extra.timeOfPosting !== undefined) doc.timeOfPosting = extra.timeOfPosting;
     if (extra.script !== undefined)    doc.script = extra.script;
     if (extra.imagePrompt !== undefined) doc.imagePrompt = extra.imagePrompt;
+    if (extra.attachments !== undefined) doc.attachments = extra.attachments;
+    if (extra.destinations !== undefined) doc.destinations = extra.destinations;
+    if (extra.scheduleMode !== undefined) doc.scheduleMode = extra.scheduleMode;
+    if (extra.scheduledAt !== undefined) doc.scheduledAt = extra.scheduledAt;
 
     return doc;
 }

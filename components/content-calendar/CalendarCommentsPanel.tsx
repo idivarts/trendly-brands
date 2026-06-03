@@ -10,7 +10,7 @@
  *
  * The breadcrumb "← Month" header is driven by onBack + backLabel props.
  */
-import SharedCommentsPanel from "@/components/shared/CommentsPanel";
+import SharedCommentsPanel, { PanelComment } from "@/components/shared/CommentsPanel";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useContentComments } from "@/hooks/use-content-comments";
 import { useMonthComments } from "@/hooks/use-month-comments";
@@ -32,6 +32,7 @@ interface CalendarCommentsPanelProps {
     onClearSelectedItem: () => void;
     /** Called when the user taps the collapse chevron in the panel header. */
     onCollapse?: () => void;
+    onSendToAI?: (comment: PanelComment) => void;
 }
 
 const CalendarCommentsPanel: React.FC<CalendarCommentsPanelProps> = ({
@@ -40,6 +41,7 @@ const CalendarCommentsPanel: React.FC<CalendarCommentsPanelProps> = ({
     selectedItem,
     onClearSelectedItem,
     onCollapse,
+    onSendToAI,
 }) => {
     const { manager } = useAuthContext();
 
@@ -61,6 +63,7 @@ const CalendarCommentsPanel: React.FC<CalendarCommentsPanelProps> = ({
             // Threading and resolve only available in item mode
             onAddReply={isItemMode ? itemHook.addReply : undefined}
             onResolveComment={isItemMode ? itemHook.resolveComment : undefined}
+            onSendToAI={onSendToAI}
             title={isItemMode ? selectedItem.title : monthLabel}
             titleIcon={isItemMode ? faCommentDots : faCalendarDays}
             onCollapse={onCollapse}

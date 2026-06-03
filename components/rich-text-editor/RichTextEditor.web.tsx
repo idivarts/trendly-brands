@@ -5,7 +5,9 @@ import {
     faBold,
     faCommentDots,
     faEraser,
+    faImage,
     faItalic,
+    faLink,
     faListOl,
     faListUl,
     faPen,
@@ -18,6 +20,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import ImageInsertModal from "./ImageInsertModal";
+import LinkInsertModal from "./LinkInsertModal";
 
 export interface StrategyEditorPanelProps {
     content: string;
@@ -42,6 +46,9 @@ function injectQuillStyles() {
         .trendly-quill-container .ql-editor {
             box-sizing: border-box;
             flex: 1;
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
             line-height: 1.6;
             min-height: 400px;
             outline: none;
@@ -84,6 +91,8 @@ function injectQuillStyles() {
         .trendly-quill-container .ql-editor em { font-style: italic; }
         .trendly-quill-container .ql-editor u { text-decoration: underline; }
         .trendly-quill-container .ql-editor s { text-decoration: line-through; }
+        .trendly-quill-container .ql-editor a { color: #1d6fb8; text-decoration: underline; cursor: pointer; }
+        .trendly-quill-container .ql-editor img { display: block; max-width: min(720px, 100%); height: auto; border-radius: 8px; margin: 8px auto; }
     `;
     document.head.appendChild(style);
 }
@@ -107,7 +116,13 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const quillRef = useRef<any>(null);
     const lastHtmlRef = useRef("");
+    // Quill selection captured at the moment a toolbar button is pressed, so the
+    // insert survives the modal stealing focus from the editor.
+    const savedRangeRef = useRef<{ index: number; length: number } | null>(null);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
+    const [linkModalVisible, setLinkModalVisible] = useState(false);
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [linkInitialText, setLinkInitialText] = useState("");
     const [selectedText, setSelectedText] = useState("");
     const [selectionRange, setSelectionRange] = useState<{ index: number; length: number } | null>(null);
     const [activeFormats, setActiveFormats] = useState<Record<string, any>>({});
@@ -169,8 +184,6 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 setPopoverPos(null);
                 return;
             }
-            const editor = container.querySelector(".ql-editor") as HTMLElement | null;
-            if (!editor) return;
             const bounds = quill.getBounds(range.index, range.length);
             if (!bounds) return;
 
@@ -178,24 +191,38 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             const POPOVER_WIDTH_ESTIMATE = 320;
             const GAP = 8;
 
-            // Coordinates of selection rect relative to the outer container.
-            const selTop = editor.offsetTop + bounds.top - editor.scrollTop;
-            const selLeft = editor.offsetLeft + bounds.left - editor.scrollLeft;
+            // `quill.getBounds()` returns the selection rect relative to the
+            // container's *visible* top-left — it already accounts for the
+            // editor's internal scroll and any page scroll. The popover is
+            // position:absolute inside this same (position:relative) container,
+            // whose `top`/`left` are measured in the container's *content*
+            // coordinate space. Convert by adding the container's own scroll
+            // offset. (The previous code subtracted the editor's scrollTop,
+            // which double-counted the scroll and made the popover drift up by
+            // ~the scroll amount once the doc was scrolled.)
+            const selTop = bounds.top + container.scrollTop;
+            const selLeft = bounds.left + container.scrollLeft;
             const selCenterX = selLeft + bounds.width / 2;
+
+            // Top edge of the currently-visible area, in content coordinates.
+            const visibleTop = container.scrollTop;
 
             // Default: place above the selection; flip below if not enough room.
             let placement: "top" | "bottom" = "top";
             let top = selTop - POPOVER_HEIGHT_ESTIMATE - GAP;
-            if (top < editor.offsetTop + 4) {
+            if (top < visibleTop + 4) {
                 placement = "bottom";
                 top = selTop + bounds.height + GAP;
             }
 
-            // Clamp left within container.
+            // Clamp left within the container's visible width (content coords).
             const containerWidth = container.clientWidth;
+            const minLeft = container.scrollLeft + 8;
+            const maxLeft = Math.max(
+                minLeft,
+                container.scrollLeft + containerWidth - POPOVER_WIDTH_ESTIMATE - 8
+            );
             let left = selCenterX - POPOVER_WIDTH_ESTIMATE / 2;
-            const minLeft = 8;
-            const maxLeft = Math.max(minLeft, containerWidth - POPOVER_WIDTH_ESTIMATE - 8);
             left = Math.max(minLeft, Math.min(maxLeft, left));
 
             setPopoverPos({ top, left, placement });
@@ -298,6 +325,61 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         setActiveFormats(updated);
         setDropdownValue(value);
     }, []);
+
+    // ── Link & image insertion ────────────────────────────────────────────────
+
+    // Capture the live selection (Quill keeps it after the click) before the
+    // modal opens, and prefill the link label with any selected text.
+    const captureRange = useCallback(() => {
+        const quill = quillRef.current;
+        const range = quill?.getSelection();
+        savedRangeRef.current = range
+            ? { index: range.index, length: range.length }
+            : { index: quill ? quill.getLength() - 1 : 0, length: 0 };
+        return savedRangeRef.current;
+    }, []);
+
+    const openLinkModal = useCallback(() => {
+        const range = captureRange();
+        const quill = quillRef.current;
+        const text = range && range.length > 0 && quill ? quill.getText(range.index, range.length).trim() : "";
+        setLinkInitialText(text);
+        setLinkModalVisible(true);
+    }, [captureRange]);
+
+    const openImageModal = useCallback(() => {
+        captureRange();
+        setImageModalVisible(true);
+    }, [captureRange]);
+
+    const handleInsertLink = useCallback((text: string, url: string) => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const range = savedRangeRef.current ?? { index: quill.getLength() - 1, length: 0 };
+        if (range.length > 0) {
+            // Replace selection with the (possibly edited) label, linked.
+            quill.deleteText(range.index, range.length);
+            quill.insertText(range.index, text, { link: url });
+            quill.setSelection(range.index + text.length, 0);
+        } else {
+            quill.insertText(range.index, text, { link: url });
+            quill.setSelection(range.index + text.length, 0);
+        }
+        const html = ensureEnrichedHtml(quill.getSemanticHTML());
+        lastHtmlRef.current = html;
+        onChange(html);
+    }, [onChange]);
+
+    const handleInsertImage = useCallback((imageUrl: string) => {
+        const quill = quillRef.current;
+        if (!quill) return;
+        const range = savedRangeRef.current ?? { index: quill.getLength() - 1, length: 0 };
+        quill.insertEmbed(range.index, "image", imageUrl, "user");
+        quill.setSelection(range.index + 1, 0);
+        const html = ensureEnrichedHtml(quill.getSemanticHTML());
+        lastHtmlRef.current = html;
+        onChange(html);
+    }, [onChange]);
 
     // ── Selection-aware actions ───────────────────────────────────────────────
 
@@ -440,6 +522,30 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     >
                         <FontAwesomeIcon icon={faEraser} size={13} color={colors.textSecondary as string} />
                     </Pressable>
+
+                    <View style={styles.toolbarDivider} />
+
+                    {/* Insert link */}
+                    <Pressable
+                        style={[styles.toolbarBtn, activeFormats.link && styles.toolbarBtnActive]}
+                        onPress={openLinkModal}
+                        accessibilityLabel="Insert link"
+                    >
+                        <FontAwesomeIcon
+                            icon={faLink}
+                            size={13}
+                            color={activeFormats.link ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                        />
+                    </Pressable>
+
+                    {/* Insert image */}
+                    <Pressable
+                        style={styles.toolbarBtn}
+                        onPress={openImageModal}
+                        accessibilityLabel="Insert image"
+                    >
+                        <FontAwesomeIcon icon={faImage} size={13} color={colors.textSecondary as string} />
+                    </Pressable>
                 </View>
 
             </View>
@@ -515,6 +621,21 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
+            />
+
+            {/* ── Link insertion ──────────────────────────────────────────── */}
+            <LinkInsertModal
+                visible={linkModalVisible}
+                initialText={linkInitialText}
+                onClose={() => setLinkModalVisible(false)}
+                onInsert={handleInsertLink}
+            />
+
+            {/* ── Image insertion (upload via AWS or paste URL) ───────────── */}
+            <ImageInsertModal
+                visible={imageModalVisible}
+                onClose={() => setImageModalVisible(false)}
+                onInsert={handleInsertImage}
             />
         </View>
     );

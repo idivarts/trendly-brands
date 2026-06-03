@@ -1,41 +1,22 @@
-import { CONTENT_TYPE_LABELS } from "@/components/content-calendar/types";
+import { CONTENT_TYPE_LABELS, contentTypeColor } from "@/components/content-calendar/types";
 import Colors from "@/shared-uis/constants/Colors";
 import { faCalendarDays, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { CONTENT_STATUS_LABELS, ContentItem } from "./types";
+import { CONTENT_STATUS_LABELS, ContentItem, contentStatusColors } from "./types";
 
 interface ContentCardProps {
     item: ContentItem;
     onPress: (item: ContentItem) => void;
 }
 
-const TYPE_COLORS: Record<string, string> = {
-    reel: "#6C47FF",
-    post: "#1A7A3A",
-    story: "#E07A00",
-    carousel: "#0070CC",
-    live: "#CC0044",
-};
-
-const STATUS_BG: Record<string, string> = {
-    draft: "rgba(139,139,139,0.12)",
-    review_pending: "rgba(224,122,0,0.12)",
-    approved: "rgba(26,122,58,0.12)",
-};
-
-const STATUS_TEXT: Record<string, string> = {
-    draft: "#8B8B8B",
-    review_pending: "#E07A00",
-    approved: "#1A7A3A",
-};
-
 const ContentCard: React.FC<ContentCardProps> = ({ item, onPress }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
+    const statusColor = contentStatusColors(item.status, colors);
 
     const formattedDate = useMemo(() => {
         const d = new Date(item.date + "T00:00:00");
@@ -46,7 +27,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ item, onPress }) => {
         });
     }, [item.date]);
 
-    const typeColor = TYPE_COLORS[item.type] ?? colors.primary;
+    const typeColor = contentTypeColor(item.type, colors);
 
     return (
         <Pressable
@@ -62,8 +43,8 @@ const ContentCard: React.FC<ContentCardProps> = ({ item, onPress }) => {
                             {CONTENT_TYPE_LABELS[item.type]}
                         </Text>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: STATUS_BG[item.status] }]}>
-                        <Text style={[styles.statusText, { color: STATUS_TEXT[item.status] }]}>
+                    <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+                        <Text style={[styles.statusText, { color: statusColor.fg }]}>
                             {CONTENT_STATUS_LABELS[item.status]}
                         </Text>
                     </View>

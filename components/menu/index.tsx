@@ -1,16 +1,20 @@
-import Colors from "@/shared-uis/constants/Colors";
 import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
 import { useAuthContext, useLocationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import { truncateText } from "@/utils/text";
 import { imageUrl } from "@/utils/url";
 import {
     faAddressCard,
+    faArrowLeft,
     faArrowTrendUp,
+    faBell,
+    faBriefcase,
+    faBullhorn,
     faBullseye,
-    faCalendarDays,
     faChartLine,
+    faChevronRight,
     faComment,
     faCreditCard,
     faDiagramProject,
@@ -18,113 +22,265 @@ import {
     faFileLines,
     faGears,
     faGem,
-    faLayerGroup,
-    faPenRuler,
+    faHandshake,
+    faInbox,
+    faLock,
+    faPeopleGroup,
+    faPenToSquare,
+    faPlus,
+    faShareNodes,
     faStar,
     faTriangleExclamation,
     faUsers,
-    faUserShield,
+    faUserShield
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme, type Theme } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Href, useRouter } from "expo-router";
-import React, { useMemo } from "react";
-import { Image, Platform, ScrollView, StyleSheet } from "react-native";
-import ProfileItemCard from "../ProfileItemCard";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    BackHandler,
+    Image,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+} from "react-native";
 import { Text, View } from "../theme/Themed";
 import Button from "../ui/button";
 
-interface MenuItem {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type HubKey = "grow" | "influencer" | "manage" | "admin";
+
+interface Item {
     id: string;
     icon: any;
     title: string;
     href: Href;
+    /** Lock reason — when present, item renders disabled with this hint. */
+    locked?: string;
+    /** Pro lock — shows an upgrade pill instead of disabled hint. */
+    pro?: boolean;
 }
 
-interface MenuSection {
-    title: string;
-    items: MenuItem[];
+interface ItemGroup {
+    title?: string;
+    items: Item[];
 }
+
+interface Hub {
+    key: HubKey;
+    icon: any;
+    title: string;
+    subtitle: string;
+    /** Hidden entirely when this returns false. */
+    visible: boolean;
+    groups: ItemGroup[];
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 /**
- * Mobile "My Brand" menu. The bottom tab bar can hold at most five tabs, so
- * every page that lives on the web sidebar (DrawerMenuContentWeb) is surfaced
- * here instead — mirroring its sections and the same visibility conditionals
- * (India-based campaigns, chat-connected execution, admin portal).
+ * Mobile "My Brand" menu. Mirrors the web sidebar's structure (Create, Grow,
+ * Manage, Admin) using a Hub home + drill-down pattern so the first screen
+ * stays scannable.
  */
 const Menu = () => {
     const theme = useTheme();
-    const styles = useMemo(() => useMenuItemStyles(theme), [theme]);
+    const styles = useMemo(() => createStyles(theme), [theme]);
     const router = useRouter();
     const { xl } = useBreakpoints();
     const { selectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
     const { isIndiaBased } = useLocationContext();
 
-    const sections = useMemo<MenuSection[]>(() => {
-        const create: MenuItem[] = [
-            { id: "content-strategies", icon: faPenRuler, title: "Content Strategy", href: "/content-strategies" },
-            { id: "content-calendar", icon: faCalendarDays, title: "Content Calendar", href: "/content-calendar" },
-            { id: "contents", icon: faLayerGroup, title: "All Content", href: "/contents" },
-            // Outside India, Collaboration Requests sits in the Create section
-            // (web drawer parity).
-            ...(!isIndiaBased
-                ? [{ id: "collaborations-create", icon: faStar, title: "Collaboration Requests", href: "/collaborations" as Href }]
-                : []),
-        ];
+    const [activeHub, setActiveHub] = useState<HubKey | null>(null);
 
-        // India-based brands get a dedicated Campaign section.
-        const campaign: MenuItem[] = isIndiaBased
+    const chatLockReason = "Connect chat to unlock";
+    const isChatConnected = !!manager?.isChatConnected;
+
+    const hubs = useMemo<Hub[]>(() => {
+        // Grow mirrors the web "Influencer Led Growth" sub-drawer plus the
+        // direct Growth links — Discovery / Execution / Paid / Programs.
+        const discoveryItems: Item[] = isIndiaBased
             ? [
-                { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover" },
+                { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover", pro: true },
                 { id: "collaborations", icon: faStar, title: "Collaboration Requests", href: "/collaborations" },
             ]
             : [];
 
-        // Execution surfaces only once chat is connected.
-        const manage: MenuItem[] = manager?.isChatConnected
-            ? [
-                { id: "messages", icon: faComment, title: "Messages", href: "/messages" },
-                { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts" },
-                { id: "analytics", icon: faChartLine, title: "Reporting & Analytics", href: "/analytics" },
-            ]
-            : [];
-
-        const brand: MenuItem[] = [
-            { id: "brand-profile", icon: faAddressCard, title: "Brand Profile", href: "/brand-profile" },
-            { id: "members", icon: faUsers, title: "Members", href: "/members" },
-            // Billing is web-only; native uses the Settings screen instead.
-            ...(Platform.OS === "web"
-                ? [{ id: "billing", icon: faCreditCard, title: "Billing", href: "/billing" as Href }]
-                : [{ id: "settings", icon: faGears, title: "Settings", href: "/settings" as Href }]),
+        const executionItems: Item[] = [
+            { id: "messages", icon: faComment, title: "Messages", href: "/messages", locked: isChatConnected ? undefined : chatLockReason },
+            { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts", locked: isChatConnected ? undefined : chatLockReason },
+            { id: "analytics", icon: faChartLine, title: "Reporting & Analytics", href: "/analytics", locked: isChatConnected ? undefined : chatLockReason },
         ];
 
-        const growth: MenuItem[] = [
-            { id: "organic-growth", icon: faArrowTrendUp, title: "Organic Conversions", href: "/organic-growth" },
-            { id: "paid-growth", icon: faBullseye, title: "Paid Mediums", href: "/paid-growth" },
-            { id: "performance-marketing", icon: faChartLine, title: "Performance Marketing", href: "/performance-marketing" },
-        ];
+        const grow: Hub = {
+            key: "grow",
+            icon: faArrowTrendUp,
+            title: "Grow",
+            subtitle: "Organic, Paid, Performance",
+            visible: true,
+            groups: [
+                {
+                    title: "Paid Growth",
+                    items: [
+                        { id: "organic-growth", icon: faArrowTrendUp, title: "Organic Conversions", href: "/organic-growth" },
+                        { id: "paid-growth", icon: faBullseye, title: "Paid Mediums", href: "/paid-growth" },
+                        { id: "performance-marketing", icon: faChartLine, title: "Performance Marketing", href: "/performance-marketing" },
+                        { id: "hire-us", icon: faBriefcase, title: "Hire Us", href: "/hire-us" },
+                    ],
+                },
+            ],
+        };
+        const influencer: Hub = {
+            key: "influencer",
+            icon: faPeopleGroup,
+            title: "Influencer Led Campaigns",
+            subtitle: "Influencers, campaigns, analytics",
+            visible: true,
+            groups: [
+                ...(discoveryItems.length ? [{ title: "Discovery", items: discoveryItems }] : []),
+                { title: "Execution", items: executionItems },
+                {
+                    title: "Programs",
+                    items: [
+                        { id: "affiliate-purchase", icon: faHandshake, title: "Affiliate Purchase", href: "/affiliate-purchase" },
+                        { id: "partnership-ads", icon: faBullhorn, title: "Partnership Ads", href: "/partnership-ads" },
+                    ],
+                },
+            ],
+        };
 
-        // Admin portal only for admins.
-        const admin: MenuItem[] = manager?.isAdmin
-            ? [
-                { id: "admin-invites", icon: faUserShield, title: "Invites Management", href: "/admin-invites" },
-                { id: "brand-crm", icon: faAddressCard, title: "Brands CRM", href: "/brand-crm" },
-                { id: "collaboration-cms", icon: faDiagramProject, title: "Collaboration CMS", href: "/collaboration-cms" },
-                { id: "applications", icon: faEye, title: "All Applications", href: "/applications" },
-                { id: "admin-escalations", icon: faTriangleExclamation, title: "Escalations", href: "/admin-escalations" },
-            ]
-            : [];
+        const manage: Hub = {
+            key: "manage",
+            icon: faGears,
+            title: "Manage Brand",
+            subtitle: "Profile, members, accounts",
+            visible: true,
+            groups: [
+                {
+                    items: [
+                        { id: "brand-profile", icon: faAddressCard, title: "Brand Profile", href: "/brand-profile" },
+                        { id: "connected-accounts", icon: faShareNodes, title: "Connected Accounts", href: "/connected-accounts" },
+                        { id: "members", icon: faUsers, title: "Members", href: "/members" },
+                        ...(Platform.OS === "web"
+                            ? [{ id: "billing", icon: faCreditCard, title: "Billing", href: "/billing" as Href }]
+                            : [{ id: "settings", icon: faGears, title: "Settings", href: "/settings" as Href }]),
+                    ],
+                },
+            ],
+        };
 
-        return [
-            { title: "Create", items: create },
-            { title: "Campaign", items: campaign },
-            { title: "Manage", items: manage },
-            { title: "Brand", items: brand },
-            { title: "Growth", items: growth },
-            { title: "Admin Portal", items: admin },
-        ].filter((s) => s.items.length > 0);
-    }, [isIndiaBased, manager?.isChatConnected, manager?.isAdmin]);
+        const admin: Hub = {
+            key: "admin",
+            icon: faUserShield,
+            title: "Admin Portal",
+            subtitle: "Operations, CMS, escalations",
+            visible: !!manager?.isAdmin,
+            groups: [
+                {
+                    title: "Operations",
+                    items: [
+                        { id: "admin-invites", icon: faUserShield, title: "Invites Management", href: "/admin-invites" },
+                        { id: "brand-crm", icon: faAddressCard, title: "Brands CRM", href: "/brand-crm" },
+                    ],
+                },
+                {
+                    title: "Content & Support",
+                    items: [
+                        { id: "collaboration-cms", icon: faDiagramProject, title: "Collaboration CMS", href: "/collaboration-cms" },
+                        { id: "applications", icon: faEye, title: "All Applications", href: "/applications" },
+                        { id: "admin-escalations", icon: faTriangleExclamation, title: "Escalations", href: "/admin-escalations" },
+                    ],
+                },
+            ],
+        };
 
+        return [grow, influencer, manage, admin].filter((h) => h.visible);
+    }, [isIndiaBased, isChatConnected, manager?.isAdmin]);
+
+    // Hardware back returns to the hub home when drilled in (Android).
+    useEffect(() => {
+        if (!activeHub || Platform.OS !== "android") return;
+        const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+            setActiveHub(null);
+            return true;
+        });
+        return () => sub.remove();
+    }, [activeHub]);
+
+    const navigate = (href: Href) => {
+        // @ts-ignore — Href union is wider than the typed routes
+        router.push(href);
+    };
+
+    // ─── Drill-down: render a category screen ─────────────────────────────
+    if (activeHub) {
+        const hub = hubs.find((h) => h.key === activeHub);
+        if (!hub) {
+            // Hub was hidden after navigation — bail back to home.
+            setActiveHub(null);
+            return null;
+        }
+        return (
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={styles.subScrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <Pressable
+                    onPress={() => setActiveHub(null)}
+                    style={styles.backRow}
+                    accessibilityRole="button"
+                    accessibilityLabel="Back to brand menu"
+                >
+                    <FontAwesomeIcon
+                        icon={faArrowLeft}
+                        size={16}
+                        color={Colors(theme).text}
+                    />
+                    <Text style={styles.backText}>Brand Menu</Text>
+                </Pressable>
+
+                <View style={styles.subHeader}>
+                    <View style={styles.subHeaderIcon}>
+                        <FontAwesomeIcon
+                            icon={hub.icon}
+                            size={20}
+                            color={Colors(theme).white}
+                        />
+                    </View>
+                    <View style={styles.subHeaderText}>
+                        <Text style={styles.subHeaderTitle}>{hub.title}</Text>
+                        <Text style={styles.subHeaderSubtitle}>{hub.subtitle}</Text>
+                    </View>
+                </View>
+
+                {hub.groups.map((group, gi) => (
+                    <View key={`${hub.key}-g-${gi}`} style={styles.group}>
+                        {group.title && (
+                            <Text style={styles.groupTitle}>{group.title}</Text>
+                        )}
+                        <View style={styles.groupItems}>
+                            {group.items.map((item) => (
+                                <ItemRow
+                                    key={item.id}
+                                    item={item}
+                                    theme={theme}
+                                    onPress={() => navigate(item.href)}
+                                />
+                            ))}
+                        </View>
+                    </View>
+                ))}
+            </ScrollView>
+        );
+    }
+
+    // ─── Hub home ──────────────────────────────────────────────────────────
     return (
         <ScrollView
             style={styles.container}
@@ -145,9 +301,14 @@ const Menu = () => {
                 <Button
                     mode="contained"
                     style={styles.menuButton}
-                    onPress={() => {
-                        router.push("/brand-profile");
-                    }}
+                    icon={() => (
+                        <FontAwesomeIcon
+                            icon={faPenToSquare}
+                            size={14}
+                            color={Colors(theme).white}
+                        />
+                    )}
+                    onPress={() => router.push("/brand-profile")}
                 >
                     Edit Brand
                 </Button>
@@ -157,28 +318,199 @@ const Menu = () => {
                 <CreditDisplayCard />
             )}
 
-            {sections.map((section) => (
-                <View key={section.title} style={styles.section}>
-                    <Text style={styles.sectionTitle}>{section.title}</Text>
-                    <View style={styles.sectionItems}>
-                        {section.items.map((item) => (
-                            <ProfileItemCard
-                                key={item.id}
-                                item={item}
-                                onPress={() => {
-                                    // @ts-ignore — Href union is wider than the typed routes
-                                    router.push(item.href);
-                                }}
-                            />
-                        ))}
-                    </View>
-                </View>
-            ))}
+            {/* Quick actions */}
+            <View style={styles.quickRow}>
+                <QuickChip
+                    icon={faInbox}
+                    label="Inbox"
+                    theme={theme}
+                    onPress={() => navigate("/inbox")}
+                />
+                <QuickChip
+                    icon={faComment}
+                    label="Messages"
+                    theme={theme}
+                    onPress={() => navigate("/messages")}
+                />
+                <QuickChip
+                    icon={faBell}
+                    label="Alerts"
+                    theme={theme}
+                    onPress={() => navigate("/notifications")}
+                />
+            </View>
+
+            {/* Hub cards */}
+            <View style={styles.hubGrid}>
+                {hubs.map((hub) => (
+                    <HubCard
+                        key={hub.key}
+                        hub={hub}
+                        theme={theme}
+                        onPress={() => setActiveHub(hub.key)}
+                    />
+                ))}
+            </View>
+
+            {/* Footer: Create new brand */}
+            <Pressable
+                onPress={() => navigate("/onboarding-your-brand")}
+                style={styles.footerLink}
+                accessibilityRole="button"
+            >
+                <FontAwesomeIcon
+                    icon={faPlus}
+                    size={12}
+                    color={Colors(theme).textSecondary}
+                />
+                <Text style={styles.footerLinkText}>Create New Brand</Text>
+            </Pressable>
         </ScrollView>
     );
 };
 
-function useMenuItemStyles(theme: Theme) {
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+const QuickChip: React.FC<{
+    icon: any;
+    label: string;
+    theme: Theme;
+    onPress: () => void;
+}> = ({ icon, label, theme, onPress }) => {
+    const styles = useMemo(() => createStyles(theme), [theme]);
+    return (
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.quickChip,
+                pressed && styles.quickChipPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+        >
+            <FontAwesomeIcon
+                icon={icon}
+                size={18}
+                color={Colors(theme).primary}
+            />
+            <Text style={styles.quickChipText}>{label}</Text>
+        </Pressable>
+    );
+};
+
+const HubCard: React.FC<{ hub: Hub; theme: Theme; onPress: () => void }> = ({
+    hub,
+    theme,
+    onPress,
+}) => {
+    const styles = useMemo(() => createStyles(theme), [theme]);
+    const colors = Colors(theme);
+    return (
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.hubCard,
+                pressed && styles.hubCardPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`${hub.title}. ${hub.subtitle}`}
+        >
+            <LinearGradient
+                colors={[colors.primary, colors.primaryMid]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.hubIcon}
+            >
+                <FontAwesomeIcon icon={hub.icon} size={20} color={colors.white} />
+            </LinearGradient>
+            <View style={styles.hubText}>
+                <Text style={styles.hubTitle}>{hub.title}</Text>
+                <Text style={styles.hubSubtitle} numberOfLines={1}>
+                    {hub.subtitle}
+                </Text>
+            </View>
+            <FontAwesomeIcon
+                icon={faChevronRight}
+                size={14}
+                color={colors.textSecondary}
+            />
+        </Pressable>
+    );
+};
+
+const ItemRow: React.FC<{
+    item: Item;
+    theme: Theme;
+    onPress: () => void;
+}> = ({ item, theme, onPress }) => {
+    const styles = useMemo(() => createStyles(theme), [theme]);
+    const colors = Colors(theme);
+    const disabled = !!item.locked;
+    return (
+        <Pressable
+            onPress={disabled ? undefined : onPress}
+            style={({ pressed }) => [
+                styles.itemRow,
+                pressed && !disabled && styles.itemRowPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={item.title}
+            accessibilityState={{ disabled }}
+        >
+            <View style={[styles.itemIcon, disabled && styles.itemIconDisabled]}>
+                <FontAwesomeIcon
+                    icon={item.icon}
+                    size={16}
+                    color={
+                        disabled
+                            ? colors.textSecondary
+                            : theme.dark
+                                ? colors.text
+                                : colors.primary
+                    }
+                />
+            </View>
+            <View style={styles.itemText}>
+                <Text
+                    style={[
+                        styles.itemTitle,
+                        disabled && styles.itemTitleDisabled,
+                    ]}
+                >
+                    {item.title}
+                </Text>
+                {disabled && (
+                    <Text style={styles.itemLockReason}>{item.locked}</Text>
+                )}
+            </View>
+            {item.pro ? (
+                <View style={styles.proPill}>
+                    <FontAwesomeIcon icon={faLock} size={9} color={colors.text} />
+                    <Text style={styles.proPillText}>Pro</Text>
+                </View>
+            ) : disabled ? (
+                <FontAwesomeIcon
+                    icon={faLock}
+                    size={12}
+                    color={colors.textSecondary}
+                />
+            ) : (
+                <FontAwesomeIcon
+                    icon={faChevronRight}
+                    size={14}
+                    color={colors.textSecondary}
+                />
+            )}
+        </Pressable>
+    );
+};
+
+export default Menu;
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const createStyles = (theme: Theme) => {
+    const colors = Colors(theme);
     return StyleSheet.create({
         container: {
             flex: 1,
@@ -188,48 +520,247 @@ function useMenuItemStyles(theme: Theme) {
             paddingVertical: 10,
             gap: 20,
         },
-        brandName: {
-            fontSize: 24,
-            textAlign: "center",
-            color: Colors(theme).text,
+        subScrollContent: {
+            paddingHorizontal: 20,
+            paddingTop: 8,
+            paddingBottom: 24,
+            gap: 16,
         },
-        brandAbout: {
-            fontSize: 16,
-            textAlign: "center",
-            color: Colors(theme).gray100,
-        },
+        // ── Hub home: hero ────────────────────────────────────────────────
         topRow: {
             gap: 16,
             alignItems: "center",
             paddingTop: 20,
         },
+        brandName: {
+            fontSize: 24,
+            textAlign: "center",
+            color: colors.text,
+        },
+        brandAbout: {
+            fontSize: 16,
+            textAlign: "center",
+            color: colors.gray100,
+        },
         avatarBrandImage: {
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: Colors(theme).primary,
-            width: 160,
-            height: 160,
+            backgroundColor: colors.primary,
+            width: 140,
+            height: 140,
             borderRadius: 20,
         },
         menuButton: {
-            backgroundColor: Colors(theme).primary,
+            backgroundColor: colors.primary,
         },
-        section: {
-            gap: 4,
+        // ── Quick chips row ───────────────────────────────────────────────
+        quickRow: {
+            flexDirection: "row",
+            gap: 10,
         },
-        sectionTitle: {
+        quickChip: {
+            flex: 1,
+            backgroundColor: colors.tag,
+            borderRadius: 14,
+            paddingVertical: 14,
+            paddingHorizontal: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        quickChipPressed: {
+            opacity: 0.7,
+        },
+        quickChipText: {
             fontSize: 12,
+            fontWeight: "600",
+            color: colors.text,
+        },
+        // ── Hub cards ─────────────────────────────────────────────────────
+        hubGrid: {
+            gap: 12,
+        },
+        hubCard: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            paddingHorizontal: 16,
+            paddingVertical: 16,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        hubCardPressed: {
+            opacity: 0.85,
+        },
+        hubIcon: {
+            width: 46,
+            height: 46,
+            borderRadius: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 10,
+            shadowOpacity: 0.3,
+            elevation: 4,
+        },
+        hubText: {
+            flex: 1,
+            gap: 2,
+        },
+        hubTitle: {
+            fontSize: 16,
+            fontWeight: "700",
+            color: colors.text,
+            letterSpacing: -0.2,
+        },
+        hubSubtitle: {
+            fontSize: 12,
+            color: colors.textSecondary,
+        },
+        // ── Footer link ───────────────────────────────────────────────────
+        footerLink: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            paddingVertical: 14,
+            marginTop: 4,
+        },
+        footerLinkText: {
+            fontSize: 13,
+            color: colors.textSecondary,
+            fontWeight: "500",
+        },
+        // ── Drill-down ────────────────────────────────────────────────────
+        backRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingVertical: 8,
+        },
+        backText: {
+            fontSize: 14,
+            fontWeight: "600",
+            color: colors.text,
+        },
+        subHeader: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+            paddingTop: 4,
+            paddingBottom: 4,
+        },
+        subHeaderIcon: {
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            backgroundColor: colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 10,
+            shadowOpacity: 0.3,
+            elevation: 4,
+        },
+        subHeaderText: {
+            flex: 1,
+            gap: 2,
+        },
+        subHeaderTitle: {
+            fontSize: 22,
+            fontWeight: "700",
+            color: colors.text,
+            letterSpacing: -0.4,
+        },
+        subHeaderSubtitle: {
+            fontSize: 13,
+            color: colors.textSecondary,
+        },
+        group: {
+            gap: 6,
+        },
+        groupTitle: {
+            fontSize: 11,
             fontWeight: "700",
             textTransform: "uppercase",
-            letterSpacing: 0.8,
-            color: Colors(theme).textSecondary,
+            letterSpacing: 0.9,
+            color: colors.textSecondary,
             paddingHorizontal: 4,
-            paddingBottom: 2,
         },
-        sectionItems: {
-            gap: 0,
+        groupItems: {
+            backgroundColor: colors.card,
+            borderRadius: 14,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 4,
+            shadowOpacity: 0.05,
+            elevation: 2,
+        },
+        itemRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+        },
+        itemRowPressed: {
+            backgroundColor: colors.tag,
+        },
+        itemIcon: {
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
+        },
+        itemIconDisabled: {
+            opacity: 0.6,
+        },
+        itemText: {
+            flex: 1,
+            gap: 2,
+        },
+        itemTitle: {
+            fontSize: 15,
+            fontWeight: "500",
+            color: colors.text,
+        },
+        itemTitleDisabled: {
+            color: colors.textSecondary,
+        },
+        itemLockReason: {
+            fontSize: 11,
+            color: colors.textSecondary,
+            fontStyle: "italic",
+        },
+        proPill: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: colors.tag,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 8,
+        },
+        proPillText: {
+            fontSize: 10,
+            fontWeight: "700",
+            color: colors.text,
+            letterSpacing: 0.3,
         },
     });
-}
-
-export default Menu;
+};
