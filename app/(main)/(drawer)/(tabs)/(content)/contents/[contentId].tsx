@@ -22,6 +22,7 @@ import DatePickerModal, {
 } from "@/components/modals/DatePickerModal";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -162,6 +163,12 @@ const CreateContentScreen = () => {
         setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
         setRightPanelMode("chat");
     }, []);
+
+    // "Send to AI" on a comment: focus its text in the chat (opens the panel).
+    const handleCommentToChat = useCallback(
+        (comment: PanelComment) => handleSendToChat(comment.text),
+        [handleSendToChat]
+    );
 
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
     const [magicGenerating, setMagicGenerating] = useState(false);
@@ -741,6 +748,7 @@ const CreateContentScreen = () => {
                             commentsSlot={
                                 <ContentCommentsPanel
                                     contentId={contentId ?? null}
+                                    onSendToAI={handleCommentToChat}
                                 />
                             }
                             chatSlot={
@@ -775,6 +783,7 @@ const CreateContentScreen = () => {
                         <ContentCommentsPanel
                             contentId={contentId ?? null}
                             onCollapse={() => setRightPanelMode("none")}
+                            onSendToAI={handleCommentToChat}
                         />
                     }
                     chatSlot={

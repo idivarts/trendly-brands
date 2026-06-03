@@ -21,6 +21,7 @@ import {
     faCheck,
     faChevronRight,
     faReply,
+    faRobot,
     faTrash,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -36,11 +37,12 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBreakpoints } from "@/hooks";
+import { useBrandMembers } from "@/hooks/use-brand-members";
+import MentionInput from "@/components/shared/MentionInput";
 
 // ─── Public Types ─────────────────────────────────────────────────────────────
 
@@ -72,6 +74,8 @@ export interface SharedCommentsPanelProps {
     onAddReply?: (parentId: string, text: string) => Promise<void>;
     /** Omit to hide the Resolve/Unresolve action. */
     onResolveComment?: (id: string, resolved: boolean) => Promise<void>;
+    /** Omit to hide the "Send to AI" action (pushes the comment into the AI chat). */
+    onSendToAI?: (comment: PanelComment) => void;
     // ── Header ───────────────────────────────────────────────────────────────
     title: string;
     titleIcon: IconDefinition;
@@ -98,6 +102,7 @@ interface CommentBubbleProps {
     onReply?: (parentId: string) => void;
     onResolve?: (id: string, resolved: boolean) => void;
     onDelete: (id: string) => void;
+    onSendToAI?: (comment: PanelComment) => void;
     colors: ReturnType<typeof Colors>;
     styles: ReturnType<typeof bubbleStyles>;
 }
@@ -110,6 +115,7 @@ const CommentBubble: React.FC<CommentBubbleProps> = ({
     onReply,
     onResolve,
     onDelete,
+    onSendToAI,
     colors,
     styles,
 }) => {
@@ -158,6 +164,16 @@ const CommentBubble: React.FC<CommentBubbleProps> = ({
                     >
                         <FontAwesomeIcon icon={faReply} size={11} color={colors.textSecondary} />
                         <Text style={styles.actionText}>Reply</Text>
+                    </Pressable>
+                )}
+                {onSendToAI && (
+                    <Pressable
+                        style={({ pressed }) => [styles.actionBtn, pressed && styles.btnPressed]}
+                        onPress={() => onSendToAI(comment)}
+                        accessibilityLabel="Send comment to AI chat"
+                    >
+                        <FontAwesomeIcon icon={faRobot} size={11} color={colors.primary} />
+                        <Text style={[styles.actionText, styles.actionTextActive]}>Send to AI</Text>
                     </Pressable>
                 )}
                 {onResolve && (
@@ -219,6 +235,7 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
     onDeleteComment,
     onAddReply,
     onResolveComment,
+    onSendToAI,
     title,
     titleIcon,
     onCollapse,
@@ -246,6 +263,7 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
     const [draft, setDraft] = useState("");
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [isSending, setIsSending] = useState(false);
+    const mentionMembers = useBrandMembers();
 
     const threaded = !!onAddReply;
 
@@ -335,6 +353,7 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
                                 onReply={threaded ? setReplyingTo : undefined}
                                 onResolve={onResolveComment}
                                 onDelete={onDeleteComment}
+                                onSendToAI={onSendToAI}
                                 colors={colors}
                                 styles={bubbleSty}
                             />
@@ -354,14 +373,16 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
                     </View>
                 )}
                 <View style={panelSty.compose}>
-                    <TextInput
-                        style={panelSty.input}
+                    <MentionInput
+                        containerStyle={panelSty.inputWrap}
+                        inputStyle={panelSty.input}
                         placeholder={placeholder}
                         placeholderTextColor={colors.textSecondary}
                         value={draft}
                         onChangeText={setDraft}
-                        multiline
+                        members={mentionMembers}
                         maxLength={maxLength}
+                        dropdownPlacement="top"
                     />
                     <Pressable
                         style={({ pressed }) => [
@@ -493,8 +514,11 @@ function panelStyles(
             shadowOpacity: 0.05,
             elevation: 4,
         },
-        input: {
+        inputWrap: {
             flex: 1,
+        },
+        input: {
+            width: "100%",
             backgroundColor: colors.tag,
             borderRadius: 10,
             paddingHorizontal: 12,

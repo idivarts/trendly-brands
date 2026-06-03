@@ -18,6 +18,8 @@
  *     onDismiss={() => setSelection(null)}
  *   />
  */
+import MentionInput from "@/components/shared/MentionInput";
+import { useBrandMembers } from "@/hooks/use-brand-members";
 import Colors from "@/shared-uis/constants/Colors";
 import { faCommentDots, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -31,7 +33,6 @@ import {
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from "react-native";
 
@@ -62,6 +63,7 @@ const SnippetCommentPopover: React.FC<SnippetCommentPopoverProps> = ({
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [text, setText] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const members = useBrandMembers();
 
     const handleSubmit = async () => {
         if (!text.trim() || submitting) return;
@@ -108,17 +110,18 @@ const SnippetCommentPopover: React.FC<SnippetCommentPopoverProps> = ({
                         </View>
                     )}
 
-                    {/* Input */}
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Add your comment..."
+                    {/* Input — supports @-mention autocomplete */}
+                    <MentionInput
+                        containerStyle={styles.inputWrap}
+                        inputStyle={styles.input}
+                        placeholder="Add your comment... (type @ to mention)"
                         placeholderTextColor={colors.textSecondary}
                         value={text}
                         onChangeText={setText}
-                        multiline
+                        members={members}
                         maxLength={600}
-                        textAlignVertical="top"
                         autoFocus
+                        dropdownPlacement="bottom"
                     />
 
                     {/* Footer */}
@@ -165,7 +168,9 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             maxWidth: 420,
             backgroundColor: colors.card,
             borderRadius: 16,
-            overflow: "hidden",
+            // No `overflow: hidden` — it would clip the @-mention suggestion
+            // dropdown (absolutely positioned below the input). Children respect
+            // the radius on their own, so corners still look rounded.
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 10 },
             shadowRadius: 28,
@@ -201,8 +206,11 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             fontStyle: "italic",
             lineHeight: 17,
         },
-        input: {
+        inputWrap: {
             margin: 16,
+        },
+        input: {
+            width: "100%",
             backgroundColor: colors.tag,
             borderRadius: 10,
             paddingHorizontal: 12,

@@ -1,10 +1,12 @@
 import AddContentModal from "@/components/content-calendar/AddContentModal";
+import ContentDetailsModal from "@/components/content-calendar/ContentDetailsModal";
 import CalendarCommentsPanel from "@/components/content-calendar/CalendarCommentsPanel";
 import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -73,6 +75,9 @@ const ContentCalendarScreen = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [addInitialDate, setAddInitialDate] = useState<string | undefined>();
 
+    // Item whose short-details preview modal is open (tapping a content card).
+    const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
+
     // ── Right panel ───────────────────────────────────────────────────────────
     // 'chat'     → AI chat panel (desktop default)
     // 'comments' → Calendar comments panel (month or item level)
@@ -103,9 +108,26 @@ const ContentCalendarScreen = () => {
         setRightPanelMode("comments");
     }, []);
 
-    // Tapping a content chip body: opens the content details page for editing.
-    const handleOpenItem = useCallback(
+    // "Send to AI" on a comment: focus its text in the chat panel and open chat.
+    const handleSendCommentToAI = useCallback((comment: PanelComment) => {
+        const label =
+            comment.text.length > 80 ? comment.text.slice(0, 80) + "..." : comment.text;
+        setFocusItems((prev) => [
+            ...prev,
+            { id: `comment-${comment.id}-${Date.now()}`, label },
+        ]);
+        setRightPanelMode("chat");
+    }, []);
+
+    // Tapping a content chip body: first show a short-details preview modal.
+    const handleOpenItem = useCallback((item: CalendarItem) => {
+        setDetailItem(item);
+    }, []);
+
+    // From the preview modal: navigate to the full content page for editing.
+    const handleGoToContentPage = useCallback(
         (item: CalendarItem) => {
+            setDetailItem(null);
             router.push({
                 pathname:
                     "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
@@ -207,6 +229,7 @@ const ContentCalendarScreen = () => {
                     month={calMonth}
                     selectedItem={selectedCommentItem}
                     onClearSelectedItem={() => setSelectedCommentItem(null)}
+                    onSendToAI={handleSendCommentToAI}
                 />
             }
             chatSlot={
@@ -301,6 +324,13 @@ const ContentCalendarScreen = () => {
                 initialDate={addInitialDate}
                 onClose={() => setShowAddModal(false)}
                 onAdd={handleAddItem}
+            />
+
+            <ContentDetailsModal
+                visible={!!detailItem}
+                item={detailItem}
+                onClose={() => setDetailItem(null)}
+                onOpenContentPage={handleGoToContentPage}
             />
         </AppLayout>
     );

@@ -12,6 +12,7 @@ import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerP
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
 import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts/auth-context.provider";
@@ -160,6 +161,15 @@ const ContentStrategyDetail = () => {
             return [...prev, { id, label }];
         });
     }, []);
+
+    // "Send to AI" on a comment: focus its text in the chat and open the panel.
+    const handleCommentToChat = useCallback(
+        (comment: PanelComment) => {
+            handleSendToChat(comment.text);
+            setRightPanelMode("chat");
+        },
+        [handleSendToChat]
+    );
 
     const handleNewStrategy = useCallback(() => {
         router.push("/(main)/(drawer)/(tabs)/(content)/content-strategies" as any);
@@ -432,6 +442,7 @@ const ContentStrategyDetail = () => {
                                         isCollecting ? undefined : (
                                             <CommentsPanel
                                                 strategyId={strategyId ?? null}
+                                                onSendToAI={handleCommentToChat}
                                             />
                                         )
                                     }
@@ -489,6 +500,7 @@ const ContentStrategyDetail = () => {
                         <CommentsPanel
                             strategyId={strategyId ?? null}
                             onCollapse={() => setRightPanelMode("none")}
+                            onSendToAI={handleCommentToChat}
                         />
                     }
                     chatSlot={

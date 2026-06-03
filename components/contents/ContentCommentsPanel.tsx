@@ -9,7 +9,7 @@
  * item-level comments use, comments posted from the Calendar automatically
  * appear here too (and vice versa) with no extra sync needed.
  */
-import SharedCommentsPanel from "@/components/shared/CommentsPanel";
+import SharedCommentsPanel, { PanelComment } from "@/components/shared/CommentsPanel";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useContentComments } from "@/hooks/use-content-comments";
 import { faCommentDots } from "@fortawesome/free-solid-svg-icons";
@@ -18,11 +18,13 @@ import React from "react";
 interface ContentCommentsPanelProps {
     contentId: string | null;
     onCollapse?: () => void;
+    onSendToAI?: (comment: PanelComment) => void;
 }
 
 const ContentCommentsPanel: React.FC<ContentCommentsPanelProps> = ({
     contentId,
     onCollapse,
+    onSendToAI,
 }) => {
     const { manager } = useAuthContext();
     const { comments, loading, addComment, addReply, resolveComment, deleteComment } =
@@ -36,6 +38,7 @@ const ContentCommentsPanel: React.FC<ContentCommentsPanelProps> = ({
             onAddReply={addReply}
             onResolveComment={resolveComment}
             onDeleteComment={deleteComment}
+            onSendToAI={onSendToAI}
             title="Comments"
             titleIcon={faCommentDots}
             onCollapse={onCollapse}
