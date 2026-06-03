@@ -5,14 +5,14 @@ import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
-import ScheduleBar from "@/components/contents/detail/ScheduleBar";
+import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
+import PostingSummary from "@/components/contents/detail/PostingSummary";
+import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
-    EDITABLE_CONTENT_STATUSES,
-    POPULAR_POSTING_TIMES,
     ScheduleMode,
     SocialDestination,
     contentStatusColors,
@@ -35,10 +35,12 @@ import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCheck,
+    faCircleInfo,
     faCommentDots,
     faEye,
     faHandshake,
     faMagicWandSparkles,
+    faPaperPlane,
     faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -108,6 +110,8 @@ const CreateContentScreen = () => {
     const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCollabModal, setShowCollabModal] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [showPublishModal, setShowPublishModal] = useState(false);
 
     // Firestore items arrive after first render. Hydrate local form state the
     // first time the real item shows up for this contentId. Tracked per-id so
@@ -274,6 +278,7 @@ const CreateContentScreen = () => {
                 setStatus("scheduled");
             }
             setDirty(false);
+            setShowPublishModal(false);
         } catch (e) {
             // Surface via console for now; a toast is added in the Phase 6 polish.
             console.warn("Publish/schedule error:", e);
@@ -399,6 +404,8 @@ const CreateContentScreen = () => {
         year: "numeric",
     });
 
+    const statusColorSet = contentStatusColors(status, colors);
+
     const headerActions = useMemo(
         () => [
             // 💬 Comments + 🤖 Chat toggles — mobile only; desktop lives in the RightSidePanel rail
@@ -468,6 +475,30 @@ const CreateContentScreen = () => {
                     />
                 </Pressable>
             ) : null,
+            // ℹ️ Content details (title / idea / status)
+            <Pressable
+                key="info"
+                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                onPress={() => setShowInfoModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Content details"
+            >
+                <FontAwesomeIcon icon={faCircleInfo} size={16} color={colors.textSecondary} />
+            </Pressable>,
+            // 🚀 Publish / schedule
+            <Pressable
+                key="publish"
+                style={({ pressed }) => [
+                    xl ? styles.publishHeaderBtn : styles.iconBtn,
+                    pressed && styles.iconBtnPressed,
+                ]}
+                onPress={() => setShowPublishModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Publish or schedule"
+            >
+                <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.primary} />
+                {xl && <Text style={styles.publishHeaderText}>Publish</Text>}
+            </Pressable>,
             // Save
             <Pressable
                 key="save"
@@ -498,10 +529,31 @@ const CreateContentScreen = () => {
         <AppLayout>
             <PageHeader
                 title={title || "Create Content"}
-                subtitle={CONTENT_TYPE_LABELS[contentType]}
                 showBackButton
                 actionButtons={headerActions}
                 mobileActions="all"
+                customMainContent={
+                    <View style={styles.headerMain}>
+                        <View style={styles.headerTitleRow}>
+                            <Text style={styles.headerTitleText} numberOfLines={1}>
+                                {title || "Create Content"}
+                            </Text>
+                            <View
+                                style={[styles.statusBadge, { backgroundColor: statusColorSet.bg }]}
+                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}`}
+                            >
+                                <Text style={[styles.statusBadgeText, { color: statusColorSet.fg }]}>
+                                    {CONTENT_STATUS_LABELS[status]}
+                                </Text>
+                            </View>
+                        </View>
+                        {xl ? (
+                            <Text style={styles.headerTypeText}>
+                                {CONTENT_TYPE_LABELS[contentType]}
+                            </Text>
+                        ) : null}
+                    </View>
+                }
             />
 
             {/* ── Split layout: form (left) + comments panel (right) ─────── */}
@@ -516,91 +568,32 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* ── Status + Content Info (compact, single card) ────── */}
-                        <View style={styles.section}>
-                            <View style={styles.card}>
-                                {/* Meta row: type tag + editable status chips, all inline */}
-                                <View style={styles.metaRow}>
-                                    <View style={styles.typeTag}>
-                                        <Text style={styles.typeTagText}>
-                                            {CONTENT_TYPE_LABELS[contentType]}
-                                        </Text>
-                                    </View>
-                                    {EDITABLE_CONTENT_STATUSES.map((s) => {
-                                        const sc = contentStatusColors(s, colors);
-                                        const active = status === s;
-                                        return (
-                                            <Pressable
-                                                key={s}
-                                                style={({ pressed }) => [
-                                                    styles.statusChip,
-                                                    {
-                                                        backgroundColor: active ? sc.bg : colors.tag,
-                                                    },
-                                                    pressed && styles.btnPressed,
-                                                ]}
-                                                onPress={() => setStatus(s)}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.statusChipText,
-                                                        {
-                                                            color: active
-                                                                ? sc.fg
-                                                                : colors.textSecondary,
-                                                            fontWeight: active ? "700" : "500",
-                                                        },
-                                                    ]}
-                                                >
-                                                    {CONTENT_STATUS_LABELS[s]}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
-                                </View>
-
-                                <TextInput
-                                    style={[styles.input, styles.titleInput]}
-                                    placeholder="Title — e.g. Founder Story Launch Reel"
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={title}
-                                    onChangeText={setTitle}
-                                    maxLength={120}
-                                />
-
-                                <TextInput
-                                    style={[styles.input, styles.ideaInput]}
-                                    placeholder="Idea / vision — concept, mood, or key message…"
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={idea}
-                                    onChangeText={setIdea}
-                                    multiline
-                                    maxLength={500}
-                                    textAlignVertical="top"
-                                />
-
-                                {/* Destinations & schedule live in the same panel */}
-                                <View style={styles.cardDivider} />
-                                <ScheduleBar
-                                    embedded
+                        {/* ── Posting summary (only once configured) ──────────── */}
+                        {destinations.length > 0 ? (
+                            <View style={styles.section}>
+                                <PostingSummary
                                     socialAccounts={socialAccounts}
                                     destinations={destinations}
-                                    onDestinationsChange={setDestinations}
                                     scheduleMode={scheduleMode}
-                                    onScheduleModeChange={setScheduleMode}
                                     formattedDate={formattedDate}
-                                    onPressDate={() => setShowDatePicker(true)}
                                     timeOfPosting={timeOfPosting}
-                                    onTimeChange={setTimeOfPosting}
-                                    onPublish={handlePublish}
-                                    publishing={publishing}
+                                    onEdit={() => setShowPublishModal(true)}
                                 />
                             </View>
-                        </View>
+                        ) : null}
 
-                        {/* ── Content (media + script) ─────────────────────────── */}
+                        {/* ── Content heading: title + type ────────────────────── */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>CONTENT</Text>
+                            <View style={styles.contentHeading}>
+                                <Text style={styles.contentTitle} numberOfLines={2}>
+                                    {title || "Untitled content"}
+                                </Text>
+                                <View style={styles.typeTag}>
+                                    <Text style={styles.typeTagText}>
+                                        {CONTENT_TYPE_LABELS[contentType]}
+                                    </Text>
+                                </View>
+                            </View>
 
                             {mediaSpec.kind !== "none" && (
                                 <MediaStage
@@ -843,6 +836,34 @@ const CreateContentScreen = () => {
                 content={collabSource}
                 onClose={() => setShowCollabModal(false)}
             />
+
+            <ContentInfoModal
+                visible={showInfoModal}
+                title={title}
+                idea={idea}
+                status={status}
+                typeLabel={CONTENT_TYPE_LABELS[contentType]}
+                onChangeTitle={setTitle}
+                onChangeIdea={setIdea}
+                onChangeStatus={setStatus}
+                onClose={() => setShowInfoModal(false)}
+            />
+
+            <PublishModal
+                visible={showPublishModal}
+                onClose={() => setShowPublishModal(false)}
+                socialAccounts={socialAccounts}
+                destinations={destinations}
+                onDestinationsChange={setDestinations}
+                scheduleMode={scheduleMode}
+                onScheduleModeChange={setScheduleMode}
+                formattedDate={formattedDate}
+                onPressDate={() => setShowDatePicker(true)}
+                timeOfPosting={timeOfPosting}
+                onTimeChange={setTimeOfPosting}
+                onPublish={handlePublish}
+                publishing={publishing}
+            />
         </AppLayout>
     );
 };
@@ -898,6 +919,69 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 3,
                 },
                 iconBtnPressed: { opacity: 0.75 },
+                // ── Header custom main (title + status badge + type) ──────────
+                headerMain: {
+                    flex: 1,
+                    flexShrink: 1,
+                    minWidth: 0,
+                },
+                headerTitleRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                },
+                headerTitleText: {
+                    flexShrink: 1,
+                    fontSize: 22,
+                    fontWeight: "700",
+                    color: colors.text,
+                },
+                statusBadge: {
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                    flexShrink: 0,
+                },
+                statusBadgeText: {
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 0.3,
+                },
+                headerTypeText: {
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                    marginTop: 2,
+                    letterSpacing: 1,
+                },
+                // Secondary header button (Publish) — distinct from primary Save
+                publishHeaderBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: colors.aliceBlue,
+                },
+                publishHeaderText: {
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: colors.primary,
+                },
+                // ── In-page content heading (title + type tag) ───────────────
+                contentHeading: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 12,
+                },
+                contentTitle: {
+                    flexShrink: 1,
+                    fontSize: 18,
+                    fontWeight: "700",
+                    color: colors.text,
+                },
                 sectionLabel: {
                     fontSize: 11,
                     fontWeight: "700",
@@ -975,40 +1059,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowRadius: 4,
                     shadowOpacity: 0.06,
                     elevation: 2,
-                },
-                metaRow: {
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 12,
-                },
-                titleInput: {
-                    fontSize: 15,
-                    fontWeight: "600",
-                },
-                ideaInput: {
-                    marginTop: 10,
-                    minHeight: 48,
-                    maxHeight: 90,
-                },
-                cardDivider: {
-                    height: 1,
-                    backgroundColor: colors.tag,
-                    marginVertical: 16,
-                },
-                statusChip: {
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
-                },
-                statusChipText: {
-                    fontSize: 13,
                 },
                 collabBanner: {
                     flexDirection: "row",

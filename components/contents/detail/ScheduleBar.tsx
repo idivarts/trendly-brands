@@ -36,6 +36,9 @@ interface ScheduleBarProps {
     publishing: boolean;
     /** When true, renders without its own card chrome (sits inside a parent card). */
     embedded?: boolean;
+    /** When true, both blocks stay fully expanded with no summary/Edit toggles
+     *  (used inside the publish modal, where editing is the whole point). */
+    alwaysEditing?: boolean;
 }
 
 // Only these platforms are publishable from Trendly today.
@@ -54,6 +57,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     onPublish,
     publishing,
     embedded = false,
+    alwaysEditing = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -89,7 +93,8 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     //    one account is chosen (you can't publish without one).
     const [editDest, setEditDest] = useState(false);
     const [editWhen, setEditWhen] = useState(false);
-    const showDestPicker = editDest || destinations.length === 0;
+    const showDestPicker = alwaysEditing || editDest || destinations.length === 0;
+    const showWhenControls = alwaysEditing || editWhen;
 
     const timeLabel = useMemo(() => {
         if (!timeOfPosting) return "default time";
@@ -160,10 +165,12 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
             {/* ── Destinations ─────────────────────────────────────────── */}
             <View style={styles.blockHead}>
                 <Text style={styles.blockLabel}>Send to</Text>
-                {accounts.length > 0 && destinations.length > 0 ? (
+                {!alwaysEditing && accounts.length > 0 && destinations.length > 0 ? (
                     <Pressable
                         style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
                         onPress={() => setEditDest((v) => !v)}
+                        accessibilityRole="button"
+                        accessibilityLabel={editDest ? "Done editing accounts" : "Edit accounts"}
                     >
                         <FontAwesomeIcon
                             icon={faPen}
@@ -193,16 +200,20 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
             <View style={styles.softDivider} />
             <View style={styles.blockHead}>
                 <Text style={styles.blockLabel}>When</Text>
-                <Pressable
-                    style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-                    onPress={() => setEditWhen((v) => !v)}
-                >
-                    <FontAwesomeIcon icon={faPen} size={10} color={colors.primary} />
-                    <Text style={styles.editText}>{editWhen ? "Done" : "Edit"}</Text>
-                </Pressable>
+                {!alwaysEditing ? (
+                    <Pressable
+                        style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+                        onPress={() => setEditWhen((v) => !v)}
+                        accessibilityRole="button"
+                        accessibilityLabel={editWhen ? "Done editing schedule" : "Edit schedule"}
+                    >
+                        <FontAwesomeIcon icon={faPen} size={10} color={colors.primary} />
+                        <Text style={styles.editText}>{editWhen ? "Done" : "Edit"}</Text>
+                    </Pressable>
+                ) : null}
             </View>
 
-            {!editWhen ? (
+            {!showWhenControls ? (
                 <View style={styles.whenSummaryRow}>
                     <FontAwesomeIcon
                         icon={scheduleMode === "now" ? faBolt : faCalendarDays}
