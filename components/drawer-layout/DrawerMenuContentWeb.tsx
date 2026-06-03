@@ -601,21 +601,21 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
                         {/* 6. GROWTH */}
                         <View style={styles.brandDetailsSection}>
-                            <Pressable
+                            {/* <Pressable
                                 onPress={() => { }}
                                 onHoverIn={() => setIsGrowthHovered(true)}
                                 onHoverOut={() => setIsGrowthHovered(false)}
+                            > */}
+                            <View
+                                style={[
+                                    styles.sectionHeaderRow,
+                                    isGrowthHovered && styles.sectionHeaderRowHover,
+                                ]}
                             >
-                                <View
-                                    style={[
-                                        styles.sectionHeaderRow,
-                                        isGrowthHovered && styles.sectionHeaderRowHover,
-                                    ]}
-                                >
-                                    <Text style={styles.sectionTitle}>Growth</Text>
-                                    <DrawerIcon icon={faChevronRight} size={12} />
-                                </View>
-                            </Pressable>
+                                <Text style={styles.sectionTitle}>Growth</Text>
+                                {/* <DrawerIcon icon={faChevronRight} size={12} /> */}
+                            </View>
+                            {/* </Pressable> */}
                             <View style={styles.divider} />
                             <View style={styles.menuItems}>
                                 <InfluencerLedGrowth variant="expanded" />
