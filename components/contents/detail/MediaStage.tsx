@@ -1,4 +1,5 @@
 import { ContentType } from "@/components/content-calendar/types";
+import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { pickMedia } from "@/shared-libs/utils/media-picker";
@@ -14,14 +15,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from "react-native";
 import { aspectError, MEDIA_SPEC } from "./media-spec";
@@ -33,7 +33,7 @@ interface MediaStageProps {
     /** AI image-generation prompt (only used when the type supports generation). */
     imagePrompt: string;
     onImagePromptChange: (v: string) => void;
-    onGenerateImage: () => void;
+    onGenerateImage: (prompt?: string) => void;
     isGeneratingImage: boolean;
 }
 
@@ -63,6 +63,13 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPrompt, setShowPrompt] = useState(false);
+
+    // Close the floating prompt once a generation finishes (true → false).
+    const wasGeneratingRef = useRef(false);
+    useEffect(() => {
+        if (wasGeneratingRef.current && !isGeneratingImage) setShowPrompt(false);
+        wasGeneratingRef.current = isGeneratingImage;
+    }, [isGeneratingImage]);
 
     const handleUpload = useCallback(async () => {
         setError(null);
@@ -238,7 +245,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             showPrompt && styles.genToggleBtnActive,
                             pressed && styles.pressed,
                         ]}
-                        onPress={() => setShowPrompt((v) => !v)}
+                        onPress={() => setShowPrompt(true)}
                     >
                         <FontAwesomeIcon
                             icon={faMagicWandSparkles}
@@ -257,38 +264,22 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 ) : null}
             </View>
 
-            {/* AI generation prompt */}
-            {spec.canGenerate && showPrompt ? (
-                <View style={styles.genArea}>
-                    <TextInput
-                        style={styles.genInput}
-                        placeholder="Describe the visual you want — style, subject, brand colours…"
-                        placeholderTextColor={colors.textSecondary}
-                        value={imagePrompt}
-                        onChangeText={onImagePromptChange}
-                        multiline
-                        maxLength={600}
-                        textAlignVertical="top"
-                    />
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.genBtn,
-                            (!imagePrompt.trim() || isGeneratingImage) && styles.genBtnDisabled,
-                            pressed && styles.pressed,
-                        ]}
-                        onPress={onGenerateImage}
-                        disabled={!imagePrompt.trim() || isGeneratingImage}
-                    >
-                        {isGeneratingImage ? (
-                            <ActivityIndicator size="small" color={colors.onPrimary} />
-                        ) : (
-                            <FontAwesomeIcon icon={faMagicWandSparkles} size={13} color={colors.onPrimary} />
-                        )}
-                        <Text style={styles.genBtnText}>
-                            {isGeneratingImage ? "Generating…" : spec.multi ? "Generate slide" : "Generate image"}
-                        </Text>
-                    </Pressable>
-                </View>
+            {/* AI generation prompt — floating gradient box (web) / modal (mobile) */}
+            {spec.canGenerate ? (
+                <FloatingPromptInput
+                    visible={showPrompt}
+                    title={spec.multi ? "Generate a slide with AI" : "Generate an image with AI"}
+                    subtitle="Describe the visual — style, subject, brand colours…"
+                    placeholder="E.g. minimalist flat-lay of orthopedic sandals on a warm beige background…"
+                    ctaLabel={spec.multi ? "Generate slide" : "Generate image"}
+                    loading={isGeneratingImage}
+                    initialValue={imagePrompt}
+                    onClose={() => setShowPrompt(false)}
+                    onGenerate={(prompt) => {
+                        onImagePromptChange(prompt);
+                        onGenerateImage(prompt);
+                    }}
+                />
             ) : null}
         </View>
     );
@@ -475,49 +466,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             color: colors.primary,
         },
         genToggleTextActive: {
-            color: colors.onPrimary,
-        },
-        genArea: {
-            marginTop: 12,
-            gap: 10,
-        },
-        genInput: {
-            backgroundColor: colors.tag,
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            fontSize: 14,
-            color: colors.text,
-            minHeight: 80,
-            maxHeight: 160,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowRadius: 3,
-            shadowOpacity: 0.04,
-            elevation: 1,
-        },
-        genBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            paddingVertical: 12,
-            borderRadius: 10,
-            backgroundColor: colors.primary,
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 12,
-            shadowOpacity: 0.35,
-            elevation: 4,
-        },
-        genBtnDisabled: {
-            opacity: 0.45,
-            shadowOpacity: 0,
-            elevation: 0,
-        },
-        genBtnText: {
-            fontSize: 14,
-            fontWeight: "700",
             color: colors.onPrimary,
         },
         pressed: {

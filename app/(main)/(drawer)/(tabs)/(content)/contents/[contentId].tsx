@@ -1,7 +1,7 @@
 import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
-import MagicPromptModal from "@/components/contents/detail/MagicPromptModal";
+import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
@@ -160,6 +160,7 @@ const CreateContentScreen = () => {
     }, []);
 
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
+    const [magicGenerating, setMagicGenerating] = useState(false);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -288,6 +289,7 @@ const CreateContentScreen = () => {
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
             const platform = "Instagram";
+            setMagicGenerating(true);
             if (magicTarget === "caption") {
                 generateCaption({
                     topic: prompt,
@@ -320,11 +322,13 @@ const CreateContentScreen = () => {
         });
     }, [scriptAiPrompt, isReel, title, idea, contentId, generateScript]);
 
-    const handleImageGenerate = useCallback(() => {
-        if (!imagePrompt.trim()) return;
+    const handleImageGenerate = useCallback((promptArg?: string) => {
+        const p = (promptArg ?? imagePrompt).trim();
+        if (!p) return;
+        setImagePrompt(p);
         setIsGeneratingImage(true);
         generateImage({
-            description: imagePrompt,
+            description: p,
             aspectRatio: MEDIA_SPEC[contentType].aspectRatios[0] ?? "1:1",
             count: 1,
         });
@@ -332,11 +336,12 @@ const CreateContentScreen = () => {
 
     // React to AI generation results streaming back from the backend.
 
-    // Captions: take the first variant and apply it. The MagicPromptModal closes
-    // on apply via its own onGenerate flow; we just clear magicTarget when done.
+    // Captions: take the first variant and apply it. The FloatingPromptInput
+    // closes when we clear magicTarget once the result lands.
     useEffect(() => {
         if (magicTarget !== "caption" || aiCaptions.length === 0) return;
         setCaption(aiCaptions[0].text);
+        setMagicGenerating(false);
         setMagicTarget(null);
     }, [aiCaptions, magicTarget]);
 
@@ -348,6 +353,7 @@ const CreateContentScreen = () => {
             .map((t) => `#${t}`)
             .join(" ");
         setHashtags(joined);
+        setMagicGenerating(false);
         setMagicTarget(null);
     }, [aiHashtags, magicTarget]);
 
@@ -510,79 +516,84 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* ── Status Row ──────────────────────────────────────── */}
+                        {/* ── Status + Content Info (compact, single card) ────── */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>STATUS</Text>
-                            <View style={styles.statusRow}>
-                                {EDITABLE_CONTENT_STATUSES.map((s) => {
-                                    const sc = contentStatusColors(s, colors);
-                                    const active = status === s;
-                                    return (
-                                        <Pressable
-                                            key={s}
-                                            style={({ pressed }) => [
-                                                styles.statusChip,
-                                                {
-                                                    backgroundColor: active ? sc.bg : colors.tag,
-                                                },
-                                                pressed && styles.btnPressed,
-                                            ]}
-                                            onPress={() => setStatus(s)}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.statusChipText,
-                                                    {
-                                                        color: active
-                                                            ? sc.fg
-                                                            : colors.textSecondary,
-                                                        fontWeight: active ? "700" : "500",
-                                                    },
-                                                ]}
-                                            >
-                                                {CONTENT_STATUS_LABELS[s]}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                            </View>
-                        </View>
-
-                        {/* ── Calendar Stage Fields ────────────────────────────── */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>CONTENT INFO</Text>
                             <View style={styles.card}>
-                                <View style={styles.fieldRow}>
-                                    <Text style={styles.fieldLabel}>Type</Text>
+                                {/* Meta row: type tag + editable status chips, all inline */}
+                                <View style={styles.metaRow}>
                                     <View style={styles.typeTag}>
                                         <Text style={styles.typeTagText}>
                                             {CONTENT_TYPE_LABELS[contentType]}
                                         </Text>
                                     </View>
+                                    {EDITABLE_CONTENT_STATUSES.map((s) => {
+                                        const sc = contentStatusColors(s, colors);
+                                        const active = status === s;
+                                        return (
+                                            <Pressable
+                                                key={s}
+                                                style={({ pressed }) => [
+                                                    styles.statusChip,
+                                                    {
+                                                        backgroundColor: active ? sc.bg : colors.tag,
+                                                    },
+                                                    pressed && styles.btnPressed,
+                                                ]}
+                                                onPress={() => setStatus(s)}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.statusChipText,
+                                                        {
+                                                            color: active
+                                                                ? sc.fg
+                                                                : colors.textSecondary,
+                                                            fontWeight: active ? "700" : "500",
+                                                        },
+                                                    ]}
+                                                >
+                                                    {CONTENT_STATUS_LABELS[s]}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
                                 </View>
 
-                                <View style={styles.fieldDivider} />
-
-                                <Text style={styles.fieldLabel}>Title</Text>
                                 <TextInput
-                                    style={styles.input}
-                                    placeholder="E.g. Founder Story Launch Reel"
+                                    style={[styles.input, styles.titleInput]}
+                                    placeholder="Title — e.g. Founder Story Launch Reel"
                                     placeholderTextColor={colors.textSecondary}
                                     value={title}
                                     onChangeText={setTitle}
                                     maxLength={120}
                                 />
 
-                                <Text style={[styles.fieldLabel, styles.mt12]}>Idea / Vision</Text>
                                 <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    placeholder="Describe the concept, mood, or key message..."
+                                    style={[styles.input, styles.ideaInput]}
+                                    placeholder="Idea / vision — concept, mood, or key message…"
                                     placeholderTextColor={colors.textSecondary}
                                     value={idea}
                                     onChangeText={setIdea}
                                     multiline
                                     maxLength={500}
                                     textAlignVertical="top"
+                                />
+
+                                {/* Destinations & schedule live in the same panel */}
+                                <View style={styles.cardDivider} />
+                                <ScheduleBar
+                                    embedded
+                                    socialAccounts={socialAccounts}
+                                    destinations={destinations}
+                                    onDestinationsChange={setDestinations}
+                                    scheduleMode={scheduleMode}
+                                    onScheduleModeChange={setScheduleMode}
+                                    formattedDate={formattedDate}
+                                    onPressDate={() => setShowDatePicker(true)}
+                                    timeOfPosting={timeOfPosting}
+                                    onTimeChange={setTimeOfPosting}
+                                    onPublish={handlePublish}
+                                    publishing={publishing}
                                 />
                             </View>
                         </View>
@@ -684,24 +695,6 @@ const CreateContentScreen = () => {
                                     </Pressable>
                                 </View>
                             </View>
-                        </View>
-
-                        {/* ── Destinations & schedule ──────────────────────────── */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>DESTINATIONS & SCHEDULE</Text>
-                            <ScheduleBar
-                                socialAccounts={socialAccounts}
-                                destinations={destinations}
-                                onDestinationsChange={setDestinations}
-                                scheduleMode={scheduleMode}
-                                onScheduleModeChange={setScheduleMode}
-                                formattedDate={formattedDate}
-                                onPressDate={() => setShowDatePicker(true)}
-                                timeOfPosting={timeOfPosting}
-                                onTimeChange={setTimeOfPosting}
-                                onPublish={handlePublish}
-                                publishing={publishing}
-                            />
                         </View>
 
                         {/* ── Reel Collab CTA ───────────────────────────────────── */}
@@ -823,18 +816,24 @@ const CreateContentScreen = () => {
                 onClose={() => setShowDatePicker(false)}
             />
 
-            <MagicPromptModal
+            <FloatingPromptInput
                 visible={magicTarget !== null}
                 title={
                     magicTarget === "caption"
-                        ? "Generate Caption with AI"
-                        : "Generate Hashtags with AI"
+                        ? "Generate caption with AI"
+                        : "Generate hashtags with AI"
+                }
+                subtitle={
+                    magicTarget === "caption"
+                        ? "Set the tone, or paste a draft to refine."
+                        : "Describe your niche, product, or audience."
                 }
                 placeholder={
                     magicTarget === "caption"
-                        ? "Describe the tone: funny, professional, motivational... or paste your draft to enhance it."
-                        : "Describe your niche, product, or target audience for relevant hashtags."
+                        ? "E.g. punchy and playful, highlight free shipping…"
+                        : "E.g. orthopedic sandals for women, wellness niche…"
                 }
+                loading={magicGenerating}
                 onClose={() => setMagicTarget(null)}
                 onGenerate={handleMagicGenerate}
             />
@@ -928,21 +927,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     lineHeight: 18,
                     marginBottom: 12,
                 },
-                fieldRow: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingVertical: 4,
-                },
-                fieldDivider: {
-                    height: 10,
-                },
-                fieldLabel: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                    marginBottom: 6,
-                },
                 typeTag: {
                     paddingHorizontal: 12,
                     paddingVertical: 4,
@@ -970,10 +954,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 inputFlex: {
                     flex: 1,
                 },
-                textArea: {
-                    minHeight: 90,
-                    maxHeight: 180,
-                },
                 textAreaShort: {
                     minHeight: 70,
                     maxHeight: 140,
@@ -996,10 +976,26 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowOpacity: 0.06,
                     elevation: 2,
                 },
-                statusRow: {
+                metaRow: {
                     flexDirection: "row",
-                    gap: 8,
                     flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 12,
+                },
+                titleInput: {
+                    fontSize: 15,
+                    fontWeight: "600",
+                },
+                ideaInput: {
+                    marginTop: 10,
+                    minHeight: 48,
+                    maxHeight: 90,
+                },
+                cardDivider: {
+                    height: 1,
+                    backgroundColor: colors.tag,
+                    marginVertical: 16,
                 },
                 statusChip: {
                     paddingHorizontal: 14,
@@ -1103,9 +1099,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 btnPressed: {
                     opacity: 0.72,
-                },
-                mt12: {
-                    marginTop: 12,
                 },
                 bottomPad: {
                     height: 40,
