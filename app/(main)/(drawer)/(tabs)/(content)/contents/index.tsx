@@ -44,10 +44,7 @@ const ContentsScreen = () => {
     };
 
     const handleOpenContent = (item: ContentItem) => {
-        router.push({
-            pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
-            params: { contentId: item.id },
-        });
+        router.push(`/contents/${item.id}`);
     };
 
     const addButton = (
