@@ -1,15 +1,14 @@
-import Colors from "@/shared-uis/constants/Colors";
 import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
 import { useAuthContext, useLocationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import { truncateText } from "@/utils/text";
 import { imageUrl } from "@/utils/url";
 import {
     faAddressCard,
     faArrowTrendUp,
     faBullseye,
-    faCalendarDays,
     faChartLine,
     faComment,
     faCreditCard,
@@ -18,13 +17,11 @@ import {
     faFileLines,
     faGears,
     faGem,
-    faLayerGroup,
-    faPenRuler,
     faShareNodes,
     faStar,
     faTriangleExclamation,
     faUsers,
-    faUserShield,
+    faUserShield
 } from "@fortawesome/free-solid-svg-icons";
 import { useTheme, type Theme } from "@react-navigation/native";
 import { Href, useRouter } from "expo-router";
@@ -62,16 +59,6 @@ const Menu = () => {
     const { isIndiaBased } = useLocationContext();
 
     const sections = useMemo<MenuSection[]>(() => {
-        const create: MenuItem[] = [
-            { id: "content-strategies", icon: faPenRuler, title: "Content Strategy", href: "/content-strategies" },
-            { id: "content-calendar", icon: faCalendarDays, title: "Content Calendar", href: "/content-calendar" },
-            { id: "contents", icon: faLayerGroup, title: "All Content", href: "/contents" },
-            // Outside India, Collaboration Requests sits in the Create section
-            // (web drawer parity).
-            ...(!isIndiaBased
-                ? [{ id: "collaborations-create", icon: faStar, title: "Collaboration Requests", href: "/collaborations" as Href }]
-                : []),
-        ];
 
         // India-based brands get a dedicated Campaign section.
         const campaign: MenuItem[] = isIndiaBased
@@ -118,7 +105,6 @@ const Menu = () => {
             : [];
 
         return [
-            { title: "Create", items: create },
             { title: "Campaign", items: campaign },
             { title: "Manage", items: manage },
             { title: "Brand", items: brand },

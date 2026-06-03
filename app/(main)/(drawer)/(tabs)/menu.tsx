@@ -1,14 +1,15 @@
 import Menu from "@/components/menu";
 import { Text } from "@/components/theme/Themed";
-import Button from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
+import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -22,6 +23,7 @@ const MenuScreen = () => {
     const { selectedBrand, brands } = useBrandContext();
     const { manager } = useAuthContext();
     const theme = useTheme();
+    const { xl } = useBreakpoints();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -59,7 +61,7 @@ const MenuScreen = () => {
     const brandTitleContent = (
         <Pressable onPress={() => OpenDrawerSubject.next(true)} style={styles.brandTitleRow}>
             <Text style={styles.brandTitle}>{selectedBrand?.name ?? "My Brand"}</Text>
-            {brands.length > 1 && (
+            {brands.length > 1 && !xl && (
                 <FontAwesomeIcon
                     color={colors.text}
                     icon={faChevronDown}
@@ -77,9 +79,15 @@ const MenuScreen = () => {
                 mobileActions="all"
                 customMainContent={brandTitleContent}
                 actionButtons={[
-                    <Button key="copy" mode="outlined" onPress={copyBrandId} size="small">
-                        Copy ID
-                    </Button>,
+                    <Pressable
+                        key="copy"
+                        onPress={copyBrandId}
+                        style={styles.iconButton}
+                        accessibilityLabel="Copy Brand ID"
+                        accessibilityRole="button"
+                    >
+                        <FontAwesomeIcon icon={faCopy} size={16} color={colors.text} />
+                    </Pressable>,
                 ]}
                 rightComponent={profileButton}
             />
@@ -109,5 +117,13 @@ const makeStyles = (colors: ReturnType<typeof Colors>) =>
         },
         profileButton: {
             padding: 8,
+        },
+        iconButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
         },
     });
