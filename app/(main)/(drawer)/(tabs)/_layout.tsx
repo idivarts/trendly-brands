@@ -122,7 +122,7 @@ const TabLayout = () => {
                         <CoachmarkAnchor
                             id="guide-tour-campaigns-mobile"
                             shape="pill"
-                            style={{ flex: 1 }}
+                        // style={{ flex: 1 }}
                         >
                             <FontAwesomeIcon
                                 color={color}
