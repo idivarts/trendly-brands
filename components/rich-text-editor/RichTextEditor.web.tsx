@@ -184,8 +184,6 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 setPopoverPos(null);
                 return;
             }
-            const editor = container.querySelector(".ql-editor") as HTMLElement | null;
-            if (!editor) return;
             const bounds = quill.getBounds(range.index, range.length);
             if (!bounds) return;
 
@@ -193,24 +191,38 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             const POPOVER_WIDTH_ESTIMATE = 320;
             const GAP = 8;
 
-            // Coordinates of selection rect relative to the outer container.
-            const selTop = editor.offsetTop + bounds.top - editor.scrollTop;
-            const selLeft = editor.offsetLeft + bounds.left - editor.scrollLeft;
+            // `quill.getBounds()` returns the selection rect relative to the
+            // container's *visible* top-left — it already accounts for the
+            // editor's internal scroll and any page scroll. The popover is
+            // position:absolute inside this same (position:relative) container,
+            // whose `top`/`left` are measured in the container's *content*
+            // coordinate space. Convert by adding the container's own scroll
+            // offset. (The previous code subtracted the editor's scrollTop,
+            // which double-counted the scroll and made the popover drift up by
+            // ~the scroll amount once the doc was scrolled.)
+            const selTop = bounds.top + container.scrollTop;
+            const selLeft = bounds.left + container.scrollLeft;
             const selCenterX = selLeft + bounds.width / 2;
+
+            // Top edge of the currently-visible area, in content coordinates.
+            const visibleTop = container.scrollTop;
 
             // Default: place above the selection; flip below if not enough room.
             let placement: "top" | "bottom" = "top";
             let top = selTop - POPOVER_HEIGHT_ESTIMATE - GAP;
-            if (top < editor.offsetTop + 4) {
+            if (top < visibleTop + 4) {
                 placement = "bottom";
                 top = selTop + bounds.height + GAP;
             }
 
-            // Clamp left within container.
+            // Clamp left within the container's visible width (content coords).
             const containerWidth = container.clientWidth;
+            const minLeft = container.scrollLeft + 8;
+            const maxLeft = Math.max(
+                minLeft,
+                container.scrollLeft + containerWidth - POPOVER_WIDTH_ESTIMATE - 8
+            );
             let left = selCenterX - POPOVER_WIDTH_ESTIMATE / 2;
-            const minLeft = 8;
-            const maxLeft = Math.max(minLeft, containerWidth - POPOVER_WIDTH_ESTIMATE - 8);
             left = Math.max(minLeft, Math.min(maxLeft, left));
 
             setPopoverPos({ top, left, placement });
