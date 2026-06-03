@@ -34,14 +34,14 @@
  */
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronRight, faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faCommentDots, faEye, faRobot } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export type RightPanelMode = "none" | "comments" | "chat";
+export type RightPanelMode = "none" | "comments" | "chat" | "preview";
 
 interface RightSidePanelProps {
     mode: RightPanelMode;
@@ -52,6 +52,8 @@ interface RightSidePanelProps {
     /** Content to show when mode === 'chat'. Same convention as commentsSlot.
      *  Optional — omit on screens that have no AI chat panel. */
     chatSlot?: React.ReactNode;
+    /** Content to show when mode === 'preview'. Same convention as the others. */
+    previewSlot?: React.ReactNode;
 }
 
 /**
@@ -202,19 +204,25 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     onModeChange,
     commentsSlot,
     chatSlot,
+    previewSlot,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useMemo(() => createStyles(colors, xl), [colors, xl]);
 
+    type ActiveMode = Exclude<RightPanelMode, "none">;
     // Default to whichever slot is available.
-    const defaultMode: "comments" | "chat" = commentsSlot ? "comments" : "chat";
+    const defaultMode: ActiveMode = commentsSlot
+        ? "comments"
+        : chatSlot
+            ? "chat"
+            : "preview";
 
     // Remember the last active mode so an external trigger (e.g. mobile header
     // icons that get retained under Option C) can restore the user's last
     // surface preference if it ever decides to.
-    const lastModeRef = useRef<"comments" | "chat">(defaultMode);
+    const lastModeRef = useRef<ActiveMode>(defaultMode);
     useEffect(() => {
         if (mode !== "none") lastModeRef.current = mode;
     }, [mode]);
@@ -226,7 +234,7 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
      * to that mode if a different surface is open, and collapses the panel
      * if its own mode is already active. One predictable rule across states.
      */
-    const handleToggle = (target: "comments" | "chat") => {
+    const handleToggle = (target: ActiveMode) => {
         if (mode === target) {
             onModeChange("none");
         } else {
@@ -253,6 +261,7 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
                 <View style={styles.mobileSheet}>
                     {mode === "comments" && commentsSlot}
                     {mode === "chat" && chatSlot}
+                    {mode === "preview" && previewSlot}
                 </View>
             </View>
         );
@@ -299,11 +308,21 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
                         colors={colors}
                     />
                 )}
+                {previewSlot && (
+                    <RailIcon
+                        icon={faEye}
+                        label="Preview"
+                        active={mode === "preview"}
+                        onPress={() => handleToggle("preview")}
+                        colors={colors}
+                    />
+                )}
             </View>
             {isExpanded && (
                 <View style={styles.content}>
                     {mode === "comments" && commentsSlot}
                     {mode === "chat" && chatSlot}
+                    {mode === "preview" && previewSlot}
                 </View>
             )}
         </View>

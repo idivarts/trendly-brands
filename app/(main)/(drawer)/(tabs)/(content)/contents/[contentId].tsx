@@ -1,35 +1,45 @@
 import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
+import MagicPromptModal from "@/components/contents/detail/MagicPromptModal";
+import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
+import MediaStage from "@/components/contents/detail/MediaStage";
+import PreviewPanel from "@/components/contents/detail/PreviewPanel";
+import ScheduleBar from "@/components/contents/detail/ScheduleBar";
+import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
-    POPULAR_POSTING_TIMES
+    EDITABLE_CONTENT_STATUSES,
+    POPULAR_POSTING_TIMES,
+    ScheduleMode,
+    SocialDestination,
+    contentStatusColors,
 } from "@/components/contents/types";
 import DatePickerModal, {
     formatDateForWebInput,
 } from "@/components/modals/DatePickerModal";
-import RichTextEditor from "@/components/rich-text-editor";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import { useAIGenerate } from "@/hooks/use-ai-generate";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { useContents } from "@/hooks/use-contents";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
-    faCalendarDays,
     faCheck,
-    faClock,
     faCommentDots,
+    faEye,
     faHandshake,
     faMagicWandSparkles,
-    faPaperPlane,
     faRobot,
-    faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -37,9 +47,7 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
-    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -48,227 +56,7 @@ import {
     TextInput,
 } from "react-native";
 
-// ─── Magic Wand Prompt Modal ──────────────────────────────────────────────────
-
-interface MagicPromptModalProps {
-    visible: boolean;
-    title: string;
-    placeholder: string;
-    onClose: () => void;
-    onGenerate: (prompt: string) => void;
-}
-
-const MagicPromptModal: React.FC<MagicPromptModalProps> = ({
-    visible,
-    title,
-    placeholder,
-    onClose,
-    onGenerate,
-}) => {
-    const theme = useTheme();
-    const colors = Colors(theme);
-    const [prompt, setPrompt] = useState("");
-    const styles = useMemo(() => magicStyles(colors), [colors]);
-
-    const handleGenerate = () => {
-        if (!prompt.trim()) return;
-        onGenerate(prompt.trim());
-        setPrompt("");
-    };
-
-    return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-            <View style={styles.backdrop}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-                <View style={styles.sheet}>
-                    <View style={styles.header}>
-                        <View style={styles.wand}>
-                            <FontAwesomeIcon
-                                icon={faMagicWandSparkles}
-                                size={16}
-                                color={colors.primary}
-                            />
-                        </View>
-                        <Text style={styles.title}>{title}</Text>
-                        <Pressable onPress={onClose} style={styles.closeBtn}>
-                            <FontAwesomeIcon icon={faXmark} size={15} color={colors.textSecondary} />
-                        </Pressable>
-                    </View>
-                    <View style={styles.body}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder={placeholder}
-                            placeholderTextColor={colors.textSecondary}
-                            value={prompt}
-                            onChangeText={setPrompt}
-                            multiline
-                            maxLength={300}
-                            textAlignVertical="top"
-                            autoFocus
-                        />
-                    </View>
-                    <View style={styles.footer}>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.cancelBtn,
-                                pressed && styles.btnPressed,
-                            ]}
-                            onPress={onClose}
-                        >
-                            <Text style={styles.cancelText}>Cancel</Text>
-                        </Pressable>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.generateBtn,
-                                !prompt.trim() && styles.generateBtnDisabled,
-                                pressed && styles.btnPressed,
-                            ]}
-                            onPress={handleGenerate}
-                            disabled={!prompt.trim()}
-                        >
-                            <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.onPrimary} />
-                            <Text style={styles.generateText}>Generate</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            </View>
-        </Modal>
-    );
-};
-
-function magicStyles(colors: ReturnType<typeof Colors>) {
-    return StyleSheet.create({
-        backdrop: {
-            flex: 1,
-            backgroundColor: colors.backdrop,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-        },
-        sheet: {
-            width: "100%",
-            maxWidth: 440,
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            overflow: "hidden",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 12 },
-            shadowRadius: 32,
-            shadowOpacity: 0.16,
-            elevation: 12,
-        },
-        header: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            paddingHorizontal: 18,
-            paddingVertical: 14,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowRadius: 6,
-            shadowOpacity: 0.04,
-            elevation: 1,
-        },
-        wand: {
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            backgroundColor: colors.aliceBlue,
-            alignItems: "center",
-            justifyContent: "center",
-        },
-        title: {
-            flex: 1,
-            fontSize: 15,
-            fontWeight: "700",
-            color: colors.text,
-        },
-        closeBtn: {
-            padding: 4,
-        },
-        body: {
-            paddingHorizontal: 18,
-            paddingVertical: 12,
-        },
-        input: {
-            backgroundColor: colors.tag,
-            borderRadius: 10,
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            fontSize: 14,
-            color: colors.text,
-            minHeight: 90,
-            maxHeight: 160,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowRadius: 3,
-            shadowOpacity: 0.04,
-            elevation: 1,
-        },
-        footer: {
-            flexDirection: "row",
-            gap: 10,
-            paddingHorizontal: 18,
-            paddingBottom: 16,
-        },
-        cancelBtn: {
-            flex: 1,
-            paddingVertical: 11,
-            borderRadius: 10,
-            alignItems: "center",
-            backgroundColor: colors.tag,
-        },
-        cancelText: {
-            fontSize: 13,
-            fontWeight: "600",
-            color: colors.textSecondary,
-        },
-        generateBtn: {
-            flex: 2,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            paddingVertical: 11,
-            borderRadius: 10,
-            backgroundColor: colors.primary,
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 12,
-            shadowOpacity: 0.35,
-            elevation: 4,
-        },
-        generateBtnDisabled: {
-            opacity: 0.45,
-            shadowOpacity: 0,
-            elevation: 0,
-        },
-        generateText: {
-            fontSize: 13,
-            fontWeight: "700",
-            color: colors.onPrimary,
-        },
-        btnPressed: {
-            opacity: 0.72,
-        },
-    });
-}
-
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-
-const STATUS_ORDER: ContentStatus[] = ["draft", "review_pending", "approved"];
-
-const STATUS_COLOR: Record<ContentStatus, string> = {
-    draft: "#8B8B8B",
-    review_pending: "#E07A00",
-    approved: "#1A7A3A",
-};
-
-const STATUS_BG: Record<ContentStatus, string> = {
-    draft: "rgba(139,139,139,0.13)",
-    review_pending: "rgba(224,122,0,0.13)",
-    approved: "rgba(26,122,58,0.13)",
-};
 
 const CreateContentScreen = () => {
     const theme = useTheme();
@@ -285,6 +73,8 @@ const CreateContentScreen = () => {
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
     const { items, updateContent } = useContents();
+    const { socialAccounts } = useBrandSocialContext();
+    const { selectedBrand } = useBrandContext();
 
     // Resolve the live item from the real contents list first; fall back to
     // mock data so demo/test contentIds still work in dev.
@@ -310,10 +100,12 @@ const CreateContentScreen = () => {
     const [hashtags, setHashtags] = useState(seedItem?.hashtags ?? "");
     const [script, setScript] = useState(seedItem?.script ?? "");
     const [imagePrompt, setImagePrompt] = useState(seedItem?.imagePrompt ?? "");
+    const [attachments, setAttachments] = useState<Attachment[]>(seedItem?.attachments ?? []);
+    const [destinations, setDestinations] = useState<SocialDestination[]>(seedItem?.destinations ?? []);
+    const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(seedItem?.scheduleMode ?? "scheduled");
+    const [publishing, setPublishing] = useState(false);
     const [scriptAiPrompt, setScriptAiPrompt] = useState("");
     const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
-    const [customTime, setCustomTime] = useState("");
-    const [showCustomTime, setShowCustomTime] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCollabModal, setShowCollabModal] = useState(false);
 
@@ -334,11 +126,28 @@ const CreateContentScreen = () => {
         setHashtags(seedItem.hashtags ?? "");
         setScript(seedItem.script ?? "");
         setImagePrompt(seedItem.imagePrompt ?? "");
+        setAttachments(seedItem.attachments ?? []);
+        setDestinations(seedItem.destinations ?? []);
+        setScheduleMode(seedItem.scheduleMode ?? "scheduled");
         setTimeOfPosting(seedItem.timeOfPosting ?? "");
         if (seedItem.date) {
             setDate(new Date(seedItem.date + "T00:00:00"));
         }
+        // Freshly hydrated state is "clean" — skip the next dirty-watch tick.
+        skipDirtyRef.current = true;
+        setDirty(false);
     }, [seedItem]);
+
+    // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
+    const [dirty, setDirty] = useState(false);
+    const skipDirtyRef = useRef(true);
+    useEffect(() => {
+        if (skipDirtyRef.current) {
+            skipDirtyRef.current = false;
+            return;
+        }
+        setDirty(true);
+    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, scheduleMode, date]);
 
     // ── Right side panel (comments + AI chat) ────────────────────────────────
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
@@ -356,7 +165,7 @@ const CreateContentScreen = () => {
 
     const contentType = (seedItem?.type ?? paramType ?? "post") as ContentType;
     const isReel = contentType === "reel";
-    const isImageBased = contentType === "post" || contentType === "carousel";
+    const mediaSpec = MEDIA_SPEC[contentType];
 
     const collabSource: CollabContentSource = {
         contentId: contentId ?? `content-${Date.now()}`,
@@ -394,12 +203,83 @@ const CreateContentScreen = () => {
             timeOfPosting,
             script,
             imagePrompt,
+            attachments,
             postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
         });
+        setDirty(false);
         setSaveState("saved");
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
-    }, [contentId, saveState, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, date]);
+    }, [contentId, saveState, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date]);
+
+    // Publish now / schedule. Persists the latest edits + destinations to
+    // Firestore so the backend reads fresh data, then calls the publish /
+    // schedule endpoint (functions/trendly_v2 → internal/trendlyapis/publishing).
+    const handlePublish = useCallback(async () => {
+        if (!contentId || publishing || destinations.length === 0) return;
+        const brandId = selectedBrand?.id;
+        if (!brandId) return;
+        setPublishing(true);
+
+        // Derive the precise publish epoch: "now" → current time; otherwise the
+        // selected date combined with the chosen HH:MM (defaulting to 09:00).
+        let scheduledAt = Date.now();
+        if (scheduleMode === "scheduled") {
+            const d = new Date(date);
+            if (/^\d{1,2}:\d{2}$/.test(timeOfPosting)) {
+                const [hh, mm] = timeOfPosting.split(":").map(Number);
+                d.setHours(hh, mm, 0, 0);
+            } else {
+                d.setHours(9, 0, 0, 0);
+            }
+            scheduledAt = d.getTime();
+        }
+
+        try {
+            // 1. Persist current state so the backend publishes the latest content.
+            await updateContent(contentId, {
+                title,
+                description: idea,
+                caption,
+                hashtags,
+                script,
+                imagePrompt,
+                attachments,
+                timeOfPosting,
+                destinations,
+                scheduleMode,
+                scheduledAt,
+                postingTimeStamp: new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime(),
+            });
+
+            // 2. Trigger publish-now or schedule on the backend.
+            if (scheduleMode === "now") {
+                const res = await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/contents/${contentId}/publish`,
+                    { method: "POST" }
+                );
+                if (!res.ok) throw new Error(`Publish failed (${res.status})`);
+                setStatus("posted");
+            } else {
+                const res = await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/contents/${contentId}/schedule`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ scheduledAt }),
+                    }
+                );
+                if (!res.ok) throw new Error(`Schedule failed (${res.status})`);
+                setStatus("scheduled");
+            }
+            setDirty(false);
+        } catch (e) {
+            // Surface via console for now; a toast is added in the Phase 6 polish.
+            console.warn("Publish/schedule error:", e);
+        } finally {
+            setPublishing(false);
+        }
+    }, [contentId, publishing, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
 
     const handleCreateCollab = useCallback(() => {
         setShowCollabModal(true);
@@ -445,7 +325,7 @@ const CreateContentScreen = () => {
         setIsGeneratingImage(true);
         generateImage({
             description: imagePrompt,
-            aspectRatio: contentType === "reel" ? "9:16" : "1:1",
+            aspectRatio: MEDIA_SPEC[contentType].aspectRatios[0] ?? "1:1",
             count: 1,
         });
     }, [imagePrompt, contentType, generateImage]);
@@ -493,16 +373,19 @@ const CreateContentScreen = () => {
         }
     }, [aiScript, scriptStreaming, isGeneratingScript]);
 
-    // Image: alert with the result URL on completion. The existing UI doesn't
-    // host an image preview slot, so this preserves the original mock behavior
-    // but now shows a real S3 URL.
+    // Image: on completion, append the generated asset to the media gallery
+    // (or replace it for single-asset types). Persists via attachments[] on save.
     useEffect(() => {
         if (!isGeneratingImage) return;
         if (imagesStreaming) return;
         if (aiImages.length === 0) return;
-        Alert.alert("Image generated", aiImages[aiImages.length - 1].s3Url);
+        const latest = aiImages[aiImages.length - 1];
+        const asset: Attachment = { type: "image", imageUrl: latest.s3Url };
+        setAttachments((prev) =>
+            MEDIA_SPEC[contentType].multi ? [...prev, asset] : [asset]
+        );
         setIsGeneratingImage(false);
-    }, [aiImages, imagesStreaming, isGeneratingImage]);
+    }, [aiImages, imagesStreaming, isGeneratingImage, contentType]);
 
     const formattedDate = date.toLocaleDateString("en-IN", {
         day: "2-digit",
@@ -524,6 +407,9 @@ const CreateContentScreen = () => {
                     onPress={() =>
                         setRightPanelMode((m) => (m === "comments" ? "none" : "comments"))
                     }
+                    accessibilityRole="button"
+                    accessibilityLabel="Comments"
+                    accessibilityState={{ selected: rightPanelMode === "comments" }}
                 >
                     <FontAwesomeIcon
                         icon={faCommentDots}
@@ -543,11 +429,36 @@ const CreateContentScreen = () => {
                     onPress={() =>
                         setRightPanelMode((m) => (m === "chat" ? "none" : "chat"))
                     }
+                    accessibilityRole="button"
+                    accessibilityLabel="AI Chat"
+                    accessibilityState={{ selected: rightPanelMode === "chat" }}
                 >
                     <FontAwesomeIcon
                         icon={faRobot}
                         size={15}
                         color={rightPanelMode === "chat" ? colors.onPrimary : colors.textSecondary}
+                    />
+                </Pressable>
+            ) : null,
+            !xl ? (
+                <Pressable
+                    key="preview"
+                    style={({ pressed }) => [
+                        styles.iconBtn,
+                        rightPanelMode === "preview" && styles.iconBtnActive,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={() =>
+                        setRightPanelMode((m) => (m === "preview" ? "none" : "preview"))
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel="Preview"
+                    accessibilityState={{ selected: rightPanelMode === "preview" }}
+                >
+                    <FontAwesomeIcon
+                        icon={faEye}
+                        size={15}
+                        color={rightPanelMode === "preview" ? colors.onPrimary : colors.textSecondary}
                     />
                 </Pressable>
             ) : null,
@@ -561,19 +472,20 @@ const CreateContentScreen = () => {
                 ]}
                 onPress={handleSave}
                 disabled={saveState === "saving"}
-                accessibilityLabel="Save"
+                accessibilityRole="button"
+                accessibilityLabel={dirty ? "Save (unsaved changes)" : "Save"}
             >
                 {saveState === "saving" ? (
                     xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
                     <>
                         <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                        {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : "Save"}</Text>}
+                        {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : dirty ? "Save •" : "Save"}</Text>}
                     </>
                 )}
             </Pressable>,
         ],
-        [styles, colors, handleSave, saveState, rightPanelMode, xl]
+        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty]
     );
 
     return (
@@ -602,35 +514,37 @@ const CreateContentScreen = () => {
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>STATUS</Text>
                             <View style={styles.statusRow}>
-                                {STATUS_ORDER.map((s) => (
-                                    <Pressable
-                                        key={s}
-                                        style={({ pressed }) => [
-                                            styles.statusChip,
-                                            {
-                                                backgroundColor:
-                                                    status === s ? STATUS_BG[s] : colors.tag,
-                                            },
-                                            pressed && styles.btnPressed,
-                                        ]}
-                                        onPress={() => setStatus(s)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.statusChipText,
+                                {EDITABLE_CONTENT_STATUSES.map((s) => {
+                                    const sc = contentStatusColors(s, colors);
+                                    const active = status === s;
+                                    return (
+                                        <Pressable
+                                            key={s}
+                                            style={({ pressed }) => [
+                                                styles.statusChip,
                                                 {
-                                                    color:
-                                                        status === s
-                                                            ? STATUS_COLOR[s]
-                                                            : colors.textSecondary,
-                                                    fontWeight: status === s ? "700" : "500",
+                                                    backgroundColor: active ? sc.bg : colors.tag,
                                                 },
+                                                pressed && styles.btnPressed,
                                             ]}
+                                            onPress={() => setStatus(s)}
                                         >
-                                            {CONTENT_STATUS_LABELS[s]}
-                                        </Text>
-                                    </Pressable>
-                                ))}
+                                            <Text
+                                                style={[
+                                                    styles.statusChipText,
+                                                    {
+                                                        color: active
+                                                            ? sc.fg
+                                                            : colors.textSecondary,
+                                                        fontWeight: active ? "700" : "500",
+                                                    },
+                                                ]}
+                                            >
+                                                {CONTENT_STATUS_LABELS[s]}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
                             </View>
                         </View>
 
@@ -645,23 +559,6 @@ const CreateContentScreen = () => {
                                             {CONTENT_TYPE_LABELS[contentType]}
                                         </Text>
                                     </View>
-                                </View>
-
-                                <View style={styles.fieldDivider} />
-
-                                <View style={styles.fieldRow}>
-                                    <Text style={styles.fieldLabel}>Date of Posting</Text>
-                                    <Pressable
-                                        style={styles.dateBtn}
-                                        onPress={() => setShowDatePicker(true)}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faCalendarDays}
-                                            size={12}
-                                            color={colors.primary}
-                                        />
-                                        <Text style={styles.dateBtnText}>{formattedDate}</Text>
-                                    </Pressable>
                                 </View>
 
                                 <View style={styles.fieldDivider} />
@@ -690,112 +587,40 @@ const CreateContentScreen = () => {
                             </View>
                         </View>
 
-                        {/* ── Content Format ───────────────────────────────────── */}
+                        {/* ── Content (media + script) ─────────────────────────── */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>CONTENT FORMAT</Text>
+                            <Text style={styles.sectionLabel}>CONTENT</Text>
 
-                            {isReel ? (
-                                <View style={styles.card}>
-                                    <Text style={styles.cardTitle}>Reel Script</Text>
-                                    <Text style={styles.cardSub}>
-                                        Write your full reel script with scene transitions, dialogue, and
-                                        direction notes.
-                                    </Text>
-                                    {isGeneratingScript ? <TextInput
-                                        style={[styles.input, styles.scriptEditorContainer]}
-                                        placeholder={"[Scene 1 - Hook]\nHey everyone...\n\n[Scene 2 - Main content]\n...\n\n[Scene 3 - CTA]\nFollow for more!"}
-                                        placeholderTextColor={colors.textSecondary}
-                                        value={script}
-                                        onChangeText={() => { }}
-                                        multiline
-                                        textAlignVertical="top"
-                                    /> :
-                                        <View style={styles.scriptEditorContainer}>
-                                            <RichTextEditor
-                                                content={script}
-                                                onChange={setScript}
-                                                onSendToChat={handleSendToChat}
-                                                strategyId={contentId}
-                                                module="content"
-                                            />
-                                        </View>}
+                            {mediaSpec.kind !== "none" && (
+                                <MediaStage
+                                    contentType={contentType}
+                                    attachments={attachments}
+                                    onAttachmentsChange={setAttachments}
+                                    imagePrompt={imagePrompt}
+                                    onImagePromptChange={setImagePrompt}
+                                    onGenerateImage={handleImageGenerate}
+                                    isGeneratingImage={isGeneratingImage}
+                                />
+                            )}
 
-                                    <View style={styles.aiPromptRow}>
-                                        <TextInput
-                                            style={[styles.input, styles.aiPromptInput]}
-                                            placeholder="Describe changes or ask AI to generate script..."
-                                            placeholderTextColor={colors.textSecondary}
-                                            value={scriptAiPrompt}
-                                            onChangeText={setScriptAiPrompt}
-                                        />
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.aiSendBtn,
-                                                !scriptAiPrompt.trim() && styles.aiSendBtnDisabled,
-                                                pressed && styles.btnPressed,
-                                            ]}
-                                            onPress={handleScriptAiEnhance}
-                                            disabled={!scriptAiPrompt.trim() || isGeneratingScript}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faMagicWandSparkles}
-                                                size={14}
-                                                color={colors.onPrimary}
-                                            />
-                                            <Text style={styles.aiSendBtnText}>
-                                                {isGeneratingScript ? "Generating..." : "Enhance"}
-                                            </Text>
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            ) : isImageBased ? (
-                                <View style={styles.card}>
-                                    <Text style={styles.cardTitle}>Image Generation</Text>
-                                    <Text style={styles.cardSub}>
-                                        Describe the visual you want. Add iterative instructions to
-                                        refine and generate variations.
-                                    </Text>
-                                    <TextInput
-                                        style={[styles.input, styles.textArea]}
-                                        placeholder="E.g. Bold minimal design, product centred on white background, brand colours: deep blue and white..."
-                                        placeholderTextColor={colors.textSecondary}
-                                        value={imagePrompt}
-                                        onChangeText={setImagePrompt}
-                                        multiline
-                                        maxLength={600}
-                                        textAlignVertical="top"
-                                    />
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.generateImgBtn,
-                                            !imagePrompt.trim() && styles.generateImgBtnDisabled,
-                                            pressed && styles.btnPressed,
-                                        ]}
-                                        onPress={handleImageGenerate}
-                                        disabled={!imagePrompt.trim() || isGeneratingImage}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faMagicWandSparkles}
-                                            size={14}
-                                            color={colors.onPrimary}
-                                        />
-                                        <Text style={styles.generateImgBtnText}>
-                                            {isGeneratingImage
-                                                ? "Generating Image..."
-                                                : "Generate Image"}
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                            ) : (
-                                <View style={styles.card}>
-                                    <Text style={styles.cardSub}>
-                                        Content format tooling is not available for{" "}
-                                        <Text style={{ fontWeight: "700" }}>
-                                            {CONTENT_TYPE_LABELS[contentType]}
-                                        </Text>{" "}
-                                        type yet.
-                                    </Text>
-                                </View>
+                            {mediaSpec.hasScript && (
+                                <ScriptEditor
+                                    title={isReel ? "Reel Script" : "Script"}
+                                    subtitle={
+                                        isReel
+                                            ? "Optional — add a shot-by-shot script, or just upload your finished video above."
+                                            : "Outline the talking points and flow for your live session."
+                                    }
+                                    script={script}
+                                    onScriptChange={setScript}
+                                    aiPrompt={scriptAiPrompt}
+                                    onAiPromptChange={setScriptAiPrompt}
+                                    onEnhance={handleScriptAiEnhance}
+                                    isGenerating={isGeneratingScript}
+                                    contentId={contentId}
+                                    onSendToChat={handleSendToChat}
+                                    collapsible={isReel}
+                                />
                             )}
                         </View>
 
@@ -861,84 +686,22 @@ const CreateContentScreen = () => {
                             </View>
                         </View>
 
-                        {/* ── Time of Posting ───────────────────────────────────── */}
+                        {/* ── Destinations & schedule ──────────────────────────── */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>TIME OF POSTING</Text>
-                            <View style={styles.card}>
-                                <Text style={styles.cardSub}>
-                                    Pick a popular time or set your own.
-                                </Text>
-                                <View style={styles.timeRow}>
-                                    {POPULAR_POSTING_TIMES.map((t) => (
-                                        <Pressable
-                                            key={t.value}
-                                            style={({ pressed }) => [
-                                                styles.timeChip,
-                                                timeOfPosting === t.value && styles.timeChipActive,
-                                                pressed && styles.btnPressed,
-                                            ]}
-                                            onPress={() => {
-                                                setTimeOfPosting(t.value);
-                                                setShowCustomTime(false);
-                                            }}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faClock}
-                                                size={11}
-                                                color={
-                                                    timeOfPosting === t.value
-                                                        ? colors.onPrimary
-                                                        : colors.textSecondary
-                                                }
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.timeChipText,
-                                                    timeOfPosting === t.value &&
-                                                    styles.timeChipTextActive,
-                                                ]}
-                                            >
-                                                {t.label}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.timeChip,
-                                            showCustomTime && styles.timeChipActive,
-                                            pressed && styles.btnPressed,
-                                        ]}
-                                        onPress={() => {
-                                            setShowCustomTime((v) => !v);
-                                            if (!showCustomTime) setTimeOfPosting("");
-                                        }}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.timeChipText,
-                                                showCustomTime && styles.timeChipTextActive,
-                                            ]}
-                                        >
-                                            Custom
-                                        </Text>
-                                    </Pressable>
-                                </View>
-
-                                {showCustomTime && (
-                                    <TextInput
-                                        style={[styles.input, styles.mt12]}
-                                        placeholder="HH:MM (e.g. 08:30)"
-                                        placeholderTextColor={colors.textSecondary}
-                                        value={customTime}
-                                        onChangeText={(v) => {
-                                            setCustomTime(v);
-                                            setTimeOfPosting(v);
-                                        }}
-                                        maxLength={5}
-                                        keyboardType="numbers-and-punctuation"
-                                    />
-                                )}
-                            </View>
+                            <Text style={styles.sectionLabel}>DESTINATIONS & SCHEDULE</Text>
+                            <ScheduleBar
+                                socialAccounts={socialAccounts}
+                                destinations={destinations}
+                                onDestinationsChange={setDestinations}
+                                scheduleMode={scheduleMode}
+                                onScheduleModeChange={setScheduleMode}
+                                formattedDate={formattedDate}
+                                onPressDate={() => setShowDatePicker(true)}
+                                timeOfPosting={timeOfPosting}
+                                onTimeChange={setTimeOfPosting}
+                                onPublish={handlePublish}
+                                publishing={publishing}
+                            />
                         </View>
 
                         {/* ── Reel Collab CTA ───────────────────────────────────── */}
@@ -1005,6 +768,14 @@ const CreateContentScreen = () => {
                                     isCompact
                                 />
                             }
+                            previewSlot={
+                                <PreviewPanel
+                                    contentType={contentType}
+                                    attachments={attachments}
+                                    caption={caption}
+                                    hashtags={hashtags}
+                                />
+                            }
                         />
                     </View>
                 )}
@@ -1029,6 +800,15 @@ const CreateContentScreen = () => {
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
                             isCompact
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                    previewSlot={
+                        <PreviewPanel
+                            contentType={contentType}
+                            attachments={attachments}
+                            caption={caption}
+                            hashtags={hashtags}
                             onCollapse={() => setRightPanelMode("none")}
                         />
                     }
@@ -1174,25 +954,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
-                dateBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 8,
-                    backgroundColor: colors.aliceBlue,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
-                },
-                dateBtnText: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.primary,
-                },
                 input: {
                     backgroundColor: colors.tag,
                     borderRadius: 10,
@@ -1216,74 +977,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 textAreaShort: {
                     minHeight: 70,
                     maxHeight: 140,
-                },
-                scriptEditorContainer: {
-                    height: 360,
-                    borderRadius: 10,
-                    overflow: "hidden",
-                    marginBottom: 12,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
-                },
-                aiPromptRow: {
-                    flexDirection: "row",
-                    gap: 8,
-                    alignItems: "center",
-                },
-                aiPromptInput: {
-                    flex: 1,
-                },
-                aiSendBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    borderRadius: 10,
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                aiSendBtnDisabled: {
-                    opacity: 0.45,
-                    shadowOpacity: 0,
-                    elevation: 0,
-                },
-                aiSendBtnText: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.onPrimary,
-                },
-                generateImgBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 7,
-                    marginTop: 4,
-                    paddingVertical: 12,
-                    borderRadius: 10,
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 12,
-                    shadowOpacity: 0.35,
-                    elevation: 4,
-                },
-                generateImgBtnDisabled: {
-                    opacity: 0.45,
-                    shadowOpacity: 0,
-                    elevation: 0,
-                },
-                generateImgBtnText: {
-                    fontSize: 14,
-                    fontWeight: "700",
-                    color: colors.onPrimary,
                 },
                 inputWithWand: {
                     flexDirection: "row",
@@ -1320,41 +1013,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 statusChipText: {
                     fontSize: 13,
-                },
-                timeRow: {
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    gap: 8,
-                },
-                timeChip: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 5,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    backgroundColor: colors.tag,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
-                },
-                timeChipActive: {
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                timeChipText: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                },
-                timeChipTextActive: {
-                    color: colors.onPrimary,
                 },
                 collabBanner: {
                     flexDirection: "row",
@@ -1435,8 +1093,8 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 3,
                 },
                 saveBtnSaved: {
-                    backgroundColor: "#1A7A3A",
-                    shadowColor: "#1A7A3A",
+                    backgroundColor: colors.statusApprovedFg,
+                    shadowColor: colors.statusApprovedFg,
                 },
                 saveBtnText: {
                     fontSize: 13,

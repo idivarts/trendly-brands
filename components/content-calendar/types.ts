@@ -1,3 +1,5 @@
+import Colors from "@/shared-uis/constants/Colors";
+
 export type ContentType = "reel" | "post" | "story" | "carousel" | "live";
 
 export interface CalendarItem {
@@ -19,3 +21,24 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
     carousel: "Carousel",
     live: "Live",
 };
+
+/** Theme-aware accent color for a content type, sourced from the central palette. */
+export function contentTypeColor(
+    type: ContentType,
+    colors: ReturnType<typeof Colors>
+): string {
+    switch (type) {
+        case "reel":
+            return colors.typeReel;
+        case "post":
+            return colors.typePost;
+        case "story":
+            return colors.typeStory;
+        case "carousel":
+            return colors.typeCarousel;
+        case "live":
+            return colors.typeLive;
+        default:
+            return colors.primary;
+    }
+}
