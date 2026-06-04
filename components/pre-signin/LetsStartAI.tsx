@@ -22,7 +22,7 @@ import {
     TextInput,
     View,
 } from "react-native";
-import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 const HEADLINE = "What can I create for you?";
 const PLACEHOLDER = "Describe what you need — a content plan, a week of posts, a campaign…";
@@ -188,8 +188,19 @@ const LetsStartAI: React.FC = () => {
                         <Animated.View entering={FadeIn.duration(180)} style={styles.modalBackdrop}>
                             <Pressable style={StyleSheet.absoluteFill} onPress={() => setAuthOpen(false)} accessibilityLabel="Dismiss" />
                         </Animated.View>
-                        <Animated.View entering={ZoomIn.duration(220)} style={styles.modalCardWrap} pointerEvents="box-none">
-                            <AuthCard onClose={() => setAuthOpen(false)} />
+                        <Animated.View entering={FadeIn.duration(200)} style={styles.modalCardWrap} pointerEvents="box-none">
+                            <View style={[styles.modalCard, { width: Math.min(420, width - 48) }]}>
+                                <Pressable
+                                    style={({ pressed }) => [styles.modalClose, pressed && { opacity: 0.7 }]}
+                                    onPress={() => setAuthOpen(false)}
+                                    hitSlop={8}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Close"
+                                >
+                                    <Ionicons name="close" size={20} color={colors.text} />
+                                </Pressable>
+                                <AuthCard />
+                            </View>
                         </Animated.View>
                     </View>
                 )}
@@ -366,6 +377,29 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         modalCardWrap: {
             width: "100%",
             alignItems: "center",
+        },
+        modalCard: {
+            alignSelf: "center",
+            backgroundColor: colors.card,
+            borderRadius: 24,
+            overflow: "hidden",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 18 },
+            shadowOpacity: 0.22,
+            shadowRadius: 44,
+            ...Platform.select({ android: { elevation: 16 } }),
+        },
+        modalClose: {
+            position: "absolute",
+            top: 12,
+            right: 12,
+            zIndex: 2,
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
         },
     });
 }

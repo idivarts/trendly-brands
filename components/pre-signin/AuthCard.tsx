@@ -35,7 +35,7 @@ const AuthCard: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
         //         </Pressable>
         //     )}
         // {/* </View> */ }
-        <View style={{ padding: 24, alignItems: "center" }}>
+        <View style={{ padding: 24, alignItems: "stretch", width: "100%" }}>
 
             <Text style={[styles.title, { fontSize: compact ? 24 : 28 }]}>{TITLE}</Text>
             <Text style={styles.subtitle}>{SUBTITLE}</Text>
