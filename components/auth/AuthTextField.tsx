@@ -24,6 +24,11 @@ const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
+    // Soft rest border in light mode (the default paper outline is a heavy
+    // mid-grey); a visible-but-subtle border in dark mode where a light hairline
+    // would glare. Rounded to match the auth buttons (no dated sharp corners).
+    const restOutline = theme.dark ? colors.outline : colors.borderLight;
+
     return (
         <View style={styles.field}>
             <Text style={styles.label}>{label}</Text>
@@ -32,6 +37,8 @@ const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style
                 placeholder={placeholder ?? label}
                 placeholderTextColor={colors.textSecondary}
                 textColor={colors.text}
+                outlineColor={restOutline}
+                outlineStyle={styles.outline}
                 style={[styles.input, style]}
                 {...props}
             />
@@ -51,6 +58,9 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         input: {
             backgroundColor: colors.background,
+        },
+        outline: {
+            borderRadius: 12,
         },
     });
 }

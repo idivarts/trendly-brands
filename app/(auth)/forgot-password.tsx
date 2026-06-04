@@ -1,19 +1,25 @@
+import AuthHeader from "@/components/auth/AuthHeader";
+import AuthNavLink from "@/components/auth/AuthNavLink";
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import AuthTextField from "@/components/auth/AuthTextField";
 import Button from "@/components/ui/button";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import fnStyles from "@/styles/signup.styles";
-import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const ForgotPasswordScreen = () => {
     const [email, setEmail] = useState("");
     const router = useRouter();
-    const theme = useTheme();
-    const styles = fnStyles(theme);
+
+    const goBackToLogin = () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/(auth)/login");
+        }
+    };
 
     const handleResetPassword = async () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,20 +64,12 @@ const ForgotPasswordScreen = () => {
 
     return (
         <AuthPageLayout>
-            {/* <Image
-                source={require("@/assets/images/logo.png")}
-                style={styles.logo}
-                resizeMode="contain"
-            /> */}
-            <View style={authLayoutStyles.formHeader}>
-                <Text style={[styles.title, authLayoutStyles.formTitle]}>
-                    Forgot Password
-                </Text>
-                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
-                    We will email you a reset link.
-                </Text>
-            </View>
-            <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
+            <AuthHeader
+                title="Forgot Password"
+                subtitle="We will email you a reset link."
+                onBack={goBackToLogin}
+            />
+            <View style={authLayoutStyles.inputStack}>
                 <AuthTextField
                     label="Email"
                     value={email}
@@ -82,22 +80,18 @@ const ForgotPasswordScreen = () => {
                 <Button
                     mode="contained"
                     style={authLayoutStyles.primaryButton}
+                    labelStyle={authLayoutStyles.primaryButtonLabel}
                     onPress={handleResetPassword}
                 >
                     Reset Password
                 </Button>
             </View>
-            <View style={authLayoutStyles.loginPrompt}>
-                <Text style={[styles.loginText, authLayoutStyles.loginText]}>
-                    Remember your password?
-                </Text>
-                <Button
-                    mode="outlined"
-                    style={authLayoutStyles.secondaryButton}
+            <View style={authLayoutStyles.navStack}>
+                <AuthNavLink
+                    prompt="Remember your password?"
+                    action="Back to log in"
                     onPress={() => router.replace("/(auth)/login")}
-                >
-                    Login
-                </Button>
+                />
             </View>
         </AuthPageLayout>
     );

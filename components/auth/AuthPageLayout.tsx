@@ -84,11 +84,14 @@ function makeStyles(
             backgroundColor: colors.background,
         },
         rightScroll: {
+            // Top-anchored (not center) so the header sits at the same vertical
+            // position on every auth screen — short screens (pre-signin) no
+            // longer float to the middle while tall ones (signup) start at top.
             flexGrow: 1,
-            justifyContent: "center",
+            justifyContent: "flex-start",
             alignItems: "center",
             paddingHorizontal: isWide ? 56 : 24,
-            paddingTop: Math.max(insets.top, isWide ? 48 : 32),
+            paddingTop: Math.max(insets.top, isWide ? 80 : 40),
             paddingBottom: Math.max(insets.bottom, isWide ? 48 : 32),
         },
         formWrap: {
@@ -100,20 +103,10 @@ function makeStyles(
 
 /**
  * Shared content styles consumed by the auth screens (login / create-new-account
- * / forgot-password) for their form header, inputs, buttons and links.
+ * / forgot-password) for their inputs, primary button, and cross-nav links.
+ * Header typography lives in `AuthHeader`; inline cross-nav links in `AuthNavLink`.
  */
 export const authLayoutStyles = {
-    formTitle: {
-        textAlign: "center" as const,
-    },
-    formSubtitle: {
-        textAlign: "center" as const,
-        opacity: 0.8,
-        marginBottom: 10,
-    },
-    formHeader: {
-        marginBottom: 8,
-    },
     inputStack: {
         gap: 14,
     },
@@ -121,24 +114,18 @@ export const authLayoutStyles = {
         marginTop: 16,
         borderRadius: 14,
     },
-    loginPrompt: {
-        marginTop: 16,
+    primaryButtonLabel: {
+        fontSize: 16,
+        fontWeight: "600" as const,
+        paddingVertical: 4,
+    },
+    // Container for the inline cross-nav links, placed directly under the
+    // primary button so "log in / sign up / forgot password" is always in the
+    // same predictable spot across screens.
+    navStack: {
+        marginTop: 20,
         alignItems: "center" as const,
-    },
-    loginText: {
-        opacity: 0.8,
-    },
-    secondaryButton: {
-        marginTop: 8,
-        borderRadius: 14,
-    },
-    forgotPassword: {
-        textAlign: "center" as const,
-    },
-    backText: {
-        opacity: 0.7,
-        marginTop: 12,
-        textAlign: "center" as const,
+        gap: 12,
     },
 } as const;
 

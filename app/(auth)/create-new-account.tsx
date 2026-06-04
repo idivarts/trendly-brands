@@ -1,12 +1,12 @@
+import AuthHeader from "@/components/auth/AuthHeader";
+import AuthNavLink from "@/components/auth/AuthNavLink";
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import AuthTextField from "@/components/auth/AuthTextField";
 import Button from "@/components/ui/button";
 import { useAuthContext } from "@/contexts";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import fnStyles from "@/styles/signup.styles";
-import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 const SignUpScreen = () => {
     const [name, setName] = useState("");
@@ -16,9 +16,15 @@ const SignUpScreen = () => {
     const [verificationSent, setVerificationSent] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useMyNavigation();
-    const theme = useTheme();
-    const styles = fnStyles(theme);
     const { signUp } = useAuthContext();
+
+    const goBackToSocial = () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.resetAndNavigate("/pre-signin");
+        }
+    };
 
     const handleSignUp = async () => {
         setIsSubmitting(true);
@@ -35,33 +41,22 @@ const SignUpScreen = () => {
     if (verificationSent) {
         return (
             <AuthPageLayout>
-                {/* <Image
-                    source={require("@/assets/images/logo.png")}
-                    style={styles.logo}
-                    resizeMode="contain"
-                /> */}
-                <View style={authLayoutStyles.formHeader}>
-                    <Text style={[styles.title, authLayoutStyles.formTitle]}>
-                        Verification Email Sent
-                    </Text>
-                    <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
-                        We've sent a verification email to{" "}
-                        <Text style={styles.bold}>{email}</Text>.
-                        {"\n\n"}
-                        Please open your inbox and click the verification link to activate your account.
-                    </Text>
-                </View>
-                <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
+                <AuthHeader
+                    title="Verification Email Sent"
+                    subtitle={`We've sent a verification email to ${email}. Open your inbox and click the link to activate your account.`}
+                />
+                <View style={authLayoutStyles.inputStack}>
                     <Button
                         mode="contained"
                         style={authLayoutStyles.primaryButton}
+                        labelStyle={authLayoutStyles.primaryButtonLabel}
                         onPress={() => router.replace("/(auth)/login")}
                     >
                         Go to Login
                     </Button>
                     <Button
                         mode="outlined"
-                        style={authLayoutStyles.secondaryButton}
+                        style={authLayoutStyles.primaryButton}
                         onPress={() => setVerificationSent(false)}
                     >
                         Back to Sign Up
@@ -73,20 +68,12 @@ const SignUpScreen = () => {
 
     return (
         <AuthPageLayout>
-            {/* <Image
-                source={require("@/assets/images/logo.png")}
-                style={styles.logo}
-                resizeMode="contain"
-            /> */}
-            <View style={authLayoutStyles.formHeader}>
-                <Text style={[styles.title, authLayoutStyles.formTitle]}>
-                    Create your brand
-                </Text>
-                <Text style={[styles.subTitle, authLayoutStyles.formSubtitle]}>
-                    Use your work email to create a Trendly brand account
-                </Text>
-            </View>
-            <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
+            <AuthHeader
+                title="Create your brand"
+                subtitle="Use your work email to create a Trendly brand account"
+                onBack={goBackToSocial}
+            />
+            <View style={authLayoutStyles.inputStack}>
                 <AuthTextField
                     label="Name"
                     value={name}
@@ -114,6 +101,7 @@ const SignUpScreen = () => {
                 <Button
                     mode="contained"
                     style={authLayoutStyles.primaryButton}
+                    labelStyle={authLayoutStyles.primaryButtonLabel}
                     onPress={handleSignUp}
                     disabled={isSubmitting}
                     loading={isSubmitting}
@@ -121,33 +109,13 @@ const SignUpScreen = () => {
                     Create Account
                 </Button>
             </View>
-            <View style={authLayoutStyles.loginPrompt}>
-                <Text style={[styles.loginText, authLayoutStyles.loginText]}>
-                    Already have an account?
-                </Text>
-                <Button
-                    mode="outlined"
-                    style={authLayoutStyles.secondaryButton}
+            <View style={authLayoutStyles.navStack}>
+                <AuthNavLink
+                    prompt="Already have an account?"
+                    action="Log in"
                     onPress={() => router.replace("/(auth)/login")}
-                >
-                    Login
-                </Button>
+                />
             </View>
-            <Text style={[styles.loginText, authLayoutStyles.backText]}>
-                Looking for Social Signup?{" "}
-                <Text
-                    style={styles.loginLink}
-                    onPress={() => {
-                        if (router.canGoBack()) {
-                            router.back()
-                        } else {
-                            router.resetAndNavigate("/pre-signin")
-                        }
-                    }}
-                >
-                    Go Back
-                </Text>
-            </Text>
         </AuthPageLayout>
     );
 };
