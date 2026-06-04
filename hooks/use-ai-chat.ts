@@ -4,7 +4,29 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { aiWS } from "@/utils/ai-ws";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type AIModule = "strategy" | "calendar" | "content" | "general";
+export type AIModule = "strategy" | "calendar" | "content" | "general" | "onboarding";
+
+/**
+ * AIControl is an optional structured answer control attached to an assistant
+ * message — either a set of selectable options or a typed/validated input field.
+ * Mirrors the backend trendlymodels.AIControl. Available in every module.
+ */
+export interface AIControlOption {
+    label: string;
+    value: string;
+}
+
+export interface AIControl {
+    kind: "options" | "input";
+    // options
+    selectionType?: "single" | "multi";
+    options?: AIControlOption[];
+    allowCustom?: boolean;
+    // input
+    inputType?: "text" | "phone" | "url" | "email";
+    placeholder?: string;
+    optional?: boolean;
+}
 
 export interface AIMessage {
     role: "user" | "assistant" | "tool";
@@ -14,6 +36,7 @@ export interface AIMessage {
     imageUrl?: string;
     tokenCount?: number;
     timestamp: number;
+    control?: AIControl;
 }
 
 export interface AIConversationMeta {
@@ -38,9 +61,14 @@ interface UseAIChatOpts {
      * fresh thread instead of appending to the last one.
      */
     autoOpenLatest?: boolean;
+    /**
+     * Fired when the backend signals onboarding is complete (all required brand
+     * fields collected). The onboarding screen uses this to finalize the brand.
+     */
+    onOnboardingComplete?: () => void;
 }
 
-export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAIChatOpts) {
+export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardingComplete }: UseAIChatOpts) {
     const { selectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
 
@@ -53,6 +81,13 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
 
     const brandId = selectedBrand?.id;
     const streamingRef = useRef("");
+    // A control pushed mid-stream is buffered here and attached to the assistant
+    // message when the turn finishes ("done").
+    const pendingControlRef = useRef<AIControl | null>(null);
+    // Kept in a ref so the WS listener doesn't need to resubscribe when the
+    // callback identity changes.
+    const onOnboardingCompleteRef = useRef(onOnboardingComplete);
+    onOnboardingCompleteRef.current = onOnboardingComplete;
     // Guards auto-open so it fires once per module + contextId, not on every
     // refreshThreads. Reset when the scope changes.
     const autoOpenedRef = useRef(false);
@@ -152,23 +187,31 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
             if (msg.type === "token" && typeof msg.delta === "string") {
                 streamingRef.current += msg.delta;
                 setStreamingContent(streamingRef.current);
+            } else if (msg.type === "control") {
+                pendingControlRef.current = (msg.control as AIControl) ?? null;
+            } else if (msg.type === "onboarding_complete") {
+                onOnboardingCompleteRef.current?.();
             } else if (msg.type === "done") {
                 const finalContent = streamingRef.current;
+                const control = pendingControlRef.current;
                 streamingRef.current = "";
+                pendingControlRef.current = null;
                 setStreamingContent("");
                 setIsStreaming(false);
-                if (finalContent) {
+                if (finalContent || control) {
                     setMessages((prev) => [
                         ...prev,
                         {
                             role: "assistant",
                             content: finalContent,
+                            control: control ?? undefined,
                             timestamp: Date.now(),
                         },
                     ]);
                 }
             } else if (msg.type === "error") {
                 streamingRef.current = "";
+                pendingControlRef.current = null;
                 setStreamingContent("");
                 setIsStreaming(false);
             }

@@ -22,7 +22,7 @@ const BrandProtectedScreen: React.FC<BrandProtectedScreenProps> = ({
         if (!loading && !selectedBrand) {
             //   // If the manager has no brands, redirect to onboarding
             router.replace({
-                pathname: "/onboarding-your-brand",
+                pathname: "/onboarding-chat",
                 params: {
                     firstBrand: "true",
                 },
