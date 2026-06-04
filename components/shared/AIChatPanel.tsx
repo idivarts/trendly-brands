@@ -1,5 +1,6 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import AIAnswerControl from "@/components/shared/AIAnswerControl";
+import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useBreakpoints } from "@/hooks";
@@ -277,9 +278,13 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 )}
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
                     <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
-                        <Text style={[styles.bubbleText, isAI ? styles.aiText : styles.userText]}>
-                            {item.text}
-                        </Text>
+                        {isAI ? (
+                            <MarkdownMessage content={item.text} compact={isCompact} />
+                        ) : (
+                            <Text style={[styles.bubbleText, styles.userText]}>
+                                {item.text}
+                            </Text>
+                        )}
                     </View>
                     {showControl && item.control && (
                         <AIAnswerControl
