@@ -20,6 +20,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
     Platform,
@@ -155,6 +156,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         messages: aiMessages,
         streamingContent,
         isStreaming,
+        loading,
+        initializing,
         sendMessage,
         loadThread,
         createThread,
@@ -170,18 +173,24 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     const { models, selectedModel, setSelectedModel } = useAIModels();
 
+    // The conversation is still wiring up (resolving brand, fetching threads,
+    // loading history). Show a loader and keep the composer disabled until ready.
+    const notReady = initializing || loading;
+
     // Mode toggle: chat (default) vs history list.
     const [viewMode, setViewMode] = useState<"chat" | "history">("chat");
 
-    // Auto-send any queued initial message exactly once.
+    // Auto-send any queued initial message exactly once — but only after the
+    // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
         if (!initialMessage) return;
+        if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         sendMessage(initialMessage, undefined, selectedModel);
         onInitialMessageSent?.();
-    }, [initialMessage, sendMessage, selectedModel, onInitialMessageSent]);
+    }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
@@ -223,7 +232,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (!trimmed || isStreaming) return;
+        if (!trimmed || isStreaming || notReady) return;
         const focusedText =
             focusItems.length > 0 ? focusItems.map((f) => f.label).join("\n") : undefined;
         sendMessage(trimmed, focusedText, selectedModel);
@@ -457,16 +466,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
                 <>
-                    <FlatList
-                        ref={listRef}
-                        data={messages}
-                        keyExtractor={(item) => item.id}
-                        renderItem={renderMessage}
-                        contentContainerStyle={styles.messageList}
-                        showsVerticalScrollIndicator={false}
-                    />
+                    {notReady ? (
+                        <View style={styles.initLoader}>
+                            <ActivityIndicator color={colors.primary} />
+                            <Text style={styles.initText}>Setting up your conversation…</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            ref={listRef}
+                            data={messages}
+                            keyExtractor={(item) => item.id}
+                            renderItem={renderMessage}
+                            contentContainerStyle={styles.messageList}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    )}
 
-                    {isAITyping && (
+                    {!notReady && isAITyping && (
                         <View style={styles.typingRow}>
                             <View style={styles.avatarContainer}>
                                 <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
@@ -516,10 +532,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     <View style={styles.inputArea}>
                         <TextInput
                             style={styles.input}
-                            placeholder={placeholder}
+                            placeholder={notReady ? "Getting ready…" : placeholder}
                             placeholderTextColor={colors.textSecondary}
                             value={input}
                             onChangeText={setInput}
+                            editable={!notReady}
                             multiline
                             maxLength={1000}
                             onKeyPress={(e: any) => {
@@ -539,10 +556,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             style={({ pressed }) => [
                                 styles.sendBtn,
                                 pressed && styles.sendBtnPressed,
-                                (!input.trim() || isStreaming) && styles.sendBtnDisabled,
+                                (!input.trim() || isStreaming || notReady) && styles.sendBtnDisabled,
                             ]}
                             onPress={handleSend}
-                            disabled={!input.trim() || isStreaming}
+                            disabled={!input.trim() || isStreaming || notReady}
                         >
                             <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
                         </Pressable>
@@ -602,6 +619,14 @@ function useStyles(
                     flexGrow: 1,
                     justifyContent: messageAlign === "top" ? "flex-start" : "flex-end",
                 },
+                initLoader: {
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    padding: 24,
+                },
+                initText: { color: colors.textSecondary, fontSize: 13 },
                 messageRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",

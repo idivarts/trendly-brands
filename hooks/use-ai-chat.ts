@@ -78,6 +78,10 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
     const [streamingContent, setStreamingContent] = useState<string>("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [loading, setLoading] = useState(false);
+    // True until the conversation is ready to use: the brand is resolved, the
+    // thread list has been fetched, and (when auto-opening) the latest thread's
+    // history has loaded. Drives the panel's init loader + send-disabled state.
+    const [initializing, setInitializing] = useState(true);
 
     const brandId = selectedBrand?.id;
     const streamingRef = useRef("");
@@ -92,8 +96,8 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
     // refreshThreads. Reset when the scope changes.
     const autoOpenedRef = useRef(false);
 
-    const refreshThreads = useCallback(async () => {
-        if (!brandId) return;
+    const refreshThreads = useCallback(async (): Promise<AIConversationMeta[]> => {
+        if (!brandId) return [];
         try {
             const q = new URLSearchParams({ brandId, module });
             if (contextId) q.set("contextId", contextId);
@@ -104,8 +108,10 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
                 ? all.filter((t) => t.contextId === contextId)
                 : all;
             setThreads(filtered);
+            return filtered;
         } catch {
             setThreads([]);
+            return [];
         }
     }, [brandId, module, contextId]);
 
@@ -116,10 +122,6 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
         setActiveThreadId(null);
         setMessages([]);
     }, [module, contextId]);
-
-    useEffect(() => {
-        refreshThreads();
-    }, [refreshThreads]);
 
     const loadThread = useCallback(async (conversationId: string) => {
         setLoading(true);
@@ -133,16 +135,30 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
         }
     }, []);
 
-    // Auto-open the most recent conversation for this scope (threads arrive
-    // ordered by updatedAt desc). Fires once until the scope changes.
+    // Initialize the conversation: fetch the thread list and, when auto-opening,
+    // load the latest thread's history — keeping `initializing` true for the
+    // whole sequence so the panel can show one clean loading state. Re-runs when
+    // the scope (brand / module / contextId) changes.
     useEffect(() => {
-        if (!autoOpenLatest) return;
-        if (autoOpenedRef.current) return;
-        if (activeThreadId) return;
-        if (threads.length === 0) return;
-        autoOpenedRef.current = true;
-        loadThread(threads[0].id);
-    }, [autoOpenLatest, threads, activeThreadId, loadThread]);
+        let cancelled = false;
+        if (!brandId) {
+            setInitializing(true);
+            return;
+        }
+        setInitializing(true);
+        (async () => {
+            const list = await refreshThreads();
+            if (cancelled) return;
+            if (autoOpenLatest && !autoOpenedRef.current && list.length > 0) {
+                autoOpenedRef.current = true;
+                await loadThread(list[0].id);
+            }
+            if (!cancelled) setInitializing(false);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [brandId, refreshThreads, autoOpenLatest, loadThread]);
 
     const createThread = useCallback(async (title?: string): Promise<string | null> => {
         if (!brandId) return null;
@@ -253,6 +269,7 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
         streamingContent,
         isStreaming,
         loading,
+        initializing,
         createThread,
         loadThread,
         deleteThread,
