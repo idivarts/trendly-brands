@@ -10,6 +10,7 @@ import Colors from "@/shared-uis/constants/Colors";
  */
 export type ContentStatus =
     | "draft"
+    | "in_progress"
     | "review_pending"
     | "approved"
     | "scheduled"
@@ -62,6 +63,7 @@ export interface ContentItem extends CalendarItem {
 
 export const CONTENT_STATUS_LABELS: Record<ContentStatus, string> = {
     draft: "Draft",
+    in_progress: "In Progress",
     review_pending: "Review Pending",
     approved: "Approved",
     scheduled: "Scheduled",
@@ -72,11 +74,24 @@ export const CONTENT_STATUS_LABELS: Record<ContentStatus, string> = {
 /** Full status set, in lifecycle order (for filters, legends, etc.). */
 export const CONTENT_STATUS_ORDER: ContentStatus[] = [
     "draft",
+    "in_progress",
     "review_pending",
     "approved",
     "scheduled",
     "posted",
     "rejected",
+];
+
+/**
+ * The authoring funnel shown as Board columns. Pipeline-driven (`scheduled`,
+ * `posted`) and review-flow (`rejected`) statuses are intentionally excluded —
+ * see the Contents-page ticket. Drag targets are limited to this set.
+ */
+export const BOARD_CONTENT_STATUSES: ContentStatus[] = [
+    "draft",
+    "in_progress",
+    "review_pending",
+    "approved",
 ];
 
 /**
@@ -86,6 +101,7 @@ export const CONTENT_STATUS_ORDER: ContentStatus[] = [
  */
 export const EDITABLE_CONTENT_STATUSES: ContentStatus[] = [
     "draft",
+    "in_progress",
     "review_pending",
     "approved",
 ];
@@ -99,6 +115,8 @@ export function contentStatusColors(
     colors: ReturnType<typeof Colors>
 ): { fg: string; bg: string } {
     switch (status) {
+        case "in_progress":
+            return { fg: colors.statusInProgressFg, bg: colors.statusInProgressBg };
         case "review_pending":
             return { fg: colors.statusReviewFg, bg: colors.statusReviewBg };
         case "approved":
