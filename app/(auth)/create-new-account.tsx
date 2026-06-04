@@ -1,9 +1,8 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
+import AuthTextField from "@/components/auth/AuthTextField";
 import Button from "@/components/ui/button";
-import TextInput from "@/components/ui/text-input";
 import { useAuthContext } from "@/contexts";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
@@ -88,48 +87,29 @@ const SignUpScreen = () => {
                 </Text>
             </View>
             <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
-                <TextInput
+                <AuthTextField
                     label="Name"
                     value={name}
                     onChangeText={setName}
-                    mode="outlined"
-                    textColor={Colors(theme).text}
-                    placeholderTextColor={Colors(theme).text}
-                    style={styles.input}
-                    theme={{ colors: { primary: Colors(theme).text } }}
                 />
-                <TextInput
-                    autoCapitalize="none"
+                <AuthTextField
                     label="Work Email"
                     value={email}
-                    placeholderTextColor={Colors(theme).text}
                     onChangeText={setEmail}
-                    textColor={Colors(theme).text}
-                    mode="outlined"
-                    style={styles.input}
-                    theme={{ colors: { primary: Colors(theme).text } }}
+                    autoCapitalize="none"
+                    placeholder="you@company.com"
                 />
-                <TextInput
+                <AuthTextField
                     label="Password"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
-                    mode="outlined"
-                    placeholderTextColor={Colors(theme).text}
-                    textColor={Colors(theme).text}
-                    style={styles.input}
-                    theme={{ colors: { primary: Colors(theme).text } }}
                 />
-                <TextInput
+                <AuthTextField
                     label="Confirm Password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    placeholderTextColor={Colors(theme).text}
-                    textColor={Colors(theme).text}
                     secureTextEntry
-                    mode="outlined"
-                    style={styles.input}
-                    theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <Button
                     mode="contained"

@@ -5,10 +5,10 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 const FEATURE_ITEMS = [
-    { icon: "🤝", title: "Direct Brand-Influencer Match", sub: "Connect with verified influencers without middlemen" },
-    { icon: "💰", title: "Zero Commission", sub: "Keep 100% of your budget for campaigns" },
-    { icon: "⚡", title: "Fast Campaign Setup", sub: "Post collaborations and start getting applications instantly" },
-    { icon: "📊", title: "Guaranteed ROI", sub: "Smart matching ensures higher engagement and conversions" },
+    { icon: "🗓️", title: "Plan & Schedule", sub: "Organize your brand's content in one shared calendar" },
+    { icon: "✏️", title: "Create & Manage", sub: "Produce, review, and publish content end to end" },
+    { icon: "🤝", title: "Creators On Demand", sub: "Bring in vetted creators whenever you need extra hands" },
+    { icon: "💰", title: "Zero Commission", sub: "Keep 100% of your budget — no middlemen" },
 ];
 
 const LandingFooter = () => {

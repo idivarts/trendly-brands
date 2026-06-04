@@ -1,8 +1,7 @@
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
+import AuthTextField from "@/components/auth/AuthTextField";
 import Button from "@/components/ui/button";
-import TextInput from "@/components/ui/text-input";
 import { useAuthContext } from "@/contexts";
-import Colors from "@/shared-uis/constants/Colors";
 import fnStyles from "@/styles/signup.styles";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -38,25 +37,18 @@ const LoginScreen = () => {
                 </Text>
             </View>
             <View style={[styles.inputContainer, authLayoutStyles.inputStack]}>
-                <TextInput
-                    autoCapitalize="none"
+                <AuthTextField
                     label="Email"
                     value={email}
                     onChangeText={setEmail}
-                    mode="outlined"
-                    textColor={Colors(theme).text}
-                    style={styles.input}
-                    theme={{ colors: { primary: Colors(theme).text } }}
+                    autoCapitalize="none"
+                    placeholder="you@company.com"
                 />
-                <TextInput
+                <AuthTextField
                     label="Password"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
-                    mode="outlined"
-                    style={styles.input}
-                    textColor={Colors(theme).text}
-                    theme={{ colors: { primary: Colors(theme).text } }}
                 />
                 <Button
                     mode="contained"

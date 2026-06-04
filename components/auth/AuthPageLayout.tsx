@@ -1,91 +1,20 @@
-import {
-    AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX,
-    authShowcaseSampleInfluencers,
-} from "@/components/auth/auth-showcase-sample-influencers";
-import type { InfluencerItem } from "@/components/discover/discover-types";
-import InfluencerCard from "@/components/explore-influencers/InfluencerCard";
+import AuthShowcase from "@/components/auth/AuthShowcase";
 import { useBreakpoints } from "@/hooks";
 import { getConstrainedHeight } from "@/shared-libs/contexts/mobile-layout-context.provider";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     View
 } from "react-native";
-import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withSequence,
-    withTiming,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-/** Must match `showcaseCardWrapper` height + gap so the scroll loop stays seamless. */
-const marqueeCard = { height: 260, gap: 60 } as const;
-const marqueeScrollDurationMs = 26_000;
 
 /** Viewport height below this uses compact spacing so the form fits without scrolling. */
 export const SHORT_VIEWPORT_MAX_HEIGHT = 920;
-
-/** Duplicate items so that when we scroll, duplicated content fills any gap (no white space). */
-const buildLoop = (items: InfluencerItem[]) => [...items, ...items, ...items];
-
-const AutoScrollColumn = ({
-    items,
-    direction,
-}: {
-    items: InfluencerItem[];
-    direction: 1 | -1;
-}) => {
-    const loopItems = useMemo(() => buildLoop(items), [items]);
-    const scrollDistance = useMemo(
-        () => items.length * (marqueeCard.height + marqueeCard.gap),
-        [items.length]
-    );
-    // direction -1 = scroll downward: start one segment down so content above viewport (no white at top).
-    const initialY = direction === -1 ? -scrollDistance : 0;
-    const translateY = useSharedValue(initialY);
-
-    useEffect(() => {
-        const towardY = direction === -1 ? 0 : -scrollDistance;
-        const resetY = direction === -1 ? -scrollDistance : 0;
-        translateY.value = withRepeat(
-            withSequence(
-                withTiming(towardY, {
-                    duration: marqueeScrollDurationMs,
-                    easing: Easing.linear,
-                }),
-                withTiming(resetY, { duration: 0 })
-            ),
-            -1
-        );
-    }, [direction, scrollDistance, translateY]);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: translateY.value }],
-    }));
-
-    return Platform.OS === "web" ? (
-        <View style={authLayoutStyles.showcaseColumn}>
-            <Animated.View style={animatedStyle}>
-                {loopItems.map((item, index) => (
-                    <View
-                        key={`${item.id}-${index}`}
-                        style={authLayoutStyles.showcaseCardWrapper}
-                    >
-                        <InfluencerCard item={item} isCollapsed />
-                    </View>
-                ))}
-            </Animated.View>
-        </View>
-    ) : null;
-};
 
 const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const theme = useTheme();
@@ -97,10 +26,12 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
     const narrowPagePaddingBottom = Math.max(30, insets.bottom);
     const narrowMaxHeight =
         windowHeight - narrowPagePaddingTop - narrowPagePaddingBottom;
-    const showcaseHeight = Math.max(640, windowHeight - 24 * 2);
 
+    // Soft, neutral light wash (replaces the old pastel gradient). Keeps the
+    // dark studio showcase and the white form card both reading cleanly, and
+    // stays legible for the full-bleed form on narrow/native layouts.
     const gradientColors = useMemo<readonly [string, string, string]>(
-        () => [colors.authGradient1, colors.authGradient2, colors.authGradient3],
+        () => [colors.background, colors.aliceBlue, colors.background],
         [colors]
     );
 
@@ -161,17 +92,6 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
         [colors, isWideLayout, windowHeight]
     );
 
-    const leftItems = useMemo(
-        () =>
-            authShowcaseSampleInfluencers.slice(0, AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX),
-        []
-    );
-    const rightItems = useMemo(
-        () =>
-            authShowcaseSampleInfluencers.slice(AUTH_SHOWCASE_MARQUEE_SPLIT_INDEX),
-        []
-    );
-
     const pageContent = (
         <>
             {isWideLayout && (
@@ -181,14 +101,7 @@ const AuthPageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =
                         stylesWithTheme.leftPaneShortViewport,
                     ]}
                 >
-                    <View style={authLayoutStyles.showcaseMarqueeWrapper}>
-                        <View
-                            style={[stylesWithTheme.showcaseContainer, { height: showcaseHeight }]}
-                        >
-                            <AutoScrollColumn items={rightItems} direction={-1} />
-                            <AutoScrollColumn items={leftItems} direction={1} />
-                        </View>
-                    </View>
+                    <AuthShowcase />
                 </View>
             )}
             <View
@@ -347,8 +260,8 @@ export const authLayoutStyles = {
         overflow: "hidden" as const,
     },
     showcaseCardWrapper: {
-        height: marqueeCard.height,
-        marginBottom: marqueeCard.gap,
+        height: 260,
+        marginBottom: 60,
         opacity: 0.6,
     },
     floatingCard: {
