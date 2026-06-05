@@ -3,6 +3,7 @@ import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCheck,
+    faChevronDown,
     faImage,
     faItalic,
     faLink,
@@ -15,9 +16,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -104,6 +106,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     const editable = lock ? lock.editable : true;
     const editorRef = useRef<EnrichedTextInputInstance>(null);
     const [stylesState, setStylesState] = useState<OnChangeStateEvent | null>(null);
+    // iOS keyboards have no built-in dismiss key — track visibility so we can
+    // surface a "collapse keyboard" button in the toolbar while typing.
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
     const [linkModalVisible, setLinkModalVisible] = useState(false);
     const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -116,6 +121,27 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     });
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
+
+    // iOS only: watch the keyboard so the dismiss button appears exactly when
+    // there's a keyboard to dismiss. (Android already shows a back-to-collapse.)
+    useEffect(() => {
+        if (Platform.OS !== "ios") return;
+        const show = Keyboard.addListener("keyboardWillShow", () =>
+            setKeyboardVisible(true)
+        );
+        const hide = Keyboard.addListener("keyboardWillHide", () =>
+            setKeyboardVisible(false)
+        );
+        return () => {
+            show.remove();
+            hide.remove();
+        };
+    }, []);
+
+    const dismissKeyboard = useCallback(() => {
+        editorRef.current?.blur();
+        Keyboard.dismiss();
+    }, []);
 
     // react-native-enriched does not expose selected text directly via state,
     // so selection-based actions (Send to Chat, Comment) are limited on native.
@@ -231,6 +257,25 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     </ScrollView>
 
                     <View style={styles.toolbarRight}>
+                        {/* Collapse-keyboard button — iOS keyboards lack one. Shown
+                            only while the keyboard is up so it never lingers. */}
+                        {keyboardVisible && (
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.dismissBtn,
+                                    pressed && styles.toolbarBtnPressed,
+                                ]}
+                                onPress={dismissKeyboard}
+                                hitSlop={6}
+                                accessibilityLabel="Collapse keyboard"
+                            >
+                                <FontAwesomeIcon
+                                    icon={faChevronDown}
+                                    size={13}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                        )}
                         {/* Quick Edit always available on native (no selection required) */}
                         <Pressable
                             style={styles.selectionAction}
@@ -439,6 +484,19 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
             shadowOpacity: 0,
             elevation: 0,
+        },
+        dismissBtn: {
+            width: 30,
+            height: 30,
+            borderRadius: 6,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.background,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.06,
+            elevation: 1,
         },
         selectionAction: {
             flexDirection: "row",
