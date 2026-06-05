@@ -10,6 +10,7 @@ import {
     faLink,
     faListOl,
     faListUl,
+    faLock,
     faPen,
     faQuoteLeft,
     faShareNodes,
@@ -28,6 +29,8 @@ import {
     ListNode,
     REMOVE_LIST_COMMAND,
 } from "@lexical/list";
+import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
+import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -64,7 +67,12 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import ImageInsertModal from "./ImageInsertModal";
+import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { doc as fsDoc, runTransaction } from "firebase/firestore";
 import { $createImageNode, ImageNode } from "./lexical/ImageNode";
+import { createFirestoreProviderFactory } from "./lexical/FirestoreYjsProvider";
 import { $serializeToEnrichedInner, $setEditorContentFromHtml } from "./lexical/serialize";
 import LinkInsertModal from "./LinkInsertModal";
 
@@ -77,6 +85,36 @@ export interface StrategyEditorPanelProps {
     strategyId?: string;
     /** AI module used for Quick Edit context. Defaults to "content". */
     module?: string;
+    /**
+     * Opt-in real-time co-editing (web). When true AND a brand + manager +
+     * strategyId are available, the Yjs CRDT becomes the source of truth and the
+     * HTML `content`/`onChange` sync path is suspended (see Roadmap ticket
+     * 37542d5f…cdd28, Phase 2). The shared ScriptEditor never sets this, so it
+     * keeps the single-writer behaviour.
+     */
+    collaborative?: boolean;
+    /**
+     * Native single-writer lock state (Phase 3). When `editable` is false the
+     * editor is read-only; on web that means a native editor currently holds the
+     * lock, so we show a banner and suspend editing until it's released.
+     */
+    lock?: EditLockUI;
+}
+
+export interface EditLockUI {
+    editable: boolean;
+    lockedByName?: string | null;
+    onRequestEdit?: () => void;
+    onEndEdit?: () => void;
+}
+
+// Stable per-editor cursor colours (remote carets). Picked by manager id.
+const CURSOR_COLORS = ["#2D6CDF", "#E8590C", "#2F9E44", "#9C36B5", "#C2255C", "#0C8599"];
+function pickCursorColor(seed?: string): string {
+    if (!seed) return CURSOR_COLORS[0];
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return CURSOR_COLORS[h % CURSOR_COLORS.length];
 }
 
 const STYLE_ID = "trendly-lexical-core-css";
@@ -210,11 +248,91 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     onSnippetComment,
     strategyId,
     module: aiModule = "content",
+    collaborative,
+    lock,
 }) => {
     const [editor] = useLexicalComposerContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
+
+    // Read-only while a native editor holds the single-writer lock.
+    const readOnly = lock ? !lock.editable : false;
+    useEffect(() => {
+        editor.setEditable(!readOnly);
+    }, [editor, readOnly]);
+
+    const { selectedBrand } = useBrandContext();
+    const { manager } = useAuthContext();
+
+    // Collaboration is enabled only when explicitly requested AND we have the
+    // brand/manager/strategy needed to address the CRDT log.
+    const collabEnabled = !!(
+        collaborative && selectedBrand?.id && manager?.id && strategyId
+    );
+
+    // Bootstrap arbitration: exactly one client seeds the empty Yjs doc from the
+    // existing markdownContent. "pending" until the transactional claim resolves.
+    const [bootstrapRole, setBootstrapRole] = useState<"pending" | "owner" | "follower">(
+        collabEnabled ? "pending" : "follower"
+    );
+    // Seed captured once at mount (EditorBody remounts per strategy — see key).
+    const seedHtmlRef = useRef(ensureEnrichedHtml(content || ""));
+    const cursorsRef = useRef<HTMLDivElement>(null);
+    const cursorColor = useMemo(() => pickCursorColor(manager?.id), [manager?.id]);
+
+    const providerFactory = useMemo(() => {
+        if (!collabEnabled) return undefined;
+        return createFirestoreProviderFactory({
+            brandId: selectedBrand!.id,
+            strategyId: strategyId!,
+            managerId: manager!.id,
+            name: manager?.name ?? "Editor",
+        });
+    }, [collabEnabled, selectedBrand?.id, strategyId, manager?.id, manager?.name]);
+
+    const initialEditorState = useCallback(
+        (ed: LexicalEditor) => {
+            $setEditorContentFromHtml(ed, seedHtmlRef.current);
+        },
+        []
+    );
+
+    // Claim (or decline) the one-time CRDT bootstrap for this strategy.
+    useEffect(() => {
+        if (!collabEnabled) {
+            setBootstrapRole("follower");
+            return;
+        }
+        let cancelled = false;
+        setBootstrapRole("pending");
+        (async () => {
+            try {
+                const sref = fsDoc(
+                    FirestoreDB,
+                    "brands",
+                    selectedBrand!.id,
+                    "strategies",
+                    strategyId!
+                );
+                let owner = false;
+                await runTransaction(FirestoreDB, async (tx) => {
+                    const s = await tx.get(sref);
+                    if (s.data()?.crdtInitialized !== true) {
+                        tx.update(sref, { crdtInitialized: true });
+                        owner = true;
+                    }
+                });
+                if (!cancelled) setBootstrapRole(owner ? "owner" : "follower");
+            } catch {
+                // Safe default: don't seed; the provider will load existing state.
+                if (!cancelled) setBootstrapRole("follower");
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [collabEnabled, strategyId, selectedBrand?.id]);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const lastHtmlRef = useRef("");
@@ -337,7 +455,11 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     }, [computePopover]);
 
     // ── Initial content load ───────────────────────────────────────────────────
+    // In collaborative mode the Yjs CRDT (via CollaborationPlugin) owns content,
+    // so we must NOT seed/sync from the HTML prop here — doing so would fight the
+    // CRDT and re-introduce the clobber bug in a new form.
     useEffect(() => {
+        if (collabEnabled) return;
         const incoming = ensureEnrichedHtml(content || "");
         lastHtmlRef.current = incoming;
         editor.update(() => $setEditorContentFromHtml(editor, incoming));
@@ -346,11 +468,12 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
 
     // ── External content sync (avoid update loops) ─────────────────────────────
     useEffect(() => {
+        if (collabEnabled) return;
         const incoming = ensureEnrichedHtml(content || "");
         if (incoming === lastHtmlRef.current) return;
         lastHtmlRef.current = incoming;
         editor.update(() => $setEditorContentFromHtml(editor, incoming));
-    }, [content, editor]);
+    }, [content, editor, collabEnabled]);
 
     // ── Active-state listener + scroll reposition ──────────────────────────────
     useEffect(() => {
@@ -564,7 +687,20 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
 
     return (
         <View style={styles.container}>
+            {/* ── Read-only banner: a native editor holds the single-writer lock ─ */}
+            {readOnly && (
+                <View style={styles.lockBanner}>
+                    <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary as string} />
+                    <Text style={styles.lockBannerText} numberOfLines={1}>
+                        {lock?.lockedByName
+                            ? `${lock.lockedByName} is editing on a device · changes appear when they finish`
+                            : "Read-only"}
+                    </Text>
+                </View>
+            )}
+
             {/* ── Toolbar ──────────────────────────────────────────────────── */}
+            {!readOnly && (
             <View style={styles.toolbar}>
                 <View style={styles.toolbarLeft}>
                     <select value={dropdownValue} onChange={(e) => handleTextSize(e.target.value)} style={selectStyle}>
@@ -651,6 +787,7 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                     </Pressable>
                 </View>
             </View>
+            )}
 
             {/* ── Editor surface ───────────────────────────────────────────── */}
             <div
@@ -670,10 +807,29 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                     placeholder={<div className="tl-placeholder">Write your content strategy...</div>}
                     ErrorBoundary={LexicalErrorBoundary}
                 />
-                <HistoryPlugin />
+                {/* Stock history conflicts with CRDT undo — only outside collab. */}
+                {!collabEnabled && <HistoryPlugin />}
+                {collabEnabled && bootstrapRole !== "pending" && providerFactory && (
+                    <CollaborationPlugin
+                        id={`strategy-${strategyId}`}
+                        providerFactory={providerFactory}
+                        shouldBootstrap={bootstrapRole === "owner"}
+                        initialEditorState={
+                            bootstrapRole === "owner" ? initialEditorState : undefined
+                        }
+                        username={manager?.name ?? "Editor"}
+                        cursorColor={cursorColor}
+                        cursorsContainerRef={cursorsRef}
+                    />
+                )}
                 <ListPlugin />
                 <LinkPlugin />
                 <OnChangePlugin onChange={handleEditorChange} ignoreSelectionChange />
+
+                {/* Remote collaborator carets render into this layer. */}
+                {collabEnabled && (
+                    <div ref={cursorsRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 40 } as React.CSSProperties} />
+                )}
 
                 {hasSelection && popoverPos && (
                     <View
@@ -681,14 +837,18 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                         onMouseDown={(e: any) => e.preventDefault()}
                         style={[styles.floatingPopover, { top: popoverPos.top, left: popoverPos.left }]}
                     >
-                        <Pressable
-                            style={({ hovered, pressed }: any) => [styles.popoverAction, (hovered || pressed) && styles.popoverActionHover]}
-                            onPress={handleQuickEditOpen}
-                        >
-                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary as string} />
-                            <Text style={styles.popoverActionText}>Quick Edit</Text>
-                        </Pressable>
-                        <View style={styles.popoverDivider} />
+                        {!readOnly && (
+                            <>
+                                <Pressable
+                                    style={({ hovered, pressed }: any) => [styles.popoverAction, (hovered || pressed) && styles.popoverActionHover]}
+                                    onPress={handleQuickEditOpen}
+                                >
+                                    <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary as string} />
+                                    <Text style={styles.popoverActionText}>Quick Edit</Text>
+                                </Pressable>
+                                <View style={styles.popoverDivider} />
+                            </>
+                        )}
                         <Pressable
                             style={({ hovered, pressed }: any) => [styles.popoverAction, (hovered || pressed) && styles.popoverActionHover]}
                             onPress={handleSendToChat}
@@ -747,6 +907,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = (props) => {
         () => ({
             namespace: "trendly-strategy-editor",
             theme: EDITOR_THEME,
+            // CollaborationPlugin requires editorState=null so Lexical defers the
+            // initial state to the CRDT instead of seeding its own empty doc.
+            editorState: props.collaborative ? null : undefined,
             onError: (error: Error) => {
                 // eslint-disable-next-line no-console
                 console.error("[RichTextEditor] Lexical error:", error);
@@ -762,13 +925,26 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = (props) => {
                 ImageNode,
             ],
         }),
-        []
+        [props.collaborative]
     );
 
-    return (
-        <LexicalComposer initialConfig={initialConfig}>
+    // Fully remount (new Y.Doc + provider) when switching strategies in collab mode.
+    const composerKey =
+        props.collaborative && props.strategyId ? `collab-${props.strategyId}` : "single";
+
+    const composer = (
+        <LexicalComposer key={composerKey} initialConfig={initialConfig}>
             <EditorBody {...props} />
         </LexicalComposer>
+    );
+
+    // CollaborationPlugin reads CollaborationContext (yjsDocMap, isCollabActive),
+    // which @lexical/react does NOT provide by default — its dev build throws
+    // "useCollaborationContext: no context provider found" without this wrapper.
+    return props.collaborative ? (
+        <LexicalCollaboration>{composer}</LexicalCollaboration>
+    ) : (
+        composer
     );
 };
 
@@ -789,6 +965,20 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         toolbarLeft: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, flex: 1 },
         toolbarDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 6 },
+        lockBanner: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            backgroundColor: colors.tag,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        lockBannerText: { fontSize: 12.5, fontWeight: "600", color: colors.textSecondary, flexShrink: 1 },
         floatingPopover: {
             position: "absolute",
             flexDirection: "row",

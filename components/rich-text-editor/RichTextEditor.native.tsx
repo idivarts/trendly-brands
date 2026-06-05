@@ -2,11 +2,13 @@ import Colors from "@/shared-uis/constants/Colors";
 import { ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
+    faCheck,
     faImage,
     faItalic,
     faLink,
     faListOl,
     faListUl,
+    faLock,
     faPen,
     faStrikethrough,
     faUnderline
@@ -59,6 +61,13 @@ async function resolveImageSize(
     });
 }
 
+export interface EditLockUI {
+    editable: boolean;
+    lockedByName?: string | null;
+    onRequestEdit?: () => void;
+    onEndEdit?: () => void;
+}
+
 export interface StrategyEditorPanelProps {
     content: string;
     onChange: (text: string) => void;
@@ -68,6 +77,13 @@ export interface StrategyEditorPanelProps {
     strategyId?: string;
     /** AI module used for Quick Edit context. Defaults to "content". */
     module?: string;
+    /** Web-only collaboration flag — ignored on native (single-writer). */
+    collaborative?: boolean;
+    /**
+     * Single-writer lock state (Phase 3). On native this drives the read-only /
+     * "Edit" / "Done" bar: the device must hold the lock to type.
+     */
+    lock?: EditLockUI;
 }
 
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
@@ -77,10 +93,15 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     onSnippetComment,
     strategyId,
     module: aiModule = "content",
+    lock,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { width } = useBreakpoints();
+
+    // Native is the single-writer surface: editable only while this device holds
+    // the lock. When `lock` is omitted (e.g. ScriptEditor), stay fully editable.
+    const editable = lock ? lock.editable : true;
     const editorRef = useRef<EnrichedTextInputInstance>(null);
     const [stylesState, setStylesState] = useState<OnChangeStateEvent | null>(null);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
@@ -179,46 +200,68 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
     return (
         <View style={styles.container}>
-            {/* ── Toolbar ──────────────────────────────────────────────────── */}
-            <View style={styles.toolbar}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.toolbarScroll}
-                    contentContainerStyle={styles.toolbarLeft}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {formatButtons.map((btn) => (
-                        <Pressable
-                            key={btn.label}
-                            style={({ pressed }) => [
-                                styles.toolbarBtn,
-                                btn.isActive && styles.toolbarBtnActive,
-                                pressed && styles.toolbarBtnPressed,
-                            ]}
-                            onPress={btn.onPress}
-                            accessibilityLabel={btn.label}
-                        >
-                            <FontAwesomeIcon
-                                icon={btn.icon}
-                                size={13}
-                                color={btn.isActive ? colors.onPrimary : colors.textSecondary}
-                            />
-                        </Pressable>
-                    ))}
-                </ScrollView>
-
-                {/* Quick Edit always available on native (no selection required) */}
-                <View style={styles.toolbarRight}>
-                    <Pressable
-                        style={styles.selectionAction}
-                        onPress={() => setQuickEditVisible(true)}
+            {/* ── Toolbar (editing) or lock bar (read-only) ──────────────────── */}
+            {editable ? (
+                <View style={styles.toolbar}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.toolbarScroll}
+                        contentContainerStyle={styles.toolbarLeft}
+                        keyboardShouldPersistTaps="handled"
                     >
-                        <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText} />
-                        <Text style={styles.selectionActionText}>Quick Edit</Text>
-                    </Pressable>
+                        {formatButtons.map((btn) => (
+                            <Pressable
+                                key={btn.label}
+                                style={({ pressed }) => [
+                                    styles.toolbarBtn,
+                                    btn.isActive && styles.toolbarBtnActive,
+                                    pressed && styles.toolbarBtnPressed,
+                                ]}
+                                onPress={btn.onPress}
+                                accessibilityLabel={btn.label}
+                            >
+                                <FontAwesomeIcon
+                                    icon={btn.icon}
+                                    size={13}
+                                    color={btn.isActive ? colors.onPrimary : colors.textSecondary}
+                                />
+                            </Pressable>
+                        ))}
+                    </ScrollView>
+
+                    <View style={styles.toolbarRight}>
+                        {/* Quick Edit always available on native (no selection required) */}
+                        <Pressable
+                            style={styles.selectionAction}
+                            onPress={() => setQuickEditVisible(true)}
+                        >
+                            <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText} />
+                            <Text style={styles.selectionActionText}>Quick Edit</Text>
+                        </Pressable>
+                        {/* "Done" releases the lock so web can resume co-editing. */}
+                        {lock?.onEndEdit && (
+                            <Pressable style={styles.doneAction} onPress={lock.onEndEdit}>
+                                <FontAwesomeIcon icon={faCheck} size={12} color={colors.onPrimary} />
+                                <Text style={styles.doneActionText}>Done</Text>
+                            </Pressable>
+                        )}
+                    </View>
                 </View>
-            </View>
+            ) : (
+                <View style={styles.lockBar}>
+                    <FontAwesomeIcon icon={faLock} size={13} color={colors.textSecondary} />
+                    <Text style={styles.lockBarText} numberOfLines={1}>
+                        {lock?.lockedByName ? `${lock.lockedByName} is editing` : "View only"}
+                    </Text>
+                    {!lock?.lockedByName && lock?.onRequestEdit && (
+                        <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
+                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                            <Text style={styles.editActionText}>Edit</Text>
+                        </Pressable>
+                    )}
+                </View>
+            )}
 
             {/* ── Editor ───────────────────────────────────────────────────── */}
             <KeyboardAvoidingView
@@ -233,6 +276,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 >
                     <EnrichedTextInput
                         ref={editorRef}
+                        editable={editable}
                         defaultValue={ensureEnrichedHtml(content || "")}
                         // Run native output through the same canonical normaliser
                         // the web editor uses, so both export identical rich text.
@@ -315,6 +359,63 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "flex-end",
             gap: 6,
             paddingLeft: 8,
+        },
+        lockBar: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingHorizontal: 14,
+            paddingVertical: 11,
+            backgroundColor: colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        lockBarText: {
+            flex: 1,
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.textSecondary,
+        },
+        editAction: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 8,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            shadowOpacity: 0.35,
+            elevation: 4,
+        },
+        editActionText: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.onPrimary,
+        },
+        doneAction: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 6,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 10,
+            shadowOpacity: 0.3,
+            elevation: 3,
+        },
+        doneActionText: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.onPrimary,
         },
         toolbarBtn: {
             width: 30,

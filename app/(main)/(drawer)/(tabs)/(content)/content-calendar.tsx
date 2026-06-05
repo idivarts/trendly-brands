@@ -155,6 +155,12 @@ const ContentCalendarScreen = () => {
     // AddContentModal places new items (see toIContent in use-contents).
     const handleMoveItem = useCallback(
         async (itemId: string, newDate: string) => {
+            // Scheduled / posted content is locked — its posting date can't be
+            // changed by dragging. Unschedule (or it's already posted) first.
+            const moved = allContents.find((c) => c.id === itemId);
+            if (moved && (moved.status === "scheduled" || moved.status === "posted")) {
+                return;
+            }
             const postingTimeStamp = new Date(newDate + "T00:00:00Z").getTime();
             try {
                 await updateContent(itemId, { postingTimeStamp });
@@ -162,7 +168,7 @@ const ContentCalendarScreen = () => {
                 console.warn("Failed to move content to new day", err);
             }
         },
-        [updateContent]
+        [updateContent, allContents]
     );
 
     // Toggle helpers — tapping the active mode collapses; tapping inactive switches.

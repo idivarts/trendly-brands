@@ -17,14 +17,15 @@ import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePan
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { useStrategies } from "@/hooks/use-strategies";
+import { EDIT_LOCK_TTL_MS, useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, StyleSheet } from "react-native";
+import { Animated, Easing, Platform, StyleSheet } from "react-native";
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 // .replace(/<[^>]*>/g, "").trim()
@@ -48,6 +49,9 @@ const ContentStrategyDetail = () => {
         updateStrategyName,
         updateReviewStatus,
         updatePresence,
+        acquireEditLock,
+        refreshEditLock,
+        releaseEditLock,
     } = useStrategies();
 
     // Start in "loading" until Firestore tells us whether this strategy has
@@ -153,6 +157,83 @@ const ContentStrategyDetail = () => {
         const interval = setInterval(() => updatePresence(strategyId), 20_000);
         return () => clearInterval(interval);
     }, [strategyId, updatePresence]);
+
+    // ── Single-writer edit lock (Phase 3) ──────────────────────────────────
+    // Web is the collaborative (CRDT) surface; native is single-writer. A fresh
+    // `editLock` means a device is editing → web yields (read-only). Native must
+    // tap "Edit" to take the lock, and "Done" releases it (resetting the CRDT so
+    // web re-bootstraps from the native-edited content).
+    const isWeb = Platform.OS === "web";
+    const [holdingLock, setHoldingLock] = useState(false);
+    const holdingLockRef = useRef(false);
+    useEffect(() => {
+        holdingLockRef.current = holdingLock;
+    }, [holdingLock]);
+
+    // Re-evaluate lock freshness periodically so a stale lock (closed editor)
+    // visibly frees up even without a new Firestore snapshot.
+    const [, setLockTick] = useState(0);
+    useEffect(() => {
+        const i = setInterval(() => setLockTick((t) => t + 1), 10_000);
+        return () => clearInterval(i);
+    }, []);
+
+    const editLock = activeStrategy?.editLock ?? null;
+    const lockFresh = !!editLock && Date.now() - editLock.heartbeatAt < EDIT_LOCK_TTL_MS;
+    const lockedByOther = lockFresh && editLock!.managerId !== manager?.id;
+    const lockedByName = lockedByOther ? editLock!.name : null;
+
+    const handleRequestEdit = useCallback(async () => {
+        if (!strategyId) return;
+        const ok = await acquireEditLock(strategyId);
+        if (ok) setHoldingLock(true);
+        else Toaster.error("Someone's editing", "This strategy is being edited on another device.");
+    }, [strategyId, acquireEditLock]);
+
+    const handleEndEdit = useCallback(async () => {
+        if (!strategyId) return;
+        setHoldingLock(false);
+        await releaseEditLock(strategyId, true);
+    }, [strategyId, releaseEditLock]);
+
+    // Heartbeat the lock while we hold it (native).
+    useEffect(() => {
+        if (!holdingLock || !strategyId) return;
+        const i = setInterval(() => refreshEditLock(strategyId), 10_000);
+        return () => clearInterval(i);
+    }, [holdingLock, strategyId, refreshEditLock]);
+
+    // Release the lock (and reset the CRDT) if we leave while still holding it.
+    useEffect(() => {
+        return () => {
+            if (holdingLockRef.current && strategyId) {
+                void releaseEditLock(strategyId, true);
+            }
+        };
+    }, [strategyId, releaseEditLock]);
+
+    // When a native holder releases, bump a generation so the web editor remounts
+    // and re-bootstraps the CRDT from the freshly-edited markdownContent.
+    const prevLockedByOther = useRef(lockedByOther);
+    const [crdtGen, setCrdtGen] = useState(0);
+    useEffect(() => {
+        if (prevLockedByOther.current && !lockedByOther) {
+            setCrdtGen((g) => g + 1);
+        }
+        prevLockedByOther.current = lockedByOther;
+    }, [lockedByOther]);
+
+    const editorEditable = isWeb ? !lockedByOther : holdingLock;
+    const editorLock = useMemo(
+        () => ({
+            editable: editorEditable,
+            lockedByName,
+            onRequestEdit:
+                !isWeb && !lockedByOther && !holdingLock ? handleRequestEdit : undefined,
+            onEndEdit: !isWeb && holdingLock ? handleEndEdit : undefined,
+        }),
+        [editorEditable, lockedByName, isWeb, lockedByOther, holdingLock, handleRequestEdit, handleEndEdit]
+    );
 
     const handleSendToChat = useCallback((text: string) => {
         const label = text.length > 120 ? text.slice(0, 120) + "..." : text;
@@ -381,11 +462,15 @@ const ContentStrategyDetail = () => {
                                 pointerEvents={isReady ? "auto" : "none"}
                             >
                                 <StrategyEditorPanel
+                                    key={`editor-${strategyId}-${crdtGen}`}
                                     content={strategyContent}
                                     onChange={handleStrategyContentChange}
                                     onSendToChat={handleSendToChat}
                                     onSnippetComment={handleSnippetComment}
                                     strategyId={strategyId ?? undefined}
+                                    collaborative
+                                    lock={editorLock}
+
                                     toolbar={activeStrategy ? {
                                         strategy: activeStrategy,
                                         currentManagerId: manager?.id ?? "",

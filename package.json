@@ -47,6 +47,7 @@
         "@lexical/rich-text": "^0.45.0",
         "@lexical/selection": "^0.45.0",
         "@lexical/utils": "^0.45.0",
+        "@lexical/yjs": "^0.45.0",
         "@likashefqet/react-native-image-zoom": "^4.3.0",
         "@lottiefiles/dotlottie-react": "^0.13.5",
         "@ptomasroos/react-native-multi-slider": "^2.2.2",
@@ -136,7 +137,9 @@
         "reanimated-bottom-sheet": "^1.0.0-alpha.22",
         "rxjs": "^7.8.2",
         "stream-chat-expo": "^8.5.0",
-        "uuid": "^13.0.0"
+        "uuid": "^13.0.0",
+        "y-protocols": "^1.0.7",
+        "yjs": "^13.6.31"
     },
     "devDependencies": {
         "@babel/core": "^7.20.0",
