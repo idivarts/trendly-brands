@@ -46,7 +46,7 @@ const ContentCalendarScreen = () => {
 
     const { items: allContents, addContent, updateContent } = useContents();
     const items = useMemo<CalendarItem[]>(
-        () => allContents.filter((i) => !!i.date),
+        () => allContents.filter((i) => !!i.date && !i.isArchived),
         [allContents]
     );
 
@@ -95,9 +95,12 @@ const ContentCalendarScreen = () => {
     // Sending an item to chat: focuses it in the chat panel and opens chat if closed.
     const handleFocusChat = useCallback((item: CalendarItem) => {
         const label = item.title.length > 80 ? item.title.slice(0, 80) + "..." : item.title;
+        // Carry the post's id (+ date/type) to the AI so calendar tools can act on
+        // this exact item; the chip itself still shows just the title.
+        const contextText = `Focused post [id:${item.id}] "${item.title}" (${item.type}, ${item.date})`;
         setFocusItems((prev) => {
             if (prev.find((f) => f.id === item.id)) return prev;
-            return [...prev, { id: item.id, label }];
+            return [...prev, { id: item.id, label, contextText }];
         });
         setRightPanelMode("chat");
     }, []);
@@ -109,15 +112,24 @@ const ContentCalendarScreen = () => {
     }, []);
 
     // "Send to AI" on a comment: focus its text in the chat panel and open chat.
-    const handleSendCommentToAI = useCallback((comment: PanelComment) => {
-        const label =
-            comment.text.length > 80 ? comment.text.slice(0, 80) + "..." : comment.text;
-        setFocusItems((prev) => [
-            ...prev,
-            { id: `comment-${comment.id}-${Date.now()}`, label },
-        ]);
-        setRightPanelMode("chat");
-    }, []);
+    // Comments live either at month level or on a specific content item; we tell
+    // the AI which, and (for item comments) the post's id so it can act on it.
+    const handleSendCommentToAI = useCallback(
+        (comment: PanelComment) => {
+            const label =
+                comment.text.length > 80 ? comment.text.slice(0, 80) + "..." : comment.text;
+            const target = selectedCommentItem
+                ? `on post [id:${selectedCommentItem.id}] "${selectedCommentItem.title}"`
+                : "on the calendar month";
+            const contextText = `Comment ${target}: "${comment.text}"`;
+            setFocusItems((prev) => [
+                ...prev,
+                { id: `comment-${comment.id}-${Date.now()}`, label, contextText },
+            ]);
+            setRightPanelMode("chat");
+        },
+        [selectedCommentItem]
+    );
 
     // Tapping a content chip body: first show a short-details preview modal.
     const handleOpenItem = useCallback((item: CalendarItem) => {
