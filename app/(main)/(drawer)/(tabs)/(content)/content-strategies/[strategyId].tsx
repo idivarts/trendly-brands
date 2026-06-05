@@ -455,7 +455,7 @@ const ContentStrategyDetail = () => {
     });
 
     return (
-        <AppLayout>
+        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
             <View style={styles.splitContainer}>
                 {/* ── Left: layered loading-skeleton / shimmer / editor.
                     All three states cross-fade via opacity. Inactive children
