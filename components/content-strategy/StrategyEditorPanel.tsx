@@ -1,5 +1,6 @@
 import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/types";
 import RichTextEditor from "@/components/rich-text-editor";
+import ShareButton from "@/components/sharing/ShareButton";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -324,7 +325,7 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     onNewStrategy,
     colors,
 }) => {
-    const { hasCapability } = useBrandContext();
+    const { hasCapability, selectedBrand } = useBrandContext();
     const reviewStatus = strategy.reviewStatus ?? "draft";
     const status = statusVisual(reviewStatus, colors);
     const isReviewer =
@@ -461,6 +462,18 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                         {xl && <Text style={styles.primaryBtnText}>Send for Review</Text>}
                     </Pressable>
                 )}
+
+                {selectedBrand?.id && strategy.id ? (
+                    <ShareButton
+                        canShare={hasCapability("manage_content_strategy")}
+                        target={{
+                            type: "strategy",
+                            brandId: selectedBrand.id,
+                            resourceId: strategy.id,
+                        }}
+                        title={strategy.title || "Untitled strategy"}
+                    />
+                ) : null}
 
                 <OverflowMenu items={overflowItems} colors={colors} styles={styles} />
             </View>

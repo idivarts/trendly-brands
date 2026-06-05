@@ -8,6 +8,7 @@ import { CalendarItem, CalendarView } from "@/components/content-calendar/types"
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import ShareButton from "@/components/sharing/ShareButton";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -40,7 +41,7 @@ const ContentCalendarScreen = () => {
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const router = useRouter();
-    const { hasCapability } = useBrandContext();
+    const { hasCapability, selectedBrand } = useBrandContext();
     const canManageContent = hasCapability("manage_content");
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
@@ -232,6 +233,23 @@ const ContentCalendarScreen = () => {
                 </Pressable>
             ) : null,
 
+            // 🔗 Share this month (read-only public link)
+            selectedBrand?.id ? (
+                <ShareButton
+                    key="share"
+                    canShare={canManageContent}
+                    target={{
+                        type: "calendarMonth",
+                        brandId: selectedBrand.id,
+                        month: `${calYear}-${String(calMonth + 1).padStart(2, "0")}`,
+                    }}
+                    title={new Date(calYear, calMonth, 1).toLocaleDateString("en-IN", {
+                        month: "long",
+                        year: "numeric",
+                    })}
+                />
+            ) : null,
+
             // Add content
             hasItems && canManageContent ? (
                 <Pressable
@@ -248,7 +266,7 @@ const ContentCalendarScreen = () => {
                 </Pressable>
             ) : null,
         ].filter(Boolean) as React.ReactElement[],
-        [hasItems, canManageContent, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl]
+        [hasItems, canManageContent, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl, selectedBrand?.id, calYear, calMonth]
     );
 
     // Slot chevrons are intentionally not wired — desktop uses the rail's

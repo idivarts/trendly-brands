@@ -25,6 +25,7 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import ShareButton from "@/components/sharing/ShareButton";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
@@ -81,7 +82,7 @@ const CreateContentScreen = () => {
     const router = useRouter();
     const { items, updateContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, hasCapability } = useBrandContext();
 
     // Resolve the live item from the real contents list first; fall back to
     // mock data so demo/test contentIds still work in dev.
@@ -602,6 +603,19 @@ const CreateContentScreen = () => {
                     />
                 </Pressable>
             ) : null,
+            // 🔗 Share (read-only public link)
+            selectedBrand?.id && contentId ? (
+                <ShareButton
+                    key="share"
+                    canShare={hasCapability("manage_content")}
+                    target={{
+                        type: "content",
+                        brandId: selectedBrand.id,
+                        resourceId: contentId,
+                    }}
+                    title={title || "Untitled content"}
+                />
+            ) : null,
             // ℹ️ Content details (title / idea / status)
             <Pressable
                 key="info"
@@ -653,7 +667,7 @@ const CreateContentScreen = () => {
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty, locked]
+        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability]
     );
 
     return (

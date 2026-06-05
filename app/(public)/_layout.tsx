@@ -23,6 +23,12 @@ const PublicLayout = () => {
                                 headerShown: false,
                             }}
                         />
+                        <Stack.Screen
+                            name="share/[token]"
+                            options={{
+                                headerShown: false,
+                            }}
+                        />
                     </Stack>
                 </View>
             </AppLayout>
