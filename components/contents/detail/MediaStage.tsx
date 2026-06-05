@@ -35,6 +35,8 @@ interface MediaStageProps {
     onImagePromptChange: (v: string) => void;
     onGenerateImage: (prompt?: string) => void;
     isGeneratingImage: boolean;
+    /** When true the media is read-only (content is scheduled or posted). */
+    readOnly?: boolean;
 }
 
 const SUBTITLE: Record<ContentType, string> = {
@@ -53,6 +55,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
     onImagePromptChange,
     onGenerateImage,
     isGeneratingImage,
+    readOnly = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -154,13 +157,15 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                         </View>
                                     )}
 
-                                    <Pressable
-                                        style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
-                                        onPress={() => removeAt(i)}
-                                        accessibilityLabel="Remove media"
-                                    >
-                                        <FontAwesomeIcon icon={faXmark} size={11} color={colors.onPrimary} />
-                                    </Pressable>
+                                    {!readOnly ? (
+                                        <Pressable
+                                            style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
+                                            onPress={() => removeAt(i)}
+                                            accessibilityLabel="Remove media"
+                                        >
+                                            <FontAwesomeIcon icon={faXmark} size={11} color={colors.onPrimary} />
+                                        </Pressable>
+                                    ) : null}
 
                                     {spec.multi ? (
                                         <View style={styles.orderBadge}>
@@ -170,7 +175,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                 </View>
 
                                 {/* Reorder controls — carousel only */}
-                                {spec.multi && attachments.length > 1 ? (
+                                {!readOnly && spec.multi && attachments.length > 1 ? (
                                     <View style={styles.reorderRow}>
                                         <Pressable
                                             style={({ pressed }) => [styles.reorderBtn, pressed && styles.pressed]}
@@ -215,7 +220,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            {/* Actions */}
+            {/* Actions — hidden when the content is locked (scheduled / posted) */}
+            {!readOnly ? (
             <View style={styles.actionRow}>
                 <Pressable
                     style={({ pressed }) => [styles.uploadBtn, pressed && styles.pressed]}
@@ -263,9 +269,10 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     </Pressable>
                 ) : null}
             </View>
+            ) : null}
 
             {/* AI generation prompt — floating gradient box (web) / modal (mobile) */}
-            {spec.canGenerate ? (
+            {!readOnly && spec.canGenerate ? (
                 <FloatingPromptInput
                     visible={showPrompt}
                     title={spec.multi ? "Generate a slide with AI" : "Generate an image with AI"}

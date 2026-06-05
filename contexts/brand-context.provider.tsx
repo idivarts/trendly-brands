@@ -50,6 +50,19 @@ interface BrandContextProps {
     createBrand: (
         brand: Partial<IBrands>
     ) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
+    /**
+     * Creates a DRAFT brand (Firestore-only, no backend provisioning) and its
+     * member doc, returning the new ref. Used to start AI onboarding: it yields
+     * a brandId the chat can scope to before the brand is fully set up.
+     */
+    createDraftBrand: (
+        brand?: Partial<IBrands>
+    ) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
+    /**
+     * Finalizes a draft brand: runs backend provisioning (billing/credits/team)
+     * and flips onboardingComplete. Safe to call once onboarding completes.
+     */
+    finalizeBrand: (brandId: string) => Promise<void>;
     selectedBrand: Brand | undefined;
     setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
     updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
@@ -76,6 +89,8 @@ type CurrentMember = {
 const BrandContext = createContext<BrandContextProps>({
     brands: [],
     createBrand: () => Promise.resolve(null),
+    createDraftBrand: () => Promise.resolve(null),
+    finalizeBrand: () => Promise.resolve(),
     selectedBrand: undefined,
     setSelectedBrand: () => { },
     updateBrand: () => Promise.resolve(),
@@ -283,6 +298,11 @@ export const BrandContextProvider: React.FC<
                             fetchedBrands.find(
                                 (brand) => brand.id === persistedSelectedBrandId
                             ) ||
+                            // Prefer a finalized brand; fall back to a draft only
+                            // when that's all there is (so onboarding can resume).
+                            fetchedBrands.find(
+                                (brand) => brand.onboardingComplete !== false
+                            ) ||
                             fetchedBrands[0];
 
                         finalSelectedBrand = resolvedSelectedBrand;
@@ -469,6 +489,44 @@ export const BrandContextProvider: React.FC<
         return brandDoc;
     };
 
+    const createDraftBrand = async (brand: Partial<IBrands> = {}) => {
+        if (!manager) return null;
+
+        const brandRef = collection(FirestoreDB, "brands");
+        const brandDoc = await addDoc(brandRef, {
+            name: "",
+            creationTime: Date.now(),
+            isBillingDisabled: false,
+            ...brand,
+            // A draft is intentionally NOT provisioned on the backend yet.
+            onboardingComplete: false,
+        });
+
+        const managerRef = doc(
+            FirestoreDB,
+            "brands",
+            brandDoc.id,
+            "members",
+            manager.id
+        );
+        await setDoc(managerRef, {
+            managerId: manager.id,
+            role: "Manager",
+        });
+
+        return brandDoc;
+    };
+
+    const finalizeBrand = async (brandId: string) => {
+        await HttpWrapper.fetch(`/api/v2/brands/create`, {
+            method: "POST",
+            body: JSON.stringify({ brandId }),
+            headers: {
+                "content-type": "application/json",
+            },
+        });
+    };
+
     const updateBrand = async (
         id: string,
         brand: Partial<IBrands>
@@ -481,6 +539,10 @@ export const BrandContextProvider: React.FC<
     useEffect(() => {
         if (selectedBrand) {
             if (!restrictForPayment) return;
+
+            // A draft brand is still being set up via onboarding — never bounce it
+            // to the paywall before it's finalized.
+            if (selectedBrand.onboardingComplete === false) return;
 
             if (Platform.OS == "web" && !selectedBrand.hasPayWall) return;
 
@@ -502,15 +564,34 @@ export const BrandContextProvider: React.FC<
         }
     }, [selectedBrand]);
 
+    // Resume onboarding: if the active brand is still a draft, keep the user in
+    // the AI onboarding chat until it's finalized.
+    useEffect(() => {
+        if (selectedBrand?.onboardingComplete !== false) return;
+        // Don't redirect while already anywhere in the onboarding flow (chat or
+        // the fallback form), only when a draft is open from elsewhere.
+        if (pathName?.includes("onboarding")) return;
+        router.resetAndNavigate("/onboarding-chat");
+    }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName]);
+
     const isOnFreeTrial = useMemo(() => {
         if (!selectedBrand) return false;
         return !selectedBrand.isBillingDisabled && !selectedBrand.billing;
     }, [selectedBrand]);
 
+    // Draft brands (mid-onboarding) are hidden from brand lists/switchers. The
+    // active draft can still be the selectedBrand during onboarding.
+    const visibleBrands = useMemo(
+        () => brands.filter((b) => b.onboardingComplete !== false),
+        [brands]
+    );
+
     const ctxValue = useMemo(
         () => ({
-            brands,
+            brands: visibleBrands,
             createBrand,
+            createDraftBrand,
+            finalizeBrand,
             selectedBrand,
             setSelectedBrand: setSelectedBrandHandler,
             updateBrand,
@@ -521,8 +602,10 @@ export const BrandContextProvider: React.FC<
             hasCapability,
         }),
         [
-            brands,
+            visibleBrands,
             createBrand,
+            createDraftBrand,
+            finalizeBrand,
             selectedBrand,
             updateBrand,
             loading,

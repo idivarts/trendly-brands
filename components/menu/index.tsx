@@ -25,8 +25,8 @@ import {
     faHandshake,
     faInbox,
     faLock,
-    faPeopleGroup,
     faPenToSquare,
+    faPeopleGroup,
     faPlus,
     faShareNodes,
     faStar,
@@ -354,7 +354,7 @@ const Menu = () => {
 
             {/* Footer: Create new brand */}
             <Pressable
-                onPress={() => navigate("/onboarding-your-brand")}
+                onPress={() => navigate("/onboarding-chat")}
                 style={styles.footerLink}
                 accessibilityRole="button"
             >

@@ -168,6 +168,20 @@ const TabLayout = () => {
                     headerShown: false,
                 }}
             />
+
+            {/* Hidden: gallery-only content library pages (triple-dot menu) */}
+            <Tabs.Screen
+                name="(content)/contents/scheduled"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
+            />
+            <Tabs.Screen
+                name="(content)/contents/posted"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
+            />
+            <Tabs.Screen
+                name="(content)/contents/archived"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
+            />
         </Tabs>
     );
 };

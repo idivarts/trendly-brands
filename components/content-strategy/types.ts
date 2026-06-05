@@ -25,4 +25,11 @@ export interface ContentStrategy {
     reviewRequestedAt?: number;
     reviewedBy?: string;
     reviewedAt?: number;
+    // Native single-writer lock (Phase 3). Fresh = someone is editing on a
+    // device; web yields to it. Stale (heartbeat past EDIT_LOCK_TTL_MS) = free.
+    editLock?: {
+        managerId: string;
+        name: string;
+        heartbeatAt: number;
+    } | null;
 }

@@ -39,10 +39,10 @@ import {
     StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdminPortal, AdminPortalSubDrawer } from "./admin-portal";
 import CreditDisplayCard from "./CreditDisplayCard";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, Tab } from "./DrawerMenuItem";
-import { AdminPortal, AdminPortalSubDrawer } from "./admin-portal";
 import { InfluencerLedGrowth, InfluencerLedGrowthSubDrawer } from "./influencer-led-growth";
 
 // ─── Width constants (kept in sync with _layout.tsx) ───────────────────────
@@ -56,11 +56,6 @@ const BOTTOM_MENU_ITEMS = (
     profileImage?: string,
     styles?: { profileImageSize: { width: number; height: number } }
 ): Tab[] => [
-        {
-            href: "/onboarding-your-brand",
-            icon: ({ focused }) => <DrawerIcon href="/onboarding-your-brand" icon={faPlus} focused={focused} />,
-            label: "Create New Brand",
-        },
         {
             href: "/profile",
             icon: () => (
@@ -319,13 +314,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             colors={
                                 theme.dark
                                     ? [
-                                          "transparent",
-                                          (colors as any).drawerHeaderCardBg ?? colors.card,
-                                      ]
+                                        "transparent",
+                                        (colors as any).drawerHeaderCardBg ?? colors.card,
+                                    ]
                                     : [
-                                          "transparent",
-                                          (colors as any).drawerHeaderCardBgLight ?? "#E9F1F7",
-                                      ]
+                                        "transparent",
+                                        (colors as any).drawerHeaderCardBgLight ?? "#E9F1F7",
+                                    ]
                             }
                             start={{ x: 0, y: 0 }}
                             end={{ x: 0, y: 1 }}
@@ -339,7 +334,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                     style={[
                                         styles.collapsedOrgButton,
                                         (isOrgHovered || orgDropdownOpen) &&
-                                            styles.collapsedOrgButtonHover,
+                                        styles.collapsedOrgButtonHover,
                                     ]}
                                     accessibilityRole="button"
                                     accessibilityLabel="Organization menu"
@@ -381,10 +376,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                             <RNView onTouchEnd={() => setOrgDropdownOpen(false)}>
                                                 <DrawerMenuItem
                                                     tab={{
-                                                        href: "/onboarding-your-brand",
+                                                        href: "/onboarding-chat",
                                                         icon: ({ focused }) => (
                                                             <DrawerIcon
-                                                                href="/onboarding-your-brand"
+                                                                href="/onboarding-chat"
                                                                 icon={faPlus}
                                                                 focused={focused}
                                                             />
@@ -399,21 +394,16 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                                 manager?.name,
                                                 manager?.profileImage,
                                                 styles
-                                            )
-                                                .filter(
-                                                    (tab) =>
-                                                        tab.href !== "/onboarding-your-brand"
-                                                )
-                                                .map((tab, idx) => (
-                                                    <RNView
-                                                        key={`c-org-profile-${idx}`}
-                                                        onTouchEnd={() =>
-                                                            setOrgDropdownOpen(false)
-                                                        }
-                                                    >
-                                                            <DrawerMenuItem tab={tab} />
-                                                    </RNView>
-                                                ))}
+                                            ).map((tab, idx) => (
+                                                <RNView
+                                                    key={`c-org-profile-${idx}`}
+                                                    onTouchEnd={() =>
+                                                        setOrgDropdownOpen(false)
+                                                    }
+                                                >
+                                                    <DrawerMenuItem tab={tab} />
+                                                </RNView>
+                                            ))}
                                         </RNView>
                                     </SidebarCollapsedContext.Provider>
                                 )}
@@ -719,10 +709,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                     <RNView onTouchEnd={() => setOrgDropdownOpen(false)}>
                                         <DrawerMenuItem
                                             tab={{
-                                                href: "/onboarding-your-brand",
+                                                href: "/onboarding-chat",
                                                 icon: ({ focused }) => (
                                                     <DrawerIcon
-                                                        href="/onboarding-your-brand"
+                                                        href="/onboarding-chat"
                                                         icon={faPlus}
                                                         focused={focused}
                                                     />

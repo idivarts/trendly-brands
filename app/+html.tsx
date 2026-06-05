@@ -20,6 +20,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
                 {/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
                 <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
+                {/* Neutralize the browser's autofill tint so filled inputs match empty ones. */}
+                <style dangerouslySetInnerHTML={{ __html: autofillReset }} />
                 {/* Add any additional <head> elements that you want globally available on web... */}
             </head>
             <body>{children}</body>
@@ -35,4 +37,20 @@ body {
   body {
     background-color: #000;
   }
+}`;
+
+// The browser paints autofilled inputs with its own (blue/yellow) background,
+// which made some form fields look mismatched against empty ones. The long
+// transition trick keeps each input's own background; text color is inherited
+// from the field so it stays legible in both light and dark themes.
+const autofillReset = `
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  transition: background-color 600000s 0s, color 600000s 0s !important;
+  -webkit-text-fill-color: inherit !important;
+  caret-color: inherit;
 }`;

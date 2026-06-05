@@ -67,8 +67,8 @@ export default function TrendlyHero() {
     }
 
     const config: ExplainerConfig = getStarted ? getStarted : {
-        title: "Find {Right Influencers} to promote your brand",
-        description: "Connect with the right influencers to increase your brand’s reach and engagement. Save on huge commissions you pay working with agencies and other middlemen!",
+        title: "Run your brand's {social content} in one place",
+        description: "Plan, create, and publish content for your brand — and tap a vetted creator network whenever you need more hands. No agencies, no middlemen.",
     }
 
     useEffect(() => {

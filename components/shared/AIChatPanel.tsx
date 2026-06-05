@@ -1,5 +1,7 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
-import { AIModule, useAIChat } from "@/hooks/use-ai-chat";
+import AIAnswerControl from "@/components/shared/AIAnswerControl";
+import MarkdownMessage from "@/components/shared/MarkdownMessage";
+import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
@@ -18,6 +20,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
     Platform,
@@ -37,6 +40,7 @@ export interface ChatMessage {
     sender: "ai" | "user";
     text: string;
     timestamp: number;
+    control?: AIControl;
 }
 
 export interface FocusItem {
@@ -72,6 +76,25 @@ interface AIChatPanelProps {
 
     /** Called when the user taps the collapse chevron. */
     onCollapse?: () => void;
+
+    /**
+     * Fired when the backend signals onboarding is complete. Used by the
+     * onboarding screen to finalize the brand and navigate onward.
+     */
+    onOnboardingComplete?: () => void;
+
+    /**
+     * Hide the panel's own header (title + history/new-chat). Used when the host
+     * screen provides its own header (e.g. onboarding) and a single thread.
+     */
+    hideHeader?: boolean;
+
+    /**
+     * Vertical alignment of the message list. "bottom" (default) anchors to the
+     * input like a side-panel chat; "top" flows messages downward like a guided
+     * wizard — better for a full-page onboarding flow with few messages.
+     */
+    messageAlign?: "top" | "bottom";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,6 +131,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     placeholder = "Ask the AI Expert...",
     welcomeText,
     onCollapse,
+    onOnboardingComplete,
+    hideHeader = false,
+    messageAlign = "bottom",
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -119,8 +145,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const safeTop = xl ? 0 : insets.top;
     const safeBottom = xl ? 0 : insets.bottom;
     const styles = useMemo(
-        () => useStyles(colors, isCompact, safeTop, safeBottom),
-        [colors, isCompact, safeTop, safeBottom]
+        () => useStyles(colors, isCompact, safeTop, safeBottom, messageAlign),
+        [colors, isCompact, safeTop, safeBottom, messageAlign]
     );
 
     // ── Real AI thread state ─────────────────────────────────────────────────
@@ -130,28 +156,41 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         messages: aiMessages,
         streamingContent,
         isStreaming,
+        loading,
+        initializing,
         sendMessage,
         loadThread,
         createThread,
         renameThread,
         deleteThread,
         refreshThreads,
-    } = useAIChat({ module, contextId, autoOpenLatest: !initialMessage });
+    } = useAIChat({
+        module,
+        contextId,
+        autoOpenLatest: !initialMessage,
+        onOnboardingComplete,
+    });
 
     const { models, selectedModel, setSelectedModel } = useAIModels();
+
+    // The conversation is still wiring up (resolving brand, fetching threads,
+    // loading history). Show a loader and keep the composer disabled until ready.
+    const notReady = initializing || loading;
 
     // Mode toggle: chat (default) vs history list.
     const [viewMode, setViewMode] = useState<"chat" | "history">("chat");
 
-    // Auto-send any queued initial message exactly once.
+    // Auto-send any queued initial message exactly once — but only after the
+    // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
         if (!initialMessage) return;
+        if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         sendMessage(initialMessage, undefined, selectedModel);
         onInitialMessageSent?.();
-    }, [initialMessage, sendMessage, selectedModel, onInitialMessageSent]);
+    }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
@@ -164,6 +203,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             sender: m.role === "user" ? "user" : "ai",
             text: m.content,
             timestamp: m.timestamp,
+            control: m.control,
         }));
         if (isStreaming && streamingContent) {
             out.push({
@@ -192,7 +232,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (!trimmed || isStreaming) return;
+        if (!trimmed || isStreaming || notReady) return;
         const focusedText =
             focusItems.length > 0 ? focusItems.map((f) => f.label).join("\n") : undefined;
         sendMessage(trimmed, focusedText, selectedModel);
@@ -225,9 +265,19 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         setViewMode("chat");
     };
 
+    // Send a control's answer back through the normal chat path as a user turn.
+    const handleControlSubmit = (text: string) => {
+        if (!text.trim() || isStreaming) return;
+        sendMessage(text, undefined, selectedModel);
+    };
+
     // ── Render helpers ───────────────────────────────────────────────────────
-    const renderMessage = ({ item }: { item: ChatMessage }) => {
+    const renderMessage = ({ item, index }: { item: ChatMessage; index: number }) => {
         const isAI = item.sender === "ai";
+        // An answer control is actionable only on the latest message — once the
+        // user replies, a new message follows and the stale control disappears.
+        const showControl =
+            isAI && !!item.control && index === messages.length - 1 && !isStreaming;
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 {isAI && (
@@ -235,10 +285,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
                     </View>
                 )}
-                <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
-                    <Text style={[styles.bubbleText, isAI ? styles.aiText : styles.userText]}>
-                        {item.text}
-                    </Text>
+                <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
+                    <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
+                        {isAI ? (
+                            <MarkdownMessage content={item.text} compact={isCompact} />
+                        ) : (
+                            <Text style={[styles.bubbleText, styles.userText]}>
+                                {item.text}
+                            </Text>
+                        )}
+                    </View>
+                    {showControl && item.control && (
+                        <AIAnswerControl
+                            control={item.control}
+                            disabled={isStreaming}
+                            onSubmit={handleControlSubmit}
+                        />
+                    )}
                 </View>
             </View>
         );
@@ -250,6 +313,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
             {/* ── Header — capped at 3 elements (per design critique) ───── */}
+            {!hideHeader && (
             <View style={styles.panelHeader}>
                 {onCollapse && (
                     <Pressable
@@ -298,6 +362,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     </Pressable>
                 )}
             </View>
+            )}
 
             {viewMode === "history" ? (
                 // ── Conversations view ───────────────────────────────────────
@@ -401,16 +466,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
                 <>
-                    <FlatList
-                        ref={listRef}
-                        data={messages}
-                        keyExtractor={(item) => item.id}
-                        renderItem={renderMessage}
-                        contentContainerStyle={styles.messageList}
-                        showsVerticalScrollIndicator={false}
-                    />
+                    {notReady ? (
+                        <View style={styles.initLoader}>
+                            <ActivityIndicator color={colors.primary} />
+                            <Text style={styles.initText}>Setting up your conversation…</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            ref={listRef}
+                            data={messages}
+                            keyExtractor={(item) => item.id}
+                            renderItem={renderMessage}
+                            contentContainerStyle={styles.messageList}
+                            showsVerticalScrollIndicator={false}
+                        />
+                    )}
 
-                    {isAITyping && (
+                    {!notReady && isAITyping && (
                         <View style={styles.typingRow}>
                             <View style={styles.avatarContainer}>
                                 <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
@@ -460,21 +532,34 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     <View style={styles.inputArea}>
                         <TextInput
                             style={styles.input}
-                            placeholder={placeholder}
+                            placeholder={notReady ? "Getting ready…" : placeholder}
                             placeholderTextColor={colors.textSecondary}
                             value={input}
                             onChangeText={setInput}
+                            editable={!notReady}
                             multiline
                             maxLength={1000}
+                            onKeyPress={(e: any) => {
+                                // Web: Enter sends, Shift+Enter inserts a newline.
+                                // Native multiline behaviour is left untouched.
+                                if (
+                                    Platform.OS === "web" &&
+                                    e?.nativeEvent?.key === "Enter" &&
+                                    !e?.nativeEvent?.shiftKey
+                                ) {
+                                    e.preventDefault?.();
+                                    handleSend();
+                                }
+                            }}
                         />
                         <Pressable
                             style={({ pressed }) => [
                                 styles.sendBtn,
                                 pressed && styles.sendBtnPressed,
-                                (!input.trim() || isStreaming) && styles.sendBtnDisabled,
+                                (!input.trim() || isStreaming || notReady) && styles.sendBtnDisabled,
                             ]}
                             onPress={handleSend}
-                            disabled={!input.trim() || isStreaming}
+                            disabled={!input.trim() || isStreaming || notReady}
                         >
                             <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
                         </Pressable>
@@ -491,7 +576,8 @@ function useStyles(
     colors: ReturnType<typeof Colors>,
     isCompact: boolean,
     safeTop: number,
-    safeBottom: number
+    safeBottom: number,
+    messageAlign: "top" | "bottom"
 ) {
     return useMemo(
         () =>
@@ -531,8 +617,16 @@ function useStyles(
                     padding: isCompact ? 12 : 16,
                     gap: 12,
                     flexGrow: 1,
-                    justifyContent: "flex-end",
+                    justifyContent: messageAlign === "top" ? "flex-start" : "flex-end",
                 },
+                initLoader: {
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    padding: 24,
+                },
+                initText: { color: colors.textSecondary, fontSize: 13 },
                 messageRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",
@@ -550,8 +644,11 @@ function useStyles(
                     flexShrink: 0,
                     marginTop: 2,
                 },
+                messageColumn: { maxWidth: "82%", gap: 6 },
+                messageColumnAI: { alignItems: "flex-start" },
+                messageColumnUser: { alignItems: "flex-end" },
                 bubble: {
-                    maxWidth: "80%",
+                    maxWidth: "100%",
                     borderRadius: 14,
                     paddingHorizontal: isCompact ? 10 : 14,
                     paddingVertical: isCompact ? 8 : 10,
@@ -754,6 +851,6 @@ function useStyles(
                     fontSize: 13,
                 },
             }),
-        [colors, isCompact, safeTop, safeBottom]
+        [colors, isCompact, safeTop, safeBottom, messageAlign]
     );
 }

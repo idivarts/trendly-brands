@@ -10,6 +10,7 @@ import {
     faLink,
     faListOl,
     faListUl,
+    faLock,
     faPen,
     faQuoteLeft,
     faShareNodes,
@@ -18,9 +19,61 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { CodeHighlightNode, CodeNode } from "@lexical/code";
+import { $createLinkNode, $isLinkNode, LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
+import {
+    $isListNode,
+    INSERT_ORDERED_LIST_COMMAND,
+    INSERT_UNORDERED_LIST_COMMAND,
+    ListItemNode,
+    ListNode,
+    REMOVE_LIST_COMMAND,
+} from "@lexical/list";
+import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
+import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import {
+    $createHeadingNode,
+    $createQuoteNode,
+    $isHeadingNode,
+    $isQuoteNode,
+    HeadingNode,
+    QuoteNode,
+} from "@lexical/rich-text";
+import { $setBlocksType } from "@lexical/selection";
+import { $findMatchingParent } from "@lexical/utils";
+import {
+    $createParagraphNode,
+    $createRangeSelection,
+    $createTextNode,
+    $getRoot,
+    $getSelection,
+    $isRangeSelection,
+    $isTextNode,
+    $setSelection,
+    FORMAT_TEXT_COMMAND,
+    type EditorState,
+    type LexicalEditor,
+    type TextFormatType,
+} from "lexical";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import ImageInsertModal from "./ImageInsertModal";
+import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { doc as fsDoc, runTransaction } from "firebase/firestore";
+import { $createImageNode, ImageNode } from "./lexical/ImageNode";
+import { createFirestoreProviderFactory } from "./lexical/FirestoreYjsProvider";
+import { $serializeToEnrichedInner, $setEditorContentFromHtml } from "./lexical/serialize";
 import LinkInsertModal from "./LinkInsertModal";
 
 export interface StrategyEditorPanelProps {
@@ -32,393 +85,587 @@ export interface StrategyEditorPanelProps {
     strategyId?: string;
     /** AI module used for Quick Edit context. Defaults to "content". */
     module?: string;
+    /**
+     * Opt-in real-time co-editing (web). When true AND a brand + manager +
+     * strategyId are available, the Yjs CRDT becomes the source of truth and the
+     * HTML `content`/`onChange` sync path is suspended (see Roadmap ticket
+     * 37542d5f…cdd28, Phase 2). The shared ScriptEditor never sets this, so it
+     * keeps the single-writer behaviour.
+     */
+    collaborative?: boolean;
+    /**
+     * Native single-writer lock state (Phase 3). When `editable` is false the
+     * editor is read-only; on web that means a native editor currently holds the
+     * lock, so we show a banner and suspend editing until it's released.
+     */
+    lock?: EditLockUI;
 }
 
-const QUILL_STYLE_ID = "trendly-quill-core-css";
+export interface EditLockUI {
+    editable: boolean;
+    lockedByName?: string | null;
+    onRequestEdit?: () => void;
+    onEndEdit?: () => void;
+}
 
-function injectQuillStyles() {
+// Stable per-editor cursor colours (remote carets). Picked by manager id.
+const CURSOR_COLORS = ["#2D6CDF", "#E8590C", "#2F9E44", "#9C36B5", "#C2255C", "#0C8599"];
+function pickCursorColor(seed?: string): string {
+    if (!seed) return CURSOR_COLORS[0];
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return CURSOR_COLORS[h % CURSOR_COLORS.length];
+}
+
+const STYLE_ID = "trendly-lexical-core-css";
+
+/** Lexical theme — class names the editor stamps onto rendered nodes. */
+const EDITOR_THEME = {
+    paragraph: "tl-p",
+    quote: "tl-quote",
+    heading: { h1: "tl-h1", h2: "tl-h2", h3: "tl-h3" },
+    list: { ul: "tl-ul", ol: "tl-ol", listitem: "tl-li" },
+    link: "tl-a",
+    code: "tl-codeblock",
+    text: {
+        bold: "tl-b",
+        italic: "tl-i",
+        underline: "tl-u",
+        strikethrough: "tl-s",
+        code: "tl-code",
+    },
+};
+
+/** Hard ceiling (px) for an inserted image's display width. */
+const MAX_IMAGE_WIDTH = 720;
+
+function injectStyles(colors: ReturnType<typeof Colors>) {
     if (typeof document === "undefined") return;
-    if (document.getElementById(QUILL_STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = QUILL_STYLE_ID;
+    let style = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+    if (!style) {
+        style = document.createElement("style");
+        style.id = STYLE_ID;
+        document.head.appendChild(style);
+    }
     style.textContent = `
-        .trendly-quill-container { position: relative; flex: 1; display: flex; flex-direction: column; }
-        .trendly-quill-container .ql-editor {
+        .tl-scroll { position: relative; }
+        .tl-content {
             box-sizing: border-box;
-            flex: 1;
             width: 100%;
             max-width: 760px;
             margin: 0 auto;
-            line-height: 1.6;
             min-height: 400px;
-            outline: none;
-            overflow-y: auto;
             padding: 20px;
-            tab-size: 4;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            outline: none;
+            line-height: 1.6;
             font-size: 16px;
             font-family: inherit;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            tab-size: 4;
+            color: ${colors.text as string};
+            caret-color: ${colors.text as string};
         }
-        .trendly-quill-container .ql-editor.ql-blank::before {
-            color: rgba(128,128,128,0.6);
-            content: attr(data-placeholder);
-            left: 20px;
-            pointer-events: none;
+        .tl-content:focus { outline: none; }
+        .tl-placeholder {
             position: absolute;
-            right: 20px;
+            top: 20px;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            max-width: 760px;
+            padding: 0 20px;
+            box-sizing: border-box;
+            pointer-events: none;
             font-style: italic;
+            font-size: 16px;
+            color: rgba(128,128,128,0.6);
         }
-        .trendly-quill-container .ql-editor p { margin: 0 0 6px 0; font-size: 16px; }
-        .trendly-quill-container .ql-editor h1 { font-size: 2em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
-        .trendly-quill-container .ql-editor h2 { font-size: 1.5em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.3; }
-        .trendly-quill-container .ql-editor h3 { font-size: 1.17em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
-        .trendly-quill-container .ql-editor h4 { font-size: 1em; font-weight: 700; margin: 0 0 6px 0; }
-        .trendly-quill-container .ql-editor h5 { font-size: 0.83em; font-weight: 700; margin: 0 0 6px 0; }
-        .trendly-quill-container .ql-size-small { font-size: 0.75em; }
-        .trendly-quill-container .ql-editor ul,
-        .trendly-quill-container .ql-editor ol { padding-left: 1.5em; margin: 0 0 6px 0; }
-        .trendly-quill-container .ql-editor ul li { list-style-type: disc; }
-        .trendly-quill-container .ql-editor ol li { list-style-type: decimal; }
-        .trendly-quill-container .ql-editor blockquote {
-            border-left: 4px solid #ccc;
+        .tl-content .tl-p { margin: 0 0 6px 0; font-size: 16px; }
+        .tl-content .tl-h1 { font-size: 2em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
+        .tl-content .tl-h2 { font-size: 1.5em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.3; }
+        .tl-content .tl-h3 { font-size: 1.17em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
+        .tl-content .tl-ul,
+        .tl-content .tl-ol { padding-left: 1.5em; margin: 0 0 6px 0; }
+        .tl-content .tl-ul .tl-li { list-style-type: disc; }
+        .tl-content .tl-ol .tl-li { list-style-type: decimal; }
+        .tl-content .tl-quote {
+            border-left: 4px solid ${colors.border as string};
             margin: 0 0 8px 0;
             padding-left: 16px;
             opacity: 0.8;
             font-style: italic;
         }
-        .trendly-quill-container .ql-editor strong { font-weight: 700; }
-        .trendly-quill-container .ql-editor em { font-style: italic; }
-        .trendly-quill-container .ql-editor u { text-decoration: underline; }
-        .trendly-quill-container .ql-editor s { text-decoration: line-through; }
-        .trendly-quill-container .ql-editor a { color: #1d6fb8; text-decoration: underline; cursor: pointer; }
-        .trendly-quill-container .ql-editor img { display: block; max-width: min(720px, 100%); height: auto; border-radius: 8px; margin: 8px auto; }
+        .tl-content .tl-a { color: ${colors.primary as string}; text-decoration: underline; cursor: pointer; }
+        .tl-content .tl-b { font-weight: 700; }
+        .tl-content .tl-i { font-style: italic; }
+        .tl-content .tl-u { text-decoration: underline; }
+        .tl-content .tl-s { text-decoration: line-through; }
+        .tl-content .tl-code { font-family: monospace; background: ${colors.tag as string}; padding: 1px 4px; border-radius: 4px; }
+        .tl-content .tl-codeblock {
+            display: block;
+            font-family: monospace;
+            background: ${colors.tag as string};
+            padding: 12px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            margin: 0 0 8px 0;
+        }
+        .tl-content img { display: block; max-width: min(720px, 100%); height: auto; border-radius: 8px; margin: 8px auto; }
     `;
-    document.head.appendChild(style);
 }
 
-function getDropdownValue(formats: Record<string, any>): string {
-    if (formats.header) return `h${formats.header}`;
-    if (formats.size === "small") return "small";
-    return "normal";
+/** Loads an image URL's display size, scaled to fit `maxWidth`. */
+function resolveImageSize(url: string, maxWidth: number): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+        const fallback = { width: maxWidth, height: Math.round(maxWidth * 0.6) };
+        if (typeof window === "undefined") return resolve(fallback);
+        const img = new window.Image();
+        img.onload = () => {
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+            if (!w || !h) return resolve(fallback);
+            const ratio = w > maxWidth ? maxWidth / w : 1;
+            resolve({ width: Math.round(w * ratio), height: Math.round(h * ratio) });
+        };
+        img.onerror = () => resolve(fallback);
+        img.src = url;
+    });
 }
 
-const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
+type SavedSelection = {
+    a: [string, number, "text" | "element"];
+    f: [string, number, "text" | "element"];
+    text: string;
+} | null;
+
+// ── Inner editor (has access to the Lexical editor via context) ─────────────
+
+const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     content,
     onChange,
     onSendToChat,
     onSnippetComment,
     strategyId,
     module: aiModule = "content",
+    collaborative,
+    lock,
 }) => {
+    const [editor] = useLexicalComposerContext();
     const theme = useTheme();
     const colors = Colors(theme);
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+
+    // Read-only while a native editor holds the single-writer lock.
+    const readOnly = lock ? !lock.editable : false;
+    useEffect(() => {
+        editor.setEditable(!readOnly);
+    }, [editor, readOnly]);
+
+    const { selectedBrand } = useBrandContext();
+    const { manager } = useAuthContext();
+
+    // Collaboration is enabled only when explicitly requested AND we have the
+    // brand/manager/strategy needed to address the CRDT log.
+    const collabEnabled = !!(
+        collaborative && selectedBrand?.id && manager?.id && strategyId
+    );
+
+    // Bootstrap arbitration: exactly one client seeds the empty Yjs doc from the
+    // existing markdownContent. "pending" until the transactional claim resolves.
+    const [bootstrapRole, setBootstrapRole] = useState<"pending" | "owner" | "follower">(
+        collabEnabled ? "pending" : "follower"
+    );
+    // Seed captured once at mount (EditorBody remounts per strategy — see key).
+    const seedHtmlRef = useRef(ensureEnrichedHtml(content || ""));
+    const cursorsRef = useRef<HTMLDivElement>(null);
+    const cursorColor = useMemo(() => pickCursorColor(manager?.id), [manager?.id]);
+
+    const providerFactory = useMemo(() => {
+        if (!collabEnabled) return undefined;
+        return createFirestoreProviderFactory({
+            brandId: selectedBrand!.id,
+            strategyId: strategyId!,
+            managerId: manager!.id,
+            name: manager?.name ?? "Editor",
+        });
+    }, [collabEnabled, selectedBrand?.id, strategyId, manager?.id, manager?.name]);
+
+    const initialEditorState = useCallback(
+        (ed: LexicalEditor) => {
+            $setEditorContentFromHtml(ed, seedHtmlRef.current);
+        },
+        []
+    );
+
+    // Claim (or decline) the one-time CRDT bootstrap for this strategy.
+    useEffect(() => {
+        if (!collabEnabled) {
+            setBootstrapRole("follower");
+            return;
+        }
+        let cancelled = false;
+        setBootstrapRole("pending");
+        (async () => {
+            try {
+                const sref = fsDoc(
+                    FirestoreDB,
+                    "brands",
+                    selectedBrand!.id,
+                    "strategies",
+                    strategyId!
+                );
+                let owner = false;
+                await runTransaction(FirestoreDB, async (tx) => {
+                    const s = await tx.get(sref);
+                    if (s.data()?.crdtInitialized !== true) {
+                        tx.update(sref, { crdtInitialized: true });
+                        owner = true;
+                    }
+                });
+                if (!cancelled) setBootstrapRole(owner ? "owner" : "follower");
+            } catch {
+                // Safe default: don't seed; the provider will load existing state.
+                if (!cancelled) setBootstrapRole("follower");
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [collabEnabled, strategyId, selectedBrand?.id]);
+
     const containerRef = useRef<HTMLDivElement>(null);
-    const quillRef = useRef<any>(null);
     const lastHtmlRef = useRef("");
-    // Quill selection captured at the moment a toolbar button is pressed, so the
-    // insert survives the modal stealing focus from the editor.
-    const savedRangeRef = useRef<{ index: number; length: number } | null>(null);
+    const savedSelRef = useRef<SavedSelection>(null);
+    // Keep the latest callbacks in refs so the OnChange handler / listeners stay stable.
+    const onChangeRef = useRef(onChange);
+    const onSendToChatRef = useRef(onSendToChat);
+    const onSnippetCommentRef = useRef(onSnippetComment);
+    const selectedTextRef = useRef("");
+
     const [quickEditVisible, setQuickEditVisible] = useState(false);
     const [linkModalVisible, setLinkModalVisible] = useState(false);
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [linkInitialText, setLinkInitialText] = useState("");
     const [selectedText, setSelectedText] = useState("");
-    const [selectionRange, setSelectionRange] = useState<{ index: number; length: number } | null>(null);
-    const [activeFormats, setActiveFormats] = useState<Record<string, any>>({});
+    const [activeFormats, setActiveFormats] = useState({
+        bold: false,
+        italic: false,
+        underline: false,
+        strike: false,
+    });
     const [dropdownValue, setDropdownValue] = useState("normal");
+    const [listType, setListType] = useState<"bullet" | "number" | null>(null);
+    const [blockquoteActive, setBlockquoteActive] = useState(false);
+    const [linkActive, setLinkActive] = useState(false);
     const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; placement: "top" | "bottom" } | null>(null);
-    const popoverRef = useRef<View | null>(null);
 
-    const styles = useMemo(() => makeStyles(colors), [colors]);
+    useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+    useEffect(() => { onSendToChatRef.current = onSendToChat; }, [onSendToChat]);
+    useEffect(() => { onSnippetCommentRef.current = onSnippetComment; }, [onSnippetComment]);
+    useEffect(() => { selectedTextRef.current = selectedText; }, [selectedText]);
 
-    // Inject minimal Quill CSS once on mount
-    useEffect(() => {
-        injectQuillStyles();
-    }, []);
+    useEffect(() => { injectStyles(colors); }, [colors]);
 
-    // Initialise Quill once
-    useEffect(() => {
-        if (!containerRef.current) return;
+    // ── Position the floating selection popover ────────────────────────────────
+    const computePopover = useCallback(() => {
+        const container = containerRef.current;
+        const domSel = typeof window !== "undefined" ? window.getSelection() : null;
+        if (!container || !domSel || domSel.rangeCount === 0) { setPopoverPos(null); return; }
+        const range = domSel.getRangeAt(0);
+        if (range.collapsed) { setPopoverPos(null); return; }
+        const rect = range.getBoundingClientRect();
+        if (!rect || (rect.width === 0 && rect.height === 0)) { setPopoverPos(null); return; }
+        const cRect = container.getBoundingClientRect();
 
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const QuillClass = require("quill").default;
+        const POPOVER_HEIGHT = 40;
+        const POPOVER_WIDTH = 320;
+        const GAP = 8;
 
-        // Register size class format for "small" text
-        try {
-            const SizeClass = QuillClass.import("attributors/class/size");
-            SizeClass.whitelist = ["small"];
-            QuillClass.register(SizeClass, true);
-        } catch (_) { /* already registered or unavailable */ }
+        const selTop = rect.top - cRect.top + container.scrollTop;
+        const selLeft = rect.left - cRect.left + container.scrollLeft;
+        const selCenterX = selLeft + rect.width / 2;
+        const visibleTop = container.scrollTop;
 
-        const quill = new QuillClass(containerRef.current, {
-            modules: { toolbar: false },
-            theme: false,
-            placeholder: "Write your content strategy...",
-        });
-
-        // Apply theme colours to the editor element
-        const editorEl = containerRef.current.querySelector(".ql-editor") as HTMLElement | null;
-        if (editorEl) {
-            editorEl.style.color = colors.text as string;
-            editorEl.style.backgroundColor = colors.background as string;
+        let placement: "top" | "bottom" = "top";
+        let top = selTop - POPOVER_HEIGHT - GAP;
+        if (top < visibleTop + 4) {
+            placement = "bottom";
+            top = selTop + rect.height + GAP;
         }
 
-        const initialHtml = ensureEnrichedHtml(content || "");
-        quill.clipboard.dangerouslyPasteHTML(initialHtml);
-        // Store the canonical (enriched-vocabulary) form so the sync effect's
-        // comparison below is stable across the Quill ⇄ canonical round-trip.
-        lastHtmlRef.current = ensureEnrichedHtml(quill.getSemanticHTML());
+        const containerWidth = container.clientWidth;
+        const minLeft = container.scrollLeft + 8;
+        const maxLeft = Math.max(minLeft, container.scrollLeft + containerWidth - POPOVER_WIDTH - 8);
+        let left = selCenterX - POPOVER_WIDTH / 2;
+        left = Math.max(minLeft, Math.min(maxLeft, left));
 
-        quill.on("text-change", () => {
-            // Normalise Quill's output (<strong>/<em>/<h4…>) into the shared
-            // canonical format so web and native export identical rich text.
-            const html = ensureEnrichedHtml(quill.getSemanticHTML());
-            lastHtmlRef.current = html;
-            onChange(html);
+        setPopoverPos({ top, left, placement });
+    }, []);
+
+    // ── Reflect active formats / block type + drive the popover ────────────────
+    const syncToolbarState = useCallback(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) {
+            setActiveFormats({ bold: false, italic: false, underline: false, strike: false });
+            setDropdownValue("normal");
+            setListType(null);
+            setBlockquoteActive(false);
+            setLinkActive(false);
+            setSelectedText("");
+            setPopoverPos(null);
+            return;
+        }
+
+        setActiveFormats({
+            bold: selection.hasFormat("bold"),
+            italic: selection.hasFormat("italic"),
+            underline: selection.hasFormat("underline"),
+            strike: selection.hasFormat("strikethrough"),
         });
 
-        const computePopoverPosition = (range: any) => {
-            const container = containerRef.current;
-            if (!container || !range || range.length === 0) {
-                setPopoverPos(null);
-                return;
+        const anchorNode = selection.anchor.getNode();
+        const topLevel = anchorNode.getKey() === "root" ? null : anchorNode.getTopLevelElement();
+        let dropdown = "normal";
+        let list: "bullet" | "number" | null = null;
+        let quote = false;
+        if (topLevel) {
+            if ($isHeadingNode(topLevel)) {
+                const tag = topLevel.getTag();
+                dropdown = tag === "h1" || tag === "h2" || tag === "h3" ? tag : "normal";
+            } else if ($isQuoteNode(topLevel)) {
+                quote = true;
+            } else if ($isListNode(topLevel)) {
+                list = topLevel.getListType() === "number" ? "number" : "bullet";
             }
-            const bounds = quill.getBounds(range.index, range.length);
-            if (!bounds) return;
+        }
+        setDropdownValue(dropdown);
+        setListType(list);
+        setBlockquoteActive(quote);
+        setLinkActive($findMatchingParent(anchorNode, (n) => $isLinkNode(n)) !== null);
 
-            const POPOVER_HEIGHT_ESTIMATE = 40;
-            const POPOVER_WIDTH_ESTIMATE = 320;
-            const GAP = 8;
+        const text = selection.getTextContent();
+        if (text && text.trim().length > 0 && !selection.isCollapsed()) {
+            setSelectedText(text.trim());
+            computePopover();
+        } else {
+            setSelectedText("");
+            setPopoverPos(null);
+        }
+    }, [computePopover]);
 
-            // `quill.getBounds()` returns the selection rect relative to the
-            // container's *visible* top-left — it already accounts for the
-            // editor's internal scroll and any page scroll. The popover is
-            // position:absolute inside this same (position:relative) container,
-            // whose `top`/`left` are measured in the container's *content*
-            // coordinate space. Convert by adding the container's own scroll
-            // offset. (The previous code subtracted the editor's scrollTop,
-            // which double-counted the scroll and made the popover drift up by
-            // ~the scroll amount once the doc was scrolled.)
-            const selTop = bounds.top + container.scrollTop;
-            const selLeft = bounds.left + container.scrollLeft;
-            const selCenterX = selLeft + bounds.width / 2;
-
-            // Top edge of the currently-visible area, in content coordinates.
-            const visibleTop = container.scrollTop;
-
-            // Default: place above the selection; flip below if not enough room.
-            let placement: "top" | "bottom" = "top";
-            let top = selTop - POPOVER_HEIGHT_ESTIMATE - GAP;
-            if (top < visibleTop + 4) {
-                placement = "bottom";
-                top = selTop + bounds.height + GAP;
-            }
-
-            // Clamp left within the container's visible width (content coords).
-            const containerWidth = container.clientWidth;
-            const minLeft = container.scrollLeft + 8;
-            const maxLeft = Math.max(
-                minLeft,
-                container.scrollLeft + containerWidth - POPOVER_WIDTH_ESTIMATE - 8
-            );
-            let left = selCenterX - POPOVER_WIDTH_ESTIMATE / 2;
-            left = Math.max(minLeft, Math.min(maxLeft, left));
-
-            setPopoverPos({ top, left, placement });
-        };
-
-        quill.on("selection-change", (range: any) => {
-            if (!range) return;
-            const formats = quill.getFormat(range.index, range.length);
-            setActiveFormats(formats);
-            setDropdownValue(getDropdownValue(formats));
-            if (range.length > 0) {
-                const text = quill.getText(range.index, range.length);
-                setSelectedText(text.trim());
-                setSelectionRange({ index: range.index, length: range.length });
-                computePopoverPosition(range);
-            } else {
-                setSelectedText("");
-                setSelectionRange(null);
-                setPopoverPos(null);
-            }
-        });
-
-        // Reposition popover when the editor scrolls while a selection is active.
-        const editorEl2 = containerRef.current.querySelector(".ql-editor") as HTMLElement | null;
-        const onEditorScroll = () => {
-            const r = quill.getSelection();
-            if (r && r.length > 0) computePopoverPosition(r);
-        };
-        editorEl2?.addEventListener("scroll", onEditorScroll);
-
-        quillRef.current = quill;
-
-        return () => {
-            quill.off("text-change");
-            quill.off("selection-change");
-            editorEl2?.removeEventListener("scroll", onEditorScroll);
-        };
+    // ── Initial content load ───────────────────────────────────────────────────
+    // In collaborative mode the Yjs CRDT (via CollaborationPlugin) owns content,
+    // so we must NOT seed/sync from the HTML prop here — doing so would fight the
+    // CRDT and re-introduce the clobber bug in a new form.
+    useEffect(() => {
+        if (collabEnabled) return;
+        const incoming = ensureEnrichedHtml(content || "");
+        lastHtmlRef.current = incoming;
+        editor.update(() => $setEditorContentFromHtml(editor, incoming));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Sync external content changes without causing update loops
+    // ── External content sync (avoid update loops) ─────────────────────────────
     useEffect(() => {
-        const quill = quillRef.current;
-        if (!quill) return;
+        if (collabEnabled) return;
         const incoming = ensureEnrichedHtml(content || "");
-        if (incoming !== lastHtmlRef.current) {
-            const sel = quill.getSelection();
-            quill.clipboard.dangerouslyPasteHTML(incoming);
-            lastHtmlRef.current = ensureEnrichedHtml(quill.getSemanticHTML());
-            if (sel) quill.setSelection(sel.index, sel.length);
+        if (incoming === lastHtmlRef.current) return;
+        lastHtmlRef.current = incoming;
+        editor.update(() => $setEditorContentFromHtml(editor, incoming));
+    }, [content, editor, collabEnabled]);
+
+    // ── Active-state listener + scroll reposition ──────────────────────────────
+    useEffect(() => {
+        const unregister = editor.registerUpdateListener(({ editorState }) => {
+            editorState.read(() => syncToolbarState());
+        });
+        const container = containerRef.current;
+        const onScroll = () => { if (selectedTextRef.current) computePopover(); };
+        container?.addEventListener("scroll", onScroll);
+        return () => {
+            unregister();
+            container?.removeEventListener("scroll", onScroll);
+        };
+    }, [editor, syncToolbarState, computePopover]);
+
+    // ── Editor → canonical HTML → onChange ─────────────────────────────────────
+    const handleEditorChange = useCallback((editorState: EditorState) => {
+        editorState.read(() => {
+            const inner = $serializeToEnrichedInner();
+            const emitted = inner ? `<html>\n${inner}\n</html>` : "";
+            if (emitted !== lastHtmlRef.current) {
+                lastHtmlRef.current = emitted;
+                onChangeRef.current(emitted);
+            }
+        });
+    }, []);
+
+    // ── Selection capture / restore (modals steal focus) ───────────────────────
+    const captureSelection = useCallback(() => {
+        editor.getEditorState().read(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+                savedSelRef.current = {
+                    a: [selection.anchor.key, selection.anchor.offset, selection.anchor.type],
+                    f: [selection.focus.key, selection.focus.offset, selection.focus.type],
+                    text: selection.getTextContent(),
+                };
+            } else {
+                savedSelRef.current = null;
+            }
+        });
+    }, [editor]);
+
+    const restoreSelection = useCallback((): boolean => {
+        const saved = savedSelRef.current;
+        if (!saved) return false;
+        try {
+            const selection = $createRangeSelection();
+            selection.anchor.set(saved.a[0], saved.a[1], saved.a[2]);
+            selection.focus.set(saved.f[0], saved.f[1], saved.f[2]);
+            $setSelection(selection);
+            return true;
+        } catch {
+            return false;
         }
-    }, [content]);
-
-    // ── Format helpers ────────────────────────────────────────────────────────
-
-    const handleInlineFormat = useCallback((format: string) => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        const current = quill.getFormat();
-        quill.format(format, !current[format]);
-        setActiveFormats(quill.getFormat());
     }, []);
 
-    const handleList = useCallback((type: "bullet" | "ordered") => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        const current = quill.getFormat();
-        quill.format("list", current.list === type ? false : type);
-        setActiveFormats(quill.getFormat());
-    }, []);
-
-    const handleBlockquote = useCallback(() => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        const current = quill.getFormat();
-        quill.format("blockquote", !current.blockquote);
-        setActiveFormats(quill.getFormat());
-    }, []);
-
-    const handleClearFormat = useCallback(() => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        const range = quill.getSelection();
-        if (range) quill.removeFormat(range.index, range.length);
-        setActiveFormats({});
-        setDropdownValue("normal");
-    }, []);
+    // ── Toolbar handlers ───────────────────────────────────────────────────────
+    const handleInlineFormat = useCallback((format: TextFormatType) => {
+        editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
+    }, [editor]);
 
     const handleTextSize = useCallback((value: string) => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        quill.format("header", false);
-        quill.format("size", false);
-        if (value.startsWith("h")) {
-            quill.format("header", parseInt(value[1], 10));
-        } else if (value === "small") {
-            quill.format("size", "small");
+        editor.update(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection)) return;
+            if (value === "h1" || value === "h2" || value === "h3") {
+                $setBlocksType(selection, () => $createHeadingNode(value));
+            } else {
+                $setBlocksType(selection, () => $createParagraphNode());
+            }
+        });
+    }, [editor]);
+
+    const handleList = useCallback((type: "bullet" | "number") => {
+        if (listType === type) {
+            editor.dispatchCommand(REMOVE_LIST_COMMAND, undefined);
+        } else if (type === "bullet") {
+            editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+        } else {
+            editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
         }
-        const updated = quill.getFormat();
-        setActiveFormats(updated);
-        setDropdownValue(value);
-    }, []);
+    }, [editor, listType]);
 
-    // ── Link & image insertion ────────────────────────────────────────────────
+    const handleBlockquote = useCallback(() => {
+        editor.update(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection)) return;
+            $setBlocksType(selection, () => (blockquoteActive ? $createParagraphNode() : $createQuoteNode()));
+        });
+    }, [editor, blockquoteActive]);
 
-    // Capture the live selection (Quill keeps it after the click) before the
-    // modal opens, and prefill the link label with any selected text.
-    const captureRange = useCallback(() => {
-        const quill = quillRef.current;
-        const range = quill?.getSelection();
-        savedRangeRef.current = range
-            ? { index: range.index, length: range.length }
-            : { index: quill ? quill.getLength() - 1 : 0, length: 0 };
-        return savedRangeRef.current;
-    }, []);
+    const handleClearFormat = useCallback(() => {
+        editor.update(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection)) return;
+            selection.getNodes().forEach((node) => {
+                if ($isTextNode(node)) {
+                    node.setFormat(0);
+                    node.setStyle("");
+                }
+            });
+            $setBlocksType(selection, () => $createParagraphNode());
+        });
+        editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+    }, [editor]);
 
+    // ── Link & image insertion ─────────────────────────────────────────────────
     const openLinkModal = useCallback(() => {
-        const range = captureRange();
-        const quill = quillRef.current;
-        const text = range && range.length > 0 && quill ? quill.getText(range.index, range.length).trim() : "";
-        setLinkInitialText(text);
+        captureSelection();
+        setLinkInitialText(savedSelRef.current?.text?.trim() ?? "");
         setLinkModalVisible(true);
-    }, [captureRange]);
+    }, [captureSelection]);
 
     const openImageModal = useCallback(() => {
-        captureRange();
+        captureSelection();
         setImageModalVisible(true);
-    }, [captureRange]);
+    }, [captureSelection]);
 
     const handleInsertLink = useCallback((text: string, url: string) => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        const range = savedRangeRef.current ?? { index: quill.getLength() - 1, length: 0 };
-        if (range.length > 0) {
-            // Replace selection with the (possibly edited) label, linked.
-            quill.deleteText(range.index, range.length);
-            quill.insertText(range.index, text, { link: url });
-            quill.setSelection(range.index + text.length, 0);
-        } else {
-            quill.insertText(range.index, text, { link: url });
-            quill.setSelection(range.index + text.length, 0);
-        }
-        const html = ensureEnrichedHtml(quill.getSemanticHTML());
-        lastHtmlRef.current = html;
-        onChange(html);
-    }, [onChange]);
+        editor.update(() => {
+            const restored = restoreSelection();
+            const linkNode = $createLinkNode(url);
+            linkNode.append($createTextNode(text || url));
+            const selection = $getSelection();
+            if (restored && $isRangeSelection(selection)) {
+                selection.insertNodes([linkNode]);
+            } else {
+                const paragraph = $createParagraphNode();
+                paragraph.append(linkNode);
+                $getRoot().append(paragraph);
+            }
+        });
+    }, [editor, restoreSelection]);
 
-    const handleInsertImage = useCallback((imageUrl: string) => {
-        const quill = quillRef.current;
-        if (!quill) return;
-        const range = savedRangeRef.current ?? { index: quill.getLength() - 1, length: 0 };
-        quill.insertEmbed(range.index, "image", imageUrl, "user");
-        quill.setSelection(range.index + 1, 0);
-        const html = ensureEnrichedHtml(quill.getSemanticHTML());
-        lastHtmlRef.current = html;
-        onChange(html);
-    }, [onChange]);
+    const handleInsertImage = useCallback(async (imageUrl: string) => {
+        const containerWidth = containerRef.current?.clientWidth ?? MAX_IMAGE_WIDTH;
+        const maxWidth = Math.min(MAX_IMAGE_WIDTH, Math.max(120, containerWidth - 40));
+        const size = await resolveImageSize(imageUrl, maxWidth);
+        editor.update(() => {
+            const restored = restoreSelection();
+            const imageNode = $createImageNode({ src: imageUrl, width: size.width, height: size.height });
+            const selection = $getSelection();
+            if (restored && $isRangeSelection(selection)) {
+                selection.insertNodes([imageNode]);
+            } else {
+                const paragraph = $createParagraphNode();
+                paragraph.append(imageNode);
+                $getRoot().append(paragraph);
+            }
+        });
+    }, [editor, restoreSelection]);
 
-    // ── Selection-aware actions ───────────────────────────────────────────────
+    // ── Selection-aware actions ────────────────────────────────────────────────
+    const handleQuickEditOpen = useCallback(() => {
+        captureSelection();
+        setQuickEditVisible(true);
+    }, [captureSelection]);
+
+    const handleAIQuickEditAccept = useCallback((newText: string) => {
+        editor.update(() => {
+            const restored = restoreSelection();
+            const selection = $getSelection();
+            if (restored && $isRangeSelection(selection)) {
+                selection.insertText(newText);
+            }
+        });
+        setQuickEditVisible(false);
+    }, [editor, restoreSelection]);
 
     const handleSendToChat = useCallback(() => {
-        if (selectedText) onSendToChat(selectedText);
-    }, [selectedText, onSendToChat]);
+        if (selectedText) onSendToChatRef.current(selectedText);
+    }, [selectedText]);
 
     const handleSnippetComment = useCallback(() => {
-        if (onSnippetComment && selectedText && selectionRange) {
-            onSnippetComment(selectedText, selectionRange.index, selectionRange.index + selectionRange.length);
-        }
-    }, [onSnippetComment, selectedText, selectionRange]);
+        const snippet = selectedText;
+        if (!snippet || !onSnippetCommentRef.current) return;
+        editor.getEditorState().read(() => {
+            const full = $getRoot().getTextContent();
+            const start = full.indexOf(snippet);
+            const anchorStart = start < 0 ? 0 : start;
+            const anchorEnd = start < 0 ? snippet.length : start + snippet.length;
+            onSnippetCommentRef.current?.(snippet, anchorStart, anchorEnd);
+        });
+    }, [editor, selectedText]);
 
-    // Replace the current Quill selection with AI-generated text, then sync to parent.
-    const handleAIQuickEditAccept = useCallback(
-        (newText: string) => {
-            const quill = quillRef.current;
-            if (!quill || !selectionRange) {
-                setQuickEditVisible(false);
-                return;
-            }
-            quill.deleteText(selectionRange.index, selectionRange.length);
-            quill.insertText(selectionRange.index, newText);
-            quill.setSelection(selectionRange.index + newText.length, 0);
-            const html = ensureEnrichedHtml(quill.getSemanticHTML());
-            lastHtmlRef.current = html;
-            onChange(html);
-            setQuickEditVisible(false);
-        },
-        [selectionRange, onChange]
-    );
-
-    // ── Toolbar button definitions ────────────────────────────────────────────
-
-    const inlineButtons = [
-        { icon: faBold, label: "Bold", format: "bold" },
-        { icon: faItalic, label: "Italic", format: "italic" },
-        { icon: faUnderline, label: "Underline", format: "underline" },
-        { icon: faStrikethrough, label: "Strike", format: "strike" },
+    // ── Toolbar config ─────────────────────────────────────────────────────────
+    const inlineButtons: { icon: typeof faBold; label: string; format: TextFormatType; active: boolean }[] = [
+        { icon: faBold, label: "Bold", format: "bold", active: activeFormats.bold },
+        { icon: faItalic, label: "Italic", format: "italic", active: activeFormats.italic },
+        { icon: faUnderline, label: "Underline", format: "underline", active: activeFormats.underline },
+        { icon: faStrikethrough, label: "Strike", format: "strikethrough", active: activeFormats.strike },
     ];
 
     const hasSelection = selectedText.length > 0;
@@ -440,120 +687,112 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
     return (
         <View style={styles.container}>
+            {/* ── Read-only banner: a native editor holds the single-writer lock ─ */}
+            {readOnly && (
+                <View style={styles.lockBanner}>
+                    <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary as string} />
+                    <Text style={styles.lockBannerText} numberOfLines={1}>
+                        {lock?.lockedByName
+                            ? `${lock.lockedByName} is editing on a device · changes appear when they finish`
+                            : "Read-only"}
+                    </Text>
+                </View>
+            )}
+
             {/* ── Toolbar ──────────────────────────────────────────────────── */}
+            {!readOnly && (
             <View style={styles.toolbar}>
                 <View style={styles.toolbarLeft}>
-                    {/* Text size / header dropdown */}
                     <select value={dropdownValue} onChange={(e) => handleTextSize(e.target.value)} style={selectStyle}>
                         <option value="normal">Normal</option>
                         <option value="h1">H1</option>
                         <option value="h2">H2</option>
                         <option value="h3">H3</option>
-                        <option value="h4">H4</option>
-                        <option value="h5">H5</option>
-                        <option value="small">Small</option>
                     </select>
 
-                    {/* Inline format buttons */}
-                    {inlineButtons.map((btn) => {
-                        const isActive = !!activeFormats[btn.format];
-                        return (
-                            <Pressable
-                                key={btn.label}
-                                style={[styles.toolbarBtn, isActive && styles.toolbarBtnActive]}
-                                onPress={() => handleInlineFormat(btn.format)}
-                                accessibilityLabel={btn.label}
-                            >
-                                <FontAwesomeIcon
-                                    icon={btn.icon}
-                                    size={13}
-                                    color={isActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
-                                />
-                            </Pressable>
-                        );
-                    })}
+                    {inlineButtons.map((btn) => (
+                        <Pressable
+                            key={btn.label}
+                            style={[styles.toolbarBtn, btn.active && styles.toolbarBtnActive]}
+                            onPress={() => handleInlineFormat(btn.format)}
+                            accessibilityLabel={btn.label}
+                        >
+                            <FontAwesomeIcon
+                                icon={btn.icon}
+                                size={13}
+                                color={btn.active ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            />
+                        </Pressable>
+                    ))}
 
                     <View style={styles.toolbarDivider} />
 
-                    {/* List buttons */}
                     <Pressable
-                        style={[styles.toolbarBtn, activeFormats.list === "bullet" && styles.toolbarBtnActive]}
+                        style={[styles.toolbarBtn, listType === "bullet" && styles.toolbarBtnActive]}
                         onPress={() => handleList("bullet")}
                         accessibilityLabel="Bullet list"
                     >
                         <FontAwesomeIcon
                             icon={faListUl}
                             size={13}
-                            color={activeFormats.list === "bullet" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            color={listType === "bullet" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
                         />
                     </Pressable>
                     <Pressable
-                        style={[styles.toolbarBtn, activeFormats.list === "ordered" && styles.toolbarBtnActive]}
-                        onPress={() => handleList("ordered")}
+                        style={[styles.toolbarBtn, listType === "number" && styles.toolbarBtnActive]}
+                        onPress={() => handleList("number")}
                         accessibilityLabel="Ordered list"
                     >
                         <FontAwesomeIcon
                             icon={faListOl}
                             size={13}
-                            color={activeFormats.list === "ordered" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            color={listType === "number" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
                         />
                     </Pressable>
 
                     <View style={styles.toolbarDivider} />
 
-                    {/* Blockquote */}
                     <Pressable
-                        style={[styles.toolbarBtn, activeFormats.blockquote && styles.toolbarBtnActive]}
+                        style={[styles.toolbarBtn, blockquoteActive && styles.toolbarBtnActive]}
                         onPress={handleBlockquote}
                         accessibilityLabel="Blockquote"
                     >
                         <FontAwesomeIcon
                             icon={faQuoteLeft}
                             size={13}
-                            color={activeFormats.blockquote ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            color={blockquoteActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
                         />
                     </Pressable>
 
-                    {/* Clear formatting */}
-                    <Pressable
-                        style={styles.toolbarBtn}
-                        onPress={handleClearFormat}
-                        accessibilityLabel="Clear formatting"
-                    >
+                    <Pressable style={styles.toolbarBtn} onPress={handleClearFormat} accessibilityLabel="Clear formatting">
                         <FontAwesomeIcon icon={faEraser} size={13} color={colors.textSecondary as string} />
                     </Pressable>
 
                     <View style={styles.toolbarDivider} />
 
-                    {/* Insert link */}
                     <Pressable
-                        style={[styles.toolbarBtn, activeFormats.link && styles.toolbarBtnActive]}
+                        style={[styles.toolbarBtn, linkActive && styles.toolbarBtnActive]}
                         onPress={openLinkModal}
                         accessibilityLabel="Insert link"
                     >
                         <FontAwesomeIcon
                             icon={faLink}
                             size={13}
-                            color={activeFormats.link ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            color={linkActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
                         />
                     </Pressable>
 
-                    {/* Insert image */}
-                    <Pressable
-                        style={styles.toolbarBtn}
-                        onPress={openImageModal}
-                        accessibilityLabel="Insert image"
-                    >
+                    <Pressable style={styles.toolbarBtn} onPress={openImageModal} accessibilityLabel="Insert image">
                         <FontAwesomeIcon icon={faImage} size={13} color={colors.textSecondary as string} />
                     </Pressable>
                 </View>
-
             </View>
+            )}
 
-            {/* ── Quill editor container ───────────────────────────────────── */}
+            {/* ── Editor surface ───────────────────────────────────────────── */}
             <div
                 ref={containerRef}
-                className="trendly-quill-container"
+                className="tl-scroll"
                 style={{
                     flex: 1,
                     display: "flex",
@@ -563,32 +802,55 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     position: "relative",
                 } as React.CSSProperties}
             >
+                <RichTextPlugin
+                    contentEditable={<ContentEditable className="tl-content" />}
+                    placeholder={<div className="tl-placeholder">Write your content strategy...</div>}
+                    ErrorBoundary={LexicalErrorBoundary}
+                />
+                {/* Stock history conflicts with CRDT undo — only outside collab. */}
+                {!collabEnabled && <HistoryPlugin />}
+                {collabEnabled && bootstrapRole !== "pending" && providerFactory && (
+                    <CollaborationPlugin
+                        id={`strategy-${strategyId}`}
+                        providerFactory={providerFactory}
+                        shouldBootstrap={bootstrapRole === "owner"}
+                        initialEditorState={
+                            bootstrapRole === "owner" ? initialEditorState : undefined
+                        }
+                        username={manager?.name ?? "Editor"}
+                        cursorColor={cursorColor}
+                        cursorsContainerRef={cursorsRef}
+                    />
+                )}
+                <ListPlugin />
+                <LinkPlugin />
+                <OnChangePlugin onChange={handleEditorChange} ignoreSelectionChange />
+
+                {/* Remote collaborator carets render into this layer. */}
+                {collabEnabled && (
+                    <div ref={cursorsRef} style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 40 } as React.CSSProperties} />
+                )}
+
                 {hasSelection && popoverPos && (
                     <View
-                        ref={popoverRef as any}
-                        // @ts-ignore - web-only DOM event used to keep Quill selection intact
+                        // @ts-ignore - web-only DOM event to keep the visual selection intact
                         onMouseDown={(e: any) => e.preventDefault()}
-                        style={[
-                            styles.floatingPopover,
-                            { top: popoverPos.top, left: popoverPos.left },
-                        ]}
+                        style={[styles.floatingPopover, { top: popoverPos.top, left: popoverPos.left }]}
                     >
+                        {!readOnly && (
+                            <>
+                                <Pressable
+                                    style={({ hovered, pressed }: any) => [styles.popoverAction, (hovered || pressed) && styles.popoverActionHover]}
+                                    onPress={handleQuickEditOpen}
+                                >
+                                    <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary as string} />
+                                    <Text style={styles.popoverActionText}>Quick Edit</Text>
+                                </Pressable>
+                                <View style={styles.popoverDivider} />
+                            </>
+                        )}
                         <Pressable
-                            style={({ hovered, pressed }: any) => [
-                                styles.popoverAction,
-                                (hovered || pressed) && styles.popoverActionHover,
-                            ]}
-                            onPress={() => setQuickEditVisible(true)}
-                        >
-                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary as string} />
-                            <Text style={styles.popoverActionText}>Quick Edit</Text>
-                        </Pressable>
-                        <View style={styles.popoverDivider} />
-                        <Pressable
-                            style={({ hovered, pressed }: any) => [
-                                styles.popoverAction,
-                                (hovered || pressed) && styles.popoverActionHover,
-                            ]}
+                            style={({ hovered, pressed }: any) => [styles.popoverAction, (hovered || pressed) && styles.popoverActionHover]}
                             onPress={handleSendToChat}
                         >
                             <FontAwesomeIcon icon={faShareNodes} size={12} color={colors.onPrimary as string} />
@@ -598,10 +860,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                             <>
                                 <View style={styles.popoverDivider} />
                                 <Pressable
-                                    style={({ hovered, pressed }: any) => [
-                                        styles.popoverAction,
-                                        (hovered || pressed) && styles.popoverActionHover,
-                                    ]}
+                                    style={({ hovered, pressed }: any) => [styles.popoverAction, (hovered || pressed) && styles.popoverActionHover]}
                                     onPress={handleSnippetComment}
                                 >
                                     <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.onPrimary as string} />
@@ -613,7 +872,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 )}
             </div>
 
-            {/* ── AI Quick Edit modal — streaming, with Accept/Discard ──── */}
+            {/* ── AI Quick Edit modal ──────────────────────────────────────── */}
             <AIQuickEditModal
                 visible={quickEditVisible}
                 onClose={() => setQuickEditVisible(false)}
@@ -623,7 +882,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 onAccept={handleAIQuickEditAccept}
             />
 
-            {/* ── Link insertion ──────────────────────────────────────────── */}
+            {/* ── Link insertion ───────────────────────────────────────────── */}
             <LinkInsertModal
                 visible={linkModalVisible}
                 initialText={linkInitialText}
@@ -631,13 +890,61 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 onInsert={handleInsertLink}
             />
 
-            {/* ── Image insertion (upload via AWS or paste URL) ───────────── */}
+            {/* ── Image insertion ──────────────────────────────────────────── */}
             <ImageInsertModal
                 visible={imageModalVisible}
                 onClose={() => setImageModalVisible(false)}
                 onInsert={handleInsertImage}
             />
         </View>
+    );
+};
+
+// ── Outer wrapper: provides the Lexical context ─────────────────────────────
+
+const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = (props) => {
+    const initialConfig = useMemo(
+        () => ({
+            namespace: "trendly-strategy-editor",
+            theme: EDITOR_THEME,
+            // CollaborationPlugin requires editorState=null so Lexical defers the
+            // initial state to the CRDT instead of seeding its own empty doc.
+            editorState: props.collaborative ? null : undefined,
+            onError: (error: Error) => {
+                // eslint-disable-next-line no-console
+                console.error("[RichTextEditor] Lexical error:", error);
+            },
+            nodes: [
+                HeadingNode,
+                QuoteNode,
+                ListNode,
+                ListItemNode,
+                LinkNode,
+                CodeNode,
+                CodeHighlightNode,
+                ImageNode,
+            ],
+        }),
+        [props.collaborative]
+    );
+
+    // Fully remount (new Y.Doc + provider) when switching strategies in collab mode.
+    const composerKey =
+        props.collaborative && props.strategyId ? `collab-${props.strategyId}` : "single";
+
+    const composer = (
+        <LexicalComposer key={composerKey} initialConfig={initialConfig}>
+            <EditorBody {...props} />
+        </LexicalComposer>
+    );
+
+    // CollaborationPlugin reads CollaborationContext (yjsDocMap, isCollabActive),
+    // which @lexical/react does NOT provide by default — its dev build throws
+    // "useCollaborationContext: no context provider found" without this wrapper.
+    return props.collaborative ? (
+        <LexicalCollaboration>{composer}</LexicalCollaboration>
+    ) : (
+        composer
     );
 };
 
@@ -658,6 +965,20 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         toolbarLeft: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, flex: 1 },
         toolbarDivider: { width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 6 },
+        lockBanner: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+            backgroundColor: colors.tag,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        lockBannerText: { fontSize: 12.5, fontWeight: "600", color: colors.textSecondary, flexShrink: 1 },
         floatingPopover: {
             position: "absolute",
             flexDirection: "row",
@@ -680,9 +1001,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             paddingVertical: 7,
             borderRadius: 9,
         },
-        popoverActionHover: {
-            backgroundColor: "rgba(255,255,255,0.14)",
-        },
+        popoverActionHover: { backgroundColor: "rgba(255,255,255,0.14)" },
         popoverActionText: {
             fontSize: 12.5,
             fontWeight: "600",
@@ -709,18 +1028,6 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 1,
         },
         toolbarBtnActive: { backgroundColor: colors.primary, shadowOpacity: 0, elevation: 0 },
-        selectionAction: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 6,
-            backgroundColor: colors.secondarySurface,
-            borderWidth: 1,
-            borderColor: colors.secondaryBorder,
-        },
-        selectionActionText: { fontSize: 12, fontWeight: "600", color: colors.secondaryText },
     });
 }
 

@@ -4,7 +4,29 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { aiWS } from "@/utils/ai-ws";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type AIModule = "strategy" | "calendar" | "content" | "general";
+export type AIModule = "strategy" | "calendar" | "content" | "general" | "onboarding";
+
+/**
+ * AIControl is an optional structured answer control attached to an assistant
+ * message — either a set of selectable options or a typed/validated input field.
+ * Mirrors the backend trendlymodels.AIControl. Available in every module.
+ */
+export interface AIControlOption {
+    label: string;
+    value: string;
+}
+
+export interface AIControl {
+    kind: "options" | "input";
+    // options
+    selectionType?: "single" | "multi";
+    options?: AIControlOption[];
+    allowCustom?: boolean;
+    // input
+    inputType?: "text" | "phone" | "url" | "email";
+    placeholder?: string;
+    optional?: boolean;
+}
 
 export interface AIMessage {
     role: "user" | "assistant" | "tool";
@@ -14,6 +36,7 @@ export interface AIMessage {
     imageUrl?: string;
     tokenCount?: number;
     timestamp: number;
+    control?: AIControl;
 }
 
 export interface AIConversationMeta {
@@ -38,9 +61,14 @@ interface UseAIChatOpts {
      * fresh thread instead of appending to the last one.
      */
     autoOpenLatest?: boolean;
+    /**
+     * Fired when the backend signals onboarding is complete (all required brand
+     * fields collected). The onboarding screen uses this to finalize the brand.
+     */
+    onOnboardingComplete?: () => void;
 }
 
-export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAIChatOpts) {
+export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardingComplete }: UseAIChatOpts) {
     const { selectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
 
@@ -50,15 +78,26 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
     const [streamingContent, setStreamingContent] = useState<string>("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [loading, setLoading] = useState(false);
+    // True until the conversation is ready to use: the brand is resolved, the
+    // thread list has been fetched, and (when auto-opening) the latest thread's
+    // history has loaded. Drives the panel's init loader + send-disabled state.
+    const [initializing, setInitializing] = useState(true);
 
     const brandId = selectedBrand?.id;
     const streamingRef = useRef("");
+    // A control pushed mid-stream is buffered here and attached to the assistant
+    // message when the turn finishes ("done").
+    const pendingControlRef = useRef<AIControl | null>(null);
+    // Kept in a ref so the WS listener doesn't need to resubscribe when the
+    // callback identity changes.
+    const onOnboardingCompleteRef = useRef(onOnboardingComplete);
+    onOnboardingCompleteRef.current = onOnboardingComplete;
     // Guards auto-open so it fires once per module + contextId, not on every
     // refreshThreads. Reset when the scope changes.
     const autoOpenedRef = useRef(false);
 
-    const refreshThreads = useCallback(async () => {
-        if (!brandId) return;
+    const refreshThreads = useCallback(async (): Promise<AIConversationMeta[]> => {
+        if (!brandId) return [];
         try {
             const q = new URLSearchParams({ brandId, module });
             if (contextId) q.set("contextId", contextId);
@@ -69,8 +108,10 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
                 ? all.filter((t) => t.contextId === contextId)
                 : all;
             setThreads(filtered);
+            return filtered;
         } catch {
             setThreads([]);
+            return [];
         }
     }, [brandId, module, contextId]);
 
@@ -81,10 +122,6 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
         setActiveThreadId(null);
         setMessages([]);
     }, [module, contextId]);
-
-    useEffect(() => {
-        refreshThreads();
-    }, [refreshThreads]);
 
     const loadThread = useCallback(async (conversationId: string) => {
         setLoading(true);
@@ -98,16 +135,30 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
         }
     }, []);
 
-    // Auto-open the most recent conversation for this scope (threads arrive
-    // ordered by updatedAt desc). Fires once until the scope changes.
+    // Initialize the conversation: fetch the thread list and, when auto-opening,
+    // load the latest thread's history — keeping `initializing` true for the
+    // whole sequence so the panel can show one clean loading state. Re-runs when
+    // the scope (brand / module / contextId) changes.
     useEffect(() => {
-        if (!autoOpenLatest) return;
-        if (autoOpenedRef.current) return;
-        if (activeThreadId) return;
-        if (threads.length === 0) return;
-        autoOpenedRef.current = true;
-        loadThread(threads[0].id);
-    }, [autoOpenLatest, threads, activeThreadId, loadThread]);
+        let cancelled = false;
+        if (!brandId) {
+            setInitializing(true);
+            return;
+        }
+        setInitializing(true);
+        (async () => {
+            const list = await refreshThreads();
+            if (cancelled) return;
+            if (autoOpenLatest && !autoOpenedRef.current && list.length > 0) {
+                autoOpenedRef.current = true;
+                await loadThread(list[0].id);
+            }
+            if (!cancelled) setInitializing(false);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [brandId, refreshThreads, autoOpenLatest, loadThread]);
 
     const createThread = useCallback(async (title?: string): Promise<string | null> => {
         if (!brandId) return null;
@@ -152,23 +203,31 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
             if (msg.type === "token" && typeof msg.delta === "string") {
                 streamingRef.current += msg.delta;
                 setStreamingContent(streamingRef.current);
+            } else if (msg.type === "control") {
+                pendingControlRef.current = (msg.control as AIControl) ?? null;
+            } else if (msg.type === "onboarding_complete") {
+                onOnboardingCompleteRef.current?.();
             } else if (msg.type === "done") {
                 const finalContent = streamingRef.current;
+                const control = pendingControlRef.current;
                 streamingRef.current = "";
+                pendingControlRef.current = null;
                 setStreamingContent("");
                 setIsStreaming(false);
-                if (finalContent) {
+                if (finalContent || control) {
                     setMessages((prev) => [
                         ...prev,
                         {
                             role: "assistant",
                             content: finalContent,
+                            control: control ?? undefined,
                             timestamp: Date.now(),
                         },
                     ]);
                 }
             } else if (msg.type === "error") {
                 streamingRef.current = "";
+                pendingControlRef.current = null;
                 setStreamingContent("");
                 setIsStreaming(false);
             }
@@ -210,6 +269,7 @@ export function useAIChat({ module, contextId, autoOpenLatest = true }: UseAICha
         streamingContent,
         isStreaming,
         loading,
+        initializing,
         createThread,
         loadThread,
         deleteThread,

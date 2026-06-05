@@ -9,6 +9,7 @@ import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
+import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
@@ -35,18 +36,20 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
+    faCalendarXmark,
     faCheck,
     faCircleInfo,
     faCommentDots,
     faEye,
     faHandshake,
+    faLock,
     faMagicWandSparkles,
     faPaperPlane,
     faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -75,6 +78,7 @@ const CreateContentScreen = () => {
         }>();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
+    const router = useRouter();
     const { items, updateContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand } = useBrandContext();
@@ -107,12 +111,14 @@ const CreateContentScreen = () => {
     const [destinations, setDestinations] = useState<SocialDestination[]>(seedItem?.destinations ?? []);
     const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(seedItem?.scheduleMode ?? "scheduled");
     const [publishing, setPublishing] = useState(false);
+    const [unscheduling, setUnscheduling] = useState(false);
     const [scriptAiPrompt, setScriptAiPrompt] = useState("");
     const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCollabModal, setShowCollabModal] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
     // Firestore items arrive after first render. Hydrate local form state the
     // first time the real item shows up for this contentId. Tracked per-id so
@@ -203,32 +209,47 @@ const CreateContentScreen = () => {
         generateImage,
     } = useAIGenerate();
 
-    const handleSave = useCallback(async () => {
-        if (!contentId || saveState === "saving") return;
+    // Scheduled / posted content is locked: every edit + Save is disabled.
+    // A "scheduled" post can be unlocked by unscheduling it (reverts to
+    // "approved"); a "posted" one is locked permanently.
+    const locked = status === "scheduled" || status === "posted";
+
+    // Returns true when the content was persisted, false otherwise (no-op or
+    // failure) — the unsaved-changes leave flow relies on this to decide whether
+    // it's safe to navigate away.
+    const handleSave = useCallback(async (): Promise<boolean> => {
+        if (!contentId || saveState === "saving" || locked) return false;
         setSaveState("saving");
-        await updateContent(contentId, {
-            title,
-            description: idea,
-            status: status as any,
-            caption,
-            hashtags,
-            timeOfPosting,
-            script,
-            imagePrompt,
-            attachments,
-            postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
-        });
+        try {
+            await updateContent(contentId, {
+                title,
+                description: idea,
+                status: status as any,
+                caption,
+                hashtags,
+                timeOfPosting,
+                script,
+                imagePrompt,
+                attachments,
+                postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
+            });
+        } catch (e) {
+            console.warn("Save error:", e);
+            setSaveState("idle");
+            return false;
+        }
         setDirty(false);
         setSaveState("saved");
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
-    }, [contentId, saveState, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date]);
+        return true;
+    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date]);
 
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
     // schedule endpoint (functions/trendly_v2 → internal/trendlyapis/publishing).
     const handlePublish = useCallback(async () => {
-        if (!contentId || publishing || destinations.length === 0) return;
+        if (!contentId || publishing || destinations.length === 0 || locked) return;
         const brandId = selectedBrand?.id;
         if (!brandId) return;
         setPublishing(true);
@@ -292,11 +313,65 @@ const CreateContentScreen = () => {
         } finally {
             setPublishing(false);
         }
-    }, [contentId, publishing, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+    }, [contentId, publishing, locked, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+
+    // Unschedule a scheduled post: cancels the backend Step Functions execution
+    // and reverts status to "approved", which unlocks the editor again.
+    const handleUnschedule = useCallback(async () => {
+        if (!contentId || unscheduling) return;
+        const brandId = selectedBrand?.id;
+        if (!brandId) return;
+        setUnscheduling(true);
+        try {
+            const res = await HttpWrapper.fetch(
+                `/api/v2/brands/${brandId}/contents/${contentId}/schedule`,
+                { method: "DELETE" }
+            );
+            if (!res.ok) throw new Error(`Unschedule failed (${res.status})`);
+            setStatus("approved");
+            skipDirtyRef.current = true;
+            setDirty(false);
+        } catch (e) {
+            console.warn("Unschedule error:", e);
+        } finally {
+            setUnscheduling(false);
+        }
+    }, [contentId, unscheduling, selectedBrand?.id]);
 
     const handleCreateCollab = useCallback(() => {
         setShowCollabModal(true);
     }, []);
+
+    // ── Back navigation with an unsaved-changes guard ────────────────────────
+    const doNavigateBack = useCallback(() => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/contents");
+        }
+    }, [router]);
+
+    // Header back press: prompt to save/discard when there are unsaved edits,
+    // otherwise leave straight away.
+    const handleBackPress = useCallback(() => {
+        if (dirty) {
+            setShowLeaveConfirm(true);
+        } else {
+            doNavigateBack();
+        }
+    }, [dirty, doNavigateBack]);
+
+    const handleLeaveSave = useCallback(async () => {
+        const ok = await handleSave();
+        if (!ok) return; // save failed — keep the prompt open so the user can retry or discard
+        setShowLeaveConfirm(false);
+        doNavigateBack();
+    }, [handleSave, doNavigateBack]);
+
+    const handleLeaveDiscard = useCallback(() => {
+        setShowLeaveConfirm(false);
+        doNavigateBack();
+    }, [doNavigateBack]);
 
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
@@ -492,44 +567,48 @@ const CreateContentScreen = () => {
             >
                 <FontAwesomeIcon icon={faCircleInfo} size={16} color={colors.textSecondary} />
             </Pressable>,
-            // 🚀 Publish / schedule
-            <Pressable
-                key="publish"
-                style={({ pressed }) => [
-                    xl ? styles.publishHeaderBtn : styles.iconBtn,
-                    pressed && styles.iconBtnPressed,
-                ]}
-                onPress={() => setShowPublishModal(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Publish or schedule"
-            >
-                <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.primary} />
-                {xl && <Text style={styles.publishHeaderText}>Publish</Text>}
-            </Pressable>,
-            // Save
-            <Pressable
-                key="save"
-                style={({ pressed }) => [
-                    xl ? styles.saveBtn : styles.saveBtnIcon,
-                    saveState === "saved" && styles.saveBtnSaved,
-                    pressed && styles.btnPressed,
-                ]}
-                onPress={handleSave}
-                disabled={saveState === "saving"}
-                accessibilityRole="button"
-                accessibilityLabel={dirty ? "Save (unsaved changes)" : "Save"}
-            >
-                {saveState === "saving" ? (
-                    xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
-                ) : (
-                    <>
-                        <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                        {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : dirty ? "Save •" : "Save"}</Text>}
-                    </>
-                )}
-            </Pressable>,
+            // 🚀 Publish / schedule — hidden once locked (scheduled / posted)
+            locked ? null : (
+                <Pressable
+                    key="publish"
+                    style={({ pressed }) => [
+                        xl ? styles.publishHeaderBtn : styles.iconBtn,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={() => setShowPublishModal(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Publish or schedule"
+                >
+                    <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.primary} />
+                    {xl && <Text style={styles.publishHeaderText}>Publish</Text>}
+                </Pressable>
+            ),
+            // Save — hidden once locked (scheduled / posted)
+            locked ? null : (
+                <Pressable
+                    key="save"
+                    style={({ pressed }) => [
+                        xl ? styles.saveBtn : styles.saveBtnIcon,
+                        saveState === "saved" && styles.saveBtnSaved,
+                        pressed && styles.btnPressed,
+                    ]}
+                    onPress={handleSave}
+                    disabled={saveState === "saving"}
+                    accessibilityRole="button"
+                    accessibilityLabel={dirty ? "Save (unsaved changes)" : "Save"}
+                >
+                    {saveState === "saving" ? (
+                        xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
+                    ) : (
+                        <>
+                            <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
+                            {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : dirty ? "Save •" : "Save"}</Text>}
+                        </>
+                    )}
+                </Pressable>
+            ),
         ],
-        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty]
+        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty, locked]
     );
 
     return (
@@ -537,6 +616,7 @@ const CreateContentScreen = () => {
             <PageHeader
                 title={title || "Create Content"}
                 showBackButton
+                onBackPress={handleBackPress}
                 actionButtons={headerActions}
                 mobileActions="all"
                 customMainContent={
@@ -575,6 +655,48 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
+                        {/* ── Lock banner: scheduled / posted content is read-only ── */}
+                        {locked ? (
+                            <View style={styles.section}>
+                                <View style={styles.lockBanner}>
+                                    <View style={styles.lockIconWrap}>
+                                        <FontAwesomeIcon icon={faLock} size={14} color={colors.primary} />
+                                    </View>
+                                    <View style={styles.lockBannerBody}>
+                                        <Text style={styles.lockBannerTitle}>
+                                            {status === "posted" ? "Posted — locked" : "Scheduled — locked"}
+                                        </Text>
+                                        <Text style={styles.lockBannerSub}>
+                                            {status === "posted"
+                                                ? "This content has been posted and can no longer be edited."
+                                                : "Editing is paused while this post is scheduled. Unschedule it to make changes."}
+                                        </Text>
+                                    </View>
+                                    {status === "scheduled" ? (
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.unscheduleBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={handleUnschedule}
+                                            disabled={unscheduling}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Unschedule post"
+                                        >
+                                            {unscheduling ? (
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            ) : (
+                                                <FontAwesomeIcon icon={faCalendarXmark} size={13} color={colors.primary} />
+                                            )}
+                                            <Text style={styles.unscheduleBtnText}>
+                                                {unscheduling ? "Unscheduling…" : "Unschedule"}
+                                            </Text>
+                                        </Pressable>
+                                    ) : null}
+                                </View>
+                            </View>
+                        ) : null}
+
                         {/* ── Posting summary (only once configured) ──────────── */}
                         {destinations.length > 0 ? (
                             <View style={styles.section}>
@@ -611,6 +733,7 @@ const CreateContentScreen = () => {
                                     onImagePromptChange={setImagePrompt}
                                     onGenerateImage={handleImageGenerate}
                                     isGeneratingImage={isGeneratingImage}
+                                    readOnly={locked}
                                 />
                             )}
 
@@ -631,6 +754,7 @@ const CreateContentScreen = () => {
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
                                     collapsible={isReel}
+                                    readOnly={locked}
                                 />
                             )}
                         </View>
@@ -649,20 +773,23 @@ const CreateContentScreen = () => {
                                         multiline
                                         maxLength={2200}
                                         textAlignVertical="top"
+                                        editable={!locked}
                                     />
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.wandBtn,
-                                            pressed && styles.btnPressed,
-                                        ]}
-                                        onPress={() => setMagicTarget("caption")}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faMagicWandSparkles}
-                                            size={16}
-                                            color={colors.primary}
-                                        />
-                                    </Pressable>
+                                    {!locked ? (
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.wandBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={() => setMagicTarget("caption")}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faMagicWandSparkles}
+                                                size={16}
+                                                color={colors.primary}
+                                            />
+                                        </Pressable>
+                                    ) : null}
                                 </View>
                             </View>
                         </View>
@@ -679,20 +806,23 @@ const CreateContentScreen = () => {
                                         value={hashtags}
                                         onChangeText={setHashtags}
                                         maxLength={500}
+                                        editable={!locked}
                                     />
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.wandBtn,
-                                            pressed && styles.btnPressed,
-                                        ]}
-                                        onPress={() => setMagicTarget("hashtags")}
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faMagicWandSparkles}
-                                            size={16}
-                                            color={colors.primary}
-                                        />
-                                    </Pressable>
+                                    {!locked ? (
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.wandBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={() => setMagicTarget("hashtags")}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faMagicWandSparkles}
+                                                size={16}
+                                                color={colors.primary}
+                                            />
+                                        </Pressable>
+                                    ) : null}
                                 </View>
                             </View>
                         </View>
@@ -856,6 +986,7 @@ const CreateContentScreen = () => {
                 onChangeIdea={setIdea}
                 onChangeStatus={setStatus}
                 onClose={() => setShowInfoModal(false)}
+                readOnly={locked}
             />
 
             <PublishModal
@@ -872,6 +1003,14 @@ const CreateContentScreen = () => {
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}
                 publishing={publishing}
+            />
+
+            <UnsavedChangesModal
+                visible={showLeaveConfirm}
+                saving={saveState === "saving"}
+                onSave={handleLeaveSave}
+                onDiscard={handleLeaveDiscard}
+                onCancel={() => setShowLeaveConfirm(false)}
             />
         </AppLayout>
     );
@@ -1161,6 +1300,62 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 bottomPad: {
                     height: 40,
+                },
+                // ── Lock banner (scheduled / posted content) ──────────────────
+                lockBanner: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    backgroundColor: colors.aliceBlue,
+                    borderRadius: 12,
+                    padding: 14,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                lockIconWrap: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.card,
+                },
+                lockBannerBody: {
+                    flex: 1,
+                    minWidth: 0,
+                },
+                lockBannerTitle: {
+                    fontSize: 14,
+                    fontWeight: "700",
+                    color: colors.text,
+                    marginBottom: 2,
+                },
+                lockBannerSub: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    lineHeight: 17,
+                },
+                unscheduleBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.06,
+                    elevation: 2,
+                },
+                unscheduleBtnText: {
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: colors.primary,
                 },
             }),
         [colors, xl, maxWidth]

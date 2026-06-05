@@ -12,9 +12,11 @@
  * JSON is consumed directly. Mutations are optimistic, then reconciled by a
  * background refetch.
  */
-import { useCallback, useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import {
     ConnectedInboxAccount,
@@ -23,6 +25,38 @@ import {
     UseInboxResult,
 } from "../types";
 
+/**
+ * Maps raw `brands/{brandId}/socialAccounts` Firestore documents to the inbox's
+ * `ConnectedInboxAccount` shape. Mirrors the backend's `ListAccounts`
+ * (internal/trendlyapis/inbox/service.go): only Meta channels participate, and a
+ * Facebook Page with a linked IG Business Account also surfaces an Instagram
+ * entry so the UI shows IG as connected.
+ */
+function mapConnectedAccounts(docs: any[]): ConnectedInboxAccount[] {
+    const out: ConnectedInboxAccount[] = [];
+    for (const s of docs) {
+        const channel = s?.platform;
+        if (channel !== "instagram" && channel !== "facebook") continue;
+        out.push({
+            id: s.id,
+            channel,
+            name: s.displayName ?? "",
+            handle: s.username ?? "",
+            avatarUrl: s.profileImageURL,
+        });
+        if (channel === "facebook" && s.instagramBusinessId) {
+            out.push({
+                id: s.id,
+                channel: "instagram",
+                name: s.displayName ?? "",
+                handle: "",
+                avatarUrl: s.profileImageURL,
+            });
+        }
+    }
+    return out;
+}
+
 export function useInboxApi(): UseInboxResult {
     const { selectedBrand } = useBrandContext();
     const brandId = selectedBrand?.id;
@@ -30,6 +64,11 @@ export function useInboxApi(): UseInboxResult {
     const [loading, setLoading] = useState(true);
     const [connectedAccounts, setConnectedAccounts] = useState<ConnectedInboxAccount[]>([]);
     const [conversations, setConversations] = useState<InboxConversation[]>([]);
+
+    // True once the backend GET has applied authoritative state for the current
+    // brand. Guards the instant Firestore paint from clobbering fresher data if
+    // the (parallel) backend call wins the race.
+    const backendSettledRef = useRef(false);
 
     const fetchInbox = useCallback(async () => {
         if (!brandId) {
@@ -41,6 +80,7 @@ export function useInboxApi(): UseInboxResult {
         try {
             const res = await HttpWrapper.fetch(`/api/v2/brands/${brandId}/inbox`);
             const data = await res.json();
+            backendSettledRef.current = true;
             setConnectedAccounts(data.connectedAccounts ?? []);
             setConversations(data.conversations ?? []);
         } catch (e) {
@@ -52,9 +92,50 @@ export function useInboxApi(): UseInboxResult {
     }, [brandId]);
 
     useEffect(() => {
+        if (!brandId) {
+            setConnectedAccounts([]);
+            setConversations([]);
+            setLoading(false);
+            return;
+        }
+
+        backendSettledRef.current = false;
         setLoading(true);
+        let cancelled = false;
+
+        // Instant paint: the backend already persists the inbox to Firestore
+        // (brands/{brandId}/inbox + socialAccounts), so read it directly instead
+        // of waiting on the Lambda round-trip + Meta sync. Only flips the spinner
+        // off when there is meaningful cached content (≥1 connected account) — a
+        // cold cache falls through to the backend response, so no regression.
+        (async () => {
+            try {
+                const [convSnap, accSnap] = await Promise.all([
+                    getDocs(collection(FirestoreDB, "brands", brandId, "inbox")),
+                    getDocs(collection(FirestoreDB, "brands", brandId, "socialAccounts")),
+                ]);
+                if (cancelled || backendSettledRef.current) return;
+                const accounts = mapConnectedAccounts(accSnap.docs.map((d) => d.data()));
+                if (accounts.length === 0) return;
+                setConnectedAccounts(accounts);
+                setConversations(
+                    convSnap.docs.map((d) => d.data() as InboxConversation)
+                );
+                setLoading(false);
+            } catch (e) {
+                // Best-effort cache read; the backend GET will still populate.
+                console.warn("inbox: firestore cache read failed", e);
+            }
+        })();
+
+        // Authoritative refresh in the background (also triggers the server-side
+        // Meta sync on a cold cache). Reconciles whatever the cache painted.
         fetchInbox();
-    }, [fetchInbox]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [brandId, fetchInbox]);
 
     const sendReply = useCallback(
         async (conversationId: string, text: string) => {

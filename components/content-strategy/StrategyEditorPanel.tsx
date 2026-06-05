@@ -33,6 +33,15 @@ interface EditorProps {
     onSendToChat: (text: string) => void;
     onSnippetComment?: (snippet: string, anchorStart: number, anchorEnd: number) => void;
     strategyId?: string;
+    /** Enable real-time co-editing (web Yjs CRDT). Ignored by the native editor. */
+    collaborative?: boolean;
+    /** Single-writer lock state (Phase 3) — drives read-only / Edit / Done UI. */
+    lock?: {
+        editable: boolean;
+        lockedByName?: string | null;
+        onRequestEdit?: () => void;
+        onEndEdit?: () => void;
+    };
 }
 
 export interface ToolbarProps {

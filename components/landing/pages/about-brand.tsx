@@ -98,11 +98,11 @@ export default function BrandDetailPage() {
     const explainerConfig: ExplainerConfig = aboutBrand ? aboutBrand : {
         kicker: "BRAND ONBOARDING",
         title: `Tell us about {<BRAND_NAME>}`,
-        description: "Your brand profile is your influencer magnet. The more professional and appealing your brand looks here, the more influencers will want to promote your product — often at better rates. This is where you set the value of your brand, so make it count.",
+        description: "Your brand profile powers everything Trendly creates for you — the richer it is, the better your content and your creator matches. This is where you set the value of your brand, so make it count.",
         items: [
-            "Get matched to niche influencers fast",
-            "Transparent chats, contracts, and payouts",
-            "Fraud protection and dispute assistance"
+            "Plan & schedule content in one calendar",
+            "Transparent briefs, contracts, and payouts",
+            "On-demand vetted creators when you need them"
         ]
     }
     explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
@@ -142,7 +142,7 @@ export default function BrandDetailPage() {
 
                     {/* Right: Form */}
                     <View style={[styles.formCard, showDetails && styles.formCardWide]}>
-                        <Stepper count={3} total={4} />
+                        <Stepper count={4} total={5} />
 
                         <View style={styles.headerRow}>
                             <View style={{ flexShrink: 1 }}>

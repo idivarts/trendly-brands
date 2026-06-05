@@ -11,11 +11,14 @@ import {
     arrayUnion,
     collection,
     doc,
+    getDocs,
     onSnapshot,
     orderBy,
     query,
+    runTransaction,
     setDoc,
     updateDoc,
+    writeBatch,
 } from "firebase/firestore";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -56,6 +59,7 @@ function toContentStrategy(id: string, data: IStrategy): ContentStrategy {
         reviewRequestedAt: data.reviewRequestedAt,
         reviewedBy: data.reviewedBy,
         reviewedAt: data.reviewedAt,
+        editLock: data.editLock ?? null,
     };
 }
 
@@ -98,10 +102,27 @@ interface UseStrategiesReturn {
     ) => Promise<void>;
     /** Write (or refresh) the caller's presence heartbeat for a strategy */
     updatePresence: (strategyId: string) => Promise<void>;
+    /**
+     * Try to take the native single-writer edit lock. Resolves true if acquired
+     * (lock was free, stale, or already ours), false if another active editor holds it.
+     */
+    acquireEditLock: (strategyId: string) => Promise<boolean>;
+    /** Refresh our lock heartbeat (call on an interval while editing on native). */
+    refreshEditLock: (strategyId: string) => Promise<void>;
+    /**
+     * Release the lock. When `resetCrdt` is true (native finished editing), also
+     * reset the Yjs baseline — clears `crdtInitialized` and prunes `yupdates` —
+     * so web re-bootstraps the CRDT from the native-edited `markdownContent`.
+     */
+    releaseEditLock: (strategyId: string, resetCrdt?: boolean) => Promise<void>;
 }
 
 // Presence TTL: a heartbeat older than this is considered stale
 const PRESENCE_TTL_MS = 30_000;
+
+// Edit-lock TTL: a lock whose heartbeat is older than this is considered
+// abandoned (editor crashed / closed) and can be taken over.
+const EDIT_LOCK_TTL_MS = 30_000;
 
 export function useStrategies(): UseStrategiesReturn {
     const { selectedBrand } = useBrandContext();
@@ -112,6 +133,24 @@ export function useStrategies(): UseStrategiesReturn {
 
     // Debounce timer ref — keyed by strategyId
     const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+    // ── Clobber guard (Roadmap ticket 37542d5f…cdd28, Phase 1) ──────────────
+    // The whole strategy body is one Firestore field saved last-write-wins, and
+    // `onSnapshot` fires on every version — including our own write echoed back
+    // and stale intermediate snapshots. Without a guard those replace the editor
+    // while the user is mid-typing, so in-flight keystrokes are lost ("save and
+    // revert"). We keep the last content the LOCAL user emitted per strategy and
+    // pin the strategy's content to it while an edit is in flight, so a snapshot
+    // can never regress what's on screen. The override is dropped once our write
+    // fully lands (server value matches) or a genuine remote edit arrives while
+    // we're idle. True same-doc concurrent merge is Phase 2 (Yjs CRDT).
+    const localEditsRef = useRef<Record<string, string>>({});
+
+    // managerId read inside the snapshot listener without re-subscribing on login.
+    const managerIdRef = useRef<string | undefined>(manager?.id);
+    useEffect(() => {
+        managerIdRef.current = manager?.id;
+    }, [manager?.id]);
 
     useEffect(() => {
         const brandId = selectedBrand?.id;
@@ -127,9 +166,32 @@ export function useStrategies(): UseStrategiesReturn {
         const unsubscribe = onSnapshot(
             q,
             (snapshot) => {
-                const mapped = snapshot.docs.map((d) =>
-                    toContentStrategy(d.id, d.data() as IStrategy)
-                );
+                const myId = managerIdRef.current;
+                const mapped = snapshot.docs.map((d) => {
+                    const data = d.data() as IStrategy;
+                    const local = localEditsRef.current[d.id];
+
+                    // No local edit in flight → trust the server value.
+                    if (local === undefined) return toContentStrategy(d.id, data);
+
+                    const serverContent = data.markdownContent ?? "";
+                    const pending = !!debounceRef.current[d.id];
+                    const isRemoteEdit = !!data.lastEditedBy && data.lastEditedBy !== myId;
+
+                    // Our own write fully landed and nothing is queued → drop the override.
+                    if (!pending && serverContent === local) {
+                        delete localEditsRef.current[d.id];
+                        return toContentStrategy(d.id, data);
+                    }
+                    // A genuine collaborator edit arrived while we're idle → accept it.
+                    if (!pending && isRemoteEdit) {
+                        delete localEditsRef.current[d.id];
+                        return toContentStrategy(d.id, data);
+                    }
+                    // Otherwise keep the locally-typed content so in-flight
+                    // keystrokes (our own echo / a stale snapshot) are never clobbered.
+                    return toContentStrategy(d.id, { ...data, markdownContent: local });
+                });
                 setStrategies(mapped);
                 setLoading(false);
             },
@@ -173,6 +235,11 @@ export function useStrategies(): UseStrategiesReturn {
             const brandId = selectedBrand?.id;
             const managerId = manager?.id;
             if (!brandId) return;
+
+            // Record the local edit immediately (before the debounced write and
+            // before our own optimistic snapshot echoes back) so the snapshot
+            // listener pins this strategy's content to what the user just typed.
+            localEditsRef.current[strategyId] = markdownContent;
 
             // Clear any pending debounce for this strategy
             if (debounceRef.current[strategyId]) {
@@ -278,13 +345,115 @@ export function useStrategies(): UseStrategiesReturn {
                 "presence",
                 managerId
             );
-            await setDoc(presenceRef, {
-                managerId,
-                name: managerName,
-                lastSeen: Date.now(),
-            });
+            // merge:true so the heartbeat doesn't wipe the `awareness` field that
+            // FirestoreYjsProvider writes to this same presence doc for live cursors.
+            await setDoc(
+                presenceRef,
+                {
+                    managerId,
+                    name: managerName,
+                    lastSeen: Date.now(),
+                },
+                { merge: true }
+            );
         },
         [selectedBrand?.id, manager?.id, manager?.name]
+    );
+
+    const acquireEditLock = useCallback(
+        async (strategyId: string): Promise<boolean> => {
+            const brandId = selectedBrand?.id;
+            const managerId = manager?.id;
+            const name = manager?.name ?? "Someone";
+            if (!brandId || !managerId) return false;
+
+            const ref = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+            try {
+                return await runTransaction(FirestoreDB, async (tx) => {
+                    const snap = await tx.get(ref);
+                    const lock = snap.data()?.editLock as IStrategy["editLock"] | undefined;
+                    const fresh =
+                        lock && Date.now() - lock.heartbeatAt < EDIT_LOCK_TTL_MS;
+                    if (fresh && lock!.managerId !== managerId) return false; // held by another
+                    tx.update(ref, {
+                        editLock: { managerId, name, heartbeatAt: Date.now() },
+                    });
+                    return true;
+                });
+            } catch {
+                return false;
+            }
+        },
+        [selectedBrand?.id, manager?.id, manager?.name]
+    );
+
+    const refreshEditLock = useCallback(
+        async (strategyId: string): Promise<void> => {
+            const brandId = selectedBrand?.id;
+            const managerId = manager?.id;
+            const name = manager?.name ?? "Someone";
+            if (!brandId || !managerId) return;
+            const ref = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+            // Only refresh if we still hold it (avoid stomping a takeover).
+            try {
+                await runTransaction(FirestoreDB, async (tx) => {
+                    const snap = await tx.get(ref);
+                    const lock = snap.data()?.editLock as IStrategy["editLock"] | undefined;
+                    if (lock && lock.managerId !== managerId) return; // lost it — don't refresh
+                    tx.update(ref, {
+                        editLock: { managerId, name, heartbeatAt: Date.now() },
+                    });
+                });
+            } catch {
+                /* best-effort heartbeat */
+            }
+        },
+        [selectedBrand?.id, manager?.id, manager?.name]
+    );
+
+    const releaseEditLock = useCallback(
+        async (strategyId: string, resetCrdt = false): Promise<void> => {
+            const brandId = selectedBrand?.id;
+            const managerId = manager?.id;
+            if (!brandId) return;
+            const ref = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+
+            // Only release if we hold it; clear the lock (and optionally the CRDT).
+            try {
+                const updates: Record<string, unknown> = { editLock: null };
+                if (resetCrdt) updates.crdtInitialized = false;
+                await updateDoc(ref, updates);
+
+                if (resetCrdt) {
+                    // Prune the Yjs log so web re-bootstraps from the edited
+                    // markdownContent on next open. Batched to respect the 500-op cap.
+                    const yupdatesRef = collection(
+                        FirestoreDB,
+                        "brands",
+                        brandId,
+                        "strategies",
+                        strategyId,
+                        "yupdates"
+                    );
+                    const docs = await getDocs(yupdatesRef);
+                    let batch = writeBatch(FirestoreDB);
+                    let ops = 0;
+                    for (const d of docs.docs) {
+                        batch.delete(d.ref);
+                        if (++ops >= 400) {
+                            await batch.commit();
+                            batch = writeBatch(FirestoreDB);
+                            ops = 0;
+                        }
+                    }
+                    if (ops > 0) await batch.commit();
+                }
+            } catch {
+                /* best-effort release; a stale lock will expire via TTL */
+            }
+            void managerId; // reserved for future "only release if owner" rule
+        },
+        [selectedBrand?.id, manager?.id]
     );
 
     return {
@@ -296,7 +465,10 @@ export function useStrategies(): UseStrategiesReturn {
         addCollaborator,
         updateReviewStatus,
         updatePresence,
+        acquireEditLock,
+        refreshEditLock,
+        releaseEditLock,
     };
 }
 
-export { PRESENCE_TTL_MS };
+export { PRESENCE_TTL_MS, EDIT_LOCK_TTL_MS };

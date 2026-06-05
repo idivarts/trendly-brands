@@ -142,6 +142,7 @@ const GetStartedScreen = () => {
 
                 {/* Question 2: What will you use Trendly for */}
                 <Text style={styles.question}>What will you use Trendly for?</Text>
+                {/* Content-first options: lead with content creation & management */}
                 <Menu
                     visible={visible2}
                     onDismiss={closeMenu2}
@@ -156,17 +157,24 @@ const GetStartedScreen = () => {
                 >
                     <Menu.Item
                         onPress={() => {
-                            setUseFor("Marketing");
+                            setUseFor("Content Creation & Publishing");
                             closeMenu2();
                         }}
-                        title="Marketing"
+                        title="Content Creation & Publishing"
                     />
                     <Menu.Item
                         onPress={() => {
-                            setUseFor("Content Creation");
+                            setUseFor("Content Management & Planning");
                             closeMenu2();
                         }}
-                        title="Content Creation"
+                        title="Content Management & Planning"
+                    />
+                    <Menu.Item
+                        onPress={() => {
+                            setUseFor("Creator Collaborations");
+                            closeMenu2();
+                        }}
+                        title="Creator Collaborations"
                     />
                     <Menu.Item
                         onPress={() => {
@@ -177,9 +185,9 @@ const GetStartedScreen = () => {
                     />
                 </Menu>
 
-                {/* Question 3: What is the volume of collaborations you wish to post */}
+                {/* Question 3: How much content do you plan to publish */}
                 <Text style={styles.question}>
-                    What is the volume of collaborations you wish to post?
+                    How much content do you plan to publish each month?
                 </Text>
                 <Menu
                     visible={visible3}

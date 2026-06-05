@@ -8,10 +8,17 @@ const Stepper = ({ count = 0, total = 3 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
-    const { features: { hideAboutBrand, payWall } } = useMyGrowthBook()
+    const { features: { hideAboutBrand, hideContentGoals, payWall } } = useMyGrowthBook()
 
-    const subs = (!payWall ? 1 : 0) + (hideAboutBrand ? 1 : 0)
-    const finalCount = (count == 4 && hideAboutBrand) ? count - 1 : count
+    // Full landing flow (absolute positions, all steps present):
+    //   1 get-started (hero, no stepper) · 2 create-brand · 3 content-goals
+    //   4 about-brand · 5 pricing
+    // Any of content-goals / about-brand can be hidden via flags, and pricing
+    // is excluded from the count when there's no paywall. Compute the displayed
+    // numbers by subtracting the hidden steps that fall before the current one.
+    const subs = (!payWall ? 1 : 0) + (hideAboutBrand ? 1 : 0) + (hideContentGoals ? 1 : 0)
+    const hiddenBefore = (hideContentGoals && count > 3 ? 1 : 0) + (hideAboutBrand && count > 4 ? 1 : 0)
+    const finalCount = count - hiddenBefore
     const finalTotal = total - subs
 
     const steps = Array.from({ length: finalTotal }, (_, i) => i + 1);

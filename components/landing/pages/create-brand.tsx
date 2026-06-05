@@ -40,7 +40,7 @@ const AGE_OPTIONS = [
 
 export default function CreateBrandPage() {
     const router = useMyNavigation()
-    const { features: { createBrand: cJson, hideAboutBrand, showDetailsOnMobile } } = useMyGrowthBook()
+    const { features: { createBrand: cJson, hideAboutBrand, hideContentGoals, showDetailsOnMobile } } = useMyGrowthBook()
     const { manager, session } = useAuthContext()
     const { createBrand, setSelectedBrand } = useBrandContext()
     const theme = useTheme();
@@ -114,11 +114,11 @@ export default function CreateBrandPage() {
         kicker: "BRAND ONBOARDING",
         title: "Create your {brand}",
         description:
-            "Start hiring verified influencers without middlemen. Post a collaboration, pick applications you like, and pay securely when you finalize. No setup fees and no commissions, just direct connections that work.",
+            "Set up your brand's content workspace. Plan campaigns, manage your calendar, and bring in creators on demand — pay securely only when you finalize. No setup fees and no commissions.",
         items: [
-            "Get matched to niche influencers fast",
-            "Transparent chats, contracts, and payouts",
-            "Fraud protection and dispute assistance",
+            "Plan & schedule content in one calendar",
+            "Transparent briefs, contracts, and payouts",
+            "On-demand vetted creators when you need them",
         ],
         // image: ONBOARD_IMG,
     };
@@ -150,7 +150,7 @@ export default function CreateBrandPage() {
 
                     {/* Right: Form */}
                     <View style={[styles.formCard, showDetails && styles.formCardWide]}>
-                        <Stepper count={2} total={4} />
+                        <Stepper count={2} total={5} />
 
                         <View>
                             <Text style={styles.formHeading}>Create your brand</Text>
@@ -237,10 +237,12 @@ export default function CreateBrandPage() {
                 message="Brand created!"
                 onDone={() => {
                     setShowSuccess(false);
-                    if (hideAboutBrand)
-                        router.resetAndNavigate("/pricing-page");
-                    else
+                    if (!hideContentGoals)
+                        router.resetAndNavigate("/content-goals");
+                    else if (!hideAboutBrand)
                         router.resetAndNavigate("/about-brand");
+                    else
+                        router.resetAndNavigate("/pricing-page");
                 }}
             />
         </AppLayout>

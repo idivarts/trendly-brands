@@ -267,7 +267,7 @@ export default function PricingPage() {
 
                     {/* Right: Form */}
                     <View style={styles.formCard}>
-                        <Stepper count={4} total={4} />
+                        <Stepper count={5} total={5} />
 
                         <Text style={styles.formHeading}>Choose your plan</Text>
                         <Text style={styles.formSub}>Your trial continues. Pay nothing today.</Text>
@@ -276,7 +276,7 @@ export default function PricingPage() {
                         <PlanWrapper verticallyStacked={true} />
 
                         {/* Comparison note */}
-                        <Text style={styles.compareHint}>Both plans include full access, verified influencer hiring, unlimited invites, and fraud protection. Yearly plan adds priority support and faster dispute handling.</Text>
+                        <Text style={styles.compareHint}>Both plans include full access to content planning & management, plus on-demand creator collaborations, unlimited invites, and fraud protection. Yearly plan adds priority support and faster dispute handling.</Text>
                     </View>
                 </View>
 

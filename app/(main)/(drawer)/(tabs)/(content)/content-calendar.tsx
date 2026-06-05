@@ -44,7 +44,7 @@ const ContentCalendarScreen = () => {
     const canManageContent = hasCapability("manage_content");
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
-    const { items: allContents, addContent } = useContents();
+    const { items: allContents, addContent, updateContent } = useContents();
     const items = useMemo<CalendarItem[]>(
         () => allContents.filter((i) => !!i.date),
         [allContents]
@@ -148,6 +148,28 @@ const ContentCalendarScreen = () => {
         setAddInitialDate(date);
         setShowAddModal(true);
     }, []);
+
+    // Drag a content card onto another day (month view, desktop). Persisting the
+    // new postingTimeStamp re-fires the Firestore snapshot, so the chip lands on
+    // the new day with no manual optimistic state. Midnight UTC mirrors how
+    // AddContentModal places new items (see toIContent in use-contents).
+    const handleMoveItem = useCallback(
+        async (itemId: string, newDate: string) => {
+            // Scheduled / posted content is locked — its posting date can't be
+            // changed by dragging. Unschedule (or it's already posted) first.
+            const moved = allContents.find((c) => c.id === itemId);
+            if (moved && (moved.status === "scheduled" || moved.status === "posted")) {
+                return;
+            }
+            const postingTimeStamp = new Date(newDate + "T00:00:00Z").getTime();
+            try {
+                await updateContent(itemId, { postingTimeStamp });
+            } catch (err) {
+                console.warn("Failed to move content to new day", err);
+            }
+        },
+        [updateContent, allContents]
+    );
 
     // Toggle helpers — tapping the active mode collapses; tapping inactive switches.
     const handleCommentsToggle = useCallback(() => {
@@ -300,6 +322,9 @@ const ContentCalendarScreen = () => {
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
                                 onOpenItem={handleOpenItem}
+                                onMoveItem={
+                                    canManageContent ? handleMoveItem : undefined
+                                }
                             />
                         )}
                     </View>
