@@ -1,5 +1,4 @@
 import ChatLoadingPanel from "@/components/content-strategy/ChatLoadingPanel";
-import CollaboratorsModal from "@/components/content-strategy/CollaboratorsModal";
 import CommentsPanel from "@/components/content-strategy/CommentsPanel";
 import PushToCalendarModal, {
     PushToCalendarConfirm,
@@ -70,7 +69,6 @@ const ContentStrategyDetail = () => {
     const [screenState, setScreenState] = useState<ScreenState>("loading");
 
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
-    const [showCollaborators, setShowCollaborators] = useState(false);
     const [showPushToCalendar, setShowPushToCalendar] = useState(false);
     const [snippetSelection, setSnippetSelection] = useState<{
         snippet: string;
@@ -508,7 +506,6 @@ const ContentStrategyDetail = () => {
                                         xl,
                                         onApprove: handleApprove,
                                         onRequestChanges: handleRequestChanges,
-                                        onInvite: () => setShowCollaborators(true),
                                         onSendForReview: handleSendForReview,
                                         onPushToCalendar: () => setShowPushToCalendar(true),
                                         onRename: handleRename,
@@ -643,15 +640,6 @@ const ContentStrategyDetail = () => {
                 onSelect={handleSelectStrategy}
                 onClose={() => setDrawerOpen(false)}
             />
-
-            {strategyId && activeStrategy && (
-                <CollaboratorsModal
-                    visible={showCollaborators}
-                    strategyId={strategyId}
-                    collaboratorIds={activeStrategy.collaboratorIds}
-                    onClose={() => setShowCollaborators(false)}
-                />
-            )}
 
             {activeStrategy && (
                 <PushToCalendarModal

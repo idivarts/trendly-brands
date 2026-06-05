@@ -1,3 +1,4 @@
+import CollaboratorsSection from "@/components/content-strategy/CollaboratorsSection";
 import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/types";
 import RichTextEditor from "@/components/rich-text-editor";
 import ShareButton from "@/components/sharing/ShareButton";
@@ -9,15 +10,14 @@ import {
     faBars,
     faCalendarDays,
     faCheck,
+    faChevronDown,
     faCircleCheck,
     faClock,
     faEllipsis,
-    faLock,
     faPaperPlane,
     faPen,
     faPlus,
     faRotateLeft,
-    faUserGroup,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -51,7 +51,6 @@ export interface ToolbarProps {
     xl: boolean;
     onApprove: () => void;
     onRequestChanges: () => void;
-    onInvite: () => void;
     onSendForReview: () => void;
     onPushToCalendar: () => void;
     onRename: (name: string) => void;
@@ -309,6 +308,103 @@ const Tooltip: React.FC<{
     );
 };
 
+// ── Status badge with dropdown ────────────────────────────────────────────────
+// The status pill doubles as the entry point for status transitions
+// (Send for Review / Approve / Request Changes). When the current viewer has no
+// available transition for the current state, the badge renders as a static
+// display — no chevron, no press affordance.
+
+const StatusBadge: React.FC<{
+    status: StatusVisual;
+    xl: boolean;
+    items: MenuItem[];
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof toolbarStyles>;
+}> = ({ status, xl, items, colors, styles }) => {
+    const [open, setOpen] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0 });
+    const triggerRef = useRef<View>(null);
+
+    const hasMenu = items.length > 0;
+
+    const openMenu = () => {
+        if (!hasMenu) return;
+        const node = triggerRef.current;
+        if (node && typeof node.measureInWindow === "function") {
+            node.measureInWindow((x, y, _w, h) => {
+                setPos({ top: y + h + 6, left: Math.max(8, x) });
+                setOpen(true);
+            });
+        } else {
+            setOpen(true);
+        }
+    };
+
+    const pill = xl ? (
+        <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
+            <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
+                {status.label}
+            </Text>
+            {hasMenu && (
+                <FontAwesomeIcon icon={faChevronDown} size={10} color={status.text} />
+            )}
+        </View>
+    ) : (
+        <View style={[styles.statusIcon, { backgroundColor: status.bg }]}>
+            <FontAwesomeIcon icon={status.icon} size={12} color={status.text} />
+        </View>
+    );
+
+    if (!hasMenu) {
+        return pill;
+    }
+
+    return (
+        <>
+            <Pressable
+                ref={triggerRef}
+                onPress={openMenu}
+                hitSlop={6}
+                accessibilityLabel={`Status: ${status.label}. Tap to change.`}
+                accessibilityRole="button"
+            >
+                {pill}
+            </Pressable>
+
+            <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
+                <Pressable style={styles.menuBackdrop} onPress={() => setOpen(false)}>
+                    <View style={[styles.menuCard, { top: pos.top, left: pos.left }]}>
+                        {items.map((item) => (
+                            <Pressable
+                                key={item.label}
+                                style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+                                onPress={() => {
+                                    setOpen(false);
+                                    item.onPress();
+                                }}
+                            >
+                                <FontAwesomeIcon
+                                    icon={item.icon}
+                                    size={14}
+                                    color={item.destructive ? colors.toastError : colors.textSecondary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.menuItemText,
+                                        item.destructive && { color: colors.toastError },
+                                    ]}
+                                >
+                                    {item.label}
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                </Pressable>
+            </Modal>
+        </>
+    );
+};
+
 // ── Strategy Toolbar ──────────────────────────────────────────────────────────
 
 const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Colors> }> = ({
@@ -317,7 +413,6 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     xl,
     onApprove,
     onRequestChanges,
-    onInvite,
     onSendForReview,
     onPushToCalendar,
     onRename,
@@ -335,9 +430,6 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     const canSendForReview =
         (reviewStatus === "draft" || reviewStatus === "changes_requested") &&
         hasCapability("manage_content_strategy");
-
-    const inviteCount = strategy.collaboratorIds?.length ?? 0;
-    const isShared = inviteCount > 0;
 
     const styles = toolbarStyles(colors, xl);
 
@@ -364,6 +456,21 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
         { label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar },
     ];
 
+    // Status transitions available to this viewer in the current state. The
+    // status badge surfaces these as a dropdown — there is no separate set of
+    // action buttons. When this list is empty the badge is a static display.
+    const statusMenuItems: MenuItem[] = [
+        ...(isReviewer
+            ? [
+                { label: "Approve", icon: faCheck, onPress: onApprove },
+                { label: "Request Changes", icon: faRotateLeft, onPress: onRequestChanges, destructive: true },
+            ]
+            : []),
+        ...(canSendForReview
+            ? [{ label: "Send for Review", icon: faPaperPlane, onPress: onSendForReview }]
+            : []),
+    ];
+
     return (
         <View style={styles.row}>
             {/* ── Left: identity + autosave assurance ──────────────────────── */}
@@ -376,24 +483,13 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                     styles={styles}
                 />
 
-                {xl ? (
-                    <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-                        <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
-                            {status.label}
-                        </Text>
-                    </View>
-                ) : (
-                    <Tooltip
-                        text={status.label}
-                        accessibilityLabel={`Status: ${status.label}`}
-                        align="left"
-                        colors={colors}
-                        styles={styles}
-                        triggerStyle={[styles.statusIcon, { backgroundColor: status.bg }]}
-                    >
-                        <FontAwesomeIcon icon={status.icon} size={12} color={status.text} />
-                    </Tooltip>
-                )}
+                <StatusBadge
+                    status={status}
+                    xl={xl}
+                    items={statusMenuItems}
+                    colors={colors}
+                    styles={styles}
+                />
             </View>
 
             {/* ── Right: autosave status + collaborators + decision + overflow ─ */}
@@ -410,59 +506,6 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                     <FontAwesomeIcon icon={faCircleCheck} size={16} color={colors.toastSuccess} />
                 </Tooltip>
 
-                <Pressable
-                    style={({ pressed }) => [styles.collabChip, pressed && styles.btnPressed]}
-                    onPress={onInvite}
-                    accessibilityLabel={isShared ? `Shared with ${inviteCount}` : "Private — invite collaborators"}
-                >
-                    <FontAwesomeIcon
-                        icon={isShared ? faUserGroup : faLock}
-                        size={12}
-                        color={isShared ? colors.primary : colors.textSecondary}
-                    />
-                    {(isShared || xl) && (
-                        <Text
-                            style={[styles.collabChipText, isShared && { color: colors.primary }]}
-                            numberOfLines={1}
-                        >
-                            {isShared ? (xl ? `${inviteCount} invited` : `${inviteCount}`) : "Private"}
-                        </Text>
-                    )}
-                </Pressable>
-
-                {isReviewer && (
-                    <Pressable
-                        style={({ pressed }) => [styles.ghostBtn, pressed && styles.btnPressed]}
-                        onPress={onRequestChanges}
-                        accessibilityLabel="Request Changes"
-                    >
-                        <FontAwesomeIcon icon={faRotateLeft} size={12} color={colors.toastError} />
-                        {xl && <Text style={[styles.ghostBtnText, { color: colors.toastError }]}>Request Changes</Text>}
-                    </Pressable>
-                )}
-
-                {isReviewer && (
-                    <Pressable
-                        style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
-                        onPress={onApprove}
-                        accessibilityLabel="Approve"
-                    >
-                        <FontAwesomeIcon icon={faCheck} size={12} color={colors.onPrimary} />
-                        <Text style={styles.primaryBtnText}>Approve</Text>
-                    </Pressable>
-                )}
-
-                {!isReviewer && canSendForReview && (
-                    <Pressable
-                        style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
-                        onPress={onSendForReview}
-                        accessibilityLabel="Send for Review"
-                    >
-                        <FontAwesomeIcon icon={faPaperPlane} size={12} color={colors.onPrimary} />
-                        {xl && <Text style={styles.primaryBtnText}>Send for Review</Text>}
-                    </Pressable>
-                )}
-
                 {selectedBrand?.id && strategy.id ? (
                     <ShareButton
                         canShare={hasCapability("manage_content_strategy")}
@@ -472,6 +515,12 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                             resourceId: strategy.id,
                         }}
                         title={strategy.title || "Untitled strategy"}
+                        extraSection={
+                            <CollaboratorsSection
+                                strategyId={strategy.id}
+                                collaboratorIds={strategy.collaboratorIds ?? []}
+                            />
+                        }
                     />
                 ) : null}
 
@@ -548,6 +597,9 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             paddingHorizontal: 10,
             paddingVertical: 5,
             borderRadius: 999,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
         },
         statusPillText: {
             fontSize: 12,
@@ -605,57 +657,6 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             alignItems: "center",
             gap: 8,
             marginLeft: "auto",
-        },
-        collabChip: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: 10,
-            paddingVertical: 7,
-            borderRadius: 8,
-            backgroundColor: colors.tag,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowRadius: 3,
-            shadowOpacity: 0.04,
-            elevation: 1,
-        },
-        collabChipText: {
-            fontSize: 12,
-            fontWeight: "600",
-            color: colors.textSecondary,
-        },
-        primaryBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderRadius: 8,
-            backgroundColor: colors.primary,
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 12,
-            shadowOpacity: 0.35,
-            elevation: 4,
-        },
-        primaryBtnText: {
-            fontSize: 13,
-            fontWeight: "700",
-            color: colors.onPrimary,
-        },
-        ghostBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            paddingHorizontal: xl ? 12 : 9,
-            paddingVertical: 8,
-            borderRadius: 8,
-            backgroundColor: colors.toastErrorBg,
-        },
-        ghostBtnText: {
-            fontSize: 13,
-            fontWeight: "600",
         },
         iconBtn: {
             width: 34,

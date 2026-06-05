@@ -29,6 +29,11 @@ interface ShareModalProps {
     /** Display name shown in the modal copy (strategy / content title, or month). */
     title: string;
     onClose: () => void;
+    /**
+     * Optional slot rendered above the footer. Callers use this to add
+     * resource-specific sharing controls — e.g. the strategy collaborator picker.
+     */
+    extraSection?: React.ReactNode;
 }
 
 const LABELS: Record<ShareTarget["type"], { noun: string; blurb: string }> = {
@@ -46,7 +51,7 @@ const LABELS: Record<ShareTarget["type"], { noun: string; blurb: string }> = {
     },
 };
 
-const ShareModal: React.FC<ShareModalProps> = ({ visible, target, title, onClose }) => {
+const ShareModal: React.FC<ShareModalProps> = ({ visible, target, title, onClose, extraSection }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const insets = useSafeAreaInsets();
@@ -161,6 +166,8 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, target, title, onClose
                                 viewers can leave comments; logged-out viewers are prompted to sign in.
                             </Text>
                         )}
+
+                        {extraSection}
 
                         {/* ── Footer ────────────────────────────────────── */}
                         <View style={styles.actions}>
