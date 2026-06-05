@@ -18,6 +18,8 @@ interface ShareButtonProps {
     canShare: boolean;
     /** Show a "Share" text label next to the icon (desktop toolbars). */
     showLabel?: boolean;
+    /** Optional resource-specific slot rendered inside the share modal. */
+    extraSection?: React.ReactNode;
 }
 
 /**
@@ -29,6 +31,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
     title,
     canShare,
     showLabel = false,
+    extraSection,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -57,6 +60,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
                 target={target}
                 title={title}
                 onClose={() => setOpen(false)}
+                extraSection={extraSection}
             />
         </View>
     );

@@ -8,6 +8,7 @@ import { CalendarItem, CalendarView } from "@/components/content-calendar/types"
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import RightPanelFab from "@/components/shared/RightPanelFab";
 import ShareButton from "@/components/sharing/ShareButton";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -184,54 +185,10 @@ const ContentCalendarScreen = () => {
         [updateContent, allContents]
     );
 
-    // Toggle helpers — tapping the active mode collapses; tapping inactive switches.
-    const handleCommentsToggle = useCallback(() => {
-        setRightPanelMode((m) => (m === "comments" ? "none" : "comments"));
-    }, []);
-
-    const handleChatToggle = useCallback(() => {
-        setRightPanelMode((m) => (m === "chat" ? "none" : "chat"));
-    }, []);
-
     const headerActionButtons = useMemo(
         () => [
-            // 💬 Comments toggle — mobile only; desktop lives in the RightSidePanel rail
-            !xl ? (
-                <Pressable
-                    key="comments"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "comments" && styles.iconBtnActive,
-                        pressed && styles.iconBtnPressed,
-                    ]}
-                    onPress={handleCommentsToggle}
-                >
-                    <FontAwesomeIcon
-                        icon={faCommentDots}
-                        size={15}
-                        color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
-                    />
-                </Pressable>
-            ) : null,
-
-            // 🤖 AI Chat toggle — mobile only; desktop lives in the RightSidePanel rail
-            !xl ? (
-                <Pressable
-                    key="chat"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "chat" && styles.iconBtnActive,
-                        pressed && styles.iconBtnPressed,
-                    ]}
-                    onPress={handleChatToggle}
-                >
-                    <FontAwesomeIcon
-                        icon={faRobot}
-                        size={15}
-                        color={rightPanelMode === "chat" ? colors.onPrimary : colors.textSecondary}
-                    />
-                </Pressable>
-            ) : null,
+            // Comments + AI Chat moved to the mobile RightPanelFab (bottom-right);
+            // desktop keeps them in the RightSidePanel rail.
 
             // 🔗 Share this month (read-only public link)
             selectedBrand?.id ? (
@@ -266,7 +223,7 @@ const ContentCalendarScreen = () => {
                 </Pressable>
             ) : null,
         ].filter(Boolean) as React.ReactElement[],
-        [hasItems, canManageContent, colors, rightPanelMode, handleOpenAddModal, handleCommentsToggle, handleChatToggle, styles, xl, selectedBrand?.id, calYear, calMonth]
+        [hasItems, canManageContent, colors, handleOpenAddModal, styles, xl, selectedBrand?.id, calYear, calMonth]
     );
 
     // Slot chevrons are intentionally not wired — desktop uses the rail's
@@ -373,6 +330,20 @@ const ContentCalendarScreen = () => {
             )}
 
             {!xl && hasItems && rightSidePanel}
+
+            {/* Mobile: panel surfaces live in a bottom-right speed-dial FAB.
+                bottomOffset clears the 70px bottom tab bar. */}
+            {!xl && hasItems && (
+                <RightPanelFab
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    bottomOffset={70}
+                    actions={[
+                        { mode: "comments", icon: faCommentDots, label: "Comments" },
+                        { mode: "chat", icon: faRobot, label: "AI Chat" },
+                    ]}
+                />
+            )}
 
             <AddContentModal
                 visible={showAddModal}

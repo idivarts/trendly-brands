@@ -25,6 +25,7 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import RightPanelFab from "@/components/shared/RightPanelFab";
 import ShareButton from "@/components/sharing/ShareButton";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -536,73 +537,9 @@ const CreateContentScreen = () => {
 
     const headerActions = useMemo(
         () => [
-            // 💬 Comments + 🤖 Chat toggles — mobile only; desktop lives in the RightSidePanel rail
-            !xl ? (
-                <Pressable
-                    key="comments"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "comments" && styles.iconBtnActive,
-                        pressed && styles.iconBtnPressed,
-                    ]}
-                    onPress={() =>
-                        setRightPanelMode((m) => (m === "comments" ? "none" : "comments"))
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel="Comments"
-                    accessibilityState={{ selected: rightPanelMode === "comments" }}
-                >
-                    <FontAwesomeIcon
-                        icon={faCommentDots}
-                        size={15}
-                        color={rightPanelMode === "comments" ? colors.onPrimary : colors.textSecondary}
-                    />
-                </Pressable>
-            ) : null,
-            !xl ? (
-                <Pressable
-                    key="chat"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "chat" && styles.iconBtnActive,
-                        pressed && styles.iconBtnPressed,
-                    ]}
-                    onPress={() =>
-                        setRightPanelMode((m) => (m === "chat" ? "none" : "chat"))
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel="AI Chat"
-                    accessibilityState={{ selected: rightPanelMode === "chat" }}
-                >
-                    <FontAwesomeIcon
-                        icon={faRobot}
-                        size={15}
-                        color={rightPanelMode === "chat" ? colors.onPrimary : colors.textSecondary}
-                    />
-                </Pressable>
-            ) : null,
-            !xl ? (
-                <Pressable
-                    key="preview"
-                    style={({ pressed }) => [
-                        styles.iconBtn,
-                        rightPanelMode === "preview" && styles.iconBtnActive,
-                        pressed && styles.iconBtnPressed,
-                    ]}
-                    onPress={() =>
-                        setRightPanelMode((m) => (m === "preview" ? "none" : "preview"))
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel="Preview"
-                    accessibilityState={{ selected: rightPanelMode === "preview" }}
-                >
-                    <FontAwesomeIcon
-                        icon={faEye}
-                        size={15}
-                        color={rightPanelMode === "preview" ? colors.onPrimary : colors.textSecondary}
-                    />
-                </Pressable>
-            ) : null,
+            // Comments / AI Chat / Preview moved to the mobile RightPanelFab
+            // (bottom-right); desktop keeps them in the RightSidePanel rail.
+
             // 🔗 Share (read-only public link)
             selectedBrand?.id && contentId ? (
                 <ShareButton
@@ -667,7 +604,7 @@ const CreateContentScreen = () => {
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability]
+        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability]
     );
 
     return (
@@ -997,6 +934,21 @@ const CreateContentScreen = () => {
                             onCollapse={() => setRightPanelMode("none")}
                         />
                     }
+                />
+            )}
+
+            {/* Mobile: panel surfaces live in a bottom-right speed-dial FAB.
+                bottomOffset clears the 70px bottom tab bar. */}
+            {!xl && (
+                <RightPanelFab
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    bottomOffset={70}
+                    actions={[
+                        { mode: "comments", icon: faCommentDots, label: "Comments" },
+                        { mode: "chat", icon: faRobot, label: "AI Chat" },
+                        { mode: "preview", icon: faEye, label: "Preview" },
+                    ]}
                 />
             )}
 
