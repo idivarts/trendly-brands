@@ -9,6 +9,7 @@ import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
+import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import {
     CONTENT_STATUS_LABELS,
@@ -48,7 +49,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -77,6 +78,7 @@ const CreateContentScreen = () => {
         }>();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 
+    const router = useRouter();
     const { items, updateContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand } = useBrandContext();
@@ -116,6 +118,7 @@ const CreateContentScreen = () => {
     const [showCollabModal, setShowCollabModal] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
     // Firestore items arrive after first render. Hydrate local form state the
     // first time the real item shows up for this contentId. Tracked per-id so
@@ -211,25 +214,35 @@ const CreateContentScreen = () => {
     // "approved"); a "posted" one is locked permanently.
     const locked = status === "scheduled" || status === "posted";
 
-    const handleSave = useCallback(async () => {
-        if (!contentId || saveState === "saving" || locked) return;
+    // Returns true when the content was persisted, false otherwise (no-op or
+    // failure) — the unsaved-changes leave flow relies on this to decide whether
+    // it's safe to navigate away.
+    const handleSave = useCallback(async (): Promise<boolean> => {
+        if (!contentId || saveState === "saving" || locked) return false;
         setSaveState("saving");
-        await updateContent(contentId, {
-            title,
-            description: idea,
-            status: status as any,
-            caption,
-            hashtags,
-            timeOfPosting,
-            script,
-            imagePrompt,
-            attachments,
-            postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
-        });
+        try {
+            await updateContent(contentId, {
+                title,
+                description: idea,
+                status: status as any,
+                caption,
+                hashtags,
+                timeOfPosting,
+                script,
+                imagePrompt,
+                attachments,
+                postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
+            });
+        } catch (e) {
+            console.warn("Save error:", e);
+            setSaveState("idle");
+            return false;
+        }
         setDirty(false);
         setSaveState("saved");
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
+        return true;
     }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date]);
 
     // Publish now / schedule. Persists the latest edits + destinations to
@@ -328,6 +341,37 @@ const CreateContentScreen = () => {
     const handleCreateCollab = useCallback(() => {
         setShowCollabModal(true);
     }, []);
+
+    // ── Back navigation with an unsaved-changes guard ────────────────────────
+    const doNavigateBack = useCallback(() => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/contents");
+        }
+    }, [router]);
+
+    // Header back press: prompt to save/discard when there are unsaved edits,
+    // otherwise leave straight away.
+    const handleBackPress = useCallback(() => {
+        if (dirty) {
+            setShowLeaveConfirm(true);
+        } else {
+            doNavigateBack();
+        }
+    }, [dirty, doNavigateBack]);
+
+    const handleLeaveSave = useCallback(async () => {
+        const ok = await handleSave();
+        if (!ok) return; // save failed — keep the prompt open so the user can retry or discard
+        setShowLeaveConfirm(false);
+        doNavigateBack();
+    }, [handleSave, doNavigateBack]);
+
+    const handleLeaveDiscard = useCallback(() => {
+        setShowLeaveConfirm(false);
+        doNavigateBack();
+    }, [doNavigateBack]);
 
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
@@ -572,6 +616,7 @@ const CreateContentScreen = () => {
             <PageHeader
                 title={title || "Create Content"}
                 showBackButton
+                onBackPress={handleBackPress}
                 actionButtons={headerActions}
                 mobileActions="all"
                 customMainContent={
@@ -958,6 +1003,14 @@ const CreateContentScreen = () => {
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}
                 publishing={publishing}
+            />
+
+            <UnsavedChangesModal
+                visible={showLeaveConfirm}
+                saving={saveState === "saving"}
+                onSave={handleLeaveSave}
+                onDiscard={handleLeaveDiscard}
+                onCancel={() => setShowLeaveConfirm(false)}
             />
         </AppLayout>
     );
