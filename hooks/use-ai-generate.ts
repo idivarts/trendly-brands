@@ -150,6 +150,10 @@ export function useAIGenerate() {
         style?: string;
         aspectRatio?: string;
         count?: number;
+        /** Content doc id — the backend persists results + status here. */
+        contextId?: string;
+        /** Carousel (append) vs single-image (replace) content type. */
+        multi?: boolean;
         model?: string;
     }) => {
         if (!brandId) return;
@@ -163,10 +167,12 @@ export function useAIGenerate() {
             model: args.model,
             payload: {
                 brandId,
+                contextId: args.contextId,
                 description: args.description,
                 style: args.style,
                 aspectRatio: args.aspectRatio ?? "1:1",
                 count: args.count ?? 1,
+                multi: args.multi ?? false,
             },
         });
     }, [brandId]);

@@ -48,6 +48,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         script: data.script,
         imagePrompt: data.imagePrompt,
         attachments: data.attachments,
+        imageGeneration: data.imageGeneration,
         destinations: data.destinations as SocialDestination[] | undefined,
         scheduleMode: data.scheduleMode,
         scheduledAt: data.scheduledAt,
