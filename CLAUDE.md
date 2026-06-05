@@ -26,7 +26,8 @@ It is a cross-platform app (iOS + Android + Web via expo-router).
 
 - **Bundle ID**: `@idiv__trendly-brands`
 - **Stack**: React Native 0.81 + Expo SDK 54 + Expo Router 6 + TypeScript
-- **Extra libs (brands-only)**: `@dnd-kit` (drag & drop), `react-native-razorpay`, `@lottiefiles/dotlottie-react`, GrowthBook feature flags
+- **Extra libs (brands-only)**: `@dnd-kit` (drag & drop), `@lottiefiles/dotlottie-react`, GrowthBook feature flags
+- **Payments**: no native payment SDK. The backend issues a Razorpay Payment Link (`shortUrl`); native opens it in an in-app browser (`expo-web-browser`), web uses checkout.js. `react-native-razorpay` was removed so iOS App Review sees no in-app payment module.
 
 ---
 

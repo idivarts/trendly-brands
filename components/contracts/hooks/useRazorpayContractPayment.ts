@@ -128,6 +128,9 @@ export function useRazorpayContractPayment({
             };
             if (order.amount > 0) razorpayOptions.amount = order.amount;
             if (order.currency) razorpayOptions.currency = order.currency;
+            // Native opens this hosted payment link in an in-app browser instead
+            // of a native checkout SDK; web ignores it and uses checkout.js.
+            if (order.shortUrl) razorpayOptions.short_url = order.shortUrl;
 
             try {
                 try {
