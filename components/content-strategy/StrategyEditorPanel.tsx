@@ -1,7 +1,7 @@
 import CollaboratorsSection from "@/components/content-strategy/CollaboratorsSection";
 import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/types";
 import RichTextEditor from "@/components/rich-text-editor";
-import ShareButton from "@/components/sharing/ShareButton";
+import ShareModal from "@/components/sharing/ShareModal";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -11,6 +11,7 @@ import {
     faCalendarDays,
     faCheck,
     faChevronDown,
+    faChevronLeft,
     faCircleCheck,
     faClock,
     faEllipsis,
@@ -18,6 +19,7 @@ import {
     faPen,
     faPlus,
     faRotateLeft,
+    faShareNodes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -56,6 +58,9 @@ export interface ToolbarProps {
     onRename: (name: string) => void;
     onOpenDrawer?: () => void;
     onNewStrategy: () => void;
+    /** Navigate back to the strategies listing. Surfaced as a leading back
+     *  button on mobile (!xl), where there's otherwise no way out. */
+    onBack?: () => void;
 }
 
 export interface StrategyEditorPanelProps extends EditorProps {
@@ -340,7 +345,9 @@ const StatusBadge: React.FC<{
         }
     };
 
-    const pill = xl ? (
+    // Always a labeled pill — on mobile too. (The old icon-only circle read as
+    // an orphaned glyph, e.g. a bare pencil for "Draft".)
+    const pill = (
         <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusPillText, { color: status.text }]} numberOfLines={1}>
                 {status.label}
@@ -348,10 +355,6 @@ const StatusBadge: React.FC<{
             {hasMenu && (
                 <FontAwesomeIcon icon={faChevronDown} size={10} color={status.text} />
             )}
-        </View>
-    ) : (
-        <View style={[styles.statusIcon, { backgroundColor: status.bg }]}>
-            <FontAwesomeIcon icon={status.icon} size={12} color={status.text} />
         </View>
     );
 
@@ -418,9 +421,11 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     onRename,
     onOpenDrawer,
     onNewStrategy,
+    onBack,
     colors,
 }) => {
     const { hasCapability, selectedBrand } = useBrandContext();
+    const [shareOpen, setShareOpen] = useState(false);
     const reviewStatus = strategy.reviewStatus ?? "draft";
     const status = statusVisual(reviewStatus, colors);
     const isReviewer =
@@ -430,6 +435,8 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     const canSendForReview =
         (reviewStatus === "draft" || reviewStatus === "changes_requested") &&
         hasCapability("manage_content_strategy");
+    const canShare =
+        hasCapability("manage_content_strategy") && !!selectedBrand?.id && !!strategy.id;
 
     const styles = toolbarStyles(colors, xl);
 
@@ -451,6 +458,11 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     }, []);
 
     const overflowItems: MenuItem[] = [
+        // On mobile, Share collapses into the overflow menu (no room for a
+        // dedicated button); on desktop it stays a first-class toolbar icon.
+        ...(!xl && canShare
+            ? [{ label: "Share", icon: faShareNodes, onPress: () => setShareOpen(true) }]
+            : []),
         ...(onOpenDrawer ? [{ label: "All Strategies", icon: faBars, onPress: onOpenDrawer }] : []),
         { label: "New Strategy", icon: faPlus, onPress: onNewStrategy },
         { label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar },
@@ -473,6 +485,20 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
 
     return (
         <View style={styles.row}>
+            {/* ── Leading back button (mobile only) — the detail screen is
+                  otherwise a navigational dead-end on !xl. ──────────────────── */}
+            {!xl && onBack && (
+                <Pressable
+                    onPress={onBack}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.backBtn, pressed && styles.btnPressed]}
+                    accessibilityLabel="Back to strategies"
+                    accessibilityRole="button"
+                >
+                    <FontAwesomeIcon icon={faChevronLeft} size={16} color={colors.text} />
+                </Pressable>
+            )}
+
             {/* ── Left: identity + autosave assurance ──────────────────────── */}
             <View style={styles.infoCluster}>
                 <EditableTitle
@@ -494,38 +520,58 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
 
             {/* ── Right: autosave status + collaborators + decision + overflow ─ */}
             <View style={styles.actions}>
-                {/* Passive autosave status — kept apart from the active commands below */}
-                <Tooltip
-                    text="Autosaves as you type — no need to save manually."
-                    accessibilityLabel="Saved — autosaves as you type"
-                    align="right"
-                    colors={colors}
-                    styles={styles}
-                    triggerStyle={styles.savedTrigger}
-                >
-                    <FontAwesomeIcon icon={faCircleCheck} size={16} color={colors.toastSuccess} />
-                </Tooltip>
+                {/* Passive autosave status — desktop only. On mobile it's a
+                    reassurance that doesn't earn an active-control slot. */}
+                {xl && (
+                    <Tooltip
+                        text="Autosaves as you type — no need to save manually."
+                        accessibilityLabel="Saved — autosaves as you type"
+                        align="right"
+                        colors={colors}
+                        styles={styles}
+                        triggerStyle={styles.savedTrigger}
+                    >
+                        <FontAwesomeIcon icon={faCircleCheck} size={16} color={colors.toastSuccess} />
+                    </Tooltip>
+                )}
 
-                {selectedBrand?.id && strategy.id ? (
-                    <ShareButton
-                        canShare={hasCapability("manage_content_strategy")}
-                        target={{
-                            type: "strategy",
-                            brandId: selectedBrand.id,
-                            resourceId: strategy.id,
-                        }}
-                        title={strategy.title || "Untitled strategy"}
-                        extraSection={
-                            <CollaboratorsSection
-                                strategyId={strategy.id}
-                                collaboratorIds={strategy.collaboratorIds ?? []}
-                            />
-                        }
-                    />
-                ) : null}
+                {/* Share is a first-class button on desktop; on mobile it lives
+                    in the overflow menu (see overflowItems above). */}
+                {xl && canShare && (
+                    <Pressable
+                        style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}
+                        onPress={() => setShareOpen(true)}
+                        hitSlop={6}
+                        accessibilityLabel="Share"
+                        accessibilityRole="button"
+                    >
+                        <FontAwesomeIcon icon={faShareNodes} size={15} color={colors.primary} />
+                    </Pressable>
+                )}
 
                 <OverflowMenu items={overflowItems} colors={colors} styles={styles} />
             </View>
+
+            {/* Controlled share modal — opened from the desktop icon or the
+                mobile overflow item. */}
+            {canShare && (
+                <ShareModal
+                    visible={shareOpen}
+                    target={{
+                        type: "strategy",
+                        brandId: selectedBrand!.id,
+                        resourceId: strategy.id,
+                    }}
+                    title={strategy.title || "Untitled strategy"}
+                    onClose={() => setShareOpen(false)}
+                    extraSection={
+                        <CollaboratorsSection
+                            strategyId={strategy.id}
+                            collaboratorIds={strategy.collaboratorIds ?? []}
+                        />
+                    }
+                />
+            )}
         </View>
     );
 };
@@ -599,19 +645,11 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             borderRadius: 999,
             flexDirection: "row",
             alignItems: "center",
-            gap: 4,
+            gap: 5,
         },
         statusPillText: {
             fontSize: 12,
             fontWeight: "700",
-        },
-        statusIcon: {
-            flexShrink: 0,
-            width: 30,
-            height: 30,
-            borderRadius: 999,
-            alignItems: "center",
-            justifyContent: "center",
         },
         savedTrigger: {
             flexShrink: 0,
@@ -657,6 +695,15 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             alignItems: "center",
             gap: 8,
             marginLeft: "auto",
+        },
+        backBtn: {
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
+            flexShrink: 0,
         },
         iconBtn: {
             width: 34,

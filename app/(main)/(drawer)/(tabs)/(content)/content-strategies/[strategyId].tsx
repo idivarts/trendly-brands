@@ -13,7 +13,9 @@ import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import RightPanelFab from "@/components/shared/RightPanelFab";
 import { View } from "@/components/theme/Themed";
+import { faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -255,6 +257,12 @@ const ContentStrategyDetail = () => {
 
     const handleNewStrategy = useCallback(() => {
         router.push("/(main)/(drawer)/(tabs)/(content)/content-strategies" as any);
+    }, [router]);
+
+    // Back to the strategies listing. `navigate` (not `push`) collapses the
+    // stack so we don't pile detail screens on top of each other.
+    const handleBack = useCallback(() => {
+        router.navigate("/(main)/(drawer)/(tabs)/(content)/content-strategies" as any);
     }, [router]);
 
     const handleSelectStrategy = useCallback(
@@ -511,6 +519,7 @@ const ContentStrategyDetail = () => {
                                         onRename: handleRename,
                                         onOpenDrawer: strategies.length > 0 ? () => setDrawerOpen(true) : undefined,
                                         onNewStrategy: handleNewStrategy,
+                                        onBack: handleBack,
                                     } : undefined}
                                 />
                             </Animated.View>
@@ -630,6 +639,21 @@ const ContentStrategyDetail = () => {
                             onCollapse={() => setRightPanelMode("none")}
                         />
                     }
+                />
+            )}
+
+            {/* Mobile: open Comments / AI Chat from a bottom-right speed-dial FAB.
+                Only in the strategy-ready state — while collecting the chat already
+                fills the screen. bottomOffset clears the 70px bottom tab bar. */}
+            {!xl && !isCollecting && !isLoading && (
+                <RightPanelFab
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    bottomOffset={70}
+                    actions={[
+                        { mode: "comments", icon: faCommentDots, label: "Comments" },
+                        { mode: "chat", icon: faRobot, label: "AI Chat" },
+                    ]}
                 />
             )}
 
