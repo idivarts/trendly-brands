@@ -35,6 +35,8 @@ export interface ContentInfoModalProps {
     onChangeIdea: (v: string) => void;
     onChangeStatus: (s: ContentStatus) => void;
     onClose: () => void;
+    /** When true, status/title/idea are locked (content is scheduled or posted). */
+    readOnly?: boolean;
 }
 
 const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
@@ -47,6 +49,7 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
     onChangeIdea,
     onChangeStatus,
     onClose,
+    readOnly = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -88,6 +91,27 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                         keyboardShouldPersistTaps="handled"
                     >
                         <Text style={styles.label} nativeID="ci-status">Status</Text>
+                        {readOnly ? (
+                            <>
+                                <View style={styles.statusRow}>
+                                    {(() => {
+                                        const sc = contentStatusColors(status, colors);
+                                        return (
+                                            <View style={[styles.statusChip, { backgroundColor: sc.bg }]}>
+                                                <Text style={[styles.statusChipText, { color: sc.fg, fontWeight: "700" }]}>
+                                                    {CONTENT_STATUS_LABELS[status]}
+                                                </Text>
+                                            </View>
+                                        );
+                                    })()}
+                                </View>
+                                <Text style={[styles.lockNote, styles.mt8]}>
+                                    {status === "posted"
+                                        ? "This content has been posted and can no longer be edited."
+                                        : "This content is scheduled. Unschedule it to make changes."}
+                                </Text>
+                            </>
+                        ) : (
                         <View style={styles.statusRow} accessibilityLabel="Status" accessibilityRole="radiogroup">
                             {EDITABLE_CONTENT_STATUSES.map((s) => {
                                 const sc = contentStatusColors(s, colors);
@@ -120,6 +144,7 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                                 );
                             })}
                         </View>
+                        )}
 
                         <Text style={[styles.label, styles.mt18]} nativeID="ci-title">Title</Text>
                         <TextInput
@@ -129,6 +154,7 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                             value={title}
                             onChangeText={onChangeTitle}
                             maxLength={120}
+                            editable={!readOnly}
                             accessibilityLabel="Title"
                             aria-labelledby="ci-title"
                         />
@@ -143,6 +169,7 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                             multiline
                             maxLength={500}
                             textAlignVertical="top"
+                            editable={!readOnly}
                             accessibilityLabel="Idea or vision"
                             aria-labelledby="ci-idea"
                         />
@@ -239,6 +266,14 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         },
         mt18: {
             marginTop: 18,
+        },
+        mt8: {
+            marginTop: 8,
+        },
+        lockNote: {
+            fontSize: 12,
+            color: colors.textSecondary,
+            lineHeight: 17,
         },
         statusRow: {
             flexDirection: "row",

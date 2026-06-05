@@ -23,6 +23,8 @@ interface ScriptEditorProps {
     onSendToChat: (text: string) => void;
     /** Reel: script is optional and collapsed by default. Live: always open. */
     collapsible?: boolean;
+    /** When true the script is read-only (content is scheduled or posted). */
+    readOnly?: boolean;
 }
 
 const ScriptEditor: React.FC<ScriptEditorProps> = ({
@@ -37,6 +39,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
     contentId,
     onSendToChat,
     collapsible = false,
+    readOnly = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -88,10 +91,12 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
                                 onSendToChat={onSendToChat}
                                 strategyId={contentId}
                                 module="content"
+                                lock={readOnly ? { editable: false } : undefined}
                             />
                         </View>
                     )}
 
+                    {!readOnly && (
                     <View style={styles.aiPromptRow}>
                         <TextInput
                             style={[styles.input, styles.aiPromptInput]}
@@ -119,6 +124,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
                             </Text>
                         </Pressable>
                     </View>
+                    )}
                 </>
             ) : null}
         </View>
