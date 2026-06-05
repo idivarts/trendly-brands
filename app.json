@@ -31,18 +31,6 @@
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false,
                 "CFBundleDisplayName": "Trendly Brands",
-                "LSApplicationQueriesSchemes": [
-                    "upi",
-                    "bhim",
-                    "phonepe",
-                    "paytmmp",
-                    "tez",
-                    "gpay",
-                    "amazonpay",
-                    "credpay",
-                    "mobikwik",
-                    "freecharge"
-                ],
                 "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
                 "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
             },

@@ -35,6 +35,8 @@ interface MediaStageProps {
     onImagePromptChange: (v: string) => void;
     onGenerateImage: (prompt?: string) => void;
     isGeneratingImage: boolean;
+    /** Backend image-generation error to surface (e.g. after a failed job). */
+    generationError?: string | null;
     /** When true the media is read-only (content is scheduled or posted). */
     readOnly?: boolean;
 }
@@ -55,6 +57,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
     onImagePromptChange,
     onGenerateImage,
     isGeneratingImage,
+    generationError = null,
     readOnly = false,
 }) => {
     const theme = useTheme();
@@ -205,7 +208,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                         );
                     })}
                 </View>
-            ) : (
+            ) : isGeneratingImage ? null : (
                 <View style={styles.emptyState}>
                     <FontAwesomeIcon
                         icon={spec.kind === "video" ? faPlay : faImage}
@@ -218,7 +221,26 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 </View>
             )}
 
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {/* Generation progress — image jobs run on the backend, so this also
+                shows after a reload while a job is still finishing. */}
+            {isGeneratingImage ? (
+                <View style={styles.generatingBox}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <View style={styles.generatingTextWrap}>
+                        <Text style={styles.generatingTitle}>
+                            {spec.multi ? "Generating slide…" : "Generating image…"}
+                        </Text>
+                        <Text style={styles.generatingSub}>
+                            This can take up to a minute. You can keep working — it'll appear
+                            here automatically when it's ready.
+                        </Text>
+                    </View>
+                </View>
+            ) : null}
+
+            {error || generationError ? (
+                <Text style={styles.errorText}>{error || generationError}</Text>
+            ) : null}
 
             {/* Actions — hidden when the content is locked (scheduled / posted) */}
             {!readOnly ? (
@@ -424,6 +446,36 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontSize: 12,
             fontWeight: "600",
             color: colors.textSecondary,
+        },
+        generatingBox: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 10,
+            backgroundColor: colors.tag,
+            marginBottom: 12,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        generatingTextWrap: {
+            flex: 1,
+            minWidth: 0,
+        },
+        generatingTitle: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.text,
+            marginBottom: 2,
+        },
+        generatingSub: {
+            fontSize: 11,
+            color: colors.textSecondary,
+            lineHeight: 16,
         },
         errorText: {
             fontSize: 12,

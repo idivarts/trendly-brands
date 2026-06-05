@@ -46,6 +46,12 @@ export interface ChatMessage {
 export interface FocusItem {
     id: string;
     label: string;
+    /**
+     * Optional text sent to the AI in place of `label`. Use it to give the model
+     * the actionable identity of the focused thing (e.g. a content id) while the
+     * chip still shows a short human label. Falls back to `label` when unset.
+     */
+    contextText?: string;
 }
 
 interface AIChatPanelProps {
@@ -234,7 +240,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const trimmed = input.trim();
         if (!trimmed || isStreaming || notReady) return;
         const focusedText =
-            focusItems.length > 0 ? focusItems.map((f) => f.label).join("\n") : undefined;
+            focusItems.length > 0
+                ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
+                : undefined;
         sendMessage(trimmed, focusedText, selectedModel);
         setInput("");
         focusItems.forEach((f) => onRemoveFocusItem?.(f.id));

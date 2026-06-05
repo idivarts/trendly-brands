@@ -11,6 +11,24 @@ The Content Strategy feature is a two-phase AI-driven flow:
 
 ## Endpoints Needed
 
+> **⚠️ Updated 2026-06-05 — endpoints #1–#8 are SUPERSEDED.** The strategy chat,
+> session, generation, quick-edit and CRUD flows are now served by the shared
+> **OpenRouter AI chat engine**, not bespoke `/api/content-strategy/*` routes:
+> - **Chat / create / edit:** WebSocket + `/api/ai/conversations*` with
+>   `module="strategy"` and `contextId={strategyId}`. The AI collects the brief
+>   conversationally and writes the doc via the `set_strategy_brief` /
+>   `generate_strategy_doc` / `apply_strategy_edit` server tools
+>   (`backend-sls/internal/trendlyapis/ai/strategy_tools.go`).
+> - **Quick edit (direct text enhancement):** `POST /api/ai/quick-edit`.
+> - **List / CRUD:** the apps read/write `brands/{brandId}/strategies/{id}`
+>   directly via the `useStrategies` hook + Firestore.
+>
+> Only **#9 push-to-calendar** and **#10 recheck-duration** are live HTTP
+> endpoints (implemented in `strategy_routes.go`, registered under
+> `/api/content-strategy`). They now require `brandId` in the request body.
+> The document body is stored as **HTML** in `markdownContent` (the field name
+> is historical), not Markdown.
+
 ### 1. Start a Strategy Session
 
 **POST** `/api/content-strategy/session`
@@ -198,6 +216,7 @@ the UI sends a default of `30`.
 **Request:**
 ```json
 {
+  "brandId": "string",            // owning brand (the strategy lives under brands/{brandId})
   "startDate": "2026-06-01",      // YYYY-MM-DD — first day the strategy occupies
   "durationDays": 30,             // window length in days (inclusive of startDate)
   "overrideExisting": false       // see behaviour below
@@ -247,9 +266,11 @@ The endpoint should re-analyse `markdownContent`, extract the intended run lengt
 and **persist** the corrected window back to `IStrategy.timeline` (so subsequent reads
 and the push-to-calendar step use the fresh value).
 
-**Request:** _(no body required — the server reads the stored strategy content)_
+**Request:**
 ```json
-{}
+{
+  "brandId": "string"   // owning brand; the server reads the stored strategy content
+}
 ```
 
 **Response:**
@@ -288,13 +309,23 @@ content_strategies/
 
 ## AI Integration Notes
 
-- Use **Gemini** (already integrated in `pkg/gemini/`) for question generation and strategy creation
-- System prompt should include: brand profile, niche, and previous collab history
-- Quick Edit and Chat endpoints should include the current strategy content in context
-- Token cost is high — consider caching the base strategy generation
+- AI runs through **OpenRouter** (`pkg/openrouter/`), not Gemini. The strategy
+  conversation uses the `strategy` module (system prompt + tools in
+  `internal/trendlyapis/ai/`); `TaskStrategy` resolves to Claude Opus.
+- The system prompt already injects the brand profile and the existing strategy
+  doc (`internal/trendlyapis/ai/context.go → loadModuleContext`).
+- Create + edit happen via server tools that write `markdownContent` directly and
+  reset the Yjs CRDT (`crdtInitialized=false` + prune `yupdates`) so a live web
+  editor re-bootstraps from the new HTML.
+- push-to-calendar / recheck-duration parse the strategy HTML with a JSON-mode
+  OpenRouter call and map the result into `brands/{brandId}/contents`.
 
 ---
 
-## Markdown Format
+## Document Format
 
-The strategy content is stored and edited as **Markdown**. The frontend currently uses a plain text editor for the scaffold. Replace with a proper markdown editor library (e.g. `react-native-pell-rich-editor` storing HTML, or a web-native editor like Tiptap via Expo web) before production.
+The strategy body is stored and edited as **HTML** in the `markdownContent`
+field (the field name is historical — it does **not** hold Markdown). The web
+editor is Lexical (with Yjs real-time collaboration); native is a single-writer
+HTML editor. AI generation and edits emit semantic HTML, and push-to-calendar
+parses HTML — they must all agree on this format.

@@ -1,5 +1,6 @@
 import { CalendarItem } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { IImageGeneration } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import Colors from "@/shared-uis/constants/Colors";
 
 /**
@@ -51,6 +52,8 @@ export interface ContentItem extends CalendarItem {
     imagePrompt?: string;
     /** Final media files / carousel slides. Mirrors `IContent.attachments`. */
     attachments?: Attachment[];
+    /** Live state of a backend-driven AI image-generation job, if any. */
+    imageGeneration?: IImageGeneration;
     /** Target connected accounts for publish / schedule (Phase 4). */
     destinations?: SocialDestination[];
     /** Publish immediately or at `scheduledAt`. */

@@ -25,6 +25,7 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import ShareButton from "@/components/sharing/ShareButton";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
@@ -81,7 +82,7 @@ const CreateContentScreen = () => {
     const router = useRouter();
     const { items, updateContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, hasCapability } = useBrandContext();
 
     // Resolve the live item from the real contents list first; fall back to
     // mock data so demo/test contentIds still work in dev.
@@ -418,8 +419,10 @@ const CreateContentScreen = () => {
             description: p,
             aspectRatio: MEDIA_SPEC[contentType].aspectRatios[0] ?? "1:1",
             count: 1,
+            contextId: contentId,
+            multi: MEDIA_SPEC[contentType].multi,
         });
-    }, [imagePrompt, contentType, generateImage]);
+    }, [imagePrompt, contentType, contentId, generateImage]);
 
     // React to AI generation results streaming back from the backend.
 
@@ -466,19 +469,62 @@ const CreateContentScreen = () => {
         }
     }, [aiScript, scriptStreaming, isGeneratingScript]);
 
-    // Image: on completion, append the generated asset to the media gallery
-    // (or replace it for single-asset types). Persists via attachments[] on save.
+    // Image (websocket fast-path): when connected, apply the streamed result to
+    // the gallery immediately for snappy feedback. The backend has already
+    // persisted it to the content doc, so no manual Save is needed.
     useEffect(() => {
         if (!isGeneratingImage) return;
         if (imagesStreaming) return;
         if (aiImages.length === 0) return;
         const latest = aiImages[aiImages.length - 1];
+        if (!latest?.s3Url) return;
         const asset: Attachment = { type: "image", imageUrl: latest.s3Url };
-        setAttachments((prev) =>
-            MEDIA_SPEC[contentType].multi ? [...prev, asset] : [asset]
-        );
+        setAttachments((prev) => {
+            // De-dupe — the Firestore reconciliation below may also surface it.
+            if (prev.some((a) => a.imageUrl === latest.s3Url)) return prev;
+            return MEDIA_SPEC[contentType].multi ? [...prev, asset] : [asset];
+        });
         setIsGeneratingImage(false);
     }, [aiImages, imagesStreaming, isGeneratingImage, contentType]);
+
+    // Image (backend-driven reconciliation): the job's status + result live on the
+    // content doc, so a generation survives a websocket drop or a page reload.
+    // Pull any server-persisted images not yet reflected locally, and clear the
+    // generating flag once the backend job resolves.
+    useEffect(() => {
+        const gen = seedItem?.imageGeneration;
+        const status = gen?.status;
+
+        if (status === "done" || status === "error") {
+            setIsGeneratingImage(false);
+        }
+        if (!gen) return;
+
+        const serverAtt = seedItem?.attachments ?? [];
+        setAttachments((local) => {
+            const localUrls = new Set(
+                local.map((a) => a.imageUrl).filter(Boolean) as string[]
+            );
+            const missing = serverAtt.filter(
+                (a) => a.type === "image" && a.imageUrl && !localUrls.has(a.imageUrl)
+            );
+            if (missing.length === 0) return local;
+            // Backend already persisted these — don't flag the form as dirty.
+            skipDirtyRef.current = true;
+            return MEDIA_SPEC[contentType].multi
+                ? [...local, ...missing]
+                : [missing[missing.length - 1]];
+        });
+    }, [seedItem?.imageGeneration, seedItem?.attachments, contentType]);
+
+    // Derived image-generation UI state: show progress while either the local
+    // request or the backend job is running; surface backend errors.
+    const imageGenStatus = seedItem?.imageGeneration?.status;
+    const imageGenerating = isGeneratingImage || imageGenStatus === "generating";
+    const imageGenError =
+        imageGenStatus === "error"
+            ? seedItem?.imageGeneration?.error || "Image generation failed. Please try again."
+            : null;
 
     const formattedDate = date.toLocaleDateString("en-IN", {
         day: "2-digit",
@@ -557,6 +603,19 @@ const CreateContentScreen = () => {
                     />
                 </Pressable>
             ) : null,
+            // 🔗 Share (read-only public link)
+            selectedBrand?.id && contentId ? (
+                <ShareButton
+                    key="share"
+                    canShare={hasCapability("manage_content")}
+                    target={{
+                        type: "content",
+                        brandId: selectedBrand.id,
+                        resourceId: contentId,
+                    }}
+                    title={title || "Untitled content"}
+                />
+            ) : null,
             // ℹ️ Content details (title / idea / status)
             <Pressable
                 key="info"
@@ -608,7 +667,7 @@ const CreateContentScreen = () => {
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty, locked]
+        [styles, colors, handleSave, saveState, rightPanelMode, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability]
     );
 
     return (
@@ -732,7 +791,8 @@ const CreateContentScreen = () => {
                                     imagePrompt={imagePrompt}
                                     onImagePromptChange={setImagePrompt}
                                     onGenerateImage={handleImageGenerate}
-                                    isGeneratingImage={isGeneratingImage}
+                                    isGeneratingImage={imageGenerating}
+                                    generationError={imageGenError}
                                     readOnly={locked}
                                 />
                             )}

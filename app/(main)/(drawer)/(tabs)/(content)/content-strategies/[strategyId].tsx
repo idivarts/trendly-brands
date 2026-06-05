@@ -16,6 +16,8 @@ import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useBreakpoints } from "@/hooks";
 import { EDIT_LOCK_TTL_MS, useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
@@ -37,6 +39,7 @@ const ContentStrategyDetail = () => {
     const { xl } = useBreakpoints();
     const router = useRouter();
     const { manager } = useAuthContext();
+    const { selectedBrand } = useBrandContext();
     const { strategyId, initialPrompt } = useLocalSearchParams<{
         strategyId: string;
         initialPrompt?: string;
@@ -305,33 +308,61 @@ const ContentStrategyDetail = () => {
     // Confirmed "Push to Calendar": persist the schedule server-side, then land
     // the user on the calendar at the month they chose as the start date.
     const handlePushToCalendarConfirm = useCallback(
-        (opts: PushToCalendarConfirm) => {
+        async (opts: PushToCalendarConfirm) => {
             setShowPushToCalendar(false);
+            const brandId = selectedBrand?.id;
+            const startDate = formatDateForWebInput(opts.startDate);
+            if (!strategyId || !brandId) return;
 
-            // TODO(API): POST /api/content-strategy/:strategyId/push-to-calendar
-            //   body: { startDate, durationDays, overrideExisting }
-            //   See components/content-strategy/README.md → "Push Strategy to Calendar".
-            //   Wire the real call here once the endpoint ships.
-
-            router.push({
-                pathname: "/(main)/(drawer)/(tabs)/(content)/content-calendar" as any,
-                params: { focusDate: formatDateForWebInput(opts.startDate) },
-            });
+            try {
+                await HttpWrapper.fetch(
+                    `/api/content-strategy/${strategyId}/push-to-calendar`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            brandId,
+                            startDate,
+                            durationDays: opts.durationDays,
+                            overrideExisting: opts.overrideExisting,
+                        }),
+                    }
+                );
+                router.push({
+                    pathname: "/(main)/(drawer)/(tabs)/(content)/content-calendar" as any,
+                    params: { focusDate: startDate },
+                });
+            } catch (e) {
+                Toaster.error(
+                    "Couldn't add to calendar",
+                    (await HttpWrapper.extractErrorMessage(e)) ?? "Please try again."
+                );
+            }
         },
-        [router]
+        [router, strategyId, selectedBrand?.id]
     );
 
     // Re-derive the campaign length from the (possibly hand-edited) strategy body.
     const handleRefreshDuration = useCallback(async (): Promise<number | null> => {
-        if (!strategyId) return null;
+        const brandId = selectedBrand?.id;
+        if (!strategyId || !brandId) return activeStrategy?.durationDays ?? null;
 
-        // TODO(API): POST /api/content-strategy/:strategyId/recheck-duration
-        //   AI re-reads the strategy body and returns the corrected length in days,
-        //   persisting it back to the strategy timeline. See
-        //   components/content-strategy/README.md → "Re-check Strategy Duration".
-        //   Until the endpoint ships, fall back to the recorded duration.
-        return activeStrategy?.durationDays ?? null;
-    }, [strategyId, activeStrategy?.durationDays]);
+        try {
+            const res = await HttpWrapper.fetch(
+                `/api/content-strategy/${strategyId}/recheck-duration`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ brandId }),
+                }
+            );
+            const data = await res.json();
+            return typeof data.durationDays === "number" ? data.durationDays : null;
+        } catch {
+            // Endpoint hiccup → keep the recorded duration rather than blocking.
+            return activeStrategy?.durationDays ?? null;
+        }
+    }, [strategyId, selectedBrand?.id, activeStrategy?.durationDays]);
 
     const handleSnippetComment = useCallback(
         (snippet: string, anchorStart: number, anchorEnd: number) => {
