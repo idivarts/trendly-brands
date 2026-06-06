@@ -114,7 +114,6 @@ const Menu = () => {
         const executionItems: Item[] = [
             { id: "messages", icon: faComment, title: "Messages", href: "/messages", locked: isChatConnected ? undefined : chatLockReason },
             { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts", locked: isChatConnected ? undefined : chatLockReason },
-            { id: "analytics", icon: faChartLine, title: "Reporting & Analytics", href: "/analytics", locked: isChatConnected ? undefined : chatLockReason },
         ];
 
         const grow: Hub = {
@@ -127,6 +126,7 @@ const Menu = () => {
                 {
                     title: "Paid Growth",
                     items: [
+                        { id: "analytics", icon: faChartLine, title: "Reporting & Analytics", href: "/analytics" },
                         { id: "organic-growth", icon: faArrowTrendUp, title: "Organic Conversions", href: "/organic-growth" },
                         { id: "paid-growth", icon: faBullseye, title: "Paid Mediums", href: "/paid-growth" },
                         { id: "performance-marketing", icon: faChartLine, title: "Performance Marketing", href: "/performance-marketing" },

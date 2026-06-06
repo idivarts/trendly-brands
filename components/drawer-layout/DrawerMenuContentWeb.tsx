@@ -13,6 +13,7 @@ import {
     faBuilding,
     faBullseye,
     faCalendarDays,
+    faChartLine,
     faChevronDown,
     faChevronLeft,
     faChevronRight,
@@ -101,6 +102,11 @@ const MANAGE_MENU_ITEMS = (theme: Theme): Tab[] => [
         href: "/inbox",
         icon: ({ focused }) => <DrawerIcon href="/inbox" icon={faInbox} focused={focused} />,
         label: "Inbox",
+    },
+    {
+        href: "/analytics",
+        icon: ({ focused }) => <DrawerIcon href="/analytics" icon={faChartLine} focused={focused} />,
+        label: "Reporting & Analytics",
     },
 ];
 

@@ -6,12 +6,11 @@ import {
 } from "@fortawesome/free-regular-svg-icons";
 import {
     faBullhorn,
-    faChartLine,
     faComment as faCommentSolid,
     faFileLines,
     faGem as faGemSolid,
     faHandshake,
-    faStar as faStarSolid,
+    faStar as faStarSolid
 } from "@fortawesome/free-solid-svg-icons";
 import { Theme } from "@react-navigation/native";
 import React from "react";
@@ -58,11 +57,6 @@ export const EXECUTION_ITEMS = (theme: Theme): Tab[] => [
         href: "/contracts",
         icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
         label: "Influencer Contracts",
-    },
-    {
-        href: "/analytics",
-        icon: ({ focused }) => <DrawerIcon href="/analytics" icon={faChartLine} focused={focused} />,
-        label: "Reporting & Analytics",
     },
 ];
 
