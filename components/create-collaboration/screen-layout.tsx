@@ -1,0 +1,180 @@
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
+import { View } from "../theme/Themed";
+
+import { useBreakpoints } from "@/hooks";
+import ConfirmationModal from "@/shared-uis/components/ConfirmationModal";
+import Colors from "@/shared-uis/constants/Colors";
+import { resetAndNavigate } from "@/utils/router";
+import { useRouter } from "expo-router";
+import ScreenHeader from "../ui/screen-header";
+
+interface ScreenLayoutProps {
+    children: React.ReactNode;
+    headerRight?: React.ReactNode;
+    isEdited: boolean;
+    isSubmitting?: boolean;
+    saveAsDraft?: () => Promise<void>;
+    screen: number;
+    setScreen: React.Dispatch<React.SetStateAction<number>>;
+    type: "Add" | "Edit";
+}
+
+const ScreenLayout: React.FC<ScreenLayoutProps> = ({
+    children,
+    headerRight,
+    isEdited,
+    isSubmitting,
+    screen,
+    saveAsDraft,
+    setScreen,
+    type,
+}) => {
+    const theme = useTheme();
+
+    const router = useRouter();
+    const [isModalVisible, setIsModalVisible] = useState(false);
+
+    const showCloseButton = screen !== 1 && type === "Add";
+    const showHeaderRight = Boolean(headerRight) || showCloseButton;
+    const { xl } = useBreakpoints();
+
+    const headerRightContent = showHeaderRight ? (
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {headerRight}
+            {showCloseButton && (
+                <Pressable
+                    onPress={() => {
+                        if (isEdited) {
+                            setIsModalVisible(true);
+                        } else {
+                            router.back();
+                        }
+                    }}
+                    style={{
+                        marginLeft: 20,
+                        marginRight: 8,
+                    }}
+                >
+                    <FontAwesomeIcon
+                        icon={faXmark}
+                        size={24}
+                        color={theme.colors.text}
+                    />
+                </Pressable>
+            )}
+        </View>
+    ) : undefined;
+
+    return (
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{
+                flex: 1,
+                paddingTop: 8,
+            }}
+        >
+            <ScreenHeader
+                action={() => {
+                    if (screen === 1) {
+                        setIsModalVisible(true);
+                        router.back();
+                    } else {
+                        setScreen(screen - 1);
+                    }
+                }}
+                hideAction={false}
+                title={`${type === "Add" ? "Create a" : "Edit"} Collaboration`}
+                rightAction={showHeaderRight}
+                rightActionButton={headerRightContent}
+            />
+
+            <View
+                style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 8,
+                }}
+            >
+                {
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <View
+                            key={index}
+                            style={{
+                                flex: 1,
+                                height: 4,
+                                backgroundColor: screen > index ? Colors(theme).primary : Colors(theme).aliceBlue,
+                                marginTop: 8,
+                            }}
+                        />
+                    ))
+                }
+            </View>
+            <ScrollView
+                style={{
+                    flex: 1,
+                    paddingTop: 16,
+                    paddingHorizontal: 16,
+                    alignSelf: "center",
+                    width: "100%",
+                    maxWidth: xl ? 800 : undefined
+                }}
+                contentContainerStyle={{
+                    paddingBottom: 32,
+                    flexGrow: 1,
+                }}
+            >
+
+                <View
+                    style={{
+                        paddingTop: 16,
+                        gap: 32,
+                        flexGrow: 1,
+                    }}
+                >
+                    {children}
+                </View>
+            </ScrollView>
+
+            <ConfirmationModal
+                visible={isModalVisible}
+                setVisible={setIsModalVisible}
+                cancelAction={() => {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    if (router.canGoBack()) {
+                        router.back();
+                    } else {
+                        resetAndNavigate("/collaborations");
+                    }
+                    setIsModalVisible(false)
+                }}
+                confirmAction={() => {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    if (isEdited && saveAsDraft) {
+                        saveAsDraft().then(() => {
+                            setIsModalVisible(false);
+                        });
+                    } else {
+                        router.back();
+                        setIsModalVisible(false);
+                    }
+                }}
+                confirmText={isSubmitting ? "Saving..." : "Save as Draft"}
+                cancelText="Discard"
+                description="Are you sure you want to discard the changes? You can save as draft instead"
+            />
+        </KeyboardAvoidingView>
+    );
+};
+
+export default ScreenLayout;

@@ -3,7 +3,7 @@ import { Theme } from "@react-navigation/native";
 import { StyleSheet } from "react-native";
 
 /**
- * EXCEPTION: External stylesheet shared by ViewCollaborationMap,
+ * EXCEPTION: External stylesheet shared by ViewCollaborationMap, CreateCollaborationMap, screen-four,
  * ImageUploadModal, DocumentUploadModal, BrandModal, ManagerModal. Uses only Colors(theme); no hardcoded colors.
  */
 const stylesFn = (theme: Theme) =>
