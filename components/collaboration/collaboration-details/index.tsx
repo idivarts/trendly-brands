@@ -273,6 +273,21 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const campaignHeaderActions = isDraft
         ? [
             <Button
+                key="edit"
+                mode="contained"
+                onPress={() => {
+                    nav.push({
+                        pathname: "/edit-collaboration",
+                        params: { id: pageID },
+                    });
+                }}
+                size="small"
+                style={styles.draftActionButton}
+                textColor={colors.text}
+            >
+                Edit
+            </Button>,
+            <Button
                 key="publish"
                 mode="contained"
                 onPress={() => publish(pageID, { onSuccess: fetchCollaboration })}
@@ -328,6 +343,12 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
             {collaboration.status === "draft" && (
                 <OverviewTabContent
                     collaboration={collaboration}
+                    onEditPress={() => {
+                        nav.push({
+                            pathname: "/edit-collaboration",
+                            params: { id: pageID },
+                        });
+                    }}
                     onPublishPress={() =>
                         publish(pageID, { onSuccess: fetchCollaboration })
                     }

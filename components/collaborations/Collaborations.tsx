@@ -1,16 +1,26 @@
-import AddContentModal from "@/components/content-calendar/AddContentModal";
-import { CalendarItem } from "@/components/content-calendar/types";
+import BottomSheetActions from "@/components/BottomSheetActions";
+import { Text, View } from "@/components/theme/Themed";
+import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
+import AppLayout from "@/layouts/app-layout";
 import { Console } from "@/shared-libs/utils/console";
 import { IS_LIVE } from "@/shared-libs/utils/environment";
+import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
 import Colors from "@/shared-uis/constants/Colors";
+import { stylesFn } from "@/styles/Proposal.styles";
+import { MediaItem } from "@/types/Media";
+import { processRawAttachment } from "@/utils/attachments";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import {
     collection,
     getDocs,
+    limit,
     onSnapshot,
     orderBy,
     query,
@@ -23,337 +33,361 @@ import {
     Pressable,
     RefreshControl,
     StyleSheet,
-    Text,
-    View,
 } from "react-native";
-import CollaborationCard, { CollaborationCardItem } from "./CollaborationCard";
-import { CollabContentSource } from "./CreateCollabFromContentModal";
-import ContentPickerModal from "./ContentPickerModal";
-import CreateCollabFromContentModal from "./CreateCollabFromContentModal";
-import EmptyCollaborationsView from "./EmptyCollaborationsView";
+import CollaborationDetails from "../collaboration-card/card-components/CollaborationDetails";
+import CollaborationStats from "../collaboration-card/card-components/CollaborationStats";
+import CustomDivider from "../CustomDivider";
+import Button from "../ui/button";
+import EmptyState from "../ui/empty-state";
 
-type Tab = "active" | "archived";
 
-const ACTIVE_STATUSES = ["active", "draft", "stopped"];
-const ARCHIVED_STATUSES = ["inactive"];
-
-const CollaborationsV2 = () => {
-    const theme = useTheme();
-    const colors = Colors(theme);
-    const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
-
+const CollaborationList = ({ active }: { active: boolean }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [proposals, setProposals] = useState<any[]>([]);
+    const [selectedCollabId, setSelectedCollabId] = useState<string | null>(null);
+    const [selectedCollabStatus, setSelectedCollabStatus] = useState<string | undefined>(undefined);
     const { selectedBrand } = useBrandContext();
 
-    const [allCollabs, setAllCollabs] = useState<CollaborationCardItem[]>([]);
+    const openBottomSheet = (id: string, status?: string) => {
+        setIsVisible(true);
+        setSelectedCollabId(id);
+        setSelectedCollabStatus(status);
+    };
+    const closeBottomSheet = () => setIsVisible(false);
+
+    const theme = useTheme();
+    const { xl } = useBreakpoints();
+    const styles = useMemo(() => useStyles(theme, xl), [theme, xl]);
+    const stylesFromFn = stylesFn(theme);
+    const user = AuthApp.currentUser;
+
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<Tab>("active");
 
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [showContentPicker, setShowContentPicker] = useState(false);
-    const [collabSource, setCollabSource] = useState<CollabContentSource | null>(null);
-    const [showCollabModal, setShowCollabModal] = useState(false);
-
-    const handleCreateDirectly = () => setShowAddModal(true);
-    const handleCreateFromContent = () => setShowContentPicker(true);
-
-    const handleAddContent = (item: Omit<CalendarItem, "id">) => {
-        const newId = `content-${Date.now()}`;
-        router.push({
-            pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
-            params: { contentId: newId, title: item.title, idea: item.idea, type: item.type, date: item.date },
-        });
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchProposals();
+        setRefreshing(false);
     };
 
-    const handleContentSelected = (source: CollabContentSource) => {
-        setShowContentPicker(false);
-        setCollabSource(source);
-        setShowCollabModal(true);
-    };
-
-    const displayed = useMemo(() => {
-        if (activeTab === "active") {
-            return allCollabs.filter((c) => ACTIVE_STATUSES.includes(c.status));
-        }
-        return allCollabs.filter((c) => ARCHIVED_STATUSES.includes(c.status));
-    }, [allCollabs, activeTab]);
-
-    const tabCount = (tab: Tab) =>
-        tab === "active"
-            ? allCollabs.filter((c) => ACTIVE_STATUSES.includes(c.status)).length
-            : allCollabs.filter((c) => ARCHIVED_STATUSES.includes(c.status)).length;
-
-    const fetchCollabs = async () => {
-        if (!selectedBrand) return;
-
+    const fetchProposals = async () => {
         try {
-            const collabCol = collection(FirestoreDB, "collaborations");
+            if (!selectedBrand) {
+                return;
+            }
+
+            const collaborationCol = collection(FirestoreDB, "collaborations");
             const q = query(
-                collabCol,
-                where("brandId", "==", selectedBrand.id),
+                collaborationCol,
+                where("brandId", "==", selectedBrand?.id),
                 where("isLive", "==", IS_LIVE),
-                where("version", "==", 2),
+                (active ? where("status", "in", ["active", "draft", "stopped"]) : where("status", "in", ["inactive"])),
                 orderBy("timeStamp", "desc")
             );
 
-            const unsubscribe = onSnapshot(
-                q,
-                async (snap) => {
-                    const items = await Promise.all(
-                        snap.docs.map(async (docSnap) => {
-                            const data = { ...docSnap.data(), id: docSnap.id } as any;
+            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+                const proposals = await Promise.all(
+                    querySnapshot.docs.map(async (doc) => {
+                        const data = {
+                            ...doc.data(),
+                            id: doc.id,
+                        };
 
-                            const appSnap = await getDocs(
-                                collection(FirestoreDB, "collaborations", data.id, "applications")
-                            );
-                            const apps = appSnap.docs.map((d) => d.data());
-                            const accepted = apps.filter((a) => a.status === "accepted").length;
+                        // Fetch applications
+                        const applicationCol = collection(
+                            FirestoreDB,
+                            "collaborations",
+                            data.id,
+                            "applications"
+                        );
+                        const applicationSnapshot = await getDocs(applicationCol);
+                        const applications = applicationSnapshot.docs.map((appDoc) =>
+                            appDoc.data()
+                        );
+                        const acceptedApplications = applications.filter(
+                            (application) => application.status === "accepted"
+                        ).length;
 
-                            const invSnap = await getDocs(
-                                collection(FirestoreDB, "collaborations", data.id, "invitations")
-                            );
+                        // Fetch invitations
+                        const invitationCol = collection(
+                            FirestoreDB,
+                            "collaborations",
+                            data.id,
+                            "invitations"
+                        );
+                        const invitationSnapshot = await getDocs(invitationCol);
+                        const invitations = invitationSnapshot.docs.map((invDoc) =>
+                            invDoc.data()
+                        );
 
-                            return {
-                                id: data.id,
-                                name: data.name,
-                                description: data.description,
-                                status: data.status,
-                                promotionType: data.promotionType,
-                                contentFormat: data.contentFormat,
-                                platform: data.platform,
-                                budget: data.budget,
-                                timeStamp: data.timeStamp,
-                                applications: apps.length,
-                                invitations: invSnap.size,
-                                acceptedApplications: accepted,
-                                version: data.version,
-                            } as CollaborationCardItem;
-                        })
-                    );
-                    setAllCollabs(items);
-                    setIsLoading(false);
-                },
-                () => {
-                    setIsLoading(false);
-                }
-            );
+                        return {
+                            ...data,
+                            applications: applications.length,
+                            invitations: invitations.length,
+                            acceptedApplications,
+                        };
+                    })
+                );
+                setProposals(proposals);
+                setIsLoading(false);
+            }, (error) => {
+                setIsLoading(false);
+            }, () => {
+                setIsLoading(false);
+            });
 
-            return unsubscribe;
-        } catch (err) {
-            Console.error(err, "Error fetching v2 collaborations");
+            return () => {
+                unsubscribe();
+            };
+        } catch (error) {
+            Console.error(error, "Error fetching proposals");
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
-        fetchCollabs().then((unsub) => {
-            unsubscribe = unsub;
-        });
-        return () => {
-            unsubscribe?.();
-        };
-    }, [selectedBrand?.id]);
+        fetchProposals();
+    }, [user, selectedBrand?.id]);
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await fetchCollabs();
-        setRefreshing(false);
-    };
+    useEffect(() => {
+        const checkAndRedirectIfNoCampaigns = async () => {
+            if (!isLoading && proposals.length === 0 && selectedBrand) {
+                const collaborationCol = collection(FirestoreDB, "collaborations");
+                const countQuery = query(
+                    collaborationCol,
+                    where("brandId", "==", selectedBrand.id),
+                    where("isLive", "==", IS_LIVE),
+                    limit(1)
+                );
+                const snapshot = await getDocs(countQuery);
+                if (snapshot.empty) {
+                    router.replace("/create-collaboration");
+                }
+            }
+        };
+        checkAndRedirectIfNoCampaigns();
+    }, [isLoading, proposals, selectedBrand?.id]);
+
+    const filteredProposals = proposals;
 
     if (isLoading) {
         return (
-            <View style={styles.loadingCenter}>
-                <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-        );
-    }
-
-    if (allCollabs.length === 0) {
-        return (
-            <>
-                <EmptyCollaborationsView
-                    onCreateFromContent={handleCreateFromContent}
-                    onCreateDirectly={handleCreateDirectly}
-                />
-                <AddContentModal
-                    visible={showAddModal}
-                    onClose={() => setShowAddModal(false)}
-                    onAdd={handleAddContent}
-                />
-                <ContentPickerModal
-                    visible={showContentPicker}
-                    onClose={() => setShowContentPicker(false)}
-                    onSelect={handleContentSelected}
-                />
-                <CreateCollabFromContentModal
-                    visible={showCollabModal}
-                    content={collabSource}
-                    onClose={() => { setShowCollabModal(false); setCollabSource(null); }}
-                />
-            </>
+            <AppLayout>
+                <View style={stylesFromFn.container}>
+                    <ActivityIndicator size="large" color={Colors(theme).primary} />
+                </View>
+            </AppLayout>
         );
     }
 
     return (
         <View style={styles.root}>
-            <AddContentModal
-                visible={showAddModal}
-                onClose={() => setShowAddModal(false)}
-                onAdd={handleAddContent}
-            />
-            <ContentPickerModal
-                visible={showContentPicker}
-                onClose={() => setShowContentPicker(false)}
-                onSelect={handleContentSelected}
-            />
-            <CreateCollabFromContentModal
-                visible={showCollabModal}
-                content={collabSource}
-                onClose={() => { setShowCollabModal(false); setCollabSource(null); }}
-            />
-            <View style={styles.tabBar}>
-                {(["active", "archived"] as Tab[]).map((tab) => (
-                    <Pressable
-                        key={tab}
-                        style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
-                        onPress={() => setActiveTab(tab)}
-                    >
-                        <Text style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}>
-                            {tab === "active" ? "Active" : "Archived"}
-                        </Text>
-                        <View style={[styles.tabCount, activeTab === tab && styles.tabCountActive]}>
-                            <Text style={[styles.tabCountText, activeTab === tab && styles.tabCountTextActive]}>
-                                {tabCount(tab)}
-                            </Text>
-                        </View>
-                    </Pressable>
-                ))}
-            </View>
-
-            {displayed.length === 0 ? (
-                <View style={styles.emptyTab}>
-                    <Text style={styles.emptyTabText}>
-                        {activeTab === "active"
-                            ? "No active collaborations. Create one!"
-                            : "No archived collaborations."}
-                    </Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={displayed}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <CollaborationCard
-                            item={item}
-                            onPress={() => router.push(`/collaboration-details/${item.id}`)}
-                        />
-                    )}
-                    contentContainerStyle={styles.list}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={handleRefresh}
-                            colors={[colors.primary]}
-                        />
-                    }
+            {filteredProposals.length === 0 ? (
+                <EmptyState
+                    image={require("@/assets/images/illustration6.png")}
+                    subtitle="You have posted no collaborations yet! Your journey begins here"
+                    title="No Collaborations posted"
+                    action={() => router.push("/create-collaboration")}
+                    actionLabel="Create Collaboration"
                 />
+            ) : (
+                <View style={styles.listWrapper}>
+                    <FlatList
+                        data={filteredProposals}
+                        showsVerticalScrollIndicator={false}
+                        renderItem={({ item }) => (
+                            <View style={styles.cardOuter}>
+                                <View style={[styles.cardInner, item.status === "draft" && styles.cardInnerDraft]}>
+                                    <View key={item.id} style={styles.cardContent}>
+                                        {item.status === "draft" && (
+                                            <View style={styles.draftBadge}>
+                                                <Text style={styles.draftBadgeText}>Draft</Text>
+                                            </View>
+                                        )}
+                                        {item.attachments && item.attachments?.length > 0 && (
+                                            <ScrollMedia
+                                                theme={theme}
+                                                MAX_WIDTH_WEB={MAX_WIDTH_WEB}
+                                                media={item.attachments?.map(
+                                                    //@ts-ignore
+                                                    (attachment: MediaItem) =>
+                                                        processRawAttachment(attachment)
+                                                ) || []}
+                                                xl={xl}
+                                            />
+                                        )}
+                                        <Pressable style={styles.cardPressable} onPress={() =>
+                                            router.push(`/collaboration-details/${item.id}`)
+                                        }>
+
+                                            <View style={styles.detailsWrapper}>
+                                                <CollaborationDetails
+                                                    collabDescription={item.description || ""}
+                                                    name={item.name || ""}
+                                                    contentType={item.contentFormat}
+                                                    location={item.location}
+                                                    platform={item.platform}
+                                                    promotionType={item.promotionType}
+                                                    onOpenBottomSheet={(id) => openBottomSheet(id, item.status)}
+                                                    collabId={item.id}
+                                                />
+                                            </View>
+
+                                            <View>
+                                                <CustomDivider thickness={2} />
+
+                                                <CollaborationStats
+                                                    budget={item.budget}
+                                                    collabID={item.id}
+                                                    influencerCount={item.numberOfInfluencersNeeded}
+                                                />
+                                            </View>
+                                        </Pressable>
+
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+                        keyExtractor={(item, index) => index.toString()}
+                        style={styles.flatList}
+                        contentContainerStyle={styles.flatListContent}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={handleRefresh}
+                                colors={[Colors(theme).primary]}
+                            />
+                        }
+                        numColumns={xl ? 2 : 1}
+                        {...(xl && {
+                            columnWrapperStyle: styles.columnWrapper,
+                        })}
+                    />
+                </View>
+            )}
+            {isVisible && (
+                <BottomSheetActions
+                    cardId={selectedCollabId || ""}
+                    cardType="activeCollab"
+                    data={{ status: selectedCollabStatus }}
+                    isVisible={isVisible}
+                    onClose={closeBottomSheet}
+                    snapPointsRange={["25%", "50%"]}
+                    key={selectedCollabId}
+                />
+            )}
+            {filteredProposals.length !== 0 && !xl && (
+                <View style={styles.fabContainer}>
+                    <Button
+                        onPress={() => {
+                            router.push({
+                                pathname: "/create-collaboration",
+                            });
+                        }}
+                        icon={({ size, color }) => (
+                            <FontAwesomeIcon
+                                icon={faPlus}
+                                color={color}
+                                size={size ?? 16}
+                            />
+                        )}
+                    >
+                        Create Collaboration
+                    </Button>
+                </View>
             )}
         </View>
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
-    return useMemo(
-        () =>
-            StyleSheet.create({
-                root: {
-                    flex: 1,
-                },
-                loadingCenter: {
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                },
-                tabBar: {
-                    flexDirection: "row",
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    gap: 8,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.05,
-                    elevation: 2,
-                    zIndex: 2,
-                    backgroundColor: colors.background,
-                },
-                tabItem: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    backgroundColor: colors.tag,
-                },
-                tabItemActive: {
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                tabLabel: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                },
-                tabLabelActive: {
-                    color: colors.onPrimary,
-                },
-                tabCount: {
-                    minWidth: 20,
-                    height: 20,
-                    borderRadius: 10,
-                    paddingHorizontal: 5,
-                    backgroundColor: colors.background,
-                    alignItems: "center",
-                    justifyContent: "center",
-                },
-                tabCountActive: {
-                    backgroundColor: "rgba(255,255,255,0.25)",
-                },
-                tabCountText: {
-                    fontSize: 11,
-                    fontWeight: "700",
-                    color: colors.textSecondary,
-                },
-                tabCountTextActive: {
-                    color: colors.onPrimary,
-                },
-                list: {
-                    paddingTop: 8,
-                    paddingBottom: 32,
-                },
-                emptyTab: {
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 14,
-                    padding: 24,
-                },
-                emptyTabText: {
-                    fontSize: 14,
-                    color: colors.textSecondary,
-                    textAlign: "center",
-                },
-            }),
-        [colors, xl]
-    );
+function useStyles(theme: ReturnType<typeof useTheme>, xl: boolean) {
+    return StyleSheet.create({
+        root: {
+            width: "100%",
+            flex: 1,
+            position: "relative",
+        },
+        listWrapper: {
+            flex: 1,
+        },
+        cardOuter: {
+            flex: xl ? 1 : undefined,
+            maxWidth: xl ? "50%" : undefined,
+            width: xl ? undefined : "100%",
+            backgroundColor: Colors(theme).primary,
+            borderRadius: 14,
+            shadowColor: Colors(theme).primary,
+            shadowOffset: { width: 2, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 8,
+            elevation: 5,
+        },
+        cardInner: {
+            flex: 1,
+            borderWidth: 2,
+            borderColor: Colors(theme).primary,
+            borderRadius: 12,
+            backgroundColor: Colors(theme).card,
+            borderStyle: "solid",
+        },
+        cardInnerDraft: {
+            borderStyle: "dashed",
+        },
+        cardContent: {
+            flex: 1,
+            gap: 8,
+            overflow: "hidden",
+            borderRadius: 10,
+        },
+        cardPressable: {
+            borderRadius: 10,
+            overflow: "hidden",
+            flex: 1,
+            justifyContent: "space-between",
+        },
+        draftBadge: {
+            // Avoid absolute positioning overlap by letting the badge
+            // participate in layout. This keeps it near the top-right
+            // without colliding with media/details.
+            alignSelf: "flex-end",
+            marginTop: 6,
+            marginRight: 12,
+            backgroundColor: Colors(theme).tag,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 999,
+        },
+        draftBadgeText: {
+            color: Colors(theme).tagForeground,
+            fontWeight: "700",
+            fontSize: 12,
+        },
+        detailsWrapper: {
+            flex: 1,
+        },
+        flatList: {
+            flexGrow: 1,
+            paddingBottom: 16,
+            paddingHorizontal: 16,
+            paddingTop: 8,
+        },
+        flatListContent: {
+            gap: 16,
+            paddingBottom: 64,
+        },
+        columnWrapper: {
+            justifyContent: "space-between",
+            gap: 16,
+        },
+        fabContainer: {
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            left: 0,
+            paddingTop: 16,
+            paddingHorizontal: 16,
+        },
+    });
 }
 
-export default CollaborationsV2;
+export default CollaborationList;

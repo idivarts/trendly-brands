@@ -1,4 +1,3 @@
-import CreateCollabFromContentModal, { CollabContentSource } from "@/components/collaborations/CreateCollabFromContentModal";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
@@ -18,9 +17,7 @@ import {
     SocialDestination,
     contentStatusColors,
 } from "@/components/contents/types";
-import DatePickerModal, {
-    formatDateForWebInput,
-} from "@/components/modals/DatePickerModal";
+import DatePickerModal from "@/components/modals/DatePickerModal";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -117,7 +114,6 @@ const CreateContentScreen = () => {
     const [scriptAiPrompt, setScriptAiPrompt] = useState("");
     const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showCollabModal, setShowCollabModal] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -187,13 +183,6 @@ const CreateContentScreen = () => {
     const isReel = contentType === "reel";
     const mediaSpec = MEDIA_SPEC[contentType];
 
-    const collabSource: CollabContentSource = {
-        contentId: contentId ?? `content-${Date.now()}`,
-        title,
-        idea,
-        type: contentType,
-        date: formatDateForWebInput(date),
-    };
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -341,8 +330,8 @@ const CreateContentScreen = () => {
     }, [contentId, unscheduling, selectedBrand?.id]);
 
     const handleCreateCollab = useCallback(() => {
-        setShowCollabModal(true);
-    }, []);
+        router.push("/hire-us");
+    }, [router]);
 
     // ── Back navigation with an unsaved-changes guard ────────────────────────
     const doNavigateBack = useCallback(() => {
@@ -980,12 +969,6 @@ const CreateContentScreen = () => {
                 loading={magicGenerating}
                 onClose={() => setMagicTarget(null)}
                 onGenerate={handleMagicGenerate}
-            />
-
-            <CreateCollabFromContentModal
-                visible={showCollabModal}
-                content={collabSource}
-                onClose={() => setShowCollabModal(false)}
             />
 
             <ContentInfoModal
