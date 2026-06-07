@@ -16,8 +16,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { InboxMedia, InboxMediaComment, UseInboxMediaResult } from "../types";
-
-const JSON_HEADERS = { "Content-Type": "application/json" };
+import {
+    deleteMediaComment,
+    fetchMediaComments,
+    replyToMediaComment,
+    setMediaCommentHidden,
+} from "./media-comments-api";
 
 export function useInboxMedia(): UseInboxMediaResult {
     const { selectedBrand } = useBrandContext();
@@ -51,17 +55,7 @@ export function useInboxMedia(): UseInboxMediaResult {
     const loadComments = useCallback(
         async (m: InboxMedia): Promise<InboxMediaComment[]> => {
             if (!brandId) return [];
-            const qs = `socialId=${encodeURIComponent(m.socialId)}&channel=${m.channel}`;
-            try {
-                const res = await HttpWrapper.fetch(
-                    `/api/v2/brands/${brandId}/inbox/media/${encodeURIComponent(m.id)}/comments?${qs}`
-                );
-                const data = await res.json();
-                return data.comments ?? [];
-            } catch (e) {
-                console.warn("inbox media: failed to load comments", e);
-                return [];
-            }
+            return fetchMediaComments(brandId, m);
         },
         [brandId]
     );
@@ -69,14 +63,7 @@ export function useInboxMedia(): UseInboxMediaResult {
     const replyToComment = useCallback(
         async (m: InboxMedia, commentId: string, text: string) => {
             if (!brandId) return;
-            await HttpWrapper.fetch(
-                `/api/v2/brands/${brandId}/inbox/comments/${encodeURIComponent(commentId)}/reply`,
-                {
-                    method: "POST",
-                    headers: JSON_HEADERS,
-                    body: JSON.stringify({ socialId: m.socialId, channel: m.channel, text }),
-                }
-            );
+            await replyToMediaComment(brandId, m, commentId, text);
         },
         [brandId]
     );
@@ -84,14 +71,7 @@ export function useInboxMedia(): UseInboxMediaResult {
     const setCommentHidden = useCallback(
         async (m: InboxMedia, commentId: string, hidden: boolean) => {
             if (!brandId) return;
-            await HttpWrapper.fetch(
-                `/api/v2/brands/${brandId}/inbox/comments/${encodeURIComponent(commentId)}/hide`,
-                {
-                    method: "POST",
-                    headers: JSON_HEADERS,
-                    body: JSON.stringify({ socialId: m.socialId, channel: m.channel, hidden }),
-                }
-            );
+            await setMediaCommentHidden(brandId, m, commentId, hidden);
         },
         [brandId]
     );
@@ -99,11 +79,7 @@ export function useInboxMedia(): UseInboxMediaResult {
     const deleteComment = useCallback(
         async (m: InboxMedia, commentId: string) => {
             if (!brandId) return;
-            const qs = `socialId=${encodeURIComponent(m.socialId)}&channel=${m.channel}`;
-            await HttpWrapper.fetch(
-                `/api/v2/brands/${brandId}/inbox/comments/${encodeURIComponent(commentId)}?${qs}`,
-                { method: "DELETE" }
-            );
+            await deleteMediaComment(brandId, m, commentId);
         },
         [brandId]
     );

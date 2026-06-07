@@ -52,6 +52,8 @@ function toContentItem(id: string, data: IContent): ContentItem {
         destinations: data.destinations as SocialDestination[] | undefined,
         scheduleMode: data.scheduleMode,
         scheduledAt: data.scheduledAt,
+        publishedIds: data.publishedIds,
+        postedUrl: data.postedUrl,
         isArchived: data.isArchived ?? false,
         commentCount: data.commentCount ?? 0,
         createdAt: epochToIsoDate(data.createdAt),

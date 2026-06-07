@@ -60,6 +60,14 @@ export interface ContentItem extends CalendarItem {
     scheduleMode?: ScheduleMode;
     /** Epoch ms when a scheduled post should go live. */
     scheduledAt?: number;
+    /**
+     * Per-platform published media ids, set by the backend once posted
+     * (e.g. `{ instagram: "<mediaId>" }`). Mirrors `IContent.publishedIds`.
+     * Used to look up the live post's analytics + comments.
+     */
+    publishedIds?: Record<string, string>;
+    /** Permalink to the live post once posted. Mirrors `IContent.postedUrl`. */
+    postedUrl?: string;
     isArchived: boolean;
     createdAt: string;
 }

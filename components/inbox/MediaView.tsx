@@ -1,15 +1,12 @@
 import {
     faChevronLeft,
     faComment,
-    faEye,
-    faEyeSlash,
     faImages,
-    faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Image } from "expo-image";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -22,10 +19,10 @@ import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 
-import MessageComposer from "./MessageComposer";
+import MediaCommentsThread from "./MediaCommentsThread";
 import { useInboxMedia } from "./data/use-inbox-media";
-import { InboxMedia, InboxMediaComment } from "./types";
-import { channelColor, channelIcon, channelLabel, relativeTime } from "./utils";
+import { InboxMedia } from "./types";
+import { channelColor, channelIcon, channelLabel } from "./utils";
 
 const COMMENTS_WIDTH = 420;
 
@@ -35,86 +32,16 @@ const MediaView: React.FC = () => {
     const { xl } = useBreakpoints();
     const styles = useStyles(colors);
 
-    const {
-        loading,
-        media,
-        loadComments,
-        replyToComment,
-        setCommentHidden,
-        deleteComment,
-    } = useInboxMedia();
+    const { loading, media } = useInboxMedia();
 
     const [selected, setSelected] = useState<InboxMedia | undefined>(undefined);
-    const [comments, setComments] = useState<InboxMediaComment[]>([]);
-    const [commentsLoading, setCommentsLoading] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<InboxMediaComment | undefined>(undefined);
-    const [busyId, setBusyId] = useState<string | undefined>(undefined);
 
     // Keep a post selected by default on desktop.
     useEffect(() => {
         if (xl && !selected && media.length > 0) setSelected(media[0]);
     }, [xl, selected, media]);
 
-    const openMedia = useCallback(
-        async (m: InboxMedia) => {
-            setSelected(m);
-            setReplyingTo(undefined);
-            setComments([]);
-            setCommentsLoading(true);
-            const list = await loadComments(m);
-            setComments(list);
-            setCommentsLoading(false);
-        },
-        [loadComments]
-    );
-
-    const handleReply = useCallback(
-        async (text: string) => {
-            if (!selected || !replyingTo) return;
-            await replyToComment(selected, replyingTo.id, text);
-            setReplyingTo(undefined);
-        },
-        [selected, replyingTo, replyToComment]
-    );
-
-    const handleHide = useCallback(
-        async (c: InboxMediaComment) => {
-            if (!selected) return;
-            const next = !c.hidden;
-            setBusyId(c.id);
-            setComments((prev) =>
-                prev.map((x) => (x.id === c.id ? { ...x, hidden: next } : x))
-            );
-            try {
-                await setCommentHidden(selected, c.id, next);
-            } catch {
-                setComments((prev) =>
-                    prev.map((x) => (x.id === c.id ? { ...x, hidden: c.hidden } : x))
-                );
-            } finally {
-                setBusyId(undefined);
-            }
-        },
-        [selected, setCommentHidden]
-    );
-
-    const handleDelete = useCallback(
-        async (c: InboxMediaComment) => {
-            if (!selected) return;
-            setBusyId(c.id);
-            const prevList = comments;
-            setComments((prev) => prev.filter((x) => x.id !== c.id));
-            if (replyingTo?.id === c.id) setReplyingTo(undefined);
-            try {
-                await deleteComment(selected, c.id);
-            } catch {
-                setComments(prevList);
-            } finally {
-                setBusyId(undefined);
-            }
-        },
-        [selected, comments, replyingTo, deleteComment]
-    );
+    const openMedia = (m: InboxMedia) => setSelected(m);
 
     if (loading) {
         return (
@@ -200,70 +127,7 @@ const MediaView: React.FC = () => {
                 </View>
             </View>
 
-            {commentsLoading ? (
-                <View style={styles.center}>
-                    <ActivityIndicator color={colors.primary} />
-                </View>
-            ) : comments.length === 0 ? (
-                <View style={styles.center}>
-                    <Text style={styles.emptySub}>No comments on this post yet.</Text>
-                </View>
-            ) : (
-                <ScrollView style={styles.commentsList} contentContainerStyle={styles.commentsListContent}>
-                    {comments.map((c) => (
-                        <View key={c.id} style={styles.comment}>
-                            <View style={styles.commentBody}>
-                                <Text style={styles.commentAuthor}>
-                                    {c.author.handle ? `@${c.author.handle}` : c.author.name}
-                                    {c.timestamp ? (
-                                        <Text style={styles.commentTime}>  {relativeTime(c.timestamp)}</Text>
-                                    ) : null}
-                                </Text>
-                                <Text style={[styles.commentText, c.hidden && styles.commentHidden]}>
-                                    {c.text}
-                                </Text>
-                            </View>
-                            <View style={styles.commentActions}>
-                                <Pressable
-                                    onPress={() => setReplyingTo(c)}
-                                    style={styles.actionBtn}
-                                    hitSlop={6}
-                                >
-                                    <Text style={styles.actionText}>Reply</Text>
-                                </Pressable>
-                                <Pressable
-                                    onPress={() => handleHide(c)}
-                                    style={styles.actionIconBtn}
-                                    hitSlop={6}
-                                    disabled={busyId === c.id}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={c.hidden ? faEye : faEyeSlash}
-                                        size={14}
-                                        color={colors.textSecondary}
-                                    />
-                                </Pressable>
-                                <Pressable
-                                    onPress={() => handleDelete(c)}
-                                    style={styles.actionIconBtn}
-                                    hitSlop={6}
-                                    disabled={busyId === c.id}
-                                >
-                                    <FontAwesomeIcon icon={faTrash} size={14} color={colors.red} />
-                                </Pressable>
-                            </View>
-                        </View>
-                    ))}
-                </ScrollView>
-            )}
-
-            <MessageComposer
-                enabled={!!replyingTo}
-                disabledReason="Tap Reply on a comment to respond."
-                placeholder={replyingTo ? `Reply to @${replyingTo.author.handle || replyingTo.author.name}` : "Reply"}
-                hint="Replies are public and posted from your connected account."
-                onSend={handleReply}
-            />
+            <MediaCommentsThread media={selected} />
         </View>
     ) : null;
 
@@ -381,26 +245,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 postMeta: { flex: 1, gap: 2 },
                 postCaption: { fontSize: 14, fontWeight: "600", color: colors.text },
                 postSub: { fontSize: 12, color: colors.textSecondary },
-
-                commentsList: { flex: 1 },
-                commentsListContent: { padding: 14, gap: 14 },
-                comment: {
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    gap: 10,
-                    padding: 12,
-                    borderRadius: 12,
-                    backgroundColor: colors.tag,
-                },
-                commentBody: { flex: 1, gap: 3 },
-                commentAuthor: { fontSize: 13, fontWeight: "600", color: colors.text },
-                commentTime: { fontSize: 11, fontWeight: "400", color: colors.textSecondary },
-                commentText: { fontSize: 14, color: colors.text },
-                commentHidden: { color: colors.textSecondary, fontStyle: "italic", opacity: 0.6 },
-                commentActions: { flexDirection: "row", alignItems: "center", gap: 12 },
-                actionBtn: { paddingVertical: 2 },
-                actionText: { fontSize: 13, fontWeight: "600", color: colors.primary },
-                actionIconBtn: { padding: 2 },
             }),
         [colors]
     );
