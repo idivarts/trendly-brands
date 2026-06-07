@@ -1,4 +1,5 @@
 import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
+import { canAccessNav } from "@/constants/Access";
 import { useAuthContext, useLocationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
@@ -92,7 +93,7 @@ const Menu = () => {
     const styles = useMemo(() => createStyles(theme), [theme]);
     const router = useRouter();
     const { xl } = useBreakpoints();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, hasFeature, hasPrivilege } = useBrandContext();
     const { manager } = useAuthContext();
     const { isIndiaBased } = useLocationContext();
 
@@ -199,8 +200,19 @@ const Menu = () => {
             ],
         };
 
-        return [grow, influencer, manage, admin].filter((h) => h.visible);
-    }, [isIndiaBased, isChatConnected, manager?.isAdmin]);
+        // Gate every entry by the member's team feature privileges. Drop empty
+        // groups, then hide any hub left with no items (mixed hubs handled
+        // per-item — e.g. Manage Brand mixes brand_admin + social_accounts).
+        const gate = (href: string) => canAccessNav(href, hasFeature, hasPrivilege);
+        return [grow, influencer, manage, admin]
+            .map((h) => {
+                const groups = h.groups
+                    .map((g) => ({ ...g, items: g.items.filter((it) => gate(it.href as string)) }))
+                    .filter((g) => g.items.length > 0);
+                return { ...h, groups, visible: h.visible && groups.length > 0 };
+            })
+            .filter((h) => h.visible);
+    }, [isIndiaBased, isChatConnected, manager?.isAdmin, hasFeature, hasPrivilege]);
 
     // Hardware back returns to the hub home when drilled in (Android).
     useEffect(() => {

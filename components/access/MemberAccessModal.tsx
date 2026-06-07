@@ -14,9 +14,7 @@ export interface EditableMember {
     managerId: string;
     name?: string;
     email?: string;
-    role?: string;
-    teamIds?: string[];
-    overrides?: Record<string, boolean>;
+    teamId?: string;
     status: number;
 }
 
@@ -42,28 +40,28 @@ const MemberAccessModal: React.FC<MemberAccessModalProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const [role, setRole] = useState("viewer");
-    const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
-    const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+    const defaultTeamId = useMemo(
+        () => teams.find((t) => t.isDefault)?.id ?? teams[0]?.id ?? "",
+        [teams]
+    );
+    const [selectedTeamId, setSelectedTeamId] = useState("");
     const [saving, setSaving] = useState(false);
-
-    const isOwner = member?.role === "owner";
 
     useEffect(() => {
         if (!member) return;
-        setRole(member.role && member.role !== "owner" ? member.role : "viewer");
-        setSelectedTeamIds(member.teamIds ?? []);
-        setOverrides(member.overrides ?? {});
-    }, [member]);
+        setSelectedTeamId(member.teamId || defaultTeamId);
+    }, [member, defaultTeamId]);
 
     const save = async () => {
         if (!member) return;
+        if (!selectedTeamId) {
+            Toaster.error("Pick a team for this member");
+            return;
+        }
         setSaving(true);
         try {
             await updateMemberAccess(brandId, member.managerId, {
-                role,
-                teamIds: selectedTeamIds,
-                overrides,
+                teamId: selectedTeamId,
             });
             Toaster.success("Access updated");
             onSaved();
@@ -99,35 +97,21 @@ const MemberAccessModal: React.FC<MemberAccessModalProps> = ({
                     <Text style={styles.title}>{member?.name || member?.email || "Member"}</Text>
                     {member?.email ? <Text style={styles.subtitle}>{member.email}</Text> : null}
 
-                    {isOwner ? (
-                        <Text style={styles.ownerNotice}>
-                            This member is the Owner. Transfer ownership to change their role.
-                        </Text>
-                    ) : (
-                        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-                            <AccessControls
-                                theme={theme}
-                                role={role}
-                                onRoleChange={setRole}
-                                teams={teams}
-                                selectedTeamIds={selectedTeamIds}
-                                onTeamsChange={setSelectedTeamIds}
-                                overrides={overrides}
-                                onOverridesChange={setOverrides}
-                            />
-                        </ScrollView>
-                    )}
+                    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+                        <AccessControls
+                            theme={theme}
+                            teams={teams}
+                            selectedTeamId={selectedTeamId}
+                            onTeamChange={setSelectedTeamId}
+                        />
+                    </ScrollView>
 
-                    {!isOwner && (
-                        <Button mode="contained" onPress={save} style={styles.saveButton}>
-                            {saving ? <ActivityIndicator color={colors.onPrimary} /> : "Save changes"}
-                        </Button>
-                    )}
-                    {!isOwner && (
-                        <Button mode="text" onPress={remove} textColor={colors.red}>
-                            Remove from brand
-                        </Button>
-                    )}
+                    <Button mode="contained" onPress={save} style={styles.saveButton}>
+                        {saving ? <ActivityIndicator color={colors.onPrimary} /> : "Save changes"}
+                    </Button>
+                    <Button mode="text" onPress={remove} textColor={colors.red}>
+                        Remove from brand
+                    </Button>
                 </View>
             </Modal>
         </Portal>
@@ -155,11 +139,6 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         subtitle: {
             fontSize: 13,
             opacity: 0.6,
-        },
-        ownerNotice: {
-            fontSize: 13,
-            opacity: 0.7,
-            marginVertical: 12,
         },
         scroll: {
             maxHeight: 460,

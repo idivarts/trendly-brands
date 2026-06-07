@@ -1,8 +1,8 @@
-import { faComments } from "@fortawesome/free-solid-svg-icons";
+import { faComments, faImages } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
@@ -12,10 +12,13 @@ import ContactPanel from "./ContactPanel";
 import ConversationList from "./ConversationList";
 import EmptyNoMessages from "./EmptyNoMessages";
 import EmptyNoSocials from "./EmptyNoSocials";
+import MediaView from "./MediaView";
 import ThreadView from "./ThreadView";
 import { useInbox } from "./data/use-inbox";
 import { InboxConversation, InboxFilter } from "./types";
 import { matchesFilter, sortByRecency } from "./utils";
+
+type InboxMode = "messages" | "media";
 
 const LIST_WIDTH = 360;
 const CONTACT_WIDTH = 320;
@@ -36,6 +39,7 @@ const InboxView: React.FC = () => {
         markRead,
     } = useInbox();
 
+    const [mode, setMode] = useState<InboxMode>("messages");
     const [filter, setFilter] = useState<InboxFilter>("all");
     const [search, setSearch] = useState("");
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
@@ -119,10 +123,11 @@ const InboxView: React.FC = () => {
         />
     ) : null;
 
-    // ---- Mobile (single pane, drill-down) ----
+    // ---- Messages body (conversations: DMs + comment threads) ----
+    let messagesBody: React.ReactNode;
     if (!xl) {
         if (selected) {
-            return (
+            messagesBody = (
                 <View style={styles.container}>
                     {thread}
                     {showDetails ? (
@@ -135,36 +140,69 @@ const InboxView: React.FC = () => {
                     ) : null}
                 </View>
             );
+        } else if (conversations.length === 0) {
+            messagesBody = <EmptyNoMessages accounts={connectedAccounts} />;
+        } else {
+            messagesBody = <View style={styles.container}>{list}</View>;
         }
-        if (conversations.length === 0) {
-            return <EmptyNoMessages accounts={connectedAccounts} />;
-        }
-        return <View style={styles.container}>{list}</View>;
+    } else {
+        messagesBody = (
+            <View style={styles.row}>
+                <View style={[styles.listPane, { width: LIST_WIDTH }]}>{list}</View>
+                <View style={styles.threadPane}>
+                    {conversations.length === 0 ? (
+                        <EmptyNoMessages accounts={connectedAccounts} />
+                    ) : selected ? (
+                        thread
+                    ) : (
+                        <View style={styles.center}>
+                            <FontAwesomeIcon icon={faComments} size={40} color={colors.tag} />
+                            <Text style={styles.placeholder}>
+                                Select a conversation to get started
+                            </Text>
+                        </View>
+                    )}
+                </View>
+                {selected ? (
+                    <View style={[styles.contactPane, { width: CONTACT_WIDTH }]}>
+                        <ContactPanel conversation={selected} />
+                    </View>
+                ) : null}
+            </View>
+        );
     }
 
-    // ---- Desktop / tablet (multi-pane) ----
+    const tabs: { key: InboxMode; label: string; icon: typeof faComments }[] = [
+        { key: "messages", label: "Messages", icon: faComments },
+        { key: "media", label: "Media", icon: faImages },
+    ];
+
     return (
-        <View style={styles.row}>
-            <View style={[styles.listPane, { width: LIST_WIDTH }]}>{list}</View>
-            <View style={styles.threadPane}>
-                {conversations.length === 0 ? (
-                    <EmptyNoMessages accounts={connectedAccounts} />
-                ) : selected ? (
-                    thread
-                ) : (
-                    <View style={styles.center}>
-                        <FontAwesomeIcon icon={faComments} size={40} color={colors.tag} />
-                        <Text style={styles.placeholder}>
-                            Select a conversation to get started
-                        </Text>
-                    </View>
-                )}
+        <View style={styles.container}>
+            <View style={styles.modeBar}>
+                {tabs.map((t) => {
+                    const active = mode === t.key;
+                    return (
+                        <Pressable
+                            key={t.key}
+                            onPress={() => setMode(t.key)}
+                            style={[styles.modeTab, active && styles.modeTabActive]}
+                        >
+                            <FontAwesomeIcon
+                                icon={t.icon}
+                                size={15}
+                                color={active ? colors.onPrimary : colors.textSecondary}
+                            />
+                            <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
+                                {t.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
             </View>
-            {selected ? (
-                <View style={[styles.contactPane, { width: CONTACT_WIDTH }]}>
-                    <ContactPanel conversation={selected} />
-                </View>
-            ) : null}
+            <View style={styles.body}>
+                {mode === "media" ? <MediaView /> : messagesBody}
+            </View>
         </View>
     );
 };
@@ -176,6 +214,49 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 container: {
                     flex: 1,
                     backgroundColor: colors.background,
+                },
+                body: {
+                    flex: 1,
+                    backgroundColor: colors.background,
+                },
+                modeBar: {
+                    flexDirection: "row",
+                    gap: 8,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    backgroundColor: colors.background,
+                    // Sticky-header shadow downward over the body (no border).
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.06,
+                    elevation: 3,
+                    zIndex: 3,
+                },
+                modeTab: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 20,
+                    backgroundColor: colors.tag,
+                },
+                modeTabActive: {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                modeTabText: {
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                modeTabTextActive: {
+                    color: colors.onPrimary,
                 },
                 row: {
                     flex: 1,

@@ -1,6 +1,7 @@
 import { SidebarCollapsedContext, useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
+import { canAccessNav } from "@/constants/Access";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import ImageComponent from "@/shared-uis/components/image-component";
@@ -30,7 +31,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     Linking,
     Platform,
@@ -155,7 +156,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
-    const { selectedBrand, brands, setSelectedBrand } = useBrandContext();
+    const { selectedBrand, brands, setSelectedBrand, hasFeature, hasPrivilege } = useBrandContext();
     const { manager } = useAuthContext();
     const { xl } = useBreakpoints();
     const sidebarCollapsedCtx = useSidebarCollapsed();
@@ -194,7 +195,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         setBrandListExpanded(false);
     };
 
-    const contentItems = useMemo(() => CONTENT_MENU_ITEMS(theme), [theme]);
+    // Nav entries filtered by the current member's team feature privileges.
+    const navFilter = useCallback(
+        (items: Tab[]) => items.filter((t) => canAccessNav(t.href as string, hasFeature, hasPrivilege)),
+        [hasFeature, hasPrivilege]
+    );
+    const contentItems = useMemo(() => navFilter(CONTENT_MENU_ITEMS(theme)), [theme, navFilter]);
+    const manageItems = useMemo(() => navFilter(MANAGE_MENU_ITEMS(theme)), [theme, navFilter]);
+    const growthItems = useMemo(() => navFilter(GROWTH_MENU_ITEMS(theme)), [theme, navFilter]);
+    const brandDetailsItems = useMemo(() => navFilter(BRAND_DETAILS_MENU_ITEMS(theme)), [theme, navFilter]);
 
     // ─── Toggle button (bare Pressable, positioned by caller) ──────────────
     const toggleButtonBare = (
@@ -229,9 +238,9 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         // Gather all visible sections as flat groups for the collapsed view
         const groups: { items: Tab[]; proLockMap?: Record<number, boolean> }[] = [
             { items: contentItems },
-            { items: MANAGE_MENU_ITEMS(theme) },
-            { items: GROWTH_MENU_ITEMS(theme) },
-        ];
+            { items: manageItems },
+            { items: growthItems },
+        ].filter((g) => g.items.length > 0);
 
         const sidebarDividerColor = theme.dark
             ? "rgba(83, 139, 166, 0.12)"
@@ -370,7 +379,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                                 {selectedBrand?.name ?? "Brand"}
                                             </Text>
                                             <RNView style={styles.orgDropdownDivider} />
-                                            {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
+                                            {brandDetailsItems.map((tab, idx) => (
                                                 <RNView
                                                     key={`c-org-brand-${idx}`}
                                                     onTouchEnd={() => setOrgDropdownOpen(false)}
@@ -563,27 +572,31 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         showsVerticalScrollIndicator={false}
                     >
                         {/* 1. CONTENT CREATION */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Create</Text>
-                            <View style={styles.menuItems}>
-                                {contentItems.map((tab, idx) => (
-                                    <DrawerMenuItem key={`content-${idx}`} tab={tab} />
-                                ))}
+                        {contentItems.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Create</Text>
+                                <View style={styles.menuItems}>
+                                    {contentItems.map((tab, idx) => (
+                                        <DrawerMenuItem key={`content-${idx}`} tab={tab} />
+                                    ))}
+                                </View>
                             </View>
-                        </View>
+                        )}
 
                         {/* 2. MANAGE */}
-                        <View style={styles.brandDetailsSection}>
-                            <View style={styles.sectionHeaderRow}>
-                                <Text style={styles.sectionTitle}>Manage</Text>
+                        {manageItems.length > 0 && (
+                            <View style={styles.brandDetailsSection}>
+                                <View style={styles.sectionHeaderRow}>
+                                    <Text style={styles.sectionTitle}>Manage</Text>
+                                </View>
+                                <View style={styles.divider} />
+                                <View style={styles.menuItems}>
+                                    {manageItems.map((tab, idx) => (
+                                        <DrawerMenuItem key={`manage-${idx}`} tab={tab} />
+                                    ))}
+                                </View>
                             </View>
-                            <View style={styles.divider} />
-                            <View style={styles.menuItems}>
-                                {MANAGE_MENU_ITEMS(theme).map((tab, idx) => (
-                                    <DrawerMenuItem key={`manage-${idx}`} tab={tab} />
-                                ))}
-                            </View>
-                        </View>
+                        )}
 
                         {/* 3. CREDITS */}
                         {showCreditsSystem && (
@@ -663,7 +676,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 <InfluencerLedGrowth variant="expanded" />
                             </View>
                             <View style={styles.menuItems}>
-                                {GROWTH_MENU_ITEMS(theme).map((tab, idx) => (
+                                {growthItems.map((tab, idx) => (
                                     <DrawerMenuItem key={`growth-${idx}`} tab={tab} />
                                 ))}
                             </View>
@@ -703,7 +716,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         <RNView style={styles.orgWrap}>
                             {orgDropdownOpen && (
                                 <RNView style={styles.orgDropdown}>
-                                    {BRAND_DETAILS_MENU_ITEMS(theme).map((tab, idx) => (
+                                    {brandDetailsItems.map((tab, idx) => (
                                         <RNView
                                             key={`org-brand-${idx}`}
                                             onTouchEnd={() => setOrgDropdownOpen(false)}

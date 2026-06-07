@@ -1,4 +1,4 @@
-import { isLegacyRole, resolveCapability } from "@/constants/Access";
+import { FeatureKey, resolveCapability, resolvePrivilege, TeamPrivileges } from "@/constants/Access";
 import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
 import {
     IBrands,
@@ -72,17 +72,26 @@ interface BrandContextProps {
     /** The current manager's membership record for the selected brand. */
     currentMember?: CurrentMember;
     /**
-     * Whether the current member effectively holds a capability. Permissive on
-     * unknown/loading and on legacy (pre-migration) roles — the backend and
-     * Firestore rules remain the real enforcement boundary.
+     * Whether the current member's team grants `priv` under `feature`. Permissive
+     * while unknown/loading and for legacy (pre-migration) members with no team —
+     * the backend and Firestore rules remain the real enforcement boundary.
+     */
+    hasPrivilege: (feature: FeatureKey, priv: string) => boolean;
+    /**
+     * Whether the current member's team grants ANY privilege under `feature`.
+     * Used for navigation visibility (does this area show at all). Permissive
+     * while unknown/loading and for legacy members.
+     */
+    hasFeature: (feature: FeatureKey) => boolean;
+    /**
+     * Legacy capability check, mapped onto the team-privilege model. Prefer
+     * hasPrivilege() in new code.
      */
     hasCapability: (cap: string) => boolean;
 }
 
 type CurrentMember = {
-    role?: string;
-    overrides?: Record<string, boolean>;
-    teamIds?: string[];
+    teamId?: string;
     status?: number;
 };
 
@@ -98,6 +107,8 @@ const BrandContext = createContext<BrandContextProps>({
     isOnFreeTrial: true,
     isProfileLocked: (influencerId: string) => true,
     currentMember: undefined,
+    hasPrivilege: () => true,
+    hasFeature: () => true,
     hasCapability: () => true,
 });
 
@@ -120,6 +131,7 @@ export const BrandContextProvider: React.FC<
     const [loading, setLoading] = useState(true);
     const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
     const [currentMember, setCurrentMember] = useState<CurrentMember | undefined>(undefined);
+    const [teamPrivileges, setTeamPrivileges] = useState<TeamPrivileges | undefined>(undefined);
     const { manager } = useAuthContext();
     const router = useMyNavigation();
     const pathName = usePathname();
@@ -163,8 +175,8 @@ export const BrandContextProvider: React.FC<
         };
     }, [selectedBrand?.id]);
 
-    // Track the current manager's membership (role / overrides) for the selected
-    // brand so the UI can gate affordances by capability.
+    // Track the current manager's membership (the team they belong to) for the
+    // selected brand so the UI can gate affordances by feature privilege.
     useEffect(() => {
         if (!selectedBrand?.id || !manager?.id) {
             setCurrentMember(undefined);
@@ -176,6 +188,24 @@ export const BrandContextProvider: React.FC<
         });
         return () => unsubscribe();
     }, [selectedBrand?.id, manager?.id]);
+
+    // Track the privileges of the team the current member belongs to. These are
+    // what gate the UI; a member with no team (pre-migration) is treated as
+    // permissive (privileges undefined → checks fall back to allow).
+    useEffect(() => {
+        const brandId = selectedBrand?.id;
+        const teamId = currentMember?.teamId;
+        if (!brandId || !teamId) {
+            setTeamPrivileges(undefined);
+            return;
+        }
+        const teamRef = doc(FirestoreDB, "brands", brandId, "teams", teamId);
+        const unsubscribe = onSnapshot(teamRef, (snapshot) => {
+            const data = snapshot.exists() ? snapshot.data() : undefined;
+            setTeamPrivileges((data?.privileges as TeamPrivileges) ?? undefined);
+        });
+        return () => unsubscribe();
+    }, [selectedBrand?.id, currentMember?.teamId]);
 
     useEffect(() => {
         if (!manager?.id) return;
@@ -447,15 +477,33 @@ export const BrandContextProvider: React.FC<
         [selectedBrand, manager?.id]
     );
 
+    // Permissive while unknown/loading and for legacy (pre-migration) members
+    // with no team — backend + Firestore rules enforce. Mirrors the server-side
+    // transition shim.
+    const isPermissiveMember = !currentMember || !currentMember.teamId;
+
+    const hasPrivilege = useCallback(
+        (feature: FeatureKey, priv: string) => {
+            if (isPermissiveMember) return true;
+            return resolvePrivilege(teamPrivileges, feature, priv);
+        },
+        [isPermissiveMember, teamPrivileges]
+    );
+
+    const hasFeature = useCallback(
+        (feature: FeatureKey) => {
+            if (isPermissiveMember) return true;
+            return (teamPrivileges?.[feature]?.length ?? 0) > 0;
+        },
+        [isPermissiveMember, teamPrivileges]
+    );
+
     const hasCapability = useCallback(
         (cap: string) => {
-            // Permissive while unknown/loading and for legacy roles — backend +
-            // Firestore rules enforce. Mirrors the server-side transition shim.
-            if (!currentMember) return true;
-            if (isLegacyRole(currentMember.role)) return true;
-            return resolveCapability(currentMember.role, currentMember.overrides, cap);
+            if (isPermissiveMember) return true;
+            return resolveCapability(teamPrivileges, cap);
         },
-        [currentMember]
+        [isPermissiveMember, teamPrivileges]
     );
 
     const createBrand = async (brand: Partial<IBrands>) => {
@@ -599,6 +647,8 @@ export const BrandContextProvider: React.FC<
             isOnFreeTrial,
             isProfileLocked,
             currentMember,
+            hasPrivilege,
+            hasFeature,
             hasCapability,
         }),
         [
@@ -613,6 +663,8 @@ export const BrandContextProvider: React.FC<
             isProfileLocked,
             setSelectedBrandHandler,
             currentMember,
+            hasPrivilege,
+            hasFeature,
             hasCapability,
         ]
     );
