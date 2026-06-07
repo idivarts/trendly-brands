@@ -175,7 +175,7 @@ const NameSection = ({
                         </Text>
                     </View>
                 ) : (
-                    <InviteToCampaignButton label="Invite Now" openModal={openModal} influencerIds={[item.id]} influencerName={item.name} />
+                    <InviteToCampaignButton label="Invite Now" openModal={openModal} influencerIds={[item.id]} influencerName={item.name} isDiscover={item.isDiscover === true} />
                 )}
             </View>
         </View>

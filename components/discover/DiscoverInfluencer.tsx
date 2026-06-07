@@ -850,6 +850,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             openModal={openModal}
                                             influencerIds={[selectedInfluencer.id]}
                                             influencerName={selectedInfluencer.name}
+                                            isDiscover={selectedInfluencer.isDiscover === true}
                                         />
                                         {manager?.isAdmin && (
                                             <Menu
