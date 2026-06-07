@@ -1,8 +1,8 @@
-import { faComments, faImages } from "@fortawesome/free-solid-svg-icons";
+import { faComments } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
@@ -15,15 +15,18 @@ import EmptyNoSocials from "./EmptyNoSocials";
 import MediaView from "./MediaView";
 import ThreadView from "./ThreadView";
 import { useInbox } from "./data/use-inbox";
-import { InboxConversation, InboxFilter } from "./types";
+import { InboxConversation, InboxFilter, InboxMode } from "./types";
 import { matchesFilter, sortByRecency } from "./utils";
 
-type InboxMode = "messages" | "media";
+interface InboxViewProps {
+    /** Active section, controlled by the page-header toggle. */
+    mode: InboxMode;
+}
 
 const LIST_WIDTH = 360;
 const CONTACT_WIDTH = 320;
 
-const InboxView: React.FC = () => {
+const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
@@ -39,7 +42,6 @@ const InboxView: React.FC = () => {
         markRead,
     } = useInbox();
 
-    const [mode, setMode] = useState<InboxMode>("messages");
     const [filter, setFilter] = useState<InboxFilter>("all");
     const [search, setSearch] = useState("");
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
@@ -172,37 +174,9 @@ const InboxView: React.FC = () => {
         );
     }
 
-    const tabs: { key: InboxMode; label: string; icon: typeof faComments }[] = [
-        { key: "messages", label: "Messages", icon: faComments },
-        { key: "media", label: "Media", icon: faImages },
-    ];
-
     return (
-        <View style={styles.container}>
-            <View style={styles.modeBar}>
-                {tabs.map((t) => {
-                    const active = mode === t.key;
-                    return (
-                        <Pressable
-                            key={t.key}
-                            onPress={() => setMode(t.key)}
-                            style={[styles.modeTab, active && styles.modeTabActive]}
-                        >
-                            <FontAwesomeIcon
-                                icon={t.icon}
-                                size={15}
-                                color={active ? colors.onPrimary : colors.textSecondary}
-                            />
-                            <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
-                                {t.label}
-                            </Text>
-                        </Pressable>
-                    );
-                })}
-            </View>
-            <View style={styles.body}>
-                {mode === "media" ? <MediaView /> : messagesBody}
-            </View>
+        <View style={styles.body}>
+            {mode === "media" ? <MediaView /> : messagesBody}
         </View>
     );
 };
@@ -218,45 +192,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 body: {
                     flex: 1,
                     backgroundColor: colors.background,
-                },
-                modeBar: {
-                    flexDirection: "row",
-                    gap: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    backgroundColor: colors.background,
-                    // Sticky-header shadow downward over the body (no border).
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.06,
-                    elevation: 3,
-                    zIndex: 3,
-                },
-                modeTab: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    paddingHorizontal: 16,
-                    paddingVertical: 9,
-                    borderRadius: 20,
-                    backgroundColor: colors.tag,
-                },
-                modeTabActive: {
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 12,
-                    shadowOpacity: 0.35,
-                    elevation: 4,
-                },
-                modeTabText: {
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                },
-                modeTabTextActive: {
-                    color: colors.onPrimary,
                 },
                 row: {
                     flex: 1,

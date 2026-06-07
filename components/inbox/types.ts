@@ -17,6 +17,9 @@ export type ConversationKind = "dm" | "comment";
 /** Quick filters shown above the conversation list. */
 export type InboxFilter = "all" | "unread" | "dm" | "comment";
 
+/** Top-level inbox section: the conversation feed vs. the media browser. */
+export type InboxMode = "messages" | "media";
+
 /** Who authored a given message/reply. */
 export type MessageAuthor = "contact" | "business";
 
