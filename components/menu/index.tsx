@@ -1,6 +1,6 @@
 import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
 import { canAccessNav } from "@/constants/Access";
-import { useAuthContext, useLocationContext } from "@/contexts";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
@@ -93,9 +93,8 @@ const Menu = () => {
     const styles = useMemo(() => createStyles(theme), [theme]);
     const router = useRouter();
     const { xl } = useBreakpoints();
-    const { selectedBrand, hasFeature, hasPrivilege } = useBrandContext();
+    const { selectedBrand, hasFeature, hasPrivilege, isIndiaBased } = useBrandContext();
     const { manager } = useAuthContext();
-    const { isIndiaBased } = useLocationContext();
 
     const [activeHub, setActiveHub] = useState<HubKey | null>(null);
 
@@ -105,12 +104,13 @@ const Menu = () => {
     const hubs = useMemo<Hub[]>(() => {
         // Grow mirrors the web "Influencer Led Growth" sub-drawer plus the
         // direct Growth links — Discovery / Execution / Paid / Programs.
-        const discoveryItems: Item[] = isIndiaBased
-            ? [
-                { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover", pro: true },
-                { id: "collaborations", icon: faStar, title: "Collaboration Requests", href: "/collaborations" },
-            ]
-            : [];
+        // Discover + Collaboration Requests show for everyone. For non-India the
+        // Discover route renders a managed-sourcing landing (Hire Us) instead of
+        // the discovery grid, so it isn't gated behind Pro there.
+        const discoveryItems: Item[] = [
+            { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover", pro: isIndiaBased },
+            { id: "collaborations", icon: faStar, title: "Collaboration Requests", href: "/collaborations" },
+        ];
 
         const executionItems: Item[] = [
             { id: "messages", icon: faComment, title: "Messages", href: "/messages", locked: isChatConnected ? undefined : chatLockReason },

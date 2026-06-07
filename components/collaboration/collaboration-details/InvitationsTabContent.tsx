@@ -1,5 +1,6 @@
 import InvitationCard from "@/components/card/collaboration-details/invitation-card";
 import { InvitationCard as ProfileInvitationCard } from "@/components/card/profile-modal/invitation-card";
+import CollaborationLinkShare from "@/components/collaboration/collaboration-details/CollaborationLinkShare";
 import Discover from "@/components/discover/Discover";
 import InfluencerActionModal from "@/components/explore-influencers/InfluencerActionModal";
 import { Text, View } from "@/components/theme/Themed";
@@ -67,7 +68,7 @@ const InvitationsTabContent = (props: any) => {
 
     const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
     const { manager } = useAuthContext();
-    const { isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { isOnFreeTrial, isProfileLocked, isIndiaBased } = useBrandContext();
 
     // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
     // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -170,6 +171,19 @@ const InvitationsTabContent = (props: any) => {
     //   );
     // }
 
+    // Non-India brands have no in-app discovery; the entire Send Invitations tab
+    // is a polished copy-link page so they can invite creators via a shared link.
+    if (!isIndiaBased) {
+        return (
+            <View style={styles.root}>
+                <CollaborationLinkShare
+                    collaborationId={collaborationId}
+                    variant="page"
+                />
+            </View>
+        );
+    }
+
     if (influencers.length === 0 && !isLoading) {
         return (
             <EmptyState
@@ -188,6 +202,12 @@ const InvitationsTabContent = (props: any) => {
 
     return (
         <View style={styles.root}>
+            {/* Brands can also invite creators not shown here by sharing the
+                collaboration link directly. */}
+            <CollaborationLinkShare
+                collaborationId={collaborationId}
+                variant="inline"
+            />
             {/* Toggle Bar */}
             {/* <View
         style={{

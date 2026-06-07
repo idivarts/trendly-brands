@@ -16,6 +16,7 @@ import {
 } from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
+import { detectCountryCode, isIndiaBrand } from "@/utils/country";
 import { usePathname } from "expo-router";
 import {
     addDoc,
@@ -88,6 +89,13 @@ interface BrandContextProps {
      * hasPrivilege() in new code.
      */
     hasCapability: (cap: string) => boolean;
+    /**
+     * Whether the selected brand is India-based, derived from its stored
+     * country (missing => India). Source of truth for India-only gating
+     * (discovery, in-app invites, Razorpay payments). The country itself is
+     * never surfaced in the UI.
+     */
+    isIndiaBased: boolean;
 }
 
 type CurrentMember = {
@@ -110,6 +118,7 @@ const BrandContext = createContext<BrandContextProps>({
     hasPrivilege: () => true,
     hasFeature: () => true,
     hasCapability: () => true,
+    isIndiaBased: true,
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -510,7 +519,12 @@ export const BrandContextProvider: React.FC<
         if (!manager) return null;
 
         const brandRef = collection(FirestoreDB, "brands");
-        const brandDoc = await addDoc(brandRef, brand);
+        // Capture the brand's country silently (no UI). Source of truth for
+        // India-only gating. Don't overwrite an explicitly provided value.
+        const brandDoc = await addDoc(brandRef, {
+            country: detectCountryCode(),
+            ...brand,
+        });
 
         const managerRef = doc(
             FirestoreDB,
@@ -545,6 +559,9 @@ export const BrandContextProvider: React.FC<
             name: "",
             creationTime: Date.now(),
             isBillingDisabled: false,
+            // Capture the brand's country silently (no UI) at draft creation so
+            // it survives the later finalize step. Source of truth for gating.
+            country: detectCountryCode(),
             ...brand,
             // A draft is intentionally NOT provisioned on the backend yet.
             onboardingComplete: false,
@@ -634,6 +651,13 @@ export const BrandContextProvider: React.FC<
         [brands]
     );
 
+    // India-only gating derives from the selected brand's stored country.
+    // Missing country (all legacy brands) => treated as India.
+    const isIndiaBased = useMemo(
+        () => isIndiaBrand(selectedBrand),
+        [selectedBrand]
+    );
+
     const ctxValue = useMemo(
         () => ({
             brands: visibleBrands,
@@ -650,6 +674,7 @@ export const BrandContextProvider: React.FC<
             hasPrivilege,
             hasFeature,
             hasCapability,
+            isIndiaBased,
         }),
         [
             visibleBrands,
@@ -666,6 +691,7 @@ export const BrandContextProvider: React.FC<
             hasPrivilege,
             hasFeature,
             hasCapability,
+            isIndiaBased,
         ]
     );
 

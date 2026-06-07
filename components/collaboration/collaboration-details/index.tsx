@@ -55,7 +55,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
     const styles = useMemo(() => useStyles(theme), [theme]);
-    const { isOnFreeTrial, hasCapability } = useBrandContext();
+    const { isOnFreeTrial, hasCapability, isIndiaBased } = useBrandContext();
     const { openModal } = useConfirmationModel();
     const nav = useMyNavigation();
     const expoRouter = useRouter();
@@ -235,16 +235,22 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 <InvitationsTabContent key={"invitations"} pageID={pageID} />
             ),
         },
-        {
-            id: "Invitations-Sent",
-            title: "Invited Members",
-            component: (
-                <InvitedMemberTabContent
-                    key={"invited-members"}
-                    pageID={pageID}
-                />
-            ),
-        },
+        // "Invited Members" lists in-app invitations, which only exist for India
+        // brands (non-India brands invite purely via shared link). Hide it there.
+        ...(isIndiaBased
+            ? [
+                {
+                    id: "Invitations-Sent",
+                    title: "Invited Members",
+                    component: (
+                        <InvitedMemberTabContent
+                            key={"invited-members"}
+                            pageID={pageID}
+                        />
+                    ),
+                },
+            ]
+            : []),
     ];
 
     useEffect(() => {

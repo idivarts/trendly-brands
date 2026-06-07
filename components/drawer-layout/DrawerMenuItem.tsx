@@ -22,6 +22,12 @@ export type Tab = {
     label: string;
     showUnreadCount?: boolean;
     pro?: boolean;
+    /**
+     * When set, the item is disabled (navigation blocked) and shows this reason
+     * as a small lock hint — e.g. "Connect chat to unlock". Mirrors the mobile
+     * menu's `locked` behaviour.
+     */
+    locked?: string;
 };
 
 type DrawerMenuItemProps = {
@@ -40,6 +46,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
 
     // Avoid marking blank href items as active
     const isActive = !!tab.href && pathname.startsWith(tab.href.toString());
+    const isLocked = !!tab.locked;
     const colorSet = Colors(theme);
     const inactiveBg = drawerColors?.inactiveBg ?? (drawerColors ? colorSet.drawerBackground : colorSet.background);
     const inactiveText = drawerColors ? drawerColors.inactiveColor : colorSet.text;
@@ -57,7 +64,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     if (isCollapsed) {
         return (
             <Pressable
-                onPress={() => { if (tab.href) router.push(tab.href); }}
+                onPress={() => { if (isLocked) return; if (tab.href) router.push(tab.href); }}
                 onHoverIn={() => setHovered(true)}
                 onHoverOut={() => setHovered(false)}
                 android_ripple={{ color: colorSet.primary + "22" }}
@@ -105,6 +112,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     return (
         <Pressable
             onPress={() => {
+                if (isLocked) return;
                 if (tab.href) router.push(tab.href);
             }}
             onHoverIn={() => setHovered(true)}
@@ -143,7 +151,9 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                     style={[
                         styles.label,
                         {
-                            color: isActive ? activeText : hovered ? hoverText : inactiveText,
+                            color: isLocked
+                                ? colorSet.textSecondary
+                                : isActive ? activeText : hovered ? hoverText : inactiveText,
                             fontWeight: isActive ? "600" : "500",
                         },
                     ]}
@@ -151,7 +161,30 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
                 >
                     {tab.label}
                 </Text>
-                {proLock && (
+                {isLocked && (
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            backgroundColor: colorSet.border,
+                            borderRadius: 6,
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            marginLeft: 6,
+                        }}
+                    >
+                        <FontAwesomeIcon
+                            icon={faLock}
+                            size={10}
+                            color={colorSet.textSecondary}
+                            style={{ marginRight: 4 }}
+                        />
+                        <Text style={{ color: colorSet.textSecondary, fontSize: 11, fontWeight: "500" }}>
+                            {tab.locked}
+                        </Text>
+                    </View>
+                )}
+                {!isLocked && proLock && (
                     <View
                         style={{
                             flexDirection: "row",
