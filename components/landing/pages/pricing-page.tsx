@@ -7,6 +7,7 @@ import BrandSwitcher, { OpenBrandSwitcher } from "@/components/ui/brand-switcher
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
+import { IOrgBilling } from "@/shared-libs/firestore/trendly-pro/models/organizations";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
@@ -39,6 +40,7 @@ export default function PricingPage() {
     const colors = Colors(theme);
 
     const [myBrand, setMyBrand] = useState(selectedBrand)
+    const [orgBilling, setOrgBilling] = useState<IOrgBilling | undefined>(undefined)
     const [loading, setLoading] = useState(false)
     const [link, setlink] = useState<number | undefined>(undefined)
     const [planLinks, setPlanLinks] = useState(["", ""])
@@ -122,17 +124,31 @@ export default function PricingPage() {
         }
     }, [selectedBrand])
 
+    // Subscribe to the parent org's billing — billing moved Brand -> Org and is
+    // the basis for the "already subscribed, bounce to /discover" redirect.
+    useEffect(() => {
+        const orgId = myBrand?.organizationId
+        if (!orgId) {
+            setOrgBilling(undefined)
+            return
+        }
+        const unsub = onSnapshot(doc(FirestoreDB, "organizations", orgId), (snap) => {
+            const data = snap.data() as { billing?: IOrgBilling } | undefined
+            setOrgBilling(data?.billing)
+        })
+        return () => unsub()
+    }, [myBrand?.organizationId])
+
     const handleFocus = async () => {
         Console.log("Handling Focus")
-        if (!myBrand)
-            return
-        if (myBrand.billing?.status == ModelStatus.Accepted)
+        if (!myBrand) return
+        if (orgBilling?.status == ModelStatus.Accepted)
             router.resetAndNavigate("/discover")
     }
 
     useEffect(() => {
         handleFocus()
-    }, [myBrand])
+    }, [myBrand, orgBilling])
 
 
     const handleSubmit = (isGrowthPlan: boolean) => {

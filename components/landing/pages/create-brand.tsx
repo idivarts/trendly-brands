@@ -82,7 +82,6 @@ export default function CreateBrandPage() {
                     phone: phone
                 },
                 age: brandAge,
-                isBillingDisabled: false,
                 creationTime: Date.now()
             }
             const brand = await createBrand(brandObj)

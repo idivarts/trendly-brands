@@ -6,6 +6,7 @@ import MediaStage from "@/components/contents/detail/MediaStage";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
+import PostPerformance from "@/components/contents/PostPerformance";
 import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
@@ -693,6 +694,13 @@ const CreateContentScreen = () => {
                                     timeOfPosting={timeOfPosting}
                                     onEdit={() => setShowPublishModal(true)}
                                 />
+                            </View>
+                        ) : null}
+
+                        {/* ── Post performance (live analytics + comments) ────── */}
+                        {status === "posted" && seedItem ? (
+                            <View style={styles.section}>
+                                <PostPerformance content={seedItem} />
                             </View>
                         ) : null}
 

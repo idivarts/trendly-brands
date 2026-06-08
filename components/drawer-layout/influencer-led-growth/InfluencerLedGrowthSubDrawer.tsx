@@ -1,6 +1,8 @@
 import { SidebarCollapsedContext, useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
+import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import Colors from "@/shared-uis/constants/Colors";
 import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -26,9 +28,12 @@ const InfluencerLedGrowthSubDrawer: React.FC = () => {
     const sidebarCtx = useSidebarCollapsed();
     const { subDrawerKind, closeSubDrawer } = sidebarCtx;
     const isOpen = subDrawerKind === "ilg";
-    const { selectedBrand } = useBrandContext();
+    const { isIndiaBased } = useBrandContext();
+    const { selectedOrgBilling } = useOrganizationContext();
+    const { manager } = useAuthContext();
+    const isChatConnected = !!manager?.isChatConnected;
 
-    const planKey = selectedBrand?.billing?.planKey || "";
+    const planKey = selectedOrgBilling?.planKey || "";
     const mutedColor = (colors as any).drawerTextMuted ?? (theme.dark ? colors.text : "#506878");
 
     // Close on Escape (web keyboard affordance).
@@ -44,7 +49,7 @@ const InfluencerLedGrowthSubDrawer: React.FC = () => {
 
     if (!isOpen) return null;
 
-    const segments = INFLUENCER_LED_GROWTH_SEGMENTS(theme);
+    const segments = INFLUENCER_LED_GROWTH_SEGMENTS(theme, isChatConnected, isIndiaBased);
 
     return (
         <View style={styles.subDrawer}>

@@ -31,10 +31,12 @@ import { doc, getDoc } from "firebase/firestore";
 import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
+import { acknowledgeSelfManagedPayment } from "./api/payment-pending.api";
 import { getShipmentStatus } from "./api/shipment-pending.api";
 import { requestDeliverableWithUX } from "./api/video-pending.api";
 import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
 import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
+import AcknowledgeSelfManagedPaymentBottomSheet from "./modals/AcknowledgeSelfManagedPaymentBottomSheet";
 import ApproveVideoReleaseBottomSheet from "./modals/ApproveVideoReleaseBottomSheet";
 import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
 import KycBlockedStartContractModal from "./modals/KycBlockedStartContractModal";
@@ -122,6 +124,8 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
     const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
     const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
+    const [showAckSelfManagedSheet, setShowAckSelfManagedSheet] = useState(false);
+    const [ackSelfManagedLoading, setAckSelfManagedLoading] = useState(false);
     const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
     const [showRaiseDisputeModal, setShowRaiseDisputeModal] = useState(false);
     const [showRequestCancellationModal, setShowRequestCancellationModal] = useState(false);
@@ -256,7 +260,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const { hasCapability } = useBrandContext();
+    const { hasCapability, isIndiaBased } = useBrandContext();
     // Funding a contract requires the fund_contracts capability. Gate every
     // payment entry point through this guard; the backend also enforces it.
     const guardFund = useCallback(
@@ -287,6 +291,13 @@ const ActionContainer: FC<ActionContainerProps> = ({
     }, []);
 
     const handleStartContractPress = useCallback(() => {
+        // Non-India brands settle off-platform: no Razorpay, no influencer KYC
+        // gate. Show the acknowledge sheet and advance on confirmation.
+        if (!isIndiaBased) {
+            setShowAckSelfManagedSheet(true);
+            return;
+        }
+
         // KYC gate: prefetch order side-effects if any, then show blocking modal (no payment summary).
         if (kycBlocked) {
             void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
@@ -298,6 +309,7 @@ const ActionContainer: FC<ActionContainerProps> = ({
         openStartContractPaymentSheet();
     }, [
         handlePendingPayment,
+        isIndiaBased,
         kycBlocked,
         openStartContractPaymentSheet,
         showContinueContractPayment,
@@ -307,6 +319,21 @@ const ActionContainer: FC<ActionContainerProps> = ({
         setShowStartContractPaymentSheet(false);
         await handlePendingPayment();
     }, [handlePendingPayment]);
+
+    const handleAcknowledgeSelfManaged = useCallback(async () => {
+        setAckSelfManagedLoading(true);
+        try {
+            await acknowledgeSelfManagedPayment({ contractId: contractIdForApi });
+            setShowAckSelfManagedSheet(false);
+            Toaster.success("Contract started");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ?? "Could not start the contract");
+        } finally {
+            setAckSelfManagedLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
 
     const handleGetDeliveryStatus = useCallback(async () => {
         setDeliveryStatusLoading(true);
@@ -935,6 +962,21 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     applicationQuotation ?? contract.payment?.amount
                 )}
                 paymentAmountLabel={formatContractMoneyLabel(
+                    applicationQuotation ?? contract.payment?.amount
+                )}
+            />
+            <AcknowledgeSelfManagedPaymentBottomSheet
+                visible={showAckSelfManagedSheet}
+                onClose={() => setShowAckSelfManagedSheet(false)}
+                onConfirm={() => {
+                    void handleAcknowledgeSelfManaged();
+                }}
+                confirmLoading={ackSelfManagedLoading}
+                influencerName={userData.name}
+                influencerHandle={formatInfluencerHandleFromUser(userData.primarySocial)}
+                influencerProfileImageUrl={userData.profileImage}
+                collaborationTitle={collaborationData?.name ?? "Collaboration"}
+                contractBudgetLabel={formatContractMoneyLabel(
                     applicationQuotation ?? contract.payment?.amount
                 )}
             />

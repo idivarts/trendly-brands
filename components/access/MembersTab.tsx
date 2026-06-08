@@ -1,6 +1,5 @@
 import { Text, View } from "@/components/theme/Themed";
 import MembersModal from "@/components/ui/modal/MembersModal";
-import { roleLabel } from "@/constants/Access";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { Console } from "@/shared-libs/utils/console";
@@ -51,9 +50,7 @@ const MembersTab: React.FC<MembersTabProps> = ({ showInviteModal, onCloseInvite 
                         managerId: m.id,
                         name: profile.name,
                         email: profile.email,
-                        role: data.role,
-                        teamIds: data.teamIds ?? [],
-                        overrides: data.overrides ?? {},
+                        teamId: data.teamId,
                         status: data.status ?? 0,
                         profileImage: profile.profileImage,
                     } as EditableMember & { profileImage?: string };
@@ -102,7 +99,9 @@ const MembersTab: React.FC<MembersTabProps> = ({ showInviteModal, onCloseInvite 
                     </View>
                 ) : null}
                 <View style={styles.roleBadge}>
-                    <Text style={styles.roleBadgeText}>{roleLabel(item.role)}</Text>
+                    <Text style={styles.roleBadgeText}>
+                        {teams.find((t) => t.id === item.teamId)?.name ?? "No team"}
+                    </Text>
                 </View>
             </View>
         </Pressable>
@@ -223,7 +222,7 @@ function createStyles(colors: ReturnType<typeof Colors>, xl: boolean, width: num
         },
         pendingText: {
             fontSize: 11,
-            color: colors.orange,
+            color: colors.yellow,
             fontWeight: "600",
         },
     });

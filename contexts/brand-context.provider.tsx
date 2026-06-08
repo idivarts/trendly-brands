@@ -1,10 +1,9 @@
-import { isLegacyRole, resolveCapability } from "@/constants/Access";
+import { FeatureKey, resolveCapability, resolvePrivilege, TeamPrivileges } from "@/constants/Access";
 import { IS_MONETIZATION_DONE } from "@/shared-constants/app";
 import {
     IBrands,
     IBrandsMembers,
 } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -16,6 +15,7 @@ import {
 } from "@/shared-uis/components/ProfileModal/Profile-Modal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Brand } from "@/types/Brand";
+import { detectCountryCode, isIndiaBrand } from "@/utils/country";
 import { usePathname } from "expo-router";
 import {
     addDoc,
@@ -42,11 +42,15 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
 
 interface BrandContextProps {
+    // Finalized brands only (drafts hidden) — used by most screens.
     brands: Brand[];
+    // Every brand the user can access, INCLUDING mid-onboarding drafts. Used by
+    // the brand switcher so it matches the Organizations page (which lists every
+    // org regardless of brand state).
+    allBrands: Brand[];
     createBrand: (
         brand: Partial<IBrands>
     ) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
@@ -67,27 +71,43 @@ interface BrandContextProps {
     setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
     updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
     loading: boolean;
-    isOnFreeTrial?: boolean;
     isProfileLocked: (influencerId: string) => boolean;
     /** The current manager's membership record for the selected brand. */
     currentMember?: CurrentMember;
     /**
-     * Whether the current member effectively holds a capability. Permissive on
-     * unknown/loading and on legacy (pre-migration) roles — the backend and
-     * Firestore rules remain the real enforcement boundary.
+     * Whether the current member's team grants `priv` under `feature`. Permissive
+     * while unknown/loading and for legacy (pre-migration) members with no team —
+     * the backend and Firestore rules remain the real enforcement boundary.
+     */
+    hasPrivilege: (feature: FeatureKey, priv: string) => boolean;
+    /**
+     * Whether the current member's team grants ANY privilege under `feature`.
+     * Used for navigation visibility (does this area show at all). Permissive
+     * while unknown/loading and for legacy members.
+     */
+    hasFeature: (feature: FeatureKey) => boolean;
+    /**
+     * Legacy capability check, mapped onto the team-privilege model. Prefer
+     * hasPrivilege() in new code.
      */
     hasCapability: (cap: string) => boolean;
+    /**
+     * Whether the selected brand is India-based, derived from its stored
+     * country (missing => India). Source of truth for India-only gating
+     * (discovery, in-app invites, Razorpay payments). The country itself is
+     * never surfaced in the UI.
+     */
+    isIndiaBased: boolean;
 }
 
 type CurrentMember = {
-    role?: string;
-    overrides?: Record<string, boolean>;
-    teamIds?: string[];
+    teamId?: string;
     status?: number;
 };
 
 const BrandContext = createContext<BrandContextProps>({
     brands: [],
+    allBrands: [],
     createBrand: () => Promise.resolve(null),
     createDraftBrand: () => Promise.resolve(null),
     finalizeBrand: () => Promise.resolve(),
@@ -95,10 +115,12 @@ const BrandContext = createContext<BrandContextProps>({
     setSelectedBrand: () => { },
     updateBrand: () => Promise.resolve(),
     loading: true,
-    isOnFreeTrial: true,
     isProfileLocked: (influencerId: string) => true,
     currentMember: undefined,
+    hasPrivilege: () => true,
+    hasFeature: () => true,
     hasCapability: () => true,
+    isIndiaBased: true,
 });
 
 export const useBrandContext = () => useContext(BrandContext);
@@ -115,11 +137,12 @@ const getManagerBrandsCacheKey = (managerId: string) =>
 
 export const BrandContextProvider: React.FC<
     PropsWithChildren & { restrictForPayment?: boolean }
-> = ({ children, restrictForPayment = true }) => {
+> = ({ children }) => {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
     const [currentMember, setCurrentMember] = useState<CurrentMember | undefined>(undefined);
+    const [teamPrivileges, setTeamPrivileges] = useState<TeamPrivileges | undefined>(undefined);
     const { manager } = useAuthContext();
     const router = useMyNavigation();
     const pathName = usePathname();
@@ -163,8 +186,8 @@ export const BrandContextProvider: React.FC<
         };
     }, [selectedBrand?.id]);
 
-    // Track the current manager's membership (role / overrides) for the selected
-    // brand so the UI can gate affordances by capability.
+    // Track the current manager's membership (the team they belong to) for the
+    // selected brand so the UI can gate affordances by feature privilege.
     useEffect(() => {
         if (!selectedBrand?.id || !manager?.id) {
             setCurrentMember(undefined);
@@ -176,6 +199,24 @@ export const BrandContextProvider: React.FC<
         });
         return () => unsubscribe();
     }, [selectedBrand?.id, manager?.id]);
+
+    // Track the privileges of the team the current member belongs to. These are
+    // what gate the UI; a member with no team (pre-migration) is treated as
+    // permissive (privileges undefined → checks fall back to allow).
+    useEffect(() => {
+        const brandId = selectedBrand?.id;
+        const teamId = currentMember?.teamId;
+        if (!brandId || !teamId) {
+            setTeamPrivileges(undefined);
+            return;
+        }
+        const teamRef = doc(FirestoreDB, "brands", brandId, "teams", teamId);
+        const unsubscribe = onSnapshot(teamRef, (snapshot) => {
+            const data = snapshot.exists() ? snapshot.data() : undefined;
+            setTeamPrivileges((data?.privileges as TeamPrivileges) ?? undefined);
+        });
+        return () => unsubscribe();
+    }, [selectedBrand?.id, currentMember?.teamId]);
 
     useEffect(() => {
         if (!manager?.id) return;
@@ -257,6 +298,45 @@ export const BrandContextProvider: React.FC<
                     }
                 });
 
+                // Union in brands from organizations the manager belongs to, so
+                // the brand switcher matches the Organizations page (org
+                // membership grants access to the org's brands). Without this, a
+                // brand that exists in an org but lacks a per-brand member doc is
+                // invisible in the switcher while still showing on the org page.
+                try {
+                    const orgMembersSnap = await getDocs(
+                        query(
+                            collectionGroup(FirestoreDB, "orgMembers"),
+                            where("managerId", "==", manager.id)
+                        )
+                    );
+                    const orgIds = Array.from(
+                        new Set(
+                            orgMembersSnap.docs
+                                .map((d) => d.ref.parent.parent?.id)
+                                .filter((x): x is string => !!x)
+                        )
+                    );
+                    for (let i = 0; i < orgIds.length; i += 10) {
+                        const chunk = orgIds.slice(i, i + 10);
+                        const orgsSnap = await getDocs(
+                            query(
+                                collection(FirestoreDB, "organizations"),
+                                where(documentId(), "in", chunk)
+                            )
+                        );
+                        orgsSnap.docs.forEach((o) => {
+                            const data = o.data() as any;
+                            if (data?.deletedAt) return;
+                            (data?.brandIds as string[] | undefined)?.forEach((bid) =>
+                                brandIds.add(bid)
+                            );
+                        });
+                    }
+                } catch (e) {
+                    Console.log("Failed to union organization brands", e);
+                }
+
                 if (brandIds.size === 0) {
                     Console.log("No brands associated with this manager");
                     setBrands([]);
@@ -264,59 +344,56 @@ export const BrandContextProvider: React.FC<
                     return;
                 }
 
-                const brandsCollection = collection(FirestoreDB, "brands");
-                const brandsQuery = query(
-                    brandsCollection,
-                    where(documentId(), "in", Array.from(brandIds))
-                );
-
-                await getDocs(brandsQuery).then(async (brandsSnapshot) => {
-                    const fetchedBrands: Brand[] = [];
-                    brandsSnapshot.docs.forEach((brandDoc) => {
-                        fetchedBrands.push({
-                            ...(brandDoc.data() as Brand),
-                            id: brandDoc.id,
-                        });
+                // Fetch all brand docs, chunked by 10 to respect Firestore's
+                // `in` query limit (membership + org brands can exceed it).
+                const idList = Array.from(brandIds);
+                const fetchedBrands: Brand[] = [];
+                for (let i = 0; i < idList.length; i += 10) {
+                    const chunk = idList.slice(i, i + 10);
+                    const snap = await getDocs(
+                        query(collection(FirestoreDB, "brands"), where(documentId(), "in", chunk))
+                    );
+                    snap.docs.forEach((brandDoc) => {
+                        fetchedBrands.push({ ...(brandDoc.data() as Brand), id: brandDoc.id });
                     });
+                }
 
-                    setBrands(fetchedBrands);
+                setBrands(fetchedBrands);
 
-                    let finalSelectedBrand: Brand | undefined = selectedBrandRef.current;
+                if (fetchedBrands.length > 0) {
+                    const persistedSelectedBrandId =
+                        (await PersistentStorage.get("selectedBrandId")) || undefined;
 
-                    if (fetchedBrands.length > 0) {
-                        const persistedSelectedBrandId =
-                            (await PersistentStorage.get("selectedBrandId")) || undefined;
-                        Console.log(
-                            "Selected Brand ID from storage:",
-                            persistedSelectedBrandId
-                        );
+                    const isFinalized = (b?: Brand) => !!b && b.onboardingComplete !== false;
+                    const refBrand = fetchedBrands.find(
+                        (brand) => brand.id === selectedBrandRef.current?.id
+                    );
+                    const persistedBrand = fetchedBrands.find(
+                        (brand) => brand.id === persistedSelectedBrandId
+                    );
+                    const firstFinalized = fetchedBrands.find(
+                        (brand) => brand.onboardingComplete !== false
+                    );
 
-                        const resolvedSelectedBrand =
-                            fetchedBrands.find(
-                                (brand) => brand.id === selectedBrandRef.current?.id
-                            ) ||
-                            fetchedBrands.find(
-                                (brand) => brand.id === persistedSelectedBrandId
-                            ) ||
-                            // Prefer a finalized brand; fall back to a draft only
-                            // when that's all there is (so onboarding can resume).
-                            fetchedBrands.find(
-                                (brand) => brand.onboardingComplete !== false
-                            ) ||
-                            fetchedBrands[0];
+                    // Always prefer a FINALIZED brand (ref → persisted → any).
+                    // A draft is only selected when the user has no finalized
+                    // brand at all (so first-time onboarding can resume) —
+                    // otherwise a stray draft id in ref/storage would wrongly
+                    // bounce an onboarded user back to the onboarding chat.
+                    const resolvedSelectedBrand =
+                        (isFinalized(refBrand) ? refBrand : undefined) ||
+                        (isFinalized(persistedBrand) ? persistedBrand : undefined) ||
+                        firstFinalized ||
+                        refBrand ||
+                        persistedBrand ||
+                        fetchedBrands[0];
 
-                        finalSelectedBrand = resolvedSelectedBrand;
-
-                        if (resolvedSelectedBrand.id !== selectedBrandRef.current?.id) {
-                            await setSelectedBrandHandler(resolvedSelectedBrand, false);
-                        }
-                    } else {
-                        finalSelectedBrand = undefined;
-                        if (selectedBrandRef.current) {
-                            await setSelectedBrandHandler(undefined, false);
-                        }
+                    if (resolvedSelectedBrand.id !== selectedBrandRef.current?.id) {
+                        await setSelectedBrandHandler(resolvedSelectedBrand, false);
                     }
-                });
+                } else if (selectedBrandRef.current) {
+                    await setSelectedBrandHandler(undefined, false);
+                }
             } finally {
                 setLoading(false);
             }
@@ -424,45 +501,52 @@ export const BrandContextProvider: React.FC<
 
     const isProfileLocked = useCallback(
         (influencerId: string) => {
-            // TODO: replace this placeholder logic with your real rules.
-            // Example of using state that should trigger recomputation when they change:
-            // - selectedBrand
-            // - loading
-            // - manager
-            // - isOnFreeTrial
             if (!selectedBrand) return true;
-
-            // Example rule: lock profiles when brand is on free trial or billing not accepted
-            const lockedByBilling =
-                !selectedBrand.isBillingDisabled &&
-                selectedBrand.billing?.status !== ModelStatus.Accepted;
-
-            // Example rule: optionally lock specific influencer IDs (extend as needed)
-            // const lockedById = Boolean(influencerId && selectedBrand.lockedInfluencers?.includes?.(influencerId));
-
-            // https://brands.trendly.now/influencer/GB9YIOsx1ESc7SBxuqm4pI9wZP53
             const unlockedProfiles = selectedBrand.unlockedInfluencers || [];
             return !unlockedProfiles.includes(influencerId);
         },
         [selectedBrand, manager?.id]
     );
 
+    // Permissive while unknown/loading and for legacy (pre-migration) members
+    // with no team — backend + Firestore rules enforce. Mirrors the server-side
+    // transition shim.
+    const isPermissiveMember = !currentMember || !currentMember.teamId;
+
+    const hasPrivilege = useCallback(
+        (feature: FeatureKey, priv: string) => {
+            if (isPermissiveMember) return true;
+            return resolvePrivilege(teamPrivileges, feature, priv);
+        },
+        [isPermissiveMember, teamPrivileges]
+    );
+
+    const hasFeature = useCallback(
+        (feature: FeatureKey) => {
+            if (isPermissiveMember) return true;
+            return (teamPrivileges?.[feature]?.length ?? 0) > 0;
+        },
+        [isPermissiveMember, teamPrivileges]
+    );
+
     const hasCapability = useCallback(
         (cap: string) => {
-            // Permissive while unknown/loading and for legacy roles — backend +
-            // Firestore rules enforce. Mirrors the server-side transition shim.
-            if (!currentMember) return true;
-            if (isLegacyRole(currentMember.role)) return true;
-            return resolveCapability(currentMember.role, currentMember.overrides, cap);
+            if (isPermissiveMember) return true;
+            return resolveCapability(teamPrivileges, cap);
         },
-        [currentMember]
+        [isPermissiveMember, teamPrivileges]
     );
 
     const createBrand = async (brand: Partial<IBrands>) => {
         if (!manager) return null;
 
         const brandRef = collection(FirestoreDB, "brands");
-        const brandDoc = await addDoc(brandRef, brand);
+        // Capture the brand's country silently (no UI). Source of truth for
+        // India-only gating. Don't overwrite an explicitly provided value.
+        const brandDoc = await addDoc(brandRef, {
+            country: detectCountryCode(),
+            ...brand,
+        });
 
         const managerRef = doc(
             FirestoreDB,
@@ -496,7 +580,9 @@ export const BrandContextProvider: React.FC<
         const brandDoc = await addDoc(brandRef, {
             name: "",
             creationTime: Date.now(),
-            isBillingDisabled: false,
+            // Capture the brand's country silently (no UI) at draft creation so
+            // it survives the later finalize step. Source of truth for gating.
+            country: detectCountryCode(),
             ...brand,
             // A draft is intentionally NOT provisioned on the backend yet.
             onboardingComplete: false,
@@ -536,48 +622,19 @@ export const BrandContextProvider: React.FC<
         await updateDoc(brandRef, brand);
     };
 
-    useEffect(() => {
-        if (selectedBrand) {
-            if (!restrictForPayment) return;
-
-            // A draft brand is still being set up via onboarding — never bounce it
-            // to the paywall before it's finalized.
-            if (selectedBrand.onboardingComplete === false) return;
-
-            if (Platform.OS == "web" && !selectedBrand.hasPayWall) return;
-
-            console.log(
-                "Evaluation Paywall condition",
-                !selectedBrand.isBillingDisabled &&
-                selectedBrand.billing?.status != ModelStatus.Accepted
-            );
-
-            if (
-                !selectedBrand.isBillingDisabled &&
-                selectedBrand.billing?.status != ModelStatus.Accepted &&
-                (!selectedBrand.billing?.isOnTrial ||
-                    (selectedBrand.billing?.isOnTrial &&
-                        (selectedBrand.billing.trialEnds || 0) < Date.now()))
-            ) {
-                router.resetAndNavigate("/pay-wall");
-            }
-        }
-    }, [selectedBrand]);
-
     // Resume onboarding: if the active brand is still a draft, keep the user in
     // the AI onboarding chat until it's finalized.
     useEffect(() => {
         if (selectedBrand?.onboardingComplete !== false) return;
+        // If the user already has a finalized brand, never bounce them to
+        // onboarding — selection prefers the finalized brand, so this draft is
+        // transient (e.g. a stray/abandoned draft) and must not hijack routing.
+        if (brands.some((b) => b.onboardingComplete !== false)) return;
         // Don't redirect while already anywhere in the onboarding flow (chat or
         // the fallback form), only when a draft is open from elsewhere.
         if (pathName?.includes("onboarding")) return;
         router.resetAndNavigate("/onboarding-chat");
-    }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName]);
-
-    const isOnFreeTrial = useMemo(() => {
-        if (!selectedBrand) return false;
-        return !selectedBrand.isBillingDisabled && !selectedBrand.billing;
-    }, [selectedBrand]);
+    }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName, brands]);
 
     // Draft brands (mid-onboarding) are hidden from brand lists/switchers. The
     // active draft can still be the selectedBrand during onboarding.
@@ -586,9 +643,17 @@ export const BrandContextProvider: React.FC<
         [brands]
     );
 
+    // India-only gating derives from the selected brand's stored country.
+    // Missing country (all legacy brands) => treated as India.
+    const isIndiaBased = useMemo(
+        () => isIndiaBrand(selectedBrand),
+        [selectedBrand]
+    );
+
     const ctxValue = useMemo(
         () => ({
             brands: visibleBrands,
+            allBrands: brands,
             createBrand,
             createDraftBrand,
             finalizeBrand,
@@ -596,24 +661,29 @@ export const BrandContextProvider: React.FC<
             setSelectedBrand: setSelectedBrandHandler,
             updateBrand,
             loading,
-            isOnFreeTrial,
             isProfileLocked,
             currentMember,
+            hasPrivilege,
+            hasFeature,
             hasCapability,
+            isIndiaBased,
         }),
         [
             visibleBrands,
+            brands,
             createBrand,
             createDraftBrand,
             finalizeBrand,
             selectedBrand,
             updateBrand,
             loading,
-            isOnFreeTrial,
             isProfileLocked,
             setSelectedBrandHandler,
             currentMember,
+            hasPrivilege,
+            hasFeature,
             hasCapability,
+            isIndiaBased,
         ]
     );
 

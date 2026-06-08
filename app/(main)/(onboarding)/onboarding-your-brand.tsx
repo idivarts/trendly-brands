@@ -8,6 +8,7 @@ import {
     CreateNewBrandForm,
     CreateNewBrandHeader,
 } from "@/components/create-new-brand";
+import { ONBOARDING_COMPLETE_LANDING_PAGE } from "@/constants/App";
 import { useAuthContext, useAWSContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import AppLayout from "@/layouts/app-layout";
@@ -36,7 +37,6 @@ const OnboardingScreen = () => {
             influencerCategories: [],
         },
         creationTime: Date.now(),
-        isBillingDisabled: false,
     });
     const [brandWebImage, setBrandWebImage] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,7 +150,7 @@ const OnboardingScreen = () => {
                     false
                 );
                 setSession(AuthApp.currentUser?.uid || "");
-                router.resetAndNavigate("/discover");
+                router.resetAndNavigate(ONBOARDING_COMPLETE_LANDING_PAGE);
                 Toaster.success(
                     firstBrand === "true"
                         ? "Signed In Successfully!"
@@ -178,7 +178,7 @@ const OnboardingScreen = () => {
                     id: brandDoc.id,
                 } as Brand);
                 setSession(AuthApp.currentUser?.uid || "");
-                router.resetAndNavigate("/content-strategies");
+                router.resetAndNavigate(ONBOARDING_COMPLETE_LANDING_PAGE);
                 Toaster.success(
                     firstBrand === "true"
                         ? "Signed In Successfully!"

@@ -1,4 +1,5 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
@@ -28,6 +29,7 @@ const PayWallComponent = () => {
     )
 
     const { selectedBrand, setSelectedBrand } = useBrandContext()
+    const { selectedOrgBilling } = useOrganizationContext()
 
     const [cancelPlan, setCancelPlan] = useState(false)
 
@@ -73,7 +75,7 @@ const PayWallComponent = () => {
                     </Text>
                 </View>
 
-                {selectedBrand?.billing?.status == ModelStatus.Accepted &&
+                {selectedOrgBilling?.status == ModelStatus.Accepted &&
                     <View style={styles.cancelSection}>
                         <Text
                             variant="bodyLarge"

@@ -1,14 +1,16 @@
 import PayWallComponent from "@/components/paywall";
-import ScreenHeader from "@/components/ui/screen-header";
+import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import React from "react";
 
+// Billing for the CURRENT organization (the active brand's org). Billing is
+// org-level — PayWallComponent reads the selected brand's org billing.
 const BillingScreen = () => {
-    const { xl } = useBreakpoints()
+    const { xl } = useBreakpoints();
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
-            {!xl && <ScreenHeader title="" />}
+            {!xl && <PageHeader title="Billing" />}
             <PayWallComponent />
         </AppLayout>
     );

@@ -5,6 +5,7 @@ import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useProcess } from "@/hooks";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
@@ -138,7 +139,8 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     } = useProcess();
     const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-    const { selectedBrand, isOnFreeTrial } = useBrandContext();
+    const { selectedBrand } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     const { getCollaborationById, createCollaboration, updateCollaboration } =
         useCollaborationContext();
 

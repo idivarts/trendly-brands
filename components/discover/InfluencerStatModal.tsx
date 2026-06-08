@@ -57,18 +57,6 @@ export const InfluencerStatsModal: React.FC<{
     const { openModal } = useConfirmationModel();
 
     const sendInvite = () => {
-        if ((selectedBrand?.credits?.connection || 0) <= 0) {
-            openModal({
-                title: "No Connection Credit",
-                description:
-                    "You seem to have exhausted the connection credit. Contact support for recharging the credit",
-                confirmText: "Contact Support",
-                confirmAction: () => {
-                    Linking.openURL("mailto:support@idiv.in");
-                },
-            });
-            return;
-        }
         openModal({
             title: "Feature is Underway",
             description:
@@ -134,7 +122,7 @@ export const InfluencerStatsModal: React.FC<{
                         </View>
                         <Card.Actions>
                             {/* <Button mode="contained" onPress={() => sendInvite()}>Invite</Button> */}
-                            <InviteToCampaignButton openModal={openModal} influencerIds={item ? [item.id] : undefined} influencerName={item?.name} />
+                            <InviteToCampaignButton openModal={openModal} influencerIds={item ? [item.id] : undefined} influencerName={item?.name} isDiscover={item?.isDiscover === true} />
 
                             <IconButton
                                 icon="open-in-new"

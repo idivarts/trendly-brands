@@ -1,11 +1,11 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useActiveAgencyHire } from "@/hooks/useActiveAgencyHire";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Linking } from "react-native";
 import { Button } from "react-native-paper";
 import InviteToCampaignModal from "./InviteToCampaignModal";
 
@@ -16,7 +16,13 @@ interface InviteButtonProps {
     influencerIds?: string[];
     influencerName?: string;
     brandId?: string;
-    connectionCredits?: number;
+    /**
+     * Whether this button represents a single discover-only (off-platform)
+     * influencer. When true and the brand has no active agency hire, the invite
+     * is gated behind hiring our agency. Omit for bulk/mixed selections — the
+     * backend still enforces the gate and returns `agency-not-hired`.
+     */
+    isDiscover?: boolean;
 }
 
 const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
@@ -26,7 +32,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     influencerIds,
     influencerName,
     brandId,
-    connectionCredits,
+    isDiscover,
 }) => {
     const theme = useTheme();
     const router = useRouter();
@@ -36,21 +42,28 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     // ✅ Get selectedBrand directly from context
     const { selectedBrand } = useBrandContext();
     const effectiveBrandId = brandId ?? selectedBrand?.id;
-    const effectiveCredits =
-        connectionCredits ?? selectedBrand?.credits?.connection ?? 0;
+
+    const { hasActiveAgencyHire } = useActiveAgencyHire(effectiveBrandId);
+
+    // Advertise hiring our agency, with a CTA that routes to the hire-us page.
+    const promptHireUs = () => {
+        openModal({
+            title: "Hire us to invite this creator",
+            description:
+                "This creator isn't on Trendly yet. Hire our agency and we'll reach out and manage the collaboration for you.",
+            confirmText: "Hire Us",
+            confirmAction: () => router.push("/hire-us"),
+        });
+    };
 
     const handleInvitePress = () => {
-        if (effectiveCredits <= 0) {
-            openModal({
-                title: "No Connection Credit",
-                description:
-                    "You seem to have exhausted the connection credit. Contact support for recharging the credit.",
-                confirmText: "Contact Support",
-                confirmAction: () => Linking.openURL("mailto:support@idiv.in"),
-            });
+        // Discover-only influencer with no active agency hire → advertise hiring us.
+        if (isDiscover && !hasActiveAgencyHire) {
+            promptHireUs();
             return;
         }
 
+        // Inviting is no longer credit-gated (old credit system removed).
         setModalVisible(true);
     };
 
@@ -101,6 +114,19 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
             Toaster.success("Invite sent");
             return true;
         } catch (err: any) {
+            // Backend gates discover-only invites behind an active agency hire.
+            let code: string | undefined;
+            if (err instanceof Response) {
+                try {
+                    const parsed = await err.clone().json();
+                    code = parsed?.error;
+                } catch { /* non-JSON body */ }
+            }
+            if (code === "agency-not-hired") {
+                setModalVisible(false);
+                promptHireUs();
+                return false;
+            }
             console.warn("Failed to send invite", err);
             Toaster.error("Something went wrong!");
             return false;

@@ -2,11 +2,10 @@
  * Inbox feature — data contract.
  *
  * These types are the seam between the UI and its data source. They are
- * intentionally backend-agnostic: today they are fulfilled by the mock layer
- * (`components/inbox/mock`), tomorrow by a real backend hook. The UI imports
- * ONLY from here and from `data/use-inbox`, never from `mock/` directly.
+ * fulfilled by the live backend hook (`data/use-inbox.api`). The UI imports
+ * ONLY from here and from `data/use-inbox`.
  *
- * See components/inbox/README.md for how to swap the mock for the real backend.
+ * See components/inbox/README.md for the backend contract.
  */
 
 /** Channels supported by the Inbox v1 (Meta only). */
@@ -17,6 +16,9 @@ export type ConversationKind = "dm" | "comment";
 
 /** Quick filters shown above the conversation list. */
 export type InboxFilter = "all" | "unread" | "dm" | "comment";
+
+/** Top-level inbox section: the conversation feed vs. the media browser. */
+export type InboxMode = "messages" | "media";
 
 /** Who authored a given message/reply. */
 export type MessageAuthor = "contact" | "business";
@@ -124,4 +126,57 @@ export interface UseInboxResult {
     deleteComment: (conversationId: string) => Promise<void>;
     /** Mark a conversation as read. */
     markRead: (conversationId: string) => Promise<void>;
+}
+
+// ── Media tab ──────────────────────────────────────────────────────────────
+//
+// The Media tab browses published posts/reels and their comments on demand
+// (read straight from the Graph API), so historical comments never flood the
+// conversation feed. Conversations stay the "needs attention" layer; Media is
+// the browse-by-post layer.
+
+/** A published post/reel surfaced in the Media tab. */
+export interface InboxMedia {
+    id: string;
+    channel: InboxChannel;
+    /** Serving connected-account id — required for comment actions. */
+    socialId: string;
+    thumbnailUrl?: string;
+    caption?: string;
+    permalink?: string;
+    /** epoch ms */
+    timestamp: number;
+    commentsCount: number;
+}
+
+/** A top-level comment on a piece of media. */
+export interface InboxMediaComment {
+    id: string;
+    channel: InboxChannel;
+    author: InboxParticipant;
+    text: string;
+    /** epoch ms (0 when the platform did not supply one). */
+    timestamp: number;
+    /** Local-only flag toggled optimistically by hide/unhide. */
+    hidden?: boolean;
+}
+
+/**
+ * Media-tab data contract. Posts/reels are listed up front; a post's comments
+ * are fetched lazily on selection. Comment actions are keyed by comment id and
+ * carry the owning media so the backend can resolve the serving account.
+ */
+export interface UseInboxMediaResult {
+    loading: boolean;
+    media: InboxMedia[];
+    /** Fetch the top-level comments for one media item. */
+    loadComments: (media: InboxMedia) => Promise<InboxMediaComment[]>;
+    /** Post a public reply to a comment. */
+    replyToComment: (media: InboxMedia, commentId: string, text: string) => Promise<void>;
+    /** Hide or unhide a comment. */
+    setCommentHidden: (media: InboxMedia, commentId: string, hidden: boolean) => Promise<void>;
+    /** Permanently delete a comment. */
+    deleteComment: (media: InboxMedia, commentId: string) => Promise<void>;
+    /** Re-fetch the media list. */
+    refresh: () => void;
 }

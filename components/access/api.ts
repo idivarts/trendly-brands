@@ -1,7 +1,11 @@
-// Typed API helpers for the privilege-control (Access) feature. All calls go
-// through HttpWrapper, which attaches the Firebase bearer token automatically.
+// Typed API helpers for the privilege-control (Access) feature. Reads come
+// straight from Firestore; mutations go through HttpWrapper, which attaches the
+// Firebase bearer token automatically.
 
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { TeamPrivileges } from "@/constants/Access";
+import { collection, getDocs } from "firebase/firestore";
 
 export interface Team {
     id: string;
@@ -9,20 +13,17 @@ export interface Team {
     isDefault: boolean;
     createdBy?: string;
     creationTime?: number;
+    privileges?: TeamPrivileges;
 }
 
 export interface BrandMemberRecord {
     managerId: string;
-    role?: string;
     status: number;
-    teamIds?: string[];
-    overrides?: Record<string, boolean>;
+    teamId?: string;
 }
 
 export interface MemberAccessPayload {
-    role?: string;
-    teamIds?: string[];
-    overrides?: Record<string, boolean>;
+    teamId?: string;
 }
 
 const json = async (res: Response) => {
@@ -35,27 +36,39 @@ const json = async (res: Response) => {
 
 // ── Teams ────────────────────────────────────────────────────────────────────
 
+// Teams are read directly from Firestore (brands/{brandId}/teams). Brand members
+// have read access via Firestore rules, so no backend round-trip is needed.
 export const listTeams = async (brandId: string): Promise<Team[]> => {
-    const res = await HttpWrapper.fetch(`/api/v2/brands/${brandId}/teams`, { method: "GET" });
-    const data = await json(res);
-    return (data.teams ?? []) as Team[];
+    const snap = await getDocs(collection(FirestoreDB, "brands", brandId, "teams"));
+    return snap.docs.map((d) => {
+        const data = d.data() as Team;
+        return { ...data, id: data.id ?? d.id };
+    });
 };
 
-export const createTeam = async (brandId: string, name: string): Promise<Team> => {
+export const createTeam = async (
+    brandId: string,
+    name: string,
+    privileges?: TeamPrivileges,
+): Promise<Team> => {
     const res = await HttpWrapper.fetch(`/api/v2/brands/${brandId}/teams`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, privileges: privileges ?? {} }),
     });
     const data = await json(res);
     return data.team as Team;
 };
 
-export const renameTeam = async (brandId: string, teamId: string, name: string): Promise<void> => {
+export const updateTeam = async (
+    brandId: string,
+    teamId: string,
+    payload: { name: string; privileges?: TeamPrivileges },
+): Promise<void> => {
     await HttpWrapper.fetch(`/api/v2/brands/${brandId}/teams/${teamId}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
     });
 };
 
@@ -90,18 +103,4 @@ export const updateMemberAccess = async (
 
 export const removeMember = async (brandId: string, managerId: string): Promise<void> => {
     await HttpWrapper.fetch(`/api/v2/brands/${brandId}/members/${managerId}`, { method: "DELETE" });
-};
-
-// ── Socials ──────────────────────────────────────────────────────────────────
-
-export const assignSocialTeam = async (
-    brandId: string,
-    socialId: string,
-    teamId: string,
-): Promise<void> => {
-    await HttpWrapper.fetch(`/api/v2/brands/${brandId}/socials/${socialId}/team`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ teamId }),
-    });
 };

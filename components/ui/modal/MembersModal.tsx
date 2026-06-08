@@ -42,16 +42,17 @@ const MembersModal: React.FC<MembersModalProps> = ({
     const [email, setEmail] = React.useState("");
     const [name, setName] = React.useState("");
     const [loading, setLoading] = React.useState(false);
-    const [role, setRole] = React.useState("viewer");
     const [teams, setTeams] = React.useState<Team[]>([]);
-    const [selectedTeamIds, setSelectedTeamIds] = React.useState<string[]>([]);
-    const [overrides, setOverrides] = React.useState<Record<string, boolean>>({});
+    const [selectedTeamId, setSelectedTeamId] = React.useState("");
     const { selectedBrand } = useBrandContext();
 
     React.useEffect(() => {
         if (!visible || !selectedBrand) return;
         listTeams(selectedBrand.id)
-            .then(setTeams)
+            .then((t) => {
+                setTeams(t);
+                setSelectedTeamId(t.find((x) => x.isDefault)?.id ?? t[0]?.id ?? "");
+            })
             .catch(() => setTeams([]));
     }, [visible, selectedBrand]);
 
@@ -76,9 +77,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
         await inviteMember(selectedBrand.id, {
             email,
             name,
-            role,
-            teamIds: selectedTeamIds,
-            overrides,
+            teamId: selectedTeamId,
         }).then(() => {
             Toaster.success("User Invited Successfully");
             refresh();
@@ -89,9 +88,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
             handleModalClose();
             setEmail("");
             setName("");
-            setRole("viewer");
-            setSelectedTeamIds([]);
-            setOverrides({});
+            setSelectedTeamId(teams.find((x) => x.isDefault)?.id ?? "");
             setLoading(false);
         });
     };
@@ -135,13 +132,9 @@ const MembersModal: React.FC<MembersModalProps> = ({
 
                                 <AccessControls
                                     theme={theme}
-                                    role={role}
-                                    onRoleChange={setRole}
                                     teams={teams}
-                                    selectedTeamIds={selectedTeamIds}
-                                    onTeamsChange={setSelectedTeamIds}
-                                    overrides={overrides}
-                                    onOverridesChange={setOverrides}
+                                    selectedTeamId={selectedTeamId}
+                                    onTeamChange={setSelectedTeamId}
                                 />
 
                                 <Button
@@ -216,6 +209,7 @@ function useMembersStyles(theme: Theme) {
         },
         addButton: {
             alignItems: "center",
+            marginTop: 16,
         },
         noDataContainer: {
             flex: 1,

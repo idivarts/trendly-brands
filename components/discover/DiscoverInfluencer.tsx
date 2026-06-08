@@ -5,6 +5,7 @@ import {
 import { buildDiscoveryPayload } from "@/components/discover/utils/filter-utils";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ISocialAnalytics, ISocials } from "@/shared-libs/firestore/trendly-pro/models/bq-socials";
 import { IAdvanceFilters } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
@@ -44,7 +45,6 @@ import InviteToCampaignButton from "../collaboration/InviteToCampaignButton";
 import InfluencerCard from "../explore-influencers/InfluencerCard";
 import BottomSheetScrollContainer from "../ui/bottom-sheet/BottomSheetWithScroll";
 import type { InfluencerItem } from "./discover-types";
-import NoDiscoveryCreditModal from "./NoDiscoveryCreditModal";
 import TrendlyAnalyticsEmbed from "./trendly/TrendlyAnalyticsEmbed";
 
 // type SocialsBreif struct {
@@ -170,7 +170,8 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         showRightPanel,
     } = useDiscovery();
     const { manager } = useAuthContext();
-    const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { selectedBrand, isProfileLocked } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
@@ -194,21 +195,12 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const [data, setData] = useState<InfluencerItem[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const { openModal } = useConfirmationModel();
-    const [showNoCreditModal, setShowNoCreditModal] = useState(false);
 
     const { xl } = useBreakpoints();
 
     // collaborations are fetched inside InviteToCampaignModal when it mounts
     const openProfile = useCallback((data: InfluencerItem | null) => {
-        if (
-            (selectedBrand?.credits?.discovery || 0) <= 0 &&
-            data &&
-            !selectedBrand?.discoveredInfluencers?.includes(data.id)
-        ) {
-            setShowNoCreditModal(true);
-            return;
-        }
-
+        // Profile viewing is no longer credit-gated (old credit system removed).
         setTrendlyAnalytics(null);
         setTrendlySocial(null);
         setShadowUser(null);
@@ -217,7 +209,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
         setIsAnalyticsLoading(!!data);
         setSelectedInfluencer(data);
         setOpenProfileModal(!!data);
-    }, [selectedBrand?.credits?.discovery, selectedBrand?.discoveredInfluencers]);
+    }, []);
 
     const closeProfileModal = () => {
         setOpenProfileModal(false);
@@ -791,7 +783,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                                     : undefined
                                             }
                                             brandId={selectedBrand?.id}
-                                            connectionCredits={selectedBrand?.credits?.connection}
                                         />
                                         <IconButton
                                             icon="close"
@@ -850,6 +841,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                                             openModal={openModal}
                                             influencerIds={[selectedInfluencer.id]}
                                             influencerName={selectedInfluencer.name}
+                                            isDiscover={selectedInfluencer.isDiscover === true}
                                         />
                                         {manager?.isAdmin && (
                                             <Menu
@@ -903,10 +895,6 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
                     )}
                 </BottomSheetScrollContainer>
             </View>
-            <NoDiscoveryCreditModal
-                visible={showNoCreditModal}
-                onClose={() => setShowNoCreditModal(false)}
-            />
         </View>
     );
 };

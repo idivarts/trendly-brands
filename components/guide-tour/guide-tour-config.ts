@@ -27,14 +27,6 @@ const WEB_STEPS = [
         shape: "rect" as const,
     },
     {
-        id: "guide-tour-credits-web",
-        title: "Credits",
-        description:
-            "This is your credits card. Discovery credits are used when you view influencer profiles. Invites are used to send collaboration requests. Tap REFILL to top up.",
-        placement: "right" as const,
-        shape: "rect" as const,
-    },
-    {
         id: "guide-tour-brand-switcher-web",
         title: "Brand Switcher",
         description:

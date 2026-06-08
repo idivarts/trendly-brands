@@ -13,6 +13,7 @@ import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheet
 import EmptyState from "@/components/ui/empty-state";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useApplications } from "@/hooks/request";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -102,7 +103,8 @@ const ApplicationsTabContent = ({ isApplicationConcised, ...props }: IProps) => 
         statusFilter: props.filter
     });
 
-    const { brands, isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { brands, isProfileLocked } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
 
     useEffect(() => {
         fetchApplications();

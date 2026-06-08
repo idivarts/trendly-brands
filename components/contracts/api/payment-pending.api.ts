@@ -96,6 +96,35 @@ export async function createContractOrder(
     }
 }
 
+/**
+ * Non-India contracts: acknowledge that Trendly does not process payments in the
+ * brand's region and that the brand and influencer will settle compensation
+ * directly. On success the backend advances the contract like a funded contract
+ * (no Razorpay order or payout).
+ */
+export async function acknowledgeSelfManagedPayment(
+    payload: CreateContractOrderPayload
+): Promise<void> {
+    const urlPath = `/monetize/brands/contracts/${payload.contractId}/order/acknowledge`;
+
+    try {
+        logContractApiCall({
+            apiState: "State_0_api",
+            state: "Payment",
+            action: "acknowledgeSelfManagedPayment",
+            contractId: payload.contractId,
+        });
+        await HttpWrapper.fetch(urlPath, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ acknowledged: true }),
+        });
+    } catch (err) {
+        const message = await HttpWrapper.extractErrorMessage(err);
+        throw new Error(message ?? "Failed to start contract");
+    }
+}
+
 export async function getContractOrderStatus(
     payload: CreateContractOrderPayload
 ): Promise<ContractOrderData> {

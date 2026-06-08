@@ -12,15 +12,21 @@ import ContactPanel from "./ContactPanel";
 import ConversationList from "./ConversationList";
 import EmptyNoMessages from "./EmptyNoMessages";
 import EmptyNoSocials from "./EmptyNoSocials";
+import MediaView from "./MediaView";
 import ThreadView from "./ThreadView";
 import { useInbox } from "./data/use-inbox";
-import { InboxConversation, InboxFilter } from "./types";
+import { InboxConversation, InboxFilter, InboxMode } from "./types";
 import { matchesFilter, sortByRecency } from "./utils";
+
+interface InboxViewProps {
+    /** Active section, controlled by the page-header toggle. */
+    mode: InboxMode;
+}
 
 const LIST_WIDTH = 360;
 const CONTACT_WIDTH = 320;
 
-const InboxView: React.FC = () => {
+const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
@@ -119,10 +125,11 @@ const InboxView: React.FC = () => {
         />
     ) : null;
 
-    // ---- Mobile (single pane, drill-down) ----
+    // ---- Messages body (conversations: DMs + comment threads) ----
+    let messagesBody: React.ReactNode;
     if (!xl) {
         if (selected) {
-            return (
+            messagesBody = (
                 <View style={styles.container}>
                     {thread}
                     {showDetails ? (
@@ -135,36 +142,41 @@ const InboxView: React.FC = () => {
                     ) : null}
                 </View>
             );
+        } else if (conversations.length === 0) {
+            messagesBody = <EmptyNoMessages accounts={connectedAccounts} />;
+        } else {
+            messagesBody = <View style={styles.container}>{list}</View>;
         }
-        if (conversations.length === 0) {
-            return <EmptyNoMessages accounts={connectedAccounts} />;
-        }
-        return <View style={styles.container}>{list}</View>;
+    } else {
+        messagesBody = (
+            <View style={styles.row}>
+                <View style={[styles.listPane, { width: LIST_WIDTH }]}>{list}</View>
+                <View style={styles.threadPane}>
+                    {conversations.length === 0 ? (
+                        <EmptyNoMessages accounts={connectedAccounts} />
+                    ) : selected ? (
+                        thread
+                    ) : (
+                        <View style={styles.center}>
+                            <FontAwesomeIcon icon={faComments} size={40} color={colors.tag} />
+                            <Text style={styles.placeholder}>
+                                Select a conversation to get started
+                            </Text>
+                        </View>
+                    )}
+                </View>
+                {selected ? (
+                    <View style={[styles.contactPane, { width: CONTACT_WIDTH }]}>
+                        <ContactPanel conversation={selected} />
+                    </View>
+                ) : null}
+            </View>
+        );
     }
 
-    // ---- Desktop / tablet (multi-pane) ----
     return (
-        <View style={styles.row}>
-            <View style={[styles.listPane, { width: LIST_WIDTH }]}>{list}</View>
-            <View style={styles.threadPane}>
-                {conversations.length === 0 ? (
-                    <EmptyNoMessages accounts={connectedAccounts} />
-                ) : selected ? (
-                    thread
-                ) : (
-                    <View style={styles.center}>
-                        <FontAwesomeIcon icon={faComments} size={40} color={colors.tag} />
-                        <Text style={styles.placeholder}>
-                            Select a conversation to get started
-                        </Text>
-                    </View>
-                )}
-            </View>
-            {selected ? (
-                <View style={[styles.contactPane, { width: CONTACT_WIDTH }]}>
-                    <ContactPanel conversation={selected} />
-                </View>
-            ) : null}
+        <View style={styles.body}>
+            {mode === "media" ? <MediaView /> : messagesBody}
         </View>
     );
 };
@@ -174,6 +186,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         () =>
             StyleSheet.create({
                 container: {
+                    flex: 1,
+                    backgroundColor: colors.background,
+                },
+                body: {
                     flex: 1,
                     backgroundColor: colors.background,
                 },

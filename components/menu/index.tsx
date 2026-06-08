@@ -1,5 +1,5 @@
-import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
-import { useAuthContext, useLocationContext } from "@/contexts";
+import { canAccessNav } from "@/constants/Access";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
@@ -11,6 +11,7 @@ import {
     faArrowTrendUp,
     faBell,
     faBriefcase,
+    faBuilding,
     faBullhorn,
     faBullseye,
     faChartLine,
@@ -27,7 +28,6 @@ import {
     faLock,
     faPenToSquare,
     faPeopleGroup,
-    faPlus,
     faShareNodes,
     faStar,
     faTriangleExclamation,
@@ -92,28 +92,25 @@ const Menu = () => {
     const styles = useMemo(() => createStyles(theme), [theme]);
     const router = useRouter();
     const { xl } = useBreakpoints();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, hasFeature, hasPrivilege, isIndiaBased } = useBrandContext();
     const { manager } = useAuthContext();
-    const { isIndiaBased } = useLocationContext();
 
     const [activeHub, setActiveHub] = useState<HubKey | null>(null);
-
-    const chatLockReason = "Connect chat to unlock";
-    const isChatConnected = !!manager?.isChatConnected;
 
     const hubs = useMemo<Hub[]>(() => {
         // Grow mirrors the web "Influencer Led Growth" sub-drawer plus the
         // direct Growth links — Discovery / Execution / Paid / Programs.
-        const discoveryItems: Item[] = isIndiaBased
-            ? [
-                { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover", pro: true },
-                { id: "collaborations", icon: faStar, title: "Collaboration Requests", href: "/collaborations" },
-            ]
-            : [];
+        // Discover + Collaboration Requests show for everyone. For non-India the
+        // Discover route renders a managed-sourcing landing (Hire Us) instead of
+        // the discovery grid, so it isn't gated behind Pro there.
+        const discoveryItems: Item[] = [
+            { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover" },
+            { id: "collaborations", icon: faStar, title: "Collaboration Requests", href: "/collaborations" },
+        ];
 
         const executionItems: Item[] = [
-            { id: "messages", icon: faComment, title: "Messages", href: "/messages", locked: isChatConnected ? undefined : chatLockReason },
-            { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts", locked: isChatConnected ? undefined : chatLockReason },
+            { id: "messages", icon: faComment, title: "Messages", href: "/messages" },
+            { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts" },
         ];
 
         const grow: Hub = {
@@ -199,8 +196,19 @@ const Menu = () => {
             ],
         };
 
-        return [grow, influencer, manage, admin].filter((h) => h.visible);
-    }, [isIndiaBased, isChatConnected, manager?.isAdmin]);
+        // Gate every entry by the member's team feature privileges. Drop empty
+        // groups, then hide any hub left with no items (mixed hubs handled
+        // per-item — e.g. Manage Brand mixes brand_admin + social_accounts).
+        const gate = (href: string) => canAccessNav(href, hasFeature, hasPrivilege);
+        return [grow, influencer, manage, admin]
+            .map((h) => {
+                const groups = h.groups
+                    .map((g) => ({ ...g, items: g.items.filter((it) => gate(it.href as string)) }))
+                    .filter((g) => g.items.length > 0);
+                return { ...h, groups, visible: h.visible && groups.length > 0 };
+            })
+            .filter((h) => h.visible);
+    }, [isIndiaBased, manager?.isAdmin, hasFeature, hasPrivilege]);
 
     // Hardware back returns to the hub home when drilled in (Android).
     useEffect(() => {
@@ -314,10 +322,6 @@ const Menu = () => {
                 </Button>
             </View>
 
-            {!xl && selectedBrand && !selectedBrand.isBillingDisabled && (
-                <CreditDisplayCard />
-            )}
-
             {/* Quick actions */}
             <View style={styles.quickRow}>
                 <QuickChip
@@ -352,18 +356,34 @@ const Menu = () => {
                 ))}
             </View>
 
-            {/* Footer: Create new brand */}
+            {/* Organizations row */}
             <Pressable
-                onPress={() => navigate("/onboarding-chat")}
-                style={styles.footerLink}
+                onPress={() => navigate("/organizations")}
+                style={({ pressed }) => [
+                    styles.orgRow,
+                    pressed && styles.orgRowPressed,
+                ]}
                 accessibilityRole="button"
+                accessibilityLabel="Organizations"
             >
+                <View style={styles.orgIcon}>
+                    <FontAwesomeIcon
+                        icon={faBuilding}
+                        size={18}
+                        color={Colors(theme).primary}
+                    />
+                </View>
+                <View style={styles.orgText}>
+                    <Text style={styles.orgTitle}>Organizations</Text>
+                    <Text style={styles.orgSubtitle} numberOfLines={1}>
+                        Switch or manage your organizations
+                    </Text>
+                </View>
                 <FontAwesomeIcon
-                    icon={faPlus}
-                    size={12}
+                    icon={faChevronRight}
+                    size={14}
                     color={Colors(theme).textSecondary}
                 />
-                <Text style={styles.footerLinkText}>Create New Brand</Text>
             </Pressable>
         </ScrollView>
     );
@@ -628,19 +648,47 @@ const createStyles = (theme: Theme) => {
             fontSize: 12,
             color: colors.textSecondary,
         },
-        // ── Footer link ───────────────────────────────────────────────────
-        footerLink: {
+        // ── Organizations row ─────────────────────────────────────────────
+        orgRow: {
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
+            gap: 14,
+            backgroundColor: colors.tag,
+            borderRadius: 16,
+            paddingHorizontal: 16,
             paddingVertical: 14,
             marginTop: 4,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
         },
-        footerLinkText: {
-            fontSize: 13,
+        orgRowPressed: {
+            opacity: 0.85,
+        },
+        orgIcon: {
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.card,
+        },
+        orgText: {
+            flex: 1,
+            gap: 2,
+            backgroundColor: "transparent",
+        },
+        orgTitle: {
+            fontSize: 15,
+            fontWeight: "600",
+            color: colors.text,
+            letterSpacing: -0.1,
+        },
+        orgSubtitle: {
+            fontSize: 12,
             color: colors.textSecondary,
-            fontWeight: "500",
         },
         // ── Drill-down ────────────────────────────────────────────────────
         backRow: {
