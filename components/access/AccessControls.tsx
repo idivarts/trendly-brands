@@ -1,9 +1,9 @@
-import { Text, View } from "@/components/theme/Themed";
+import { Text } from "@/components/theme/Themed";
 import { featureLabel } from "@/constants/Access";
 import Colors from "@/shared-uis/constants/Colors";
 import { type Theme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Team } from "./api";
 
 interface AccessControlsProps {

@@ -1,4 +1,5 @@
 import AIChatPanel from "@/components/shared/AIChatPanel";
+import { ONBOARDING_COMPLETE_LANDING_PAGE } from "@/constants/App";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
@@ -22,7 +23,7 @@ const OnboardingChatScreen = () => {
 
     const router = useMyNavigation();
     const { firstBrand } = useLocalSearchParams<{ firstBrand?: string }>();
-    const { selectedBrand, createDraftBrand, finalizeBrand, setSelectedBrand } =
+    const { selectedBrand, allBrands, loading, createDraftBrand, finalizeBrand, setSelectedBrand } =
         useBrandContext();
 
     const [draftId, setDraftId] = useState<string | undefined>();
@@ -35,15 +36,31 @@ const OnboardingChatScreen = () => {
     // Ensure a draft brand exists and is the active brand before the chat mounts.
     useEffect(() => {
         if (initOnce.current) return;
+        // Wait until brand-context has finished loading. Acting earlier (while
+        // selectedBrand is still undefined) would mint a NEW draft on every
+        // mount/refresh — stranding the previous draft AND starting a fresh AI
+        // conversation each time (threads are keyed by brandId). Waiting lets us
+        // resume the existing draft so the user lands back where they left off.
+        if (loading) return;
         initOnce.current = true;
 
         (async () => {
-            // Resume an in-progress draft.
-            if (selectedBrand && selectedBrand.onboardingComplete === false) {
-                setDraftId(selectedBrand.id);
+            // Resume an in-progress draft: prefer the selected brand if it's a
+            // draft, else any existing draft the manager already has.
+            const existingDraft =
+                selectedBrand?.onboardingComplete === false
+                    ? selectedBrand
+                    : allBrands.find((b) => b.onboardingComplete === false);
+
+            if (existingDraft) {
+                if (existingDraft.id !== selectedBrand?.id) {
+                    setSelectedBrand(existingDraft, false);
+                }
+                setDraftId(existingDraft.id);
                 setIsFresh(false);
                 return;
             }
+
             // Start a fresh draft.
             const ref = await createDraftBrand();
             if (!ref) {
@@ -63,7 +80,7 @@ const OnboardingChatScreen = () => {
             setDraftId(ref.id);
             setIsFresh(true);
         })();
-    }, [selectedBrand, createDraftBrand, setSelectedBrand]);
+    }, [loading, selectedBrand, allBrands, createDraftBrand, setSelectedBrand]);
 
     const handleComplete = async () => {
         if (finalizedOnce.current || !draftId) return;
@@ -83,7 +100,7 @@ const OnboardingChatScreen = () => {
                     ? "Welcome aboard! Your brand is ready."
                     : "Brand created successfully!"
             );
-            router.resetAndNavigate("/content-strategies");
+            router.resetAndNavigate(ONBOARDING_COMPLETE_LANDING_PAGE);
         } catch {
             finalizedOnce.current = false;
             Toaster.error("Couldn't finish setting up your brand");

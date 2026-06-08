@@ -205,9 +205,14 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
 
     const selectedOrgBilling = selectedOrganization?.billing;
 
+    // "Free plan" = no billing record yet (legacy) OR an org explicitly on the
+    // free tier. Every finalized brand now gets a free-plan org auto-provisioned,
+    // so this must key off the plan, not merely the presence of a billing record
+    // (otherwise free orgs would read as paid and unlock paid-only affordances).
     const isOnFreeTrial = useMemo(() => {
         if (!selectedBrand) return false;
-        return !selectedOrgBilling;
+        const planKey = selectedOrgBilling?.planKey;
+        return !planKey || planKey === "free";
     }, [selectedBrand, selectedOrgBilling]);
 
     // Paywall gate: bounce non-onboarded, non-trial, non-Accepted brands to the
@@ -222,6 +227,15 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         // Wait until the org has hydrated to avoid a false-positive redirect on
         // first render (when selectedOrgBilling is briefly undefined).
         if (selectedBrand.organizationId && !selectedOrganization) return;
+
+        // Free-plan orgs are never paywalled — the product is free to use and is
+        // gated by credits, not a subscription. Only a lapsed PAID plan (no
+        // active subscription and no live trial) bounces to the paywall. This
+        // also keeps a freshly auto-provisioned free org (and brands whose org
+        // hasn't hydrated yet) out of the native paywall dead-end.
+        const planKey = selectedOrgBilling?.planKey;
+        const isFreePlan = !planKey || planKey === "free";
+        if (isFreePlan) return;
 
         const trialActive =
             selectedOrgBilling?.isOnTrial &&

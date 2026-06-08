@@ -209,6 +209,7 @@ function useMembersStyles(theme: Theme) {
         },
         addButton: {
             alignItems: "center",
+            marginTop: 16,
         },
         noDataContainer: {
             flex: 1,
