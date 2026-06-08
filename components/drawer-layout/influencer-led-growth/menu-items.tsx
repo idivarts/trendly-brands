@@ -28,7 +28,6 @@ export const DISCOVERY_ITEMS = (theme: Theme, isIndiaBased = true): Tab[] => [
                 <DrawerIcon href="/discover" icon={faGem} focused={focused} />
             ),
         label: "Discover Influencers",
-        pro: isIndiaBased,
     },
     {
         href: "/collaborations",
@@ -46,10 +45,8 @@ export const DISCOVERY_ITEMS = (theme: Theme, isIndiaBased = true): Tab[] => [
 // Execution surfaces (Messages, Influencer Contracts) require a connected chat
 // account. When chat is not connected the items render in a locked state
 // ("Connect chat to unlock"), mirroring the mobile menu.
-const CHAT_LOCK_REASON = "Connect chat to unlock";
 
 export const EXECUTION_ITEMS = (theme: Theme, isChatConnected = true): Tab[] => {
-    const lock = isChatConnected ? undefined : CHAT_LOCK_REASON;
     return [
         {
             href: "/messages",
@@ -61,13 +58,11 @@ export const EXECUTION_ITEMS = (theme: Theme, isChatConnected = true): Tab[] => 
                 ),
             label: "Messages",
             showUnreadCount: true,
-            locked: lock,
         },
         {
             href: "/contracts",
             icon: ({ focused }) => <DrawerIcon href="/contracts" icon={faFileLines} focused={focused} />,
             label: "Influencer Contracts",
-            locked: lock,
         },
     ];
 };
@@ -96,7 +91,7 @@ export const INFLUENCER_LED_GROWTH_SEGMENTS = (
     isChatConnected = true,
     isIndiaBased = true
 ): SubDrawerSegment[] => [
-    { title: "Discovery", items: DISCOVERY_ITEMS(theme, isIndiaBased) },
-    { title: "Execution", items: EXECUTION_ITEMS(theme, isChatConnected) },
-    { title: "Growth", items: GROWTH_ITEMS(theme) },
-];
+        { title: "Discovery", items: DISCOVERY_ITEMS(theme, isIndiaBased) },
+        { title: "Execution", items: EXECUTION_ITEMS(theme, isChatConnected) },
+        { title: "Growth", items: GROWTH_ITEMS(theme) },
+    ];

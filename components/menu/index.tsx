@@ -97,9 +97,6 @@ const Menu = () => {
 
     const [activeHub, setActiveHub] = useState<HubKey | null>(null);
 
-    const chatLockReason = "Connect chat to unlock";
-    const isChatConnected = !!manager?.isChatConnected;
-
     const hubs = useMemo<Hub[]>(() => {
         // Grow mirrors the web "Influencer Led Growth" sub-drawer plus the
         // direct Growth links — Discovery / Execution / Paid / Programs.
@@ -107,13 +104,13 @@ const Menu = () => {
         // Discover route renders a managed-sourcing landing (Hire Us) instead of
         // the discovery grid, so it isn't gated behind Pro there.
         const discoveryItems: Item[] = [
-            { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover", pro: isIndiaBased },
+            { id: "discover", icon: faGem, title: "Discover Influencers", href: "/discover" },
             { id: "collaborations", icon: faStar, title: "Collaboration Requests", href: "/collaborations" },
         ];
 
         const executionItems: Item[] = [
-            { id: "messages", icon: faComment, title: "Messages", href: "/messages", locked: isChatConnected ? undefined : chatLockReason },
-            { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts", locked: isChatConnected ? undefined : chatLockReason },
+            { id: "messages", icon: faComment, title: "Messages", href: "/messages" },
+            { id: "contracts", icon: faFileLines, title: "Influencer Contracts", href: "/contracts" },
         ];
 
         const grow: Hub = {
@@ -211,7 +208,7 @@ const Menu = () => {
                 return { ...h, groups, visible: h.visible && groups.length > 0 };
             })
             .filter((h) => h.visible);
-    }, [isIndiaBased, isChatConnected, manager?.isAdmin, hasFeature, hasPrivilege]);
+    }, [isIndiaBased, manager?.isAdmin, hasFeature, hasPrivilege]);
 
     // Hardware back returns to the hub home when drilled in (Android).
     useEffect(() => {
