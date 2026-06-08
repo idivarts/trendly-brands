@@ -1,3 +1,4 @@
+import BrandCard from "@/components/organization/BrandCard";
 import ConfirmDeleteDialog from "@/components/organization/ConfirmDeleteDialog";
 import ConfirmRemoveMemberDialog from "@/components/organization/ConfirmRemoveMemberDialog";
 import EntityCard from "@/components/organization/EntityCard";
@@ -28,8 +29,8 @@ import { Divider, IconButton, Menu } from "react-native-paper";
 const ManageOrganizationScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const { xl, width } = useBreakpoints();
+    const styles = useMemo(() => useStyles(colors), [colors]);
     const router = useRouter();
 
     const { orgId } = useLocalSearchParams<{ orgId: string }>();
@@ -53,6 +54,9 @@ const ManageOrganizationScreen = () => {
     const [addBrandOpen, setAddBrandOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [menuBrandId, setMenuBrandId] = useState<string | null>(null);
+    // Header overflow menu — gathers the org-level actions (rename, billing,
+    // delete) that used to be scattered across the header and a danger zone.
+    const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
     // One destructive-confirmation pattern for both brand + org deletes.
     const [brandDeleteTarget, setBrandDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -99,6 +103,23 @@ const ManageOrganizationScreen = () => {
 
     const roleLabel = (role: OrganizationMemberRow["role"]) =>
         role === "org_owner" ? "Owner" : role === "org_admin" ? "Admin" : "Member";
+
+    // Drive the two-column split + brand-grid sizing off the constrained content
+    // width. On xl the page splits 2/3 (brands) · 1/3 (members); on mobile it
+    // stacks and the brand grid simply uses the full width.
+    const COLUMN_GAP = 24;
+    const GRID_GAP = 12;
+    const layout = useMemo(() => {
+        const content = width - 32; // 32 = scroll horizontal padding; full-width page
+        const leftWidth = xl ? (content - COLUMN_GAP) * (2 / 3) : content;
+        const rightWidth = xl ? (content - COLUMN_GAP) * (1 / 3) : content;
+        // Width-driven column count: target ~175px squarish tiles so a full-width
+        // page fills its horizontal space instead of stretching a few wide tiles.
+        // Clamped to keep at least 2 columns and avoid splintering on ultra-wide.
+        const cols = Math.max(2, Math.min(6, Math.floor(leftWidth / 175)));
+        const brandCardWidth = Math.floor((leftWidth - GRID_GAP * (cols - 1)) / cols);
+        return { leftWidth, rightWidth, brandCardWidth };
+    }, [width, xl]);
 
     const handleAddBrand = async (name: string) => {
         if (!name || !orgId) return;
@@ -187,25 +208,47 @@ const ManageOrganizationScreen = () => {
                 actionButtons={
                     detail
                         ? [
-                            detail && (
-                                <IconButton
-                                    icon="pencil"
-                                    size={18}
-                                    iconColor={colors.textSecondary}
-                                    onPress={() => setRenameOpen(true)}
-                                    style={styles.headerEditButton}
-                                />
-                            ),
-                            <Button
-                                key="billing"
-                                mode="text"
-                                compact
-                                icon="credit-card-outline"
-                                textColor={colors.primary}
-                                onPress={() => router.push(`/billing/${orgId}`)}
+                            <Menu
+                                key="org-actions"
+                                visible={headerMenuOpen}
+                                onDismiss={() => setHeaderMenuOpen(false)}
+                                anchor={
+                                    <IconButton
+                                        icon="dots-horizontal"
+                                        size={22}
+                                        iconColor={colors.text}
+                                        onPress={() => setHeaderMenuOpen(true)}
+                                        style={styles.headerEditButton}
+                                    />
+                                }
                             >
-                                Billing
-                            </Button>
+                                <Menu.Item
+                                    leadingIcon="pencil"
+                                    title="Edit name"
+                                    onPress={() => {
+                                        setHeaderMenuOpen(false);
+                                        setRenameOpen(true);
+                                    }}
+                                />
+                                <Menu.Item
+                                    leadingIcon="credit-card-outline"
+                                    title="Billing"
+                                    onPress={() => {
+                                        setHeaderMenuOpen(false);
+                                        router.push(`/billing/${orgId}`);
+                                    }}
+                                />
+                                <Divider />
+                                <Menu.Item
+                                    leadingIcon="trash-can-outline"
+                                    title="Delete organization"
+                                    titleStyle={{ color: colors.red }}
+                                    onPress={() => {
+                                        setHeaderMenuOpen(false);
+                                        setOrgDeleteOpen(true);
+                                    }}
+                                />
+                            </Menu>,
                         ]
                         : []
                 }
@@ -217,146 +260,129 @@ const ManageOrganizationScreen = () => {
                     ) : !detail ? (
                         <Text style={styles.empty}>Organization not found.</Text>
                     ) : (
-                        <>
-                            <View style={styles.sectionHeaderRow} lightColor="transparent" darkColor="transparent">
-                                <View style={{ flex: 1, flexDirection: "column", gap: 8 }}>
-                                    <Text style={styles.sectionHeaderTitle}>Brands</Text>
-                                    {atCap &&
-                                        <Text style={styles.capWarning}>
-                                            You've reached your plan's brand limit. Upgrade to add more.
-                                        </Text>}
-                                </View>
-                                <Button
-                                    mode="contained"
-                                    icon={atCap ? "arrow-up-bold" : "plus"}
-                                    style={styles.ctaButton}
-                                    onPress={() =>
-                                        atCap
-                                            ? router.push(`/billing/${orgId}`)
-                                            : setAddBrandOpen(true)
-                                    }
-                                >
-                                    {atCap ? "Upgrade plan" : "Add brand"}
-                                </Button>
-                            </View>
-                            {detail.brands.length === 0 ? (
-                                <Text style={styles.empty}>
-                                    No brands in this organization yet.
-                                </Text>
-                            ) : (
-                                detail.brands.map((b) => {
-                                    const isCurrent = b.id === selectedBrand?.id;
-                                    return (
-                                        <EntityCard
-                                            key={b.id}
-                                            title={b.name}
-                                            subtitle={isCurrent ? "Active brand" : "Tap to open"}
-                                            onPress={() => openBrand(b.id)}
-                                            trailing={
-                                                <>
-                                                    {isCurrent && <Tag compact>Current</Tag>}
-                                                    <Menu
-                                                        visible={menuBrandId === b.id}
-                                                        onDismiss={() => setMenuBrandId(null)}
-                                                        anchor={
-                                                            <IconButton
-                                                                icon="dots-vertical"
-                                                                size={20}
-                                                                iconColor={colors.text}
-                                                                onPress={() => setMenuBrandId(b.id)}
-                                                            />
-                                                        }
-                                                    >
-                                                        <Menu.Item
-                                                            title="Move to another organization"
-                                                            disabled={moveTargets.length === 0}
-                                                            onPress={() => {
-                                                                setMenuBrandId(null);
-                                                                setMoveBrandTarget({ id: b.id, name: b.name });
-                                                            }}
-                                                        />
-                                                        <Divider />
-                                                        <Menu.Item
-                                                            title="Delete"
-                                                            titleStyle={{ color: colors.red }}
-                                                            onPress={() => {
-                                                                setMenuBrandId(null);
-                                                                setBrandDeleteTarget({ id: b.id, name: b.name });
-                                                            }}
-                                                        />
-                                                    </Menu>
-                                                </>
-                                            }
-                                        />
-                                    );
-                                })
-                            )}
-
+                        <View
+                            style={[styles.split, xl && styles.splitRow]}
+                            lightColor="transparent"
+                            darkColor="transparent"
+                        >
+                            {/* Left (2/3 on xl): brands as a squarish tile grid. */}
                             <View
-                                style={styles.membersHeaderRow}
+                                style={[styles.column, xl && { width: layout.leftWidth }]}
                                 lightColor="transparent"
                                 darkColor="transparent"
                             >
-                                <View style={{ flex: 1, flexDirection: "column", gap: 8 }}>
-                                    <Text style={styles.sectionHeaderTitle}>Members</Text>
-                                    <Text style={styles.sectionHint}>
-                                        Members join this organization automatically when they're
-                                        invited to one of its brands. To add someone, invite them from
-                                        a brand's User Management page.
-                                    </Text>
+                                <View style={styles.sectionHeaderRow} lightColor="transparent" darkColor="transparent">
+                                    <View style={styles.sectionHeaderText}>
+                                        <Text style={styles.sectionHeaderTitle}>Brands</Text>
+                                        {atCap && (
+                                            <Text style={styles.capWarning}>
+                                                You've reached your plan's brand limit. Upgrade to add more.
+                                            </Text>
+                                        )}
+                                    </View>
+                                    <Button
+                                        mode="contained"
+                                        compact
+                                        icon={atCap ? "arrow-up-bold" : "plus"}
+                                        style={styles.ctaButton}
+                                        onPress={() =>
+                                            atCap
+                                                ? router.push(`/billing/${orgId}`)
+                                                : setAddBrandOpen(true)
+                                        }
+                                    >
+                                        {atCap ? "Upgrade plan" : "Add brand"}
+                                    </Button>
                                 </View>
-                                <Button
-                                    mode="text"
-                                    compact
-                                    textColor={colors.primary}
-                                    onPress={() => router.push("/members")}
-                                >
-                                    Go to User Management
-                                </Button>
+
+                                {detail.brands.length === 0 ? (
+                                    <Text style={styles.empty}>
+                                        No brands in this organization yet.
+                                    </Text>
+                                ) : (
+                                    <View style={styles.brandGrid} lightColor="transparent" darkColor="transparent">
+                                        {detail.brands.map((b) => (
+                                            <BrandCard
+                                                key={b.id}
+                                                name={b.name}
+                                                image={b.image}
+                                                isCurrent={b.id === selectedBrand?.id}
+                                                width={layout.brandCardWidth}
+                                                onPress={() => openBrand(b.id)}
+                                                menuOpen={menuBrandId === b.id}
+                                                onOpenMenu={() => setMenuBrandId(b.id)}
+                                                onDismissMenu={() => setMenuBrandId(null)}
+                                                canMove={moveTargets.length > 0}
+                                                onMove={() => {
+                                                    setMenuBrandId(null);
+                                                    setMoveBrandTarget({ id: b.id, name: b.name });
+                                                }}
+                                                onDelete={() => {
+                                                    setMenuBrandId(null);
+                                                    setBrandDeleteTarget({ id: b.id, name: b.name });
+                                                }}
+                                            />
+                                        ))}
+                                    </View>
+                                )}
                             </View>
 
-                            {members.length === 0 ? (
-                                <Text style={styles.empty}>No members yet.</Text>
-                            ) : (
-                                members.map((m) => {
-                                    const display = m.name || m.email || "Member";
-                                    const canRemove =
-                                        canManageMembers &&
-                                        m.role !== "org_owner" &&
-                                        m.managerId !== manager?.id;
-                                    return (
-                                        <EntityCard
-                                            key={m.managerId}
-                                            title={display}
-                                            subtitle={m.name ? m.email : undefined}
-                                            trailing={
-                                                <>
-                                                    <Tag compact>{roleLabel(m.role)}</Tag>
-                                                    {canRemove && (
-                                                        <IconButton
-                                                            icon="account-remove-outline"
-                                                            size={20}
-                                                            iconColor={colors.red}
-                                                            onPress={() => setMemberRemoveTarget(m)}
-                                                        />
-                                                    )}
-                                                </>
-                                            }
-                                        />
-                                    );
-                                })
-                            )}
+                            {/* Right (1/3 on xl): members as compact rows. */}
+                            <View
+                                style={[styles.column, xl ? { width: layout.rightWidth } : styles.membersStacked]}
+                                lightColor="transparent"
+                                darkColor="transparent"
+                            >
+                                <View style={styles.sectionHeaderRow} lightColor="transparent" darkColor="transparent">
+                                    <Text style={styles.sectionHeaderTitle}>Members</Text>
+                                    <Button
+                                        mode="text"
+                                        compact
+                                        textColor={colors.primary}
+                                        onPress={() => router.push("/members")}
+                                    >
+                                        Manage
+                                    </Button>
+                                </View>
+                                <Text style={styles.sectionHint}>
+                                    Members join automatically when invited to one of this
+                                    organization's brands. Invite people from a brand's User
+                                    Management page.
+                                </Text>
 
-                            <View style={styles.dangerZone} lightColor="transparent" darkColor="transparent">
-                                <Button
-                                    mode="outlined"
-                                    textColor={colors.red}
-                                    onPress={() => setOrgDeleteOpen(true)}
-                                >
-                                    Delete organization
-                                </Button>
+                                {members.length === 0 ? (
+                                    <Text style={styles.empty}>No members yet.</Text>
+                                ) : (
+                                    members.map((m) => {
+                                        const display = m.name || m.email || "Member";
+                                        const canRemove =
+                                            canManageMembers &&
+                                            m.role !== "org_owner" &&
+                                            m.managerId !== manager?.id;
+                                        return (
+                                            <EntityCard
+                                                key={m.managerId}
+                                                title={display}
+                                                subtitle={m.name ? m.email : undefined}
+                                                trailing={
+                                                    <>
+                                                        <Tag compact>{roleLabel(m.role)}</Tag>
+                                                        {canRemove && (
+                                                            <IconButton
+                                                                icon="account-remove-outline"
+                                                                size={20}
+                                                                iconColor={colors.red}
+                                                                onPress={() => setMemberRemoveTarget(m)}
+                                                            />
+                                                        )}
+                                                    </>
+                                                }
+                                            />
+                                        );
+                                    })
+                                )}
                             </View>
-                        </>
+                        </View>
                     )}
                 </View>
             </ScrollView>
@@ -422,42 +448,32 @@ const ManageOrganizationScreen = () => {
     );
 };
 
-const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
+const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         scroll: {
             padding: 16,
-            alignItems: xl ? "center" : "stretch",
+            alignItems: "stretch",
         },
         container: {
             width: "100%",
-            maxWidth: 1000,
-            alignSelf: "center",
+        },
+        split: {
+            gap: 32,
+        },
+        splitRow: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 24,
+        },
+        column: {
+            flexShrink: 1,
             gap: 12,
         },
-        headerMain: {
-            flex: 1,
-            minWidth: 0,
-        },
-        headerTitleRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 2,
-        },
-        headerTitleText: {
-            fontSize: 22,
-            fontWeight: "700",
-            color: colors.text,
-            flexShrink: 1,
+        membersStacked: {
+            marginTop: 4,
         },
         headerEditButton: {
             margin: 0,
-        },
-        headerSubtitle: {
-            fontSize: 12,
-            fontWeight: "600",
-            color: colors.textSecondary,
-            letterSpacing: 1,
-            marginTop: 2,
         },
         ctaButton: {
             shadowColor: colors.primary,
@@ -466,34 +482,37 @@ const useStyles = (colors: ReturnType<typeof Colors>, xl: boolean) =>
             shadowOpacity: 0.25,
             elevation: 4,
         },
-        membersHeaderRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 36,
-        },
         sectionHeaderRow: {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-            marginTop: 16,
+            gap: 12,
+            minHeight: 40,
+        },
+        sectionHeaderText: {
+            flex: 1,
+            flexDirection: "column",
+            gap: 6,
         },
         sectionHeaderTitle: {
-            fontSize: 16,
-            fontWeight: "600",
+            fontSize: 18,
+            fontWeight: "700",
             color: colors.text,
         },
         sectionHint: {
             fontSize: 13,
             color: colors.textSecondary,
             lineHeight: 18,
+            marginTop: -4,
+        },
+        brandGrid: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 12,
         },
         capWarning: {
             fontSize: 13,
             color: colors.red,
-        },
-        dangerZone: {
-            marginTop: 32,
         },
         empty: {
             fontSize: 14,
