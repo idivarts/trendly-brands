@@ -20,9 +20,11 @@ const Button: React.FC<ButtonProps> = ({
                 style,
             ]}
             contentStyle={[
-                size === 'small' && {
+                size === 'small' ? {
                     paddingVertical: 0,
                     paddingHorizontal: 0,
+                } : {
+                    paddingHorizontal: 6,
                 },
                 contentStyle,
             ]}
