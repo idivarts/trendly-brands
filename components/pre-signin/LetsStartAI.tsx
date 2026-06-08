@@ -106,7 +106,7 @@ const LetsStartAI: React.FC = () => {
                     <View style={styles.navRight}>
                         {isWide && (
                             <Pressable onPress={handleCreatorPress} hitSlop={8}>
-                                <Text style={styles.creatorLink}>Are you a creator?</Text>
+                                <Text style={styles.creatorLink}>Are you an Influencer?</Text>
                             </Pressable>
                         )}
                         <Pressable
