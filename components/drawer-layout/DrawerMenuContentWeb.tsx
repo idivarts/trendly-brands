@@ -1,8 +1,9 @@
 import { SidebarCollapsedContext, useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { Text, View } from "@/components/theme/Themed";
-import { useAuthContext } from "@/contexts";
 import { canAccessNav } from "@/constants/Access";
+import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
@@ -42,7 +43,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdminPortal, AdminPortalSubDrawer } from "./admin-portal";
-import CreditDisplayCard from "./CreditDisplayCard";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, Tab } from "./DrawerMenuItem";
 import { InfluencerLedGrowth, InfluencerLedGrowthSubDrawer } from "./influencer-led-growth";
@@ -156,13 +156,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
-    const { selectedBrand, brands, setSelectedBrand, hasFeature, hasPrivilege } = useBrandContext();
+    // allBrands (incl. drafts) so the switcher/list matches the Organizations page.
+    const { selectedBrand, allBrands: brands, setSelectedBrand, hasFeature, hasPrivilege } = useBrandContext();
+    const { organizations, selectedOrgBilling } = useOrganizationContext();
     const { manager } = useAuthContext();
     const { xl } = useBreakpoints();
     const sidebarCollapsedCtx = useSidebarCollapsed();
     const { isCollapsed, toggle } = sidebarCollapsedCtx;
 
-    const planKey = selectedBrand?.billing?.planKey || "";
+    const planKey = selectedOrgBilling?.planKey || "";
     const hasMultipleBrands = brands.length > 1;
 
     const drawerColors = useMemo(
@@ -204,6 +206,114 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const manageItems = useMemo(() => navFilter(MANAGE_MENU_ITEMS(theme)), [theme, navFilter]);
     const growthItems = useMemo(() => navFilter(GROWTH_MENU_ITEMS(theme)), [theme, navFilter]);
     const brandDetailsItems = useMemo(() => navFilter(BRAND_DETAILS_MENU_ITEMS(theme)), [theme, navFilter]);
+
+    // The organization the active brand belongs to (for org-scoped actions).
+    const currentOrg = useMemo(
+        () => organizations.find((o) => o.id === selectedBrand?.organizationId),
+        [organizations, selectedBrand?.organizationId]
+    );
+
+    // Brands belonging to the active org (for the inline org → brands list).
+    const orgBrands = useMemo(
+        () => (currentOrg ? brands.filter((b) => b.organizationId === currentOrg.id) : []),
+        [brands, currentOrg]
+    );
+
+    // Shared org dropdown body — used by both the collapsed popover and the
+    // expanded dropdown. Shows the active BRAND (info + brand-scoped actions) and
+    // the ORGANIZATION (billing + hub + the current org, which expands to its
+    // brands + a "New Brand" action), then the account row.
+    const renderOrgMenu = () => {
+        // Billing is an ORG-level concern, so pull it out of the brand actions.
+        const billingItem = brandDetailsItems.find((t) => t.href === "/billing");
+        const brandOnlyItems = brandDetailsItems.filter((t) => t.href !== "/billing");
+        return (
+            <>
+                <Text style={styles.orgMenuSectionLabel}>Brand</Text>
+                <Text style={styles.orgMenuMeta} numberOfLines={1}>
+                    {selectedBrand?.name ?? "Brand"}
+                </Text>
+                {brandOnlyItems.map((tab, idx) => (
+                    <Pressable key={`org-brand-${idx}`} onPress={() => setOrgDropdownOpen(false)}>
+                        <DrawerMenuItem tab={tab} />
+                    </Pressable>
+                ))}
+
+                <RNView style={styles.orgDropdownDivider} />
+
+                <Text style={styles.orgMenuSectionLabel}>Organization</Text>
+
+                {/* Billing lives on the organization now */}
+                {billingItem && (
+                    <Pressable onPress={() => setOrgDropdownOpen(false)}>
+                        <DrawerMenuItem tab={billingItem} />
+                    </Pressable>
+                )}
+
+                {/* Link to the full Organizations hub */}
+                <Pressable onPress={() => setOrgDropdownOpen(false)}>
+                    <DrawerMenuItem
+                        tab={{
+                            href: "/organizations",
+                            icon: ({ focused }) => (
+                                <DrawerIcon
+                                    href="/organizations"
+                                    icon={faLayerGroup}
+                                    focused={focused}
+                                />
+                            ),
+                            label: "All Organizations",
+                        }}
+                    />
+                </Pressable>
+
+                {/* Current organization — tap to open its detail page */}
+                {currentOrg ? (
+                    <Pressable
+                        onPress={() => {
+                            setOrgDropdownOpen(false);
+                            router.push(`/organizations/${currentOrg.id}`);
+                        }}
+                        style={styles.orgCurrentRow}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open organization"
+                    >
+                        <RNView style={styles.orgIconCircle}>
+                            <FontAwesomeIcon icon={faBuilding} size={14} color={colors.white} />
+                        </RNView>
+                        <RNView style={styles.orgCurrentInfo}>
+                            <Text style={styles.orgCurrentName} numberOfLines={1}>
+                                {currentOrg.name}
+                            </Text>
+                            <Text style={styles.orgCurrentMeta} numberOfLines={1}>
+                                {orgBrands.length}/{currentOrg.maxBrands || 1} brands ·{" "}
+                                {(currentOrg.planKey || "free").toUpperCase()}
+                            </Text>
+                        </RNView>
+                        <FontAwesomeIcon
+                            icon={faChevronRight}
+                            size={12}
+                            color={(colors as any).drawerTextMuted ?? colors.textSecondary}
+                        />
+                    </Pressable>
+                ) : (
+                    <Text style={styles.orgMenuMeta} numberOfLines={1}>
+                        Not in an organization
+                    </Text>
+                )}
+
+                <RNView style={styles.orgDropdownDivider} />
+
+                {BOTTOM_MENU_ITEMS(theme, manager?.name, manager?.profileImage, styles).map(
+                    (tab, idx) => (
+                        <Pressable key={`org-profile-${idx}`} onPress={() => setOrgDropdownOpen(false)}>
+                            <DrawerMenuItem tab={tab} />
+                        </Pressable>
+                    )
+                )}
+            </>
+        );
+    };
 
     // ─── Toggle button (bare Pressable, positioned by caller) ──────────────
     const toggleButtonBare = (
@@ -372,53 +482,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                         }}
                                     >
                                         <RNView style={styles.collapsedOrgPopover}>
-                                            <Text
-                                                style={styles.collapsedOrgPopoverHeader}
-                                                numberOfLines={1}
-                                            >
-                                                {selectedBrand?.name ?? "Brand"}
-                                            </Text>
-                                            <RNView style={styles.orgDropdownDivider} />
-                                            {brandDetailsItems.map((tab, idx) => (
-                                                <RNView
-                                                    key={`c-org-brand-${idx}`}
-                                                    onTouchEnd={() => setOrgDropdownOpen(false)}
-                                                >
-                                                    <DrawerMenuItem tab={tab} />
-                                                </RNView>
-                                            ))}
-                                            <RNView style={styles.orgDropdownDivider} />
-                                            <RNView onTouchEnd={() => setOrgDropdownOpen(false)}>
-                                                <DrawerMenuItem
-                                                    tab={{
-                                                        href: "/onboarding-chat",
-                                                        icon: ({ focused }) => (
-                                                            <DrawerIcon
-                                                                href="/onboarding-chat"
-                                                                icon={faPlus}
-                                                                focused={focused}
-                                                            />
-                                                        ),
-                                                        label: "Create New Brand",
-                                                    }}
-                                                />
-                                            </RNView>
-                                            <RNView style={styles.orgDropdownDivider} />
-                                            {BOTTOM_MENU_ITEMS(
-                                                theme,
-                                                manager?.name,
-                                                manager?.profileImage,
-                                                styles
-                                            ).map((tab, idx) => (
-                                                <RNView
-                                                    key={`c-org-profile-${idx}`}
-                                                    onTouchEnd={() =>
-                                                        setOrgDropdownOpen(false)
-                                                    }
-                                                >
-                                                    <DrawerMenuItem tab={tab} />
-                                                </RNView>
-                                            ))}
+                                            {renderOrgMenu()}
                                         </RNView>
                                     </SidebarCollapsedContext.Provider>
                                 )}
@@ -510,6 +574,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                 </Pressable>
             )}
             {hasMultipleBrands && brandListExpanded && (
+                <Pressable
+                    style={styles.dropdownBackdrop}
+                    onPress={() => setBrandListExpanded(false)}
+                    accessibilityLabel="Close brand list"
+                />
+            )}
+            {hasMultipleBrands && brandListExpanded && (
                 <RNView style={styles.brandListDropdown} pointerEvents="box-none">
                     <ScrollView
                         style={styles.brandListScroll}
@@ -517,29 +588,74 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         showsVerticalScrollIndicator={true}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {brands.map((brand) => {
-                            const isSelected = brand.id === selectedBrand?.id;
-                            return (
-                                <Pressable
-                                    key={brand.id}
-                                    onPress={() => handleBrandSelect(brand)}
-                                    style={[
-                                        styles.brandListItem,
-                                        isSelected && styles.brandListItemSelectedInDropdown,
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.brandListItemText,
-                                            isSelected && styles.brandListItemTextSelected,
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {brand.name}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
+                        {(() => {
+                            // Group the brand list by organization (grouped switcher).
+                            // Brands with no org fall under "Other".
+                            const byOrg = new Map<
+                                string,
+                                { name: string; brands: typeof brands }
+                            >();
+                            const other: typeof brands = [];
+                            brands.forEach((b) => {
+                                const oid = b.organizationId;
+                                if (oid) {
+                                    if (!byOrg.has(oid)) {
+                                        byOrg.set(oid, {
+                                            name:
+                                                organizations.find((o) => o.id === oid)?.name ||
+                                                "Organization",
+                                            brands: [] as typeof brands,
+                                        });
+                                    }
+                                    byOrg.get(oid)!.brands.push(b);
+                                } else {
+                                    other.push(b);
+                                }
+                            });
+                            const groups = Array.from(byOrg.entries()).map(([key, v]) => ({
+                                key,
+                                name: v.name,
+                                brands: v.brands,
+                            }));
+                            if (other.length)
+                                groups.push({ key: "__other__", name: "Other", brands: other });
+                            const showHeaders = groups.length > 1;
+
+                            return groups.map((group) => (
+                                <RNView key={group.key}>
+                                    {showHeaders && (
+                                        <Text style={styles.brandSubtitle}>
+                                            {group.name.toUpperCase()}
+                                        </Text>
+                                    )}
+                                    {group.brands.map((brand) => {
+                                        const isSelected = brand.id === selectedBrand?.id;
+                                        return (
+                                            <Pressable
+                                                key={brand.id}
+                                                onPress={() => handleBrandSelect(brand)}
+                                                style={[
+                                                    styles.brandListItem,
+                                                    isSelected &&
+                                                    styles.brandListItemSelectedInDropdown,
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.brandListItemText,
+                                                        isSelected &&
+                                                        styles.brandListItemTextSelected,
+                                                    ]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {brand.name?.trim() || "Untitled brand"}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </RNView>
+                            ));
+                        })()}
                     </ScrollView>
                 </RNView>
             )}
@@ -598,50 +714,38 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             </View>
                         )}
 
-                        {/* 3. CREDITS */}
-                        {showCreditsSystem && (
+                        {/* 3. BILLING / PLAN STATUS */}
+                        {showCreditsSystem && selectedBrand && (
                             <>
-                                {selectedBrand && !selectedBrand.isBillingDisabled &&
-                                    (xl ? (
-                                        <CoachmarkAnchor id="guide-tour-credits-web" shape="rect">
-                                            <CreditDisplayCard />
-                                        </CoachmarkAnchor>
-                                    ) : (
-                                        <CreditDisplayCard />
-                                    ))}
-                                {selectedBrand && !selectedBrand.isBillingDisabled && (
-                                    <>
-                                        {(!selectedBrand.billing ||
-                                            selectedBrand?.billing?.planKey === "starter") && (
-                                                <RenderBanner
-                                                    title="You're on a Free Plan"
-                                                    description="Upgrade now to enjoy all the premium features and grow your brand."
-                                                    buttonText="Upgrade Now"
-                                                />
-                                            )}
-                                        {selectedBrand.billing?.isOnTrial &&
-                                            (selectedBrand.billing?.trialEnds || 0) > Date.now() && (
-                                                <RenderBanner
-                                                    title={`You're on ${selectedBrand.billing.planKey} plan's Trial`}
-                                                    description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
-                                                        ((selectedBrand.billing?.trialEnds || 0) - Date.now()) /
-                                                        (1000 * 60 * 60)
-                                                    )} hours`}
-                                                    buttonText="Pay Now"
-                                                    customUrl={selectedBrand.billing.subscriptionUrl}
-                                                />
-                                            )}
-                                        {selectedBrand.billing?.isOnTrial &&
-                                            (selectedBrand.billing?.trialEnds || 0) <= Date.now() && (
-                                                <RenderBanner
-                                                    title="You're Trial has Ended"
-                                                    description="To keep using the platform, please pay for the subscription plan"
-                                                    buttonText="Pay Now"
-                                                    customUrl={selectedBrand.billing.subscriptionUrl}
-                                                />
-                                            )}
-                                    </>
-                                )}
+                                {(!selectedOrgBilling ||
+                                    selectedOrgBilling?.planKey === "starter") && (
+                                        <RenderBanner
+                                            title="You're on a Free Plan"
+                                            description="Upgrade now to enjoy all the premium features and grow your brand."
+                                            buttonText="Upgrade Now"
+                                        />
+                                    )}
+                                {selectedOrgBilling?.isOnTrial &&
+                                    (selectedOrgBilling?.trialEnds || 0) > Date.now() && (
+                                        <RenderBanner
+                                            title={`You're on ${selectedOrgBilling.planKey} plan's Trial`}
+                                            description={`Upgrade now to loose access to this community. Trial ends in ${Math.round(
+                                                ((selectedOrgBilling?.trialEnds || 0) - Date.now()) /
+                                                (1000 * 60 * 60)
+                                            )} hours`}
+                                            buttonText="Pay Now"
+                                            customUrl={selectedOrgBilling.subscriptionUrl}
+                                        />
+                                    )}
+                                {selectedOrgBilling?.isOnTrial &&
+                                    (selectedOrgBilling?.trialEnds || 0) <= Date.now() && (
+                                        <RenderBanner
+                                            title="You're Trial has Ended"
+                                            description="To keep using the platform, please pay for the subscription plan"
+                                            buttonText="Pay Now"
+                                            customUrl={selectedOrgBilling.subscriptionUrl}
+                                        />
+                                    )}
                             </>
                         )}
 
@@ -715,49 +819,15 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         {/* Org dropdown — opens upward */}
                         <RNView style={styles.orgWrap}>
                             {orgDropdownOpen && (
+                                <Pressable
+                                    style={styles.dropdownBackdrop}
+                                    onPress={() => setOrgDropdownOpen(false)}
+                                    accessibilityLabel="Close organization menu"
+                                />
+                            )}
+                            {orgDropdownOpen && (
                                 <RNView style={styles.orgDropdown}>
-                                    {brandDetailsItems.map((tab, idx) => (
-                                        <RNView
-                                            key={`org-brand-${idx}`}
-                                            onTouchEnd={() => setOrgDropdownOpen(false)}
-                                        >
-                                            <DrawerMenuItem tab={tab} />
-                                        </RNView>
-                                    ))}
-                                    <RNView style={styles.orgDropdownDivider} />
-                                    <RNView onTouchEnd={() => setOrgDropdownOpen(false)}>
-                                        <DrawerMenuItem
-                                            tab={{
-                                                href: "/onboarding-chat",
-                                                icon: ({ focused }) => (
-                                                    <DrawerIcon
-                                                        href="/onboarding-chat"
-                                                        icon={faPlus}
-                                                        focused={focused}
-                                                    />
-                                                ),
-                                                label: "Create New Brand",
-                                            }}
-                                        />
-                                    </RNView>
-                                    <RNView style={styles.orgDropdownDivider} />
-                                    {BOTTOM_MENU_ITEMS(
-                                        theme,
-                                        manager?.name,
-                                        manager?.profileImage,
-                                        styles
-                                    )
-                                        .filter(
-                                            (tab) => tab.href !== "/onboarding-your-brand"
-                                        )
-                                        .map((tab, idx) => (
-                                            <RNView
-                                                key={`org-profile-${idx}`}
-                                                onTouchEnd={() => setOrgDropdownOpen(false)}
-                                            >
-                                                <DrawerMenuItem tab={tab} />
-                                            </RNView>
-                                        ))}
+                                    {renderOrgMenu()}
                                 </RNView>
                             )}
                             <Pressable
@@ -780,10 +850,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 </RNView>
                                 <View style={styles.orgTextWrap}>
                                     <Text style={styles.orgLabel} numberOfLines={1}>
-                                        My Organization
+                                        {currentOrg ? "Organization" : "My Organization"}
                                     </Text>
                                     <Text style={styles.orgSubtitle} numberOfLines={1}>
-                                        {selectedBrand?.name ?? "Brand"}
+                                        {currentOrg?.name ?? selectedBrand?.name ?? "Brand"}
                                     </Text>
                                 </View>
                                 <RNView style={styles.orgPresenceDot} />
@@ -1121,6 +1191,18 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             position: "relative",
             backgroundColor: "transparent",
         },
+        // Full-viewport invisible layer that captures outside clicks to close an
+        // open drawer dropdown. position:fixed (web) so it covers the screen; its
+        // zIndex sits below each dropdown (brand list 1000 / org 2000) but above
+        // page content.
+        dropdownBackdrop: {
+            position: "fixed" as any,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 900,
+        },
         orgDropdown: {
             position: "absolute",
             bottom: "100%",
@@ -1192,6 +1274,48 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             backgroundColor: sidebarDividerColor,
             marginVertical: 6,
             marginHorizontal: 12,
+        },
+        orgMenuSectionLabel: {
+            fontSize: 10,
+            fontWeight: "700",
+            color: (colors as any).drawerTextMuted ?? colors.textSecondary,
+            textTransform: "uppercase" as const,
+            letterSpacing: 0.6,
+            paddingHorizontal: 12,
+            paddingTop: 6,
+            paddingBottom: 2,
+        },
+        orgMenuMeta: {
+            fontSize: 11,
+            color: (colors as any).drawerTextMuted ?? colors.textSecondary,
+            paddingHorizontal: 12,
+            paddingBottom: 6,
+        },
+        orgCurrentRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 10,
+        },
+        orgCurrentInfo: {
+            flex: 1,
+            minWidth: 0,
+            backgroundColor: "transparent",
+        },
+        orgCurrentName: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: theme.dark ? colors.drawerText : colors.primary,
+            letterSpacing: -0.2,
+        },
+        orgCurrentMeta: {
+            fontSize: 11,
+            color: (colors as any).drawerTextMuted ?? colors.textSecondary,
+        },
+        orgBrandSubList: {
+            paddingLeft: 10,
         },
         orgPresenceDot: {
             width: 7,

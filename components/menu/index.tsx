@@ -1,4 +1,3 @@
-import CreditDisplayCard from "@/components/drawer-layout/CreditDisplayCard";
 import { canAccessNav } from "@/constants/Access";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -12,6 +11,7 @@ import {
     faArrowTrendUp,
     faBell,
     faBriefcase,
+    faBuilding,
     faBullhorn,
     faBullseye,
     faChartLine,
@@ -28,7 +28,6 @@ import {
     faLock,
     faPenToSquare,
     faPeopleGroup,
-    faPlus,
     faShareNodes,
     faStar,
     faTriangleExclamation,
@@ -326,10 +325,6 @@ const Menu = () => {
                 </Button>
             </View>
 
-            {!xl && selectedBrand && !selectedBrand.isBillingDisabled && (
-                <CreditDisplayCard />
-            )}
-
             {/* Quick actions */}
             <View style={styles.quickRow}>
                 <QuickChip
@@ -364,18 +359,34 @@ const Menu = () => {
                 ))}
             </View>
 
-            {/* Footer: Create new brand */}
+            {/* Organizations row */}
             <Pressable
-                onPress={() => navigate("/onboarding-chat")}
-                style={styles.footerLink}
+                onPress={() => navigate("/organizations")}
+                style={({ pressed }) => [
+                    styles.orgRow,
+                    pressed && styles.orgRowPressed,
+                ]}
                 accessibilityRole="button"
+                accessibilityLabel="Organizations"
             >
+                <View style={styles.orgIcon}>
+                    <FontAwesomeIcon
+                        icon={faBuilding}
+                        size={18}
+                        color={Colors(theme).primary}
+                    />
+                </View>
+                <View style={styles.orgText}>
+                    <Text style={styles.orgTitle}>Organizations</Text>
+                    <Text style={styles.orgSubtitle} numberOfLines={1}>
+                        Switch or manage your organizations
+                    </Text>
+                </View>
                 <FontAwesomeIcon
-                    icon={faPlus}
-                    size={12}
+                    icon={faChevronRight}
+                    size={14}
                     color={Colors(theme).textSecondary}
                 />
-                <Text style={styles.footerLinkText}>Create New Brand</Text>
             </Pressable>
         </ScrollView>
     );
@@ -640,19 +651,47 @@ const createStyles = (theme: Theme) => {
             fontSize: 12,
             color: colors.textSecondary,
         },
-        // ── Footer link ───────────────────────────────────────────────────
-        footerLink: {
+        // ── Organizations row ─────────────────────────────────────────────
+        orgRow: {
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
+            gap: 14,
+            backgroundColor: colors.tag,
+            borderRadius: 16,
+            paddingHorizontal: 16,
             paddingVertical: 14,
             marginTop: 4,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
         },
-        footerLinkText: {
-            fontSize: 13,
+        orgRowPressed: {
+            opacity: 0.85,
+        },
+        orgIcon: {
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.card,
+        },
+        orgText: {
+            flex: 1,
+            gap: 2,
+            backgroundColor: "transparent",
+        },
+        orgTitle: {
+            fontSize: 15,
+            fontWeight: "600",
+            color: colors.text,
+            letterSpacing: -0.1,
+        },
+        orgSubtitle: {
+            fontSize: 12,
             color: colors.textSecondary,
-            fontWeight: "500",
         },
         // ── Drill-down ────────────────────────────────────────────────────
         backRow: {

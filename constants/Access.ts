@@ -123,6 +123,64 @@ export const resolvePrivilege = (
     return (privileges[feature] ?? []).includes(priv);
 };
 
+// ── Privilege-set builders ───────────────────────────────────────────────────
+// Frontend mirrors of the backend privilege-map builders in permissions.go /
+// team.go (AllFeaturePrivilegesMap, FeaturePrivilegesMapExcept,
+// ViewOnlyFeaturePrivilegesMap). Keep these in exact sync with the backend so
+// the team presets the UI offers match the ones EnsureDefaultTeam seeds.
+
+// Every privilege value defined for a single feature.
+export const allPrivilegesFor = (key: FeatureKey): string[] =>
+    FEATURES.find((f) => f.key === key)?.privileges.map((p) => p.value) ?? [];
+
+// All features → all their privileges, minus any excluded features.
+export const featurePrivilegesExcept = (...exclude: FeatureKey[]): TeamPrivileges =>
+    FEATURES.reduce((acc, f) => {
+        if (!exclude.includes(f.key)) acc[f.key] = f.privileges.map((p) => p.value);
+        return acc;
+    }, {} as TeamPrivileges);
+
+// All features → all privileges (Admin preset / backend AllFeaturePrivilegesMap).
+export const allFeaturePrivileges = (): TeamPrivileges => featurePrivilegesExcept();
+
+// Read-only access to viewable features (Viewer preset / backend viewPrivileges).
+export const viewOnlyFeaturePrivileges = (): TeamPrivileges => ({
+    strategy: ["viewer"],
+    content_calendar: ["view"],
+    content: ["view"],
+    social_accounts: ["view"],
+});
+
+// ── Access presets ───────────────────────────────────────────────────────────
+// The three roles every brand is seeded with (backend defaultTeamSpecs).
+export interface AccessPreset {
+    key: string;
+    label: string;
+    description: string;
+    build: () => TeamPrivileges;
+}
+
+export const ACCESS_PRESETS: AccessPreset[] = [
+    { key: "admin", label: "Admin", description: "Full access to everything.", build: allFeaturePrivileges },
+    { key: "editor", label: "Editor", description: "Everything except brand administration.", build: () => featurePrivilegesExcept("brand_admin") },
+    { key: "viewer", label: "Viewer", description: "View & comment only.", build: viewOnlyFeaturePrivileges },
+];
+
+// Privileges a brand-new team starts with: all features except brand admin
+// (i.e. the Editor preset). Mirrors the most common real-world team.
+export const defaultNewTeamPrivileges = (): TeamPrivileges => featurePrivilegesExcept("brand_admin");
+
+// Canonical, order-independent signature of a privilege map (empty features
+// dropped) — used to tell which preset, if any, a draft currently matches.
+const canonicalPrivileges = (p: TeamPrivileges): string =>
+    FEATURES.map((f) => `${f.key}:${[...(p[f.key] ?? [])].sort().join(",")}`)
+        .filter((s) => !s.endsWith(":"))
+        .join("|");
+
+// Returns the preset key a privilege map matches exactly, or null ("Custom").
+export const matchPresetKey = (p: TeamPrivileges): string | null =>
+    ACCESS_PRESETS.find((x) => canonicalPrivileges(x.build()) === canonicalPrivileges(p))?.key ?? null;
+
 // ── Legacy capability shim ───────────────────────────────────────────────────
 // Existing call sites gate on the old capability strings. Map each to the
 // feature/privilege pair(s) that should satisfy it; a capability is held when
