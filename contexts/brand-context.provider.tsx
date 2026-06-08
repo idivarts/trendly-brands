@@ -633,7 +633,7 @@ export const BrandContextProvider: React.FC<
         // Don't redirect while already anywhere in the onboarding flow (chat or
         // the fallback form), only when a draft is open from elsewhere.
         if (pathName?.includes("onboarding")) return;
-        router.resetAndNavigate("/onboarding-chat");
+        router.resetAndNavigate("/onboarding");
     }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName, brands]);
 
     // Draft brands (mid-onboarding) are hidden from brand lists/switchers. The

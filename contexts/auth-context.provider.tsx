@@ -154,7 +154,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
         });
 
         resetAndNavigate({
-            pathname: "/onboarding-chat",
+            pathname: "/onboarding",
             params: {
                 firstBrand: "true",
             },

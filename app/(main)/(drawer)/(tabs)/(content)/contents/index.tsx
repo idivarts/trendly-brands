@@ -8,6 +8,7 @@ import ContentStateFilter, {
 import ContentViewSwitcher, { ContentView } from "@/components/contents/ContentViewSwitcher";
 import ContentsOverflowMenu from "@/components/contents/ContentsOverflowMenu";
 import EmptyContentsView from "@/components/contents/EmptyContentsView";
+import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import { CONTENT_STATUS_ORDER, ContentItem, ContentStatus } from "@/components/contents/types";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -18,8 +19,8 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
 const ContentsScreen = () => {
@@ -28,11 +29,22 @@ const ContentsScreen = () => {
     const { xl } = useBreakpoints();
     const router = useRouter();
     const styles = useMemo(() => useStyles(colors), [colors]);
+    useSidebarParam();
 
     const { items, addContent, updateContent } = useContents();
     const [view, setView] = useState<ContentView>("gallery");
     const [stateFilter, setStateFilter] = useState<ContentStateFilterValue>("all");
     const [showAddModal, setShowAddModal] = useState(false);
+
+    // Arriving from /onboarding ("Work on a specific content") opens the create
+    // modal straight away. Applied once so closing it doesn't re-trigger.
+    const { openCreate } = useLocalSearchParams<{ openCreate?: string }>();
+    const openedFromParam = useRef(false);
+    useEffect(() => {
+        if (openedFromParam.current || openCreate !== "1") return;
+        openedFromParam.current = true;
+        setShowAddModal(true);
+    }, [openCreate]);
 
     // The Board is desktop-only — on mobile we always render the Gallery.
     const effectiveView: ContentView = xl ? view : "gallery";
