@@ -104,11 +104,11 @@ const LetsStartAI: React.FC = () => {
                         />
                     </Pressable>
                     <View style={styles.navRight}>
-                        {isWide && (
+                        {/* {isWide && (
                             <Pressable onPress={handleCreatorPress} hitSlop={8}>
                                 <Text style={styles.creatorLink}>Are you an Influencer?</Text>
                             </Pressable>
-                        )}
+                        )} */}
                         <Pressable
                             onPress={() => setAuthOpen(true)}
                             style={({ pressed }) => [styles.signInBtn, pressed && { opacity: 0.85 }]}
