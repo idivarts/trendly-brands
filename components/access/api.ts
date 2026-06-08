@@ -1,8 +1,11 @@
-// Typed API helpers for the privilege-control (Access) feature. All calls go
-// through HttpWrapper, which attaches the Firebase bearer token automatically.
+// Typed API helpers for the privilege-control (Access) feature. Reads come
+// straight from Firestore; mutations go through HttpWrapper, which attaches the
+// Firebase bearer token automatically.
 
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { TeamPrivileges } from "@/constants/Access";
+import { collection, getDocs } from "firebase/firestore";
 
 export interface Team {
     id: string;
@@ -33,10 +36,14 @@ const json = async (res: Response) => {
 
 // ── Teams ────────────────────────────────────────────────────────────────────
 
+// Teams are read directly from Firestore (brands/{brandId}/teams). Brand members
+// have read access via Firestore rules, so no backend round-trip is needed.
 export const listTeams = async (brandId: string): Promise<Team[]> => {
-    const res = await HttpWrapper.fetch(`/api/v2/brands/${brandId}/teams`, { method: "GET" });
-    const data = await json(res);
-    return (data.teams ?? []) as Team[];
+    const snap = await getDocs(collection(FirestoreDB, "brands", brandId, "teams"));
+    return snap.docs.map((d) => {
+        const data = d.data() as Team;
+        return { ...data, id: data.id ?? d.id };
+    });
 };
 
 export const createTeam = async (
