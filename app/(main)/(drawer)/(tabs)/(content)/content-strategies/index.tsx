@@ -1,6 +1,7 @@
 import EmptyPromptView from "@/components/content-strategy/EmptyPromptView";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import { ContentStrategy } from "@/components/content-strategy/types";
+import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import { useStrategies } from "@/hooks/use-strategies";
@@ -19,6 +20,7 @@ const ContentStrategiesIndex = () => {
     const { xl } = useBreakpoints();
     const router = useRouter();
     const { strategies, addStrategy } = useStrategies();
+    useSidebarParam();
 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const styles = useMemo(() => useStyles(colors), [colors]);

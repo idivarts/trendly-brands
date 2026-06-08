@@ -5,6 +5,7 @@ import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
+import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
@@ -43,6 +44,7 @@ const ContentCalendarScreen = () => {
     const { xl } = useBreakpoints();
     const router = useRouter();
     const { hasCapability, selectedBrand } = useBrandContext();
+    useSidebarParam();
     const canManageContent = hasCapability("manage_content");
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
 

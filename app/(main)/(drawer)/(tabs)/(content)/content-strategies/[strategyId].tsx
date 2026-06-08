@@ -10,6 +10,7 @@ import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingP
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
 import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
+import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
@@ -45,6 +46,7 @@ const ContentStrategyDetail = () => {
         strategyId: string;
         initialPrompt?: string;
     }>();
+    useSidebarParam();
 
     const {
         strategies,

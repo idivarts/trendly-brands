@@ -98,7 +98,7 @@ const DrawerMenuContentMobile: React.FC<DrawerMenuContentMobileProps> = () => {
                     showChevron={false}
                     onPress={() => {
                         router.push({
-                            pathname: "/onboarding-chat",
+                            pathname: "/onboarding",
                         });
                         OpenDrawerSubject.next(false);
                     }}
