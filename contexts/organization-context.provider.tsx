@@ -1,5 +1,8 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { IOrgBilling } from "@/shared-libs/firestore/trendly-pro/models/organizations";
+import {
+    IOrgBilling,
+    OrgRole,
+} from "@/shared-libs/firestore/trendly-pro/models/organizations";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -15,6 +18,7 @@ import {
     getDocs,
     onSnapshot,
     query,
+    updateDoc,
     where,
 } from "firebase/firestore";
 import React, {
@@ -41,16 +45,33 @@ export interface OrganizationDetail {
     brandCount: number;
 }
 
+export interface OrganizationMemberRow {
+    managerId: string;
+    role: OrgRole;
+    status: number;
+    name?: string;
+    email?: string;
+    profileImage?: string;
+}
+
 interface OrganizationContextProps {
     organizations: Organization[];
     loading: boolean;
     refresh: () => Promise<void>;
     createOrganization: (name: string, image?: string) => Promise<Organization | null>;
+    renameOrganization: (orgId: string, name: string) => Promise<boolean>;
     deleteOrganization: (orgId: string) => Promise<boolean>;
     addBrand: (orgId: string, name: string, image?: string) => Promise<string | null>;
     transferBrand: (destOrgId: string, brandId: string) => Promise<boolean>;
     deleteBrand: (brandId: string) => Promise<boolean>;
     getOrganization: (orgId: string) => Promise<OrganizationDetail | null>;
+    // Org members live at organizations/{orgId}/orgMembers, joined with their
+    // manager profile for display. Read directly from Firestore (rules grant
+    // any authenticated user read access).
+    getOrganizationMembers: (orgId: string) => Promise<OrganizationMemberRow[]>;
+    // Removes a member from the org AND every brand in it. Owner cannot be
+    // removed. Returns true on success.
+    removeOrganizationMember: (orgId: string, managerId: string) => Promise<boolean>;
     // The parent organization of the currently selected brand, kept in sync via
     // a Firestore subscription. Undefined for legacy brands with no
     // organizationId or while the subscription is still hydrating.
@@ -73,11 +94,14 @@ const OrganizationContext = createContext<OrganizationContextProps>({
     loading: false,
     refresh: async () => {},
     createOrganization: noop,
+    renameOrganization: noop,
     deleteOrganization: noop,
     addBrand: noop,
     transferBrand: noop,
     deleteBrand: noop,
     getOrganization: noop,
+    getOrganizationMembers: async () => [],
+    removeOrganizationMember: noop,
     selectedOrganization: undefined,
     selectedOrgBilling: undefined,
     isOnFreeTrial: true,
@@ -227,6 +251,22 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         []
     );
 
+    const renameOrganization = useCallback(
+        async (orgId: string, name: string): Promise<boolean> => {
+            const trimmed = name.trim();
+            if (!trimmed) return false;
+            try {
+                await updateDoc(doc(FirestoreDB, "organizations", orgId), { name: trimmed });
+                Toaster.success("Organization renamed");
+                return true;
+            } catch (e) {
+                Toaster.error(await errorMessage(e, "Failed to rename organization"));
+                return false;
+            }
+        },
+        []
+    );
+
     const deleteOrganization = useCallback(
         async (orgId: string): Promise<boolean> => {
             try {
@@ -347,6 +387,56 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         []
     );
 
+    // List org members (orgMembers subcollection) joined with each manager's
+    // profile for name/email/avatar — mirrors how the brand MembersTab hydrates
+    // brand members.
+    const getOrganizationMembers = useCallback(
+        async (orgId: string): Promise<OrganizationMemberRow[]> => {
+            try {
+                const snap = await getDocs(
+                    collection(FirestoreDB, "organizations", orgId, "orgMembers")
+                );
+                const rows = await Promise.all(
+                    snap.docs.map(async (m) => {
+                        const data = m.data() as { role?: OrgRole; status?: number };
+                        const profileSnap = await getDoc(doc(FirestoreDB, "managers", m.id));
+                        const profile = (profileSnap.data() as any) || {};
+                        return {
+                            managerId: m.id,
+                            role: (data.role ?? "member") as OrgRole,
+                            status: data.status ?? 1,
+                            name: profile.name,
+                            email: profile.email,
+                            profileImage: profile.profileImage,
+                        } as OrganizationMemberRow;
+                    })
+                );
+                return rows;
+            } catch (e) {
+                Toaster.error(await errorMessage(e, "Failed to load members"));
+                return [];
+            }
+        },
+        []
+    );
+
+    const removeOrganizationMember = useCallback(
+        async (orgId: string, managerId: string): Promise<boolean> => {
+            try {
+                await HttpWrapper.fetch(
+                    `/api/v2/organizations/${orgId}/members/${managerId}`,
+                    { method: "DELETE" }
+                );
+                Toaster.success("Member removed from organization");
+                return true;
+            } catch (e) {
+                Toaster.error(await errorMessage(e, "Failed to remove member"));
+                return false;
+            }
+        },
+        []
+    );
+
     return (
         <OrganizationContext.Provider
             value={{
@@ -354,11 +444,14 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
                 loading,
                 refresh,
                 createOrganization,
+                renameOrganization,
                 deleteOrganization,
                 addBrand,
                 transferBrand,
                 deleteBrand,
                 getOrganization,
+                getOrganizationMembers,
+                removeOrganizationMember,
                 selectedOrganization,
                 selectedOrgBilling,
                 isOnFreeTrial,

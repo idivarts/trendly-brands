@@ -45,7 +45,12 @@ import React, {
 import { useAuthContext } from "./auth-context.provider";
 
 interface BrandContextProps {
+    // Finalized brands only (drafts hidden) — used by most screens.
     brands: Brand[];
+    // Every brand the user can access, INCLUDING mid-onboarding drafts. Used by
+    // the brand switcher so it matches the Organizations page (which lists every
+    // org regardless of brand state).
+    allBrands: Brand[];
     createBrand: (
         brand: Partial<IBrands>
     ) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
@@ -102,6 +107,7 @@ type CurrentMember = {
 
 const BrandContext = createContext<BrandContextProps>({
     brands: [],
+    allBrands: [],
     createBrand: () => Promise.resolve(null),
     createDraftBrand: () => Promise.resolve(null),
     finalizeBrand: () => Promise.resolve(),
@@ -292,6 +298,45 @@ export const BrandContextProvider: React.FC<
                     }
                 });
 
+                // Union in brands from organizations the manager belongs to, so
+                // the brand switcher matches the Organizations page (org
+                // membership grants access to the org's brands). Without this, a
+                // brand that exists in an org but lacks a per-brand member doc is
+                // invisible in the switcher while still showing on the org page.
+                try {
+                    const orgMembersSnap = await getDocs(
+                        query(
+                            collectionGroup(FirestoreDB, "orgMembers"),
+                            where("managerId", "==", manager.id)
+                        )
+                    );
+                    const orgIds = Array.from(
+                        new Set(
+                            orgMembersSnap.docs
+                                .map((d) => d.ref.parent.parent?.id)
+                                .filter((x): x is string => !!x)
+                        )
+                    );
+                    for (let i = 0; i < orgIds.length; i += 10) {
+                        const chunk = orgIds.slice(i, i + 10);
+                        const orgsSnap = await getDocs(
+                            query(
+                                collection(FirestoreDB, "organizations"),
+                                where(documentId(), "in", chunk)
+                            )
+                        );
+                        orgsSnap.docs.forEach((o) => {
+                            const data = o.data() as any;
+                            if (data?.deletedAt) return;
+                            (data?.brandIds as string[] | undefined)?.forEach((bid) =>
+                                brandIds.add(bid)
+                            );
+                        });
+                    }
+                } catch (e) {
+                    Console.log("Failed to union organization brands", e);
+                }
+
                 if (brandIds.size === 0) {
                     Console.log("No brands associated with this manager");
                     setBrands([]);
@@ -299,70 +344,56 @@ export const BrandContextProvider: React.FC<
                     return;
                 }
 
-                const brandsCollection = collection(FirestoreDB, "brands");
-                const brandsQuery = query(
-                    brandsCollection,
-                    where(documentId(), "in", Array.from(brandIds))
-                );
-
-                await getDocs(brandsQuery).then(async (brandsSnapshot) => {
-                    const fetchedBrands: Brand[] = [];
-                    brandsSnapshot.docs.forEach((brandDoc) => {
-                        fetchedBrands.push({
-                            ...(brandDoc.data() as Brand),
-                            id: brandDoc.id,
-                        });
+                // Fetch all brand docs, chunked by 10 to respect Firestore's
+                // `in` query limit (membership + org brands can exceed it).
+                const idList = Array.from(brandIds);
+                const fetchedBrands: Brand[] = [];
+                for (let i = 0; i < idList.length; i += 10) {
+                    const chunk = idList.slice(i, i + 10);
+                    const snap = await getDocs(
+                        query(collection(FirestoreDB, "brands"), where(documentId(), "in", chunk))
+                    );
+                    snap.docs.forEach((brandDoc) => {
+                        fetchedBrands.push({ ...(brandDoc.data() as Brand), id: brandDoc.id });
                     });
+                }
 
-                    setBrands(fetchedBrands);
+                setBrands(fetchedBrands);
 
-                    let finalSelectedBrand: Brand | undefined = selectedBrandRef.current;
+                if (fetchedBrands.length > 0) {
+                    const persistedSelectedBrandId =
+                        (await PersistentStorage.get("selectedBrandId")) || undefined;
 
-                    if (fetchedBrands.length > 0) {
-                        const persistedSelectedBrandId =
-                            (await PersistentStorage.get("selectedBrandId")) || undefined;
-                        Console.log(
-                            "Selected Brand ID from storage:",
-                            persistedSelectedBrandId
-                        );
+                    const isFinalized = (b?: Brand) => !!b && b.onboardingComplete !== false;
+                    const refBrand = fetchedBrands.find(
+                        (brand) => brand.id === selectedBrandRef.current?.id
+                    );
+                    const persistedBrand = fetchedBrands.find(
+                        (brand) => brand.id === persistedSelectedBrandId
+                    );
+                    const firstFinalized = fetchedBrands.find(
+                        (brand) => brand.onboardingComplete !== false
+                    );
 
-                        const isFinalized = (b?: Brand) =>
-                            !!b && b.onboardingComplete !== false;
-                        const refBrand = fetchedBrands.find(
-                            (brand) => brand.id === selectedBrandRef.current?.id
-                        );
-                        const persistedBrand = fetchedBrands.find(
-                            (brand) => brand.id === persistedSelectedBrandId
-                        );
-                        const firstFinalized = fetchedBrands.find(
-                            (brand) => brand.onboardingComplete !== false
-                        );
+                    // Always prefer a FINALIZED brand (ref → persisted → any).
+                    // A draft is only selected when the user has no finalized
+                    // brand at all (so first-time onboarding can resume) —
+                    // otherwise a stray draft id in ref/storage would wrongly
+                    // bounce an onboarded user back to the onboarding chat.
+                    const resolvedSelectedBrand =
+                        (isFinalized(refBrand) ? refBrand : undefined) ||
+                        (isFinalized(persistedBrand) ? persistedBrand : undefined) ||
+                        firstFinalized ||
+                        refBrand ||
+                        persistedBrand ||
+                        fetchedBrands[0];
 
-                        // Always prefer a FINALIZED brand (ref → persisted → any).
-                        // A draft is only selected when the user has no finalized
-                        // brand at all (so first-time onboarding can resume) —
-                        // otherwise a stray draft id in ref/storage would wrongly
-                        // bounce an onboarded user back to the onboarding chat.
-                        const resolvedSelectedBrand =
-                            (isFinalized(refBrand) ? refBrand : undefined) ||
-                            (isFinalized(persistedBrand) ? persistedBrand : undefined) ||
-                            firstFinalized ||
-                            refBrand ||
-                            persistedBrand ||
-                            fetchedBrands[0];
-
-                        finalSelectedBrand = resolvedSelectedBrand;
-
-                        if (resolvedSelectedBrand.id !== selectedBrandRef.current?.id) {
-                            await setSelectedBrandHandler(resolvedSelectedBrand, false);
-                        }
-                    } else {
-                        finalSelectedBrand = undefined;
-                        if (selectedBrandRef.current) {
-                            await setSelectedBrandHandler(undefined, false);
-                        }
+                    if (resolvedSelectedBrand.id !== selectedBrandRef.current?.id) {
+                        await setSelectedBrandHandler(resolvedSelectedBrand, false);
                     }
-                });
+                } else if (selectedBrandRef.current) {
+                    await setSelectedBrandHandler(undefined, false);
+                }
             } finally {
                 setLoading(false);
             }
@@ -622,6 +653,7 @@ export const BrandContextProvider: React.FC<
     const ctxValue = useMemo(
         () => ({
             brands: visibleBrands,
+            allBrands: brands,
             createBrand,
             createDraftBrand,
             finalizeBrand,
@@ -638,6 +670,7 @@ export const BrandContextProvider: React.FC<
         }),
         [
             visibleBrands,
+            brands,
             createBrand,
             createDraftBrand,
             finalizeBrand,
