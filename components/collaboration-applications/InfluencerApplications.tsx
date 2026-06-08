@@ -1,4 +1,4 @@
-import { useBrandContext } from '@/contexts/brand-context.provider'
+import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { Attachment } from '@/shared-libs/firestore/trendly-pro/constants/attachment'
 import { IApplications, ICollaboration } from '@/shared-libs/firestore/trendly-pro/models/collaborations'
 import { IUsers } from '@/shared-libs/firestore/trendly-pro/models/users'
@@ -25,7 +25,7 @@ const InfluencerApplication: React.FC<IInfluencerApplication> = ({ collaboration
     const [error, setError] = useState(false)
     const theme = useTheme()
     const colors = Colors(theme)
-    const { isOnFreeTrial } = useBrandContext()
+    const { isOnFreeTrial } = useOrganizationContext()
 
     const [influencer, setInfluencer] = useState<User | undefined>(undefined)
     const [application, setApplication] = useState<IApplications | undefined>(undefined)

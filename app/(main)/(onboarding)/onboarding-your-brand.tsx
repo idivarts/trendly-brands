@@ -36,7 +36,6 @@ const OnboardingScreen = () => {
             influencerCategories: [],
         },
         creationTime: Date.now(),
-        isBillingDisabled: false,
     });
     const [brandWebImage, setBrandWebImage] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);

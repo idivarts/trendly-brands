@@ -1,4 +1,4 @@
-import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import React from "react";
 import type { DB_TYPE } from "./discover-types";
 import EmptyModashSelected from "./empty-screens/EmptyDiscoverModash";
@@ -17,8 +17,8 @@ const DiscoverAdPlaceholder: React.FC<IProps> = ({
     setSelectedDb,
     showPlaceholder,
 }) => {
-    const { selectedBrand } = useBrandContext();
-    const planKey = selectedBrand?.billing?.planKey;
+    const { selectedOrgBilling } = useOrganizationContext();
+    const planKey = selectedOrgBilling?.planKey;
 
     if (!showPlaceholder) {
         return null;

@@ -1,6 +1,7 @@
 //  import pricingPage from "@/app/(landing)/pricing-page";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -181,15 +182,16 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     }, [vStacked]);
 
     const { selectedBrand } = useBrandContext();
+    const { selectedOrgBilling } = useOrganizationContext();
 
     useEffect(() => {
         if (!selectedBrand)
             return;
-        setBilling(selectedBrand.billing?.planCycle == "monthly" ? "monthly" : "yearly")
-    }, [selectedBrand?.id])
+        setBilling(selectedOrgBilling?.planCycle == "monthly" ? "monthly" : "yearly")
+    }, [selectedBrand?.id, selectedOrgBilling?.planCycle])
 
-    const currentPlanKey = selectedBrand?.billing?.planKey as PlanKey | undefined
-    const currentPlanCycle = selectedBrand?.billing?.planCycle as BillingCycle | undefined;
+    const currentPlanKey = selectedOrgBilling?.planKey as PlanKey | undefined
+    const currentPlanCycle = selectedOrgBilling?.planCycle as BillingCycle | undefined;
 
     const openPaymentLink = async () => {
         if (!paymentUrl) return;
@@ -323,11 +325,11 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                     const billedYearly = plan.monthly * 10; // pay for 10 months
                     const currentPlan = currentPlanKey === plan.key
                         && (currentPlanCycle === billing || plan.monthly == 0)
-                        && selectedBrand?.billing?.status == ModelStatus.Accepted
+                        && selectedOrgBilling?.status == ModelStatus.Accepted
                     const BuyButton = (<Pressable
                         onPress={() => {
                             if (currentPlan) {
-                                window.open(selectedBrand?.billing?.subscriptionUrl, "_blank");
+                                window.open(selectedOrgBilling?.subscriptionUrl, "_blank");
                             } else if (manager?.isAdmin) {
                                 setCustomPlanKey(plan.key as PlanKey);
                                 setCustomModalVisible(true);

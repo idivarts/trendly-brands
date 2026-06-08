@@ -1,5 +1,5 @@
 import { useDiscovery } from "@/components/discover/discovery-context";
-import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
@@ -13,7 +13,7 @@ export default function EmptyTrendlyInternalSelected() {
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
     const router = useMyNavigation();
-    const { selectedBrand } = useBrandContext();
+    const { selectedOrgBilling } = useOrganizationContext();
     const { selectedDb, setShowFilters } = useDiscovery();
 
     const gradientColors = [colors.surface || colors.tag, colors.tag || colors.card];
@@ -38,7 +38,7 @@ export default function EmptyTrendlyInternalSelected() {
                     <Text style={styles.detail}>• Built‑in lead capture, shortlists, and campaign boards</Text>
                     <Text style={styles.detail}>• Priority support for founders: fast onboarding, faster results</Text>
                     <Text style={styles.testimonial}>"We found our first 100 true fans with Trendly Pro."</Text>
-                    {["pro", "enterprise"].includes(selectedBrand?.billing?.planKey || "") ? (
+                    {["pro", "enterprise"].includes(selectedOrgBilling?.planKey || "") ? (
                         <Button
                             mode="contained"
                             style={styles.button}

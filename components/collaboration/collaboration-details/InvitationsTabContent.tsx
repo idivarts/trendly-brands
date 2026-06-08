@@ -10,6 +10,7 @@ import EmptyState from "@/components/ui/empty-state";
 import TextInput from "@/components/ui/text-input";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useCollaborationContext } from "@/contexts/collaboration-context.provider";
 import { useCollapseContext } from "@/contexts/CollapseContext";
 import { useBreakpoints } from "@/hooks";
@@ -68,7 +69,8 @@ const InvitationsTabContent = (props: any) => {
 
     const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
     const { manager } = useAuthContext();
-    const { isOnFreeTrial, isProfileLocked, isIndiaBased } = useBrandContext();
+    const { isProfileLocked, isIndiaBased } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
 
     // const bottomSheetModalRef = useRef<BottomSheetModal>(null);
     // const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);

@@ -1,5 +1,6 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import useInvitation from "@/hooks/use-invitation";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
@@ -30,7 +31,8 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         checkIfAlreadyInvited,
         influencerId: data.id,
     });
-    const { isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { isProfileLocked } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     const { xl } = useBreakpoints();
 
     return (

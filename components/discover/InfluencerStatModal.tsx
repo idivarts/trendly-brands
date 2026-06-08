@@ -57,18 +57,6 @@ export const InfluencerStatsModal: React.FC<{
     const { openModal } = useConfirmationModel();
 
     const sendInvite = () => {
-        if ((selectedBrand?.credits?.connection || 0) <= 0) {
-            openModal({
-                title: "No Connection Credit",
-                description:
-                    "You seem to have exhausted the connection credit. Contact support for recharging the credit",
-                confirmText: "Contact Support",
-                confirmAction: () => {
-                    Linking.openURL("mailto:support@idiv.in");
-                },
-            });
-            return;
-        }
         openModal({
             title: "Feature is Underway",
             description:

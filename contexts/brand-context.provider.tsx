@@ -4,7 +4,6 @@ import {
     IBrands,
     IBrandsMembers,
 } from "@/shared-libs/firestore/trendly-pro/models/brands";
-import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -43,7 +42,6 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { Platform } from "react-native";
 import { useAuthContext } from "./auth-context.provider";
 
 interface BrandContextProps {
@@ -68,7 +66,6 @@ interface BrandContextProps {
     setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
     updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
     loading: boolean;
-    isOnFreeTrial?: boolean;
     isProfileLocked: (influencerId: string) => boolean;
     /** The current manager's membership record for the selected brand. */
     currentMember?: CurrentMember;
@@ -112,7 +109,6 @@ const BrandContext = createContext<BrandContextProps>({
     setSelectedBrand: () => { },
     updateBrand: () => Promise.resolve(),
     loading: true,
-    isOnFreeTrial: true,
     isProfileLocked: (influencerId: string) => true,
     currentMember: undefined,
     hasPrivilege: () => true,
@@ -135,7 +131,7 @@ const getManagerBrandsCacheKey = (managerId: string) =>
 
 export const BrandContextProvider: React.FC<
     PropsWithChildren & { restrictForPayment?: boolean }
-> = ({ children, restrictForPayment = true }) => {
+> = ({ children }) => {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
@@ -330,18 +326,29 @@ export const BrandContextProvider: React.FC<
                             persistedSelectedBrandId
                         );
 
+                        const isFinalized = (b?: Brand) =>
+                            !!b && b.onboardingComplete !== false;
+                        const refBrand = fetchedBrands.find(
+                            (brand) => brand.id === selectedBrandRef.current?.id
+                        );
+                        const persistedBrand = fetchedBrands.find(
+                            (brand) => brand.id === persistedSelectedBrandId
+                        );
+                        const firstFinalized = fetchedBrands.find(
+                            (brand) => brand.onboardingComplete !== false
+                        );
+
+                        // Always prefer a FINALIZED brand (ref → persisted → any).
+                        // A draft is only selected when the user has no finalized
+                        // brand at all (so first-time onboarding can resume) —
+                        // otherwise a stray draft id in ref/storage would wrongly
+                        // bounce an onboarded user back to the onboarding chat.
                         const resolvedSelectedBrand =
-                            fetchedBrands.find(
-                                (brand) => brand.id === selectedBrandRef.current?.id
-                            ) ||
-                            fetchedBrands.find(
-                                (brand) => brand.id === persistedSelectedBrandId
-                            ) ||
-                            // Prefer a finalized brand; fall back to a draft only
-                            // when that's all there is (so onboarding can resume).
-                            fetchedBrands.find(
-                                (brand) => brand.onboardingComplete !== false
-                            ) ||
+                            (isFinalized(refBrand) ? refBrand : undefined) ||
+                            (isFinalized(persistedBrand) ? persistedBrand : undefined) ||
+                            firstFinalized ||
+                            refBrand ||
+                            persistedBrand ||
                             fetchedBrands[0];
 
                         finalSelectedBrand = resolvedSelectedBrand;
@@ -463,23 +470,7 @@ export const BrandContextProvider: React.FC<
 
     const isProfileLocked = useCallback(
         (influencerId: string) => {
-            // TODO: replace this placeholder logic with your real rules.
-            // Example of using state that should trigger recomputation when they change:
-            // - selectedBrand
-            // - loading
-            // - manager
-            // - isOnFreeTrial
             if (!selectedBrand) return true;
-
-            // Example rule: lock profiles when brand is on free trial or billing not accepted
-            const lockedByBilling =
-                !selectedBrand.isBillingDisabled &&
-                selectedBrand.billing?.status !== ModelStatus.Accepted;
-
-            // Example rule: optionally lock specific influencer IDs (extend as needed)
-            // const lockedById = Boolean(influencerId && selectedBrand.lockedInfluencers?.includes?.(influencerId));
-
-            // https://brands.trendly.now/influencer/GB9YIOsx1ESc7SBxuqm4pI9wZP53
             const unlockedProfiles = selectedBrand.unlockedInfluencers || [];
             return !unlockedProfiles.includes(influencerId);
         },
@@ -558,7 +549,6 @@ export const BrandContextProvider: React.FC<
         const brandDoc = await addDoc(brandRef, {
             name: "",
             creationTime: Date.now(),
-            isBillingDisabled: false,
             // Capture the brand's country silently (no UI) at draft creation so
             // it survives the later finalize step. Source of truth for gating.
             country: detectCountryCode(),
@@ -601,48 +591,19 @@ export const BrandContextProvider: React.FC<
         await updateDoc(brandRef, brand);
     };
 
-    useEffect(() => {
-        if (selectedBrand) {
-            if (!restrictForPayment) return;
-
-            // A draft brand is still being set up via onboarding — never bounce it
-            // to the paywall before it's finalized.
-            if (selectedBrand.onboardingComplete === false) return;
-
-            if (Platform.OS == "web" && !selectedBrand.hasPayWall) return;
-
-            console.log(
-                "Evaluation Paywall condition",
-                !selectedBrand.isBillingDisabled &&
-                selectedBrand.billing?.status != ModelStatus.Accepted
-            );
-
-            if (
-                !selectedBrand.isBillingDisabled &&
-                selectedBrand.billing?.status != ModelStatus.Accepted &&
-                (!selectedBrand.billing?.isOnTrial ||
-                    (selectedBrand.billing?.isOnTrial &&
-                        (selectedBrand.billing.trialEnds || 0) < Date.now()))
-            ) {
-                router.resetAndNavigate("/pay-wall");
-            }
-        }
-    }, [selectedBrand]);
-
     // Resume onboarding: if the active brand is still a draft, keep the user in
     // the AI onboarding chat until it's finalized.
     useEffect(() => {
         if (selectedBrand?.onboardingComplete !== false) return;
+        // If the user already has a finalized brand, never bounce them to
+        // onboarding — selection prefers the finalized brand, so this draft is
+        // transient (e.g. a stray/abandoned draft) and must not hijack routing.
+        if (brands.some((b) => b.onboardingComplete !== false)) return;
         // Don't redirect while already anywhere in the onboarding flow (chat or
         // the fallback form), only when a draft is open from elsewhere.
         if (pathName?.includes("onboarding")) return;
         router.resetAndNavigate("/onboarding-chat");
-    }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName]);
-
-    const isOnFreeTrial = useMemo(() => {
-        if (!selectedBrand) return false;
-        return !selectedBrand.isBillingDisabled && !selectedBrand.billing;
-    }, [selectedBrand]);
+    }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName, brands]);
 
     // Draft brands (mid-onboarding) are hidden from brand lists/switchers. The
     // active draft can still be the selectedBrand during onboarding.
@@ -668,7 +629,6 @@ export const BrandContextProvider: React.FC<
             setSelectedBrand: setSelectedBrandHandler,
             updateBrand,
             loading,
-            isOnFreeTrial,
             isProfileLocked,
             currentMember,
             hasPrivilege,
@@ -684,7 +644,6 @@ export const BrandContextProvider: React.FC<
             selectedBrand,
             updateBrand,
             loading,
-            isOnFreeTrial,
             isProfileLocked,
             setSelectedBrandHandler,
             currentMember,

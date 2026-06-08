@@ -1,4 +1,4 @@
-import { useBrandContext } from '@/contexts/brand-context.provider'
+import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Colors from '@/shared-uis/constants/Colors'
@@ -47,8 +47,8 @@ const RightPanel: React.FC<IProps> = () => {
     const styles = stylesFn(theme)
     const router = useMyNavigation()
 
-    const { selectedBrand } = useBrandContext()
-    const planKey = selectedBrand?.billing?.planKey
+    const { selectedOrgBilling } = useOrganizationContext()
+    const planKey = selectedOrgBilling?.planKey
     const isLocked = planKey != "pro" && planKey != "enterprise"
 
     return (

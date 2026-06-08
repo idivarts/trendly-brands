@@ -1,4 +1,5 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import InfluencerCard from "@/shared-uis/components/InfluencerCard";
 import { InfluencerApplication } from "@/types/Collaboration";
@@ -26,7 +27,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
     const theme = useTheme();
     const [influencer, setInfluencer] = useState(data.influencer)
     const { xl } = useBreakpoints()
-    const { isOnFreeTrial, isProfileLocked } = useBrandContext();
+    const { isProfileLocked } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     return (
         <>
             <InfluencerCard

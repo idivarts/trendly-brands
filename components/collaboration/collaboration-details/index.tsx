@@ -4,6 +4,7 @@ import Button from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
@@ -55,7 +56,8 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
     const styles = useMemo(() => useStyles(theme), [theme]);
-    const { isOnFreeTrial, hasCapability, isIndiaBased } = useBrandContext();
+    const { hasCapability, isIndiaBased } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     const { openModal } = useConfirmationModel();
     const nav = useMyNavigation();
     const expoRouter = useRouter();

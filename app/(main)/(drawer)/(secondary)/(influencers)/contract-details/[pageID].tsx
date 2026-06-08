@@ -8,6 +8,7 @@ import { Text, View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import {
@@ -72,7 +73,8 @@ const ContractScreen = () => {
 
     const { manager } = useAuthContext()
     const managerEmail = manager?.email;
-    const { isOnFreeTrial, isProfileLocked } = useBrandContext()
+    const { isProfileLocked } = useBrandContext()
+    const { isOnFreeTrial } = useOrganizationContext()
     const { pageID } = useLocalSearchParams();
     const [contract, setContract] = useState<ICollaborationCard>();
     const [openProfileModal, setOpenProfileModal] = useState(false);

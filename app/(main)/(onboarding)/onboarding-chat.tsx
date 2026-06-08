@@ -56,7 +56,6 @@ const OnboardingChatScreen = () => {
                     id: ref.id,
                     name: "",
                     creationTime: Date.now(),
-                    isBillingDisabled: false,
                     onboardingComplete: false,
                 } as Brand,
                 false

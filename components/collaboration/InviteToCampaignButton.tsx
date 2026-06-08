@@ -6,7 +6,6 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Linking } from "react-native";
 import { Button } from "react-native-paper";
 import InviteToCampaignModal from "./InviteToCampaignModal";
 
@@ -17,7 +16,6 @@ interface InviteButtonProps {
     influencerIds?: string[];
     influencerName?: string;
     brandId?: string;
-    connectionCredits?: number;
     /**
      * Whether this button represents a single discover-only (off-platform)
      * influencer. When true and the brand has no active agency hire, the invite
@@ -34,7 +32,6 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     influencerIds,
     influencerName,
     brandId,
-    connectionCredits,
     isDiscover,
 }) => {
     const theme = useTheme();
@@ -45,8 +42,6 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
     // ✅ Get selectedBrand directly from context
     const { selectedBrand } = useBrandContext();
     const effectiveBrandId = brandId ?? selectedBrand?.id;
-    const effectiveCredits =
-        connectionCredits ?? selectedBrand?.credits?.connection ?? 0;
 
     const { hasActiveAgencyHire } = useActiveAgencyHire(effectiveBrandId);
 
@@ -68,19 +63,7 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
             return;
         }
 
-        // On-platform influencers are invited by email and don't consume
-        // connection credits, so skip the credit gate for them.
-        if (isDiscover !== false && effectiveCredits <= 0) {
-            openModal({
-                title: "No Connection Credit",
-                description:
-                    "You seem to have exhausted the connection credit. Contact support for recharging the credit.",
-                confirmText: "Contact Support",
-                confirmAction: () => Linking.openURL("mailto:support@idiv.in"),
-            });
-            return;
-        }
-
+        // Inviting is no longer credit-gated (old credit system removed).
         setModalVisible(true);
     };
 
