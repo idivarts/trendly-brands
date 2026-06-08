@@ -23,69 +23,73 @@ import {
 } from "react-native";
 import { CreateCustomLinkModal, IAdminData } from "../CustomPlanModal";
 
-export type PlanKey = 'starter' | 'growth' | 'pro' | 'enterprise'
+export type PlanKey = 'free' | 'pro' | 'team' | 'agency'
 export type BillingCycle = "yearly" | "monthly";
 
 /* ----------------------- Config ----------------------- */
-const starterFeatures = [
-    "Unlimited Influencer Browsing",
-    "Unlimited Invitations / Applications",
-    "5 influencer unlocks",
-    "Upto 1 Campaign",
-    "Max One Hiring (Contract)"
-]
-
-const growthFeatures = [
-    "Basic Influencer Filters",
-    "Upto 50 influencer unlocks",
-    "5 Collaboration posting",
-    "Upto 8 Hiring (Contracts)",
-    "One Free Collaboration Boosting"
+// New USD, org-level, monthly-only plans (see the Credit System ticket). Value
+// metric = brand workspaces per org; everything metered draws from one monthly
+// token wallet.
+const freeFeatures = [
+    "1 brand workspace",
+    "1 seat",
+    "20 tokens / month",
+    "10 creator lookups / month",
+    "Basic scheduling & analytics",
 ]
 
 const proFeatures = [
-    "Advanced Discovery Tools",
-    "5 Free Collaboration Boosting",
-    "Unlimited Collaboration Postings",
-    "Unlimited Hirings (Contracts)",
-    "Advanced Customer Support"
+    "1 brand workspace",
+    "2 seats",
+    "200 tokens / month",
+    "Creator lookups from your token balance",
+    "Full scheduling · standard analytics",
 ]
 
-const enterpriseFeatures = [
-    "Discovery with no Limits",
-    "Access 250 million+ Influencers",
-    "Direct access to Modash / Phyllo",
-    "End to End Hiring Support *",
-    "Guaranteed Recovery Support *"
+const teamFeatures = [
+    "Up to 3 brand workspaces",
+    "5 seats",
+    "600 tokens / month",
+    "Approvals & campaigns",
+    "Full analytics + team reporting",
 ]
-const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean }[] = [
+
+const agencyFeatures = [
+    "Custom brand workspaces",
+    "Custom seats",
+    "Custom monthly token allowance",
+    "Unlimited creator lookups",
+    "Priority support & onboarding",
+]
+const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean, custom?: boolean }[] = [
     {
-        key: "starter",
-        name: "Starter",
+        key: "free",
+        name: "Free",
         monthly: 0,
-        features: starterFeatures,
+        features: freeFeatures,
         preferred: false
-    },
-    {
-        key: "growth",
-        name: "Growth",
-        monthly: 750,
-        features: growthFeatures,
-        preferred: false, // visually highlight
     },
     {
         key: "pro",
         name: "Pro",
-        monthly: 1500,
+        monthly: 29,
         features: proFeatures,
+        preferred: false
+    },
+    {
+        key: "team",
+        name: "Team",
+        monthly: 79,
+        features: teamFeatures,
         preferred: true
     },
     {
-        key: "enterprise",
-        name: "Enterprise",
-        monthly: 10000,
-        features: enterpriseFeatures,
-        preferred: false
+        key: "agency",
+        name: "Agency",
+        monthly: 0,
+        features: agencyFeatures,
+        preferred: false,
+        custom: true
     },
 ] as const;
 
@@ -100,8 +104,8 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const colors = useMemo(() => Colors(theme), [theme]);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const [billing, setBilling] = React.useState<BillingCycle>("yearly"); // default Yearly
-    const isYearly = billing === "yearly";
+    // Monthly-only billing (no annual plans in v1 — see the Credit System ticket).
+    const [billing, setBilling] = React.useState<BillingCycle>("monthly");
 
     const [modalVisible, setModalVisible] = useState(false);
     const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error" | "admin">("loading");
@@ -116,17 +120,17 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
     const handleSubmit = async (planKey: typeof PLANS[number]["key"], adminData?: IAdminData) => {
         try {
-            if (planKey == "enterprise" && !manager?.isAdmin) {
+            if (planKey == "agency" && !manager?.isAdmin) {
                 openModal({
-                    title: "Upgrade to Enterprise",
-                    description: "Enterprise upgrade is subject to custom pricing as per the requirements from the customers. Contact support for details",
+                    title: "Upgrade to Agency",
+                    description: "Agency plans are tailored to your needs with custom pricing. Contact support and we'll set you up.",
                     confirmText: "Contact Support",
                     confirmAction: () => {
                         Linking.openURL("mailto:support@idiv.in")
                     }
                 })
                 return;
-            } else if (planKey == "starter") {
+            } else if (planKey == "free") {
                 router.resetAndNavigate("/discover")
                 return
             }
@@ -185,9 +189,8 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const { selectedOrgBilling } = useOrganizationContext();
 
     useEffect(() => {
-        if (!selectedBrand)
-            return;
-        setBilling(selectedOrgBilling?.planCycle == "monthly" ? "monthly" : "yearly")
+        // Monthly-only — always present plans on the monthly cadence.
+        setBilling("monthly");
     }, [selectedBrand?.id, selectedOrgBilling?.planCycle])
 
     const currentPlanKey = selectedOrgBilling?.planKey as PlanKey | undefined
@@ -259,59 +262,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
     return (
         <View style={styles.rootWrap}>
-            {/* Billing toggle */}
-            <View style={styles.toggleWrap}>
-                <View style={styles.togglePill}>
-                    <Pressable
-                        accessibilityRole="button"
-                        onPress={() => setBilling("monthly")}
-                        style={({ pressed }) => [
-                            styles.toggleItem,
-                            billing === "monthly" && styles.toggleItemActive,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.toggleText,
-                                billing === "monthly" && styles.toggleTextActive,
-                            ]}
-                        >
-                            Monthly
-                        </Text>
-                    </Pressable>
-                    <Pressable
-                        accessibilityRole="button"
-                        onPress={() => setBilling("yearly")}
-                        style={({ pressed }) => [
-                            styles.toggleItem,
-                            billing === "yearly" && styles.toggleItemActive,
-                            pressed && styles.pressed,
-                        ]}
-                    >
-                        <View style={styles.toggleYearlyRow}>
-                            <Text
-                                style={[
-                                    styles.toggleText,
-                                    billing === "yearly" && styles.toggleTextActive,
-                                ]}
-                            >
-                                Yearly
-                            </Text>
-                            <View style={styles.discountPillAlt}>
-                                <Text style={styles.discountText}>Save 2 months</Text>
-                            </View>
-                        </View>
-                    </Pressable>
-                </View>
-                {/* {isYearly && (
-                    <View style={styles.discountPillAlt}>
-                        <Text style={styles.discountText}>Save 2 months</Text>
-                    </View>
-                )} */}
-            </View>
-
-            {/* Plans grid */}
+            {/* Plans grid (monthly-only — no billing toggle) */}
             <View
                 style={[
                     styles.plansWrap,
@@ -319,10 +270,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                 ]}
             >
                 {SORTED_FILTER.map((plan) => {
-                    const effectiveMonthly = isYearly
-                        ? Math.round((plan.monthly * 10) / 12)
-                        : plan.monthly;
-                    const billedYearly = plan.monthly * 10; // pay for 10 months
+                    const effectiveMonthly = plan.monthly;
                     const currentPlan = currentPlanKey === plan.key
                         && (currentPlanCycle === billing || plan.monthly == 0)
                         && selectedOrgBilling?.status == ModelStatus.Accepted
@@ -345,7 +293,8 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                     >
                         <Text style={currentPlan ? styles.buyTextCurrent : (plan.preferred ? styles.buyText : styles.buyTextAlt)}>
                             {currentPlan ? "Current Plan" :
-                                (manager?.isAdmin ? `Create Custom Link` : `Start ${plan.name} Plan`)}
+                                plan.custom ? "Contact Sales" :
+                                    (manager?.isAdmin ? `Create Custom Link` : `Start ${plan.name} Plan`)}
                         </Text>
                     </Pressable>)
                     return (
@@ -368,32 +317,29 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                                 {/* ({isYearly ? "Yearly" : "Monthly"}) */}
                             </Text>
 
-                            {effectiveMonthly == 0 ?
+                            {plan.custom ? (
+                                <>
+                                    <View style={styles.priceRow}>
+                                        <Text style={styles.priceMain}>Custom</Text>
+                                    </View>
+                                    <Text style={styles.billingNote}>Tailored to your needs</Text>
+                                </>
+                            ) : effectiveMonthly == 0 ? (
                                 <>
                                     <View style={styles.priceRow}>
                                         <Text style={styles.priceMain}>Free</Text>
                                     </View>
-                                    <Text style={styles.billingNote}>Free for ever</Text>
-                                </> :
+                                    <Text style={styles.billingNote}>Free forever</Text>
+                                </>
+                            ) : (
                                 <>
                                     <View style={styles.priceRow}>
-                                        <Text style={styles.priceMain}>₹{effectiveMonthly}</Text>
-                                        {isYearly && (
-                                            <Text style={styles.priceSlash}>₹{plan.monthly}</Text>
-                                        )}
+                                        <Text style={styles.priceMain}>${effectiveMonthly}</Text>
                                         <Text style={styles.pricePer}>/ month</Text>
-                                        {/* {isYearly && (
-                                    <Text style={styles.pricePer}> when paid yearly</Text>
-                                )} */}
                                     </View>
-                                    {isYearly ? (
-                                        <Text style={styles.savingsText}>
-                                            Billed ₹{billedYearly}/year - Save 2 months cost
-                                        </Text>
-                                    ) : (
-                                        <Text style={styles.billingNote}>Billed monthly, cancel anytime</Text>
-                                    )}
-                                </>}
+                                    <Text style={styles.billingNote}>Billed monthly, cancel anytime</Text>
+                                </>
+                            )}
 
 
 
