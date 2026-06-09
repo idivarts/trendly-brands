@@ -8,6 +8,7 @@ import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PostPerformance from "@/components/contents/PostPerformance";
 import PublishModal from "@/components/contents/detail/PublishModal";
+import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
@@ -117,6 +118,7 @@ const CreateContentScreen = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
     // Firestore items arrive after first render. Hydrate local form state the
@@ -306,6 +308,17 @@ const CreateContentScreen = () => {
             setPublishing(false);
         }
     }, [contentId, publishing, locked, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+
+    // Guard the publish entry point: if the brand has no connected social
+    // accounts, surface a blocking modal that routes to Connected Accounts
+    // instead of opening the publish/schedule sheet.
+    const handleOpenPublish = useCallback(() => {
+        if (socialAccounts.length === 0) {
+            setShowNoSocialsModal(true);
+            return;
+        }
+        setShowPublishModal(true);
+    }, [socialAccounts.length]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
     // and reverts status to "approved", which unlocks the editor again.
@@ -561,7 +574,7 @@ const CreateContentScreen = () => {
                         xl ? styles.publishHeaderBtn : styles.iconBtn,
                         pressed && styles.iconBtnPressed,
                     ]}
-                    onPress={() => setShowPublishModal(true)}
+                    onPress={handleOpenPublish}
                     accessibilityRole="button"
                     accessibilityLabel="Publish or schedule"
                 >
@@ -594,7 +607,7 @@ const CreateContentScreen = () => {
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability]
+        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability, handleOpenPublish]
     );
 
     return (
@@ -992,6 +1005,14 @@ const CreateContentScreen = () => {
                 readOnly={locked}
             />
 
+            <NoSocialsModal
+                visible={showNoSocialsModal}
+                onClose={() => setShowNoSocialsModal(false)}
+                onConnect={() => {
+                    setShowNoSocialsModal(false);
+                    router.push("/connected-accounts" as any);
+                }}
+            />
             <PublishModal
                 visible={showPublishModal}
                 onClose={() => setShowPublishModal(false)}
