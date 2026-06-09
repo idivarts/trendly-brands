@@ -3,7 +3,7 @@ import ConfirmDeleteDialog from "@/components/organization/ConfirmDeleteDialog";
 import ConfirmRemoveMemberDialog from "@/components/organization/ConfirmRemoveMemberDialog";
 import EntityCard from "@/components/organization/EntityCard";
 import MoveBrandDialog from "@/components/organization/MoveBrandDialog";
-import NameInputModal from "@/components/organization/NameInputModal";
+import ConfirmCreateBrandDialog from "@/components/organization/ConfirmCreateBrandDialog";
 import RenameDialog from "@/components/organization/RenameDialog";
 import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
@@ -39,7 +39,6 @@ const ManageOrganizationScreen = () => {
         getOrganization,
         getOrganizationMembers,
         removeOrganizationMember,
-        addBrand,
         transferBrand,
         deleteBrand,
         deleteOrganization,
@@ -52,7 +51,6 @@ const ManageOrganizationScreen = () => {
     const [members, setMembers] = useState<OrganizationMemberRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [addBrandOpen, setAddBrandOpen] = useState(false);
-    const [busy, setBusy] = useState(false);
     const [menuBrandId, setMenuBrandId] = useState<string | null>(null);
     // Header overflow menu — gathers the org-level actions (rename, billing,
     // delete) that used to be scattered across the header and a danger zone.
@@ -121,15 +119,13 @@ const ManageOrganizationScreen = () => {
         return { leftWidth, rightWidth, brandCardWidth };
     }, [width, xl]);
 
-    const handleAddBrand = async (name: string) => {
-        if (!name || !orgId) return;
-        setBusy(true);
-        const id = await addBrand(orgId, name);
-        setBusy(false);
-        if (id) {
-            setAddBrandOpen(false);
-            load();
-        }
+    // Confirming brand creation no longer collects a name inline — it routes
+    // into the onboarding flow, which captures the name + profile. The org id
+    // is threaded through so the draft brand is created under this organization.
+    const handleConfirmCreateBrand = () => {
+        if (!orgId) return;
+        setAddBrandOpen(false);
+        router.push({ pathname: "/onboarding", params: { orgId } } as any);
     };
 
     // Switch the active brand to the tapped one and enter the app. Only brands
@@ -434,15 +430,11 @@ const ManageOrganizationScreen = () => {
                 onConfirm={doRename}
             />
 
-            <NameInputModal
+            <ConfirmCreateBrandDialog
                 visible={addBrandOpen}
-                title="Add a brand"
-                subtitle={`Create a new brand in ${detail?.organization.name ?? "this organization"}.`}
-                label="Brand name"
-                submitLabel="Add brand"
-                loading={busy}
-                onSubmit={handleAddBrand}
-                onClose={() => setAddBrandOpen(false)}
+                organizationName={detail?.organization.name}
+                onCancel={() => setAddBrandOpen(false)}
+                onConfirm={handleConfirmCreateBrand}
             />
         </AppLayout>
     );
