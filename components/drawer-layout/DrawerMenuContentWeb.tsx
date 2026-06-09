@@ -660,7 +660,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             return groups.map((group) => (
                                 <RNView key={group.key}>
                                     {showHeaders && (
-                                        <Text style={styles.brandSubtitle}>
+                                        <Text style={styles.brandListGroupLabel}>
                                             {group.name.toUpperCase()}
                                         </Text>
                                     )}
@@ -1110,10 +1110,28 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             maxHeight: 220,
         },
         brandListContent: {
-            paddingTop: 8,
-            paddingBottom: 12,
-            paddingHorizontal: 4,
+            // Balanced vertical padding (was 8 top / 12 bottom — visibly
+            // lopsided) and a small horizontal gutter so the selected-item pill
+            // has an even inset from the dropdown edges.
+            paddingTop: 6,
+            paddingBottom: 6,
+            paddingHorizontal: 6,
             gap: 0,
+        },
+        // Group header inside the brand dropdown. Dedicated style (not the
+        // shared header `brandSubtitle`) so its left inset matches the brand
+        // names beneath it — paddingHorizontal:12 here aligns the label with the
+        // item text, which also has paddingHorizontal:12 — and it gets real top
+        // spacing to separate one organization's group from the next.
+        brandListGroupLabel: {
+            fontSize: 9,
+            fontWeight: "700",
+            color: (colors as any).drawerTextMuted ?? colors.drawerTextMuted,
+            textTransform: "uppercase" as const,
+            letterSpacing: 0.8,
+            paddingHorizontal: 12,
+            paddingTop: 10,
+            paddingBottom: 4,
         },
         brandListItem: {
             paddingVertical: 10,
