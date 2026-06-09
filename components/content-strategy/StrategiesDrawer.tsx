@@ -11,6 +11,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ContentStrategy } from "./types";
 
 interface StrategiesDrawerProps {
@@ -30,6 +31,7 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const insets = useSafeAreaInsets();
     const slideAnim = useRef(new Animated.Value(0)).current;
     const styles = useMemo(() => useStyles(colors), [colors]);
 
@@ -52,7 +54,7 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
         <View style={styles.overlay} pointerEvents={visible ? "auto" : "none"}>
             <Pressable style={styles.backdrop} onPress={onClose} />
             <Animated.View style={[styles.drawer, { transform: [{ translateX }] }]}>
-                <View style={styles.drawerHeader}>
+                <View style={[styles.drawerHeader, { paddingTop: 18 + insets.top }]}>
                     <Text style={styles.drawerTitle}>Your Strategies</Text>
                     <Pressable onPress={onClose} style={styles.closeBtn}>
                         <FontAwesomeIcon icon={faXmark} size={18} color={colors.textSecondary} />
@@ -60,7 +62,7 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
                 </View>
                 <ScrollView
                     style={styles.list}
-                    contentContainerStyle={styles.listContent}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: 12 + insets.bottom }]}
                     showsVerticalScrollIndicator={false}
                 >
                     {strategies.map((strategy) => {
