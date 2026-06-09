@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { faArrowRight, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCommentDots, faRobot, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
@@ -13,6 +13,10 @@ interface ContentDetailsModalProps {
     onClose: () => void;
     /** Navigate to the full content page for editing. */
     onOpenContentPage: (item: CalendarItem) => void;
+    /** Open item-level comments for this content (optional). */
+    onAddComment?: (item: CalendarItem) => void;
+    /** Focus this content in the AI chat panel (optional). */
+    onSendToAI?: (item: CalendarItem) => void;
 }
 
 /**
@@ -25,6 +29,8 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
     item,
     onClose,
     onOpenContentPage,
+    onAddComment,
+    onSendToAI,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -75,6 +81,33 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
                             {item.idea?.trim() ? item.idea : "No idea added yet."}
                         </Text>
                     </ScrollView>
+
+                    {(onAddComment || onSendToAI) && (
+                        <View style={styles.quickActions}>
+                            {onAddComment && (
+                                <Pressable
+                                    style={({ pressed }) => [styles.quickBtn, pressed && styles.btnPressed]}
+                                    onPress={() => onAddComment(item)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Add a comment"
+                                >
+                                    <FontAwesomeIcon icon={faCommentDots} size={14} color={colors.primary} />
+                                    <Text style={styles.quickBtnText}>Comment</Text>
+                                </Pressable>
+                            )}
+                            {onSendToAI && (
+                                <Pressable
+                                    style={({ pressed }) => [styles.quickBtn, pressed && styles.btnPressed]}
+                                    onPress={() => onSendToAI(item)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Send to AI chat"
+                                >
+                                    <FontAwesomeIcon icon={faRobot} size={14} color={colors.primary} />
+                                    <Text style={styles.quickBtnText}>Ask AI</Text>
+                                </Pressable>
+                            )}
+                        </View>
+                    )}
 
                     <View style={styles.footer}>
                         <Pressable
@@ -230,6 +263,27 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontSize: 14,
                     fontWeight: "700",
                     color: colors.onPrimary,
+                },
+                quickActions: {
+                    flexDirection: "row",
+                    gap: 10,
+                    paddingHorizontal: 16,
+                    paddingTop: 12,
+                },
+                quickBtn: {
+                    flex: 1,
+                    flexDirection: "row",
+                    gap: 8,
+                    paddingVertical: 11,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                quickBtnText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.primary,
                 },
                 btnPressed: {
                     opacity: 0.72,
