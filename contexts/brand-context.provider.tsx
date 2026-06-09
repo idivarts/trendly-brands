@@ -397,6 +397,18 @@ export const BrandContextProvider: React.FC<
             } finally {
                 setLoading(false);
             }
+        }, (error) => {
+            // Without this handler a transient listener error (seen when the
+            // brands subscription re-attaches during client-side navigation,
+            // e.g. opening a brand from the Organizations page) left `loading`
+            // stuck true forever — BrandProtectedScreen then showed an infinite
+            // spinner until a full refresh re-attached the listener. Mirror the
+            // error-resilient pattern used by the organization + contents
+            // subscriptions: log and release the loading gate.
+            Console.log("Brands member subscription error", error);
+            if (isMounted) {
+                setLoading(false);
+            }
         });
 
         return () => {
