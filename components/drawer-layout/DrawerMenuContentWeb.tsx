@@ -32,7 +32,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Linking,
     Platform,
@@ -192,10 +192,38 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
     const showCreditsSystem = false;
 
+    // DOM ref to the brand-switcher container (header + dropdown live inside it).
+    // Used for the web outside-click dismissal below.
+    const brandSwitcherRef = useRef<any>(null);
+
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
         setBrandListExpanded(false);
     };
+
+    // Dismiss the expanded brand switcher on any click outside of it.
+    //
+    // The in-tree `dropdownBackdrop` (position:fixed) cannot cover the full
+    // viewport here: the drawer is rendered inside CustomDrawerWrapper's
+    // Animated.View, which always applies a `transform` (translateX). Per the
+    // CSS spec a transformed ancestor becomes the containing block for
+    // position:fixed descendants, so the backdrop is clipped to the drawer
+    // column and clicks on the main content area to its right never dismiss the
+    // dropdown. A document-level listener escapes that containing block and
+    // catches clicks anywhere on the page. Web-only (uses DOM APIs).
+    useEffect(() => {
+        if (Platform.OS !== "web") return;
+        if (!brandListExpanded) return;
+        const handlePointerDown = (e: any) => {
+            const node = brandSwitcherRef.current as HTMLElement | null;
+            if (node && e?.target instanceof Node && !node.contains(e.target)) {
+                setBrandListExpanded(false);
+            }
+        };
+        document.addEventListener("pointerdown", handlePointerDown, true);
+        return () =>
+            document.removeEventListener("pointerdown", handlePointerDown, true);
+    }, [brandListExpanded]);
 
     // Nav entries filtered by the current member's team feature privileges.
     const navFilter = useCallback(
@@ -685,7 +713,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
                     {/* Brand switcher + collapse button on a single row */}
                     <RNView style={styles.headerWithToggleRow}>
-                        <RNView style={styles.headerWrap}>
+                        <RNView style={styles.headerWrap} ref={brandSwitcherRef}>
                             {brandHeaderContent}
                         </RNView>
                         {toggleButtonBare}
