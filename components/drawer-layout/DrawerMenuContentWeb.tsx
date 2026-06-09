@@ -195,6 +195,10 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     // DOM ref to the brand-switcher container (header + dropdown live inside it).
     // Used for the web outside-click dismissal below.
     const brandSwitcherRef = useRef<any>(null);
+    // DOM refs to the org-menu containers (expanded + collapsed popover).
+    // Used for the web outside-click dismissal below.
+    const orgWrapRef = useRef<any>(null);
+    const collapsedOrgWrapRef = useRef<any>(null);
 
     const handleBrandSelect = (brand: Brand) => {
         setSelectedBrand(brand);
@@ -224,6 +228,29 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         return () =>
             document.removeEventListener("pointerdown", handlePointerDown, true);
     }, [brandListExpanded]);
+
+    // Dismiss the org dropdown on any click outside of it (web-only).
+    // Same rationale as the brand switcher above: the in-tree position:fixed
+    // backdrop is clipped by CustomDrawerWrapper's transformed ancestor, so a
+    // document-level listener is needed to catch clicks anywhere on the page.
+    // Covers both the expanded org button and the collapsed-rail popover.
+    useEffect(() => {
+        if (Platform.OS !== "web") return;
+        if (!orgDropdownOpen) return;
+        const handlePointerDown = (e: any) => {
+            const target = e?.target;
+            if (!(target instanceof Node)) return;
+            const expanded = orgWrapRef.current as HTMLElement | null;
+            const collapsed = collapsedOrgWrapRef.current as HTMLElement | null;
+            const inside =
+                (expanded && expanded.contains(target)) ||
+                (collapsed && collapsed.contains(target));
+            if (!inside) setOrgDropdownOpen(false);
+        };
+        document.addEventListener("pointerdown", handlePointerDown, true);
+        return () =>
+            document.removeEventListener("pointerdown", handlePointerDown, true);
+    }, [orgDropdownOpen]);
 
     // Nav entries filtered by the current member's team feature privileges.
     const navFilter = useCallback(
@@ -479,7 +506,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                             end={{ x: 0, y: 1 }}
                             style={[styles.bottomActions, styles.bottomActionsCollapsed]}
                         >
-                            <RNView style={styles.collapsedOrgWrap}>
+                            <RNView ref={collapsedOrgWrapRef} style={styles.collapsedOrgWrap}>
                                 <Pressable
                                     onPress={() => setOrgDropdownOpen((v) => !v)}
                                     onHoverIn={() => setIsOrgHovered(true)}
@@ -853,7 +880,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         style={styles.bottomActions}
                     >
                         {/* Org dropdown — opens upward */}
-                        <RNView style={styles.orgWrap}>
+                        <RNView ref={orgWrapRef} style={styles.orgWrap}>
                             {orgDropdownOpen && (
                                 <Pressable
                                     style={styles.dropdownBackdrop}
