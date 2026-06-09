@@ -359,6 +359,14 @@ const ContentCalendarScreen = () => {
                 item={detailItem}
                 onClose={() => setDetailItem(null)}
                 onOpenContentPage={handleGoToContentPage}
+                onAddComment={(item) => {
+                    setDetailItem(null);
+                    handleComment(item);
+                }}
+                onSendToAI={(item) => {
+                    setDetailItem(null);
+                    handleFocusChat(item);
+                }}
             />
         </AppLayout>
     );
