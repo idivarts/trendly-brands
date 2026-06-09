@@ -4,6 +4,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useLocalSearchParams } from "expo-router";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -99,6 +100,8 @@ const OnboardingFlow = () => {
     const { xl } = useBreakpoints();
     const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
     const router = useMyNavigation();
+    // When started from an Organization page, create the brand under that org.
+    const { orgId } = useLocalSearchParams<{ orgId?: string }>();
 
     const {
         selectedBrand,
@@ -145,6 +148,11 @@ const OnboardingFlow = () => {
                     setSelectedBrand(existingDraft, false);
                 }
                 setDraftId(existingDraft.id);
+                // If this onboarding was launched from an organization and the
+                // resumed draft isn't tied to one yet, attach it now.
+                if (orgId && !existingDraft.organizationId) {
+                    updateBrand(existingDraft.id, { organizationId: orgId });
+                }
                 // Seed whatever the draft already captured so a resumed flow
                 // continues instead of starting blank.
                 setForm((prev) => ({
@@ -157,7 +165,7 @@ const OnboardingFlow = () => {
                 return;
             }
 
-            const ref = await createDraftBrand();
+            const ref = await createDraftBrand(orgId ? { organizationId: orgId } : {});
             if (!ref) {
                 Toaster.error("Couldn't start onboarding");
                 return;
@@ -173,7 +181,7 @@ const OnboardingFlow = () => {
             );
             setDraftId(ref.id);
         })();
-    }, [loading, selectedBrand, allBrands, createDraftBrand, setSelectedBrand]);
+    }, [loading, selectedBrand, allBrands, createDraftBrand, setSelectedBrand, orgId, updateBrand]);
 
     const setField = (key: StepKey, value: string) =>
         setForm((prev) => ({ ...prev, [key]: value }));
