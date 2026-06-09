@@ -475,6 +475,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 </Pressable>
 
                                 {orgDropdownOpen && (
+                                    <Pressable
+                                        style={styles.dropdownBackdrop}
+                                        onPress={() => setOrgDropdownOpen(false)}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Close organization menu"
+                                    />
+                                )}
+                                {orgDropdownOpen && (
                                     <SidebarCollapsedContext.Provider
                                         value={{
                                             ...sidebarCollapsedCtx,
