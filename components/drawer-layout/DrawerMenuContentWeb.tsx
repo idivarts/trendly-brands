@@ -380,7 +380,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                                 shape="circle"
                                 size="small"
                                 altText={selectedBrand?.name || "Brand"}
-                                style={styles.logoCircle}
+                                style={[styles.logoCircle, styles.collapsedLogoCircle]}
                             />
                         </RNView>
 
@@ -1122,6 +1122,13 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
             paddingVertical: 10,
             alignItems: "center",
             justifyContent: "center",
+        },
+        // The shared logoCircle carries marginRight:10 to space it from the brand
+        // name in the expanded header. On the collapsed rail there is no text, so
+        // that right margin pushed the icon ~5px left of the rail's centre. Reset
+        // it here so the brand icon sits dead-centre on the 56px rail.
+        collapsedLogoCircle: {
+            marginRight: 0,
         },
         // ── Scroll areas ───────────────────────────────────────────────────
         scrollContent: {
