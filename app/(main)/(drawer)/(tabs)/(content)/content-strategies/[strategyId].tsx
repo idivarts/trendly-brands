@@ -11,6 +11,7 @@ import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerP
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
 import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
@@ -47,6 +48,15 @@ const ContentStrategyDetail = () => {
         initialPrompt?: string;
     }>();
     useSidebarParam();
+
+    // Auto-collapse the web drawer rail on open so the strategy editor gets the
+    // full width. Applied once on mount; the user can re-expand manually after.
+    const { setCollapsed: setSidebarCollapsed } = useSidebarCollapsed();
+    useEffect(() => {
+        setSidebarCollapsed(true);
+        // Run strictly once on mount; never fight a later manual toggle.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const {
         strategies,
