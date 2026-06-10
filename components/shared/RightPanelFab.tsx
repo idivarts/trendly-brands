@@ -88,11 +88,16 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
         }).start();
     }, [open, anim]);
 
-    // A panel being open means the sheet covers the screen — make sure the dial
-    // is collapsed so it doesn't re-appear mid-open when the sheet closes.
+    // Hardening: the dial must never linger expanded once it's hidden or
+    // non-interactive. This fires whenever a panel opens (sheet covers the
+    // screen), we switch to the desktop rail (xl), or there are no actions —
+    // so the dial always re-appears collapsed instead of restoring a stale
+    // expanded state.
     useEffect(() => {
-        if (mode !== "none" && open) setOpen(false);
-    }, [mode, open]);
+        if (open && (mode !== "none" || xl || actions.length === 0)) {
+            setOpen(false);
+        }
+    }, [open, mode, xl, actions.length]);
 
     if (xl) return null;
     // Hidden while a surface is open; the sheet owns the screen then.
