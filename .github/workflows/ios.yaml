@@ -7,6 +7,10 @@ on:
     tags:
       - 'dev-*'
 
+concurrency:
+  group: deploy-ios-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ios-release:
     # App Store Connect requires iOS 26+ SDK (Xcode 26+). macos-latest still uses older Xcode.

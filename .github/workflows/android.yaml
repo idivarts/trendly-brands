@@ -7,6 +7,10 @@ on:
     tags:
       - 'dev-*'
 
+concurrency:
+  group: deploy-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android-release:
     runs-on: ubuntu-latest
