@@ -3,6 +3,7 @@ import CommentsPanel from "@/components/content-strategy/CommentsPanel";
 import PushToCalendarModal, {
     PushToCalendarConfirm,
 } from "@/components/content-strategy/PushToCalendarModal";
+import PushToCalendarProgressModal from "@/components/content-strategy/PushToCalendarProgressModal";
 import SnippetCommentPopover from "@/components/content-strategy/SnippetCommentPopover";
 import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
@@ -83,7 +84,15 @@ const ContentStrategyDetail = () => {
     const [screenState, setScreenState] = useState<ScreenState>("loading");
 
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
+    // Measured width of the split row — feeds the RightSidePanel resize bounds.
+    const [splitWidth, setSplitWidth] = useState(0);
     const [showPushToCalendar, setShowPushToCalendar] = useState(false);
+    // The confirmed push job — drives the WS-backed progress/success modal.
+    const [pushJob, setPushJob] = useState<{
+        startDate: string;
+        durationDays: number;
+        overrideExisting: boolean;
+    } | null>(null);
     const [snippetSelection, setSnippetSelection] = useState<{
         snippet: string;
         anchorStart: number;
@@ -369,41 +378,34 @@ const ContentStrategyDetail = () => {
         if (strategyId) updateStrategyName(strategyId, name);
     }, [strategyId, updateStrategyName]);
 
-    // Confirmed "Push to Calendar": persist the schedule server-side, then land
-    // the user on the calendar at the month they chose as the start date.
+    // Confirmed "Push to Calendar": hand off to the WS-backed progress modal.
+    // The generation is heavy AI work that can exceed the 30s HTTP limit, so it
+    // runs over the WebSocket with a live loader instead of a blocking request.
     const handlePushToCalendarConfirm = useCallback(
-        async (opts: PushToCalendarConfirm) => {
+        (opts: PushToCalendarConfirm) => {
             setShowPushToCalendar(false);
-            const brandId = selectedBrand?.id;
             const startDate = formatDateForWebInput(opts.startDate);
-            if (!strategyId || !brandId) return;
-
-            try {
-                await HttpWrapper.fetch(
-                    `/api/content-strategy/${strategyId}/push-to-calendar`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            brandId,
-                            startDate,
-                            durationDays: opts.durationDays,
-                            overrideExisting: opts.overrideExisting,
-                        }),
-                    }
-                );
-                router.push({
-                    pathname: "/(main)/(drawer)/(tabs)/(content)/content-calendar" as any,
-                    params: { focusDate: startDate },
-                });
-            } catch (e) {
-                Toaster.error(
-                    "Couldn't add to calendar",
-                    (await HttpWrapper.extractErrorMessage(e)) ?? "Please try again."
-                );
-            }
+            if (!strategyId || !selectedBrand?.id) return;
+            setPushJob({
+                startDate,
+                durationDays: opts.durationDays,
+                overrideExisting: opts.overrideExisting,
+            });
         },
-        [router, strategyId, selectedBrand?.id]
+        [strategyId, selectedBrand?.id]
+    );
+
+    // Success CTA from the progress modal — close it and land on the calendar at
+    // the campaign's start month.
+    const handleViewCalendarFromPush = useCallback(
+        (focusDate: string) => {
+            setPushJob(null);
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/content-calendar" as any,
+                params: { focusDate },
+            });
+        },
+        [router]
     );
 
     // Re-derive the campaign length from the (possibly hand-edited) strategy body.
@@ -522,7 +524,10 @@ const ContentStrategyDetail = () => {
 
     return (
         <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
-            <View style={styles.splitContainer}>
+            <View
+                style={styles.splitContainer}
+                onLayout={(e) => setSplitWidth(e.nativeEvent.layout.width)}
+            >
                 {/* ── Left: layered loading-skeleton / shimmer / editor.
                     All three states cross-fade via opacity. Inactive children
                     are unmounted after the transition completes (mountFlags).
@@ -590,19 +595,19 @@ const ContentStrategyDetail = () => {
                       so we don't trigger network calls before we know which
                       state to land in. ─────────────────────────────────── */}
                 {xl && (() => {
-                    const isPanelCollapsed =
-                        !isCollecting && !isLoading && rightPanelMode === "none";
+                    // Once the strategy has settled (not loading / not collecting)
+                    // the RightSidePanel owns its own width — drag-to-resize or the
+                    // 44px rail — so the wrapper just hugs it. While loading or
+                    // collecting we keep the animated flex transition (7→1) and
+                    // disable resizing so the two don't fight.
+                    const isSettled = !isCollecting && !isLoading;
                     return (
                         <Animated.View
                             style={[
                                 styles.rightPanel,
-                                // When collapsed we skip the animated flex so the
-                                // static width: 44 (via rightPanelCollapsed) isn't
-                                // overridden by an inline `flex` style — inline
-                                // beats classes in RN Web, so an inline `flex: 1`
-                                // would expand basis: 0% and erase the 44px width.
-                                isPanelCollapsed ? null : { flex: rightFlex },
-                                isPanelCollapsed ? styles.rightPanelCollapsed : null,
+                                isSettled
+                                    ? styles.rightPanelSettled
+                                    : { flex: rightFlex },
                             ]}
                         >
                             {isLoading ? (
@@ -611,6 +616,8 @@ const ContentStrategyDetail = () => {
                                 <RightSidePanel
                                     mode={isCollecting ? "chat" : rightPanelMode}
                                     onModeChange={isCollecting ? () => { } : setRightPanelMode}
+                                    containerWidth={splitWidth}
+                                    resizable={isSettled}
                                     // Comments aren't available during collecting —
                                     // suppressing the slot also hides the rail icon
                                     // so users don't tap a no-op control.
@@ -734,6 +741,19 @@ const ContentStrategyDetail = () => {
                 />
             )}
 
+            {pushJob && selectedBrand?.id && strategyId && (
+                <PushToCalendarProgressModal
+                    visible={!!pushJob}
+                    brandId={selectedBrand.id}
+                    strategyId={strategyId}
+                    startDate={pushJob.startDate}
+                    durationDays={pushJob.durationDays}
+                    overrideExisting={pushJob.overrideExisting}
+                    onClose={() => setPushJob(null)}
+                    onViewCalendar={handleViewCalendarFromPush}
+                />
+            )}
+
             {snippetSelection && (
                 <SnippetCommentPopover
                     visible={!!snippetSelection}
@@ -766,14 +786,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 rightPanel: {
                 },
-                rightPanelCollapsed: {
-                    // `flex: 0` compiles to `flex: 0 1 0%` which makes basis
-                    // 0% override the explicit width and collapse the box to
-                    // 0px. Use flexShrink: 0 + width so the rail stays 44px.
-                    flexGrow: 0,
+                rightPanelSettled: {
+                    // Settled: the panel owns its width (drag-to-resize / 44px
+                    // rail); the wrapper hugs it without growing or shrinking.
                     flexShrink: 0,
-                    flexBasis: 44,
-                    width: 44,
                 },
                 fullScreenChat: {
                     flex: 1,

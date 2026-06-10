@@ -465,7 +465,11 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
             : []),
         ...(onOpenDrawer ? [{ label: "All Strategies", icon: faBars, onPress: onOpenDrawer }] : []),
         { label: "New Strategy", icon: faPlus, onPress: onNewStrategy },
-        { label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar },
+        // On web, Push to Calendar is a first-class labelled button in the
+        // toolbar (see below); on mobile it stays in the overflow menu.
+        ...(!xl
+            ? [{ label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar }]
+            : []),
     ];
 
     // Status transitions available to this viewer in the current state. The
@@ -533,6 +537,22 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                     >
                         <FontAwesomeIcon icon={faCircleCheck} size={16} color={colors.toastSuccess} />
                     </Tooltip>
+                )}
+
+                {/* Push to Calendar — a first-class labelled secondary button on
+                    desktop. On mobile it lives in the overflow menu (no room for
+                    a labelled control). */}
+                {xl && (
+                    <Pressable
+                        style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+                        onPress={onPushToCalendar}
+                        hitSlop={6}
+                        accessibilityLabel="Push to Calendar"
+                        accessibilityRole="button"
+                    >
+                        <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
+                        <Text style={styles.secondaryBtnText}>Push to Calendar</Text>
+                    </Pressable>
                 )}
 
                 {/* Share is a first-class button on desktop; on mobile it lives
@@ -712,6 +732,25 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.tag,
+        },
+        secondaryBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            height: 34,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            backgroundColor: colors.tag,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        secondaryBtnText: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.primary,
         },
         btnPressed: {
             opacity: 0.72,

@@ -33,6 +33,7 @@
  *   />
  */
 import { useBreakpoints } from "@/hooks";
+import { useResizablePanel } from "@/hooks/useResizablePanel";
 import Colors from "@/shared-uis/constants/Colors";
 import { faChevronRight, faCommentDots, faEye, faRobot } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -40,6 +41,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import PanelResizeHandle from "./PanelResizeHandle";
 
 export type RightPanelMode = "none" | "comments" | "chat" | "preview";
 
@@ -54,6 +56,18 @@ interface RightSidePanelProps {
     chatSlot?: React.ReactNode;
     /** Content to show when mode === 'preview'. Same convention as the others. */
     previewSlot?: React.ReactNode;
+    /**
+     * Width of the surrounding split container (px) — measured by the parent
+     * via onLayout. Drives the drag-to-resize bounds (max = 60% of this).
+     * Web/xl only; ignored on native.
+     */
+    containerWidth?: number;
+    /**
+     * Whether the panel may be user-resized on web/xl. Default true. Set false
+     * while a screen is running its own width animation (e.g. the strategy
+     * collecting → ready transition) so the two don't fight.
+     */
+    resizable?: boolean;
 }
 
 /**
@@ -205,11 +219,16 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     commentsSlot,
     chatSlot,
     previewSlot,
+    containerWidth = 0,
+    resizable = true,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useMemo(() => createStyles(colors, xl), [colors, xl]);
+
+    const { widthPx, minPx, maxPx, commitWidth, reset } =
+        useResizablePanel(containerWidth);
 
     type ActiveMode = Exclude<RightPanelMode, "none">;
     // Default to whichever slot is available.
@@ -228,6 +247,27 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     }, [mode]);
 
     const isExpanded = mode !== "none";
+
+    // Drag-to-resize applies on web/xl while expanded. We apply an explicit
+    // width even before the parent has measured the container (the hook falls
+    // back to the min width) — otherwise the wrapper, which no longer supplies
+    // flex, would let the panel collapse to the rail and render blank.
+    const useControlledWidth = xl && resizable && isExpanded;
+    // The panel owns its own desktop width now (parents no longer juggle flex):
+    //  • collapsed            → the 44px rail
+    //  • expanded + resizable → the user-dragged width
+    //  • expanded, !resizable → flex:1 fill, so a parent animation drives width
+    //
+    // We override ONLY `width` and leave the base `flex: 1` intact: outerContainer
+    // sits inside a *column* wrapper, so flex:1 fills the height while the explicit
+    // `width` (cross-axis) sets the panel's measure. Setting flexGrow/Shrink here
+    // would instead kill the vertical fill and let flexBasis:0% collapse the width.
+    const widthStyle = useMemo(() => {
+        if (!xl) return null;
+        if (!isExpanded) return { width: RIGHT_PANEL_RAIL_WIDTH };
+        if (useControlledWidth) return { width: widthPx };
+        return null;
+    }, [xl, isExpanded, useControlledWidth, widthPx]);
 
     /**
      * VS Code rule: tapping an icon opens to that mode if collapsed, switches
@@ -275,7 +315,16 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
      * outer container width to match.
      */
     return (
-        <View style={styles.outerContainer}>
+        <View style={[styles.outerContainer, widthStyle]}>
+            {useControlledWidth && (
+                <PanelResizeHandle
+                    widthPx={widthPx}
+                    minPx={minPx}
+                    maxPx={maxPx}
+                    onResize={commitWidth}
+                    onReset={reset}
+                />
+            )}
             <View style={styles.rail}>
                 {isExpanded && (
                     <RailButton
@@ -334,6 +383,7 @@ function createStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         outerContainer: {
             flex: 1,
             flexDirection: "row",
+            position: "relative",
             backgroundColor: colors.card,
             // Left-casting shadow creates depth between the panel and main content.
             // shadowOffset.width is negative to cast LEFT (toward the main panel).
