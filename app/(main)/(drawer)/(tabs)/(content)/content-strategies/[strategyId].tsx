@@ -227,16 +227,59 @@ const ContentStrategyDetail = () => {
         };
     }, [strategyId, releaseEditLock]);
 
-    // When a native holder releases, bump a generation so the web editor remounts
-    // and re-bootstraps the CRDT from the freshly-edited markdownContent.
+    // ── Editor refresh generation ───────────────────────────────────────────
+    // Bumping this remounts the editor so it re-reads the strategy body from
+    // scratch (web re-bootstraps the CRDT; native re-seeds its uncontrolled
+    // input). Without it, a body replaced out-of-band — by an AI action or
+    // another device — wasn't visible until a full app reload (Notion
+    // 37b42d5f…1503534).
+    const [editorGen, setEditorGen] = useState(0);
+    const bumpEditor = useCallback(() => setEditorGen((g) => g + 1), []);
+
+    // The last body THIS device emitted, so we can tell our own echo apart from
+    // a genuine external rewrite (used by the native trigger below).
+    const lastEmittedRef = useRef<string | null>(null);
+
+    // (a) A device's native single-writer lock was released or expired → the
+    // body may have changed while we were read-only; re-read it.
     const prevLockedByOther = useRef(lockedByOther);
-    const [crdtGen, setCrdtGen] = useState(0);
     useEffect(() => {
-        if (prevLockedByOther.current && !lockedByOther) {
-            setCrdtGen((g) => g + 1);
-        }
+        if (prevLockedByOther.current && !lockedByOther) bumpEditor();
         prevLockedByOther.current = lockedByOther;
-    }, [lockedByOther]);
+    }, [lockedByOther, bumpEditor]);
+
+    // (b) An AI action (or any server rewrite) replaced the doc. The backend
+    // writes markdownContent and clears `crdtInitialized` in one atomic update,
+    // so a true→false transition is a reliable, co-editing-safe signal that the
+    // live editor must re-bootstrap. (Live human co-edits never touch it.)
+    const crdtInitialized = activeStrategy?.crdtInitialized;
+    const prevCrdtInit = useRef(crdtInitialized);
+    useEffect(() => {
+        if (prevCrdtInit.current === true && crdtInitialized === false) bumpEditor();
+        prevCrdtInit.current = crdtInitialized;
+    }, [crdtInitialized, bumpEditor]);
+
+    // (c) Native fallback: the editor input is uncontrolled and a native-only
+    // strategy may never have set `crdtInitialized`, so also remount when the
+    // server body changes to something this device didn't type and isn't
+    // mid-editing. (Native is single-writer, so there's no live co-editing to
+    // disrupt.)
+    const serverContent = activeStrategy?.content ?? "";
+    const prevServerContent = useRef<string | null>(null);
+    useEffect(() => {
+        if (isWeb) {
+            prevServerContent.current = serverContent;
+            return;
+        }
+        if (prevServerContent.current === null) {
+            prevServerContent.current = serverContent;
+            return;
+        }
+        if (serverContent === prevServerContent.current) return;
+        const isOwnEcho = serverContent === lastEmittedRef.current;
+        prevServerContent.current = serverContent;
+        if (!holdingLock && !isOwnEcho) bumpEditor();
+    }, [isWeb, serverContent, holdingLock, bumpEditor]);
 
     const editorEditable = isWeb ? !lockedByOther : holdingLock;
     const editorLock = useMemo(
@@ -289,6 +332,9 @@ const ContentStrategyDetail = () => {
 
     const handleStrategyContentChange = useCallback(
         async (newContent: string) => {
+            // Remember what we emitted so the native refresh trigger can tell our
+            // own snapshot echo apart from an external rewrite.
+            lastEmittedRef.current = newContent;
             setStrategyContent(newContent);
             if (strategyId) {
                 await updateStrategyContent(strategyId, newContent);
@@ -511,7 +557,7 @@ const ContentStrategyDetail = () => {
                                 pointerEvents={isReady ? "auto" : "none"}
                             >
                                 <StrategyEditorPanel
-                                    key={`editor-${strategyId}-${crdtGen}`}
+                                    key={`editor-${strategyId}-${editorGen}`}
                                     content={strategyContent}
                                     onChange={handleStrategyContentChange}
                                     onSendToChat={handleSendToChat}

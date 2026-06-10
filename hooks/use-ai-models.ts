@@ -1,64 +1,21 @@
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
-import { useCallback, useEffect, useState } from "react";
+import { AIModel, useAIConfig } from "@/contexts/ai-config-context.provider";
 
-export interface AIModel {
-    id: string;
-    displayName: string;
-    provider: string;
-    minTier: "starter" | "growth" | "pro" | "enterprise";
-    multimodal?: boolean;
-    unlocked: boolean;
-}
+// Re-export the model type for existing consumers (AIModelSelector, quick-edit).
+export type { AIModel };
 
-const STORAGE_KEY = "ai.selectedModel";
-const DEFAULT_MODEL = "openai/gpt-4o";
-
+/**
+ * Backward-compatible chat-model hook. Reads from the app-wide AIConfigProvider
+ * (single Firestore subscription — no per-consumer fetch), returning the models
+ * allowed for the `chat` task with their unlock flags, plus the persisted
+ * selection. For other tasks/screens use `useAIConfig()` directly.
+ */
 export function useAIModels() {
-    const { selectedBrand } = useBrandContext();
-    const [models, setModels] = useState<AIModel[]>([]);
-    const [tier, setTier] = useState<string>("starter");
-    const [loading, setLoading] = useState(true);
-    const [selectedModel, setSelectedModelState] = useState<string>(DEFAULT_MODEL);
-
-    useEffect(() => {
-        PersistentStorage.get(STORAGE_KEY).then((v) => {
-            if (v) setSelectedModelState(v);
-        });
-    }, []);
-
-    useEffect(() => {
-        const brandId = selectedBrand?.id;
-        if (!brandId) {
-            setModels([]);
-            setLoading(false);
-            return;
-        }
-        let cancelled = false;
-        (async () => {
-            try {
-                const res = await HttpWrapper.fetch(`/api/ai/models?brandId=${brandId}`);
-                const data = await res.json();
-                if (cancelled) return;
-                setModels(data.models ?? []);
-                setTier(data.tier ?? "starter");
-            } catch {
-                if (cancelled) return;
-                setModels([]);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedBrand?.id]);
-
-    const setSelectedModel = useCallback(async (id: string) => {
-        setSelectedModelState(id);
-        await PersistentStorage.set(STORAGE_KEY, id);
-    }, []);
-
-    return { models, tier, loading, selectedModel, setSelectedModel };
+    const { modelsForTask, selectedModel, setSelectedModel, plan, loading } = useAIConfig();
+    return {
+        models: modelsForTask("chat"),
+        plan,
+        loading,
+        selectedModel,
+        setSelectedModel,
+    };
 }

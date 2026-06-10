@@ -3,6 +3,8 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { aiWS } from "@/utils/ai-ws";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { router } from "expo-router";
 import {
     collection,
     limit as fsLimit,
@@ -328,6 +330,13 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
                         timestamp: Date.now(),
                     });
                 }
+            } else if (msg.type === "upgrade_required") {
+                streamingRef.current = "";
+                pendingControlRef.current = null;
+                setStreamingContent("");
+                setIsStreaming(false);
+                Toaster.error("This needs a higher plan. Please upgrade to continue.");
+                router.push("/billing");
             } else if (msg.type === "error") {
                 streamingRef.current = "";
                 pendingControlRef.current = null;
@@ -371,9 +380,40 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
     // Rendered history = committed (Firestore) + any optimistic user bubbles not
     // yet synced + the lingering assistant turn not yet synced. The panel adds
     // the live streaming bubble separately while `isStreaming`.
+    //
+    // The transient bubbles are deduped against `committed` HERE — in the derived
+    // list — not only in the snapshot handler. The snapshot reconciliation can
+    // miss a race: the Firestore doc can land BEFORE the WS `done` frame (the
+    // backend writes the message, then sends `done`), so the snapshot handler
+    // runs while `lingerAssistant` is still null and the linger is added
+    // afterwards as a permanent duplicate. Filtering in the memo is
+    // order-independent, so a committed message always suppresses its matching
+    // optimistic/linger twin (Notion 37b42d5f…dcc52d).
     const messages = useMemo<AIMessage[]>(() => {
-        const out = [...committed, ...pendingUsers];
-        if (lingerAssistant) out.push(lingerAssistant);
+        const committedIds = new Set(committed.map((m) => m.id).filter(Boolean));
+        const committedClientIds = new Set(
+            committed.map((m) => m.clientMsgId).filter(Boolean)
+        );
+        const committedUserContent = new Set(
+            committed.filter((m) => m.role === "user").map((m) => m.content)
+        );
+        const committedAssistantContent = new Set(
+            committed.filter((m) => m.role === "assistant").map((m) => m.content)
+        );
+
+        const visiblePending = pendingUsers.filter((m) => {
+            if (m.clientMsgId && committedClientIds.has(m.clientMsgId)) return false;
+            if (committedUserContent.has(m.content)) return false;
+            return true;
+        });
+
+        const showLinger =
+            !!lingerAssistant &&
+            !(lingerAssistant.id && committedIds.has(lingerAssistant.id)) &&
+            !committedAssistantContent.has(lingerAssistant.content);
+
+        const out = [...committed, ...visiblePending];
+        if (showLinger && lingerAssistant) out.push(lingerAssistant);
         return out;
     }, [committed, pendingUsers, lingerAssistant]);
 

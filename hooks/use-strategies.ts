@@ -60,6 +60,7 @@ function toContentStrategy(id: string, data: IStrategy): ContentStrategy {
         reviewedBy: data.reviewedBy,
         reviewedAt: data.reviewedAt,
         editLock: data.editLock ?? null,
+        crdtInitialized: data.crdtInitialized,
     };
 }
 

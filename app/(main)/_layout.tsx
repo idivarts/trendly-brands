@@ -1,6 +1,7 @@
 import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import { OrganizationProvider } from "@/contexts/organization-context.provider";
+import { AIConfigProvider } from "@/contexts/ai-config-context.provider";
 import { BrandSocialContextProvider, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { streamClient } from "@/contexts/chat-context.provider";
 import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
@@ -87,6 +88,7 @@ const MainLayout = () => {
                         >
                             <BrandContextProvider>
                             <OrganizationProvider>
+                                <AIConfigProvider>
                                 <BrandSocialContextProvider>
                                     <CoachmarkProvider
                                         storage={storage}
@@ -114,6 +116,7 @@ const MainLayout = () => {
                                         </View>
                                     </CoachmarkProvider>
                                 </BrandSocialContextProvider>
+                                </AIConfigProvider>
                             </OrganizationProvider>
                             </BrandContextProvider>
                         </CloudMessagingContextProvider>

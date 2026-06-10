@@ -31,6 +31,7 @@ import {
 import {
     EnrichedTextInput,
     type EnrichedTextInputInstance,
+    type HtmlStyle,
     type OnChangeStateEvent,
 } from "react-native-enriched";
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
@@ -121,6 +122,24 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     });
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
+
+    // react-native-enriched renders block spacing internally and exposes no
+    // per-block margins, so the only levers for a "standard" (non-clustered)
+    // look are a clear heading hierarchy + a roomy base line height (set on the
+    // editor style below). Heading sizes mirror the web editor's proportions,
+    // kept at/under the base line height so tall headings never clip.
+    const htmlStyle = useMemo<HtmlStyle>(
+        () => ({
+            h1: { fontSize: 26, bold: true },
+            h2: { fontSize: 22, bold: true },
+            h3: { fontSize: 19, bold: true },
+            blockquote: { borderColor: colors.border, color: colors.textSecondary },
+            code: { color: colors.text, backgroundColor: colors.tag },
+            codeblock: { color: colors.text, backgroundColor: colors.tag },
+            a: { color: colors.primary, textDecorationLine: "underline" },
+        }),
+        [colors]
+    );
 
     // iOS only: watch the keyboard so the dismiss button appears exactly when
     // there's a keyboard to dismiss. (Android already shows a back-to-collapse.)
@@ -322,6 +341,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     <EnrichedTextInput
                         ref={editorRef}
                         editable={editable}
+                        htmlStyle={htmlStyle}
                         defaultValue={ensureEnrichedHtml(content || "")}
                         // Run native output through the same canonical normaliser
                         // the web editor uses, so both export identical rich text.
@@ -531,7 +551,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             minHeight: 400,
             padding: 20,
             fontSize: 16,
-            lineHeight: 24,
+            lineHeight: 26,
             textAlignVertical: "top",
         },
     });

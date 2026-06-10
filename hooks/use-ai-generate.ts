@@ -1,7 +1,16 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { aiWS } from "@/utils/ai-ws";
+import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+// Shared upgrade prompt for premium-gated AI actions (script/image on free plans,
+// or any task whose plan unlocks no allowed model).
+function promptUpgrade() {
+    Toaster.error("This needs a higher plan. Please upgrade to continue.");
+    router.push("/billing");
+}
 
 export interface CaptionVariant {
     length: "short" | "medium" | "long";
@@ -44,6 +53,8 @@ export function useAIGenerate() {
             });
             const data = await res.json();
             setCaptions((data.variants ?? []) as CaptionVariant[]);
+        } catch (e: any) {
+            if (e?.status === 402) promptUpgrade();
         } finally {
             setCaptionLoading(false);
         }
@@ -69,6 +80,8 @@ export function useAIGenerate() {
             });
             const data = await res.json();
             setHashtags((data.groups ?? []) as HashtagGroup[]);
+        } catch (e: any) {
+            if (e?.status === 402) promptUpgrade();
         } finally {
             setHashtagLoading(false);
         }
@@ -104,6 +117,14 @@ export function useAIGenerate() {
             if (imagesActiveRef.current && msg.type === "done") {
                 imagesActiveRef.current = false;
                 setImagesStreaming(false);
+                return;
+            }
+            if (msg.type === "upgrade_required") {
+                scriptActiveRef.current = false;
+                imagesActiveRef.current = false;
+                setScriptStreaming(false);
+                setImagesStreaming(false);
+                promptUpgrade();
                 return;
             }
             if (msg.type === "error") {
