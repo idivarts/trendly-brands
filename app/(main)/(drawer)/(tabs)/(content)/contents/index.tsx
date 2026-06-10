@@ -144,6 +144,7 @@ const ContentsScreen = () => {
 
             <AddContentModal
                 visible={showAddModal}
+                source="contents"
                 onClose={() => setShowAddModal(false)}
                 onAdd={handleAddFromFresh}
             />

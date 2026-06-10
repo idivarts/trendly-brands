@@ -6,8 +6,11 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
-import DatePickerModal from "../../modals/DatePickerModal";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import DatePickerModal, {
+    formatDateForWebInput,
+    parseWebInputDate,
+} from "../../modals/DatePickerModal";
 import { Text } from "../../theme/Themed";
 import Button from "../../ui/button";
 import { scheduleRelease } from "../api/release-pending.api";
@@ -41,6 +44,22 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const webDateInputStyle = useMemo(
+        () =>
+            ({
+                width: "100%" as const,
+                height: 44,
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                border: `1px solid ${colors.budgetCardBorder}`,
+                backgroundColor: colors.secondarySurface ?? colors.card,
+                color: colors.text,
+                fontSize: 15,
+                boxSizing: "border-box" as const,
+            }),
+        [colors.budgetCardBorder, colors.card, colors.secondarySurface, colors.text]
+    );
 
     const [selectedOption, setSelectedOption] = useState<ReleasePlanOption | null>(null);
     const [date, setDate] = useState(() => {
@@ -88,12 +107,10 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                         selectedOption === opt.value && styles.optionRowSelected,
                     ]}
                     onPress={() => {
-                        if (selectedOption === opt.value) {
-                            setDateModalVisible(true);
-                            return;
-                        }
                         setSelectedOption(opt.value);
-                        setDateModalVisible(true);
+                        // Native opens the system picker on select. Web shows an
+                        // inline date input below — no second modal.
+                        if (Platform.OS !== "web") setDateModalVisible(true);
                     }}
                 >
                     <Text
@@ -111,7 +128,21 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                     <Text style={[styles.subtitle, styles.dateLabel]}>
                         Release date (max 30 days)
                     </Text>
-                    {!dateModalVisible ? (
+                    {Platform.OS === "web" ? (
+                        React.createElement("input", {
+                            type: "date",
+                            value: formatDateForWebInput(date),
+                            min: formatDateForWebInput(new Date()),
+                            max: formatDateForWebInput(maxDate),
+                            onChange: (e: { target?: { value?: string } }) => {
+                                const parsed = parseWebInputDate(e?.target?.value ?? "");
+                                if (!parsed) return;
+                                const capped = Math.min(parsed.getTime(), maxDate.getTime());
+                                setDate(new Date(capped));
+                            },
+                            style: webDateInputStyle,
+                        })
+                    ) : !dateModalVisible ? (
                         <Text style={styles.dateDisplayText}>
                             {date.toLocaleDateString(undefined, {
                                 day: "numeric",
@@ -122,17 +153,19 @@ const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
                     ) : null}
                 </>
             ) : null}
-            <DatePickerModal
-                visible={dateModalVisible}
-                title="Select release date"
-                value={date}
-                onChange={setDate}
-                onClose={() => setDateModalVisible(false)}
-                minimumDate={new Date()}
-                maximumDate={maxDate}
-                submitText="Done"
-                cancelText="Cancel"
-            />
+            {Platform.OS !== "web" ? (
+                <DatePickerModal
+                    visible={dateModalVisible}
+                    title="Select release date"
+                    value={date}
+                    onChange={setDate}
+                    onClose={() => setDateModalVisible(false)}
+                    minimumDate={new Date()}
+                    maximumDate={maxDate}
+                    submitText="Done"
+                    cancelText="Cancel"
+                />
+            ) : null}
             <View style={styles.actions}>
                 <Button mode="outlined" style={styles.button} onPress={onClose}>
                     Cancel

@@ -1,4 +1,4 @@
-import DatePickerModal, { formatDateForWebInput } from "@/components/modals/DatePickerModal";
+import DateField from "@/components/modals/DateField";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
@@ -80,7 +80,6 @@ const PushToCalendarModal: React.FC<PushToCalendarModalProps> = ({
 
     const [startDate, setStartDate] = useState<Date>(startOfToday);
     const [overrideExisting, setOverrideExisting] = useState(false);
-    const [datePickerVisible, setDatePickerVisible] = useState(false);
 
     // AI-rechecked duration takes precedence over the value recorded at creation.
     const [refreshedDuration, setRefreshedDuration] = useState<number | null>(null);
@@ -155,9 +154,12 @@ const PushToCalendarModal: React.FC<PushToCalendarModalProps> = ({
 
                             {/* ── Start date ─────────────────────────────────── */}
                             <Text style={styles.sectionLabel}>Start date</Text>
-                            <Pressable
-                                style={({ pressed }) => [styles.dateField, pressed && styles.pressed]}
-                                onPress={() => setDatePickerVisible(true)}
+                            <DateField
+                                value={startDate}
+                                onChange={setStartDate}
+                                minimumDate={startOfToday()}
+                                title="Strategy start date"
+                                style={styles.dateField}
                             >
                                 <View style={styles.dateIcon}>
                                     <FontAwesomeIcon icon={faCalendarDay} size={15} color={colors.primary} />
@@ -167,7 +169,7 @@ const PushToCalendarModal: React.FC<PushToCalendarModalProps> = ({
                                     <Text style={styles.dateHint}>The strategy begins on this day</Text>
                                 </View>
                                 <FontAwesomeIcon icon={faPenToSquare} size={14} color={colors.textSecondary} />
-                            </Pressable>
+                            </DateField>
 
                             {/* ── Duration (read-only) ───────────────────────── */}
                             <Text style={styles.sectionLabel}>Duration</Text>
@@ -256,16 +258,6 @@ const PushToCalendarModal: React.FC<PushToCalendarModalProps> = ({
                     </Pressable>
                 </Pressable>
             </View>
-
-            <DatePickerModal
-                visible={datePickerVisible}
-                title="Strategy start date"
-                value={startDate}
-                minimumDate={startOfToday()}
-                onChange={setStartDate}
-                onClose={() => setDatePickerVisible(false)}
-                submitText="Set date"
-            />
         </Modal>
     );
 };
