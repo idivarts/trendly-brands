@@ -5,10 +5,10 @@ on:
     branches:
       - master
     tags:
-      - 'dev-build-*'
+      - 'dev-*'
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
