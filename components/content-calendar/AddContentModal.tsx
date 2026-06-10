@@ -1,4 +1,4 @@
-import DatePickerModal, { formatDateForWebInput, parseWebInputDate } from "@/components/modals/DatePickerModal";
+import DateField, { formatDateForWebInput, parseWebInputDate } from "@/components/modals/DateField";
 import Colors from "@/shared-uis/constants/Colors";
 import { faCalendarDays, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -15,18 +15,58 @@ import {
 } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS, ContentType } from "./types";
 
+/**
+ * Where the modal was opened from. This drives how the posting date is chosen:
+ * - `month`    → a single date selector (the default calendar behaviour).
+ * - `week`     → Mon|Tue|…|Sun pills for the days of the viewed week.
+ * - `contents` → date is optional and hidden behind a link (deprioritised).
+ */
+export type AddContentSource = "month" | "week" | "contents";
+
 interface AddContentModalProps {
     visible: boolean;
     initialDate?: string;
+    /** Controls the date-selection UI. Defaults to the month-style selector. */
+    source?: AddContentSource;
     onClose: () => void;
     onAdd: (item: Omit<CalendarItem, "id">) => void;
 }
 
 const TYPES: ContentType[] = ["reel", "post", "story", "carousel", "live"];
 
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function addDays(d: Date, n: number) {
+    const r = new Date(d);
+    r.setDate(r.getDate() + n);
+    return r;
+}
+
+function isSameDay(a: Date, b: Date) {
+    return (
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate()
+    );
+}
+
+/** The 7 consecutive days starting at `start` (used for the weekly pills). */
+function weekDaysFrom(start: Date) {
+    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+}
+
+function formatLongDate(d: Date) {
+    return d.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+
 const AddContentModal: React.FC<AddContentModalProps> = ({
     visible,
     initialDate,
+    source = "month",
     onClose,
     onAdd,
 }) => {
@@ -34,30 +74,55 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
 
-    const [date, setDate] = useState<Date>(
-        () => (initialDate ? parseWebInputDate(initialDate) ?? new Date() : new Date())
-    );
+    // The days shown as pills in the weekly view: the 7 days starting at the
+    // tapped week's start (or today's week when opened from the header).
+    const weekDays = useMemo(() => {
+        const base = initialDate ? parseWebInputDate(initialDate) ?? new Date() : new Date();
+        return weekDaysFrom(base);
+    }, [initialDate]);
+
+    // Resolve the initial selected date for the current `source`/`initialDate`.
+    // `contents` starts with no date (deprioritised); the calendar views always
+    // start on a concrete day.
+    const computeInitialDate = (): Date | null => {
+        if (source === "contents") return null;
+        const base = initialDate ? parseWebInputDate(initialDate) ?? new Date() : new Date();
+        if (source === "week") {
+            const days = weekDaysFrom(base);
+            const today = new Date();
+            // Pre-select today when it falls inside the viewed week, else the
+            // first day of that week.
+            return days.find((d) => isSameDay(d, today)) ?? days[0];
+        }
+        return base;
+    };
+
+    const [date, setDate] = useState<Date | null>(() => computeInitialDate());
     const [type, setType] = useState<ContentType>("reel");
     const [title, setTitle] = useState("");
     const [idea, setIdea] = useState("");
-    const [showDatePicker, setShowDatePicker] = useState(false);
+    // Contents view only: whether the optional date field has been revealed.
+    const [showOptionalDate, setShowOptionalDate] = useState(false);
 
     // The modal stays mounted and is toggled via `visible`, so the useState
-    // initialiser only runs once. Re-sync the date to the clicked day each time
-    // the modal opens (or the target date changes), otherwise it sticks to the
-    // first-opened / reset value. `parseWebInputDate` parses the YYYY-MM-DD
-    // string as a *local* date (plain `new Date("YYYY-MM-DD")` is UTC and can
-    // land on the previous day for negative-offset timezones).
+    // initialiser only runs once. Re-sync the date each time the modal opens (or
+    // the target date / source changes), otherwise it sticks to the first-opened
+    // value. `parseWebInputDate` parses the YYYY-MM-DD string as a *local* date
+    // (plain `new Date("YYYY-MM-DD")` is UTC and can land on the previous day for
+    // negative-offset timezones).
     useEffect(() => {
         if (!visible) return;
-        setDate(initialDate ? parseWebInputDate(initialDate) ?? new Date() : new Date());
-    }, [visible, initialDate]);
+        setDate(computeInitialDate());
+        setShowOptionalDate(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible, initialDate, source]);
 
     const reset = () => {
-        setDate(new Date());
+        setDate(computeInitialDate());
         setType("reel");
         setTitle("");
         setIdea("");
+        setShowOptionalDate(false);
     };
 
     const handleClose = () => {
@@ -70,7 +135,9 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
         onAdd({
             title: title.trim(),
             idea: idea.trim(),
-            date: formatDateForWebInput(date),
+            // Contents view may save with no posting date — the calendar simply
+            // won't show it until a date is assigned later.
+            date: date ? formatDateForWebInput(date) : "",
             type,
         });
         reset();
@@ -107,24 +174,133 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                             showsVerticalScrollIndicator={false}
                             keyboardShouldPersistTaps="handled"
                         >
-                            <Text style={styles.label}>Date of Posting</Text>
-                            <Pressable
-                                style={styles.dateRow}
-                                onPress={() => setShowDatePicker(true)}
-                            >
-                                <Text style={styles.dateText}>
-                                    {date.toLocaleDateString("en-IN", {
-                                        day: "2-digit",
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </Text>
-                                <FontAwesomeIcon
-                                    icon={faCalendarDays}
-                                    size={14}
-                                    color={colors.primary}
-                                />
-                            </Pressable>
+                            {source === "week" ? (
+                                <>
+                                    <Text style={styles.label}>Day of Posting</Text>
+                                    <View style={styles.weekRow}>
+                                        {weekDays.map((d) => {
+                                            const selected = !!date && isSameDay(d, date);
+                                            return (
+                                                <Pressable
+                                                    key={formatDateForWebInput(d)}
+                                                    style={[
+                                                        styles.weekPill,
+                                                        selected && styles.weekPillActive,
+                                                    ]}
+                                                    onPress={() => setDate(d)}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.weekPillDow,
+                                                            selected && styles.weekPillTextActive,
+                                                        ]}
+                                                    >
+                                                        {WEEKDAY_SHORT[d.getDay()]}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.weekPillNum,
+                                                            selected && styles.weekPillTextActive,
+                                                        ]}
+                                                    >
+                                                        {d.getDate()}
+                                                    </Text>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </View>
+                                </>
+                            ) : source === "contents" ? (
+                                date ? (
+                                    <>
+                                        <Text style={styles.label}>Date of Posting</Text>
+                                        <View style={styles.dateRowWithClear}>
+                                            <DateField
+                                                value={date}
+                                                onChange={setDate}
+                                                style={[styles.dateRow, styles.flex1]}
+                                            >
+                                                <Text style={styles.dateText}>
+                                                    {formatLongDate(date)}
+                                                </Text>
+                                                <FontAwesomeIcon
+                                                    icon={faCalendarDays}
+                                                    size={14}
+                                                    color={colors.primary}
+                                                />
+                                            </DateField>
+                                            <Pressable
+                                                style={styles.clearDateBtn}
+                                                onPress={() => {
+                                                    setDate(null);
+                                                    setShowOptionalDate(false);
+                                                }}
+                                                hitSlop={8}
+                                                accessibilityLabel="Remove posting date"
+                                            >
+                                                <FontAwesomeIcon
+                                                    icon={faXmark}
+                                                    size={14}
+                                                    color={colors.textSecondary}
+                                                />
+                                            </Pressable>
+                                        </View>
+                                    </>
+                                ) : showOptionalDate ? (
+                                    <>
+                                        <Text style={styles.label}>Date of Posting</Text>
+                                        <DateField
+                                            value={null}
+                                            onChange={setDate}
+                                            style={styles.dateRow}
+                                        >
+                                            <Text style={styles.datePlaceholder}>
+                                                Select a date
+                                            </Text>
+                                            <FontAwesomeIcon
+                                                icon={faCalendarDays}
+                                                size={14}
+                                                color={colors.primary}
+                                            />
+                                        </DateField>
+                                    </>
+                                ) : (
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.addDateLink,
+                                            pressed && styles.addDateLinkPressed,
+                                        ]}
+                                        onPress={() => setShowOptionalDate(true)}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={faCalendarDays}
+                                            size={13}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text style={styles.addDateLinkText}>
+                                            Add a posting date (optional)
+                                        </Text>
+                                    </Pressable>
+                                )
+                            ) : (
+                                <>
+                                    <Text style={styles.label}>Date of Posting</Text>
+                                    <DateField
+                                        value={date}
+                                        onChange={setDate}
+                                        style={styles.dateRow}
+                                    >
+                                        <Text style={styles.dateText}>
+                                            {date ? formatLongDate(date) : "Select a date"}
+                                        </Text>
+                                        <FontAwesomeIcon
+                                            icon={faCalendarDays}
+                                            size={14}
+                                            color={colors.primary}
+                                        />
+                                    </DateField>
+                                </>
+                            )}
 
                             <Text style={styles.label}>Content Type</Text>
                             <View style={styles.typeRow}>
@@ -198,14 +374,6 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                     </View>
                 </View>
             </Modal>
-
-            <DatePickerModal
-                visible={showDatePicker}
-                title="Select date"
-                value={date}
-                onChange={setDate}
-                onClose={() => setShowDatePicker(false)}
-            />
         </>
     );
 };
@@ -288,6 +456,81 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontSize: 14,
                     color: colors.text,
                     fontWeight: "500",
+                },
+                datePlaceholder: {
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                    fontWeight: "500",
+                },
+                dateRowWithClear: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                },
+                flex1: {
+                    flex: 1,
+                },
+                clearDateBtn: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                addDateLink: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    alignSelf: "flex-start",
+                    paddingVertical: 8,
+                    paddingHorizontal: 4,
+                },
+                addDateLinkPressed: {
+                    opacity: 0.6,
+                },
+                addDateLinkText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                weekRow: {
+                    flexDirection: "row",
+                    gap: 6,
+                },
+                weekPill: {
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                weekPillActive: {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                weekPillDow: {
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                weekPillNum: {
+                    fontSize: 15,
+                    fontWeight: "700",
+                    color: colors.text,
+                    marginTop: 2,
+                },
+                weekPillTextActive: {
+                    color: colors.onPrimary,
                 },
                 typeRow: {
                     flexDirection: "row",

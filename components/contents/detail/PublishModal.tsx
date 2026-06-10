@@ -22,7 +22,8 @@ export interface PublishModalProps {
     scheduleMode: ScheduleMode;
     onScheduleModeChange: (m: ScheduleMode) => void;
     formattedDate: string;
-    onPressDate: () => void;
+    dateValue: Date;
+    onDateChange: (next: Date) => void;
     timeOfPosting: string;
     onTimeChange: (t: string) => void;
     onPublish: () => void;

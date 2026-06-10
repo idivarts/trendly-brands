@@ -1,3 +1,4 @@
+import DateField from "@/components/modals/DateField";
 import { ISocialAccount } from "@/contexts/brand-social-context.provider";
 import { POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
 import Colors from "@/shared-uis/constants/Colors";
@@ -29,7 +30,9 @@ interface ScheduleBarProps {
     scheduleMode: ScheduleMode;
     onScheduleModeChange: (m: ScheduleMode) => void;
     formattedDate: string;
-    onPressDate: () => void;
+    /** The currently-selected posting date (drives the inline picker). */
+    dateValue: Date;
+    onDateChange: (next: Date) => void;
     timeOfPosting: string;
     onTimeChange: (t: string) => void;
     onPublish: () => void;
@@ -51,7 +54,8 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     scheduleMode,
     onScheduleModeChange,
     formattedDate,
-    onPressDate,
+    dateValue,
+    onDateChange,
     timeOfPosting,
     onTimeChange,
     onPublish,
@@ -263,10 +267,15 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
 
                     {scheduleMode === "scheduled" ? (
                         <View style={styles.scheduleArea}>
-                            <Pressable style={styles.dateBtn} onPress={onPressDate}>
+                            <DateField
+                                value={dateValue}
+                                onChange={onDateChange}
+                                title="Date of Posting"
+                                style={styles.dateBtn}
+                            >
                                 <FontAwesomeIcon icon={faCalendarDays} size={12} color={colors.primary} />
                                 <Text style={styles.dateBtnText}>{formattedDate}</Text>
-                            </Pressable>
+                            </DateField>
 
                             <View style={styles.timeRow}>
                                 {POPULAR_POSTING_TIMES.map((t) => {

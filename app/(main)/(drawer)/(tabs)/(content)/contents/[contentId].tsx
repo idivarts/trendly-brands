@@ -19,7 +19,6 @@ import {
     SocialDestination,
     contentStatusColors,
 } from "@/components/contents/types";
-import DatePickerModal from "@/components/modals/DatePickerModal";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -115,7 +114,6 @@ const CreateContentScreen = () => {
     const [unscheduling, setUnscheduling] = useState(false);
     const [scriptAiPrompt, setScriptAiPrompt] = useState("");
     const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
-    const [showDatePicker, setShowDatePicker] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
@@ -962,14 +960,6 @@ const CreateContentScreen = () => {
                 />
             )}
 
-            <DatePickerModal
-                visible={showDatePicker}
-                title="Date of Posting"
-                value={date}
-                onChange={setDate}
-                onClose={() => setShowDatePicker(false)}
-            />
-
             <FloatingPromptInput
                 visible={magicTarget !== null}
                 title={
@@ -1022,7 +1012,8 @@ const CreateContentScreen = () => {
                 scheduleMode={scheduleMode}
                 onScheduleModeChange={setScheduleMode}
                 formattedDate={formattedDate}
-                onPressDate={() => setShowDatePicker(true)}
+                dateValue={date}
+                onDateChange={setDate}
                 timeOfPosting={timeOfPosting}
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}

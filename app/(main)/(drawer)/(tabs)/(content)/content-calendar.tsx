@@ -350,6 +350,7 @@ const ContentCalendarScreen = () => {
             <AddContentModal
                 visible={showAddModal}
                 initialDate={addInitialDate}
+                source={calView === "week" ? "week" : "month"}
                 onClose={() => setShowAddModal(false)}
                 onAdd={handleAddItem}
             />
