@@ -637,6 +637,10 @@ const createStyles = (theme: Theme) => {
         hubText: {
             flex: 1,
             gap: 2,
+            // Themed <View> defaults its background to `background` (pure black
+            // in dark mode); keep it transparent so the card surface shows
+            // through instead of a black box behind the text.
+            backgroundColor: "transparent",
         },
         hubTitle: {
             fontSize: 16,
@@ -763,6 +767,9 @@ const createStyles = (theme: Theme) => {
             gap: 12,
             paddingHorizontal: 14,
             paddingVertical: 14,
+            // Let the grouped card surface (groupItems) show through instead of
+            // the Themed <View> default black background.
+            backgroundColor: "transparent",
         },
         itemRowPressed: {
             backgroundColor: colors.tag,
@@ -781,6 +788,7 @@ const createStyles = (theme: Theme) => {
         itemText: {
             flex: 1,
             gap: 2,
+            backgroundColor: "transparent",
         },
         itemTitle: {
             fontSize: 15,
