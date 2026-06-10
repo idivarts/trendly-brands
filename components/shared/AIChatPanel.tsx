@@ -164,6 +164,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         isStreaming,
         loading,
         initializing,
+        hasMore,
+        loadOlder,
         sendMessage,
         loadThread,
         createThread,
@@ -487,6 +489,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             renderItem={renderMessage}
                             contentContainerStyle={styles.messageList}
                             showsVerticalScrollIndicator={false}
+                            // Oldest messages sit at the top — reaching it pages in
+                            // the next older window from the Firestore subscription.
+                            onStartReached={hasMore ? loadOlder : undefined}
+                            onStartReachedThreshold={0.2}
                         />
                     )}
 
