@@ -1,9 +1,9 @@
 import BrandCard from "@/components/organization/BrandCard";
+import ConfirmCreateBrandDialog from "@/components/organization/ConfirmCreateBrandDialog";
 import ConfirmDeleteDialog from "@/components/organization/ConfirmDeleteDialog";
 import ConfirmRemoveMemberDialog from "@/components/organization/ConfirmRemoveMemberDialog";
 import EntityCard from "@/components/organization/EntityCard";
 import MoveBrandDialog from "@/components/organization/MoveBrandDialog";
-import ConfirmCreateBrandDialog from "@/components/organization/ConfirmCreateBrandDialog";
 import RenameDialog from "@/components/organization/RenameDialog";
 import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
@@ -137,7 +137,7 @@ const ManageOrganizationScreen = () => {
             return;
         }
         setSelectedBrand(full, true);
-        router.replace("/");
+        // router.replace("/");
     };
 
     const doMoveBrand = async (destOrgId: string) => {
