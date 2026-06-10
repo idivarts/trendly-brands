@@ -157,7 +157,7 @@ function injectStyles(colors: ReturnType<typeof Colors>) {
             min-height: 400px;
             padding: 20px;
             outline: none;
-            line-height: 1.6;
+            line-height: 1.7;
             font-size: 16px;
             font-family: inherit;
             white-space: pre-wrap;
@@ -181,17 +181,24 @@ function injectStyles(colors: ReturnType<typeof Colors>) {
             font-size: 16px;
             color: rgba(128,128,128,0.6);
         }
-        .tl-content .tl-p { margin: 0 0 6px 0; font-size: 16px; }
-        .tl-content .tl-h1 { font-size: 2em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2; }
-        .tl-content .tl-h2 { font-size: 1.5em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.3; }
-        .tl-content .tl-h3 { font-size: 1.17em; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
+        /* First block never carries a top margin, so the document doesn't open
+           with an empty gap above a leading heading. */
+        .tl-content > *:first-child { margin-top: 0; }
+        .tl-content .tl-p { margin: 0 0 12px 0; font-size: 16px; }
+        /* Headings get generous top space (separating them from preceding text)
+           and a smaller bottom space (binding them to the content they lead),
+           the standard document rhythm. */
+        .tl-content .tl-h1 { font-size: 2em; font-weight: 700; margin: 28px 0 12px 0; line-height: 1.25; }
+        .tl-content .tl-h2 { font-size: 1.5em; font-weight: 700; margin: 24px 0 10px 0; line-height: 1.3; }
+        .tl-content .tl-h3 { font-size: 1.17em; font-weight: 700; margin: 20px 0 8px 0; line-height: 1.4; }
         .tl-content .tl-ul,
-        .tl-content .tl-ol { padding-left: 1.5em; margin: 0 0 6px 0; }
+        .tl-content .tl-ol { padding-left: 1.5em; margin: 0 0 12px 0; }
+        .tl-content .tl-li { margin: 0 0 4px 0; }
         .tl-content .tl-ul .tl-li { list-style-type: disc; }
         .tl-content .tl-ol .tl-li { list-style-type: decimal; }
         .tl-content .tl-quote {
             border-left: 4px solid ${colors.border as string};
-            margin: 0 0 8px 0;
+            margin: 16px 0;
             padding-left: 16px;
             opacity: 0.8;
             font-style: italic;
@@ -209,9 +216,9 @@ function injectStyles(colors: ReturnType<typeof Colors>) {
             padding: 12px;
             border-radius: 8px;
             white-space: pre-wrap;
-            margin: 0 0 8px 0;
+            margin: 16px 0;
         }
-        .tl-content img { display: block; max-width: min(720px, 100%); height: auto; border-radius: 8px; margin: 8px auto; }
+        .tl-content img { display: block; max-width: min(720px, 100%); height: auto; border-radius: 8px; margin: 12px auto; }
     `;
 }
 

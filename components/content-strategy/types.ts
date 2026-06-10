@@ -32,4 +32,8 @@ export interface ContentStrategy {
         name: string;
         heartbeatAt: number;
     } | null;
+    // CRDT bootstrap flag (web co-editing). A server-side rewrite (AI action) or
+    // a native editor finishing clears this; the editor watches it to know the
+    // body was replaced out-of-band and must re-read from scratch.
+    crdtInitialized?: boolean;
 }

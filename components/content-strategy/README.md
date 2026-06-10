@@ -14,8 +14,11 @@ The Content Strategy feature is a two-phase AI-driven flow:
 > **⚠️ Updated 2026-06-05 — endpoints #1–#8 are SUPERSEDED.** The strategy chat,
 > session, generation, quick-edit and CRUD flows are now served by the shared
 > **OpenRouter AI chat engine**, not bespoke `/api/content-strategy/*` routes:
-> - **Chat / create / edit:** WebSocket + `/api/ai/conversations*` with
->   `module="strategy"` and `contextId={strategyId}`. The AI collects the brief
+> - **Chat / create / edit:** WebSocket (live typing only) + a direct Firestore
+>   subscription to `ai_conversations` for the thread list and message history
+>   (Firestore is the source of truth; first load + pagination are subscriptions,
+>   not backend GETs). Writes go through `POST/DELETE/PATCH /api/ai/conversations`
+>   with `module="strategy"` and `contextId={strategyId}`. The AI collects the brief
 >   conversationally and writes the doc via the `set_strategy_brief` /
 >   `generate_strategy_doc` / `apply_strategy_edit` server tools
 >   (`backend-sls/internal/trendlyapis/ai/strategy_tools.go`).

@@ -164,6 +164,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         isStreaming,
         loading,
         initializing,
+        hasMore,
+        loadOlder,
         sendMessage,
         loadThread,
         createThread,
@@ -205,7 +207,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Adapt AIMessage[] (+ live stream) to ChatMessage[] for rendering ────
     const messages: ChatMessage[] = useMemo(() => {
         const out: ChatMessage[] = aiMessages.map((m, i) => ({
-            id: `m-${m.timestamp}-${i}`,
+            // Key by the message's own identity (Firestore doc id, or the
+            // optimistic clientMsgId) so a committed message and its transient
+            // twin can never render under two different keys. Falls back to a
+            // role+timestamp composite only when neither id exists.
+            id: m.id ?? m.clientMsgId ?? `m-${m.role}-${m.timestamp}-${i}`,
             sender: m.role === "user" ? "user" : "ai",
             text: m.content,
             timestamp: m.timestamp,
@@ -487,6 +493,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             renderItem={renderMessage}
                             contentContainerStyle={styles.messageList}
                             showsVerticalScrollIndicator={false}
+                            // Oldest messages sit at the top — reaching it pages in
+                            // the next older window from the Firestore subscription.
+                            onStartReached={hasMore ? loadOlder : undefined}
+                            onStartReachedThreshold={0.2}
                         />
                     )}
 
