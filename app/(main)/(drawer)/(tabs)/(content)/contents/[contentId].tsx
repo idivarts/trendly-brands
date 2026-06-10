@@ -162,6 +162,8 @@ const CreateContentScreen = () => {
     // ── Right side panel (comments + AI chat) ────────────────────────────────
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
     const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
+    // Measured width of the split row — feeds the RightSidePanel resize bounds.
+    const [splitWidth, setSplitWidth] = useState(0);
 
     const handleSendToChat = useCallback((text: string) => {
         const label = text.length > 120 ? text.slice(0, 120) + "…" : text;
@@ -641,7 +643,10 @@ const CreateContentScreen = () => {
             />
 
             {/* ── Split layout: form (left) + comments panel (right) ─────── */}
-            <View style={styles.splitContainer}>
+            <View
+                style={styles.splitContainer}
+                onLayout={(e) => setSplitWidth(e.nativeEvent.layout.width)}
+            >
                 {/* Left: scrollable form */}
                 <KeyboardAvoidingView
                     style={styles.flex1}
@@ -873,13 +878,11 @@ const CreateContentScreen = () => {
                 {/* Right: split-pane comments on desktop only. Mobile uses
                     the floating overlay rendered below. */}
                 {xl && (
-                    <View style={[
-                        styles.rightPanel,
-                        rightPanelMode === "none" && styles.rightPanelCollapsed,
-                    ]}>
+                    <View style={styles.rightPanel}>
                         <RightSidePanel
                             mode={rightPanelMode}
                             onModeChange={setRightPanelMode}
+                            containerWidth={splitWidth}
                             commentsSlot={
                                 <ContentCommentsPanel
                                     contentId={contentId ?? null}
@@ -1054,15 +1057,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexDirection: "row",
                 },
                 rightPanel: {
-                    flex: 0.5,
-                },
-                rightPanelCollapsed: {
-                    // `flex: 0` ⇒ `flex: 0 1 0%` collapses width to 0; use
-                    // explicit grow/shrink/basis so the 44px rail is honored.
-                    flexGrow: 0,
+                    // The panel owns its own width (drag-to-resize / 44px rail);
+                    // this wrapper just hugs it without growing or shrinking.
                     flexShrink: 0,
-                    flexBasis: 44,
-                    width: 44,
                 },
                 // ── Header icon button (comments toggle) ──────────────────────
                 iconBtn: {

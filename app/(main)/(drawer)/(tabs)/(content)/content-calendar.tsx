@@ -42,6 +42,8 @@ const ContentCalendarScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    // Measured width of the split row — feeds the RightSidePanel resize bounds.
+    const [splitWidth, setSplitWidth] = useState(0);
     const router = useRouter();
     const { hasCapability, selectedBrand } = useBrandContext();
     useSidebarParam();
@@ -234,6 +236,7 @@ const ContentCalendarScreen = () => {
         <RightSidePanel
             mode={rightPanelMode}
             onModeChange={setRightPanelMode}
+            containerWidth={splitWidth}
             commentsSlot={
                 <CalendarCommentsPanel
                     year={calYear}
@@ -277,7 +280,10 @@ const ContentCalendarScreen = () => {
                     onCreateItem={() => handleOpenAddModal()}
                 />
             ) : (
-                <View style={styles.splitContainer}>
+                <View
+                    style={styles.splitContainer}
+                    onLayout={(e) => setSplitWidth(e.nativeEvent.layout.width)}
+                >
                     {/* ── Left: calendar grid ───────────────────────────────────── */}
                     <View style={styles.calendarPanel}>
                         {calView === "week" ? (
@@ -321,10 +327,7 @@ const ContentCalendarScreen = () => {
                     {/* ── Right: split-pane on desktop only. Mobile uses the
                           floating overlay rendered below. ──────────────────── */}
                     {xl && (
-                        <View style={[
-                            styles.rightPanel,
-                            rightPanelMode === "none" && styles.rightPanelCollapsed,
-                        ]}>
+                        <View style={styles.rightPanel}>
                             {rightSidePanel}
                         </View>
                     )}
@@ -382,20 +385,14 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexDirection: "row",
                 },
                 calendarPanel: {
-                    flex: xl ? 2 : 1,
+                    flex: 1,
                     overflow: "hidden",
                 },
                 rightPanel: {
-                    flex: 1,
-                    // overflow: visible so RightSidePanel's shadow renders unclipped.
-                },
-                rightPanelCollapsed: {
-                    // `flex: 0` ⇒ `flex: 0 1 0%` collapses width to 0; use
-                    // explicit grow/shrink/basis so the 44px rail is honored.
-                    flexGrow: 0,
+                    // The panel owns its own width (drag-to-resize / 44px rail);
+                    // this wrapper just hugs it without growing or shrinking.
+                    // overflow visible so RightSidePanel's shadow renders unclipped.
                     flexShrink: 0,
-                    flexBasis: 44,
-                    width: 44,
                 },
                 iconBtn: {
                     width: 34,
