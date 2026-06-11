@@ -76,7 +76,7 @@ const CreateContentScreen = () => {
             type?: string;
             date?: string;
         }>();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
 
     const router = useRouter();
     const { items, updateContent } = useContents();

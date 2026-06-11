@@ -28,7 +28,7 @@ const ContentsScreen = () => {
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const router = useRouter();
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     useSidebarParam();
 
     const { items, addContent, updateContent } = useContents();

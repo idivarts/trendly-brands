@@ -48,7 +48,7 @@ const ContentCalendarScreen = () => {
     const { hasCapability, selectedBrand } = useBrandContext();
     useSidebarParam();
     const canManageContent = hasCapability("manage_content");
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
 
     const { items: allContents, addContent, updateContent } = useContents();
     const items = useMemo<CalendarItem[]>(

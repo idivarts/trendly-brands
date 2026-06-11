@@ -40,7 +40,7 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
     const colors = Colors(theme);
     const insets = useSafeAreaInsets();
     const slideAnim = useRef(new Animated.Value(0)).current;
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     useEffect(() => {
         Animated.timing(slideAnim, {

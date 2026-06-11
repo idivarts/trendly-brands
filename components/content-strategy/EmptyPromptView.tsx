@@ -61,7 +61,7 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const [prompt, setPrompt] = useState("");
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const resumeStrategies = useMemo(() => {
         return strategies
