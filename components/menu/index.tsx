@@ -200,7 +200,7 @@ const Menu = () => {
         // groups, then hide any hub left with no items (mixed hubs handled
         // per-item — e.g. Manage Brand mixes brand_admin + social_accounts).
         const gate = (href: string) => canAccessNav(href, hasFeature, hasPrivilege);
-        return [grow, influencer, manage, admin]
+        return [manage, grow, influencer, admin]
             .map((h) => {
                 const groups = h.groups
                     .map((g) => ({ ...g, items: g.items.filter((it) => gate(it.href as string)) }))
