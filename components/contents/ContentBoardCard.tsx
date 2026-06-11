@@ -7,6 +7,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import ContentUrgencyBadge from "./ContentUrgencyBadge";
+import TitleTooltip from "./TitleTooltip";
 import { ContentItem } from "./types";
 
 function typeGlyph(type: ContentItem["type"]): IconDefinition {
@@ -45,9 +46,11 @@ const ContentBoardCard: React.FC<{ item: ContentItem }> = ({ item }) => {
             </View>
 
             <View style={styles.info}>
-                <Text style={styles.title} numberOfLines={2}>
-                    {item.title}
-                </Text>
+                <TitleTooltip text={item.title}>
+                    <Text style={styles.title} numberOfLines={2}>
+                        {item.title}
+                    </Text>
+                </TitleTooltip>
                 <View style={styles.metaRow}>
                     <View style={[styles.typeDot, { backgroundColor: typeColor }]} />
                     <Text style={styles.meta} numberOfLines={1}>

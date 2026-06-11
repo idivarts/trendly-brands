@@ -10,6 +10,7 @@ import {
     addDoc,
     arrayUnion,
     collection,
+    deleteDoc,
     doc,
     getDoc,
     getDocs,
@@ -101,6 +102,12 @@ interface UseStrategiesReturn {
      * CRDT baseline. Returns the new strategy id (or null on failure).
      */
     duplicateStrategy: (strategyId: string) => Promise<string | null>;
+    /**
+     * Permanently delete a strategy. Irreversible — gate behind a confirmation
+     * at the call site. Resolves true on success, false on failure (e.g. the
+     * caller lacks the content-strategy capability the Firestore rule requires).
+     */
+    deleteStrategy: (strategyId: string) => Promise<boolean>;
     /** Debounced — waits 1.5 s after the last call before writing to Firestore */
     updateStrategyContent: (strategyId: string, markdownContent: string) => Promise<void>;
     /** Cancel any pending debounced write for this strategy and commit it now. */
@@ -301,6 +308,32 @@ export function useStrategies(): UseStrategiesReturn {
             return docRef.id;
         },
         [selectedBrand?.id, manager?.id]
+    );
+
+    const deleteStrategy = useCallback(
+        async (strategyId: string): Promise<boolean> => {
+            const brandId = selectedBrand?.id;
+            if (!brandId) return false;
+
+            // Cancel any pending debounced content write so it can't resurrect
+            // the doc (or throw) after we delete it.
+            const pending = debounceRef.current[strategyId];
+            if (pending) {
+                clearTimeout(pending);
+                delete debounceRef.current[strategyId];
+            }
+            delete localEditsRef.current[strategyId];
+            markSaving(strategyId, false);
+
+            try {
+                const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+                await deleteDoc(docRef);
+                return true;
+            } catch {
+                return false;
+            }
+        },
+        [selectedBrand?.id, markSaving]
     );
 
     /**
@@ -597,6 +630,7 @@ export function useStrategies(): UseStrategiesReturn {
         loading,
         addStrategy,
         duplicateStrategy,
+        deleteStrategy,
         updateStrategyContent,
         flushStrategyContent,
         savingStrategyIds,

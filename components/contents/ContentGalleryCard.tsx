@@ -20,6 +20,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import ContentUrgencyBadge from "./ContentUrgencyBadge";
+import TitleTooltip from "./TitleTooltip";
 import { CONTENT_STATUS_LABELS, ContentItem, contentStatusColors } from "./types";
 
 interface ContentGalleryCardProps {
@@ -121,9 +122,11 @@ const ContentGalleryCard: React.FC<ContentGalleryCardProps> = ({ item, onPress }
                     </Text>
                 </View>
 
-                <Text style={styles.title} numberOfLines={1}>
-                    {item.title}
-                </Text>
+                <TitleTooltip text={item.title}>
+                    <Text style={styles.title} numberOfLines={1}>
+                        {item.title}
+                    </Text>
+                </TitleTooltip>
 
                 {item.idea ? (
                     <Text style={styles.idea} numberOfLines={1}>

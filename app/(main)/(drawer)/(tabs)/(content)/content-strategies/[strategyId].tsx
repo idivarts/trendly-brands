@@ -1,4 +1,5 @@
 import ChatLoadingPanel from "@/components/content-strategy/ChatLoadingPanel";
+import CollaboratorsSection from "@/components/content-strategy/CollaboratorsSection";
 import CommentsPanel from "@/components/content-strategy/CommentsPanel";
 import PushToCalendarModal, {
     PushToCalendarConfirm,
@@ -9,6 +10,7 @@ import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
+import ShareModal from "@/components/sharing/ShareModal";
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
 import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
@@ -27,6 +29,7 @@ import { useBreakpoints } from "@/hooks";
 import { EDIT_LOCK_TTL_MS, useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
 import AppLayout from "@/layouts/app-layout";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useTheme } from "@react-navigation/native";
@@ -43,8 +46,9 @@ const ContentStrategyDetail = () => {
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const router = useRouter();
+    const { openModal } = useConfirmationModel();
     const { manager } = useAuthContext();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, hasCapability } = useBrandContext();
     const { strategyId, initialPrompt } = useLocalSearchParams<{
         strategyId: string;
         initialPrompt?: string;
@@ -64,6 +68,7 @@ const ContentStrategyDetail = () => {
         strategies,
         loading: strategiesLoading,
         duplicateStrategy,
+        deleteStrategy,
         updateStrategyContent,
         flushStrategyContent,
         savingStrategyIds,
@@ -80,6 +85,10 @@ const ContentStrategyDetail = () => {
 
     const [strategyContent, setStrategyContent] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
+    // Strategy targeted by the drawer's "Share" quick action. Independent of the
+    // toolbar's own Share modal (which shares the strategy currently open).
+    const [shareStrategy, setShareStrategy] = useState<ContentStrategy | null>(null);
+    const canShare = hasCapability("manage_content_strategy") && !!selectedBrand?.id;
     const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
     const [initialChatMessage, setInitialChatMessage] = useState<string | undefined>(
         initialPrompt
@@ -363,6 +372,55 @@ const ContentStrategyDetail = () => {
             });
         },
         [router]
+    );
+
+    // Drawer quick-action: duplicate any listed strategy and open the copy.
+    const handleDuplicateStrategy = useCallback(
+        async (strategy: ContentStrategy) => {
+            const newId = await duplicateStrategy(strategy.id);
+            if (!newId) {
+                Toaster.error("Couldn't duplicate", "Please try again.");
+                return;
+            }
+            Toaster.success("Strategy duplicated", `A copy of "${strategy.title}" was created.`);
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                params: { strategyId: newId },
+            });
+        },
+        [duplicateStrategy, router]
+    );
+
+    // Drawer quick-action: open the public share modal for the chosen strategy.
+    const handleShareStrategy = useCallback((strategy: ContentStrategy) => {
+        setShareStrategy(strategy);
+    }, []);
+
+    // Drawer quick-action: confirm, then permanently delete. If we just deleted
+    // the strategy currently open, fall back to the listing.
+    const handleDeleteStrategy = useCallback(
+        (strategy: ContentStrategy) => {
+            openModal({
+                title: "Delete strategy?",
+                description: `"${strategy.title}" will be permanently deleted. This is an irreversible action and cannot be undone.`,
+                confirmText: "Delete Strategy",
+                cancelText: "Cancel",
+                confirmAction: async () => {
+                    const ok = await deleteStrategy(strategy.id);
+                    if (!ok) {
+                        Toaster.error("Couldn't delete", "Please try again.");
+                        return;
+                    }
+                    Toaster.success("Strategy deleted", `"${strategy.title}" was removed.`);
+                    if (strategy.id === strategyId) {
+                        router.navigate(
+                            "/(main)/(drawer)/(tabs)/(content)/content-strategies" as any
+                        );
+                    }
+                },
+            });
+        },
+        [openModal, deleteStrategy, strategyId, router]
     );
 
     const handleStrategyContentChange = useCallback(
@@ -775,7 +833,29 @@ const ContentStrategyDetail = () => {
                 activeId={strategyId ?? null}
                 onSelect={handleSelectStrategy}
                 onClose={() => setDrawerOpen(false)}
+                onDuplicate={handleDuplicateStrategy}
+                onDelete={handleDeleteStrategy}
+                onShare={canShare ? handleShareStrategy : undefined}
             />
+
+            {shareStrategy && selectedBrand?.id && (
+                <ShareModal
+                    visible={!!shareStrategy}
+                    target={{
+                        type: "strategy",
+                        brandId: selectedBrand.id,
+                        resourceId: shareStrategy.id,
+                    }}
+                    title={shareStrategy.title || "Untitled strategy"}
+                    onClose={() => setShareStrategy(null)}
+                    extraSection={
+                        <CollaboratorsSection
+                            strategyId={shareStrategy.id}
+                            collaboratorIds={shareStrategy.collaboratorIds ?? []}
+                        />
+                    }
+                />
+            )}
 
             {activeStrategy && (
                 <PushToCalendarModal

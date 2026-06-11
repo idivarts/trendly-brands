@@ -1,17 +1,21 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { formatTimeToNow } from "@/utils/date";
-import { faArrowUp, faChevronRight, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
+import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy, ReviewStatus } from "./types";
 
 interface EmptyPromptViewProps {
     onSubmit: (prompt: string) => void;
     strategies?: ContentStrategy[];
     onSelectStrategy?: (strategy: ContentStrategy) => void;
+    onDuplicateStrategy?: (strategy: ContentStrategy) => void;
+    onDeleteStrategy?: (strategy: ContentStrategy) => void;
+    onShareStrategy?: (strategy: ContentStrategy) => void;
 }
 
 const SUGGESTIONS = [
@@ -50,6 +54,9 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
     onSubmit,
     strategies = [],
     onSelectStrategy,
+    onDuplicateStrategy,
+    onDeleteStrategy,
+    onShareStrategy,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -167,11 +174,13 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
                                             </View>
                                         </View>
                                     </View>
-                                    <FontAwesomeIcon
-                                        icon={faChevronRight}
-                                        size={12}
-                                        color={colors.textSecondary}
-                                    />
+                                    {onDuplicateStrategy && onDeleteStrategy ? (
+                                        <StrategyActionsMenu
+                                            onDuplicate={() => onDuplicateStrategy(s)}
+                                            onDelete={() => onDeleteStrategy(s)}
+                                            onShare={onShareStrategy ? () => onShareStrategy(s) : undefined}
+                                        />
+                                    ) : null}
                                 </Pressable>
                             );
                         })}
