@@ -73,6 +73,15 @@ export interface FirestoreProviderOptions {
     strategyId: string;
     managerId: string;
     name: string;
+    /**
+     * The strategy's `crdtGeneration` at the moment this provider was created.
+     * Every yupdate we write is tagged with this value, and we ignore any
+     * yupdate whose `generation` does not match. This prevents a freshly
+     * re-bootstrapped editor (after an AI rewrite or native release) from
+     * applying leftover deltas from the previous generation that haven't
+     * been pruned yet — the race that used to clobber AI-written content.
+     */
+    generation: number;
 }
 
 export class FirestoreYjsProvider {
@@ -215,11 +224,14 @@ export class FirestoreYjsProvider {
     private async loadInitial(): Promise<void> {
         const all = await getDocs(query(this.yupdatesCol, orderBy("createdAt", "asc")));
 
-        // Find the newest snapshot (if any); apply it first.
+        // Find the newest snapshot for *our* generation (if any); apply it first.
+        // Snapshots from a previous generation are stale — they belong to a doc
+        // body that has since been wholesale-rewritten and re-bootstrapped.
         let snapshotIdx = -1;
         let snapshotTimeMs = -1;
         all.docs.forEach((d, i) => {
             const data = d.data();
+            if (!this.isCurrentGeneration(data)) return;
             if (data.isSnapshot) {
                 const t = tsToMs(data.createdAt);
                 if (t >= snapshotTimeMs) {
@@ -240,6 +252,7 @@ export class FirestoreYjsProvider {
             if (this.appliedIds.has(d.id)) return;
             const data = d.data();
             this.appliedIds.add(d.id);
+            if (!this.isCurrentGeneration(data)) return; // wrong generation — leftover from a prior baseline
             if (data.isSnapshot) return; // superseded older snapshot
             if (tsToMs(data.createdAt) < snapshotTimeMs) return; // folded into snapshot
             if (data.update) {
@@ -247,6 +260,16 @@ export class FirestoreYjsProvider {
                 this.deltaCount++;
             }
         });
+    }
+
+    /**
+     * True iff a yupdate doc belongs to the same generation as this provider.
+     * Legacy yupdates written before the generation field existed are treated
+     * as generation 0, matching the default we read for legacy strategy docs.
+     */
+    private isCurrentGeneration(data: DocumentData): boolean {
+        const gen = typeof data.generation === "number" ? data.generation : 0;
+        return gen === this.opts.generation;
     }
 
     // ── live tail subscription ────────────────────────────────────────────────
@@ -259,6 +282,11 @@ export class FirestoreYjsProvider {
                 this.appliedIds.add(d.id);
                 const data = d.data();
                 if (!data.update) return;
+                // Skip updates from a different generation — they belong to a
+                // pre-AI-rewrite (or pre-native-release) baseline that the
+                // editor has already moved on from. Applying them would clobber
+                // the freshly-seeded content.
+                if (!this.isCurrentGeneration(data)) return;
                 if (!data.isSnapshot) this.deltaCount++;
                 Y.applyUpdate(this.doc, b64ToBytes(data.update), this);
             });
@@ -275,6 +303,19 @@ export class FirestoreYjsProvider {
         }, FLUSH_DEBOUNCE_MS);
     }
 
+    /**
+     * Synchronously cancel any pending debounce and persist all buffered
+     * deltas to Firestore now. Used by the manual-save (Ctrl+S) path to make
+     * the converged CRDT state durable on demand.
+     */
+    async flushNow(): Promise<void> {
+        if (this.flushTimer) {
+            clearTimeout(this.flushTimer);
+            this.flushTimer = null;
+        }
+        await this.flush();
+    }
+
     private async flush(): Promise<void> {
         if (this.pending.length === 0) return;
         const merged = Y.mergeUpdates(this.pending);
@@ -285,6 +326,7 @@ export class FirestoreYjsProvider {
                 isSnapshot: false,
                 clientId: this.doc.clientID,
                 authorId: this.opts.managerId,
+                generation: this.opts.generation,
                 createdAt: serverTimestamp(),
             });
             // Our own write echoes back through the tail listener — pre-mark it
@@ -367,6 +409,7 @@ export class FirestoreYjsProvider {
                 isSnapshot: true,
                 clientId: this.doc.clientID,
                 authorId: this.opts.managerId,
+                generation: this.opts.generation,
                 createdAt: serverTimestamp(),
             });
             this.appliedIds.add(snapRef.id);
@@ -392,8 +435,15 @@ function tsToMs(value: unknown): number {
 /**
  * Builds the `providerFactory` that `CollaborationPlugin` expects. The plugin
  * owns the Y.Doc (via `yjsDocMap`); we attach a Firestore-backed provider to it.
+ *
+ * `onProvider` lets the caller capture a reference to the underlying
+ * FirestoreYjsProvider instance — useful for manual-save plumbing (`flushNow`)
+ * that has to reach past the @lexical/yjs Provider boundary.
  */
-export function createFirestoreProviderFactory(opts: FirestoreProviderOptions) {
+export function createFirestoreProviderFactory(
+    opts: FirestoreProviderOptions,
+    onProvider?: (provider: FirestoreYjsProvider) => void
+) {
     return (id: string, yjsDocMap: Map<string, Y.Doc>) => {
         let ydoc = yjsDocMap.get(id);
         if (!ydoc) {
@@ -402,7 +452,9 @@ export function createFirestoreProviderFactory(opts: FirestoreProviderOptions) {
         } else {
             ydoc.load();
         }
+        const provider = new FirestoreYjsProvider(ydoc, opts);
+        onProvider?.(provider);
         // Cast at the boundary — the structural shape matches @lexical/yjs Provider.
-        return new FirestoreYjsProvider(ydoc, opts) as unknown as import("@lexical/yjs").Provider;
+        return provider as unknown as import("@lexical/yjs").Provider;
     };
 }

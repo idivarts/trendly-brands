@@ -12,6 +12,7 @@ import {
     collection,
     doc,
     getDocs,
+    increment,
     onSnapshot,
     orderBy,
     query,
@@ -61,6 +62,7 @@ function toContentStrategy(id: string, data: IStrategy): ContentStrategy {
         reviewedAt: data.reviewedAt,
         editLock: data.editLock ?? null,
         crdtInitialized: data.crdtInitialized,
+        crdtGeneration: data.crdtGeneration,
     };
 }
 
@@ -91,6 +93,8 @@ interface UseStrategiesReturn {
     addStrategy: (title: string, markdownContent: string) => Promise<string | null>;
     /** Debounced — waits 1.5 s after the last call before writing to Firestore */
     updateStrategyContent: (strategyId: string, markdownContent: string) => Promise<void>;
+    /** Cancel any pending debounced write for this strategy and commit it now. */
+    flushStrategyContent: (strategyId: string) => Promise<void>;
     /** Rename a strategy — discrete commit (on blur / Enter), not debounced */
     updateStrategyName: (strategyId: string, name: string) => Promise<void>;
     /** Add a manager (by their manager doc ID) as a collaborator on a strategy */
@@ -261,6 +265,41 @@ export function useStrategies(): UseStrategiesReturn {
         [selectedBrand?.id, manager?.id]
     );
 
+    /**
+     * Cancel any pending debounced write for `strategyId` and commit the most
+     * recent local edit to Firestore immediately. Used by the Ctrl+S "save now"
+     * path so the converged CRDT state lands on `markdownContent` without
+     * waiting out the 1.5s debounce.
+     */
+    const flushStrategyContent = useCallback(
+        async (strategyId: string): Promise<void> => {
+            const brandId = selectedBrand?.id;
+            const managerId = manager?.id;
+            if (!brandId) return;
+
+            const pending = debounceRef.current[strategyId];
+            const latest = localEditsRef.current[strategyId];
+            // Nothing buffered → nothing to write. The most recent committed
+            // markdownContent is already on the server.
+            if (!pending && latest === undefined) return;
+
+            if (pending) {
+                clearTimeout(pending);
+                delete debounceRef.current[strategyId];
+            }
+            if (latest === undefined) return;
+
+            const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+            await updateDoc(docRef, {
+                markdownContent: latest,
+                updatedAt: Date.now(),
+                lastEditedBy: managerId ?? null,
+                lastEditedAt: Date.now(),
+            });
+        },
+        [selectedBrand?.id, manager?.id]
+    );
+
     // Rename is a discrete commit (on blur / Enter), not a debounced stream
     // like content edits — so it writes straight through.
     const updateStrategyName = useCallback(
@@ -422,7 +461,13 @@ export function useStrategies(): UseStrategiesReturn {
             // Only release if we hold it; clear the lock (and optionally the CRDT).
             try {
                 const updates: Record<string, unknown> = { editLock: null };
-                if (resetCrdt) updates.crdtInitialized = false;
+                if (resetCrdt) {
+                    updates.crdtInitialized = false;
+                    // Bump the generation so any leftover yupdates from the
+                    // previous generation are ignored by the next bootstrap,
+                    // even if the prune below hasn't propagated yet.
+                    updates.crdtGeneration = increment(1);
+                }
                 await updateDoc(ref, updates);
 
                 if (resetCrdt) {
@@ -462,6 +507,7 @@ export function useStrategies(): UseStrategiesReturn {
         loading,
         addStrategy,
         updateStrategyContent,
+        flushStrategyContent,
         updateStrategyName,
         addCollaborator,
         updateReviewStatus,

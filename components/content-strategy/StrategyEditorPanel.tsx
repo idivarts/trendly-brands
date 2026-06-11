@@ -440,16 +440,20 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
 
     const styles = toolbarStyles(colors, xl);
 
-    // Autosave is silent and instant — intercept Cmd/Ctrl+S so the manual-save
-    // reflex lands on a reassuring toast instead of the browser's save dialog.
+    // Autosave is silent and debounced — Ctrl/Cmd+S still triggers a real
+    // "save now": we dispatch `trendly:strategy-save-now` so the editor flushes
+    // its buffered Yjs deltas to Firestore and the parent screen cancels the
+    // pending markdownContent debounce and commits it immediately. The toast
+    // then confirms the action to the user.
     useEffect(() => {
         if (Platform.OS !== "web" || typeof document === "undefined") return;
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
                 e.preventDefault();
+                window.dispatchEvent(new CustomEvent("trendly:strategy-save-now"));
                 Toaster.info(
-                    "Already saved",
-                    "This strategy autosaves as you type — no need to save manually."
+                    "Saved",
+                    "Latest edits merged into the strategy."
                 );
             }
         };
