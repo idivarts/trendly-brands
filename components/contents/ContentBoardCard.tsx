@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+import ContentUrgencyBadge from "./ContentUrgencyBadge";
 import { ContentItem } from "./types";
 
 function typeGlyph(type: ContentItem["type"]): IconDefinition {
@@ -49,9 +50,10 @@ const ContentBoardCard: React.FC<{ item: ContentItem }> = ({ item }) => {
                 </Text>
                 <View style={styles.metaRow}>
                     <View style={[styles.typeDot, { backgroundColor: typeColor }]} />
-                    <Text style={styles.meta}>
+                    <Text style={styles.meta} numberOfLines={1}>
                         {CONTENT_TYPE_LABELS[item.type]} · {formattedDate}
                     </Text>
+                    <ContentUrgencyBadge item={item} />
                 </View>
             </View>
         </View>
@@ -113,6 +115,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontSize: 11,
                     color: colors.textSecondary,
                     fontWeight: "500",
+                    flexShrink: 1,
                 },
             }),
         [colors]

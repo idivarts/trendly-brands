@@ -144,6 +144,68 @@ export function contentStatusColors(
     }
 }
 
+/**
+ * How imminent a piece's posting date is, used to flag deadlines on the cards.
+ * `today` (and overdue) → red; `soon` (next 1–2 days) → amber; otherwise none.
+ */
+export type PostingUrgencyLevel = "overdue" | "today" | "soon" | "none";
+
+export interface PostingUrgency {
+    level: PostingUrgencyLevel;
+    /** Short relative label shown alongside the colour, e.g. "Today", "In 2 days". */
+    label: string;
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Classify a content piece by how close its posting date is. Compared on
+ * calendar-day boundaries (not 48h) so it matches the day shown on the card.
+ * Already-published / rejected pieces have no upcoming deadline → "none".
+ */
+export function getPostingUrgency(item: ContentItem, now: Date = new Date()): PostingUrgency {
+    if (item.status === "posted" || item.status === "rejected") {
+        return { level: "none", label: "" };
+    }
+
+    const posting = item.scheduledAt
+        ? new Date(item.scheduledAt)
+        : new Date(item.date + "T00:00:00");
+
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfPosting = new Date(
+        posting.getFullYear(),
+        posting.getMonth(),
+        posting.getDate()
+    ).getTime();
+    const dayDiff = Math.round((startOfPosting - startOfToday) / MS_PER_DAY);
+
+    if (dayDiff < 0) return { level: "overdue", label: "Overdue" };
+    if (dayDiff === 0) return { level: "today", label: "Today" };
+    if (dayDiff === 1) return { level: "soon", label: "Tomorrow" };
+    if (dayDiff === 2) return { level: "soon", label: "In 2 days" };
+    return { level: "none", label: "" };
+}
+
+/**
+ * Theme-aware colours for an urgency pill. Reuses the rejected (red) and review
+ * (amber) status tokens so no new palette keys are introduced.
+ */
+export function postingUrgencyColors(
+    level: PostingUrgencyLevel,
+    colors: ReturnType<typeof Colors>
+): { fg: string; bg: string } {
+    switch (level) {
+        case "overdue":
+        case "today":
+            return { fg: colors.statusRejectedFg, bg: colors.statusRejectedBg };
+        case "soon":
+            return { fg: colors.statusReviewFg, bg: colors.statusReviewBg };
+        default:
+            return { fg: colors.textSecondary, bg: "transparent" };
+    }
+}
+
 export const POPULAR_POSTING_TIMES = [
     { label: "7:00 AM", value: "07:00" },
     { label: "12:00 PM", value: "12:00" },
