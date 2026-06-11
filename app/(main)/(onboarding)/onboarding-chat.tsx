@@ -61,23 +61,23 @@ const OnboardingChatScreen = () => {
                 return;
             }
 
-            // Start a fresh draft.
-            const ref = await createDraftBrand();
-            if (!ref) {
+            // Start a fresh draft (backend allocates the id + writes the docs).
+            const newId = await createDraftBrand();
+            if (!newId) {
                 setError(true);
                 Toaster.error("Couldn't start onboarding");
                 return;
             }
             setSelectedBrand(
                 {
-                    id: ref.id,
+                    id: newId,
                     name: "",
                     creationTime: Date.now(),
                     onboardingComplete: false,
                 } as Brand,
                 false
             );
-            setDraftId(ref.id);
+            setDraftId(newId);
             setIsFresh(true);
         })();
     }, [loading, selectedBrand, allBrands, createDraftBrand, setSelectedBrand]);
