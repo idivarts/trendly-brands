@@ -10,6 +10,7 @@ import {
     faChevronLeft,
     faChevronRight,
     faClockRotateLeft,
+    faLock,
     faPaperPlane,
     faPenToSquare,
     faRobot,
@@ -72,6 +73,13 @@ interface AIChatPanelProps {
     focusItems?: FocusItem[];
     onRemoveFocusItem?: (id: string) => void;
 
+    /**
+     * Read-only mode. History stays fully visible and scrollable, but the
+     * composer, model selector and focus chips are removed — no new activity
+     * can be started. Used when the backing strategy is finalized (locked).
+     */
+    readOnly?: boolean;
+
     /** Layout */
     isCompact?: boolean;
     placeholder?: string;
@@ -119,6 +127,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     onInitialMessageSent,
     focusItems = [],
     onRemoveFocusItem,
+    readOnly = false,
     isCompact = false,
     placeholder = "Ask the AI Expert...",
     welcomeText,
@@ -179,6 +188,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
         if (!initialMessage) return;
+        if (readOnly) return; // locked strategy — never start a new turn
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
@@ -238,7 +248,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (!trimmed || isStreaming || notReady) return;
+        if (readOnly || !trimmed || isStreaming || notReady) return;
         const focusedText =
             focusItems.length > 0
                 ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
@@ -279,7 +289,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const isLatest = isInverted
             ? index === 0
             : index === renderedMessages.length - 1;
-        const showControl = isAI && !!item.control && isLatest && !isStreaming;
+        const showControl = isAI && !!item.control && isLatest && !isStreaming && !readOnly;
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 {isAI && (
@@ -422,7 +432,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </View>
                     )}
 
-                    {focusItems.length > 0 && (
+                    {!readOnly && focusItems.length > 0 && (
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -448,51 +458,64 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </ScrollView>
                     )}
 
-                    {/* Model strip — sits right above the input */}
-                    <View style={styles.modelStrip}>
-                        <AIModelSelector
-                            models={models}
-                            selectedModel={selectedModel}
-                            onSelect={setSelectedModel}
-                            compact
-                        />
-                    </View>
+                    {readOnly ? (
+                        // Finalized strategy: history stays readable, but there's
+                        // no composer — new turns would change a locked strategy.
+                        <View style={styles.readOnlyFooter}>
+                            <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
+                            <Text style={styles.readOnlyFooterText} numberOfLines={2}>
+                                Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
+                            </Text>
+                        </View>
+                    ) : (
+                        <>
+                            {/* Model strip — sits right above the input */}
+                            <View style={styles.modelStrip}>
+                                <AIModelSelector
+                                    models={models}
+                                    selectedModel={selectedModel}
+                                    onSelect={setSelectedModel}
+                                    compact
+                                />
+                            </View>
 
-                    <View style={styles.inputArea}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder={notReady ? "Getting ready…" : placeholder}
-                            placeholderTextColor={colors.textSecondary}
-                            value={input}
-                            onChangeText={setInput}
-                            editable={!notReady}
-                            multiline
-                            maxLength={1000}
-                            onKeyPress={(e: any) => {
-                                // Web: Enter sends, Shift+Enter inserts a newline.
-                                // Native multiline behaviour is left untouched.
-                                if (
-                                    Platform.OS === "web" &&
-                                    e?.nativeEvent?.key === "Enter" &&
-                                    !e?.nativeEvent?.shiftKey
-                                ) {
-                                    e.preventDefault?.();
-                                    handleSend();
-                                }
-                            }}
-                        />
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.sendBtn,
-                                pressed && styles.sendBtnPressed,
-                                (!input.trim() || isStreaming || notReady) && styles.sendBtnDisabled,
-                            ]}
-                            onPress={handleSend}
-                            disabled={!input.trim() || isStreaming || notReady}
-                        >
-                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                        </Pressable>
-                    </View>
+                            <View style={styles.inputArea}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder={notReady ? "Getting ready…" : placeholder}
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={input}
+                                    onChangeText={setInput}
+                                    editable={!notReady}
+                                    multiline
+                                    maxLength={1000}
+                                    onKeyPress={(e: any) => {
+                                        // Web: Enter sends, Shift+Enter inserts a newline.
+                                        // Native multiline behaviour is left untouched.
+                                        if (
+                                            Platform.OS === "web" &&
+                                            e?.nativeEvent?.key === "Enter" &&
+                                            !e?.nativeEvent?.shiftKey
+                                        ) {
+                                            e.preventDefault?.();
+                                            handleSend();
+                                        }
+                                    }}
+                                />
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.sendBtn,
+                                        pressed && styles.sendBtnPressed,
+                                        (!input.trim() || isStreaming || notReady) && styles.sendBtnDisabled,
+                                    ]}
+                                    onPress={handleSend}
+                                    disabled={!input.trim() || isStreaming || notReady}
+                                >
+                                    <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                                </Pressable>
+                            </View>
+                        </>
+                    )}
                 </>
             )}
         </KeyboardAvoidingView>
@@ -721,6 +744,28 @@ function useStyles(
                 },
                 sendBtnPressed: { opacity: 0.75 },
                 sendBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
+                // ── Read-only footer (finalized strategy) ────────────────────
+                readOnlyFooter: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: isCompact ? 12 : 16,
+                    paddingTop: 10,
+                    paddingBottom: (isCompact ? 12 : 16) + safeBottom,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.05,
+                    elevation: 4,
+                },
+                readOnlyFooterText: {
+                    flex: 1,
+                    fontSize: 12.5,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                    lineHeight: 17,
+                },
             }),
         [colors, isCompact, safeTop, safeBottom, messageAlign]
     );

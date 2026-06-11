@@ -10,6 +10,7 @@ import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPan
 import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
@@ -62,8 +63,10 @@ const ContentStrategyDetail = () => {
     const {
         strategies,
         loading: strategiesLoading,
+        duplicateStrategy,
         updateStrategyContent,
         flushStrategyContent,
+        savingStrategyIds,
         updateStrategyName,
         updateReviewStatus,
         updatePresence,
@@ -291,16 +294,22 @@ const ContentStrategyDetail = () => {
         if (!holdingLock && !isOwnEcho) bumpEditor();
     }, [isWeb, serverContent, holdingLock, bumpEditor]);
 
-    const editorEditable = isWeb ? !lockedByOther : holdingLock;
+    // Finalized (pushed to calendar) is a terminal lock: the document and the
+    // AI chat go read-only and the only way forward is to duplicate. It takes
+    // precedence over the collaborative single-writer lock.
+    const isFinalized = activeStrategy?.status === StrategyStatus.Finalized;
+
+    const editorEditable = !isFinalized && (isWeb ? !lockedByOther : holdingLock);
     const editorLock = useMemo(
         () => ({
             editable: editorEditable,
             lockedByName,
             onRequestEdit:
-                !isWeb && !lockedByOther && !holdingLock ? handleRequestEdit : undefined,
+                !isFinalized && !isWeb && !lockedByOther && !holdingLock ? handleRequestEdit : undefined,
             onEndEdit: !isWeb && holdingLock ? handleEndEdit : undefined,
+            finalized: isFinalized,
         }),
-        [editorEditable, lockedByName, isWeb, lockedByOther, holdingLock, handleRequestEdit, handleEndEdit]
+        [editorEditable, lockedByName, isWeb, lockedByOther, holdingLock, isFinalized, handleRequestEdit, handleEndEdit]
     );
 
     const handleSendToChat = useCallback((text: string) => {
@@ -323,6 +332,22 @@ const ContentStrategyDetail = () => {
     const handleNewStrategy = useCallback(() => {
         router.push("/(main)/(drawer)/(tabs)/(content)/content-strategies" as any);
     }, [router]);
+
+    // Duplicate into a fresh, editable copy and open it. This is the iteration
+    // path for a finalized (locked) strategy — the original stays read-only.
+    const handleDuplicate = useCallback(async () => {
+        if (!strategyId) return;
+        const newId = await duplicateStrategy(strategyId);
+        if (!newId) {
+            Toaster.error("Couldn't duplicate", "Please try again.");
+            return;
+        }
+        Toaster.success("Strategy duplicated", "Opened an editable copy.");
+        router.push({
+            pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+            params: { strategyId: newId },
+        });
+    }, [strategyId, duplicateStrategy, router]);
 
     // Back to the strategies listing. `navigate` (not `push`) collapses the
     // stack so we don't pile detail screens on top of each other.
@@ -594,10 +619,14 @@ const ContentStrategyDetail = () => {
                                         onRequestChanges: handleRequestChanges,
                                         onSendForReview: handleSendForReview,
                                         onPushToCalendar: () => setShowPushToCalendar(true),
+                                        onDuplicate: handleDuplicate,
                                         onRename: handleRename,
                                         onOpenDrawer: strategies.length > 0 ? () => setDrawerOpen(true) : undefined,
                                         onNewStrategy: handleNewStrategy,
                                         onBack: handleBack,
+                                        saveState: strategyId && savingStrategyIds.has(strategyId)
+                                            ? "unsaved"
+                                            : "saved",
                                     } : undefined}
                                 />
                             </Animated.View>
@@ -662,6 +691,7 @@ const ContentStrategyDetail = () => {
                                                     prev.filter((f) => f.id !== id)
                                                 )
                                             }
+                                            readOnly={isFinalized}
                                             isCompact={screenState === "strategy-ready"}
                                         />
                                     }
@@ -685,6 +715,7 @@ const ContentStrategyDetail = () => {
                             onRemoveFocusItem={(id) =>
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
+                            readOnly={isFinalized}
                             isCompact={false}
                         />
                     </Animated.View>
@@ -715,6 +746,7 @@ const ContentStrategyDetail = () => {
                             onRemoveFocusItem={(id) =>
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
+                            readOnly={isFinalized}
                             isCompact={screenState === "strategy-ready"}
                             onCollapse={() => setRightPanelMode("none")}
                         />

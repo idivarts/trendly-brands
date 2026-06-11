@@ -11,6 +11,7 @@ import {
     arrayUnion,
     collection,
     doc,
+    getDoc,
     getDocs,
     increment,
     onSnapshot,
@@ -50,6 +51,7 @@ function toContentStrategy(id: string, data: IStrategy): ContentStrategy {
         content: data.markdownContent ?? "",
         createdAt: epochToDisplayDate(data.createdAt),
         chatMessages: [],
+        status: data.status ?? StrategyStatus.Active,
         durationDays: timelineDurationDays(data.timeline),
         // Collaboration fields
         collaboratorIds: data.collaboratorIds ?? [],
@@ -91,10 +93,24 @@ interface UseStrategiesReturn {
     strategies: ContentStrategy[];
     loading: boolean;
     addStrategy: (title: string, markdownContent: string) => Promise<string | null>;
+    /**
+     * Duplicate a strategy into a fresh, editable copy. Used as the iteration
+     * path for finalized (locked) strategies — the original stays read-only.
+     * The copy resets to a clean `draft`/`active` state: new timestamps, no
+     * collaborators/review history, no edit lock, no public share, and a fresh
+     * CRDT baseline. Returns the new strategy id (or null on failure).
+     */
+    duplicateStrategy: (strategyId: string) => Promise<string | null>;
     /** Debounced — waits 1.5 s after the last call before writing to Firestore */
     updateStrategyContent: (strategyId: string, markdownContent: string) => Promise<void>;
     /** Cancel any pending debounced write for this strategy and commit it now. */
     flushStrategyContent: (strategyId: string) => Promise<void>;
+    /**
+     * Strategy IDs with edits that have NOT yet been merged into the canonical
+     * `markdownContent` field (a debounced write is queued or in flight). Drives
+     * the toolbar's save-status indicator: empty for a strategy → "up to date".
+     */
+    savingStrategyIds: Set<string>;
     /** Rename a strategy — discrete commit (on blur / Enter), not debounced */
     updateStrategyName: (strategyId: string, name: string) => Promise<void>;
     /** Add a manager (by their manager doc ID) as a collaborator on a strategy */
@@ -135,6 +151,22 @@ export function useStrategies(): UseStrategiesReturn {
 
     const [strategies, setStrategies] = useState<ContentStrategy[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Strategy IDs whose latest edits haven't yet landed on `markdownContent`
+    // (debounced write queued or in flight). Reactive so the toolbar can flip
+    // the save-status indicator between "unsaved" and "up to date".
+    const [savingStrategyIds, setSavingStrategyIds] = useState<Set<string>>(
+        () => new Set()
+    );
+    const markSaving = useCallback((strategyId: string, on: boolean) => {
+        setSavingStrategyIds((prev) => {
+            if (on === prev.has(strategyId)) return prev;
+            const next = new Set(prev);
+            if (on) next.add(strategyId);
+            else next.delete(strategyId);
+            return next;
+        });
+    }, []);
 
     // Debounce timer ref — keyed by strategyId
     const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -230,6 +262,47 @@ export function useStrategies(): UseStrategiesReturn {
         [selectedBrand?.id, manager?.id]
     );
 
+    const duplicateStrategy = useCallback(
+        async (strategyId: string): Promise<string | null> => {
+            const brandId = selectedBrand?.id;
+            const managerId = manager?.id;
+            if (!brandId || !managerId) return null;
+
+            const srcRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+            const snap = await getDoc(srcRef);
+            if (!snap.exists()) return null;
+            const src = snap.data() as IStrategy;
+
+            const now = Date.now();
+            // Carry over the substance (body, plan, targeting), reset everything
+            // that ties the doc to its finalized lifecycle and collaboration state.
+            const copy: IStrategy = {
+                name: `${src.name} (Copy)`,
+                managerId,
+                description: src.description,
+                objective: src.objective,
+                status: StrategyStatus.Active,
+                timeline: src.timeline,
+                platforms: src.platforms,
+                contentFormats: src.contentFormats,
+                promotionType: src.promotionType,
+                budget: src.budget,
+                targetAudience: src.targetAudience,
+                numberOfInfluencers: src.numberOfInfluencers,
+                markdownContent: src.markdownContent ?? "",
+                reviewStatus: "draft",
+                editLock: null,
+                createdAt: now,
+                updatedAt: now,
+            };
+
+            const strategiesRef = collection(FirestoreDB, "brands", brandId, "strategies");
+            const docRef = await addDoc(strategiesRef, copy);
+            return docRef.id;
+        },
+        [selectedBrand?.id, manager?.id]
+    );
+
     /**
      * Debounced content save — waits 1.5 s after the last keystroke before
      * writing to Firestore. Also records `lastEditedBy` / `lastEditedAt` so
@@ -251,18 +324,25 @@ export function useStrategies(): UseStrategiesReturn {
                 clearTimeout(debounceRef.current[strategyId]);
             }
 
+            // There are now edits not yet merged into markdownContent.
+            markSaving(strategyId, true);
+
             debounceRef.current[strategyId] = setTimeout(async () => {
-                const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
-                await updateDoc(docRef, {
-                    markdownContent,
-                    updatedAt: Date.now(),
-                    lastEditedBy: managerId ?? null,
-                    lastEditedAt: Date.now(),
-                });
-                delete debounceRef.current[strategyId];
+                try {
+                    const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+                    await updateDoc(docRef, {
+                        markdownContent,
+                        updatedAt: Date.now(),
+                        lastEditedBy: managerId ?? null,
+                        lastEditedAt: Date.now(),
+                    });
+                } finally {
+                    delete debounceRef.current[strategyId];
+                    markSaving(strategyId, false);
+                }
             }, 1500);
         },
-        [selectedBrand?.id, manager?.id]
+        [selectedBrand?.id, manager?.id, markSaving]
     );
 
     /**
@@ -281,23 +361,33 @@ export function useStrategies(): UseStrategiesReturn {
             const latest = localEditsRef.current[strategyId];
             // Nothing buffered → nothing to write. The most recent committed
             // markdownContent is already on the server.
-            if (!pending && latest === undefined) return;
+            if (!pending && latest === undefined) {
+                markSaving(strategyId, false);
+                return;
+            }
 
             if (pending) {
                 clearTimeout(pending);
                 delete debounceRef.current[strategyId];
             }
-            if (latest === undefined) return;
+            if (latest === undefined) {
+                markSaving(strategyId, false);
+                return;
+            }
 
-            const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
-            await updateDoc(docRef, {
-                markdownContent: latest,
-                updatedAt: Date.now(),
-                lastEditedBy: managerId ?? null,
-                lastEditedAt: Date.now(),
-            });
+            try {
+                const docRef = doc(FirestoreDB, "brands", brandId, "strategies", strategyId);
+                await updateDoc(docRef, {
+                    markdownContent: latest,
+                    updatedAt: Date.now(),
+                    lastEditedBy: managerId ?? null,
+                    lastEditedAt: Date.now(),
+                });
+            } finally {
+                markSaving(strategyId, false);
+            }
         },
-        [selectedBrand?.id, manager?.id]
+        [selectedBrand?.id, manager?.id, markSaving]
     );
 
     // Rename is a discrete commit (on blur / Enter), not a debounced stream
@@ -506,8 +596,10 @@ export function useStrategies(): UseStrategiesReturn {
         strategies,
         loading,
         addStrategy,
+        duplicateStrategy,
         updateStrategyContent,
         flushStrategyContent,
+        savingStrategyIds,
         updateStrategyName,
         addCollaborator,
         updateReviewStatus,

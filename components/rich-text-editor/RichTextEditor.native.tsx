@@ -69,6 +69,9 @@ export interface EditLockUI {
     lockedByName?: string | null;
     onRequestEdit?: () => void;
     onEndEdit?: () => void;
+    /** Strategy is finalized (pushed to calendar) → read-only; the lock bar
+     *  points at duplicate and the "Edit" affordance is withheld. */
+    finalized?: boolean;
 }
 
 export interface StrategyEditorPanelProps {
@@ -316,9 +319,13 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                 <View style={styles.lockBar}>
                     <FontAwesomeIcon icon={faLock} size={13} color={colors.textSecondary} />
                     <Text style={styles.lockBarText} numberOfLines={1}>
-                        {lock?.lockedByName ? `${lock.lockedByName} is editing` : "View only"}
+                        {lock?.finalized
+                            ? "Finalized — duplicate to edit"
+                            : lock?.lockedByName
+                            ? `${lock.lockedByName} is editing`
+                            : "View only"}
                     </Text>
-                    {!lock?.lockedByName && lock?.onRequestEdit && (
+                    {!lock?.finalized && !lock?.lockedByName && lock?.onRequestEdit && (
                         <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
                             <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
                             <Text style={styles.editActionText}>Edit</Text>

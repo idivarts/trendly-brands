@@ -3,6 +3,7 @@ import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/typ
 import RichTextEditor from "@/components/rich-text-editor";
 import ShareModal from "@/components/sharing/ShareModal";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -13,17 +14,21 @@ import {
     faChevronDown,
     faChevronLeft,
     faCircleCheck,
+    faCloudArrowUp,
     faClock,
+    faCopy,
     faEllipsis,
+    faLock,
     faPaperPlane,
     faPen,
     faPlus,
+    faRotate,
     faRotateLeft,
     faShareNodes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Modal, NativeSyntheticEvent, Platform, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputKeyPressEventData, View, ViewStyle } from "react-native";
 
 const PlatformEditor: React.ComponentType<EditorProps> = RichTextEditor;
@@ -44,6 +49,9 @@ interface EditorProps {
         lockedByName?: string | null;
         onRequestEdit?: () => void;
         onEndEdit?: () => void;
+        /** Strategy is finalized (pushed to calendar) → read-only banner copy
+         *  points at duplicate rather than "someone is editing". */
+        finalized?: boolean;
     };
 }
 
@@ -55,12 +63,19 @@ export interface ToolbarProps {
     onRequestChanges: () => void;
     onSendForReview: () => void;
     onPushToCalendar: () => void;
+    onDuplicate: () => void;
     onRename: (name: string) => void;
     onOpenDrawer?: () => void;
     onNewStrategy: () => void;
     /** Navigate back to the strategies listing. Surfaced as a leading back
      *  button on mobile (!xl), where there's otherwise no way out. */
     onBack?: () => void;
+    /**
+     * Save indicator state. `"unsaved"` means there are edits (incl. live Yjs
+     * deltas) not yet merged into the canonical `markdownContent`; `"saved"`
+     * means everything's flushed. Drives the toolbar's save-status button.
+     */
+    saveState?: "saved" | "unsaved";
 }
 
 export interface StrategyEditorPanelProps extends EditorProps {
@@ -86,6 +101,12 @@ function statusVisual(
         default:
             return { bg: colors.tag, text: colors.textSecondary, label: "Draft", icon: faPen };
     }
+}
+
+// Finalized is a terminal, locked state (pushed to calendar). It overrides the
+// review-status pill entirely — there are no further transitions.
+function finalizedVisual(colors: ReturnType<typeof Colors>): StatusVisual {
+    return { bg: colors.toastSuccessBg, text: colors.toastSuccess, label: "Finalized", icon: faLock };
 }
 
 // ── Overflow ("⋯") menu — anchored dropdown, cross-platform ───────────────────
@@ -285,19 +306,23 @@ const Tooltip: React.FC<{
     colors: ReturnType<typeof Colors>;
     styles: ReturnType<typeof toolbarStyles>;
     triggerStyle?: StyleProp<ViewStyle>;
+    /** When set, tapping the trigger runs this action instead of toggling the
+     *  tooltip (hover still reveals it on web). Makes the trigger a real button. */
+    onPress?: () => void;
     children: React.ReactNode;
-}> = ({ text, accessibilityLabel, align, styles, triggerStyle, children }) => {
+}> = ({ text, accessibilityLabel, align, styles, triggerStyle, onPress, children }) => {
     const [open, setOpen] = useState(false);
 
     return (
         <View style={styles.tooltipWrap}>
             <Pressable
-                onPress={() => setOpen((o) => !o)}
+                onPress={() => (onPress ? onPress() : setOpen((o) => !o))}
                 onHoverIn={() => setOpen(true)}
                 onHoverOut={() => setOpen(false)}
                 hitSlop={8}
                 style={triggerStyle}
                 accessibilityLabel={accessibilityLabel}
+                accessibilityRole={onPress ? "button" : undefined}
             >
                 {children}
             </Pressable>
@@ -408,6 +433,69 @@ const StatusBadge: React.FC<{
     );
 };
 
+// ── Save-now plumbing ─────────────────────────────────────────────────────────
+// The same event Ctrl/Cmd+S fires: the web editor flushes its buffered Yjs
+// deltas (provider.flushNow) and the parent screen materializes the converged
+// content onto `markdownContent` (flushStrategyContent). One dispatch merges
+// everything that's still in flight.
+function dispatchSaveNow() {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("trendly:strategy-save-now"));
+    }
+}
+
+// ── Save-status button ────────────────────────────────────────────────────────
+// Reflects whether live edits are merged into the saved strategy. Green check =
+// up to date; amber cloud = unsaved Yjs/content changes. Always pressable —
+// clicking force-merges any pending updates and confirms the doc is saved.
+
+const SaveStatusButton: React.FC<{
+    saveState: "saved" | "unsaved";
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof toolbarStyles>;
+}> = ({ saveState, colors, styles }) => {
+    const [saving, setSaving] = useState(false);
+    const unsaved = saveState === "unsaved";
+
+    const handlePress = useCallback(() => {
+        setSaving(true);
+        dispatchSaveNow();
+        // The flush is near-instant; drop the transient spinner shortly after so
+        // the icon settles back onto its live saved/unsaved prop.
+        setTimeout(() => setSaving(false), 600);
+        Toaster.success("Up to date", "All changes merged into the strategy.");
+    }, []);
+
+    const icon = saving ? faRotate : unsaved ? faCloudArrowUp : faCircleCheck;
+    const color = saving
+        ? colors.textSecondary
+        : unsaved
+        ? colors.toastWarning
+        : colors.toastSuccess;
+    const tooltip = saving
+        ? "Merging changes…"
+        : unsaved
+        ? "Unsaved changes — click to merge & save now"
+        : "All changes saved — click to re-sync";
+    const a11y = unsaved
+        ? "Unsaved changes. Tap to merge and save now."
+        : "All changes saved. Tap to re-sync.";
+
+    return (
+        <Tooltip
+            text={tooltip}
+            accessibilityLabel={a11y}
+            align="right"
+            colors={colors}
+            styles={styles}
+            triggerStyle={styles.savedTrigger}
+            onPress={handlePress}
+        >
+            <FontAwesomeIcon icon={icon} size={16} color={color} />
+        </Tooltip>
+    );
+};
+
 // ── Strategy Toolbar ──────────────────────────────────────────────────────────
 
 const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Colors> }> = ({
@@ -418,21 +506,29 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
     onRequestChanges,
     onSendForReview,
     onPushToCalendar,
+    onDuplicate,
     onRename,
     onOpenDrawer,
     onNewStrategy,
     onBack,
+    saveState = "saved",
     colors,
 }) => {
     const { hasCapability, selectedBrand } = useBrandContext();
     const [shareOpen, setShareOpen] = useState(false);
     const reviewStatus = strategy.reviewStatus ?? "draft";
-    const status = statusVisual(reviewStatus, colors);
+    // Finalized (pushed to calendar) is a terminal lock: the doc/chat are
+    // read-only, the status pill is static, and the only way forward is to
+    // duplicate. It overrides the review-status pill and all transitions.
+    const isFinalized = strategy.status === StrategyStatus.Finalized;
+    const status = isFinalized ? finalizedVisual(colors) : statusVisual(reviewStatus, colors);
     const isReviewer =
+        !isFinalized &&
         reviewStatus === "in_review" &&
         strategy.collaboratorIds?.includes(currentManagerId) &&
         strategy.reviewRequestedBy !== currentManagerId;
     const canSendForReview =
+        !isFinalized &&
         (reviewStatus === "draft" || reviewStatus === "changes_requested") &&
         hasCapability("manage_content_strategy");
     const canShare =
@@ -450,11 +546,8 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
         const onKey = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
                 e.preventDefault();
-                window.dispatchEvent(new CustomEvent("trendly:strategy-save-now"));
-                Toaster.info(
-                    "Saved",
-                    "Latest edits merged into the strategy."
-                );
+                dispatchSaveNow();
+                Toaster.success("Up to date", "All changes merged into the strategy.");
             }
         };
         document.addEventListener("keydown", onKey);
@@ -469,9 +562,17 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
             : []),
         ...(onOpenDrawer ? [{ label: "All Strategies", icon: faBars, onPress: onOpenDrawer }] : []),
         { label: "New Strategy", icon: faPlus, onPress: onNewStrategy },
+        // Duplicate spins off an editable copy. It's the iteration path for a
+        // finalized (locked) strategy — labelled accordingly in that state.
+        {
+            label: isFinalized ? "Duplicate to Edit" : "Duplicate",
+            icon: faCopy,
+            onPress: onDuplicate,
+        },
         // On web, Push to Calendar is a first-class labelled button in the
-        // toolbar (see below); on mobile it stays in the overflow menu.
-        ...(!xl
+        // toolbar (see below); on mobile it stays in the overflow menu. A
+        // finalized strategy is already pushed, so the action is removed.
+        ...(!xl && !isFinalized
             ? [{ label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar }]
             : []),
     ];
@@ -511,7 +612,7 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
             <View style={styles.infoCluster}>
                 <EditableTitle
                     name={strategy.title}
-                    editable={!isReviewer}
+                    editable={!isReviewer && !isFinalized}
                     onRename={onRename}
                     colors={colors}
                     styles={styles}
@@ -528,25 +629,19 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
 
             {/* ── Right: autosave status + collaborators + decision + overflow ─ */}
             <View style={styles.actions}>
-                {/* Passive autosave status — desktop only. On mobile it's a
-                    reassurance that doesn't earn an active-control slot. */}
+                {/* Save status — desktop only. Green check when everything's
+                    merged into the saved strategy; amber cloud when there are
+                    unmerged Yjs/content edits. Always pressable: clicking
+                    force-merges any pending updates and confirms it's saved. */}
                 {xl && (
-                    <Tooltip
-                        text="Autosaves as you type — no need to save manually."
-                        accessibilityLabel="Saved — autosaves as you type"
-                        align="right"
-                        colors={colors}
-                        styles={styles}
-                        triggerStyle={styles.savedTrigger}
-                    >
-                        <FontAwesomeIcon icon={faCircleCheck} size={16} color={colors.toastSuccess} />
-                    </Tooltip>
+                    <SaveStatusButton saveState={saveState} colors={colors} styles={styles} />
                 )}
 
                 {/* Push to Calendar — a first-class labelled secondary button on
                     desktop. On mobile it lives in the overflow menu (no room for
-                    a labelled control). */}
-                {xl && (
+                    a labelled control). Once finalized, the strategy is already
+                    pushed and locked, so the action is removed. */}
+                {xl && !isFinalized && (
                     <Pressable
                         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
                         onPress={onPushToCalendar}

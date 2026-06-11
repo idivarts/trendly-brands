@@ -107,6 +107,9 @@ export interface EditLockUI {
     lockedByName?: string | null;
     onRequestEdit?: () => void;
     onEndEdit?: () => void;
+    /** Strategy is finalized (pushed to calendar) → read-only with a banner
+     *  that points at duplicate rather than a transient device-edit message. */
+    finalized?: boolean;
 }
 
 // Stable per-editor cursor colours (remote carets). Picked by manager id.
@@ -765,7 +768,9 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                 <View style={styles.lockBanner}>
                     <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary as string} />
                     <Text style={styles.lockBannerText} numberOfLines={1}>
-                        {lock?.lockedByName
+                        {lock?.finalized
+                            ? "Finalized — pushed to the calendar. Duplicate it to keep editing."
+                            : lock?.lockedByName
                             ? `${lock.lockedByName} is editing on a device · changes appear when they finish`
                             : "Read-only"}
                     </Text>
