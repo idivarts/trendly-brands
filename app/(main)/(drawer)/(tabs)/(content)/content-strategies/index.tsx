@@ -69,7 +69,7 @@ const ContentStrategiesIndex = () => {
                 title={xl ? "Content Strategy" : "Strategy"}
                 subtitle="Form a strategy before putting it in actionable content"
                 showBackButton={false}
-                leftAction={headerLeftAction}
+                rightComponent={headerLeftAction}
                 mobileActions="all"
             />
 
