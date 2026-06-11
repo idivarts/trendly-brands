@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
     Image,
+    Keyboard,
     Linking,
     Platform,
     Pressable,
@@ -23,6 +24,7 @@ import {
     View,
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const HEADLINE = "What can I create for you?";
 const PLACEHOLDER = "Describe what you need — a content plan, a week of posts, a campaign…";
@@ -39,7 +41,8 @@ const LetsStartAI: React.FC = () => {
     const colors = Colors(theme);
     const { xl, width } = useBreakpoints();
     const isWide = xl || width >= 900;
-    const styles = useMemo(() => makeStyles(colors), [colors]);
+    const insets = useSafeAreaInsets();
+    const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
 
     const [showSplash, setShowSplash] = useState(true);
     const [hydrated, setHydrated] = useState(false);
@@ -71,13 +74,19 @@ const LetsStartAI: React.FC = () => {
         }
     };
 
+    const showAuth = () => {
+        // Drop the keyboard first so the auth modal isn't half-covered by it.
+        Keyboard.dismiss();
+        setAuthOpen(true);
+    };
+
     const openAuth = (intent: string) => {
         if (intent?.trim()) {
             // Stash the intent so we can personalize once they're in.
             PersistentStorage.set("pending_brand_prompt", intent.trim()).catch(() => { });
         }
         analyticsLogEvent("lets_start_intent", { hasPrompt: !!intent?.trim() });
-        setAuthOpen(true);
+        showAuth();
     };
 
     const handleCreatorPress = () => {
@@ -110,13 +119,13 @@ const LetsStartAI: React.FC = () => {
                             </Pressable>
                         )} */}
                         <Pressable
-                            onPress={() => setAuthOpen(true)}
+                            onPress={showAuth}
                             style={({ pressed }) => [styles.signInBtn, pressed && { opacity: 0.85 }]}
                         >
                             <Text style={styles.signInText}>Sign in</Text>
                         </Pressable>
                         <Pressable
-                            onPress={() => setAuthOpen(true)}
+                            onPress={showAuth}
                             style={({ pressed }) => [styles.signUpBtn, pressed && { transform: [{ scale: 0.98 }] }]}
                         >
                             <Text style={styles.signUpText}>Sign up</Text>
@@ -209,14 +218,14 @@ const LetsStartAI: React.FC = () => {
     );
 };
 
-function makeStyles(colors: ReturnType<typeof Colors>) {
+function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
     return StyleSheet.create({
         nav: {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
             paddingHorizontal: 32,
-            paddingTop: 18,
+            paddingTop: topInset + 18,
             zIndex: 5,
         },
         navNarrow: {
@@ -382,6 +391,9 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             alignSelf: "center",
             backgroundColor: colors.card,
             borderRadius: 24,
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 24,
             overflow: "hidden",
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 18 },

@@ -45,9 +45,14 @@ const OnboardingLoader: React.FC<OnboardingLoaderProps> = ({
         return () => clearInterval(id);
     }, [messages.length]);
 
+    // Theme-aware mid glow. `aliceBlue` is a light silver tint that only reads in
+    // light mode; in dark mode it washes out the white text, so we lift off black
+    // with `card` (eerieBlack) instead. Keeps brand-blue rings as the accent.
+    const midGlow = theme.dark ? colors.card : colors.aliceBlue;
+
     return (
         <LinearGradient
-            colors={[colors.background, colors.aliceBlue, colors.background]}
+            colors={[colors.background, midGlow, colors.background]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.container}

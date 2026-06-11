@@ -124,7 +124,7 @@ const ContentStrategyDetail = () => {
     const transitionProgress = useRef(new Animated.Value(0)).current;
     const loadedProgress = useRef(new Animated.Value(1)).current;
 
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const activeStrategy = useMemo(
         () => strategies.find((s) => s.id === strategyId) ?? null,
@@ -449,7 +449,7 @@ const ContentStrategyDetail = () => {
     // markdownContent to Firestore immediately so the converged CRDT state
     // lands on the main field without delay.
     useEffect(() => {
-        if (typeof window === "undefined" || !strategyId) return;
+        if (Platform.OS !== "web" || !strategyId) return;
         const onSaveNow = () => {
             void flushStrategyContent(strategyId);
         };

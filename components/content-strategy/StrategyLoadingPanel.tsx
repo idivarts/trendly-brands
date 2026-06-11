@@ -32,7 +32,7 @@ interface StrategyLoadingPanelProps {
 const StrategyLoadingPanel: React.FC<StrategyLoadingPanelProps> = ({ animating = true }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const pulse = useRef(new Animated.Value(0.5)).current;
 

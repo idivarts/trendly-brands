@@ -31,7 +31,7 @@ const StrategyActionsMenu: React.FC<StrategyActionsMenuProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const [visible, setVisible] = useState(false);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const close = () => setVisible(false);
 

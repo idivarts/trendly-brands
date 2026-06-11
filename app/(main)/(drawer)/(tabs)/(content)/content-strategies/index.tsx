@@ -31,7 +31,7 @@ const ContentStrategiesIndex = () => {
 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [shareStrategy, setShareStrategy] = useState<ContentStrategy | null>(null);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     // Public sharing is gated on the same capability the toolbar's Share uses.
     const canShare = hasCapability("manage_content_strategy") && !!selectedBrand?.id;
