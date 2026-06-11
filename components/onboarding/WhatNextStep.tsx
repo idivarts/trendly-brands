@@ -11,7 +11,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { MotiView } from "moti";
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type NextChoice = "strategy" | "calendar" | "content" | "explore";
 
@@ -62,10 +63,15 @@ const WhatNextStep: React.FC<WhatNextStepProps> = ({ onSelect, disabled }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const insets = useSafeAreaInsets();
+    const styles = useMemo(() => useStyles(colors, xl, insets.top), [colors, xl, insets.top]);
 
     return (
-        <View style={styles.container}>
+        <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.container}
+            showsVerticalScrollIndicator={false}
+        >
             <MotiView
                 from={{ opacity: 0, translateY: 16 }}
                 animate={{ opacity: 1, translateY: 0 }}
@@ -115,17 +121,22 @@ const WhatNextStep: React.FC<WhatNextStepProps> = ({ onSelect, disabled }) => {
                     </MotiView>
                 ))}
             </View>
-        </View>
+        </ScrollView>
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean, topInset: number) {
     return StyleSheet.create({
-        container: {
+        scroll: {
             flex: 1,
+        },
+        container: {
+            flexGrow: 1,
             alignItems: "center",
             justifyContent: "center",
-            padding: 24,
+            paddingHorizontal: 24,
+            paddingTop: topInset + 24,
+            paddingBottom: 24,
             gap: 28,
         },
         header: {
