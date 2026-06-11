@@ -183,6 +183,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // Mode toggle: chat (default) vs history list.
     const [viewMode, setViewMode] = useState<"chat" | "history">("chat");
 
+    // True from the moment a queued initial message is dispatched until its
+    // content is on screen. sendMessage creates the thread over HTTP first, so
+    // there's a ~1-2s window where the history subscription hasn't started yet
+    // (notReady is already false) and the optimistic user bubble hasn't been
+    // added — without this the panel would render an empty chat. Keeping the
+    // loader up across this window is what avoids the "blank panel" on first open.
+    const [startingConversation, setStartingConversation] = useState(false);
+
     // Auto-send any queued initial message exactly once — but only after the
     // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
@@ -192,9 +200,27 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
+        setStartingConversation(true);
         sendMessage(initialMessage, undefined, selectedModel);
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
+
+    // Drop the starting flag as soon as the conversation shows life — the first
+    // message lands (optimistic bubble or committed history) or the assistant
+    // starts streaming.
+    useEffect(() => {
+        if (startingConversation && (aiMessages.length > 0 || isStreaming)) {
+            setStartingConversation(false);
+        }
+    }, [startingConversation, aiMessages.length, isStreaming]);
+
+    // Render-time "still wiring up" flag. Covers three windows: the conversation
+    // initializing/loading (notReady), the single frame between ready and the
+    // dispatch effect firing (a queued initial message not yet sent), and the
+    // HTTP thread-creation window (startingConversation).
+    const initialPending =
+        !!initialMessage && !readOnly && sentInitialRef.current !== initialMessage;
+    const busy = notReady || initialPending || startingConversation;
 
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
@@ -248,7 +274,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (readOnly || !trimmed || isStreaming || notReady) return;
+        if (readOnly || !trimmed || isStreaming || busy) return;
         const focusedText =
             focusItems.length > 0
                 ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
@@ -388,7 +414,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
                 <>
-                    {notReady ? (
+                    {busy ? (
                         <View style={styles.initLoader}>
                             <ActivityIndicator color={colors.primary} />
                             <Text style={styles.initText}>Setting up your conversation…</Text>
@@ -412,7 +438,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         />
                     )}
 
-                    {!notReady && isAITyping && (
+                    {!busy && isAITyping && (
                         <View style={styles.typingRow}>
                             <View style={styles.avatarContainer}>
                                 <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
@@ -425,7 +451,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
                     {/* Tokens are already flowing into the streaming bubble; this
                         slim row makes it obvious the AI hasn't stalled mid-reply. */}
-                    {!notReady && isStreaming && !!streamingContent && (
+                    {!busy && isStreaming && !!streamingContent && (
                         <View style={styles.streamingStatus}>
                             <ActivityIndicator size="small" color={colors.primary} />
                             <Text style={styles.streamingStatusText}>Generating…</Text>
@@ -482,11 +508,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             <View style={styles.inputArea}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder={notReady ? "Getting ready…" : placeholder}
+                                    placeholder={busy ? "Getting ready…" : placeholder}
                                     placeholderTextColor={colors.textSecondary}
                                     value={input}
                                     onChangeText={setInput}
-                                    editable={!notReady}
+                                    editable={!busy}
                                     multiline
                                     maxLength={1000}
                                     onKeyPress={(e: any) => {
@@ -506,10 +532,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                     style={({ pressed }) => [
                                         styles.sendBtn,
                                         pressed && styles.sendBtnPressed,
-                                        (!input.trim() || isStreaming || notReady) && styles.sendBtnDisabled,
+                                        (!input.trim() || isStreaming || busy) && styles.sendBtnDisabled,
                                     ]}
                                     onPress={handleSend}
-                                    disabled={!input.trim() || isStreaming || notReady}
+                                    disabled={!input.trim() || isStreaming || busy}
                                 >
                                     <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
                                 </Pressable>
