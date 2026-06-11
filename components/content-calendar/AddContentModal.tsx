@@ -72,7 +72,7 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     // The days shown as pills in the weekly view: the 7 days starting at the
     // tapped week's start (or today's week when opened from the header).

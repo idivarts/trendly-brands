@@ -29,7 +29,7 @@ const ManagerModal: React.FC<ManagerModalProps> = ({
 }) => {
     const theme = useTheme();
     const { xl, width } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme, xl, width), [theme, xl, width]);
+    const styles = useStyles(theme, xl, width);
 
     return (
         <Modal

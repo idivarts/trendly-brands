@@ -97,7 +97,7 @@ const MonthView: React.FC<MonthViewProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     // Desktop cells are tall enough to read a wrapped title; mobile cells stay
     // single-line. The chip footprint stays compact either way.
@@ -304,7 +304,7 @@ const MoreLink: React.FC<{
 }> = ({ count, onOpen }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const ref = useRef<View>(null);
 
     const handlePress = () => {
@@ -364,7 +364,7 @@ const DayPopover: React.FC<{
 }> = ({ dateStr, anchor, items, onClose, onFocusChat, onComment, onOpenItem }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { width: winW, height: winH } = useWindowDimensions();
 
     const maxHeight = Math.min(360, winH * 0.6);
@@ -431,7 +431,7 @@ const DroppableDayCell: React.FC<{
 }> = ({ dateStr, today, onPress, children }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: dateStr });
 
     return (

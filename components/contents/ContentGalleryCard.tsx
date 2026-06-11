@@ -67,7 +67,7 @@ function platformGlyph(platform: string): IconDefinition {
 const ContentGalleryCard: React.FC<ContentGalleryCardProps> = ({ item, onPress }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const statusColor = contentStatusColors(item.status, colors);
     const typeColor = contentTypeColor(item.type, colors);

@@ -39,7 +39,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     mapRegion,
 }) => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     const mapInputRefNative = useRef<GooglePlacesAutocompleteRefNative>(null);
 

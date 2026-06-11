@@ -41,7 +41,7 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const accounts = useMemo(
         () => socialAccounts.filter((a) => PUBLISHABLE.has(a.platform)),

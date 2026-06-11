@@ -12,7 +12,7 @@ import { View } from "../theme/Themed";
 const ProfileIcon = () => {
     const theme = useTheme();
     const { selectedBrand } = useBrandContext();
-    const styles = useMemo(() => useStyles(), []);
+    const styles = useStyles();
     return (
         <View style={styles.wrapper}>
                 <FontAwesomeIcon

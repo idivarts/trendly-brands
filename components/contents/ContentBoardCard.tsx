@@ -26,7 +26,7 @@ function typeGlyph(type: ContentItem["type"]): IconDefinition {
 const ContentBoardCard: React.FC<{ item: ContentItem }> = ({ item }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const typeColor = contentTypeColor(item.type, colors);
     const firstImage = item.attachments?.find((a) => a.imageUrl)?.imageUrl;

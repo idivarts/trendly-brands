@@ -40,7 +40,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { socialAccounts } = useBrandSocialContext();
 
     // Publishable platforms the brand actually has connected (fall back to IG).

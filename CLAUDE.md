@@ -112,8 +112,53 @@ These rules apply to every UI component touched or created in this project. Chec
 const theme = useTheme();
 const colors = Colors(theme);
 const { xl, width } = useBreakpoints();
-const styles = useMemo(() => useStyles(colors, xl, width), [colors, xl, width]);
+const styles = useStyles(colors, xl, width);
 ```
+
+The bottom-of-file `useStyles` helper already wraps its body in `useMemo`, so it
+is itself a hook. Call it **directly** at the top level of the component.
+
+### ⛔ NEVER do this — `useMemo(() => useStyles(...))`
+
+```tsx
+// ❌ WRONG — violates Rules of Hooks at runtime
+const styles = useMemo(() => useStyles(colors), [colors]);
+```
+
+Why this is wrong:
+- `useStyles` is a hook (starts with `use`, calls `useMemo` inside).
+- Wrapping it in another `useMemo` calls a hook **inside** a hook → React throws:
+  `Do not call Hooks inside useEffect(...), useMemo(...), or other built-in Hooks.`
+- The memoisation is already done **inside** `useStyles` itself — the outer
+  `useMemo` is also redundant.
+
+✅ Correct:
+```tsx
+const styles = useStyles(colors);
+// or with multiple args
+const styles = useStyles(colors, xl, width);
+```
+
+This applies to **every** new component AND to any component you touch — if you
+see the old `useMemo(() => useStyles(...))` form anywhere, fix it to the direct
+call as part of the change.
+
+### ⛔ Animated.View — do NOT mix native and JS-driven props
+
+If an `Animated.View` animates **any layout prop** (`width`, `height`, `top`,
+`left`, `margin*`, `padding*`, etc.) those values **cannot** use
+`useNativeDriver: true` — the native animation module does not support them and
+throws `Style property 'width' is not supported by native animated module`.
+
+Rules:
+- If the same `Animated.View` animates a layout prop and a transform/opacity,
+  **all** the `Animated.Value`s feeding it must use `useNativeDriver: false`.
+- Only use `useNativeDriver: true` when the view animates exclusively
+  `transform` and/or `opacity`.
+- If you need both (e.g. smooth `translateX` + animated `width`), either:
+  1. Use one shared JS driver (`useNativeDriver: false` on both), OR
+  2. Split into two nested `Animated.View`s — outer animates `width` (JS),
+     inner animates `transform` (native).
 
 ### Self-Check Before Finishing UI Work
 - [ ] Colors come from `Colors(theme)` tokens — zero hardcoded hex/rgb values

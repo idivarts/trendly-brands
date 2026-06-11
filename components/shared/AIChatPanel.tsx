@@ -145,10 +145,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // On desktop the surrounding AppLayout already handles safe area.
     const safeTop = xl ? 0 : insets.top;
     const safeBottom = xl ? 0 : insets.bottom;
-    const styles = useMemo(
-        () => useStyles(colors, isCompact, safeTop, safeBottom, messageAlign),
-        [colors, isCompact, safeTop, safeBottom, messageAlign]
-    );
+    const styles = useStyles(colors, isCompact, safeTop, safeBottom, messageAlign);
 
     // ── Real AI thread state ─────────────────────────────────────────────────
     const {

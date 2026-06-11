@@ -18,7 +18,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) =>
 
 const ApplicationsScreen = () => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     return (
         <AppLayout withWebPadding={false}>

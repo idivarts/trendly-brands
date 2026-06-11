@@ -175,7 +175,7 @@ export default function PricingPage() {
     }
     explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
 
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         <AppLayout>

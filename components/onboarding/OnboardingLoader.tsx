@@ -34,7 +34,7 @@ const OnboardingLoader: React.FC<OnboardingLoaderProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const [msgIndex, setMsgIndex] = useState(0);
     useEffect(() => {

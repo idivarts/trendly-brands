@@ -27,7 +27,7 @@ const ContentStateFilter: React.FC<ContentStateFilterProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const counts = useMemo(() => {
         const map: Record<string, number> = {};

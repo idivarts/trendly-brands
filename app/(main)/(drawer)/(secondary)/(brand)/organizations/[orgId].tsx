@@ -30,7 +30,7 @@ const ManageOrganizationScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl, width } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const router = useRouter();
 
     const { orgId } = useLocalSearchParams<{ orgId: string }>();

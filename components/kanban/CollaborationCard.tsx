@@ -37,7 +37,7 @@ export const CollaborationCard = ({
 }: CollaborationCardProps) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const [brandData, setBrandData] = useState<BrandData | null>(null);
     const [loadingBrand, setLoadingBrand] = useState(false);

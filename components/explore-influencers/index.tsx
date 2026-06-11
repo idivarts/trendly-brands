@@ -81,7 +81,7 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
     const preferences = selectedBrand?.preferences || {}
 
     const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     const [influencerIds, setInfluencerIds] = useState<string[]>([])
 

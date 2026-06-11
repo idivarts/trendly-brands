@@ -35,7 +35,7 @@ const MoveBrandDialog: React.FC<MoveBrandDialogProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [acknowledged, setAcknowledged] = useState(false);
 

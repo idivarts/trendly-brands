@@ -52,7 +52,7 @@ const InviteToCampaignModal: React.FC<Props> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const { width, height, xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
     const { selectedBrand } = useBrandContext();
     const effectiveBrandId = brandId ?? selectedBrand?.id;
     const [loading, setLoading] = useState(true);

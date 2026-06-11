@@ -69,10 +69,7 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const typeColor = TYPE_COLORS[item.type] ?? colors.primary;
-    const styles = useMemo(
-        () => useStyles(colors, typeColor, compact),
-        [colors, typeColor, compact]
-    );
+    const styles = useStyles(colors, typeColor, compact);
 
     return (
         <TitleTooltip text={item.title}>

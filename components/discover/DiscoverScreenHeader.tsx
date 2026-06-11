@@ -111,7 +111,7 @@ const DiscoverScreenHeader: React.FC = () => {
     } = useDiscovery();
 
     const [sortMenuVisible, setSortMenuVisible] = useState(false);
-    const styles = useMemo(() => useStyles(colors, xl, insets.top), [colors, xl, insets.top]);
+    const styles = useStyles(colors, xl, insets.top);
 
     const currentOption = SORT_OPTIONS.find((o) => o.value === currentSort);
     const sortDisplayLabel = currentOption

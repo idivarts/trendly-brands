@@ -36,7 +36,7 @@ const ConfirmDeleteDialog: React.FC<ConfirmDeleteDialogProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [typed, setTyped] = useState("");
 
     useEffect(() => {

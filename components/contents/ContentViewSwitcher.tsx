@@ -16,7 +16,7 @@ interface ContentViewSwitcherProps {
 const ContentViewSwitcher: React.FC<ContentViewSwitcherProps> = ({ value, onChange }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const segments: { key: ContentView; icon: typeof faBorderAll }[] = [
         { key: "gallery", icon: faBorderAll },

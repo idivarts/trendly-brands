@@ -30,7 +30,7 @@ const ConfirmCreateBrandDialog: React.FC<ConfirmCreateBrandDialogProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>

@@ -55,7 +55,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const colors = Colors(theme);
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
     const { hasCapability, isIndiaBased } = useBrandContext();
     const { isOnFreeTrial } = useOrganizationContext();
     const { openModal } = useConfirmationModel();

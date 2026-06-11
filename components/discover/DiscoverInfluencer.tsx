@@ -174,7 +174,7 @@ const DiscoverInfluencer: React.FC<DiscoverInfluencerProps> = ({
     const { isOnFreeTrial } = useOrganizationContext();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
     const [adminMenuVisible, setAdminMenuVisible] = useState(false);

@@ -34,7 +34,7 @@ const BrandModal: React.FC<BrandModalProps> = ({
 }) => {
     const theme = useTheme();
     const { width } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme, width), [theme, width]);
+    const styles = useStyles(theme, width);
 
     return (
         <Modal

@@ -53,10 +53,7 @@ const AIChatHistory: React.FC<AIChatHistoryProps> = ({
     const { xl } = useBreakpoints();
     const insets = useSafeAreaInsets();
     const safeBottom = xl ? 0 : insets.bottom;
-    const styles = useMemo(
-        () => useStyles(colors, safeBottom),
-        [colors, safeBottom]
-    );
+    const styles = useStyles(colors, safeBottom);
 
     const [searchQ, setSearchQ] = useState("");
     const [renameId, setRenameId] = useState<string | null>(null);

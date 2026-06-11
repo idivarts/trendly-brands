@@ -34,7 +34,7 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     if (!item) return null;
 

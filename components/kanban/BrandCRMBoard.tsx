@@ -81,7 +81,7 @@ export default function BrandCRMBoard() {
     const { manager } = useAuthContext();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     useEffect(() => {
         const fetchBrands = async () => {
@@ -531,7 +531,7 @@ export default function BrandCRMBoard() {
 const DroppableColumn = ({ column, onCardPress }: { column: KanbanColumnT; onCardPress: (card: KanbanCardT) => void }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const columnBg = theme.dark
         ? isOver
@@ -618,7 +618,7 @@ const SortableCard = ({
     };
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [collaborationCount, setCollaborationCount] = useState(0);
 
     const handlePress = () => {

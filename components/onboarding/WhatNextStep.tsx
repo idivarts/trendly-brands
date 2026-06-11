@@ -64,7 +64,7 @@ const WhatNextStep: React.FC<WhatNextStepProps> = ({ onSelect, disabled }) => {
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const insets = useSafeAreaInsets();
-    const styles = useMemo(() => useStyles(colors, xl, insets.top), [colors, xl, insets.top]);
+    const styles = useStyles(colors, xl, insets.top);
 
     return (
         <ScrollView

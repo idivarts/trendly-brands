@@ -60,7 +60,7 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
 
     const [prompt, setPrompt] = useState(initialValue);
 
