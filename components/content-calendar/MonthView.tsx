@@ -1,3 +1,4 @@
+import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     DndContext,
@@ -98,6 +99,11 @@ const MonthView: React.FC<MonthViewProps> = ({
     const colors = Colors(theme);
     const styles = useMemo(() => useStyles(colors), [colors]);
 
+    // Desktop cells are tall enough to read a wrapped title; mobile cells stay
+    // single-line. The chip footprint stays compact either way.
+    const { xl } = useBreakpoints();
+    const titleLines = xl ? 2 : 1;
+
     const rows = useMemo(() => buildCalendarGrid(year, month), [year, month]);
 
     const itemsByDate = useMemo(() => {
@@ -146,6 +152,7 @@ const MonthView: React.FC<MonthViewProps> = ({
             <DraggableChip
                 key={item.id}
                 item={item}
+                titleLines={titleLines}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpenItem}
@@ -155,6 +162,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                 key={item.id}
                 item={item}
                 compact
+                titleLines={titleLines}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpenItem}
@@ -450,10 +458,11 @@ const DroppableDayCell: React.FC<{
  */
 const DraggableChip: React.FC<{
     item: CalendarItem;
+    titleLines?: number;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
     onOpen: (item: CalendarItem) => void;
-}> = ({ item, onFocusChat, onComment, onOpen }) => {
+}> = ({ item, titleLines, onFocusChat, onComment, onOpen }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } =
         useDraggable({ id: item.id });
     const { tabIndex, role, ...restAttributes } = attributes as any;
@@ -474,6 +483,7 @@ const DraggableChip: React.FC<{
             <ContentItemChip
                 item={item}
                 compact
+                titleLines={titleLines}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpen}

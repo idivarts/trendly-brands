@@ -3,12 +3,35 @@ import { faComment, faCrosshairs } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS } from "./types";
+
+/**
+ * On web, surface the full (possibly truncated) title as a native browser
+ * tooltip via the HTML `title` attribute. RN-web strips `title` from View/Text,
+ * so we wrap in a real element here. No-op on native, where hover doesn't exist.
+ */
+const TitleTooltip: React.FC<{ text: string; children: React.ReactNode }> = ({
+    text,
+    children,
+}) =>
+    Platform.OS === "web"
+        ? React.createElement(
+              "div",
+              { title: text, style: { display: "flex", flexDirection: "column", minWidth: 0 } },
+              children
+          )
+        : (children as React.ReactElement);
 
 interface ContentItemChipProps {
     item: CalendarItem;
     compact?: boolean;
+    /**
+     * How many lines the title may occupy before truncating with an ellipsis.
+     * Defaults to the compact heuristic (1 when compact, else 2). MonthView
+     * raises this to 2 on desktop where cells are tall enough to read more.
+     */
+    titleLines?: number;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
     /** Tapping the chip body opens the content details page for editing. */
@@ -23,9 +46,22 @@ const TYPE_COLORS: Record<string, string> = {
     live: "rgb(232, 185, 49)",
 };
 
+/**
+ * Tint an `rgb(...)` token to a translucent `rgba(...)`. The old code appended
+ * "22" to the rgb string, which is only valid for #hex colors — on rgb() strings
+ * it produced an invalid color, so the badge background silently dropped out.
+ */
+function tint(rgb: string, alpha: number): string {
+    const match = rgb.match(/rgba?\(([^)]+)\)/);
+    if (!match) return rgb;
+    const [r, g, b] = match[1].split(",").map((p) => p.trim());
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const ContentItemChip: React.FC<ContentItemChipProps> = ({
     item,
     compact = false,
+    titleLines,
     onFocusChat,
     onComment,
     onOpen,
@@ -39,6 +75,7 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
     );
 
     return (
+        <TitleTooltip text={item.title}>
         <Pressable
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
             onPress={onOpen ? () => onOpen(item) : undefined}
@@ -46,12 +83,16 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
         >
             <View style={styles.accentBar} />
             <View style={styles.body}>
-                <Text style={styles.title} numberOfLines={compact ? 1 : 2}>
+                <Text
+                    style={styles.title}
+                    numberOfLines={titleLines ?? (compact ? 1 : 2)}
+                >
                     {item.title}
                 </Text>
                 <View style={styles.footer}>
                     <View style={styles.typeBadge}>
-                        <Text style={styles.typeText}>
+                        <View style={styles.typeDot} />
+                        <Text style={styles.typeText} numberOfLines={1}>
                             {CONTENT_TYPE_LABELS[item.type]}
                         </Text>
                     </View>
@@ -88,6 +129,7 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
                 </View>
             </View>
         </Pressable>
+        </TitleTooltip>
     );
 };
 
@@ -136,14 +178,23 @@ function useStyles(
                     justifyContent: "space-between",
                 },
                 typeBadge: {
-                    backgroundColor: typeColor + "22",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    backgroundColor: tint(typeColor, 0.14),
                     paddingHorizontal: 6,
                     paddingVertical: 2,
                     borderRadius: 4,
                 },
+                typeDot: {
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: typeColor,
+                },
                 typeText: {
-                    fontSize: 10,
-                    fontWeight: "600",
+                    fontSize: compact ? 9 : 10,
+                    fontWeight: "700",
                     color: typeColor,
                 },
                 actions: {
