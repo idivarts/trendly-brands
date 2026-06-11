@@ -63,6 +63,7 @@ const ContentStrategyDetail = () => {
         strategies,
         loading: strategiesLoading,
         updateStrategyContent,
+        flushStrategyContent,
         updateStrategyName,
         updateReviewStatus,
         updatePresence,
@@ -358,6 +359,20 @@ const ContentStrategyDetail = () => {
     const handleWriteManually = useCallback(() => {
         handleStrategyContentChange("<html><p>Write your strategy here</p></html>");
     }, [handleStrategyContentChange]);
+
+    // Ctrl+S in the toolbar dispatches `trendly:strategy-save-now`. The editor
+    // listens too (to flush buffered Yjs deltas and re-emit the canonical
+    // HTML); here we cancel any pending 1.5s autosave debounce and commit
+    // markdownContent to Firestore immediately so the converged CRDT state
+    // lands on the main field without delay.
+    useEffect(() => {
+        if (typeof window === "undefined" || !strategyId) return;
+        const onSaveNow = () => {
+            void flushStrategyContent(strategyId);
+        };
+        window.addEventListener("trendly:strategy-save-now", onSaveNow);
+        return () => window.removeEventListener("trendly:strategy-save-now", onSaveNow);
+    }, [strategyId, flushStrategyContent]);
 
     const handleSendForReview = useCallback(async () => {
         if (!strategyId) return;
