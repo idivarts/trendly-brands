@@ -70,9 +70,10 @@ import ImageInsertModal from "./ImageInsertModal";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { doc as fsDoc, runTransaction } from "firebase/firestore";
+import { doc as fsDoc, increment, runTransaction } from "firebase/firestore";
+import { EDIT_LOCK_TTL_MS } from "@/hooks/use-strategies";
 import { $createImageNode, ImageNode } from "./lexical/ImageNode";
-import { createFirestoreProviderFactory } from "./lexical/FirestoreYjsProvider";
+import { createFirestoreProviderFactory, FirestoreYjsProvider } from "./lexical/FirestoreYjsProvider";
 import { $serializeToEnrichedInner, $setEditorContentFromHtml } from "./lexical/serialize";
 import LinkInsertModal from "./LinkInsertModal";
 
@@ -106,6 +107,9 @@ export interface EditLockUI {
     lockedByName?: string | null;
     onRequestEdit?: () => void;
     onEndEdit?: () => void;
+    /** Strategy is finalized (pushed to calendar) → read-only with a banner
+     *  that points at duplicate rather than a transient device-edit message. */
+    finalized?: boolean;
 }
 
 // Stable per-editor cursor colours (remote carets). Picked by manager id.
@@ -279,24 +283,40 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     );
 
     // Bootstrap arbitration: exactly one client seeds the empty Yjs doc from the
-    // existing markdownContent. "pending" until the transactional claim resolves.
-    const [bootstrapRole, setBootstrapRole] = useState<"pending" | "owner" | "follower">(
-        collabEnabled ? "pending" : "follower"
+    // existing markdownContent. `null` until the transactional claim resolves —
+    // we capture both the role AND the strategy's current `crdtGeneration` in
+    // one transaction so the provider is created with the right generation
+    // (yupdates from a prior generation are ignored as stale, eliminating the
+    // post-AI-rewrite clobber race).
+    type Bootstrap = { role: "owner" | "follower"; generation: number };
+    const [bootstrap, setBootstrap] = useState<Bootstrap | null>(
+        collabEnabled ? null : { role: "follower", generation: 0 }
     );
+    const bootstrapRole = bootstrap?.role ?? "pending";
     // Seed captured once at mount (EditorBody remounts per strategy — see key).
     const seedHtmlRef = useRef(ensureEnrichedHtml(content || ""));
     const cursorsRef = useRef<HTMLDivElement>(null);
     const cursorColor = useMemo(() => pickCursorColor(manager?.id), [manager?.id]);
 
+    // Stash the live provider so the Ctrl+S handler can reach past the
+    // @lexical/yjs `Provider` boundary and call our `flushNow()`.
+    const providerRef = useRef<FirestoreYjsProvider | null>(null);
+
     const providerFactory = useMemo(() => {
-        if (!collabEnabled) return undefined;
-        return createFirestoreProviderFactory({
-            brandId: selectedBrand!.id,
-            strategyId: strategyId!,
-            managerId: manager!.id,
-            name: manager?.name ?? "Editor",
-        });
-    }, [collabEnabled, selectedBrand?.id, strategyId, manager?.id, manager?.name]);
+        if (!collabEnabled || !bootstrap) return undefined;
+        return createFirestoreProviderFactory(
+            {
+                brandId: selectedBrand!.id,
+                strategyId: strategyId!,
+                managerId: manager!.id,
+                name: manager?.name ?? "Editor",
+                generation: bootstrap.generation,
+            },
+            (p) => {
+                providerRef.current = p;
+            }
+        );
+    }, [collabEnabled, bootstrap, selectedBrand?.id, strategyId, manager?.id, manager?.name]);
 
     const initialEditorState = useCallback(
         (ed: LexicalEditor) => {
@@ -305,14 +325,15 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
         []
     );
 
-    // Claim (or decline) the one-time CRDT bootstrap for this strategy.
+    // Claim (or decline) the one-time CRDT bootstrap for this strategy, and
+    // capture the current generation so the provider can filter stale yupdates.
     useEffect(() => {
         if (!collabEnabled) {
-            setBootstrapRole("follower");
+            setBootstrap({ role: "follower", generation: 0 });
             return;
         }
         let cancelled = false;
-        setBootstrapRole("pending");
+        setBootstrap(null);
         (async () => {
             try {
                 const sref = fsDoc(
@@ -323,17 +344,49 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                     strategyId!
                 );
                 let owner = false;
+                let generation = 0;
                 await runTransaction(FirestoreDB, async (tx) => {
                     const s = await tx.get(sref);
-                    if (s.data()?.crdtInitialized !== true) {
+                    const data = s.data();
+                    const currentGen = (data?.crdtGeneration as number | undefined) ?? 0;
+
+                    // Stale-editLock recovery: native held the lock but never
+                    // released it (app crashed / force-killed / OOM). The
+                    // heartbeat is past its TTL, so the in-progress native
+                    // edits already landed on markdownContent but the CRDT
+                    // baseline was never reset. Treat this like a native
+                    // release: bump generation, clear the lock, and claim
+                    // ownership so we re-seed from the fresh HTML in one
+                    // atomic step. Firestore transactions retry on conflict,
+                    // so only one of N racing web clients wins.
+                    const lock = data?.editLock as { heartbeatAt?: number } | null | undefined;
+                    const lockStale =
+                        !!lock &&
+                        typeof lock.heartbeatAt === "number" &&
+                        Date.now() - lock.heartbeatAt >= EDIT_LOCK_TTL_MS;
+
+                    if (lockStale) {
+                        tx.update(sref, {
+                            crdtInitialized: true,
+                            crdtGeneration: increment(1),
+                            editLock: null,
+                        });
+                        generation = currentGen + 1;
+                        owner = true;
+                        return;
+                    }
+
+                    generation = currentGen;
+                    if (data?.crdtInitialized !== true) {
                         tx.update(sref, { crdtInitialized: true });
                         owner = true;
                     }
                 });
-                if (!cancelled) setBootstrapRole(owner ? "owner" : "follower");
+                if (!cancelled) setBootstrap({ role: owner ? "owner" : "follower", generation });
             } catch {
-                // Safe default: don't seed; the provider will load existing state.
-                if (!cancelled) setBootstrapRole("follower");
+                // Safe default: don't seed; the provider will load existing state
+                // at generation 0 (the legacy default).
+                if (!cancelled) setBootstrap({ role: "follower", generation: 0 });
             }
         })();
         return () => {
@@ -495,6 +548,22 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
             container?.removeEventListener("scroll", onScroll);
         };
     }, [editor, syncToolbarState, computePopover]);
+
+    // ── Manual save (Ctrl+S) ───────────────────────────────────────────────────
+    // The toolbar dispatches `trendly:strategy-save-now` on Ctrl+S. Our job
+    // here is to push any buffered Yjs deltas to Firestore immediately so the
+    // converged CRDT state is durable. The parent screen separately listens
+    // for the same event and flushes its 1.5s debounce of `markdownContent`,
+    // so we don't need to re-emit onChange (doing so would queue a redundant
+    // write 1.5s later).
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const onSaveNow = () => {
+            void providerRef.current?.flushNow();
+        };
+        window.addEventListener("trendly:strategy-save-now", onSaveNow);
+        return () => window.removeEventListener("trendly:strategy-save-now", onSaveNow);
+    }, []);
 
     // ── Editor → canonical HTML → onChange ─────────────────────────────────────
     const handleEditorChange = useCallback((editorState: EditorState) => {
@@ -699,7 +768,9 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                 <View style={styles.lockBanner}>
                     <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary as string} />
                     <Text style={styles.lockBannerText} numberOfLines={1}>
-                        {lock?.lockedByName
+                        {lock?.finalized
+                            ? "Finalized — pushed to the calendar. Duplicate it to keep editing."
+                            : lock?.lockedByName
                             ? `${lock.lockedByName} is editing on a device · changes appear when they finish`
                             : "Read-only"}
                     </Text>

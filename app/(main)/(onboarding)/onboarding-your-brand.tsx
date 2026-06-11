@@ -165,8 +165,8 @@ const OnboardingScreen = () => {
         }
 
         createBrand(brand)
-            .then((brandDoc) => {
-                if (!brandDoc) {
+            .then((newId) => {
+                if (!newId) {
                     Toaster.error(
                         "Something went wrong!",
                         "Couldn't create your brand"
@@ -175,7 +175,7 @@ const OnboardingScreen = () => {
                 }
                 setSelectedBrand({
                     ...brand,
-                    id: brandDoc.id,
+                    id: newId,
                 } as Brand);
                 setSession(AuthApp.currentUser?.uid || "");
                 router.resetAndNavigate(ONBOARDING_COMPLETE_LANDING_PAGE);

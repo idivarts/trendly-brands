@@ -84,14 +84,14 @@ export default function CreateBrandPage() {
                 age: brandAge,
                 creationTime: Date.now()
             }
-            const brand = await createBrand(brandObj)
-            if (!brand) {
+            const newId = await createBrand(brandObj)
+            if (!newId) {
                 Toaster.error("Something went wrong!", "Couldn't create your brand")
                 return
             }
             setSelectedBrand({
                 ...brandObj,
-                id: brand.id
+                id: newId
             })
 
             setShowSuccess(true);

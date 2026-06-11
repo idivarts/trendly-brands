@@ -3,6 +3,7 @@ import WhatNextStep, { NextChoice } from "@/components/onboarding/WhatNextStep";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useLocalSearchParams } from "expo-router";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -12,10 +13,10 @@ import { Brand } from "@/types/Brand";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { doc, getDoc } from "firebase/firestore";
 import { AnimatePresence, MotiView } from "moti";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-    ActivityIndicator,
     Platform,
     Pressable,
     StyleSheet,
@@ -103,15 +104,7 @@ const OnboardingFlow = () => {
     // When started from an Organization page, create the brand under that org.
     const { orgId } = useLocalSearchParams<{ orgId?: string }>();
 
-    const {
-        selectedBrand,
-        allBrands,
-        loading,
-        createDraftBrand,
-        updateBrand,
-        finalizeBrand,
-        setSelectedBrand,
-    } = useBrandContext();
+    const { createBrand, setSelectedBrand } = useBrandContext();
 
     const [phase, setPhase] = useState<Phase>("form");
     const [stepIndex, setStepIndex] = useState(0);
@@ -122,66 +115,11 @@ const OnboardingFlow = () => {
         age: "",
         website: "",
     });
-    const [draftId, setDraftId] = useState<string | undefined>();
+    const [brandId, setBrandId] = useState<string | undefined>();
     const [busy, setBusy] = useState(false);
-
-    const initOnce = useRef(false);
-    const finalizedOnce = useRef(false);
 
     const steps = useMemo(() => stepsFor(form.age), [form.age]);
     const currentKey = steps[stepIndex];
-
-    // ── Ensure a draft brand exists (resume an in-progress one if present) ────
-    useEffect(() => {
-        if (initOnce.current) return;
-        if (loading) return;
-        initOnce.current = true;
-
-        (async () => {
-            const existingDraft =
-                selectedBrand?.onboardingComplete === false
-                    ? selectedBrand
-                    : allBrands.find((b) => b.onboardingComplete === false);
-
-            if (existingDraft) {
-                if (existingDraft.id !== selectedBrand?.id) {
-                    setSelectedBrand(existingDraft, false);
-                }
-                setDraftId(existingDraft.id);
-                // If this onboarding was launched from an organization and the
-                // resumed draft isn't tied to one yet, attach it now.
-                if (orgId && !existingDraft.organizationId) {
-                    updateBrand(existingDraft.id, { organizationId: orgId });
-                }
-                // Seed whatever the draft already captured so a resumed flow
-                // continues instead of starting blank.
-                setForm((prev) => ({
-                    name: existingDraft.name || prev.name,
-                    about: existingDraft.profile?.about || prev.about,
-                    phone: existingDraft.profile?.phone || prev.phone,
-                    age: existingDraft.age || prev.age,
-                    website: existingDraft.profile?.website || prev.website,
-                }));
-                return;
-            }
-
-            const ref = await createDraftBrand(orgId ? { organizationId: orgId } : {});
-            if (!ref) {
-                Toaster.error("Couldn't start onboarding");
-                return;
-            }
-            setSelectedBrand(
-                {
-                    id: ref.id,
-                    name: "",
-                    creationTime: Date.now(),
-                    onboardingComplete: false,
-                } as Brand,
-                false
-            );
-            setDraftId(ref.id);
-        })();
-    }, [loading, selectedBrand, allBrands, createDraftBrand, setSelectedBrand, orgId, updateBrand]);
 
     const setField = (key: StepKey, value: string) =>
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -215,7 +153,7 @@ const OnboardingFlow = () => {
     const advance = (nextForm: FormState) => {
         const s = stepsFor(nextForm.age);
         if (stepIndex >= s.length - 1) {
-            void startCreation(nextForm);
+            setPhase("branch");
         } else {
             setStepIndex((i) => i + 1);
         }
@@ -237,65 +175,58 @@ const OnboardingFlow = () => {
         setTimeout(() => advance(next), 260);
     };
 
-    // ── Step 6: create the brand + organization behind the loader ────────────
-    const startCreation = async (f: FormState) => {
-        setPhase("loading");
-        if (!draftId) {
-            Toaster.error("Couldn't finish setting up your brand");
-            setPhase("form");
-            return;
+    // Create + finalize the brand on demand (only once), using the form data
+    // collected during the form phase. Brand creation is entirely backend-side
+    // now — we get back the new id, fetch the persisted doc from Firestore,
+    // and seed selectedBrand from it. Returns the brand id, or null on failure.
+    const ensureBrand = async (): Promise<string | null> => {
+        if (brandId) return brandId;
+
+        const profile: Record<string, string> = {
+            about: form.about.trim(),
+            phone: form.phone.trim(),
+        };
+        if (form.website.trim()) profile.website = form.website.trim();
+
+        const newId = await createBrand({
+            name: form.name.trim(),
+            age: form.age,
+            profile,
+            ...(orgId ? { organizationId: orgId } : {}),
+        } as any);
+        if (!newId) return null;
+
+        setBrandId(newId);
+
+        const snap = await getDoc(doc(FirestoreDB, "brands", newId));
+        if (snap.exists()) {
+            setSelectedBrand({ ...(snap.data() as Brand), id: newId }, false);
         }
-        if (finalizedOnce.current) return;
-        finalizedOnce.current = true;
-
-        try {
-            const profile: Record<string, string> = {
-                about: f.about.trim(),
-                phone: f.phone.trim(),
-            };
-            if (f.website.trim()) profile.website = f.website.trim();
-
-            await updateBrand(draftId, {
-                name: f.name.trim(),
-                age: f.age,
-                profile,
-            } as any);
-            await finalizeBrand(draftId);
-
-            // Optimistically flip onboardingComplete so the global resume-redirect
-            // doesn't bounce us back before the Firestore snapshot lands.
-            if (selectedBrand) {
-                setSelectedBrand(
-                    {
-                        ...selectedBrand,
-                        name: f.name.trim(),
-                        onboardingComplete: true,
-                    } as Brand,
-                    false
-                );
-            }
-            setPhase("branch");
-        } catch {
-            finalizedOnce.current = false;
-            Toaster.error("Couldn't finish setting up your brand");
-            setPhase("form");
-        }
+        return newId;
     };
 
     // ── Step 7: route into the chosen destination (seeded + sidebar set) ─────
     const handleChoice = async (choice: NextChoice) => {
-        if (busy || !draftId) return;
+        if (busy) return;
         setBusy(true);
-        // Keep the loader curtain up while we seed, so the destination only
-        // appears once it's ready.
+        // Keep the loader curtain up while we provision + seed, so the
+        // destination only appears once it's ready.
         setPhase("loading");
 
         try {
+            const id = await ensureBrand();
+            if (!id) {
+                Toaster.error("Couldn't finish setting up your brand");
+                setBusy(false);
+                setPhase("branch");
+                return;
+            }
+
             if (choice === "strategy") {
                 const res = await HttpWrapper.fetch("/api/ai/onboarding/strategy-init", {
                     method: "POST",
                     headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ brandId: draftId }),
+                    body: JSON.stringify({ brandId: id }),
                 });
                 const data = await res.json();
                 router.resetAndNavigate({
@@ -311,7 +242,7 @@ const OnboardingFlow = () => {
                 await HttpWrapper.fetch("/api/ai/onboarding/calendar-init", {
                     method: "POST",
                     headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ brandId: draftId }),
+                    body: JSON.stringify({ brandId: id }),
                 });
                 router.resetAndNavigate({
                     pathname:
@@ -338,16 +269,6 @@ const OnboardingFlow = () => {
     };
 
     // ── Render ───────────────────────────────────────────────────────────────
-    if (!draftId && phase === "form") {
-        return (
-            <AppLayout withWebPadding={false}>
-                <View style={styles.centered}>
-                    <ActivityIndicator color={colors.primary} />
-                </View>
-            </AppLayout>
-        );
-    }
-
     const progress = (stepIndex + 1) / steps.length;
 
     const renderTextStep = (key: Exclude<StepKey, "age">) => {
@@ -464,16 +385,12 @@ const OnboardingFlow = () => {
                         transition={{ type: "timing", duration: 400 }}
                     >
                         <OnboardingLoader
-                            title={busy ? "Getting things ready" : "Building your space"}
-                            messages={
-                                busy
-                                    ? [
-                                          "Preparing your workspace…",
-                                          "Setting up the AI…",
-                                          "Almost ready…",
-                                      ]
-                                    : undefined
-                            }
+                            title="Getting things ready"
+                            messages={[
+                                "Preparing your workspace…",
+                                "Setting up the AI…",
+                                "Almost ready…",
+                            ]}
                         />
                     </MotiView>
                 )}
@@ -497,7 +414,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         container: { flex: 1, backgroundColor: colors.background },
         fill: { flex: 1 },
-        centered: { flex: 1, alignItems: "center", justifyContent: "center" },
         progressTrack: {
             height: 5,
             backgroundColor: colors.tag,

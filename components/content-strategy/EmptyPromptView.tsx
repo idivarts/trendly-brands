@@ -1,16 +1,21 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { formatTimeToNow } from "@/utils/date";
-import { faArrowUp, faChevronRight, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
+import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy, ReviewStatus } from "./types";
 
 interface EmptyPromptViewProps {
     onSubmit: (prompt: string) => void;
     strategies?: ContentStrategy[];
     onSelectStrategy?: (strategy: ContentStrategy) => void;
+    onDuplicateStrategy?: (strategy: ContentStrategy) => void;
+    onDeleteStrategy?: (strategy: ContentStrategy) => void;
+    onShareStrategy?: (strategy: ContentStrategy) => void;
 }
 
 const SUGGESTIONS = [
@@ -26,17 +31,32 @@ const RESUME_LIMIT = 3;
 // excluded since they need no further action from the brand manager.
 const ACTIONABLE_STATUSES: ReviewStatus[] = ["draft", "in_review", "changes_requested"];
 
-const STATUS_PILL: Record<ReviewStatus, { label: string; bg: string; text: string }> = {
+type Pill = { label: string; bg: string; text: string };
+
+const STATUS_PILL: Record<ReviewStatus, Pill> = {
     draft: { label: "Draft", bg: "rgba(120,120,120,0.12)", text: "#6B6B6B" },
     in_review: { label: "In Review", bg: "rgba(224,122,0,0.12)", text: "#E07A00" },
     changes_requested: { label: "Changes Requested", bg: "rgba(220,38,38,0.12)", text: "#DC2626" },
     approved: { label: "Approved", bg: "rgba(26,122,58,0.12)", text: "#1A7A3A" },
 };
 
+// Finalized (pushed to calendar) is a terminal operational state that sits on
+// `status`, not `reviewStatus` — it overrides the review pill so the card
+// reflects the real lifecycle state rather than the stale review label.
+const FINALIZED_PILL: Pill = { label: "Finalized", bg: "rgba(26,122,58,0.12)", text: "#1A7A3A" };
+
+function pillFor(s: ContentStrategy): Pill {
+    if (s.status === StrategyStatus.Finalized) return FINALIZED_PILL;
+    return STATUS_PILL[s.reviewStatus] ?? STATUS_PILL.draft;
+}
+
 const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
     onSubmit,
     strategies = [],
     onSelectStrategy,
+    onDuplicateStrategy,
+    onDeleteStrategy,
+    onShareStrategy,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -45,6 +65,8 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
 
     const resumeStrategies = useMemo(() => {
         return strategies
+            // Finalized strategies are locked/done — not "work to pick up".
+            .filter((s) => s.status !== StrategyStatus.Finalized)
             .filter((s) => ACTIONABLE_STATUSES.includes(s.reviewStatus))
             .slice()
             .sort((a, b) => (b.lastEditedAt ?? 0) - (a.lastEditedAt ?? 0))
@@ -115,7 +137,7 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
                     <Text style={styles.resumeLabel}>PICK UP WHERE YOU LEFT OFF</Text>
                     <View style={styles.resumeList}>
                         {resumeStrategies.map((s) => {
-                            const pill = STATUS_PILL[s.reviewStatus];
+                            const pill = pillFor(s);
                             const editedAt = s.lastEditedAt
                                 ? formatTimeToNow(new Date(s.lastEditedAt))
                                 : s.createdAt;
@@ -152,11 +174,13 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
                                             </View>
                                         </View>
                                     </View>
-                                    <FontAwesomeIcon
-                                        icon={faChevronRight}
-                                        size={12}
-                                        color={colors.textSecondary}
-                                    />
+                                    {onDuplicateStrategy && onDeleteStrategy ? (
+                                        <StrategyActionsMenu
+                                            onDuplicate={() => onDuplicateStrategy(s)}
+                                            onDelete={() => onDeleteStrategy(s)}
+                                            onShare={onShareStrategy ? () => onShareStrategy(s) : undefined}
+                                        />
+                                    ) : null}
                                 </Pressable>
                             );
                         })}

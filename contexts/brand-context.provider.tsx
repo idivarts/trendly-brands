@@ -18,17 +18,13 @@ import { Brand } from "@/types/Brand";
 import { detectCountryCode, isIndiaBrand } from "@/utils/country";
 import { usePathname } from "expo-router";
 import {
-    addDoc,
     collection,
     collectionGroup,
     doc,
-    DocumentData,
     documentId,
-    DocumentReference,
     getDocs,
     onSnapshot,
     query,
-    setDoc,
     updateDoc,
     where,
 } from "firebase/firestore";
@@ -51,20 +47,24 @@ interface BrandContextProps {
     // the brand switcher so it matches the Organizations page (which lists every
     // org regardless of brand state).
     allBrands: Brand[];
-    createBrand: (
-        brand: Partial<IBrands>
-    ) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
     /**
-     * Creates a DRAFT brand (Firestore-only, no backend provisioning) and its
-     * member doc, returning the new ref. Used to start AI onboarding: it yields
-     * a brandId the chat can scope to before the brand is fully set up.
+     * Creates AND finalizes a brand in one backend round-trip. Returns the new
+     * brandId. Brand creation never happens client-side — the backend allocates
+     * the id, writes the brand + member docs, and provisions the brand. The
+     * caller should fetch the brand document from Firestore using the returned
+     * id (or rely on a snapshot listener) before showing brand-scoped UI.
      */
-    createDraftBrand: (
-        brand?: Partial<IBrands>
-    ) => Promise<DocumentReference<DocumentData, DocumentData> | null>;
+    createBrand: (brand: Partial<IBrands>) => Promise<string | null>;
     /**
-     * Finalizes a draft brand: runs backend provisioning (billing/credits/team)
-     * and flips onboardingComplete. Safe to call once onboarding completes.
+     * Creates a DRAFT brand on the backend (no provisioning) and returns the
+     * new brandId. Used by the AI onboarding chat so it can scope conversation
+     * messages to a brandId before the user has filled the form.
+     */
+    createDraftBrand: (brand?: Partial<IBrands>) => Promise<string | null>;
+    /**
+     * Finalizes an existing draft brand (provisions billing/credits/team and
+     * flips onboardingComplete). Safe to call multiple times; the backend's
+     * finalize step is idempotent.
      */
     finalizeBrand: (brandId: string) => Promise<void>;
     selectedBrand: Brand | undefined;
@@ -266,8 +266,8 @@ export const BrandContextProvider: React.FC<
         const membersCollection = collectionGroup(FirestoreDB, "members");
         const membersQuery = query(
             membersCollection,
-            where("managerId", "==", manager.id)
-            // where("status", "not-in", [0, 2])
+            where("managerId", "==", manager.id),
+            // where("status", "==", 1)
         );
         Console.log("Brand ID from member Query:", manager.id);
 
@@ -287,7 +287,7 @@ export const BrandContextProvider: React.FC<
                 const brandIds = new Set<string>();
                 membersSnapshot.docs.forEach((doc) => {
                     const member = doc.data() as IBrandsMembers;
-                    if (member.status === 0 || member.status > 1) {
+                    if (member.status !== 1) {
                         return;
                     }
 
@@ -549,80 +549,58 @@ export const BrandContextProvider: React.FC<
         [isPermissiveMember, teamPrivileges]
     );
 
-    const createBrand = async (brand: Partial<IBrands>) => {
-        if (!manager) return null;
+    // Single backend call that powers create / create-draft / finalize. The
+    // server allocates the brand id, writes the docs, and provisions when
+    // requested. Returns the brandId on success, null on failure.
+    const callBrandCreateAPI = async (body: {
+        brandId?: string;
+        brand?: Partial<IBrands>;
+        draft?: boolean;
+    }): Promise<string | null> => {
+        try {
+            const res = await HttpWrapper.fetch(`/api/v2/brands/create`, {
+                method: "POST",
+                body: JSON.stringify(body),
+                headers: { "content-type": "application/json" },
+            });
+            if (!res.ok) {
+                Console.log("Brand create API failed", res.status);
+                return null;
+            }
+            const data = await res.json();
+            return data?.brandId ?? null;
+        } catch (e) {
+            Console.log("Brand create API errored", e);
+            return null;
+        }
+    };
 
-        const brandRef = collection(FirestoreDB, "brands");
+    const createBrand = async (brand: Partial<IBrands>): Promise<string | null> => {
+        if (!manager) return null;
         // Capture the brand's country silently (no UI). Source of truth for
         // India-only gating. Don't overwrite an explicitly provided value.
-        const brandDoc = await addDoc(brandRef, {
-            country: detectCountryCode(),
-            ...brand,
+        return callBrandCreateAPI({
+            brand: { country: detectCountryCode(), ...brand },
         });
-
-        const managerRef = doc(
-            FirestoreDB,
-            "brands",
-            brandDoc.id,
-            "members",
-            manager.id
-        );
-        await setDoc(managerRef, {
-            managerId: manager.id,
-            role: "Manager",
-        });
-
-        HttpWrapper.fetch(`/api/v2/brands/create`, {
-            method: "POST",
-            body: JSON.stringify({
-                brandId: brandDoc.id,
-            }),
-            headers: {
-                "content-type": "application/json",
-            },
-        });
-
-        return brandDoc;
     };
 
-    const createDraftBrand = async (brand: Partial<IBrands> = {}) => {
+    const createDraftBrand = async (
+        brand: Partial<IBrands> = {}
+    ): Promise<string | null> => {
         if (!manager) return null;
-
-        const brandRef = collection(FirestoreDB, "brands");
-        const brandDoc = await addDoc(brandRef, {
-            name: "",
-            creationTime: Date.now(),
-            // Capture the brand's country silently (no UI) at draft creation so
-            // it survives the later finalize step. Source of truth for gating.
-            country: detectCountryCode(),
-            ...brand,
-            // A draft is intentionally NOT provisioned on the backend yet.
-            onboardingComplete: false,
+        return callBrandCreateAPI({
+            brand: {
+                name: "",
+                creationTime: Date.now(),
+                country: detectCountryCode(),
+                ...brand,
+            },
+            draft: true,
         });
-
-        const managerRef = doc(
-            FirestoreDB,
-            "brands",
-            brandDoc.id,
-            "members",
-            manager.id
-        );
-        await setDoc(managerRef, {
-            managerId: manager.id,
-            role: "Manager",
-        });
-
-        return brandDoc;
     };
 
-    const finalizeBrand = async (brandId: string) => {
-        await HttpWrapper.fetch(`/api/v2/brands/create`, {
-            method: "POST",
-            body: JSON.stringify({ brandId }),
-            headers: {
-                "content-type": "application/json",
-            },
-        });
+    const finalizeBrand = async (brandId: string): Promise<void> => {
+        await callBrandCreateAPI({ brandId });
     };
 
     const updateBrand = async (

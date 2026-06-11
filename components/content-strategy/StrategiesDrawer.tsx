@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { faChevronRight, faPenToSquare, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faPenToSquare, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef } from "react";
@@ -12,6 +12,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy } from "./types";
 
 interface StrategiesDrawerProps {
@@ -20,6 +21,9 @@ interface StrategiesDrawerProps {
     activeId: string | null;
     onSelect: (strategy: ContentStrategy) => void;
     onClose: () => void;
+    onDuplicate: (strategy: ContentStrategy) => void;
+    onDelete: (strategy: ContentStrategy) => void;
+    onShare?: (strategy: ContentStrategy) => void;
 }
 
 const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
@@ -28,6 +32,9 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
     activeId,
     onSelect,
     onClose,
+    onDuplicate,
+    onDelete,
+    onShare,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -94,10 +101,11 @@ const StrategiesDrawer: React.FC<StrategiesDrawerProps> = ({
                                         {strategy.createdAt}
                                     </Text>
                                 </View>
-                                <FontAwesomeIcon
-                                    icon={faChevronRight}
-                                    size={12}
-                                    color={isActive ? colors.onPrimary : colors.textSecondary}
+                                <StrategyActionsMenu
+                                    iconColor={isActive ? colors.onPrimary : colors.textSecondary}
+                                    onDuplicate={() => onDuplicate(strategy)}
+                                    onDelete={() => onDelete(strategy)}
+                                    onShare={onShare ? () => onShare(strategy) : undefined}
                                 />
                             </Pressable>
                         );

@@ -36,11 +36,22 @@ type BoardColumn = {
     cards: ContentItem[];
 };
 
+/**
+ * Posting date as a sortable timestamp — mirrors the date shown on the card:
+ * the scheduled time if set, otherwise the planned calendar `date`.
+ */
+function postingTime(item: ContentItem): number {
+    return item.scheduledAt ?? new Date(item.date + "T00:00:00").getTime();
+}
+
 function buildColumns(items: ContentItem[]): BoardColumn[] {
     return BOARD_CONTENT_STATUSES.map((status) => ({
         id: status,
         title: CONTENT_STATUS_LABELS[status],
-        cards: items.filter((i) => i.status === status),
+        // Sort by posting date ascending — earliest at the top of the column.
+        cards: items
+            .filter((i) => i.status === status)
+            .sort((a, b) => postingTime(a) - postingTime(b)),
     }));
 }
 
@@ -56,6 +67,14 @@ const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPr
 
     const [columns, setColumns] = useState<BoardColumn[]>(() => buildColumns(items));
     const [activeCard, setActiveCard] = useState<ContentItem | null>(null);
+    // Measured height of the board area. Columns are capped to this so the
+    // column's own vertical scroll (not the page) is the scroll boundary and
+    // stays fully on-screen — otherwise a tall column is clipped at the
+    // viewport bottom with no way to reach its last cards.
+    const [boardHeight, setBoardHeight] = useState(0);
+
+    // boardScroll padding is 20 top + 20 bottom = 40px of chrome around columns.
+    const columnMaxHeight = boardHeight > 0 ? Math.max(480, boardHeight - 40) : 900;
 
     // Keep columns in sync with the live items (Firestore snapshot updates).
     useEffect(() => {
@@ -133,7 +152,10 @@ const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPr
     };
 
     return (
-        <View style={styles.wrapper}>
+        <View
+            style={styles.wrapper}
+            onLayout={(e) => setBoardHeight(e.nativeEvent.layout.height)}
+        >
             <DndContext
                 sensors={sensors}
                 collisionDetection={pointerWithin}
@@ -156,7 +178,12 @@ const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPr
                 >
                     <View style={styles.row}>
                         {columns.map((col) => (
-                            <DroppableColumn key={col.id} column={col} onPressItem={onPressItem} />
+                            <DroppableColumn
+                                key={col.id}
+                                column={col}
+                                maxHeight={columnMaxHeight}
+                                onPressItem={onPressItem}
+                            />
                         ))}
                     </View>
                 </ScrollView>
@@ -167,9 +194,11 @@ const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPr
 
 const DroppableColumn = ({
     column,
+    maxHeight,
     onPressItem,
 }: {
     column: BoardColumn;
+    maxHeight: number;
     onPressItem: (item: ContentItem) => void;
 }) => {
     const theme = useTheme();
@@ -186,7 +215,7 @@ const DroppableColumn = ({
             : colors.aliceBlue;
 
     return (
-        <View ref={setNodeRef as any} style={[styles.column, { backgroundColor: columnBg }]}>
+        <View ref={setNodeRef as any} style={[styles.column, { backgroundColor: columnBg, maxHeight }]}>
             <View style={styles.columnHeader}>
                 <Text style={styles.columnTitle} numberOfLines={1}>
                     {column.title}
@@ -275,7 +304,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     padding: 12,
                     width: 280,
                     minHeight: 480,
-                    maxHeight: 900,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 2 },
                     shadowRadius: 8,

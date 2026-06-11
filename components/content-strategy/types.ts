@@ -1,4 +1,5 @@
 import type { ChatMessage, FocusItem } from "@/components/shared/AIChatPanel";
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 
 export type { ChatMessage, FocusItem };
 
@@ -12,6 +13,10 @@ export interface ContentStrategy {
     content: string;
     createdAt: string;
     chatMessages: ChatMessage[];
+    // Operational lifecycle state. `finalized` = pushed to the calendar and
+    // locked: the document and AI chat are read-only and the user must
+    // duplicate the strategy to keep iterating.
+    status: StrategyStatus;
     // Campaign window length (days) fixed at strategy creation. Used to
     // pre-fill the calendar from a chosen start date through to the end.
     durationDays?: number;
@@ -36,4 +41,9 @@ export interface ContentStrategy {
     // a native editor finishing clears this; the editor watches it to know the
     // body was replaced out-of-band and must re-read from scratch.
     crdtInitialized?: boolean;
+    // Monotonic generation — bumped on every wholesale rewrite (AI / native
+    // release). The web editor binds yupdates to the generation it observed at
+    // mount, so any leftover old-gen updates are ignored instead of clobbering
+    // the freshly-seeded HTML.
+    crdtGeneration?: number;
 }

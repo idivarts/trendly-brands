@@ -1,5 +1,6 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import AIAnswerControl from "@/components/shared/AIAnswerControl";
+import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
@@ -9,11 +10,10 @@ import {
     faChevronLeft,
     faChevronRight,
     faClockRotateLeft,
+    faLock,
     faPaperPlane,
     faPenToSquare,
-    faPlus,
     faRobot,
-    faTrash,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -73,6 +73,13 @@ interface AIChatPanelProps {
     focusItems?: FocusItem[];
     onRemoveFocusItem?: (id: string) => void;
 
+    /**
+     * Read-only mode. History stays fully visible and scrollable, but the
+     * composer, model selector and focus chips are removed — no new activity
+     * can be started. Used when the backing strategy is finalized (locked).
+     */
+    readOnly?: boolean;
+
     /** Layout */
     isCompact?: boolean;
     placeholder?: string;
@@ -103,19 +110,6 @@ interface AIChatPanelProps {
     messageAlign?: "top" | "bottom";
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function timeAgo(epoch: number): string {
-    const s = Math.max(1, Math.floor((Date.now() - epoch) / 1000));
-    if (s < 60) return `${s}s ago`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    return `${d}d ago`;
-}
-
 /**
  * Pure presentation + thread management combined.
  *
@@ -133,6 +127,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     onInitialMessageSent,
     focusItems = [],
     onRemoveFocusItem,
+    readOnly = false,
     isCompact = false,
     placeholder = "Ask the AI Expert...",
     welcomeText,
@@ -188,17 +183,44 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // Mode toggle: chat (default) vs history list.
     const [viewMode, setViewMode] = useState<"chat" | "history">("chat");
 
+    // True from the moment a queued initial message is dispatched until its
+    // content is on screen. sendMessage creates the thread over HTTP first, so
+    // there's a ~1-2s window where the history subscription hasn't started yet
+    // (notReady is already false) and the optimistic user bubble hasn't been
+    // added — without this the panel would render an empty chat. Keeping the
+    // loader up across this window is what avoids the "blank panel" on first open.
+    const [startingConversation, setStartingConversation] = useState(false);
+
     // Auto-send any queued initial message exactly once — but only after the
     // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
         if (!initialMessage) return;
+        if (readOnly) return; // locked strategy — never start a new turn
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
+        setStartingConversation(true);
         sendMessage(initialMessage, undefined, selectedModel);
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
+
+    // Drop the starting flag as soon as the conversation shows life — the first
+    // message lands (optimistic bubble or committed history) or the assistant
+    // starts streaming.
+    useEffect(() => {
+        if (startingConversation && (aiMessages.length > 0 || isStreaming)) {
+            setStartingConversation(false);
+        }
+    }, [startingConversation, aiMessages.length, isStreaming]);
+
+    // Render-time "still wiring up" flag. Covers three windows: the conversation
+    // initializing/loading (notReady), the single frame between ready and the
+    // dispatch effect firing (a queued initial message not yet sent), and the
+    // HTTP thread-creation window (startingConversation).
+    const initialPending =
+        !!initialMessage && !readOnly && sentInitialRef.current !== initialMessage;
+    const busy = notReady || initialPending || startingConversation;
 
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
@@ -235,16 +257,24 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     const isAITyping = isStreaming && !streamingContent;
 
-    useEffect(() => {
-        if (messages.length > 0) {
-            setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-        }
-    }, [messages.length]);
+    // Default chat is rendered into an inverted FlatList — newest item sits at
+    // index 0 and lands at the visual bottom. That gives us "scroll lands at
+    // the bottom on load" + "scrolling up loads older messages" for free, and
+    // avoids the scroll-jump that prepending items to a non-inverted list
+    // causes when `loadOlder` resolves.
+    //
+    // Wizard mode (`messageAlign === "top"`) intentionally keeps the
+    // top-down flow — onboarding only has a handful of messages.
+    const isInverted = messageAlign === "bottom";
+    const renderedMessages = useMemo(
+        () => (isInverted ? [...messages].reverse() : messages),
+        [messages, isInverted]
+    );
 
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (!trimmed || isStreaming || notReady) return;
+        if (readOnly || !trimmed || isStreaming || busy) return;
         const focusedText =
             focusItems.length > 0
                 ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
@@ -255,19 +285,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     };
 
     // ── History view helpers ─────────────────────────────────────────────────
-    const [searchQ, setSearchQ] = useState("");
-    const [renameId, setRenameId] = useState<string | null>(null);
-    const [renameText, setRenameText] = useState("");
-
     useEffect(() => {
         if (viewMode === "history") refreshThreads();
     }, [viewMode, refreshThreads]);
-
-    const filteredThreads = useMemo(() => {
-        const q = searchQ.trim().toLowerCase();
-        if (!q) return threads;
-        return threads.filter((t) => (t.title ?? "").toLowerCase().includes(q));
-    }, [threads, searchQ]);
 
     const onPickThread = (id: string) => {
         loadThread(id);
@@ -290,8 +310,12 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const isAI = item.sender === "ai";
         // An answer control is actionable only on the latest message — once the
         // user replies, a new message follows and the stale control disappears.
-        const showControl =
-            isAI && !!item.control && index === messages.length - 1 && !isStreaming;
+        // In inverted mode the latest message is at index 0; otherwise it's
+        // the last item in the list.
+        const isLatest = isInverted
+            ? index === 0
+            : index === renderedMessages.length - 1;
+        const showControl = isAI && !!item.control && isLatest && !isStreaming && !readOnly;
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 {isAI && (
@@ -379,108 +403,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             )}
 
             {viewMode === "history" ? (
-                // ── Conversations view ───────────────────────────────────────
-                <View style={styles.historyWrap}>
-                    <Pressable
-                        style={({ pressed }) => [styles.newChatBtn, pressed && styles.sendBtnPressed]}
-                        onPress={onNewChat}
-                    >
-                        <FontAwesomeIcon icon={faPlus} size={12} color={colors.onPrimary} />
-                        <Text style={styles.newChatText}>New chat</Text>
-                    </Pressable>
-
-                    <TextInput
-                        style={styles.searchInput}
-                        value={searchQ}
-                        onChangeText={setSearchQ}
-                        placeholder="Search chats…"
-                        placeholderTextColor={colors.textSecondary}
-                    />
-
-                    <ScrollView style={styles.historyList} contentContainerStyle={styles.historyListContent}>
-                        {filteredThreads.length === 0 ? (
-                            <Text style={styles.historyEmpty}>No conversations yet.</Text>
-                        ) : (
-                            filteredThreads.map((t) => {
-                                const active = t.id === activeThreadId;
-                                const renaming = renameId === t.id;
-                                return (
-                                    <View
-                                        key={t.id}
-                                        style={[styles.threadRow, active && styles.threadRowActive]}
-                                    >
-                                        {renaming ? (
-                                            <TextInput
-                                                style={styles.renameInput}
-                                                value={renameText}
-                                                onChangeText={setRenameText}
-                                                autoFocus
-                                                onBlur={() => {
-                                                    const next = renameText.trim();
-                                                    if (next && next !== t.title) renameThread(t.id, next);
-                                                    setRenameId(null);
-                                                }}
-                                                onSubmitEditing={() => {
-                                                    const next = renameText.trim();
-                                                    if (next && next !== t.title) renameThread(t.id, next);
-                                                    setRenameId(null);
-                                                }}
-                                            />
-                                        ) : (
-                                            <Pressable
-                                                style={styles.threadPress}
-                                                onPress={() => onPickThread(t.id)}
-                                            >
-                                                <Text
-                                                    style={[styles.threadTitle, active && styles.threadTitleActive]}
-                                                    numberOfLines={1}
-                                                >
-                                                    {t.title || "Untitled"}
-                                                </Text>
-                                                <Text
-                                                    style={[styles.threadMeta, active && styles.threadMetaActive]}
-                                                >
-                                                    {timeAgo(t.updatedAt)}
-                                                </Text>
-                                            </Pressable>
-                                        )}
-                                        <View style={styles.threadActions}>
-                                            <Pressable
-                                                hitSlop={6}
-                                                onPress={() => {
-                                                    setRenameId(t.id);
-                                                    setRenameText(t.title);
-                                                }}
-                                                style={({ pressed }) => [styles.threadActionBtn, pressed && styles.iconBtnPressed]}
-                                            >
-                                                <FontAwesomeIcon
-                                                    icon={faPenToSquare}
-                                                    size={11}
-                                                    color={active ? colors.onPrimary : colors.textSecondary}
-                                                />
-                                            </Pressable>
-                                            <Pressable
-                                                hitSlop={6}
-                                                onPress={() => deleteThread(t.id)}
-                                                style={({ pressed }) => [styles.threadActionBtn, pressed && styles.iconBtnPressed]}
-                                            >
-                                                <FontAwesomeIcon
-                                                    icon={faTrash}
-                                                    size={11}
-                                                    color={active ? colors.onPrimary : colors.textSecondary}
-                                                />
-                                            </Pressable>
-                                        </View>
-                                    </View>
-                                );
-                            })
-                        )}
-                    </ScrollView>
-                </View>
+                <AIChatHistory
+                    threads={threads}
+                    activeThreadId={activeThreadId}
+                    onPickThread={onPickThread}
+                    onNewChat={onNewChat}
+                    onRenameThread={renameThread}
+                    onDeleteThread={deleteThread}
+                />
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
                 <>
-                    {notReady ? (
+                    {busy ? (
                         <View style={styles.initLoader}>
                             <ActivityIndicator color={colors.primary} />
                             <Text style={styles.initText}>Setting up your conversation…</Text>
@@ -488,19 +422,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     ) : (
                         <FlatList
                             ref={listRef}
-                            data={messages}
+                            data={renderedMessages}
+                            inverted={isInverted}
                             keyExtractor={(item) => item.id}
                             renderItem={renderMessage}
                             contentContainerStyle={styles.messageList}
                             showsVerticalScrollIndicator={false}
-                            // Oldest messages sit at the top — reaching it pages in
-                            // the next older window from the Firestore subscription.
-                            onStartReached={hasMore ? loadOlder : undefined}
+                            // Inverted: visual "scroll up" = approaching the end of
+                            // the data, so pagination hangs off onEndReached. The
+                            // wizard (non-inverted) keeps its top-of-list trigger.
+                            onEndReached={isInverted && hasMore ? loadOlder : undefined}
+                            onEndReachedThreshold={0.2}
+                            onStartReached={!isInverted && hasMore ? loadOlder : undefined}
                             onStartReachedThreshold={0.2}
                         />
                     )}
 
-                    {!notReady && isAITyping && (
+                    {!busy && isAITyping && (
                         <View style={styles.typingRow}>
                             <View style={styles.avatarContainer}>
                                 <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
@@ -511,7 +449,16 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </View>
                     )}
 
-                    {focusItems.length > 0 && (
+                    {/* Tokens are already flowing into the streaming bubble; this
+                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
+                    {!busy && isStreaming && !!streamingContent && (
+                        <View style={styles.streamingStatus}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={styles.streamingStatusText}>Generating…</Text>
+                        </View>
+                    )}
+
+                    {!readOnly && focusItems.length > 0 && (
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -537,51 +484,64 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </ScrollView>
                     )}
 
-                    {/* Model strip — sits right above the input */}
-                    <View style={styles.modelStrip}>
-                        <AIModelSelector
-                            models={models}
-                            selectedModel={selectedModel}
-                            onSelect={setSelectedModel}
-                            compact
-                        />
-                    </View>
+                    {readOnly ? (
+                        // Finalized strategy: history stays readable, but there's
+                        // no composer — new turns would change a locked strategy.
+                        <View style={styles.readOnlyFooter}>
+                            <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
+                            <Text style={styles.readOnlyFooterText} numberOfLines={2}>
+                                Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
+                            </Text>
+                        </View>
+                    ) : (
+                        <>
+                            {/* Model strip — sits right above the input */}
+                            <View style={styles.modelStrip}>
+                                <AIModelSelector
+                                    models={models}
+                                    selectedModel={selectedModel}
+                                    onSelect={setSelectedModel}
+                                    compact
+                                />
+                            </View>
 
-                    <View style={styles.inputArea}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder={notReady ? "Getting ready…" : placeholder}
-                            placeholderTextColor={colors.textSecondary}
-                            value={input}
-                            onChangeText={setInput}
-                            editable={!notReady}
-                            multiline
-                            maxLength={1000}
-                            onKeyPress={(e: any) => {
-                                // Web: Enter sends, Shift+Enter inserts a newline.
-                                // Native multiline behaviour is left untouched.
-                                if (
-                                    Platform.OS === "web" &&
-                                    e?.nativeEvent?.key === "Enter" &&
-                                    !e?.nativeEvent?.shiftKey
-                                ) {
-                                    e.preventDefault?.();
-                                    handleSend();
-                                }
-                            }}
-                        />
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.sendBtn,
-                                pressed && styles.sendBtnPressed,
-                                (!input.trim() || isStreaming || notReady) && styles.sendBtnDisabled,
-                            ]}
-                            onPress={handleSend}
-                            disabled={!input.trim() || isStreaming || notReady}
-                        >
-                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                        </Pressable>
-                    </View>
+                            <View style={styles.inputArea}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder={busy ? "Getting ready…" : placeholder}
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={input}
+                                    onChangeText={setInput}
+                                    editable={!busy}
+                                    multiline
+                                    maxLength={1000}
+                                    onKeyPress={(e: any) => {
+                                        // Web: Enter sends, Shift+Enter inserts a newline.
+                                        // Native multiline behaviour is left untouched.
+                                        if (
+                                            Platform.OS === "web" &&
+                                            e?.nativeEvent?.key === "Enter" &&
+                                            !e?.nativeEvent?.shiftKey
+                                        ) {
+                                            e.preventDefault?.();
+                                            handleSend();
+                                        }
+                                    }}
+                                />
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.sendBtn,
+                                        pressed && styles.sendBtnPressed,
+                                        (!input.trim() || isStreaming || busy) && styles.sendBtnDisabled,
+                                    ]}
+                                    onPress={handleSend}
+                                    disabled={!input.trim() || isStreaming || busy}
+                                >
+                                    <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                                </Pressable>
+                            </View>
+                        </>
+                    )}
                 </>
             )}
         </KeyboardAvoidingView>
@@ -631,11 +591,17 @@ function useStyles(
                     color: colors.text,
                 },
                 // ── Message list ─────────────────────────────────────────────
+                // Wizard mode (top-aligned) explicitly anchors to the top so a
+                // single message hugs the top of the panel. Default chat is
+                // rendered into an inverted FlatList, so items pile up from
+                // the visual bottom on their own — no justifyContent needed.
                 messageList: {
                     padding: isCompact ? 12 : 16,
                     gap: 12,
                     flexGrow: 1,
-                    justifyContent: messageAlign === "top" ? "flex-start" : "flex-end",
+                    ...(messageAlign === "top"
+                        ? { justifyContent: "flex-start" as const }
+                        : {}),
                 },
                 initLoader: {
                     flex: 1,
@@ -712,6 +678,18 @@ function useStyles(
                     elevation: 2,
                 },
                 typingText: { fontSize: 13, color: colors.textSecondary, fontStyle: "italic" },
+                streamingStatus: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: isCompact ? 12 : 16,
+                    paddingBottom: 8,
+                },
+                streamingStatusText: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    fontStyle: "italic",
+                },
                 // ── Focus chips ──────────────────────────────────────────────
                 focusBar: { flexShrink: 0, maxHeight: 44, marginHorizontal: 12, marginBottom: 6 },
                 focusBarContent: { gap: 8, alignItems: "center" },
@@ -792,81 +770,27 @@ function useStyles(
                 },
                 sendBtnPressed: { opacity: 0.75 },
                 sendBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
-                // ── History view ─────────────────────────────────────────────
-                historyWrap: { flex: 1, padding: 12, paddingBottom: 12 + safeBottom, gap: 10 },
-                newChatBtn: {
+                // ── Read-only footer (finalized strategy) ────────────────────
+                readOnlyFooter: {
                     flexDirection: "row",
                     alignItems: "center",
-                    justifyContent: "center",
                     gap: 8,
-                    paddingVertical: 10,
-                    backgroundColor: colors.primary,
-                    borderRadius: 10,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 10,
-                    shadowOpacity: 0.3,
+                    paddingHorizontal: isCompact ? 12 : 16,
+                    paddingTop: 10,
+                    paddingBottom: (isCompact ? 12 : 16) + safeBottom,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.05,
                     elevation: 4,
                 },
-                newChatText: { color: colors.onPrimary, fontWeight: "700", fontSize: 13 },
-                searchInput: {
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    backgroundColor: colors.tag,
-                    color: colors.text,
-                    borderRadius: 10,
-                    fontSize: 13,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
-                },
-                historyList: { flex: 1 },
-                historyListContent: { gap: 4, paddingBottom: 8 },
-                historyEmpty: {
-                    color: colors.textSecondary,
-                    fontSize: 12,
-                    textAlign: "center",
-                    paddingVertical: 20,
-                },
-                threadRow: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 10,
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    gap: 6,
-                },
-                threadRowActive: {
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                threadPress: { flex: 1 },
-                threadTitle: { color: colors.text, fontSize: 13, fontWeight: "600" },
-                threadTitleActive: { color: colors.onPrimary },
-                threadMeta: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
-                threadMetaActive: { color: colors.onPrimary, opacity: 0.8 },
-                threadActions: { flexDirection: "row", gap: 2 },
-                threadActionBtn: {
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    alignItems: "center",
-                    justifyContent: "center",
-                },
-                renameInput: {
+                readOnlyFooterText: {
                     flex: 1,
-                    paddingHorizontal: 8,
-                    paddingVertical: 6,
-                    backgroundColor: colors.tag,
-                    color: colors.text,
-                    borderRadius: 6,
-                    fontSize: 13,
+                    fontSize: 12.5,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                    lineHeight: 17,
                 },
             }),
         [colors, isCompact, safeTop, safeBottom, messageAlign]
