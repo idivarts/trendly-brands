@@ -70,7 +70,8 @@ import ImageInsertModal from "./ImageInsertModal";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { doc as fsDoc, runTransaction } from "firebase/firestore";
+import { doc as fsDoc, increment, runTransaction } from "firebase/firestore";
+import { EDIT_LOCK_TTL_MS } from "@/hooks/use-strategies";
 import { $createImageNode, ImageNode } from "./lexical/ImageNode";
 import { createFirestoreProviderFactory, FirestoreYjsProvider } from "./lexical/FirestoreYjsProvider";
 import { $serializeToEnrichedInner, $setEditorContentFromHtml } from "./lexical/serialize";
@@ -344,7 +345,35 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                 await runTransaction(FirestoreDB, async (tx) => {
                     const s = await tx.get(sref);
                     const data = s.data();
-                    generation = (data?.crdtGeneration as number | undefined) ?? 0;
+                    const currentGen = (data?.crdtGeneration as number | undefined) ?? 0;
+
+                    // Stale-editLock recovery: native held the lock but never
+                    // released it (app crashed / force-killed / OOM). The
+                    // heartbeat is past its TTL, so the in-progress native
+                    // edits already landed on markdownContent but the CRDT
+                    // baseline was never reset. Treat this like a native
+                    // release: bump generation, clear the lock, and claim
+                    // ownership so we re-seed from the fresh HTML in one
+                    // atomic step. Firestore transactions retry on conflict,
+                    // so only one of N racing web clients wins.
+                    const lock = data?.editLock as { heartbeatAt?: number } | null | undefined;
+                    const lockStale =
+                        !!lock &&
+                        typeof lock.heartbeatAt === "number" &&
+                        Date.now() - lock.heartbeatAt >= EDIT_LOCK_TTL_MS;
+
+                    if (lockStale) {
+                        tx.update(sref, {
+                            crdtInitialized: true,
+                            crdtGeneration: increment(1),
+                            editLock: null,
+                        });
+                        generation = currentGen + 1;
+                        owner = true;
+                        return;
+                    }
+
+                    generation = currentGen;
                     if (data?.crdtInitialized !== true) {
                         tx.update(sref, { crdtInitialized: true });
                         owner = true;
