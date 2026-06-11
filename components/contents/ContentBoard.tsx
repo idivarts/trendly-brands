@@ -36,11 +36,22 @@ type BoardColumn = {
     cards: ContentItem[];
 };
 
+/**
+ * Posting date as a sortable timestamp — mirrors the date shown on the card:
+ * the scheduled time if set, otherwise the planned calendar `date`.
+ */
+function postingTime(item: ContentItem): number {
+    return item.scheduledAt ?? new Date(item.date + "T00:00:00").getTime();
+}
+
 function buildColumns(items: ContentItem[]): BoardColumn[] {
     return BOARD_CONTENT_STATUSES.map((status) => ({
         id: status,
         title: CONTENT_STATUS_LABELS[status],
-        cards: items.filter((i) => i.status === status),
+        // Sort by posting date ascending — earliest at the top of the column.
+        cards: items
+            .filter((i) => i.status === status)
+            .sort((a, b) => postingTime(a) - postingTime(b)),
     }));
 }
 
