@@ -1,5 +1,6 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import AIAnswerControl from "@/components/shared/AIAnswerControl";
+import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
@@ -11,9 +12,7 @@ import {
     faClockRotateLeft,
     faPaperPlane,
     faPenToSquare,
-    faPlus,
     faRobot,
-    faTrash,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -101,19 +100,6 @@ interface AIChatPanelProps {
      * wizard — better for a full-page onboarding flow with few messages.
      */
     messageAlign?: "top" | "bottom";
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function timeAgo(epoch: number): string {
-    const s = Math.max(1, Math.floor((Date.now() - epoch) / 1000));
-    if (s < 60) return `${s}s ago`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    return `${d}d ago`;
 }
 
 /**
@@ -255,19 +241,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     };
 
     // ── History view helpers ─────────────────────────────────────────────────
-    const [searchQ, setSearchQ] = useState("");
-    const [renameId, setRenameId] = useState<string | null>(null);
-    const [renameText, setRenameText] = useState("");
-
     useEffect(() => {
         if (viewMode === "history") refreshThreads();
     }, [viewMode, refreshThreads]);
-
-    const filteredThreads = useMemo(() => {
-        const q = searchQ.trim().toLowerCase();
-        if (!q) return threads;
-        return threads.filter((t) => (t.title ?? "").toLowerCase().includes(q));
-    }, [threads, searchQ]);
 
     const onPickThread = (id: string) => {
         loadThread(id);
@@ -379,104 +355,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             )}
 
             {viewMode === "history" ? (
-                // ── Conversations view ───────────────────────────────────────
-                <View style={styles.historyWrap}>
-                    <Pressable
-                        style={({ pressed }) => [styles.newChatBtn, pressed && styles.sendBtnPressed]}
-                        onPress={onNewChat}
-                    >
-                        <FontAwesomeIcon icon={faPlus} size={12} color={colors.onPrimary} />
-                        <Text style={styles.newChatText}>New chat</Text>
-                    </Pressable>
-
-                    <TextInput
-                        style={styles.searchInput}
-                        value={searchQ}
-                        onChangeText={setSearchQ}
-                        placeholder="Search chats…"
-                        placeholderTextColor={colors.textSecondary}
-                    />
-
-                    <ScrollView style={styles.historyList} contentContainerStyle={styles.historyListContent}>
-                        {filteredThreads.length === 0 ? (
-                            <Text style={styles.historyEmpty}>No conversations yet.</Text>
-                        ) : (
-                            filteredThreads.map((t) => {
-                                const active = t.id === activeThreadId;
-                                const renaming = renameId === t.id;
-                                return (
-                                    <View
-                                        key={t.id}
-                                        style={[styles.threadRow, active && styles.threadRowActive]}
-                                    >
-                                        {renaming ? (
-                                            <TextInput
-                                                style={styles.renameInput}
-                                                value={renameText}
-                                                onChangeText={setRenameText}
-                                                autoFocus
-                                                onBlur={() => {
-                                                    const next = renameText.trim();
-                                                    if (next && next !== t.title) renameThread(t.id, next);
-                                                    setRenameId(null);
-                                                }}
-                                                onSubmitEditing={() => {
-                                                    const next = renameText.trim();
-                                                    if (next && next !== t.title) renameThread(t.id, next);
-                                                    setRenameId(null);
-                                                }}
-                                            />
-                                        ) : (
-                                            <Pressable
-                                                style={styles.threadPress}
-                                                onPress={() => onPickThread(t.id)}
-                                            >
-                                                <Text
-                                                    style={[styles.threadTitle, active && styles.threadTitleActive]}
-                                                    numberOfLines={1}
-                                                >
-                                                    {t.title || "Untitled"}
-                                                </Text>
-                                                <Text
-                                                    style={[styles.threadMeta, active && styles.threadMetaActive]}
-                                                >
-                                                    {timeAgo(t.updatedAt)}
-                                                </Text>
-                                            </Pressable>
-                                        )}
-                                        <View style={styles.threadActions}>
-                                            <Pressable
-                                                hitSlop={6}
-                                                onPress={() => {
-                                                    setRenameId(t.id);
-                                                    setRenameText(t.title);
-                                                }}
-                                                style={({ pressed }) => [styles.threadActionBtn, pressed && styles.iconBtnPressed]}
-                                            >
-                                                <FontAwesomeIcon
-                                                    icon={faPenToSquare}
-                                                    size={11}
-                                                    color={active ? colors.onPrimary : colors.textSecondary}
-                                                />
-                                            </Pressable>
-                                            <Pressable
-                                                hitSlop={6}
-                                                onPress={() => deleteThread(t.id)}
-                                                style={({ pressed }) => [styles.threadActionBtn, pressed && styles.iconBtnPressed]}
-                                            >
-                                                <FontAwesomeIcon
-                                                    icon={faTrash}
-                                                    size={11}
-                                                    color={active ? colors.onPrimary : colors.textSecondary}
-                                                />
-                                            </Pressable>
-                                        </View>
-                                    </View>
-                                );
-                            })
-                        )}
-                    </ScrollView>
-                </View>
+                <AIChatHistory
+                    threads={threads}
+                    activeThreadId={activeThreadId}
+                    onPickThread={onPickThread}
+                    onNewChat={onNewChat}
+                    onRenameThread={renameThread}
+                    onDeleteThread={deleteThread}
+                />
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
                 <>
@@ -792,82 +678,6 @@ function useStyles(
                 },
                 sendBtnPressed: { opacity: 0.75 },
                 sendBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
-                // ── History view ─────────────────────────────────────────────
-                historyWrap: { flex: 1, padding: 12, paddingBottom: 12 + safeBottom, gap: 10 },
-                newChatBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    paddingVertical: 10,
-                    backgroundColor: colors.primary,
-                    borderRadius: 10,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 10,
-                    shadowOpacity: 0.3,
-                    elevation: 4,
-                },
-                newChatText: { color: colors.onPrimary, fontWeight: "700", fontSize: 13 },
-                searchInput: {
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    backgroundColor: colors.tag,
-                    color: colors.text,
-                    borderRadius: 10,
-                    fontSize: 13,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
-                },
-                historyList: { flex: 1 },
-                historyListContent: { gap: 4, paddingBottom: 8 },
-                historyEmpty: {
-                    color: colors.textSecondary,
-                    fontSize: 12,
-                    textAlign: "center",
-                    paddingVertical: 20,
-                },
-                threadRow: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 10,
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    gap: 6,
-                },
-                threadRowActive: {
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                threadPress: { flex: 1 },
-                threadTitle: { color: colors.text, fontSize: 13, fontWeight: "600" },
-                threadTitleActive: { color: colors.onPrimary },
-                threadMeta: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
-                threadMetaActive: { color: colors.onPrimary, opacity: 0.8 },
-                threadActions: { flexDirection: "row", gap: 2 },
-                threadActionBtn: {
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    alignItems: "center",
-                    justifyContent: "center",
-                },
-                renameInput: {
-                    flex: 1,
-                    paddingHorizontal: 8,
-                    paddingVertical: 6,
-                    backgroundColor: colors.tag,
-                    color: colors.text,
-                    borderRadius: 6,
-                    fontSize: 13,
-                },
             }),
         [colors, isCompact, safeTop, safeBottom, messageAlign]
     );
