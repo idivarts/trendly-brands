@@ -80,6 +80,11 @@ const ContentCalendarScreen = () => {
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [addInitialDate, setAddInitialDate] = useState<string | undefined>();
+    // How the modal was opened decides its date UI. Only the per-week "+" button
+    // carries a real week context ("week" → day-of-week pills); the generic top
+    // "Add Content" button has no week, so it falls back to the default date
+    // picker ("month") even while the calendar is in week view.
+    const [addSource, setAddSource] = useState<"week" | "month">("month");
 
     // Item whose short-details preview modal is open (tapping a content card).
     const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
@@ -162,10 +167,14 @@ const ContentCalendarScreen = () => {
         [addContent]
     );
 
-    const handleOpenAddModal = useCallback((date?: string) => {
-        setAddInitialDate(date);
-        setShowAddModal(true);
-    }, []);
+    const handleOpenAddModal = useCallback(
+        (date?: string, source: "week" | "month" = "month") => {
+            setAddInitialDate(date);
+            setAddSource(source);
+            setShowAddModal(true);
+        },
+        []
+    );
 
     // Drag a content card onto another day (month view, desktop). Persisting the
     // new postingTimeStamp re-fires the Firestore snapshot, so the chip lands on
@@ -297,7 +306,9 @@ const ContentCalendarScreen = () => {
                                     setCalYear(y);
                                     setCalMonth(m);
                                 }}
-                                onAddWeek={(weekStartDate) => handleOpenAddModal(weekStartDate)}
+                                onAddWeek={(weekStartDate) =>
+                                    handleOpenAddModal(weekStartDate, "week")
+                                }
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
                                 onOpenItem={handleOpenItem}
@@ -353,7 +364,7 @@ const ContentCalendarScreen = () => {
             <AddContentModal
                 visible={showAddModal}
                 initialDate={addInitialDate}
-                source={calView === "week" ? "week" : "month"}
+                source={addSource}
                 onClose={() => setShowAddModal(false)}
                 onAdd={handleAddItem}
             />
