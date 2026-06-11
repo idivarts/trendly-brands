@@ -221,11 +221,19 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     const isAITyping = isStreaming && !streamingContent;
 
-    useEffect(() => {
-        if (messages.length > 0) {
-            setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-        }
-    }, [messages.length]);
+    // Default chat is rendered into an inverted FlatList — newest item sits at
+    // index 0 and lands at the visual bottom. That gives us "scroll lands at
+    // the bottom on load" + "scrolling up loads older messages" for free, and
+    // avoids the scroll-jump that prepending items to a non-inverted list
+    // causes when `loadOlder` resolves.
+    //
+    // Wizard mode (`messageAlign === "top"`) intentionally keeps the
+    // top-down flow — onboarding only has a handful of messages.
+    const isInverted = messageAlign === "bottom";
+    const renderedMessages = useMemo(
+        () => (isInverted ? [...messages].reverse() : messages),
+        [messages, isInverted]
+    );
 
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
@@ -266,8 +274,12 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const isAI = item.sender === "ai";
         // An answer control is actionable only on the latest message — once the
         // user replies, a new message follows and the stale control disappears.
-        const showControl =
-            isAI && !!item.control && index === messages.length - 1 && !isStreaming;
+        // In inverted mode the latest message is at index 0; otherwise it's
+        // the last item in the list.
+        const isLatest = isInverted
+            ? index === 0
+            : index === renderedMessages.length - 1;
+        const showControl = isAI && !!item.control && isLatest && !isStreaming;
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 {isAI && (
@@ -374,14 +386,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     ) : (
                         <FlatList
                             ref={listRef}
-                            data={messages}
+                            data={renderedMessages}
+                            inverted={isInverted}
                             keyExtractor={(item) => item.id}
                             renderItem={renderMessage}
                             contentContainerStyle={styles.messageList}
                             showsVerticalScrollIndicator={false}
-                            // Oldest messages sit at the top — reaching it pages in
-                            // the next older window from the Firestore subscription.
-                            onStartReached={hasMore ? loadOlder : undefined}
+                            // Inverted: visual "scroll up" = approaching the end of
+                            // the data, so pagination hangs off onEndReached. The
+                            // wizard (non-inverted) keeps its top-of-list trigger.
+                            onEndReached={isInverted && hasMore ? loadOlder : undefined}
+                            onEndReachedThreshold={0.2}
+                            onStartReached={!isInverted && hasMore ? loadOlder : undefined}
                             onStartReachedThreshold={0.2}
                         />
                     )}
@@ -394,6 +410,15 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             <View style={styles.typingBubble}>
                                 <Text style={styles.typingText}>Thinking…</Text>
                             </View>
+                        </View>
+                    )}
+
+                    {/* Tokens are already flowing into the streaming bubble; this
+                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
+                    {!notReady && isStreaming && !!streamingContent && (
+                        <View style={styles.streamingStatus}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={styles.streamingStatusText}>Generating…</Text>
                         </View>
                     )}
 
@@ -517,11 +542,17 @@ function useStyles(
                     color: colors.text,
                 },
                 // ── Message list ─────────────────────────────────────────────
+                // Wizard mode (top-aligned) explicitly anchors to the top so a
+                // single message hugs the top of the panel. Default chat is
+                // rendered into an inverted FlatList, so items pile up from
+                // the visual bottom on their own — no justifyContent needed.
                 messageList: {
                     padding: isCompact ? 12 : 16,
                     gap: 12,
                     flexGrow: 1,
-                    justifyContent: messageAlign === "top" ? "flex-start" : "flex-end",
+                    ...(messageAlign === "top"
+                        ? { justifyContent: "flex-start" as const }
+                        : {}),
                 },
                 initLoader: {
                     flex: 1,
@@ -598,6 +629,18 @@ function useStyles(
                     elevation: 2,
                 },
                 typingText: { fontSize: 13, color: colors.textSecondary, fontStyle: "italic" },
+                streamingStatus: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: isCompact ? 12 : 16,
+                    paddingBottom: 8,
+                },
+                streamingStatusText: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    fontStyle: "italic",
+                },
                 // ── Focus chips ──────────────────────────────────────────────
                 focusBar: { flexShrink: 0, maxHeight: 44, marginHorizontal: 12, marginBottom: 6 },
                 focusBarContent: { gap: 8, alignItems: "center" },
