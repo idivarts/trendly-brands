@@ -1,0 +1,42 @@
+diff --git a/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt b/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt
+index 55abf94..70c646a 100644
+--- a/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt
++++ b/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt
+@@ -124,6 +124,13 @@ class EnrichedTextInputView : AppCompatEditText {
+     setPadding(0, 0, 0, 0)
+     setBackgroundColor(Color.TRANSPARENT)
+ 
++    // PATCH (trendly): the library set no line spacing, so paragraphs and
++    // headings were packed far tighter than the web (Lexical) editor. Add a
++    // roomy line-height multiplier + a small extra gap so blocks breathe,
++    // mirroring iOS (lineHeightMultiple 1.4 + paragraph spacing).
++    val lineSpacingExtra = 4f * resources.displayMetrics.density
++    setLineSpacing(lineSpacingExtra, 1.4f)
++
+     addSpanWatcher(EnrichedSpanWatcher(this))
+     addTextChangedListener(EnrichedTextWatcher(this))
+   }
+diff --git a/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm b/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm
+index c3cad89..ae9d318 100644
+--- a/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm
++++ b/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm
+@@ -563,8 +563,17 @@ - (void)updateProps:(Props::Shared const &)props
+         [config primaryColor];
+     defaultTypingAttributes[NSStrikethroughColorAttributeName] =
+         [config primaryColor];
+-    defaultTypingAttributes[NSParagraphStyleAttributeName] =
+-        [[NSParagraphStyle alloc] init];
++    // PATCH (trendly): the library shipped a bare NSParagraphStyle, so every
++    // paragraph and heading was packed with no inter-block gap or line leading,
++    // looking far tighter than the web (Lexical) editor. Give the base
++    // paragraph style a roomy line height + paragraph spacing to mirror web.
++    // Headings, lists and quotes all mutableCopy this base style, so they
++    // inherit the spacing automatically (no per-style change needed).
++    NSMutableParagraphStyle *baseParagraphStyle =
++        [[NSMutableParagraphStyle alloc] init];
++    baseParagraphStyle.lineHeightMultiple = 1.4;
++    baseParagraphStyle.paragraphSpacing = 12.0;
++    defaultTypingAttributes[NSParagraphStyleAttributeName] = baseParagraphStyle;
+     textView.typingAttributes = defaultTypingAttributes;
+ 
+     // update the placeholder as well
