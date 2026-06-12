@@ -7,6 +7,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import MonthPickerModal from "./MonthPickerModal";
@@ -75,51 +76,55 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
                 <View style={styles.spacer} />
 
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.toggleBtn,
-                        view === "week" && styles.toggleBtnActive,
-                        pressed && styles.btnPressed,
-                    ]}
-                    onPress={() => onViewChange("week")}
-                >
-                    <FontAwesomeIcon
-                        icon={faCalendarWeek}
-                        size={13}
-                        color={view === "week" ? colors.onPrimary : colors.textSecondary}
-                    />
-                    <Text
-                        style={[
-                            styles.toggleText,
-                            view === "week" && styles.toggleTextActive,
-                        ]}
-                    >
-                        Week
-                    </Text>
-                </Pressable>
+                <CoachmarkAnchor id="gt-calendar-view-toggle" shape="rect">
+                    <View style={styles.toggleGroup}>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.toggleBtn,
+                                view === "week" && styles.toggleBtnActive,
+                                pressed && styles.btnPressed,
+                            ]}
+                            onPress={() => onViewChange("week")}
+                        >
+                            <FontAwesomeIcon
+                                icon={faCalendarWeek}
+                                size={13}
+                                color={view === "week" ? colors.onPrimary : colors.textSecondary}
+                            />
+                            <Text
+                                style={[
+                                    styles.toggleText,
+                                    view === "week" && styles.toggleTextActive,
+                                ]}
+                            >
+                                Week
+                            </Text>
+                        </Pressable>
 
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.toggleBtn,
-                        view === "month" && styles.toggleBtnActive,
-                        pressed && styles.btnPressed,
-                    ]}
-                    onPress={() => onViewChange("month")}
-                >
-                    <FontAwesomeIcon
-                        icon={faCalendarDays}
-                        size={13}
-                        color={view === "month" ? colors.onPrimary : colors.textSecondary}
-                    />
-                    <Text
-                        style={[
-                            styles.toggleText,
-                            view === "month" && styles.toggleTextActive,
-                        ]}
-                    >
-                        Month
-                    </Text>
-                </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.toggleBtn,
+                                view === "month" && styles.toggleBtnActive,
+                                pressed && styles.btnPressed,
+                            ]}
+                            onPress={() => onViewChange("month")}
+                        >
+                            <FontAwesomeIcon
+                                icon={faCalendarDays}
+                                size={13}
+                                color={view === "month" ? colors.onPrimary : colors.textSecondary}
+                            />
+                            <Text
+                                style={[
+                                    styles.toggleText,
+                                    view === "month" && styles.toggleTextActive,
+                                ]}
+                            >
+                                Month
+                            </Text>
+                        </Pressable>
+                    </View>
+                </CoachmarkAnchor>
             </View>
 
             <MonthPickerModal
@@ -175,6 +180,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 spacer: {
                     flex: 1,
+                },
+                toggleGroup: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
                 },
                 toggleBtn: {
                     flexDirection: "row",

@@ -10,10 +10,13 @@ import ContentsOverflowMenu from "@/components/contents/ContentsOverflowMenu";
 import EmptyContentsView from "@/components/contents/EmptyContentsView";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import { CONTENT_STATUS_ORDER, ContentItem, ContentStatus } from "@/components/contents/types";
+import { GUIDE_TOUR_CONTENT_WEB } from "@/components/guide-tour/guide-tour-config";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
+import { useFeatureTour } from "@/hooks/use-feature-tour";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -32,7 +35,9 @@ const ContentsScreen = () => {
     useSidebarParam();
 
     const { items, addContent, updateContent } = useContents();
-    const [view, setView] = useState<ContentView>("gallery");
+    // Default to the Board on desktop (xl); mobile is always forced to Gallery
+    // via effectiveView below regardless of this initial value.
+    const [view, setView] = useState<ContentView>("board");
     const [stateFilter, setStateFilter] = useState<ContentStateFilterValue>("all");
     const [showAddModal, setShowAddModal] = useState(false);
 
@@ -48,6 +53,13 @@ const ContentsScreen = () => {
 
     // The Board is desktop-only — on mobile we always render the Gallery.
     const effectiveView: ContentView = xl ? view : "gallery";
+
+    // Coach mark: teach the Board/Gallery switcher (web only) once content loads.
+    useFeatureTour({
+        feature: "content",
+        ready: items.length > 0,
+        web: GUIDE_TOUR_CONTENT_WEB,
+    });
 
     const activeItems = useMemo(() => items.filter((i) => !i.isArchived), [items]);
 
@@ -89,7 +101,15 @@ const ContentsScreen = () => {
     // Switcher is xl-only; the overflow menu is available on every breakpoint.
     const viewingButtons = [
         ...(xl
-            ? [<ContentViewSwitcher key="switcher" value={view} onChange={setView} />]
+            ? [
+                <CoachmarkAnchor
+                    key="switcher"
+                    id="gt-content-view-switcher"
+                    shape="rect"
+                >
+                    <ContentViewSwitcher value={view} onChange={setView} />
+                </CoachmarkAnchor>,
+            ]
             : []),
         <ContentsOverflowMenu key="overflow" />,
     ];

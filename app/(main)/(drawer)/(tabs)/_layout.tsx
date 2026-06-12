@@ -5,7 +5,6 @@ import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
     faCalendarDays,
     faFileLines,
@@ -19,18 +18,7 @@ const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
 
-    const menuTabButton = () =>
-        !xl ? (
-            <CoachmarkAnchor
-                id="guide-tour-menu-mobile"
-                shape="pill"
-                style={{ flex: 1 }}
-            >
-                <ProfileIcon />
-            </CoachmarkAnchor>
-        ) : (
-            <ProfileIcon />
-        );
+    const menuTabButton = () => <ProfileIcon />;
 
     return (
         <Tabs
@@ -119,17 +107,11 @@ const TabLayout = () => {
                     title: "Content",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
-                        <CoachmarkAnchor
-                            id="guide-tour-campaigns-mobile"
-                            shape="pill"
-                        // style={{ flex: 1 }}
-                        >
-                            <FontAwesomeIcon
-                                color={color}
-                                icon={faFileLines}
-                                size={22}
-                            />
-                        </CoachmarkAnchor>
+                        <FontAwesomeIcon
+                            color={color}
+                            icon={faFileLines}
+                            size={22}
+                        />
                     ),
                 }}
             />

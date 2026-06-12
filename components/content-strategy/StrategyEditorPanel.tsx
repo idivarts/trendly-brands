@@ -3,6 +3,7 @@ import { ContentStrategy, ReviewStatus } from "@/components/content-strategy/typ
 import RichTextEditor from "@/components/rich-text-editor";
 import ShareModal from "@/components/sharing/ShareModal";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -642,33 +643,39 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
                     a labelled control). Once finalized, the strategy is already
                     pushed and locked, so the action is removed. */}
                 {xl && !isFinalized && (
-                    <Pressable
-                        style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
-                        onPress={onPushToCalendar}
-                        hitSlop={6}
-                        accessibilityLabel="Push to Calendar"
-                        accessibilityRole="button"
-                    >
-                        <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
-                        <Text style={styles.secondaryBtnText}>Push to Calendar</Text>
-                    </Pressable>
+                    <CoachmarkAnchor id="gt-strategy-push-to-calendar" shape="rect">
+                        <Pressable
+                            style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+                            onPress={onPushToCalendar}
+                            hitSlop={6}
+                            accessibilityLabel="Push to Calendar"
+                            accessibilityRole="button"
+                        >
+                            <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
+                            <Text style={styles.secondaryBtnText}>Push to Calendar</Text>
+                        </Pressable>
+                    </CoachmarkAnchor>
                 )}
 
                 {/* Share is a first-class button on desktop; on mobile it lives
                     in the overflow menu (see overflowItems above). */}
                 {xl && canShare && (
-                    <Pressable
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}
-                        onPress={() => setShareOpen(true)}
-                        hitSlop={6}
-                        accessibilityLabel="Share"
-                        accessibilityRole="button"
-                    >
-                        <FontAwesomeIcon icon={faShareNodes} size={15} color={colors.primary} />
-                    </Pressable>
+                    <CoachmarkAnchor id="gt-strategy-share" shape="rect">
+                        <Pressable
+                            style={({ pressed }) => [styles.iconBtn, pressed && styles.btnPressed]}
+                            onPress={() => setShareOpen(true)}
+                            hitSlop={6}
+                            accessibilityLabel="Share"
+                            accessibilityRole="button"
+                        >
+                            <FontAwesomeIcon icon={faShareNodes} size={15} color={colors.primary} />
+                        </Pressable>
+                    </CoachmarkAnchor>
                 )}
 
-                <OverflowMenu items={overflowItems} colors={colors} styles={styles} />
+                <CoachmarkAnchor id="gt-strategy-overflow" shape="rect">
+                    <OverflowMenu items={overflowItems} colors={colors} styles={styles} />
+                </CoachmarkAnchor>
             </View>
 
             {/* Controlled share modal — opened from the desktop icon or the
@@ -898,7 +905,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = (props) => {
     return (
         <View style={{ flex: 1 }}>
             {toolbar && <StrategyToolbar {...toolbar} colors={colors} />}
-            <PlatformEditor {...editorProps} />
+            <CoachmarkAnchor id="gt-strategy-editor" shape="rect" style={{ flex: 1 }}>
+                <PlatformEditor {...editorProps} />
+            </CoachmarkAnchor>
         </View>
     );
 };

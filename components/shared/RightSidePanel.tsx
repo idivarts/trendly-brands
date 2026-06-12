@@ -38,6 +38,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faChevronRight, faCommentDots, faEye, faRobot } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -75,6 +76,10 @@ interface RightSidePanelProps {
      * chevron that does nothing.
      */
     collapsible?: boolean;
+    /** Optional coach-mark anchor id for the AI Chat rail icon (web rail only). */
+    chatAnchorId?: string;
+    /** Optional coach-mark anchor id for the Comments rail icon (web rail only). */
+    commentsAnchorId?: string;
 }
 
 /**
@@ -229,6 +234,8 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     containerWidth = 0,
     resizable = true,
     collapsible = true,
+    chatAnchorId,
+    commentsAnchorId,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -347,24 +354,46 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
                         />
                     </RailButton>
                 )}
-                {commentsSlot && (
-                    <RailIcon
-                        icon={faCommentDots}
-                        label="Comments"
-                        active={mode === "comments"}
-                        onPress={() => handleToggle("comments")}
-                        colors={colors}
-                    />
-                )}
-                {chatSlot && (
-                    <RailIcon
-                        icon={faRobot}
-                        label="AI Chat"
-                        active={mode === "chat"}
-                        onPress={() => handleToggle("chat")}
-                        colors={colors}
-                    />
-                )}
+                {commentsSlot &&
+                    (commentsAnchorId ? (
+                        <CoachmarkAnchor id={commentsAnchorId} shape="rect">
+                            <RailIcon
+                                icon={faCommentDots}
+                                label="Comments"
+                                active={mode === "comments"}
+                                onPress={() => handleToggle("comments")}
+                                colors={colors}
+                            />
+                        </CoachmarkAnchor>
+                    ) : (
+                        <RailIcon
+                            icon={faCommentDots}
+                            label="Comments"
+                            active={mode === "comments"}
+                            onPress={() => handleToggle("comments")}
+                            colors={colors}
+                        />
+                    ))}
+                {chatSlot &&
+                    (chatAnchorId ? (
+                        <CoachmarkAnchor id={chatAnchorId} shape="rect">
+                            <RailIcon
+                                icon={faRobot}
+                                label="AI Chat"
+                                active={mode === "chat"}
+                                onPress={() => handleToggle("chat")}
+                                colors={colors}
+                            />
+                        </CoachmarkAnchor>
+                    ) : (
+                        <RailIcon
+                            icon={faRobot}
+                            label="AI Chat"
+                            active={mode === "chat"}
+                            onPress={() => handleToggle("chat")}
+                            colors={colors}
+                        />
+                    ))}
                 {previewSlot && (
                     <RailIcon
                         icon={faEye}
