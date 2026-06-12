@@ -12,9 +12,7 @@ import {
 import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import {
     GUIDE_TOUR_MOBILE,
-    GUIDE_TOUR_MOBILE_SKIP_FIRST,
     GUIDE_TOUR_WEB,
-    GUIDE_TOUR_WEB_SKIP_FIRST,
 } from "@/components/guide-tour/guide-tour-config";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
@@ -53,9 +51,8 @@ const DiscoverComponent = ({
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
-    const { start: startCoachmark, isActive } = useCoachmark();
+    const { start: startCoachmark } = useCoachmark();
     const hasStartedTourRef = useRef(false);
-    const [firstInfluencerCardReady, setFirstInfluencerCardReady] = useState(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
@@ -171,86 +168,6 @@ const DiscoverComponent = ({
         startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
     };
 
-    useEffect(() => {
-        if (
-            skipGuideTour ||
-            !surveyCheckDone ||
-            showSurvey ||
-            !manager?.id ||
-            !selectedBrand?.id ||
-            isActive ||
-            hasStartedTourRef.current
-        ) {
-            return;
-        }
-        let cancelled = false;
-
-        const shouldSkipBecauseShown = async () => {
-            if (!guideTourShownKey) return false;
-            try {
-                const shown = await PersistentStorage.get(guideTourShownKey);
-                if (shown === "true") {
-                    hasStartedTourRef.current = true;
-                    return true;
-                }
-            } catch {
-                // If storage fails, fall back to showing once per session.
-            }
-            return false;
-        };
-
-        const markShown = async () => {
-            if (!guideTourShownKey) return;
-            try {
-                await PersistentStorage.set(guideTourShownKey, "true");
-            } catch {
-                // Ignore storage errors; showOnce-per-session still prevents loops.
-            }
-        };
-
-        (async () => {
-            if (await shouldSkipBecauseShown()) return;
-            if (cancelled) return;
-
-            if (firstInfluencerCardReady) {
-                await markShown();
-                if (cancelled) return;
-                hasStartedTourRef.current = true;
-                startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-                return;
-            }
-
-            // No card yet (e.g. empty list): start tour without first step after a short delay
-            const t = setTimeout(async () => {
-                if (cancelled || hasStartedTourRef.current) return;
-                if (await shouldSkipBecauseShown()) return;
-                await markShown();
-                if (cancelled || hasStartedTourRef.current) return;
-                hasStartedTourRef.current = true;
-                startCoachmark(
-                    xl ? GUIDE_TOUR_WEB_SKIP_FIRST : GUIDE_TOUR_MOBILE_SKIP_FIRST
-                );
-            }, 1000);
-
-            return () => clearTimeout(t);
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [
-        skipGuideTour,
-        surveyCheckDone,
-        showSurvey,
-        manager?.id,
-        selectedBrand?.id,
-        xl,
-        isActive,
-        firstInfluencerCardReady,
-        startCoachmark,
-        guideTourShownKey,
-    ]);
-
     if (!surveyCheckDone)
         return (
             <SlowLoader
@@ -309,7 +226,6 @@ const DiscoverComponent = ({
                             isStatusCard={isStatusCard}
                             defaultAdvanceFilters={filtersToUse}
                             initialInfluencerId={initialInfluencerId}
-                            onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
                             reduceHorizontalPadding={!showRightPanel}
                         />
                     </View>

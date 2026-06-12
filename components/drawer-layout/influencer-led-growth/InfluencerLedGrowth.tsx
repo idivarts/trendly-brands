@@ -4,6 +4,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faChevronRight, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Platform, Pressable, View as RNView, StyleSheet } from "react-native";
 
@@ -40,7 +41,10 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
     if (variant === "rail") {
         return (
             <Pressable
-                onPress={() => toggleSubDrawer("ilg")}
+                onPress={() => {
+                    toggleSubDrawer("ilg");
+                    if (!isActive) router.push("/discover");
+                }}
                 onHoverIn={() => setHovered(true)}
                 onHoverOut={() => setHovered(false)}
                 style={styles.railTriggerWrapper}
@@ -74,7 +78,10 @@ const InfluencerLedGrowth: React.FC<{ variant: Variant }> = ({ variant }) => {
     // Expanded row
     return (
         <Pressable
-            onPress={() => openSubDrawer("ilg")}
+            onPress={() => {
+                openSubDrawer("ilg");
+                router.push("/discover");
+            }}
             onHoverIn={() => setHovered(true)}
             onHoverOut={() => setHovered(false)}
             style={[styles.row, hovered && styles.rowHover]}

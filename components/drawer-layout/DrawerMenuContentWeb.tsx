@@ -8,7 +8,6 @@ import { useBreakpoints } from "@/hooks";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { faFileLines } from "@fortawesome/free-regular-svg-icons";
 import {
     faArrowTrendUp,
@@ -576,36 +575,34 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
             style={styles.header}
         >
             {xl ? (
-                <CoachmarkAnchor id="guide-tour-brand-switcher-web" shape="rect">
-                    <Pressable
-                        onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
-                        style={styles.headerPressable}
-                    >
-                        <View style={styles.headerRow}>
-                            <ImageComponent
-                                url={selectedBrand?.image || ""}
-                                initials={selectedBrand?.name?.[0] ?? ""}
-                                shape="circle"
-                                size="small"
-                                altText={selectedBrand?.name || "Brand"}
-                                style={styles.logoCircle}
-                            />
-                            <View style={styles.headerBrand}>
-                                <Text style={styles.brandName} numberOfLines={1}>
-                                    {selectedBrand?.name ?? "Brand"}
-                                </Text>
-                                <Text style={styles.brandSubtitle}>Brand Portal</Text>
-                            </View>
-                            {hasMultipleBrands ? (
-                                <FontAwesomeIcon
-                                    icon={brandListExpanded ? faChevronUp : faChevronDown}
-                                    size={14}
-                                    color={colors.drawerTextMuted}
-                                />
-                            ) : null}
+                <Pressable
+                    onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
+                    style={styles.headerPressable}
+                >
+                    <View style={styles.headerRow}>
+                        <ImageComponent
+                            url={selectedBrand?.image || ""}
+                            initials={selectedBrand?.name?.[0] ?? ""}
+                            shape="circle"
+                            size="small"
+                            altText={selectedBrand?.name || "Brand"}
+                            style={styles.logoCircle}
+                        />
+                        <View style={styles.headerBrand}>
+                            <Text style={styles.brandName} numberOfLines={1}>
+                                {selectedBrand?.name ?? "Brand"}
+                            </Text>
+                            <Text style={styles.brandSubtitle}>Brand Portal</Text>
                         </View>
-                    </Pressable>
-                </CoachmarkAnchor>
+                        {hasMultipleBrands ? (
+                            <FontAwesomeIcon
+                                icon={brandListExpanded ? faChevronUp : faChevronDown}
+                                size={14}
+                                color={colors.drawerTextMuted}
+                            />
+                        ) : null}
+                    </View>
+                </Pressable>
             ) : (
                 <Pressable
                     onPress={() => hasMultipleBrands && setBrandListExpanded((v) => !v)}
