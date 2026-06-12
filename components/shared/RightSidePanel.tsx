@@ -68,6 +68,13 @@ interface RightSidePanelProps {
      * collecting → ready transition) so the two don't fight.
      */
     resizable?: boolean;
+    /**
+     * Whether the panel may be collapsed. Default true. Set false when the host
+     * pins the panel open (e.g. the strategy collecting state, where the chat
+     * must stay full and `onModeChange` is a no-op) so we don't show a collapse
+     * chevron that does nothing.
+     */
+    collapsible?: boolean;
 }
 
 /**
@@ -221,6 +228,7 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
     previewSlot,
     containerWidth = 0,
     resizable = true,
+    collapsible = true,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -326,7 +334,7 @@ const RightSidePanel: React.FC<RightSidePanelProps> = ({
                 />
             )}
             <View style={styles.rail}>
-                {isExpanded && (
+                {isExpanded && collapsible && (
                     <RailButton
                         tooltip="Collapse panel"
                         onPress={() => onModeChange("none")}
