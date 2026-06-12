@@ -53,6 +53,8 @@ const DiscoverComponent = ({
     const { selectedBrand, updateBrand } = useBrandContext();
     const { start: startCoachmark } = useCoachmark();
     const hasStartedTourRef = useRef(false);
+    const [firstInfluencerCardReady, setFirstInfluencerCardReady] = useState(false);
+    const [pendingTourStart, setPendingTourStart] = useState(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
@@ -160,13 +162,37 @@ const DiscoverComponent = ({
 
         setShowSurvey(false);
         if (skipGuideTour) return;
-        if (guideTourShownKey) {
-            // Mark as shown immediately so refresh/dismiss doesn't re-trigger it.
-            await PersistentStorage.set(guideTourShownKey, "true");
+        // Defer the coach-mark tour until the first influencer card has actually
+        // mounted — the opening step anchors to that card, so starting now (while
+        // Discover is still loading results) would highlight nothing. The effect
+        // below fires the tour once the card is ready.
+        setPendingTourStart(true);
+    };
+
+    // Start the post-survey coach-mark tour only after the first influencer card
+    // has loaded, so the opening step has a live anchor to point at.
+    useEffect(() => {
+        if (
+            !pendingTourStart ||
+            !firstInfluencerCardReady ||
+            hasStartedTourRef.current
+        ) {
+            return;
         }
         hasStartedTourRef.current = true;
+        setPendingTourStart(false);
+        if (guideTourShownKey) {
+            // Mark as shown so a refresh/dismiss doesn't re-trigger it.
+            PersistentStorage.set(guideTourShownKey, "true").catch(() => {});
+        }
         startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-    };
+    }, [
+        pendingTourStart,
+        firstInfluencerCardReady,
+        guideTourShownKey,
+        xl,
+        startCoachmark,
+    ]);
 
     if (!surveyCheckDone)
         return (
@@ -226,6 +252,7 @@ const DiscoverComponent = ({
                             isStatusCard={isStatusCard}
                             defaultAdvanceFilters={filtersToUse}
                             initialInfluencerId={initialInfluencerId}
+                            onFirstInfluencerCardLayout={skipGuideTour ? undefined : () => setFirstInfluencerCardReady(true)}
                             reduceHorizontalPadding={!showRightPanel}
                         />
                     </View>
