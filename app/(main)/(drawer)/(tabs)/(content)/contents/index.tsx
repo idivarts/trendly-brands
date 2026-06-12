@@ -32,7 +32,9 @@ const ContentsScreen = () => {
     useSidebarParam();
 
     const { items, addContent, updateContent } = useContents();
-    const [view, setView] = useState<ContentView>("gallery");
+    // Default to the Board on desktop (xl); mobile is always forced to Gallery
+    // via effectiveView below regardless of this initial value.
+    const [view, setView] = useState<ContentView>("board");
     const [stateFilter, setStateFilter] = useState<ContentStateFilterValue>("all");
     const [showAddModal, setShowAddModal] = useState(false);
 
