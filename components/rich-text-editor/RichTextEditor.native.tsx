@@ -126,11 +126,13 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
-    // react-native-enriched renders block spacing internally and exposes no
-    // per-block margins, so the only levers for a "standard" (non-clustered)
-    // look are a clear heading hierarchy + a roomy base line height (set on the
-    // editor style below). Heading sizes mirror the web editor's proportions,
-    // kept at/under the base line height so tall headings never clip.
+    // react-native-enriched exposes no per-block margins, and it ignores the
+    // RN `lineHeight` style on native — so block spacing (line leading + gaps
+    // between paragraphs/headings) is supplied by our patch-package patch to
+    // the native module (see patches/react-native-enriched+0.2.1.patch:
+    // iOS lineHeightMultiple + paragraphSpacing, Android setLineSpacing). That
+    // makes native spacing mirror the web (Lexical) editor. Here we only set
+    // the heading hierarchy; sizes mirror the web editor's proportions.
     const htmlStyle = useMemo<HtmlStyle>(
         () => ({
             h1: { fontSize: 26, bold: true },

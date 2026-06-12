@@ -38,7 +38,7 @@ const ContentGallery: React.FC<ContentGalleryProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [containerWidth, setContainerWidth] = useState(0);
 
     const numColumns = containerWidth > 0 ? columnsForContainer(containerWidth) : 0;

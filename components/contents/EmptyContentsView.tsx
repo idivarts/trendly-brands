@@ -26,7 +26,7 @@ const EmptyContentsView: React.FC<EmptyContentsViewProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         <View style={styles.container}>

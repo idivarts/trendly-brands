@@ -57,7 +57,7 @@ export default function InviteManagementBoard() {
     const { manager } = useAuthContext();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     useEffect(() => {
         const fetchInvites = async () => {
@@ -259,7 +259,7 @@ export default function InviteManagementBoard() {
 const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const columnBg = theme.dark
         ? isOver
@@ -330,7 +330,7 @@ const SortableCard = ({
     };
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         // @ts-ignore

@@ -108,6 +108,15 @@ interface AIChatPanelProps {
      * wizard — better for a full-page onboarding flow with few messages.
      */
     messageAlign?: "top" | "bottom";
+
+    /**
+     * Set when the host already insets for the notch/home-indicator (e.g. it
+     * sits inside an `AppLayout` whose `safeAreaEdges` include `top`/`bottom`).
+     * The panel then skips its own safe-area padding so the inset isn't applied
+     * twice — otherwise the header/input gain a doubled top/bottom gap on
+     * native. Defaults to false (panel self-insets, for edge-to-edge mounts).
+     */
+    parentHandlesSafeArea?: boolean;
 }
 
 /**
@@ -135,6 +144,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     onOnboardingComplete,
     hideHeader = false,
     messageAlign = "bottom",
+    parentHandlesSafeArea = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -142,13 +152,13 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const insets = useSafeAreaInsets();
     // On mobile (!xl) the panel mounts edge-to-edge (full-screen chat or the
     // floating sheet), so it must inset for the notch/home-indicator itself.
-    // On desktop the surrounding AppLayout already handles safe area.
-    const safeTop = xl ? 0 : insets.top;
-    const safeBottom = xl ? 0 : insets.bottom;
-    const styles = useMemo(
-        () => useStyles(colors, isCompact, safeTop, safeBottom, messageAlign),
-        [colors, isCompact, safeTop, safeBottom, messageAlign]
-    );
+    // On desktop the surrounding AppLayout already handles safe area — as does
+    // any host that opts in via `parentHandlesSafeArea` (e.g. a screen whose
+    // AppLayout already insets top/bottom), which would otherwise double up.
+    const selfInset = !xl && !parentHandlesSafeArea;
+    const safeTop = selfInset ? insets.top : 0;
+    const safeBottom = selfInset ? insets.bottom : 0;
+    const styles = useStyles(colors, isCompact, safeTop, safeBottom, messageAlign);
 
     // ── Real AI thread state ─────────────────────────────────────────────────
     const {

@@ -38,7 +38,7 @@ const PublishModal: React.FC<PublishModalProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

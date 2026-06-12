@@ -13,7 +13,7 @@ const SKIP_AI_CREATION_KEY = "skipAICampaignCreation";
 const CreateCollaborationScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [showAICreation, setShowAICreation] = useState(true);
     const [generatedAiData, setGeneratedAiData] = useState<AIGeneratedCampaignData | null>(null);
 

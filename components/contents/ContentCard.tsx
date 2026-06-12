@@ -15,7 +15,7 @@ interface ContentCardProps {
 const ContentCard: React.FC<ContentCardProps> = ({ item, onPress }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const statusColor = contentStatusColors(item.status, colors);
 
     const formattedDate = useMemo(() => {

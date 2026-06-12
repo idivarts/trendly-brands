@@ -66,7 +66,7 @@ interface AIAnswerControlProps {
 const AIAnswerControl: React.FC<AIAnswerControlProps> = ({ control, disabled, onSubmit }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const [selected, setSelected] = useState<string[]>([]);
     const [custom, setCustom] = useState("");

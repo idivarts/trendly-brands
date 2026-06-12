@@ -127,7 +127,7 @@ export default function ContentGoalsPage() {
         ],
     }
 
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         <AppLayout>

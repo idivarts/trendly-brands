@@ -62,7 +62,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const spec = MEDIA_SPEC[contentType];
     const { uploadFileUri } = useAWSContext();
 

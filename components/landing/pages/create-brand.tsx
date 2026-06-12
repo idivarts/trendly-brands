@@ -122,7 +122,7 @@ export default function CreateBrandPage() {
         // image: ONBOARD_IMG,
     };
 
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         <AppLayout>

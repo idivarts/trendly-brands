@@ -50,7 +50,7 @@ export default function BrandDetailsBottomSheet({
 }: Props) {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     if (!brand) return null;
 

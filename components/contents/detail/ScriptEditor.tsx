@@ -43,7 +43,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     // Reel: start collapsed unless a script already exists. Live: always expanded.
     const [expanded, setExpanded] = useState(!collapsible || !!script);

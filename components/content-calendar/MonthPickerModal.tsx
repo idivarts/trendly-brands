@@ -27,7 +27,7 @@ const MonthPickerModal: React.FC<MonthPickerModalProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [displayYear, setDisplayYear] = useState(year);
 
     return (

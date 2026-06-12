@@ -28,7 +28,7 @@ const QuickCommentModal: React.FC<QuickCommentModalProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [comment, setComment] = useState("");
 
     const handleSubmit = () => {

@@ -34,7 +34,7 @@ const StepLayout: React.FC<StepLayoutProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl, width } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl, width), [colors, xl, width]);
+    const styles = useStyles(colors, xl, width);
 
     const handleBack = () => {
         if (step === 1) {

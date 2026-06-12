@@ -18,7 +18,7 @@ const OrganizationsScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
     const router = useRouter();
 
     const { organizations, loading, refresh, createOrganization } = useOrganizationContext();

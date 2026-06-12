@@ -16,7 +16,7 @@ import { Text } from "react-native-paper";
 const TrendlyScreen = () => {
     // const { socials } = useSocialContext();
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
     const isAndroid = Platform.OS === "android";
     const storeLabel = isAndroid ? "Play Store" : "App Store";
     const storeUrl = isAndroid ? CREATORS_PLAYSTORE_URL : CREATORS_APPSTORE_URL;

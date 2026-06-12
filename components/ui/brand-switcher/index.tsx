@@ -18,7 +18,7 @@ const BrandSwitcher = () => {
     const [visible, setVisible] = useState(false);
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     // Use allBrands (incl. drafts) so the switcher matches the Organizations page.
     const { allBrands: brands, selectedBrand, setSelectedBrand } = useBrandContext();

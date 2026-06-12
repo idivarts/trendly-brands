@@ -41,7 +41,7 @@ const BrandCard: React.FC<BrandCardProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         <Pressable

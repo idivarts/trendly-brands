@@ -13,7 +13,7 @@ import { ContentItem, getPostingUrgency, postingUrgencyColors } from "./types";
 const ContentUrgencyBadge: React.FC<{ item: ContentItem }> = ({ item }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const urgency = useMemo(
         () => getPostingUrgency(item),
         [item.status, item.date, item.scheduledAt]

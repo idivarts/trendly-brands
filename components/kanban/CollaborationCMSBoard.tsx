@@ -117,7 +117,7 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
     const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     useEffect(() => {
         const fetchCollaborations = async () => {
@@ -344,7 +344,7 @@ export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBo
 const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const columnBg = theme.dark
         ? isOver

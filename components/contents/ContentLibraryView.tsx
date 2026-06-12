@@ -29,7 +29,7 @@ const ContentLibraryView: React.FC<ContentLibraryViewProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const router = useRouter();
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const handleOpenContent = (item: ContentItem) => {
         router.push(`/contents/${item.id}` as any);

@@ -34,7 +34,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
 
     const prevMonth = () => {

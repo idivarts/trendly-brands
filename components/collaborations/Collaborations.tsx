@@ -57,7 +57,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
 
     const theme = useTheme();
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme, xl), [theme, xl]);
+    const styles = useStyles(theme, xl);
     const stylesFromFn = stylesFn(theme);
     const user = AuthApp.currentUser;
 

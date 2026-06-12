@@ -52,7 +52,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
 }) => {
     const theme = useTheme();
     const router = useRouter();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     return (
         <View style={styles.container}>

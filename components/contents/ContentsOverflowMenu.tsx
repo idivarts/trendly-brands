@@ -16,7 +16,7 @@ const ContentsOverflowMenu: React.FC = () => {
     const colors = Colors(theme);
     const router = useRouter();
     const [visible, setVisible] = useState(false);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const go = (path: string) => {
         setVisible(false);

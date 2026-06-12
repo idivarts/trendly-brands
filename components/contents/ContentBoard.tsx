@@ -63,7 +63,7 @@ function buildColumns(items: ContentItem[]): BoardColumn[] {
 const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPressItem }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const [columns, setColumns] = useState<BoardColumn[]>(() => buildColumns(items));
     const [activeCard, setActiveCard] = useState<ContentItem | null>(null);
@@ -203,7 +203,7 @@ const DroppableColumn = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
     const columnBg = theme.dark

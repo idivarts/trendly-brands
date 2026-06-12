@@ -99,7 +99,7 @@ const OnboardingFlow = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl), [colors, xl]);
+    const styles = useStyles(colors, xl);
     const router = useMyNavigation();
     // When started from an Organization page, create the brand under that org.
     const { orgId } = useLocalSearchParams<{ orgId?: string }>();

@@ -720,6 +720,10 @@ const ContentStrategyDetail = () => {
                                     onModeChange={isCollecting ? () => { } : setRightPanelMode}
                                     containerWidth={splitWidth}
                                     resizable={isSettled}
+                                    // While collecting the chat is pinned open
+                                    // (onModeChange is a no-op) — don't offer a
+                                    // collapse chevron that wouldn't do anything.
+                                    collapsible={!isCollecting}
                                     // Comments aren't available during collecting —
                                     // suppressing the slot also hides the rail icon
                                     // so users don't tap a no-op control.
@@ -775,6 +779,9 @@ const ContentStrategyDetail = () => {
                             }
                             readOnly={isFinalized}
                             isCompact={false}
+                            // AppLayout (this screen) already insets top+bottom,
+                            // so the panel must not add the safe area again.
+                            parentHandlesSafeArea
                         />
                     </Animated.View>
                 )}
@@ -807,6 +814,9 @@ const ContentStrategyDetail = () => {
                             readOnly={isFinalized}
                             isCompact={screenState === "strategy-ready"}
                             onCollapse={() => setRightPanelMode("none")}
+                            // Sheet sits inside this screen's AppLayout, which
+                            // already insets top+bottom — don't double it.
+                            parentHandlesSafeArea
                         />
                     }
                 />

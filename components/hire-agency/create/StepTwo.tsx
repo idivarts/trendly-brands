@@ -123,7 +123,7 @@ const StepTwo: React.FC<StepTwoProps> = ({ hire, setHire, onNext, onBack }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl, width } = useBreakpoints();
-    const styles = useMemo(() => useStyles(colors, xl, width), [colors, xl, width]);
+    const styles = useStyles(colors, xl, width);
 
     const setBudgetType = (type: BudgetType) =>
         setHire((prev) => ({ ...prev, budgetType: type }));
