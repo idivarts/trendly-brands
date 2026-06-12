@@ -95,9 +95,9 @@ const ConnectedAccounts: React.FC = () => {
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIcon}>
                         <FontAwesomeIcon
-                            icon={faPlus}
-                            size={22}
-                            color={colors.primary}
+                            icon={faLinkSlash}
+                            size={24}
+                            color={colors.textSecondary}
                         />
                     </View>
                     <Text style={styles.emptyText}>
@@ -322,23 +322,16 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         emptyState: {
             alignItems: "center",
             gap: 6,
-            paddingVertical: 32,
-            backgroundColor: colors.card,
+            paddingVertical: 36,
+            paddingHorizontal: 24,
+            backgroundColor: colors.tag,
             borderRadius: 16,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowRadius: 8,
-            shadowOpacity: 0.07,
-            elevation: 3,
         },
         emptyIcon: {
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            backgroundColor: colors.tag,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 4,
+            marginBottom: 6,
+            opacity: 0.7,
         },
         emptyText: {
             fontSize: 15,
