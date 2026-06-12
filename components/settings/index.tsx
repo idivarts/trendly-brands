@@ -1,14 +1,14 @@
+import { resetGuideTours } from "@/components/guide-tour/reset-guide-tours";
 import { useColorScheme } from "@/components/theme/useColorScheme";
-import Colors from "@/shared-uis/constants/Colors";
 import { useAuthContext, useThemeOverride } from "@/contexts";
 import AppLayout from "@/layouts/app-layout";
 import ContentWrapper from "@/shared-uis/components/content-wrapper";
 import SelectGroup from "@/shared-uis/components/select/select-group";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import stylesFn from "@/styles/settings/Settings.styles";
 import { useFocusEffect, useTheme } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable } from "react-native";
-import { Text, View } from "../theme/Themed";
+import { View } from "../theme/Themed";
 import Button from "../ui/button";
 import ScreenHeader from "../ui/screen-header";
 
@@ -77,19 +77,19 @@ const Settings = () => {
             <ScreenHeader
                 title="Settings"
                 rightAction
-                // rightActionButton={
-                //     <Pressable onPress={() => themeChange()}>
-                //         <Text
-                //             style={{
-                //                 color: Colors(theme).text,
-                //                 fontSize: 16,
-                //                 marginRight: 16,
-                //             }}
-                //         >
-                //             Save
-                //         </Text>
-                //     </Pressable>
-                // }
+            // rightActionButton={
+            //     <Pressable onPress={() => themeChange()}>
+            //         <Text
+            //             style={{
+            //                 color: Colors(theme).text,
+            //                 fontSize: 16,
+            //                 marginRight: 16,
+            //             }}
+            //         >
+            //             Save
+            //         </Text>
+            //     </Pressable>
+            // }
             />
             <AppLayout safeAreaEdges={["bottom", "left", "right"]}>
                 <View style={styles.settingsContainer}>
@@ -126,6 +126,26 @@ const Settings = () => {
                             theme={theme}
                         />
                     </ContentWrapper>
+
+
+                    {/* Dev-only: re-arm every coach-mark tour for QA. Stripped
+                        from production builds. */}
+                    {__DEV__ && (
+                        <Button
+                            mode="outlined"
+                            style={{ width: "100%", paddingHorizontal: 20, marginTop: 12 }}
+                            onPress={async () => {
+                                const cleared = await resetGuideTours();
+                                Toaster.success(
+                                    "Onboarding tours reset",
+                                    `Cleared ${cleared.length} flag(s). Reload to replay.`
+                                );
+                            }}
+                        >
+                            Reset onboarding tours (dev)
+                        </Button>
+                    )}
+
                     <Button
                         mode="contained"
                         style={{ width: "100%", paddingHorizontal: 20 }}

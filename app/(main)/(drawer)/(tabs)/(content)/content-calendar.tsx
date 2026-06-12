@@ -13,9 +13,11 @@ import RightPanelFab from "@/components/shared/RightPanelFab";
 import ShareButton from "@/components/sharing/ShareButton";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { GUIDE_TOUR_CALENDAR_MOBILE, GUIDE_TOUR_CALENDAR_WEB } from "@/components/guide-tour/guide-tour-config";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
+import { useFeatureTour } from "@/hooks/use-feature-tour";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -102,6 +104,15 @@ const ContentCalendarScreen = () => {
     const [focusItems, setFocusItems] = useState<FocusItem[]>([]);
 
     const hasItems = items.length > 0;
+
+    // Coach mark: teach the view toggle + AI chat/comments once the calendar
+    // has content (the rail/FAB anchors only mount when hasItems is true).
+    useFeatureTour({
+        feature: "calendar",
+        ready: hasItems,
+        web: GUIDE_TOUR_CALENDAR_WEB,
+        mobile: GUIDE_TOUR_CALENDAR_MOBILE,
+    });
 
     // Sending an item to chat: focuses it in the chat panel and opens chat if closed.
     const handleFocusChat = useCallback((item: CalendarItem) => {
@@ -246,6 +257,8 @@ const ContentCalendarScreen = () => {
             mode={rightPanelMode}
             onModeChange={setRightPanelMode}
             containerWidth={splitWidth}
+            chatAnchorId="gt-calendar-ai-chat"
+            commentsAnchorId="gt-calendar-comments"
             commentsSlot={
                 <CalendarCommentsPanel
                     year={calYear}
@@ -354,6 +367,7 @@ const ContentCalendarScreen = () => {
                     mode={rightPanelMode}
                     onModeChange={setRightPanelMode}
                     bottomOffset={70}
+                    anchorId="gt-calendar-fab"
                     actions={[
                         { mode: "comments", icon: faCommentDots, label: "Comments" },
                         { mode: "chat", icon: faRobot, label: "AI Chat" },

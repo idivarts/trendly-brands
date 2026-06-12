@@ -33,6 +33,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faLayerGroup, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
@@ -57,6 +58,8 @@ interface RightPanelFabProps {
      * sit above a bottom tab bar so the dial clears it. Defaults to 0.
      */
     bottomOffset?: number;
+    /** Optional coach-mark anchor id for the main FAB trigger button. */
+    anchorId?: string;
 }
 
 const RightPanelFab: React.FC<RightPanelFabProps> = ({
@@ -64,6 +67,7 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
     onModeChange,
     actions,
     bottomOffset = 0,
+    anchorId,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -166,21 +170,32 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
                     ))}
                 </Animated.View>
 
-                <Pressable
-                    style={({ pressed }) => [styles.mainFab, pressed && styles.pressed]}
-                    onPress={() => setOpen((o) => !o)}
-                    accessibilityRole="button"
-                    accessibilityLabel={open ? "Close panel menu" : "Open panel menu"}
-                    accessibilityState={{ expanded: open }}
-                >
-                    <Animated.View style={{ transform: [{ rotate: triggerRotate }] }}>
-                        <FontAwesomeIcon
-                            icon={open ? faXmark : faLayerGroup}
-                            size={20}
-                            color={colors.onPrimary}
-                        />
-                    </Animated.View>
-                </Pressable>
+                {(() => {
+                    const trigger = (
+                        <Pressable
+                            style={({ pressed }) => [styles.mainFab, pressed && styles.pressed]}
+                            onPress={() => setOpen((o) => !o)}
+                            accessibilityRole="button"
+                            accessibilityLabel={open ? "Close panel menu" : "Open panel menu"}
+                            accessibilityState={{ expanded: open }}
+                        >
+                            <Animated.View style={{ transform: [{ rotate: triggerRotate }] }}>
+                                <FontAwesomeIcon
+                                    icon={open ? faXmark : faLayerGroup}
+                                    size={20}
+                                    color={colors.onPrimary}
+                                />
+                            </Animated.View>
+                        </Pressable>
+                    );
+                    return anchorId ? (
+                        <CoachmarkAnchor id={anchorId} shape="pill">
+                            {trigger}
+                        </CoachmarkAnchor>
+                    ) : (
+                        trigger
+                    );
+                })()}
             </View>
         </View>
     );

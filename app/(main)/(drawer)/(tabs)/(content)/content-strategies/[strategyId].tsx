@@ -25,7 +25,9 @@ import { faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { GUIDE_TOUR_STRATEGY_MOBILE, GUIDE_TOUR_STRATEGY_WEB } from "@/components/guide-tour/guide-tour-config";
 import { useBreakpoints } from "@/hooks";
+import { useFeatureTour } from "@/hooks/use-feature-tour";
 import { EDIT_LOCK_TTL_MS, useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
 import AppLayout from "@/layouts/app-layout";
@@ -95,6 +97,15 @@ const ContentStrategyDetail = () => {
     );
 
     const [screenState, setScreenState] = useState<ScreenState>("loading");
+
+    // Coach mark: teach the editor + Push to Calendar / AI Chat / Share once the
+    // strategy is generated and the action anchors are live (strategy-ready).
+    useFeatureTour({
+        feature: "strategy",
+        ready: screenState === "strategy-ready",
+        web: GUIDE_TOUR_STRATEGY_WEB,
+        mobile: GUIDE_TOUR_STRATEGY_MOBILE,
+    });
 
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
     // Measured width of the split row — feeds the RightSidePanel resize bounds.
@@ -719,6 +730,7 @@ const ContentStrategyDetail = () => {
                                     mode={isCollecting ? "chat" : rightPanelMode}
                                     onModeChange={isCollecting ? () => { } : setRightPanelMode}
                                     containerWidth={splitWidth}
+                                    chatAnchorId="gt-strategy-ai-chat"
                                     resizable={isSettled}
                                     // While collecting the chat is pinned open
                                     // (onModeChange is a no-op) — don't offer a
@@ -830,6 +842,7 @@ const ContentStrategyDetail = () => {
                     mode={rightPanelMode}
                     onModeChange={setRightPanelMode}
                     bottomOffset={70}
+                    anchorId="gt-strategy-fab"
                     actions={[
                         { mode: "comments", icon: faCommentDots, label: "Comments" },
                         { mode: "chat", icon: faRobot, label: "AI Chat" },
