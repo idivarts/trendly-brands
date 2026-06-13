@@ -636,7 +636,11 @@ const ContentStrategyDetail = () => {
     });
 
     return (
-        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
+        // On mobile this screen sits inside the bottom Tabs navigator — the tab
+        // bar already owns the home-indicator inset, so adding our own "bottom"
+        // edge here just paints a dead band between the chat composer and the tab
+        // bar. Drop it on !xl; keep it on desktop where there's no bottom tab bar.
+        <AppLayout safeAreaEdges={xl ? ["top", "right", "bottom", "left"] : ["top", "right", "left"]}>
             <View
                 style={styles.splitContainer}
                 onLayout={(e) => setSplitWidth(e.nativeEvent.layout.width)}
