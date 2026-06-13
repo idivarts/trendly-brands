@@ -24,6 +24,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
     ActivityIndicator,
     FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -159,7 +160,27 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // AppLayout already insets top/bottom), which would otherwise double up.
     const selfInset = !xl && !parentHandlesSafeArea;
     const safeTop = selfInset ? insets.top : 0;
-    const safeBottom = selfInset ? insets.bottom : 0;
+    const rawSafeBottom = selfInset ? insets.bottom : 0;
+
+    // While the keyboard is open it already covers the home-indicator area, so
+    // the composer's own bottom safe-area inset would just float the input above
+    // the keyboard — a visible double-padded gap. Collapse the inset whenever the
+    // keyboard is up; restore it when hidden so the composer still clears the
+    // home indicator. (Driven by keyboardWill* on iOS / keyboardDid* on Android
+    // to stay in sync with the KeyboardAvoidingView animation.)
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    useEffect(() => {
+        if (Platform.OS === "web") return;
+        const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+        const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+        const showSub = Keyboard.addListener(showEvt, () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardVisible(false));
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+    const safeBottom = keyboardVisible ? 0 : rawSafeBottom;
     const styles = useStyles(colors, isCompact, safeTop, safeBottom, messageAlign);
 
     // KeyboardAvoidingView's `padding` math is `frame.y + frame.height - keyboardY`,
