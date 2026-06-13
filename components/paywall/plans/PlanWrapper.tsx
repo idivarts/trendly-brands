@@ -193,7 +193,10 @@ const PlanWrapper = (props: PlanWrapperProps) => {
         setBilling("monthly");
     }, [selectedBrand?.id, selectedOrgBilling?.planCycle])
 
-    const currentPlanKey = selectedOrgBilling?.planKey as PlanKey | undefined
+    // Default a missing planKey to "free" — legacy orgs (and freshly
+    // auto-provisioned ones) may have no billing record yet. Mirrors
+    // organization-context's isOnFreeTrial rule (!planKey || planKey === "free").
+    const currentPlanKey = (selectedOrgBilling?.planKey as PlanKey) || "free"
     const currentPlanCycle = selectedOrgBilling?.planCycle as BillingCycle | undefined;
 
     const openPaymentLink = async () => {
@@ -271,9 +274,15 @@ const PlanWrapper = (props: PlanWrapperProps) => {
             >
                 {SORTED_FILTER.map((plan) => {
                     const effectiveMonthly = plan.monthly;
+                    // Free is "current" whenever the org resolves to the free
+                    // plan — it has no subscription/acceptance step, so it must
+                    // NOT be gated on status == Accepted. Paid plans still
+                    // require an accepted subscription on the matching cycle.
                     const currentPlan = currentPlanKey === plan.key
-                        && (currentPlanCycle === billing || plan.monthly == 0)
-                        && selectedOrgBilling?.status == ModelStatus.Accepted
+                        && (plan.key === "free"
+                            ? true
+                            : currentPlanCycle === billing
+                                && selectedOrgBilling?.status == ModelStatus.Accepted)
                     const BuyButton = (<Pressable
                         onPress={() => {
                             if (currentPlan) {

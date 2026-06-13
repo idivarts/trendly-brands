@@ -1,12 +1,12 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
+import { IOrgTokenWallet } from '@/shared-libs/firestore/trendly-pro/models/organizations'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
-import { IOrgTokenWallet } from '@/shared-libs/firestore/trendly-pro/models/organizations'
 import { faArrowRight, faBullhorn, faChartLine, faCoins, faMagicWandSparkles, faUsers } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { useTheme } from '@react-navigation/native'
@@ -51,17 +51,17 @@ const PayWallComponent = () => {
     }, [selectedBrand?.id])
 
 
-    const Header = <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
-        <Text style={styles.headerSubtitle}>
-            Explore our flexible pricing designed to fit every brand’s budget and objectives.
-        </Text>
-    </View>
+    // const Header = <View style={styles.header}>
+    //     <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
+    //     <Text style={styles.headerSubtitle}>
+    //         Explore our flexible pricing designed to fit every brand’s budget and objectives.
+    //     </Text>
+    // </View>
 
     return (
         <>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {Header}
+                {/* {Header} */}
 
                 {selectedOrgWallet ? (
                     <TokenUsageCard wallet={selectedOrgWallet} colors={colors} isMobile={isMobile} />
@@ -100,9 +100,9 @@ const PayWallComponent = () => {
 
 const HIRE_US_FEATURES = [
     { icon: faMagicWandSparkles, label: "Content Strategy & Creation" },
-    { icon: faUsers,             label: "End-to-End Influencer Campaigns" },
-    { icon: faBullhorn,          label: "Strategic Ad Spend Management" },
-    { icon: faChartLine,         label: "Performance Marketing & ROAS" },
+    { icon: faUsers, label: "End-to-End Influencer Campaigns" },
+    { icon: faBullhorn, label: "Strategic Ad Spend Management" },
+    { icon: faChartLine, label: "Performance Marketing & ROAS" },
 ] as const;
 
 interface HireUsCardProps {
