@@ -1,4 +1,6 @@
+import { LockedOverlay } from "@/components/billing/EntitlementGate";
 import { BarList, formatCompact, MiniLineChart } from "@/components/analytics/charts";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandAnalytics } from "@/hooks/useBrandAnalytics";
 import AppLayout from "@/layouts/app-layout";
@@ -40,6 +42,7 @@ const AnalyticsScreen = () => {
     const isWide = xl || width >= 900;
     const styles = useMemo(() => makeStyles(colors, isWide), [colors, isWide]);
 
+    const { analyticsLocked } = useEntitlements();
     const [range, setRange] = useState<AnalyticsRange>("28d");
     const [selectedId, setSelectedId] = useState<string>("all");
     const { data, loading, error, reload } = useBrandAnalytics(range);
@@ -308,30 +311,44 @@ const AnalyticsScreen = () => {
     return (
         <AppLayout>
             <PageHeader title="Reporting & Analytics" />
-            <ScrollView
-                contentContainerStyle={styles.page}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Range selector */}
-                <View style={styles.rangeRow}>
-                    {RANGES.map((r) => {
-                        const active = range === r.key;
-                        return (
-                            <Pressable
-                                key={r.key}
-                                style={[styles.rangeBtn, active && styles.rangeBtnActive]}
-                                onPress={() => setRange(r.key)}
-                            >
-                                <Text style={[styles.rangeText, active && styles.rangeTextActive]}>
-                                    {r.label}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
-                </View>
+            {analyticsLocked ? (
+                <LockedOverlay
+                    title="Analytics is a Pro feature"
+                    subtitle="Upgrade to unlock follower, reach, engagement & audience insights across your connected socials."
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.page}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {renderSummary()}
+                    </ScrollView>
+                </LockedOverlay>
+            ) : (
+                <ScrollView
+                    contentContainerStyle={styles.page}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Range selector */}
+                    <View style={styles.rangeRow}>
+                        {RANGES.map((r) => {
+                            const active = range === r.key;
+                            return (
+                                <Pressable
+                                    key={r.key}
+                                    style={[styles.rangeBtn, active && styles.rangeBtnActive]}
+                                    onPress={() => setRange(r.key)}
+                                >
+                                    <Text style={[styles.rangeText, active && styles.rangeTextActive]}>
+                                        {r.label}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
 
-                {renderBody()}
-            </ScrollView>
+                    {renderBody()}
+                </ScrollView>
+            )}
         </AppLayout>
     );
 };

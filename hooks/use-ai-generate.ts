@@ -6,8 +6,14 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Shared upgrade prompt for premium-gated AI actions (script/image on free plans,
-// or any task whose plan unlocks no allowed model).
-function promptUpgrade() {
+// or any task whose plan unlocks no allowed model). When the reason is
+// token exhaustion we DON'T redirect — the surface shows an in-context upgrade/
+// top-up affordance — we only confirm why the action stopped.
+function promptUpgrade(reason?: string) {
+    if (reason === "tokens_exhausted") {
+        Toaster.error("You're out of AI tokens this month. Upgrade or add a top-up to continue.");
+        return;
+    }
     Toaster.error("This needs a higher plan. Please upgrade to continue.");
     router.push("/billing");
 }
@@ -124,7 +130,7 @@ export function useAIGenerate() {
                 imagesActiveRef.current = false;
                 setScriptStreaming(false);
                 setImagesStreaming(false);
-                promptUpgrade();
+                promptUpgrade(msg.reason);
                 return;
             }
             if (msg.type === "error") {

@@ -10,7 +10,7 @@ const BillingScreen = () => {
     const { xl } = useBreakpoints();
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
-            {!xl && <PageHeader title="Billing" />}
+            <PageHeader title="Billing" showBackButton />
             <PayWallComponent />
         </AppLayout>
     );

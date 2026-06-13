@@ -1,12 +1,13 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
+import { IOrgTokenWallet } from '@/shared-libs/firestore/trendly-pro/models/organizations'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
-import { faArrowRight, faBullhorn, faChartLine, faMagicWandSparkles, faUsers } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRight, faBullhorn, faChartLine, faCoins, faMagicWandSparkles, faUsers } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { useTheme } from '@react-navigation/native'
 import { router } from 'expo-router'
@@ -29,7 +30,7 @@ const PayWallComponent = () => {
     )
 
     const { selectedBrand, setSelectedBrand } = useBrandContext()
-    const { selectedOrgBilling } = useOrganizationContext()
+    const { selectedOrgBilling, selectedOrgWallet } = useOrganizationContext()
 
     const [cancelPlan, setCancelPlan] = useState(false)
 
@@ -50,17 +51,21 @@ const PayWallComponent = () => {
     }, [selectedBrand?.id])
 
 
-    const Header = <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
-        <Text style={styles.headerSubtitle}>
-            Explore our flexible pricing designed to fit every brand’s budget and objectives.
-        </Text>
-    </View>
+    // const Header = <View style={styles.header}>
+    //     <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
+    //     <Text style={styles.headerSubtitle}>
+    //         Explore our flexible pricing designed to fit every brand’s budget and objectives.
+    //     </Text>
+    // </View>
 
     return (
         <>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {Header}
+                {/* {Header} */}
+
+                {selectedOrgWallet ? (
+                    <TokenUsageCard wallet={selectedOrgWallet} colors={colors} isMobile={isMobile} />
+                ) : null}
 
                 <PlanWrapper />
 
@@ -95,9 +100,9 @@ const PayWallComponent = () => {
 
 const HIRE_US_FEATURES = [
     { icon: faMagicWandSparkles, label: "Content Strategy & Creation" },
-    { icon: faUsers,             label: "End-to-End Influencer Campaigns" },
-    { icon: faBullhorn,          label: "Strategic Ad Spend Management" },
-    { icon: faChartLine,         label: "Performance Marketing & ROAS" },
+    { icon: faUsers, label: "End-to-End Influencer Campaigns" },
+    { icon: faBullhorn, label: "Strategic Ad Spend Management" },
+    { icon: faChartLine, label: "Performance Marketing & ROAS" },
 ] as const;
 
 interface HireUsCardProps {
@@ -241,6 +246,96 @@ function createHireUsStyles(colors: ReturnType<typeof Colors>, isMobile: boolean
             fontWeight: "700",
             color: colors.white,
         },
+    });
+}
+
+// ─── Token Usage Card ─────────────────────────────────────────────────────────
+
+interface TokenUsageCardProps {
+    wallet: IOrgTokenWallet;
+    colors: ReturnType<typeof Colors>;
+    isMobile: boolean;
+}
+
+// formatTokens renders large AI-token counts compactly (1.2M, 350K, 980).
+function formatTokens(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+    if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+    return `${n}`;
+}
+
+const TokenUsageCard: React.FC<TokenUsageCardProps> = ({ wallet, colors, isMobile }) => {
+    const styles = createTokenStyles(colors, isMobile);
+    const allotment = Math.max(wallet.monthlyAllotment || 0, 0);
+    const balance = Math.max(wallet.balance || 0, 0);
+    const used = Math.max(allotment - balance, 0);
+    const pct = allotment > 0 ? Math.min(Math.round((used / allotment) * 100), 100) : 0;
+    const resetLabel = wallet.periodResetAt
+        ? new Date(wallet.periodResetAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })
+        : "the 1st";
+
+    return (
+        <View style={styles.wrapper}>
+            <View style={styles.headerRow}>
+                <View style={styles.iconWrap}>
+                    <FontAwesomeIcon icon={faCoins} size={16} color={colors.primary} />
+                </View>
+                <View style={styles.headerText}>
+                    <Text style={styles.title}>AI tokens this month</Text>
+                    <Text style={styles.subtitle}>Renews on {resetLabel} · platform usage is free — tokens cover AI</Text>
+                </View>
+            </View>
+
+            <View style={styles.barTrack}>
+                <View style={[styles.barFill, { width: `${pct}%` }]} />
+            </View>
+
+            <View style={styles.statsRow}>
+                <Text style={styles.statsText}>{formatTokens(balance)} left of {formatTokens(allotment)}</Text>
+                {wallet.topupBalance > 0 ? (
+                    <Text style={styles.topupText}>+{formatTokens(wallet.topupBalance)} top-up</Text>
+                ) : null}
+            </View>
+        </View>
+    );
+};
+
+function createTokenStyles(colors: ReturnType<typeof Colors>, isMobile: boolean) {
+    return StyleSheet.create({
+        wrapper: {
+            marginBottom: 28,
+            borderRadius: 16,
+            backgroundColor: colors.card,
+            padding: isMobile ? 16 : 20,
+            gap: 14,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        headerRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "transparent" },
+        iconWrap: {
+            width: 34,
+            height: 34,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
+        },
+        headerText: { flex: 1, backgroundColor: "transparent" },
+        title: { fontSize: 16, fontWeight: "700", color: colors.text },
+        subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+        barTrack: { height: 10, borderRadius: 6, backgroundColor: colors.tag, overflow: "hidden" },
+        barFill: { height: 10, borderRadius: 6, backgroundColor: colors.primary },
+        statsRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: "transparent",
+        },
+        statsText: { fontSize: 13, fontWeight: "600", color: colors.text },
+        topupText: { fontSize: 12, fontWeight: "600", color: colors.primary },
     });
 }
 

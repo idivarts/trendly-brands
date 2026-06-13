@@ -1,6 +1,8 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     IOrgBilling,
+    IOrgEntitlements,
+    IOrgTokenWallet,
     OrgRole,
 } from "@/shared-libs/firestore/trendly-pro/models/organizations";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
@@ -80,6 +82,14 @@ interface OrganizationContextProps {
     // trial state, subscription URL, etc. — billing lives on the org, not on
     // the brand.
     selectedOrgBilling: IOrgBilling | undefined;
+    // Resolved plan entitlements (analytics tier, inbox reply, posting cap, …)
+    // and the shared AI token wallet for the selected brand's org. Used to gate
+    // UI + show token usage. Undefined until the org subscription hydrates.
+    selectedOrgEntitlements: IOrgEntitlements | undefined;
+    selectedOrgWallet: IOrgTokenWallet | undefined;
+    // True when the org's subscription is locked / past-due / canceled — the app
+    // should route to the paywall (reused as the lock screen) until it clears.
+    isOrgLocked: boolean;
     // True when the selected brand's org has no billing record yet (org-billing
     // analogue of the old per-brand "no billing == free trial" rule).
     isOnFreeTrial: boolean;
@@ -104,6 +114,9 @@ const OrganizationContext = createContext<OrganizationContextProps>({
     removeOrganizationMember: noop,
     selectedOrganization: undefined,
     selectedOrgBilling: undefined,
+    selectedOrgEntitlements: undefined,
+    selectedOrgWallet: undefined,
+    isOrgLocked: false,
     isOnFreeTrial: true,
 });
 
@@ -204,6 +217,16 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
     }, [selectedBrand?.organizationId]);
 
     const selectedOrgBilling = selectedOrganization?.billing;
+    const selectedOrgEntitlements = selectedOrganization?.entitlements;
+    const selectedOrgWallet = selectedOrganization?.tokenWallet;
+
+    // The org is "locked" when its access state is anything other than active —
+    // a failed recurring charge (past_due → locked) or a cancellation. The app
+    // reuses the paywall as the lock screen until a payment clears it.
+    const isOrgLocked = useMemo(() => {
+        const state = selectedOrgBilling?.accessState;
+        return state === "locked" || state === "past_due" || state === "canceled";
+    }, [selectedOrgBilling]);
 
     // "Free plan" = no billing record yet (legacy) OR an org explicitly on the
     // free tier. Every finalized brand now gets a free-plan org auto-provisioned,
@@ -468,6 +491,9 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
                 removeOrganizationMember,
                 selectedOrganization,
                 selectedOrgBilling,
+                selectedOrgEntitlements,
+                selectedOrgWallet,
+                isOrgLocked,
                 isOnFreeTrial,
             }}
         >

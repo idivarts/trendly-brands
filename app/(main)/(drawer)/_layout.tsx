@@ -1,3 +1,4 @@
+import AccountLockedBanner from "@/components/billing/AccountLockedBanner";
 import DrawerMenuContent from "@/components/drawer-layout/DrawerMenuContent";
 import {
     SidebarCollapsedProvider,
@@ -33,6 +34,7 @@ const DrawerLayoutInner = () => {
                 isFixed={xl}
                 drawerWidth={drawerWidth}
             >
+                <AccountLockedBanner />
                 <Stack screenOptions={{ headerShown: false }} />
             </CustomDrawerWrapper>
         </BrandProtectedScreen>

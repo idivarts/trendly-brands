@@ -11,8 +11,10 @@ import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
+import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
 import MessageComposer from "./MessageComposer";
@@ -52,6 +54,7 @@ const ThreadView: React.FC<Props> = ({
     const styles = useStyles(colors);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+    const { inboxReadOnly } = useEntitlements();
     const isComment = conversation.kind === "comment";
     const replyable = canReply(conversation);
     const windowLeft = replyWindowLeft(conversation);
@@ -227,20 +230,25 @@ const ThreadView: React.FC<Props> = ({
                 </View>
             ) : null}
 
-            {/* Composer */}
-            <MessageComposer
-                enabled={replyable}
-                disabledReason="You can only reply within 24 hours of the last message."
-                placeholder={isComment ? "Write a public reply…" : "Reply…"}
-                hint={
-                    isComment
-                        ? "Your reply will be posted publicly under this comment."
-                        : windowLeft
-                        ? `Reply window: ${windowLeft}`
-                        : undefined
-                }
-                onSend={onSendReply}
-            />
+            {/* Composer — view-only on the free plan (replying in the Combined
+                Social Inbox is a paid feature); else the normal 24h-window composer. */}
+            {inboxReadOnly ? (
+                <UpgradeInline message="Replying is a Pro feature — upgrade to reply to comments & DMs." />
+            ) : (
+                <MessageComposer
+                    enabled={replyable}
+                    disabledReason="You can only reply within 24 hours of the last message."
+                    placeholder={isComment ? "Write a public reply…" : "Reply…"}
+                    hint={
+                        isComment
+                            ? "Your reply will be posted publicly under this comment."
+                            : windowLeft
+                            ? `Reply window: ${windowLeft}`
+                            : undefined
+                    }
+                    onSend={onSendReply}
+                />
+            )}
         </View>
     );
 };

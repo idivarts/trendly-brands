@@ -335,8 +335,16 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
                 pendingControlRef.current = null;
                 setStreamingContent("");
                 setIsStreaming(false);
-                Toaster.error("This needs a higher plan. Please upgrade to continue.");
-                router.push("/billing");
+                if (msg.reason === "tokens_exhausted") {
+                    // Out of monthly AI tokens — the composer already shows an
+                    // in-context Upgrade/Top-up block. Don't yank the user to
+                    // /billing mid-task; just confirm why the send stopped.
+                    Toaster.error("You're out of AI tokens this month. Upgrade or add a top-up to continue.");
+                } else {
+                    // Plan-lock (this model/feature needs a higher tier).
+                    Toaster.error("This needs a higher plan. Please upgrade to continue.");
+                    router.push("/billing");
+                }
             } else if (msg.type === "error") {
                 streamingRef.current = "";
                 pendingControlRef.current = null;
