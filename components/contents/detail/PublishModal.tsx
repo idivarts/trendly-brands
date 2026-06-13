@@ -1,5 +1,7 @@
+import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { ISocialAccount } from "@/contexts/brand-social-context.provider";
 import { ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import { faPaperPlane, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -39,6 +41,10 @@ const PublishModal: React.FC<PublishModalProps> = ({
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors, xl);
+    // Posting cap is a free-plan entitlement (maxPostsPerMonth; -1 = unlimited).
+    // Surface it here pre-emptively. NOTE: precise "X of N left" + hard blocking
+    // needs a backend posting-meter (like the token wallet) — not yet built.
+    const { maxPostsPerMonth } = useEntitlements();
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -73,6 +79,13 @@ const PublishModal: React.FC<PublishModalProps> = ({
                         contentContainerStyle={styles.body}
                         keyboardShouldPersistTaps="handled"
                     >
+                        {maxPostsPerMonth >= 0 ? (
+                            <View style={styles.gateRow}>
+                                <UpgradeInline
+                                    message={`Free plan includes ${maxPostsPerMonth} posts/month — upgrade for unlimited scheduling.`}
+                                />
+                            </View>
+                        ) : null}
                         <ScheduleBar embedded alwaysEditing {...scheduleProps} />
                     </ScrollView>
                 </View>
@@ -145,6 +158,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             paddingHorizontal: 18,
             paddingTop: 4,
             paddingBottom: 20,
+        },
+        gateRow: {
+            marginBottom: 12,
         },
         pressed: {
             opacity: 0.72,

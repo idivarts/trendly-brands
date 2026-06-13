@@ -2,8 +2,10 @@ import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import AIAnswerControl from "@/components/shared/AIAnswerControl";
 import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
+import { TokenMeterBar, TokenMeterBlock, TokenMeterNotice } from "@/components/billing/TokenMeter";
 import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -186,6 +188,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     const { models, selectedModel, setSelectedModel } = useAIModels();
 
+    // Org AI-token pressure. When exhausted, the composer is replaced by an
+    // in-context block (Upgrade / Add top-up) — we do NOT navigate away.
+    const { tokens } = useEntitlements();
+    const tokensExhausted = !readOnly && tokens.state === "exhausted";
+
     // The conversation is still wiring up (resolving brand, fetching threads,
     // loading history). Show a loader and keep the composer disabled until ready.
     const notReady = initializing || loading;
@@ -207,6 +214,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     useEffect(() => {
         if (!initialMessage) return;
         if (readOnly) return; // locked strategy — never start a new turn
+        if (tokensExhausted) return; // out of AI tokens — block shows instead
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
@@ -284,7 +292,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (readOnly || !trimmed || isStreaming || busy) return;
+        if (readOnly || tokensExhausted || !trimmed || isStreaming || busy) return;
         const focusedText =
             focusItems.length > 0
                 ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
@@ -503,16 +511,25 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                 Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
                             </Text>
                         </View>
+                    ) : tokensExhausted ? (
+                        // Out of monthly AI tokens — keep the user in context with an
+                        // inline Upgrade / Add top-up block instead of redirecting.
+                        <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
                     ) : (
                         <>
+                            {/* Low / critical token warning — non-blocking. */}
+                            <TokenMeterNotice tokens={tokens} />
                             {/* Model strip — sits right above the input */}
                             <View style={styles.modelStrip}>
-                                <AIModelSelector
-                                    models={models}
-                                    selectedModel={selectedModel}
-                                    onSelect={setSelectedModel}
-                                    compact
-                                />
+                                <View style={styles.modelStripGrow}>
+                                    <AIModelSelector
+                                        models={models}
+                                        selectedModel={selectedModel}
+                                        onSelect={setSelectedModel}
+                                        compact
+                                    />
+                                </View>
+                                <TokenMeterBar tokens={tokens} />
                             </View>
 
                             <View style={styles.inputArea}>
@@ -732,8 +749,10 @@ function useStyles(
                     paddingBottom: 4,
                     flexDirection: "row",
                     alignItems: "center",
+                    gap: 10,
                     backgroundColor: colors.card,
                 },
+                modelStripGrow: { flex: 1 },
                 inputArea: {
                     flexDirection: "row",
                     alignItems: "flex-end",
