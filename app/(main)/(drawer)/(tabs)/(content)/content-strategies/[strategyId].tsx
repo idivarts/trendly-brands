@@ -557,13 +557,17 @@ const ContentStrategyDetail = () => {
 
     // Collecting state: chat is the primary surface (70% on xl, 100% on !xl)
     // and not collapsible. Pin mode to "chat" while collecting so neither the
-    // user nor a stale state can close it.
+    // user nor a stale state can close it. When collecting ends on !xl, collapse
+    // the panel back to "none" — otherwise the mobile floating sheet would render
+    // expanded (chat still open) on the strategy-ready screen instead of behind
+    // the FAB. On xl the panel always stays visible, so leave its mode untouched.
     const isCollecting = screenState === "collecting";
     const isLoading = screenState === "loading";
     const isReady = screenState === "strategy-ready";
     useEffect(() => {
         if (isCollecting) setRightPanelMode("chat");
-    }, [isCollecting]);
+        else if (!xl) setRightPanelMode("none");
+    }, [isCollecting, xl]);
 
     // Track which left-panel children to keep in the tree. Inactive children
     // are unmounted after the crossfade completes so their animation loops
