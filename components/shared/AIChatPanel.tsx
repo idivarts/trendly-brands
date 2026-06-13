@@ -20,7 +20,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -161,6 +161,26 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const safeTop = selfInset ? insets.top : 0;
     const safeBottom = selfInset ? insets.bottom : 0;
     const styles = useStyles(colors, isCompact, safeTop, safeBottom, messageAlign);
+
+    // KeyboardAvoidingView's `padding` math is `frame.y + frame.height - keyboardY`,
+    // where `frame.y` is the view's PARENT-relative offset but `keyboardY` is in
+    // screen space. So whenever a parent pushes this panel down (e.g. the host
+    // AppLayout's top safe-area inset on the full-screen strategy chat), the avoided
+    // height comes up short by exactly that gap and the keyboard overlaps the
+    // composer. `keyboardVerticalOffset` exists to compensate — we measure our own
+    // on-screen Y and feed it back, which self-corrects in every mount context
+    // (full-screen, floating sheet, split-pane) without hardcoding inset assumptions.
+    // iOS-only: Android/web use `height` behaviour + system resize, which don't need it.
+    const rootRef = useRef<View>(null);
+    const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
+    const measureKbOffset = useCallback(() => {
+        if (Platform.OS !== "ios") return;
+        rootRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === "number" && Number.isFinite(y)) {
+                setKbVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev));
+            }
+        });
+    }, []);
 
     // ── Real AI thread state ─────────────────────────────────────────────────
     const {
@@ -364,9 +384,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     };
 
     return (
+        <View ref={rootRef} style={styles.container} onLayout={measureKbOffset}>
         <KeyboardAvoidingView
-            style={styles.container}
+            style={styles.fill}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={kbVerticalOffset}
         >
             {/* ── Header — capped at 3 elements (per design critique) ───── */}
             {!hideHeader && (
@@ -572,6 +594,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 </>
             )}
         </KeyboardAvoidingView>
+        </View>
     );
 };
 
@@ -588,6 +611,7 @@ function useStyles(
         () =>
             StyleSheet.create({
                 container: { flex: 1, backgroundColor: colors.card },
+                fill: { flex: 1 },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
