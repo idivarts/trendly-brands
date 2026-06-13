@@ -10,10 +10,11 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
     Image,
     Keyboard,
+    KeyboardAvoidingView,
     Linking,
     Platform,
     Pressable,
@@ -43,6 +44,22 @@ const LetsStartAI: React.FC = () => {
     const isWide = xl || width >= 900;
     const insets = useSafeAreaInsets();
     const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
+
+    // KeyboardAvoidingView's `padding` math uses a parent-relative frame against a
+    // screen-space keyboard, so the hero (which sits below the top nav) needs its
+    // on-screen Y as keyboardVerticalOffset — otherwise the keyboard overlaps the
+    // centered prompt box. Measure it and feed it back. iOS-only — Android/web use
+    // `height` behaviour + system resize.
+    const kbRootRef = useRef<View>(null);
+    const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
+    const measureKbOffset = useCallback(() => {
+        if (Platform.OS !== "ios") return;
+        kbRootRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === "number" && Number.isFinite(y)) {
+                setKbVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev));
+            }
+        });
+    }, []);
 
     const [showSplash, setShowSplash] = useState(true);
     const [hydrated, setHydrated] = useState(false);
@@ -134,7 +151,14 @@ const LetsStartAI: React.FC = () => {
                 </View>
 
                 {/* Hero */}
+                <View ref={kbRootRef} style={styles.fill} onLayout={measureKbOffset}>
+                <KeyboardAvoidingView
+                    style={styles.fill}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={kbVerticalOffset}
+                >
                 <ScrollView
+                    style={styles.fill}
                     contentContainerStyle={styles.heroScroll}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -190,6 +214,8 @@ const LetsStartAI: React.FC = () => {
                         </View>
                     </View>
                 </ScrollView>
+                </KeyboardAvoidingView>
+                </View>
 
                 {/* Auth modal — floats over the same ambient canvas */}
                 {authOpen && (
@@ -220,6 +246,7 @@ const LetsStartAI: React.FC = () => {
 
 function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
     return StyleSheet.create({
+        fill: { flex: 1 },
         nav: {
             flexDirection: "row",
             alignItems: "center",

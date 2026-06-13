@@ -5,7 +5,6 @@ import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { useLocalSearchParams } from "expo-router";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
@@ -13,10 +12,12 @@ import { Brand } from "@/types/Brand";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { AnimatePresence, MotiView } from "moti";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
+    KeyboardAvoidingView,
     Platform,
     Pressable,
     StyleSheet,
@@ -117,6 +118,22 @@ const OnboardingFlow = () => {
     });
     const [brandId, setBrandId] = useState<string | undefined>();
     const [busy, setBusy] = useState(false);
+
+    // KeyboardAvoidingView's `padding` math uses a parent-relative frame against a
+    // screen-space keyboard, so the centered step (which sits below the progress
+    // bar) needs its on-screen Y as keyboardVerticalOffset — otherwise the keyboard
+    // overlaps the input. Measure it and feed it back. iOS-only — Android/web use
+    // `height` behaviour + system resize.
+    const kbRootRef = useRef<View>(null);
+    const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
+    const measureKbOffset = useCallback(() => {
+        if (Platform.OS !== "ios") return;
+        kbRootRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === "number" && Number.isFinite(y)) {
+                setKbVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev));
+            }
+        });
+    }, []);
 
     const steps = useMemo(() => stepsFor(form.age), [form.age]);
     const currentKey = steps[stepIndex];
@@ -356,23 +373,31 @@ const OnboardingFlow = () => {
                                 transition={{ type: "timing", duration: 300 }}
                             />
                         </View>
-                        <View style={styles.formArea}>
-                            <View style={[styles.card, xl && styles.cardDesktop]}>
-                                <AnimatePresence exitBeforeEnter>
-                                    <MotiView
-                                        key={currentKey}
-                                        style={styles.stepWrap}
-                                        from={{ opacity: 0, translateY: 36 }}
-                                        animate={{ opacity: 1, translateY: 0 }}
-                                        exit={{ opacity: 0, translateY: -36 }}
-                                        transition={{ type: "timing", duration: 320 }}
-                                    >
-                                        {currentKey === "age"
-                                            ? renderAgeStep()
-                                            : renderTextStep(currentKey)}
-                                    </MotiView>
-                                </AnimatePresence>
-                            </View>
+                        <View ref={kbRootRef} style={styles.fill} onLayout={measureKbOffset}>
+                            <KeyboardAvoidingView
+                                style={styles.fill}
+                                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                                keyboardVerticalOffset={kbVerticalOffset}
+                            >
+                                <View style={styles.formArea}>
+                                    <View style={[styles.card, xl && styles.cardDesktop]}>
+                                        <AnimatePresence exitBeforeEnter>
+                                            <MotiView
+                                                key={currentKey}
+                                                style={styles.stepWrap}
+                                                from={{ opacity: 0, translateY: 36 }}
+                                                animate={{ opacity: 1, translateY: 0 }}
+                                                exit={{ opacity: 0, translateY: -36 }}
+                                                transition={{ type: "timing", duration: 320 }}
+                                            >
+                                                {currentKey === "age"
+                                                    ? renderAgeStep()
+                                                    : renderTextStep(currentKey)}
+                                            </MotiView>
+                                        </AnimatePresence>
+                                    </View>
+                                </View>
+                            </KeyboardAvoidingView>
                         </View>
                     </>
                 )}
