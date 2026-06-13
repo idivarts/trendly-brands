@@ -28,9 +28,10 @@ import {
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -253,7 +254,43 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
     // On mobile (!xl) the panel mounts edge-to-edge inside the floating sheet,
     // so it insets for the notch/home-indicator. Desktop relies on AppLayout.
     const safeTop = xl ? 0 : insets.top;
-    const safeBottom = xl ? 0 : insets.bottom;
+    const rawSafeBottom = xl ? 0 : insets.bottom;
+
+    // KeyboardAvoidingView's `padding` math is `frame.y + frame.height - keyboardY`,
+    // where `frame.y` is parent-relative but `keyboardY` is screen-space. When a
+    // parent pushes this panel down (e.g. a host AppLayout's top safe-area inset),
+    // the avoided height comes up short and the keyboard overlaps the composer.
+    // We measure our own on-screen Y and feed it back as keyboardVerticalOffset so
+    // it self-corrects in every mount context. iOS-only — Android/web use `height`
+    // behaviour + system resize and don't need it.
+    const rootRef = useRef<View>(null);
+    const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
+    const measureKbOffset = useCallback(() => {
+        if (Platform.OS !== "ios") return;
+        rootRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === "number" && Number.isFinite(y)) {
+                setKbVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev));
+            }
+        });
+    }, []);
+
+    // While the keyboard is open it already covers the home-indicator area, so the
+    // composer's own bottom safe-area inset would just float the input above the
+    // keyboard — a visible double-padded gap. Collapse it whenever the keyboard is
+    // up; restore it when hidden so the composer still clears the home indicator.
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    useEffect(() => {
+        if (Platform.OS === "web") return;
+        const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+        const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+        const showSub = Keyboard.addListener(showEvt, () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardVisible(false));
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+    const safeBottom = keyboardVisible ? 0 : rawSafeBottom;
     const panelSty = useMemo(
         () => panelStyles(colors, safeTop, safeBottom),
         [colors, safeTop, safeBottom]
@@ -296,7 +333,12 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
     }, [draft, isSending, replyingTo, onAddReply, onAddComment]);
 
     return (
-        <View style={panelSty.container}>
+        <View ref={rootRef} style={panelSty.container} onLayout={measureKbOffset}>
+        <KeyboardAvoidingView
+            style={panelSty.fill}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={kbVerticalOffset}
+        >
             {/* ── Header ─────────────────────────────────────────────────────── */}
             <View style={panelSty.header}>
                 {onCollapse && (
@@ -363,8 +405,7 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
             )}
 
             {/* ── Compose ─────────────────────────────────────────────────────── */}
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-                {replyingTo && (
+            {replyingTo && (
                     <View style={panelSty.replyBanner}>
                         <Text style={panelSty.replyBannerText}>Replying to thread</Text>
                         <Pressable onPress={() => setReplyingTo(null)}>
@@ -417,6 +458,7 @@ function panelStyles(
             flex: 1,
             backgroundColor: colors.card,
         },
+        fill: { flex: 1 },
         header: {
             flexDirection: "row",
             alignItems: "center",

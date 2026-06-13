@@ -20,10 +20,11 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -159,8 +160,48 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // AppLayout already insets top/bottom), which would otherwise double up.
     const selfInset = !xl && !parentHandlesSafeArea;
     const safeTop = selfInset ? insets.top : 0;
-    const safeBottom = selfInset ? insets.bottom : 0;
+    const rawSafeBottom = selfInset ? insets.bottom : 0;
+
+    // While the keyboard is open it already covers the home-indicator area, so
+    // the composer's own bottom safe-area inset would just float the input above
+    // the keyboard — a visible double-padded gap. Collapse the inset whenever the
+    // keyboard is up; restore it when hidden so the composer still clears the
+    // home indicator. (Driven by keyboardWill* on iOS / keyboardDid* on Android
+    // to stay in sync with the KeyboardAvoidingView animation.)
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    useEffect(() => {
+        if (Platform.OS === "web") return;
+        const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+        const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+        const showSub = Keyboard.addListener(showEvt, () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardVisible(false));
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+    const safeBottom = keyboardVisible ? 0 : rawSafeBottom;
     const styles = useStyles(colors, isCompact, safeTop, safeBottom, messageAlign);
+
+    // KeyboardAvoidingView's `padding` math is `frame.y + frame.height - keyboardY`,
+    // where `frame.y` is the view's PARENT-relative offset but `keyboardY` is in
+    // screen space. So whenever a parent pushes this panel down (e.g. the host
+    // AppLayout's top safe-area inset on the full-screen strategy chat), the avoided
+    // height comes up short by exactly that gap and the keyboard overlaps the
+    // composer. `keyboardVerticalOffset` exists to compensate — we measure our own
+    // on-screen Y and feed it back, which self-corrects in every mount context
+    // (full-screen, floating sheet, split-pane) without hardcoding inset assumptions.
+    // iOS-only: Android/web use `height` behaviour + system resize, which don't need it.
+    const rootRef = useRef<View>(null);
+    const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
+    const measureKbOffset = useCallback(() => {
+        if (Platform.OS !== "ios") return;
+        rootRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === "number" && Number.isFinite(y)) {
+                setKbVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev));
+            }
+        });
+    }, []);
 
     // ── Real AI thread state ─────────────────────────────────────────────────
     const {
@@ -364,9 +405,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     };
 
     return (
+        <View ref={rootRef} style={styles.container} onLayout={measureKbOffset}>
         <KeyboardAvoidingView
-            style={styles.container}
+            style={styles.fill}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={kbVerticalOffset}
         >
             {/* ── Header — capped at 3 elements (per design critique) ───── */}
             {!hideHeader && (
@@ -572,6 +615,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 </>
             )}
         </KeyboardAvoidingView>
+        </View>
     );
 };
 
@@ -588,6 +632,7 @@ function useStyles(
         () =>
             StyleSheet.create({
                 container: { flex: 1, backgroundColor: colors.card },
+                fill: { flex: 1 },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
