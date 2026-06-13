@@ -1,6 +1,8 @@
 import OnboardingLoader from "@/components/onboarding/OnboardingLoader";
+import PhoneNumberInput from "@/components/onboarding/PhoneNumberInput";
 import WhatNextStep, { NextChoice } from "@/components/onboarding/WhatNextStep";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { Country, getDefaultCountry } from "@/utils/countries";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -27,8 +29,9 @@ import {
 } from "react-native";
 
 // ── Validation (mirrors the existing onboarding form) ────────────────────────
-const PHONE_REGEX =
-    /^\+?[1-9]\d{0,2}[\s-]?(\(?\d{1,4}\)?[\s-]?)?\d{1,4}([\s-]?\d{1,4}){1,3}$/;
+// The country dial code is captured separately by PhoneNumberInput, so here we
+// only validate the national-number digits (typical range across countries).
+const countNationalDigits = (national: string) => national.replace(/[^\d]/g, "").length;
 const WEBSITE_REGEX = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/\S*)?$/;
 
 // ── Brand age (keys match BrandAgeSelect / backend buckets) ──────────────────
@@ -77,8 +80,8 @@ const TEXT_STEP_COPY: Record<
     },
     phone: {
         title: "What's your contact number?",
-        helper: "We'll use this to reach you about your account.",
-        placeholder: "+1 555 123 4567",
+        helper: "We'll use this to reach you about your account. Your country code is set automatically — just add your number.",
+        placeholder: "98765 43210",
         keyboardType: "phone-pad",
     },
     website: {
@@ -118,6 +121,10 @@ const OnboardingFlow = () => {
     });
     const [brandId, setBrandId] = useState<string | undefined>();
     const [busy, setBusy] = useState(false);
+    // Country for the phone field — auto-detected from the device locale/timezone
+    // so the dial code is pre-filled. `form.phone` holds only the national digits.
+    const [phoneCountry, setPhoneCountry] = useState<Country>(() => getDefaultCountry());
+    const fullPhone = (national: string) => `+${phoneCountry.dialCode} ${national.trim()}`.trim();
 
     // KeyboardAvoidingView's `padding` math uses a parent-relative frame against a
     // screen-space keyboard, so the centered step (which sits below the progress
@@ -150,11 +157,13 @@ const OnboardingFlow = () => {
             case "about":
                 if (!next.about.trim()) return "Tell us a little about your brand";
                 return null;
-            case "phone":
-                if (!next.phone.trim()) return "Please enter a contact number";
-                if (!PHONE_REGEX.test(next.phone.trim()))
+            case "phone": {
+                const digits = countNationalDigits(next.phone);
+                if (!digits) return "Please enter a contact number";
+                if (digits < 6 || digits > 14)
                     return "That doesn't look like a valid phone number";
                 return null;
+            }
             case "age":
                 if (!next.age) return "Please pick one";
                 return null;
@@ -201,7 +210,7 @@ const OnboardingFlow = () => {
 
         const profile: Record<string, string> = {
             about: form.about.trim(),
-            phone: form.phone.trim(),
+            phone: fullPhone(form.phone),
         };
         if (form.website.trim()) profile.website = form.website.trim();
 
@@ -209,6 +218,7 @@ const OnboardingFlow = () => {
             name: form.name.trim(),
             age: form.age,
             profile,
+            country: phoneCountry.iso2,
             ...(orgId ? { organizationId: orgId } : {}),
         } as any);
         if (!newId) return null;
@@ -294,27 +304,38 @@ const OnboardingFlow = () => {
             <View style={styles.stepBody}>
                 <Text style={styles.stepTitle}>{copy.title}</Text>
                 <Text style={styles.stepHelper}>{copy.helper}</Text>
-                <TextInput
-                    style={[styles.input, copy.multiline && styles.inputMultiline]}
-                    value={form[key]}
-                    onChangeText={(t) => setField(key, t)}
-                    placeholder={copy.placeholder}
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType={copy.keyboardType ?? "default"}
-                    autoFocus
-                    multiline={copy.multiline}
-                    autoCapitalize={key === "name" ? "words" : "none"}
-                    onKeyPress={(e: any) => {
-                        if (
-                            Platform.OS === "web" &&
-                            e?.nativeEvent?.key === "Enter" &&
-                            !e?.nativeEvent?.shiftKey
-                        ) {
-                            e.preventDefault?.();
-                            handleContinue();
-                        }
-                    }}
-                />
+                {key === "phone" ? (
+                    <PhoneNumberInput
+                        country={phoneCountry}
+                        onChangeCountry={setPhoneCountry}
+                        nationalNumber={form.phone}
+                        onChangeNationalNumber={(t) => setField("phone", t)}
+                        onSubmit={handleContinue}
+                        autoFocus
+                    />
+                ) : (
+                    <TextInput
+                        style={[styles.input, copy.multiline && styles.inputMultiline]}
+                        value={form[key]}
+                        onChangeText={(t) => setField(key, t)}
+                        placeholder={copy.placeholder}
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType={copy.keyboardType ?? "default"}
+                        autoFocus
+                        multiline={copy.multiline}
+                        autoCapitalize={key === "name" ? "words" : "none"}
+                        onKeyPress={(e: any) => {
+                            if (
+                                Platform.OS === "web" &&
+                                e?.nativeEvent?.key === "Enter" &&
+                                !e?.nativeEvent?.shiftKey
+                            ) {
+                                e.preventDefault?.();
+                                handleContinue();
+                            }
+                        }}
+                    />
+                )}
                 <Pressable
                     onPress={handleContinue}
                     style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
