@@ -217,9 +217,17 @@ const LetsStartAI: React.FC = () => {
                 </KeyboardAvoidingView>
                 </View>
 
-                {/* Auth modal — floats over the same ambient canvas */}
+                {/* Auth modal — floats over the same ambient canvas. The card now
+                    carries an email input (AuthCard), so it's wrapped in a
+                    KeyboardAvoidingView: on native the centered card lifts above
+                    the keyboard instead of being covered by it. The overlay is
+                    absolute-fill from the screen top, so no keyboardVerticalOffset
+                    is needed (unlike the hero, which sits below the nav). */}
                 {authOpen && (
-                    <View style={styles.modalRoot}>
+                    <KeyboardAvoidingView
+                        style={styles.modalRoot}
+                        behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    >
                         <Animated.View entering={FadeIn.duration(180)} style={styles.modalBackdrop}>
                             <Pressable style={StyleSheet.absoluteFill} onPress={() => setAuthOpen(false)} accessibilityLabel="Dismiss" />
                         </Animated.View>
@@ -237,7 +245,7 @@ const LetsStartAI: React.FC = () => {
                                 <AuthCard />
                             </View>
                         </Animated.View>
-                    </View>
+                    </KeyboardAvoidingView>
                 )}
             </AmbientBackground>
         </AppLayout>
