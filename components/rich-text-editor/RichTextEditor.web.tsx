@@ -1,6 +1,6 @@
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureEnrichedHtml } from "@/utils/rich-text";
+import { ensureEnrichedHtml, ensureHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCommentDots,
@@ -20,6 +20,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 import { $createLinkNode, $isLinkNode, LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
     $isListNode,
@@ -408,6 +409,9 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [linkInitialText, setLinkInitialText] = useState("");
     const [selectedText, setSelectedText] = useState("");
+    // HTML of the current selection — passed to Quick Edit so the AI rewrites
+    // (and returns) rich markup, which we then re-insert over the selection.
+    const [selectedHtml, setSelectedHtml] = useState("");
     const [activeFormats, setActiveFormats] = useState({
         bold: false,
         italic: false,
@@ -706,15 +710,34 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     // ── Selection-aware actions ────────────────────────────────────────────────
     const handleQuickEditOpen = useCallback(() => {
         captureSelection();
+        // Serialize the selection to HTML so the AI receives (and returns) rich
+        // markup rather than flat text. Must run inside editor.read() so
+        // $generateHtmlFromNodes has an active editor context.
+        editor.read(() => {
+            const selection = $getSelection();
+            setSelectedHtml(
+                $isRangeSelection(selection) && !selection.isCollapsed()
+                    ? $generateHtmlFromNodes(editor, selection)
+                    : ""
+            );
+        });
         setQuickEditVisible(true);
-    }, [captureSelection]);
+    }, [editor, captureSelection]);
 
-    const handleAIQuickEditAccept = useCallback((newText: string) => {
+    const handleAIQuickEditAccept = useCallback((newHtml: string) => {
         editor.update(() => {
             const restored = restoreSelection();
             const selection = $getSelection();
-            if (restored && $isRangeSelection(selection)) {
-                selection.insertText(newText);
+            if (!restored || !$isRangeSelection(selection)) return;
+            // The AI returns HTML (or markdown). Coerce to HTML, parse into
+            // Lexical nodes, and replace the selection with the rich result.
+            const html = ensureHtml(newHtml || "").trim();
+            const dom = new DOMParser().parseFromString(html, "text/html");
+            const nodes = $generateNodesFromDOM(editor, dom);
+            if (nodes.length > 0) {
+                selection.insertNodes(nodes);
+            } else {
+                selection.insertText(newHtml);
             }
         });
         setQuickEditVisible(false);
@@ -954,7 +977,7 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
             <AIQuickEditModal
                 visible={quickEditVisible}
                 onClose={() => setQuickEditVisible(false)}
-                selectedText={selectedText}
+                selectedText={selectedHtml}
                 module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
