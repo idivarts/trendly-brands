@@ -58,9 +58,12 @@ const AIQuickEditModal: React.FC<Props> = ({
                         style={styles.sheet}
                         onPress={(e) => {
                             e.stopPropagation();
-                            // Tapping anywhere on the sheet outside the text field
-                            // dismisses the keyboard.
-                            Keyboard.dismiss();
+                            // Tapping the sheet (outside the text field) dismisses
+                            // the soft keyboard — native only. On web there's no
+                            // soft keyboard, and the click bubbles up from the
+                            // TextInput, so dismissing here would instantly blur
+                            // the input the user just clicked into.
+                            if (Platform.OS !== "web") Keyboard.dismiss();
                         }}
                     >
                     <Text style={styles.title}>Edit with AI</Text>
