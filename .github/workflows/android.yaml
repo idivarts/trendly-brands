@@ -8,7 +8,7 @@ on:
       - 'dev-*'
 
 concurrency:
-  group: deploy-android-${{ github.ref }}
+  group: deploy-android
   cancel-in-progress: true
 
 jobs:

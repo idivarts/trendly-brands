@@ -8,7 +8,7 @@ on:
       - 'dev-*'
 
 concurrency:
-  group: deploy-ios-${{ github.ref }}
+  group: deploy-ios
   cancel-in-progress: true
 
 jobs:
