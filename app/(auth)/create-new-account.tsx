@@ -86,6 +86,9 @@ const SignUpScreen = () => {
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     placeholder="you@company.com"
                     locked={emailLocked}
                 />
@@ -93,18 +96,24 @@ const SignUpScreen = () => {
                     label="Name"
                     value={name}
                     onChangeText={setName}
+                    autoComplete="name"
+                    textContentType="name"
                 />
                 <AuthTextField
                     label="Password"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                 />
                 <AuthTextField
                     label="Confirm Password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                 />
                 <Button
                     mode="contained"
