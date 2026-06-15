@@ -15,6 +15,11 @@ const LoginScreen = () => {
     const router = useRouter();
     const { signIn } = useAuthContext();
 
+    // Carried over from pre-signin: the email was already verified to exist, so
+    // it's prefilled and locked here. Editing it would desync from that check —
+    // the user goes back to pre-signin to start over with a different email.
+    const emailLocked = search.locked === "1";
+
     const goBackToSocial = () => {
         if (router.canGoBack()) {
             router.back();
@@ -41,6 +46,7 @@ const LoginScreen = () => {
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     placeholder="you@company.com"
+                    locked={emailLocked}
                 />
                 <AuthTextField
                     label="Password"
@@ -62,11 +68,19 @@ const LoginScreen = () => {
                     action="Forgot password?"
                     onPress={() => router.replace("/(auth)/forgot-password")}
                 />
-                <AuthNavLink
-                    prompt="Don't have an account?"
-                    action="Sign up"
-                    onPress={() => router.replace("/(auth)/create-new-account")}
-                />
+                {emailLocked ? (
+                    <AuthNavLink
+                        prompt="Not your email?"
+                        action="Go back"
+                        onPress={goBackToSocial}
+                    />
+                ) : (
+                    <AuthNavLink
+                        prompt="Don't have an account?"
+                        action="Sign up"
+                        onPress={() => router.replace("/(auth)/create-new-account")}
+                    />
+                )}
             </View>
         </AuthPageLayout>
     );

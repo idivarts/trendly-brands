@@ -5,18 +5,25 @@ import AuthTextField from "@/components/auth/AuthTextField";
 import Button from "@/components/ui/button";
 import { useAuthContext } from "@/contexts";
 import { useMyNavigation } from "@/shared-libs/utils/router";
+import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import { View } from "react-native";
 
 const SignUpScreen = () => {
+    const search = useLocalSearchParams();
     const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState((search.email as string) || "");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [verificationSent, setVerificationSent] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useMyNavigation();
     const { signUp } = useAuthContext();
+
+    // Carried over from pre-signin: the email was already verified as NOT having
+    // an account, so it's prefilled and locked here. Changing it would desync
+    // from that check — the user goes back to pre-signin to start over.
+    const emailLocked = search.locked === "1";
 
     const goBackToSocial = () => {
         if (router.canGoBack()) {
@@ -75,16 +82,17 @@ const SignUpScreen = () => {
             />
             <View style={authLayoutStyles.inputStack}>
                 <AuthTextField
-                    label="Name"
-                    value={name}
-                    onChangeText={setName}
-                />
-                <AuthTextField
                     label="Work Email"
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     placeholder="you@company.com"
+                    locked={emailLocked}
+                />
+                <AuthTextField
+                    label="Name"
+                    value={name}
+                    onChangeText={setName}
                 />
                 <AuthTextField
                     label="Password"
@@ -115,6 +123,13 @@ const SignUpScreen = () => {
                     action="Log in"
                     onPress={() => router.replace("/(auth)/login")}
                 />
+                {emailLocked && (
+                    <AuthNavLink
+                        prompt="Not your email?"
+                        action="Go back"
+                        onPress={goBackToSocial}
+                    />
+                )}
             </View>
         </AuthPageLayout>
     );

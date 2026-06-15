@@ -3,26 +3,24 @@ import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheet
 import { useAppleLogin } from "@/utils/use-apple-login";
 import { useGoogleLogin } from "@/utils/use-google-login";
 import { faApple, faGoogle } from "@fortawesome/free-brands-svg-icons";
-import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Colors from "@/shared-uis/constants/Colors";
 
 const GOOGLE_LABEL = "Continue with Google";
 const APPLE_LABEL = "Continue with Apple";
-const EMAIL_LABEL = "Continue with Email/Password";
 
 /**
- * Provider buttons + terms. Self-contained (owns the login hooks) so it can be
- * dropped into either the /pre-signin route card or the in-page lets-start modal.
+ * Social provider buttons + terms. Self-contained (owns the login hooks) so it
+ * can be dropped into either the /pre-signin route card or the in-page
+ * lets-start modal. The email/password path lives in the email-first form above
+ * this (see AuthCard); these are the secondary "or continue with" options.
  */
 const AuthOptions: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const router = useRouter();
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
     const [error, setError] = useState<string | null>(null);
@@ -59,17 +57,6 @@ const AuthOptions: React.FC = () => {
                         <Text style={styles.providerLabel}>{APPLE_LABEL}</Text>
                     </Pressable>
                 )}
-
-                <Pressable
-                    onPress={() => router.push("/create-new-account")}
-                    disabled={loading}
-                    style={[styles.providerButton, { opacity: loading ? 0.6 : 1 }]}
-                    accessibilityRole="button"
-                    accessibilityLabel={EMAIL_LABEL}
-                >
-                    <FontAwesomeIcon icon={faEnvelope} size={20} color={colors.text} />
-                    <Text style={styles.providerLabel}>{EMAIL_LABEL}</Text>
-                </Pressable>
             </View>
 
             {!!error && <Text style={styles.errorText}>{error}</Text>}

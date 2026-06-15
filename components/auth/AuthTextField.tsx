@@ -8,6 +8,12 @@ import type { TextInputProps } from "react-native-paper";
 type AuthTextFieldProps = Omit<TextInputProps, "label"> & {
     /** Shown as a persistent label above the field (not a floating label). */
     label: string;
+    /**
+     * Renders the field read-only with a muted surface — used when a value is
+     * carried in from a previous screen (e.g. the email decided on pre-signin)
+     * and must not be edited here.
+     */
+    locked?: boolean;
 };
 
 /**
@@ -19,7 +25,7 @@ type AuthTextFieldProps = Omit<TextInputProps, "label"> & {
  * overlapping the previewed text. A static label + native placeholder is
  * managed by the browser and never collides with autofill.
  */
-const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style, ...props }) => {
+const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style, locked, ...props }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -27,7 +33,11 @@ const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style
     // Soft rest border in light mode (the default paper outline is a heavy
     // mid-grey); a visible-but-subtle border in dark mode where a light hairline
     // would glare. Rounded to match the auth buttons (no dated sharp corners).
-    const restOutline = theme.dark ? colors.outline : colors.borderLight;
+    // A locked field drops the outline entirely and sits on the muted tag
+    // surface so it reads as "carried over, not editable".
+    const restOutline = locked
+        ? "transparent"
+        : theme.dark ? colors.outline : colors.borderLight;
 
     return (
         <View style={styles.field}>
@@ -36,11 +46,12 @@ const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style
                 mode="outlined"
                 placeholder={placeholder ?? label}
                 placeholderTextColor={colors.textSecondary}
-                textColor={colors.text}
+                textColor={locked ? colors.textSecondary : colors.text}
                 outlineColor={restOutline}
                 outlineStyle={styles.outline}
-                style={[styles.input, style]}
+                style={[styles.input, locked && styles.inputLocked, style]}
                 {...props}
+                editable={locked ? false : props.editable}
             />
         </View>
     );
@@ -58,6 +69,9 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         input: {
             backgroundColor: colors.background,
+        },
+        inputLocked: {
+            backgroundColor: colors.tag,
         },
         outline: {
             borderRadius: 12,
