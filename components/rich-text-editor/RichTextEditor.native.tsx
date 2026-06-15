@@ -340,7 +340,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             <KeyboardAvoidingView
                 style={styles.kavContainer}
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 180 : 0}
+                keyboardVerticalOffset={0}
             >
                 <ScrollView
                     style={styles.editorScroll}
