@@ -1,4 +1,4 @@
-import { usePathname, useSegments } from "expo-router";
+import { useGlobalSearchParams, usePathname, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 import DownloadAndroidModal from "./DownloadAndroidModal";
 import DownloadIOSModal from "./DownloadIOSModal";
@@ -8,6 +8,15 @@ const DownloadApp = () => {
     const [showAndroidModal, setShowAndroidModal] = useState(false)
     const pathname = usePathname()
     const segments = useSegments();
+    const params = useGlobalSearchParams<{ email?: string }>();
+
+    // Landing on /login with a prefilled email almost always means the user just
+    // tapped the link in their verification email. Unlike other auth routes
+    // (where we suppress the download prompt), here we want to actively hand off
+    // to the installed app via the modal's deep-link attempt — so we let the
+    // modal mount in this one case.
+    const isLoginWithEmail =
+        !!params?.email && (pathname === "/login" || pathname.endsWith("/login"));
 
     useEffect(() => {
         if (typeof window == "undefined")
@@ -27,7 +36,7 @@ const DownloadApp = () => {
         }
     }, []);
 
-    if (segments.length > 0 && segments[0] == "(auth)")
+    if (!isLoginWithEmail && segments.length > 0 && segments[0] == "(auth)")
         return null
     if (segments.length > 0 && segments[0] == "(landing)")
         return null

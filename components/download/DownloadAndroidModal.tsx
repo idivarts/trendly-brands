@@ -28,7 +28,11 @@ const DownloadPlayModal: React.FC<DownloadPlayModalProps> = ({ }) => {
     const [isAppInstalled, setIsAppInstalled] = useState(false)
 
     const openUrl = async () => {
-        const url = `trendly-brands:/${pathname}`
+        // Carry the current query string (e.g. ?email=...&locked=1) into the deep
+        // link so the app opens on the same screen with the same params — e.g.
+        // login with the verified email prefilled.
+        const search = typeof window !== "undefined" ? window.location.search : "";
+        const url = `trendly-brands:/${pathname}${search}`
         Console.log("Opening URL", url)
         const canOpen = await Linking.canOpenURL(url)
         Console.log("Can Open URL ", canOpen)
