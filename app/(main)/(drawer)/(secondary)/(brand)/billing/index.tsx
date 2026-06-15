@@ -9,7 +9,7 @@ import React from "react";
 const BillingScreen = () => {
     const { xl } = useBreakpoints();
     return (
-        <AppLayout withWebPadding={false} safeAreaEdges={["top", "right", "bottom", "left"]}>
+        <AppLayout withWebPadding={false} safeAreaEdges={["right", "bottom", "left"]}>
             <PageHeader title="Billing" showBackButton />
             <PayWallComponent />
         </AppLayout>

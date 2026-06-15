@@ -4,7 +4,17 @@ import { faArrowUp, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableWithoutFeedback,
+    View,
+} from "react-native";
 import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy, ReviewStatus } from "./types";
@@ -87,7 +97,16 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+            <TouchableWithoutFeedback
+                onPress={Keyboard.dismiss}
+                accessible={false}
+                disabled={Platform.OS === "web"}
+            >
+                <View style={styles.container}>
             <View style={styles.hero}>
                 <Text style={styles.heading}>What&apos;s your content strategy goal?</Text>
                 <Text style={styles.subheading}>
@@ -117,7 +136,21 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
                     value={prompt}
                     onChangeText={setPrompt}
                     multiline
+                    // Native: the return key submits instead of inserting a
+                    // newline (multiline is kept only so long text wraps).
+                    submitBehavior="submit"
                     onSubmitEditing={handleSubmit}
+                    onKeyPress={(e: any) => {
+                        // Web: Enter sends, Shift+Enter inserts a newline.
+                        if (
+                            Platform.OS === "web" &&
+                            e?.nativeEvent?.key === "Enter" &&
+                            !e?.nativeEvent?.shiftKey
+                        ) {
+                            e.preventDefault?.();
+                            handleSubmit();
+                        }
+                    }}
                 />
                 <Pressable
                     style={({ pressed }) => [
@@ -187,7 +220,9 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
                     </View>
                 </View>
             )}
-        </View>
+                </View>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
 };
 
@@ -195,6 +230,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
     return useMemo(
         () =>
             StyleSheet.create({
+                flex: {
+                    flex: 1,
+                },
                 container: {
                     flex: 1,
                     alignItems: "center",

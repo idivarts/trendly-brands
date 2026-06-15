@@ -2,7 +2,7 @@ import { useAIQuickEdit } from "@/hooks/use-ai-quick-edit";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 interface Props {
     visible: boolean;
@@ -43,13 +43,26 @@ const AIQuickEditModal: React.FC<Props> = ({
 
     const run = () => {
         if (!prompt.trim()) return;
+        Keyboard.dismiss();
         runEdit({ selectedText, prompt: prompt.trim(), model, module, contextId });
     };
 
     return (
         <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-            <Pressable style={styles.backdrop} onPress={onClose}>
-                <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <KeyboardAvoidingView
+                style={styles.kav}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+            >
+                <Pressable style={styles.backdrop} onPress={onClose}>
+                    <Pressable
+                        style={styles.sheet}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            // Tapping anywhere on the sheet outside the text field
+                            // dismisses the keyboard.
+                            Keyboard.dismiss();
+                        }}
+                    >
                     <Text style={styles.title}>Edit with AI</Text>
 
                     {selectedText.length > 0 && (
@@ -107,8 +120,9 @@ const AIQuickEditModal: React.FC<Props> = ({
                             <Text style={styles.acceptText}>Accept</Text>
                         </Pressable>
                     </View>
+                    </Pressable>
                 </Pressable>
-            </Pressable>
+            </KeyboardAvoidingView>
         </Modal>
     );
 };
@@ -117,6 +131,7 @@ export default AIQuickEditModal;
 
 const makeStyles = (colors: any) =>
     StyleSheet.create({
+        kav: { flex: 1 },
         backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", padding: 16 },
         sheet: {
             backgroundColor: colors.card,

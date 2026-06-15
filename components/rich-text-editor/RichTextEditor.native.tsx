@@ -4,6 +4,7 @@ import {
     faBold,
     faCheck,
     faChevronDown,
+    faCommentDots,
     faImage,
     faItalic,
     faLink,
@@ -41,6 +42,9 @@ import LinkInsertModal from "./LinkInsertModal";
 
 /** Hard ceiling (px) for an inserted image's display width. */
 const MAX_IMAGE_WIDTH = 720;
+
+/** Height of the keyboard-docked formatting bar (used to reserve scroll room). */
+const ACCESSORY_HEIGHT = 48;
 
 /**
  * Resolves an image URL's display dimensions, scaled down to fit `maxWidth`
@@ -110,9 +114,12 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     const editable = lock ? lock.editable : true;
     const editorRef = useRef<EnrichedTextInputInstance>(null);
     const [stylesState, setStylesState] = useState<OnChangeStateEvent | null>(null);
-    // iOS keyboards have no built-in dismiss key — track visibility so we can
-    // surface a "collapse keyboard" button in the toolbar while typing.
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    // Track keyboard visibility + height so the formatting bar can dock to the
+    // top of the keyboard (an input-accessory style bar) and disappear with it.
+    const [keyboard, setKeyboard] = useState({ visible: false, height: 0 });
+    // Selection-gated actions (Quick Edit, Comment) only appear when the user
+    // has an actual text selection in the editor.
+    const [hasSelection, setHasSelection] = useState(false);
     const [quickEditVisible, setQuickEditVisible] = useState(false);
     const [linkModalVisible, setLinkModalVisible] = useState(false);
     const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -146,15 +153,17 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         [colors]
     );
 
-    // iOS only: watch the keyboard so the dismiss button appears exactly when
-    // there's a keyboard to dismiss. (Android already shows a back-to-collapse.)
+    // Watch the keyboard so the formatting bar can sit flush on top of it and
+    // vanish when it closes. iOS fires the *Will* events (smoother, with the
+    // animation); Android only fires the *Did* events.
     useEffect(() => {
-        if (Platform.OS !== "ios") return;
-        const show = Keyboard.addListener("keyboardWillShow", () =>
-            setKeyboardVisible(true)
+        const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+        const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+        const show = Keyboard.addListener(showEvt, (e) =>
+            setKeyboard({ visible: true, height: e.endCoordinates?.height ?? 0 })
         );
-        const hide = Keyboard.addListener("keyboardWillHide", () =>
-            setKeyboardVisible(false)
+        const hide = Keyboard.addListener(hideEvt, () =>
+            setKeyboard({ visible: false, height: 0 })
         );
         return () => {
             show.remove();
@@ -162,15 +171,31 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         };
     }, []);
 
+    // "Edit" → drop the user straight into typing: as soon as the device takes
+    // the lock (editable flips false→true), focus the editor so the keyboard
+    // opens instantly. We only react to the transition so a screen that mounts
+    // already-editable (e.g. ScriptEditor) doesn't steal focus on load.
+    const prevEditableRef = useRef(editable);
+    useEffect(() => {
+        if (editable && !prevEditableRef.current) {
+            // Defer a tick so the native input has applied editable=true before
+            // we ask it to become first responder.
+            const t = setTimeout(() => editorRef.current?.focus(), 50);
+            prevEditableRef.current = editable;
+            return () => clearTimeout(t);
+        }
+        prevEditableRef.current = editable;
+    }, [editable]);
+
     const dismissKeyboard = useCallback(() => {
         editorRef.current?.blur();
         Keyboard.dismiss();
     }, []);
 
-    // react-native-enriched does not expose selected text directly via state,
-    // so selection-based actions (Send to Chat, Comment) are limited on native.
     // Quick Edit takes the entire current content as the "selected text" and
-    // applies the AI-rewritten result as the new content.
+    // applies the AI-rewritten result as the new content. (The native rich-text
+    // engine has no replace-range API, so the rewrite is whole-document; the
+    // button is only offered once the user has made a selection.)
     const handleAIQuickEditAccept = useCallback(
         (newText: string) => {
             onChange(newText);
@@ -178,6 +203,22 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         },
         [onChange]
     );
+
+    const openQuickEdit = useCallback(() => {
+        // Close the keyboard so the Quick Edit modal isn't crowded by it.
+        dismissKeyboard();
+        setQuickEditVisible(true);
+    }, [dismissKeyboard]);
+
+    // Comment on the current selection. Selection offsets/text are captured live
+    // in selectionRef (the modal/popover blurs the editor, clearing the live
+    // selection by the time we read it).
+    const handleComment = useCallback(() => {
+        const { start, end, text } = selectionRef.current;
+        if (!text || !onSnippetComment) return;
+        dismissKeyboard();
+        onSnippetComment(text, start, end);
+    }, [onSnippetComment, dismissKeyboard]);
 
     // Apply a link to the captured selection, or insert a new link at the caret.
     const handleInsertLink = useCallback((text: string, url: string) => {
@@ -250,9 +291,114 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
 
     return (
         <View style={styles.container}>
-            {/* ── Toolbar (editing) or lock bar (read-only) ──────────────────── */}
+            {/* ── Top bar: selection actions + "Done" (editing) or lock bar ──────
+                Formatting controls dock to the top of the keyboard (accessory bar
+                below). The top bar hosts the selection-gated Comment / Quick Edit
+                actions on the left and "Done" on the right. It's only rendered
+                when it has something to show (a Done action or a live selection). */}
             {editable ? (
-                <View style={styles.toolbar}>
+                lock?.onEndEdit || hasSelection ? (
+                    <View style={styles.topBar}>
+                        <View style={styles.topBarLeft}>
+                            {/* Comment + Quick Edit only make sense on a selection. */}
+                            {hasSelection && onSnippetComment && (
+                                <Pressable
+                                    style={styles.selectionAction}
+                                    onPress={handleComment}
+                                    accessibilityLabel="Comment on selection"
+                                >
+                                    <FontAwesomeIcon icon={faCommentDots} size={12} color={colors.secondaryText} />
+                                    <Text style={styles.selectionActionText}>Comment</Text>
+                                </Pressable>
+                            )}
+                            {hasSelection && (
+                                <Pressable
+                                    style={styles.selectionAction}
+                                    onPress={openQuickEdit}
+                                    accessibilityLabel="Quick Edit with AI"
+                                >
+                                    <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText} />
+                                    <Text style={styles.selectionActionText}>Quick Edit</Text>
+                                </Pressable>
+                            )}
+                        </View>
+                        {/* "Done" releases the lock so web can resume co-editing. */}
+                        {lock?.onEndEdit && (
+                            <Pressable style={styles.doneAction} onPress={lock.onEndEdit}>
+                                <FontAwesomeIcon icon={faCheck} size={12} color={colors.onPrimary} />
+                                <Text style={styles.doneActionText}>Done</Text>
+                            </Pressable>
+                        )}
+                    </View>
+                ) : null
+            ) : (
+                <View style={styles.lockBar}>
+                    <FontAwesomeIcon icon={faLock} size={13} color={colors.textSecondary} />
+                    <Text style={styles.lockBarText} numberOfLines={1}>
+                        {lock?.finalized
+                            ? "Finalized — duplicate to edit"
+                            : lock?.lockedByName
+                            ? `${lock.lockedByName} is editing`
+                            : "View only"}
+                    </Text>
+                    {!lock?.finalized && !lock?.lockedByName && lock?.onRequestEdit && (
+                        <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
+                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                            <Text style={styles.editActionText}>Edit</Text>
+                        </Pressable>
+                    )}
+                </View>
+            )}
+
+            {/* ── Editor ───────────────────────────────────────────────────── */}
+            <KeyboardAvoidingView
+                style={styles.kavContainer}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={0}
+            >
+                <ScrollView
+                    style={styles.editorScroll}
+                    contentContainerStyle={[
+                        styles.editorScrollContent,
+                        // Reserve room so the last line clears the keyboard-docked
+                        // formatting bar instead of hiding behind it.
+                        keyboard.visible && { paddingBottom: ACCESSORY_HEIGHT },
+                    ]}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <EnrichedTextInput
+                        ref={editorRef}
+                        editable={editable}
+                        htmlStyle={htmlStyle}
+                        defaultValue={ensureEnrichedHtml(content || "")}
+                        // Run native output through the same canonical normaliser
+                        // the web editor uses, so both export identical rich text.
+                        onChangeHtml={(event) =>
+                            onChange(ensureEnrichedHtml(event.nativeEvent.value))
+                        }
+                        onChangeState={(event) => setStylesState(event.nativeEvent)}
+                        onChangeSelection={(event) => {
+                            selectionRef.current = event.nativeEvent;
+                            setHasSelection(event.nativeEvent.end > event.nativeEvent.start);
+                        }}
+                        placeholder="Write your content strategy..."
+                        placeholderTextColor={colors.textSecondary}
+                        style={{
+                            ...styles.editor,
+                            backgroundColor: colors.background,
+                            borderColor: colors.outline,
+                            color: colors.text,
+                        }}
+                    />
+                </ScrollView>
+            </KeyboardAvoidingView>
+
+            {/* ── Formatting accessory — docked to the top of the keyboard ─────
+                Sits flush above the keyboard while editing (input-accessory
+                style). Holds the format buttons plus the selection-gated
+                Quick Edit / Comment actions and a keyboard-collapse button. */}
+            {editable && keyboard.visible && (
+                <View style={[styles.accessory, { bottom: keyboard.height }]}>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -281,97 +427,25 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     </ScrollView>
 
                     <View style={styles.toolbarRight}>
-                        {/* Collapse-keyboard button — iOS keyboards lack one. Shown
-                            only while the keyboard is up so it never lingers. */}
-                        {keyboardVisible && (
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.dismissBtn,
-                                    pressed && styles.toolbarBtnPressed,
-                                ]}
-                                onPress={dismissKeyboard}
-                                hitSlop={6}
-                                accessibilityLabel="Collapse keyboard"
-                            >
-                                <FontAwesomeIcon
-                                    icon={faChevronDown}
-                                    size={13}
-                                    color={colors.textSecondary}
-                                />
-                            </Pressable>
-                        )}
-                        {/* Quick Edit always available on native (no selection required) */}
+                        {/* Collapse-keyboard button — iOS keyboards lack one. */}
                         <Pressable
-                            style={styles.selectionAction}
-                            onPress={() => setQuickEditVisible(true)}
+                            style={({ pressed }) => [
+                                styles.dismissBtn,
+                                pressed && styles.toolbarBtnPressed,
+                            ]}
+                            onPress={dismissKeyboard}
+                            hitSlop={6}
+                            accessibilityLabel="Collapse keyboard"
                         >
-                            <FontAwesomeIcon icon={faPen} size={12} color={colors.secondaryText} />
-                            <Text style={styles.selectionActionText}>Quick Edit</Text>
+                            <FontAwesomeIcon
+                                icon={faChevronDown}
+                                size={13}
+                                color={colors.textSecondary}
+                            />
                         </Pressable>
-                        {/* "Done" releases the lock so web can resume co-editing. */}
-                        {lock?.onEndEdit && (
-                            <Pressable style={styles.doneAction} onPress={lock.onEndEdit}>
-                                <FontAwesomeIcon icon={faCheck} size={12} color={colors.onPrimary} />
-                                <Text style={styles.doneActionText}>Done</Text>
-                            </Pressable>
-                        )}
                     </View>
                 </View>
-            ) : (
-                <View style={styles.lockBar}>
-                    <FontAwesomeIcon icon={faLock} size={13} color={colors.textSecondary} />
-                    <Text style={styles.lockBarText} numberOfLines={1}>
-                        {lock?.finalized
-                            ? "Finalized — duplicate to edit"
-                            : lock?.lockedByName
-                            ? `${lock.lockedByName} is editing`
-                            : "View only"}
-                    </Text>
-                    {!lock?.finalized && !lock?.lockedByName && lock?.onRequestEdit && (
-                        <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
-                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
-                            <Text style={styles.editActionText}>Edit</Text>
-                        </Pressable>
-                    )}
-                </View>
             )}
-
-            {/* ── Editor ───────────────────────────────────────────────────── */}
-            <KeyboardAvoidingView
-                style={styles.kavContainer}
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 180 : 0}
-            >
-                <ScrollView
-                    style={styles.editorScroll}
-                    contentContainerStyle={styles.editorScrollContent}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <EnrichedTextInput
-                        ref={editorRef}
-                        editable={editable}
-                        htmlStyle={htmlStyle}
-                        defaultValue={ensureEnrichedHtml(content || "")}
-                        // Run native output through the same canonical normaliser
-                        // the web editor uses, so both export identical rich text.
-                        onChangeHtml={(event) =>
-                            onChange(ensureEnrichedHtml(event.nativeEvent.value))
-                        }
-                        onChangeState={(event) => setStylesState(event.nativeEvent)}
-                        onChangeSelection={(event) => {
-                            selectionRef.current = event.nativeEvent;
-                        }}
-                        placeholder="Write your content strategy..."
-                        placeholderTextColor={colors.textSecondary}
-                        style={{
-                            ...styles.editor,
-                            backgroundColor: colors.background,
-                            borderColor: colors.outline,
-                            color: colors.text,
-                        }}
-                    />
-                </ScrollView>
-            </KeyboardAvoidingView>
 
             {/* ── AI Quick Edit modal — streaming, with Accept/Discard ──── */}
             <AIQuickEditModal
@@ -406,9 +480,10 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         container: {
             flex: 1,
         },
-        toolbar: {
+        topBar: {
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "space-between",
             paddingHorizontal: 14,
             paddingVertical: 10,
             backgroundColor: colors.card,
@@ -417,6 +492,31 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             shadowRadius: 8,
             shadowOpacity: 0.07,
             elevation: 3,
+        },
+        topBarLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 1,
+        },
+        // Formatting bar docked to the top edge of the keyboard. Absolutely
+        // positioned; `bottom` is set dynamically to the live keyboard height.
+        accessory: {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            height: ACCESSORY_HEIGHT,
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 14,
+            backgroundColor: colors.card,
+            zIndex: 10,
+            // Upward shadow so it reads as a layer floating over the editor.
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -3 },
+            shadowRadius: 8,
+            shadowOpacity: 0.08,
+            elevation: 8,
         },
         toolbarScroll: {
             flex: 1,
