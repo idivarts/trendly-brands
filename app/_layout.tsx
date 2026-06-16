@@ -129,7 +129,7 @@ const RootLayoutStack = () => {
             resetAndNavigate("/lets-start");
         }
         // Redirect to respective screen
-    }, [session, isLoading]);
+    }, [session, isLoading, pathname]);
 
     return (
         <ThemeProvider value={navigationTheme}>

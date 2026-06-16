@@ -29,6 +29,8 @@ export interface PostingSummaryProps {
     formattedDate: string;
     timeOfPosting: string;
     onEdit: () => void;
+    /** When the content is posted/locked, hide the Edit affordance entirely. */
+    locked?: boolean;
 }
 
 const PostingSummary: React.FC<PostingSummaryProps> = ({
@@ -38,6 +40,7 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
     formattedDate,
     timeOfPosting,
     onEdit,
+    locked = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -108,15 +111,17 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
                     </View>
                 </View>
 
-                <Pressable
-                    style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-                    onPress={onEdit}
-                    accessibilityRole="button"
-                    accessibilityLabel="Edit destinations and schedule"
-                >
-                    <FontAwesomeIcon icon={faPen} size={11} color={colors.primary} />
-                    <Text style={styles.editText}>Edit</Text>
-                </Pressable>
+                {!locked ? (
+                    <Pressable
+                        style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+                        onPress={onEdit}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit destinations and schedule"
+                    >
+                        <FontAwesomeIcon icon={faPen} size={11} color={colors.primary} />
+                        <Text style={styles.editText}>Edit</Text>
+                    </Pressable>
+                ) : null}
             </View>
         </View>
     );

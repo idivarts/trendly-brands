@@ -20,6 +20,7 @@ import {
     CONTENT_STATUS_LABELS,
     ContentItem,
     ContentStatus,
+    postingTime,
 } from "./types";
 
 interface ContentBoardProps {
@@ -35,14 +36,6 @@ type BoardColumn = {
     title: string;
     cards: ContentItem[];
 };
-
-/**
- * Posting date as a sortable timestamp — mirrors the date shown on the card:
- * the scheduled time if set, otherwise the planned calendar `date`.
- */
-function postingTime(item: ContentItem): number {
-    return item.scheduledAt ?? new Date(item.date + "T00:00:00").getTime();
-}
 
 function buildColumns(items: ContentItem[]): BoardColumn[] {
     return BOARD_CONTENT_STATUSES.map((status) => ({
