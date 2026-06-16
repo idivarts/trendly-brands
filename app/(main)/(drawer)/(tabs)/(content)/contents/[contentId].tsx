@@ -807,6 +807,9 @@ const CreateContentScreen = () => {
                                     timeOfPosting={timeOfPosting}
                                     onEdit={() => setShowPublishModal(true)}
                                     locked={status === "posted"}
+                                    postedAt={
+                                        status === "posted" ? seedItem?.scheduledAt : undefined
+                                    }
                                 />
                             </View>
                         ) : null}
