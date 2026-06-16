@@ -21,7 +21,19 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 // once the user has configured where/when to post. Tapping Edit reopens the
 // publish modal. Keeps the heavy controls off the page.
 
-const PUBLISHABLE = new Set(["instagram", "facebook"]);
+const PUBLISHABLE = new Set(["instagram", "facebook", "linkedin"]);
+
+// Brand colour for a platform's dot indicator.
+const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) => {
+    switch (platform) {
+        case "instagram":
+            return colors.socialInstagram;
+        case "linkedin":
+            return colors.socialLinkedin;
+        default:
+            return colors.socialFacebook;
+    }
+};
 
 export interface PostingSummaryProps {
     socialAccounts: ISocialAccount[];
@@ -99,10 +111,7 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
                     {/* Destinations */}
                     <View style={styles.destRow}>
                         {selected.map((a) => {
-                            const dot =
-                                a.platform === "instagram"
-                                    ? colors.socialInstagram
-                                    : colors.socialFacebook;
+                            const dot = platformDotColor(a.platform, colors);
                             const label = socialAccountLabel(a);
                             return (
                                 <View key={a.id} style={styles.destChip}>

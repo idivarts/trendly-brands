@@ -45,7 +45,19 @@ interface ScheduleBarProps {
 }
 
 // Only these platforms are publishable from Trendly today.
-const PUBLISHABLE = new Set(["instagram", "facebook"]);
+const PUBLISHABLE = new Set(["instagram", "facebook", "linkedin"]);
+
+// Brand colour for a platform's dot indicator.
+const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) => {
+    switch (platform) {
+        case "instagram":
+            return colors.socialInstagram;
+        case "linkedin":
+            return colors.socialLinkedin;
+        default:
+            return colors.socialFacebook;
+    }
+};
 
 const ScheduleBar: React.FC<ScheduleBarProps> = ({
     socialAccounts,
@@ -127,8 +139,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
             : "Schedule post";
 
     const renderAccountChip = (a: ISocialAccount, on: boolean, onPress?: () => void) => {
-        const dot =
-            a.platform === "instagram" ? colors.socialInstagram : colors.socialFacebook;
+        const dot = platformDotColor(a.platform, colors);
         const label = socialAccountLabel(a);
         return (
             <Pressable
@@ -189,7 +200,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
 
             {accounts.length === 0 ? (
                 <Text style={styles.emptyAccounts}>
-                    No connected accounts yet. Connect Instagram or Facebook to publish.
+                    No connected accounts yet. Connect Instagram, Facebook or LinkedIn to publish.
                 </Text>
             ) : showDestPicker ? (
                 <View style={styles.accountRow}>
