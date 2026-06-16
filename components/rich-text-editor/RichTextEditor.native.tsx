@@ -1,5 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
-import { ensureEnrichedHtml } from "@/utils/rich-text";
+import { aiResultToEnrichedFragment, ensureEnrichedHtml } from "@/utils/rich-text";
 import {
     faBold,
     faCheck,
@@ -130,6 +130,15 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         end: 0,
         text: "",
     });
+    // Snapshot of the selection text shown in (and edited by) the Quick Edit
+    // modal. Taken when the modal opens, since dismissing the keyboard blurs the
+    // editor and collapses the live selection.
+    const [quickEditText, setQuickEditText] = useState("");
+    const quickEditSelRef = useRef<{ start: number; end: number; text: string }>({
+        start: 0,
+        end: 0,
+        text: "",
+    });
 
     const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -192,21 +201,37 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
         Keyboard.dismiss();
     }, []);
 
-    // Quick Edit takes the entire current content as the "selected text" and
-    // applies the AI-rewritten result as the new content. (The native rich-text
-    // engine has no replace-range API, so the rewrite is whole-document; the
-    // button is only offered once the user has made a selection.)
-    const handleAIQuickEditAccept = useCallback(
-        (newText: string) => {
-            onChange(newText);
-            setQuickEditVisible(false);
-        },
-        [onChange]
-    );
+    // The selection's plain text is sent to the AI (see openQuickEdit). On
+    // accept we drop the AI result back over *just* that selection via the
+    // patched native `replaceRange(start,end,html)` command (iOS + Android),
+    // which parses the HTML fragment and splices it into the range — handles
+    // multi-block selections and keeps formatting.
+    const handleAIQuickEditAccept = useCallback((newText: string) => {
+        const sel = quickEditSelRef.current;
+        const fragment = aiResultToEnrichedFragment(newText);
+        if (fragment) {
+            editorRef.current?.replaceRange(sel.start, sel.end, fragment);
+        }
+        setQuickEditVisible(false);
+    }, []);
 
-    const openQuickEdit = useCallback(() => {
+    const openQuickEdit = useCallback(async () => {
+        // Snapshot the selection (offsets + text) before blurring (dismissing the
+        // keyboard collapses the live selection).
+        const sel = { ...selectionRef.current };
+        quickEditSelRef.current = sel;
         // Close the keyboard so the Quick Edit modal isn't crowded by it.
         dismissKeyboard();
+        // Fetch the selection's HTML so the AI edits (and returns) rich markup,
+        // mirroring web. Falls back to plain text if the fetch fails.
+        let payload = sel.text;
+        try {
+            const html = await editorRef.current?.getHTMLForRange(sel.start, sel.end);
+            if (html && html.trim()) payload = html;
+        } catch {
+            // keep the plain-text fallback
+        }
+        setQuickEditText(payload);
         setQuickEditVisible(true);
     }, [dismissKeyboard]);
 
@@ -451,7 +476,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
             <AIQuickEditModal
                 visible={quickEditVisible}
                 onClose={() => setQuickEditVisible(false)}
-                selectedText={content}
+                selectedText={quickEditText}
                 module={aiModule}
                 contextId={strategyId}
                 onAccept={handleAIQuickEditAccept}
