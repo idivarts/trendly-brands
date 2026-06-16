@@ -32,7 +32,7 @@ interface AddContentModalProps {
     onAdd: (item: Omit<CalendarItem, "id">) => void;
 }
 
-const TYPES: ContentType[] = ["reel", "post", "story", "carousel", "live"];
+const TYPES: ContentType[] = ["reel", "post", "story", "carousel", "live", "text"];
 
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 

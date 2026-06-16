@@ -286,9 +286,19 @@ export function useStrategies(): UseStrategiesReturn {
             const copy: IStrategy = {
                 name: `${src.name} (Copy)`,
                 managerId,
+                status: StrategyStatus.Active,
+                markdownContent: src.markdownContent ?? "",
+                reviewStatus: "draft",
+                editLock: null,
+                createdAt: now,
+                updatedAt: now,
+            };
+
+            // Firestore rejects `undefined` field values, so only carry over the
+            // optional fields the source actually has.
+            const optional: Partial<IStrategy> = {
                 description: src.description,
                 objective: src.objective,
-                status: StrategyStatus.Active,
                 timeline: src.timeline,
                 platforms: src.platforms,
                 contentFormats: src.contentFormats,
@@ -296,12 +306,12 @@ export function useStrategies(): UseStrategiesReturn {
                 budget: src.budget,
                 targetAudience: src.targetAudience,
                 numberOfInfluencers: src.numberOfInfluencers,
-                markdownContent: src.markdownContent ?? "",
-                reviewStatus: "draft",
-                editLock: null,
-                createdAt: now,
-                updatedAt: now,
             };
+            for (const [key, value] of Object.entries(optional)) {
+                if (value !== undefined) {
+                    (copy as unknown as Record<string, unknown>)[key] = value;
+                }
+            }
 
             const strategiesRef = collection(FirestoreDB, "brands", brandId, "strategies");
             const docRef = await addDoc(strategiesRef, copy);
@@ -644,4 +654,5 @@ export function useStrategies(): UseStrategiesReturn {
     };
 }
 
-export { PRESENCE_TTL_MS, EDIT_LOCK_TTL_MS };
+export { EDIT_LOCK_TTL_MS, PRESENCE_TTL_MS };
+

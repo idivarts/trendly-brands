@@ -1,4 +1,5 @@
 import { ContentType } from "@/components/content-calendar/types";
+import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
@@ -15,7 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -47,6 +48,7 @@ const SUBTITLE: Record<ContentType, string> = {
     carousel: "Add slides in order — upload or generate each one.",
     story: "Upload an image or generate one with AI.",
     live: "",
+    text: "",
 };
 
 const MediaStage: React.FC<MediaStageProps> = ({
@@ -69,13 +71,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPrompt, setShowPrompt] = useState(false);
-
-    // Close the floating prompt once a generation finishes (true → false).
-    const wasGeneratingRef = useRef(false);
-    useEffect(() => {
-        if (wasGeneratingRef.current && !isGeneratingImage) setShowPrompt(false);
-        wasGeneratingRef.current = isGeneratingImage;
-    }, [isGeneratingImage]);
 
     const handleUpload = useCallback(async () => {
         setError(null);
@@ -224,17 +219,11 @@ const MediaStage: React.FC<MediaStageProps> = ({
             {/* Generation progress — image jobs run on the backend, so this also
                 shows after a reload while a job is still finishing. */}
             {isGeneratingImage ? (
-                <View style={styles.generatingBox}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <View style={styles.generatingTextWrap}>
-                        <Text style={styles.generatingTitle}>
-                            {spec.multi ? "Generating slide…" : "Generating image…"}
-                        </Text>
-                        <Text style={styles.generatingSub}>
-                            This can take up to a minute. You can keep working — it'll appear
-                            here automatically when it's ready.
-                        </Text>
-                    </View>
+                <View style={styles.generatingWrap}>
+                    <AIGeneratingHint
+                        title={spec.multi ? "Generating slide…" : "Generating image…"}
+                        subtitle="This can take up to a minute. You can keep working — it'll appear here automatically when it's ready."
+                    />
                 </View>
             ) : null}
 
@@ -301,7 +290,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     subtitle="Describe the visual — style, subject, brand colours…"
                     placeholder="E.g. minimalist flat-lay of orthopedic sandals on a warm beige background…"
                     ctaLabel={spec.multi ? "Generate slide" : "Generate image"}
-                    loading={isGeneratingImage}
                     initialValue={imagePrompt}
                     onClose={() => setShowPrompt(false)}
                     onGenerate={(prompt) => {
@@ -447,35 +435,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontWeight: "600",
             color: colors.textSecondary,
         },
-        generatingBox: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            paddingVertical: 12,
-            paddingHorizontal: 14,
-            borderRadius: 10,
-            backgroundColor: colors.tag,
+        generatingWrap: {
             marginBottom: 12,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowRadius: 3,
-            shadowOpacity: 0.04,
-            elevation: 1,
-        },
-        generatingTextWrap: {
-            flex: 1,
-            minWidth: 0,
-        },
-        generatingTitle: {
-            fontSize: 13,
-            fontWeight: "700",
-            color: colors.text,
-            marginBottom: 2,
-        },
-        generatingSub: {
-            fontSize: 11,
-            color: colors.textSecondary,
-            lineHeight: 16,
         },
         errorText: {
             fontSize: 12,

@@ -8,6 +8,7 @@ import {
     faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
 import {
+    faAlignLeft,
     faCalendarDays,
     faGlobe,
     faImage,
@@ -36,6 +37,8 @@ function typeGlyph(type: ContentItem["type"]): IconDefinition {
         case "reel":
         case "live":
             return faVideo;
+        case "text":
+            return faAlignLeft;
         default:
             return faImage;
     }

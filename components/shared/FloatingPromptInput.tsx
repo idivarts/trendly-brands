@@ -8,9 +8,8 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
     Modal,
     Pressable,
     StyleSheet,
@@ -27,8 +26,11 @@ import {
 //               purple → primary gradient frame — reads as a distinct "AI" surface.
 // • Mobile (!xl): a plain centered modal sheet.
 //
-// The component owns the prompt text; the parent only receives the final string
-// via onGenerate. Pass `loading` to show the in-flight state on the CTA.
+// The component is a pure prompt-collector: it owns the prompt text, and on submit
+// it hands the final string to the parent via onGenerate and immediately closes
+// itself (onClose). It deliberately does NOT own any in-flight / loading state —
+// the parent runs the request and shows progress inline (see AIGeneratingHint) so
+// the user can keep working on the rest of the page while generation happens.
 
 export interface FloatingPromptInputProps {
     visible: boolean;
@@ -38,8 +40,6 @@ export interface FloatingPromptInputProps {
     placeholder?: string;
     /** CTA label. Defaults to "Generate". */
     ctaLabel?: string;
-    /** Shows a spinner + disables the CTA while a request is in flight. */
-    loading?: boolean;
     /** Seed the field (e.g. an existing prompt to refine). */
     initialValue?: string;
     onClose: () => void;
@@ -52,7 +52,6 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
     subtitle,
     placeholder = "Describe what you want the AI to create…",
     ctaLabel = "Generate",
-    loading = false,
     initialValue = "",
     onClose,
     onGenerate,
@@ -72,8 +71,11 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
 
     const submit = () => {
         const value = prompt.trim();
-        if (!value || loading) return;
+        if (!value) return;
+        // Hand the prompt off and get out of the way — the parent owns the
+        // request + its progress indicator, so the page stays usable.
         onGenerate(value);
+        onClose();
     };
 
     const gradient: [string, string] = [colors.aiGradientStart, colors.aiGradientEnd];
@@ -134,7 +136,7 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                             />
                             <Pressable
                                 onPress={submit}
-                                disabled={!prompt.trim() || loading}
+                                disabled={!prompt.trim()}
                                 style={({ pressed }) => [pressed && styles.pressed]}
                                 accessibilityRole="button"
                                 accessibilityLabel={ctaLabel}
@@ -145,23 +147,19 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                                     end={{ x: 1, y: 1 }}
                                     style={[
                                         styles.sendBtn,
-                                        (!prompt.trim() || loading) && styles.sendBtnDisabled,
+                                        !prompt.trim() && styles.sendBtnDisabled,
                                     ]}
                                 >
-                                    {loading ? (
-                                        <ActivityIndicator size="small" color={colors.onPrimary} />
-                                    ) : (
-                                        <FontAwesomeIcon
-                                            icon={faArrowUp}
-                                            size={16}
-                                            color={colors.onPrimary}
-                                        />
-                                    )}
+                                    <FontAwesomeIcon
+                                        icon={faArrowUp}
+                                        size={16}
+                                        color={colors.onPrimary}
+                                    />
                                 </LinearGradient>
                             </Pressable>
                         </View>
 
-                        <Text style={styles.cta}>{loading ? "Generating…" : `Press ↵ to ${ctaLabel.toLowerCase()}`}</Text>
+                        <Text style={styles.cta}>{`Press ↵ to ${ctaLabel.toLowerCase()}`}</Text>
                     </View>
                 </LinearGradient>
             </View>
