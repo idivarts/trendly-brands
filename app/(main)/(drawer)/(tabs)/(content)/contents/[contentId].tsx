@@ -198,7 +198,29 @@ const CreateContentScreen = () => {
 
     const contentType = (seedItem?.type ?? paramType ?? "post") as ContentType;
     const isReel = contentType === "reel";
+    const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
+
+    // Instagram has no text-only post format, so a text post can only target
+    // Facebook / LinkedIn / X. Hide Instagram from the destination picker and
+    // prune any Instagram destination that may already be selected.
+    const publishableAccounts = useMemo(
+        () =>
+            isTextPost
+                ? socialAccounts.filter((a) => a.platform !== "instagram")
+                : socialAccounts,
+        [socialAccounts, isTextPost]
+    );
+
+    // A text post can't go to Instagram — drop any Instagram destination if the
+    // type is (or becomes) text.
+    useEffect(() => {
+        if (!isTextPost) return;
+        setDestinations((prev) => {
+            const next = prev.filter((d) => d.platform !== "instagram");
+            return next.length === prev.length ? prev : next;
+        });
+    }, [isTextPost]);
 
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -327,12 +349,12 @@ const CreateContentScreen = () => {
     // accounts, surface a blocking modal that routes to Connected Accounts
     // instead of opening the publish/schedule sheet.
     const handleOpenPublish = useCallback(() => {
-        if (socialAccounts.length === 0) {
+        if (publishableAccounts.length === 0) {
             setShowNoSocialsModal(true);
             return;
         }
         setShowPublishModal(true);
-    }, [socialAccounts.length]);
+    }, [publishableAccounts.length]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
     // and reverts status to "approved", which unlocks the editor again. Returns
@@ -801,7 +823,7 @@ const CreateContentScreen = () => {
                         {destinations.length > 0 ? (
                             <View style={styles.section}>
                                 <PostingSummary
-                                    socialAccounts={socialAccounts}
+                                    socialAccounts={publishableAccounts}
                                     destinations={destinations}
                                     scheduleMode={scheduleMode}
                                     formattedDate={formattedDate}
@@ -879,14 +901,20 @@ const CreateContentScreen = () => {
                             )}
                         </View>
 
-                        {/* ── Caption ──────────────────────────────────────────── */}
+                        {/* ── Caption / Content ────────────────────────────────── */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>CAPTION</Text>
+                            <Text style={styles.sectionLabel}>
+                                {contentType === "text" ? "CONTENT" : "CAPTION"}
+                            </Text>
                             <View style={styles.card}>
                                 <View style={styles.inputWithWand}>
                                     <TextInput
                                         style={[styles.input, styles.inputFlex, styles.textAreaShort]}
-                                        placeholder="Write a compelling caption for this post..."
+                                        placeholder={
+                                            contentType === "text"
+                                                ? "Write your post..."
+                                                : "Write a compelling caption for this post..."
+                                        }
                                         placeholderTextColor={colors.textSecondary}
                                         value={caption}
                                         onChangeText={setCaption}
@@ -1132,7 +1160,7 @@ const CreateContentScreen = () => {
             <PublishModal
                 visible={showPublishModal}
                 onClose={() => setShowPublishModal(false)}
-                socialAccounts={socialAccounts}
+                socialAccounts={publishableAccounts}
                 destinations={destinations}
                 onDestinationsChange={setDestinations}
                 scheduleMode={scheduleMode}

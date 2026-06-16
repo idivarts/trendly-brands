@@ -43,15 +43,22 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const styles = useStyles(colors);
     const { socialAccounts } = useBrandSocialContext();
 
-    // Publishable platforms the brand actually has connected (fall back to IG).
+    // A text post is plain text for Facebook / LinkedIn / X — Instagram has no
+    // text-only format, so it's never previewed (or published) as Instagram.
+    const isText = contentType === "text";
+
+    // Publishable platforms the brand actually has connected. Instagram is
+    // excluded for text posts (it can't carry them); fall back accordingly.
     const platforms = useMemo<PreviewPlatform[]>(() => {
         const present = new Set<PreviewPlatform>();
         socialAccounts.forEach((a) => {
             if (a.platform === "instagram" || a.platform === "facebook") present.add(a.platform);
         });
+        if (isText) present.delete("instagram");
         const list = Array.from(present);
-        return list.length ? list : ["instagram"];
-    }, [socialAccounts]);
+        if (list.length) return list;
+        return isText ? ["facebook"] : ["instagram"];
+    }, [socialAccounts, isText]);
 
     const [platform, setPlatform] = useState<PreviewPlatform>(platforms[0]);
     const active = platforms.includes(platform) ? platform : platforms[0];
@@ -146,7 +153,35 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
             ) : null}
 
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                {isStory ? (
+                {isText ? (
+                    // Text post — plain-text card (Facebook / LinkedIn / X), no media.
+                    <View style={styles.postCard}>
+                        <View style={styles.postHeader}>
+                            {avatarNode}
+                            <Text style={styles.postUser} numberOfLines={1}>{username}</Text>
+                            <Text style={styles.postDots}>•••</Text>
+                        </View>
+                        <View style={styles.textBody}>
+                            {caption ? (
+                                <Text style={styles.textBodyText}>{caption}</Text>
+                            ) : (
+                                <Text style={styles.textBodyPlaceholder}>
+                                    Write your post to preview it here…
+                                </Text>
+                            )}
+                            {hashtags ? (
+                                <Text style={[styles.textBodyText, { color: accentColor }]}>
+                                    {hashtags}
+                                </Text>
+                            ) : null}
+                        </View>
+                        <View style={styles.actions}>
+                            <FontAwesomeIcon icon={faHeart} size={18} color={colors.text} />
+                            <FontAwesomeIcon icon={faComment} size={18} color={colors.text} />
+                            <FontAwesomeIcon icon={faPaperPlane} size={17} color={colors.text} />
+                        </View>
+                    </View>
+                ) : isStory ? (
                     // Story / Reel — full-bleed 9:16 with overlaid chrome
                     <View style={styles.storyFrame}>
                         {mediaBox(true)}
@@ -372,6 +407,23 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         captionUser: {
             fontWeight: "700",
+        },
+        // ── Text post ──────────────────────────────────────────────────────
+        textBody: {
+            paddingHorizontal: 14,
+            paddingTop: 4,
+            paddingBottom: 12,
+            gap: 6,
+        },
+        textBodyText: {
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.text,
+        },
+        textBodyPlaceholder: {
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.textSecondary,
         },
         // ── Story / Reel ───────────────────────────────────────────────────
         storyFrame: {
