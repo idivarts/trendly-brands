@@ -156,6 +156,15 @@ export interface PostingUrgency {
     label: string;
 }
 
+/**
+ * Posting date as a sortable timestamp — mirrors the date shown on the card:
+ * the scheduled time if set, otherwise the planned calendar `date`. Shared by
+ * the Board and Gallery views so both order pieces by posting date identically.
+ */
+export function postingTime(item: ContentItem): number {
+    return item.scheduledAt ?? new Date(item.date + "T00:00:00").getTime();
+}
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**

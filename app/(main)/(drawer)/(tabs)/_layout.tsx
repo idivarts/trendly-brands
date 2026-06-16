@@ -149,6 +149,7 @@ const TabLayout = () => {
                     tabBarItemStyle: { display: "none" },
                     headerShown: false,
                 }}
+                getId={({ params }) => params?.contentId as string}
             />
 
             {/* Hidden: gallery-only content library pages (triple-dot menu) */}

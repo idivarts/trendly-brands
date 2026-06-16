@@ -9,7 +9,12 @@ import ContentViewSwitcher, { ContentView } from "@/components/contents/ContentV
 import ContentsOverflowMenu from "@/components/contents/ContentsOverflowMenu";
 import EmptyContentsView from "@/components/contents/EmptyContentsView";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
-import { CONTENT_STATUS_ORDER, ContentItem, ContentStatus } from "@/components/contents/types";
+import {
+    CONTENT_STATUS_ORDER,
+    ContentItem,
+    ContentStatus,
+    postingTime,
+} from "@/components/contents/types";
 import { GUIDE_TOUR_CONTENT_WEB } from "@/components/guide-tour/guide-tour-config";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
@@ -63,13 +68,14 @@ const ContentsScreen = () => {
 
     const activeItems = useMemo(() => items.filter((i) => !i.isArchived), [items]);
 
-    const galleryItems = useMemo(
-        () =>
+    const galleryItems = useMemo(() => {
+        const filtered =
             stateFilter === "all"
                 ? activeItems
-                : activeItems.filter((i) => i.status === stateFilter),
-        [activeItems, stateFilter]
-    );
+                : activeItems.filter((i) => i.status === stateFilter);
+        // Sort by posting date ascending — earliest first, matching Board View.
+        return [...filtered].sort((a, b) => postingTime(a) - postingTime(b));
+    }, [activeItems, stateFilter]);
 
     const handleAddFromFresh = async (calItem: Omit<CalendarItem, "id">) => {
         const newId = await addContent(calItem);

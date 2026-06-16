@@ -24,8 +24,11 @@ import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import RightPanelFab from "@/components/shared/RightPanelFab";
-import ShareButton from "@/components/sharing/ShareButton";
+import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
+import ShareModal from "@/components/sharing/ShareModal";
 import { View } from "@/components/theme/Themed";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import { useAIGenerate } from "@/hooks/use-ai-generate";
@@ -38,7 +41,6 @@ import Colors from "@/shared-uis/constants/Colors";
 import {
     faCalendarXmark,
     faCheck,
-    faCircleInfo,
     faCommentDots,
     faEye,
     faHandshake,
@@ -64,6 +66,15 @@ import {
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
+// Convert a *local-midnight* Date (what the date picker produces) into the
+// epoch for that same calendar day at UTC midnight — the convention every
+// content writer uses for `postingTimeStamp` (see toIContent / calendar drag).
+// Using date.toISOString() here would be wrong: in a positive-offset timezone
+// (e.g. IST) local midnight is the *previous* day in UTC, shifting the stored
+// day back by one.
+const localDateToUtcMidnight = (d: Date): number =>
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+
 const CreateContentScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -79,9 +90,10 @@ const CreateContentScreen = () => {
     const styles = useStyles(colors, xl);
 
     const router = useRouter();
-    const { items, updateContent } = useContents();
+    const { items, updateContent, deleteContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
+    const { openModal } = useConfirmationModel();
 
     // Resolve the live item from the real contents list first; fall back to
     // mock data so demo/test contentIds still work in dev.
@@ -118,6 +130,7 @@ const CreateContentScreen = () => {
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     // Firestore items arrive after first render. Hydrate local form state the
     // first time the real item shows up for this contentId. Tracked per-id so
@@ -225,7 +238,7 @@ const CreateContentScreen = () => {
                 script,
                 imagePrompt,
                 attachments,
-                postingTimeStamp: date ? new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime() : undefined,
+                postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
             });
         } catch (e) {
             console.warn("Save error:", e);
@@ -276,7 +289,7 @@ const CreateContentScreen = () => {
                 destinations,
                 scheduleMode,
                 scheduledAt,
-                postingTimeStamp: new Date(date.toISOString().split("T")[0] + "T00:00:00Z").getTime(),
+                postingTimeStamp: localDateToUtcMidnight(date),
             });
 
             // 2. Trigger publish-now or schedule on the backend.
@@ -321,11 +334,12 @@ const CreateContentScreen = () => {
     }, [socialAccounts.length]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
-    // and reverts status to "approved", which unlocks the editor again.
-    const handleUnschedule = useCallback(async () => {
-        if (!contentId || unscheduling) return;
+    // and reverts status to "approved", which unlocks the editor again. Returns
+    // true on success so callers (e.g. delete) can sequence off it.
+    const handleUnschedule = useCallback(async (): Promise<boolean> => {
+        if (!contentId || unscheduling) return false;
         const brandId = selectedBrand?.id;
-        if (!brandId) return;
+        if (!brandId) return false;
         setUnscheduling(true);
         try {
             const res = await HttpWrapper.fetch(
@@ -336,8 +350,10 @@ const CreateContentScreen = () => {
             setStatus("approved");
             skipDirtyRef.current = true;
             setDirty(false);
+            return true;
         } catch (e) {
             console.warn("Unschedule error:", e);
+            return false;
         } finally {
             setUnscheduling(false);
         }
@@ -346,6 +362,79 @@ const CreateContentScreen = () => {
     const handleCreateCollab = useCallback(() => {
         router.push("/hire-us");
     }, [router]);
+
+    // Shared success path: drop the doc-gone page back to the contents list,
+    // skipping the unsaved-changes guard (the doc no longer exists).
+    const leaveAfterDelete = useCallback(() => {
+        Toaster.success("Content deleted", `"${title || "Content"}" was removed.`);
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/contents");
+        }
+    }, [title, router]);
+
+    // Permanently delete this content (frontend Firestore delete, gated by the
+    // `delete_content` capability + a confirmation modal). Locked states are
+    // guarded:
+    //   • posted   → blocked. The live social post isn't ours to remove, and the
+    //                record is kept for analytics history.
+    //   • scheduled → must unschedule first (cancels the backend Step Functions
+    //                 job), otherwise the delete would orphan it. We chain
+    //                 unschedule → delete behind a single confirm.
+    const handleDelete = useCallback(() => {
+        if (!contentId) return;
+
+        if (status === "posted") {
+            openModal({
+                title: "Can't delete a posted item",
+                description:
+                    "This content has already been published to your connected socials. Deleting it here wouldn't remove the live post — and the record is kept so its performance stays in your analytics.",
+                confirmText: "Got it",
+                cancelText: "",
+                confirmAction: () => {},
+            });
+            return;
+        }
+
+        if (status === "scheduled") {
+            openModal({
+                title: "Unschedule & delete?",
+                description: `"${title || "This content"}" is scheduled to publish. To delete it we'll cancel the schedule first, then permanently remove it. This cannot be undone.`,
+                confirmText: "Unschedule & Delete",
+                cancelText: "Cancel",
+                confirmAction: async () => {
+                    const unscheduled = await handleUnschedule();
+                    if (!unscheduled) {
+                        Toaster.error("Couldn't unschedule", "Please try again.");
+                        return;
+                    }
+                    const ok = await deleteContent(contentId);
+                    if (!ok) {
+                        Toaster.error("Couldn't delete", "Unscheduled, but the delete failed. Please try again.");
+                        return;
+                    }
+                    leaveAfterDelete();
+                },
+            });
+            return;
+        }
+
+        openModal({
+            title: "Delete content?",
+            description: `"${title || "This content"}" will be permanently deleted. This is an irreversible action and cannot be undone.`,
+            confirmText: "Delete Content",
+            cancelText: "Cancel",
+            confirmAction: async () => {
+                const ok = await deleteContent(contentId);
+                if (!ok) {
+                    Toaster.error("Couldn't delete", "Please try again.");
+                    return;
+                }
+                leaveAfterDelete();
+            },
+        });
+    }, [contentId, status, title, openModal, deleteContent, handleUnschedule, leaveAfterDelete]);
 
     // ── Back navigation with an unsaved-changes guard ────────────────────────
     const doNavigateBack = useCallback(() => {
@@ -561,29 +650,19 @@ const CreateContentScreen = () => {
             // Comments / AI Chat / Preview moved to the mobile RightPanelFab
             // (bottom-right); desktop keeps them in the RightSidePanel rail.
 
-            // 🔗 Share (read-only public link)
-            selectedBrand?.id && contentId ? (
-                <ShareButton
-                    key="share"
-                    canShare={hasCapability("manage_content")}
-                    target={{
-                        type: "content",
-                        brandId: selectedBrand.id,
-                        resourceId: contentId,
-                    }}
-                    title={title || "Untitled content"}
-                />
-            ) : null,
-            // ℹ️ Content details (title / idea / status)
-            <Pressable
-                key="info"
-                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                onPress={() => setShowInfoModal(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Content details"
-            >
-                <FontAwesomeIcon icon={faCircleInfo} size={16} color={colors.textSecondary} />
-            </Pressable>,
+            // ⋮ Overflow menu — Content details, Share, and Delete. Grouping the
+            // secondary + destructive actions here keeps the header lean (esp.
+            // on !xl, where Publish + Save already fill the row).
+            <ContentActionsMenu
+                key="menu"
+                onDetails={() => setShowInfoModal(true)}
+                onShare={
+                    selectedBrand?.id && contentId && hasCapability("manage_content")
+                        ? () => setShowShareModal(true)
+                        : undefined
+                }
+                onDelete={hasCapability("delete_content") ? handleDelete : undefined}
+            />,
             // 🚀 Publish / schedule — hidden once locked (scheduled / posted)
             locked ? null : (
                 <Pressable
@@ -606,26 +685,26 @@ const CreateContentScreen = () => {
                     key="save"
                     style={({ pressed }) => [
                         xl ? styles.saveBtn : styles.saveBtnIcon,
-                        saveState === "saved" && styles.saveBtnSaved,
+                        !dirty && styles.saveBtnSaved,
                         pressed && styles.btnPressed,
                     ]}
                     onPress={handleSave}
-                    disabled={saveState === "saving"}
+                    disabled={saveState === "saving" || !dirty}
                     accessibilityRole="button"
-                    accessibilityLabel={dirty ? "Save (unsaved changes)" : "Save"}
+                    accessibilityLabel={dirty ? "Save (unsaved changes)" : "Saved"}
                 >
                     {saveState === "saving" ? (
                         xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
                     ) : (
                         <>
                             <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                            {xl && <Text style={styles.saveBtnText}>{saveState === "saved" ? "Saved" : dirty ? "Save •" : "Save"}</Text>}
+                            {xl && <Text style={styles.saveBtnText}>{dirty ? "Save" : "Saved"}</Text>}
                         </>
                     )}
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, title, hasCapability, handleOpenPublish]
+        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDelete]
     );
 
     return (
@@ -727,6 +806,7 @@ const CreateContentScreen = () => {
                                     formattedDate={formattedDate}
                                     timeOfPosting={timeOfPosting}
                                     onEdit={() => setShowPublishModal(true)}
+                                    locked={status === "posted"}
                                 />
                             </View>
                         ) : null}
@@ -1015,6 +1095,19 @@ const CreateContentScreen = () => {
                 onClose={() => setShowInfoModal(false)}
                 readOnly={locked}
             />
+
+            {selectedBrand?.id && contentId ? (
+                <ShareModal
+                    visible={showShareModal}
+                    target={{
+                        type: "content",
+                        brandId: selectedBrand.id,
+                        resourceId: contentId,
+                    }}
+                    title={title || "Untitled content"}
+                    onClose={() => setShowShareModal(false)}
+                />
+            ) : null}
 
             <NoSocialsModal
                 visible={showNoSocialsModal}

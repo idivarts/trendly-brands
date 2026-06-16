@@ -10,6 +10,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import {
     addDoc,
     collection,
+    deleteDoc,
     doc,
     onSnapshot,
     orderBy,
@@ -126,6 +127,12 @@ interface UseContentsReturn {
         contentId: string,
         changes: Partial<IContent>
     ) => Promise<void>;
+    /**
+     * Permanently delete a content document. Irreversible — gate behind a
+     * confirmation. Returns true on success, false if the brand isn't ready
+     * or the delete failed.
+     */
+    deleteContent: (contentId: string) => Promise<boolean>;
 }
 
 /**
@@ -193,5 +200,19 @@ export function useContents(): UseContentsReturn {
         await updateDoc(docRef, { ...changes, updatedAt: Date.now() });
     };
 
-    return { items, loading, addContent, updateContent };
+    const deleteContent = async (contentId: string): Promise<boolean> => {
+        const brandId = selectedBrand?.id;
+        if (!brandId) return false;
+
+        try {
+            const docRef = doc(FirestoreDB, "brands", brandId, "contents", contentId);
+            await deleteDoc(docRef);
+            return true;
+        } catch (e) {
+            console.warn("Delete content error:", e);
+            return false;
+        }
+    };
+
+    return { items, loading, addContent, updateContent, deleteContent };
 }
