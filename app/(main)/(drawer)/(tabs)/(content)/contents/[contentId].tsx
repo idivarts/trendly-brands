@@ -381,6 +381,15 @@ const CreateContentScreen = () => {
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
             const platform = "Instagram";
+            // Pass the current (possibly unsaved) editor state so the AI writes
+            // with the context of what's on screen right now, not the last save.
+            const liveContent = {
+                title,
+                description: idea,
+                caption,
+                hashtags,
+                script,
+            };
             setMagicGenerating(true);
             if (magicTarget === "caption") {
                 generateCaption({
@@ -388,16 +397,19 @@ const CreateContentScreen = () => {
                     platform,
                     format: contentType,
                     contextId: contentId,
+                    ...liveContent,
                 });
             } else if (magicTarget === "hashtags") {
                 generateHashtags({
                     topic: prompt,
                     platform,
+                    format: contentType,
                     contextId: contentId,
+                    ...liveContent,
                 });
             }
         },
-        [magicTarget, contentType, contentId, generateCaption, generateHashtags]
+        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, generateCaption, generateHashtags]
     );
 
     const handleScriptAiEnhance = useCallback(() => {
@@ -411,8 +423,14 @@ const CreateContentScreen = () => {
             keyMessage,
             tone: "friendly",
             contextId: contentId,
+            // Live editor state so the script reflects the current piece.
+            title,
+            format: contentType,
+            description: idea,
+            caption,
+            hashtags,
         });
-    }, [scriptAiPrompt, isReel, title, idea, contentId, generateScript]);
+    }, [scriptAiPrompt, isReel, title, idea, contentType, caption, hashtags, contentId, generateScript]);
 
     const handleImageGenerate = useCallback((promptArg?: string) => {
         const p = (promptArg ?? imagePrompt).trim();

@@ -48,6 +48,12 @@ export function useAIGenerate() {
         tone?: string;
         contextId?: string;
         model?: string;
+        /** Live editor content so the AI has the current (unsaved) context. */
+        title?: string;
+        description?: string;
+        caption?: string;
+        hashtags?: string;
+        script?: string;
     }) => {
         if (!brandId) return;
         setCaptionLoading(true);
@@ -75,6 +81,13 @@ export function useAIGenerate() {
         platform?: string;
         contextId?: string;
         model?: string;
+        /** Live editor content so the AI has the current (unsaved) context. */
+        title?: string;
+        format?: string;
+        description?: string;
+        caption?: string;
+        hashtags?: string;
+        script?: string;
     }) => {
         if (!brandId) return;
         setHashtagLoading(true);
@@ -150,6 +163,14 @@ export function useAIGenerate() {
         tone?: string;
         contextId?: string;
         model?: string;
+        /** Live editor content so the AI has the current (unsaved) context. */
+        title?: string;
+        platform?: string;
+        format?: string;
+        description?: string;
+        caption?: string;
+        hashtags?: string;
+        script?: string;
     }) => {
         if (!brandId) return;
         scriptAccumRef.current = "";
@@ -168,6 +189,13 @@ export function useAIGenerate() {
                 topic: args.topic,
                 keyMessage: args.keyMessage,
                 tone: args.tone,
+                title: args.title,
+                platform: args.platform,
+                format: args.format,
+                description: args.description,
+                caption: args.caption,
+                hashtags: args.hashtags,
+                script: args.script,
             },
         });
     }, [brandId]);

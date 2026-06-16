@@ -1,5 +1,5 @@
 import DateField from "@/components/modals/DateField";
-import { ISocialAccount } from "@/contexts/brand-social-context.provider";
+import { ISocialAccount, socialAccountLabel } from "@/contexts/brand-social-context.provider";
 import { POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -82,7 +82,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 {
                     socialAccountId: a.id,
                     platform: a.platform as SocialDestination["platform"],
-                    username: a.username,
+                    username: socialAccountLabel(a),
                 },
             ]);
         }
@@ -129,6 +129,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     const renderAccountChip = (a: ISocialAccount, on: boolean, onPress?: () => void) => {
         const dot =
             a.platform === "instagram" ? colors.socialInstagram : colors.socialFacebook;
+        const label = socialAccountLabel(a);
         return (
             <Pressable
                 key={a.id}
@@ -146,7 +147,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 ) : (
                     <View style={[styles.accountAvatar, styles.accountAvatarFallback]}>
                         <Text style={styles.accountInitial}>
-                            {(a.username || "?").charAt(0).toUpperCase()}
+                            {(label || "?").charAt(0).toUpperCase()}
                         </Text>
                     </View>
                 )}
@@ -155,7 +156,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                     style={[styles.accountName, on && styles.accountNameOn]}
                     numberOfLines={1}
                 >
-                    {a.username}
+                    {label}
                 </Text>
                 {on && onPress ? (
                     <FontAwesomeIcon icon={faCheck} size={11} color={colors.onPrimary} />

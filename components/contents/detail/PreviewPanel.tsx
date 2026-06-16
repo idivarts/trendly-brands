@@ -1,5 +1,5 @@
 import { ContentType } from "@/components/content-calendar/types";
-import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { socialAccountLabel, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -57,7 +57,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const active = platforms.includes(platform) ? platform : platforms[0];
 
     const account = socialAccounts.find((a) => a.platform === active);
-    const username = account?.username || "yourbrand";
+    // Facebook stores the page id in `username`; show the page name instead.
+    const username = account ? socialAccountLabel(account) : "yourbrand";
     const avatar = account?.profileImageURL;
 
     const isStory = contentType === "story" || contentType === "reel";

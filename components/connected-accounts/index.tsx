@@ -165,8 +165,11 @@ const ConnectedAccounts: React.FC = () => {
                                             style={styles.accountHandle}
                                             numberOfLines={1}
                                         >
-                                            @{account.username} ·{" "}
-                                            {meta?.label ?? account.platform}
+                                            {/* Facebook's `username` is the numeric Page id, not a
+                                                handle — don't surface it; show just the platform. */}
+                                            {account.platform === "facebook"
+                                                ? (meta?.label ?? account.platform)
+                                                : `@${account.username} · ${meta?.label ?? account.platform}`}
                                         </Text>
                                         {account.followerCount > 0 && (
                                             <Text style={styles.followerCount}>
