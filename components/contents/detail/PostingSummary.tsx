@@ -8,6 +8,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
     faCalendarDays,
+    faCircleCheck,
     faPen,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -31,6 +32,11 @@ export interface PostingSummaryProps {
     onEdit: () => void;
     /** When the content is posted/locked, hide the Edit affordance entirely. */
     locked?: boolean;
+    /**
+     * Epoch ms the content actually went live. When set, the schedule recap
+     * shows "Published at <time>" instead of the planned "Publish now" / date.
+     */
+    postedAt?: number;
 }
 
 const PostingSummary: React.FC<PostingSummaryProps> = ({
@@ -41,6 +47,7 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
     timeOfPosting,
     onEdit,
     locked = false,
+    postedAt,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -65,8 +72,25 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
         return popular ? popular.label : timeOfPosting;
     }, [timeOfPosting]);
 
-    const whenSummary =
-        scheduleMode === "now" ? "Publish now" : `${formattedDate} · ${timeLabel}`;
+    const publishedLabel = useMemo(() => {
+        if (!postedAt) return null;
+        return new Date(postedAt).toLocaleString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
+    }, [postedAt]);
+
+    const isPublished = !!publishedLabel;
+
+    const whenSummary = isPublished
+        ? `Published at ${publishedLabel}`
+        : scheduleMode === "now"
+          ? "Publish now"
+          : `${formattedDate} · ${timeLabel}`;
 
     return (
         <View style={styles.card}>
@@ -103,9 +127,15 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
                     {/* When */}
                     <View style={styles.whenRow}>
                         <FontAwesomeIcon
-                            icon={scheduleMode === "now" ? faBolt : faCalendarDays}
+                            icon={
+                                isPublished
+                                    ? faCircleCheck
+                                    : scheduleMode === "now"
+                                      ? faBolt
+                                      : faCalendarDays
+                            }
                             size={12}
-                            color={colors.primary}
+                            color={isPublished ? colors.success : colors.primary}
                         />
                         <Text style={styles.whenText}>{whenSummary}</Text>
                     </View>
