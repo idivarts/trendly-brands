@@ -942,7 +942,13 @@ const CreateContentScreen = () => {
                             <View style={styles.card}>
                                 <View style={styles.inputWithWand}>
                                     <TextInput
-                                        style={[styles.input, styles.inputFlex, styles.textAreaShort]}
+                                        style={[
+                                            styles.input,
+                                            styles.inputFlex,
+                                            contentType === "text"
+                                                ? styles.textAreaTall
+                                                : styles.textAreaShort,
+                                        ]}
                                         placeholder={
                                             contentType === "text"
                                                 ? "Write your post..."
@@ -1416,6 +1422,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 textAreaShort: {
                     minHeight: 70,
                     maxHeight: 140,
+                },
+                // Text posts are the whole content (no media), so give the body
+                // room to breathe — ~7-10 lines tall before it scrolls.
+                textAreaTall: {
+                    minHeight: 180,
+                    maxHeight: 320,
                 },
                 inputWithWand: {
                     flexDirection: "row",
