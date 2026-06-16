@@ -1,5 +1,6 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
+import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
@@ -32,7 +33,7 @@ import ReadMore from "@/shared-uis/components/ReadMore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
-import { useAIGenerate } from "@/hooks/use-ai-generate";
+import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { useContents } from "@/hooks/use-contents";
@@ -191,8 +192,13 @@ const CreateContentScreen = () => {
         [handleSendToChat]
     );
 
+    // `magicTarget` drives ONLY the prompt modal (which field's prompt is open).
+    // The in-flight state is tracked per-field below so the modal can close the
+    // instant the prompt is submitted while generation continues in the
+    // background — caption and hashtags can even generate concurrently.
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
-    const [magicGenerating, setMagicGenerating] = useState(false);
+    const [captionGenerating, setCaptionGenerating] = useState(false);
+    const [hashtagGenerating, setHashtagGenerating] = useState(false);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -228,8 +234,10 @@ const CreateContentScreen = () => {
     // Real AI generation hooks — backed by /api/ai + OpenRouter.
     const {
         captions: aiCaptions,
+        captionLoading,
         generateCaption,
         hashtags: aiHashtags,
+        hashtagLoading,
         generateHashtags,
         script: aiScript,
         scriptStreaming,
@@ -490,8 +498,17 @@ const CreateContentScreen = () => {
         doNavigateBack();
     }, [doNavigateBack]);
 
+    // Snapshots of the last AI result, captured the moment a new request fires.
+    // The apply-effects use these to tell a fresh result apart from a stale one
+    // left over from a previous run (e.g. when a request fails and the hook
+    // never replaces its result array).
+    const captionSnapRef = useRef<CaptionVariant[] | null>(null);
+    const hashtagSnapRef = useRef<HashtagGroup[] | null>(null);
+
     const handleMagicGenerate = useCallback(
         (prompt: string) => {
+            const target = magicTarget;
+            if (!target) return;
             const platform = "Instagram";
             // Pass the current (possibly unsaved) editor state so the AI writes
             // with the context of what's on screen right now, not the last save.
@@ -502,8 +519,12 @@ const CreateContentScreen = () => {
                 hashtags,
                 script,
             };
-            setMagicGenerating(true);
-            if (magicTarget === "caption") {
+            // Flip the per-field flag and fire the request. The modal closes
+            // itself (onClose) — the user is free to keep editing while the
+            // inline hint shows progress and the result lands automatically.
+            if (target === "caption") {
+                captionSnapRef.current = aiCaptions;
+                setCaptionGenerating(true);
                 generateCaption({
                     topic: prompt,
                     platform,
@@ -511,7 +532,9 @@ const CreateContentScreen = () => {
                     contextId: contentId,
                     ...liveContent,
                 });
-            } else if (magicTarget === "hashtags") {
+            } else {
+                hashtagSnapRef.current = aiHashtags;
+                setHashtagGenerating(true);
                 generateHashtags({
                     topic: prompt,
                     platform,
@@ -521,7 +544,7 @@ const CreateContentScreen = () => {
                 });
             }
         },
-        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, generateCaption, generateHashtags]
+        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags]
     );
 
     const handleScriptAiEnhance = useCallback(() => {
@@ -560,26 +583,36 @@ const CreateContentScreen = () => {
 
     // React to AI generation results streaming back from the backend.
 
-    // Captions: take the first variant and apply it. The FloatingPromptInput
-    // closes when we clear magicTarget once the result lands.
+    // Captions: when the request settles (loading true → false), take the first
+    // variant and apply it, then release the field. The snapshot guard skips a
+    // stale array (e.g. a failed call left the previous result untouched) so we
+    // never overwrite the caption with old data — but we always clear the flag.
+    const prevCaptionLoadingRef = useRef(false);
     useEffect(() => {
-        if (magicTarget !== "caption" || aiCaptions.length === 0) return;
-        setCaption(aiCaptions[0].text);
-        setMagicGenerating(false);
-        setMagicTarget(null);
-    }, [aiCaptions, magicTarget]);
+        const settled = prevCaptionLoadingRef.current && !captionLoading;
+        prevCaptionLoadingRef.current = captionLoading;
+        if (!settled || !captionGenerating) return;
+        if (aiCaptions.length > 0 && aiCaptions !== captionSnapRef.current) {
+            setCaption(aiCaptions[0].text);
+        }
+        setCaptionGenerating(false);
+    }, [captionLoading, captionGenerating, aiCaptions]);
 
     // Hashtags: flatten all tier groups into a single space-separated #tag string.
+    const prevHashtagLoadingRef = useRef(false);
     useEffect(() => {
-        if (magicTarget !== "hashtags" || aiHashtags.length === 0) return;
-        const joined = aiHashtags
-            .flatMap((g) => g.tags)
-            .map((t) => `#${t}`)
-            .join(" ");
-        setHashtags(joined);
-        setMagicGenerating(false);
-        setMagicTarget(null);
-    }, [aiHashtags, magicTarget]);
+        const settled = prevHashtagLoadingRef.current && !hashtagLoading;
+        prevHashtagLoadingRef.current = hashtagLoading;
+        if (!settled || !hashtagGenerating) return;
+        if (aiHashtags.length > 0 && aiHashtags !== hashtagSnapRef.current) {
+            const joined = aiHashtags
+                .flatMap((g) => g.tags)
+                .map((t) => `#${t}`)
+                .join(" ");
+            setHashtags(joined);
+        }
+        setHashtagGenerating(false);
+    }, [hashtagLoading, hashtagGenerating, aiHashtags]);
 
     // Script: stream into the script field. Append on first run; replace the
     // streamed block on subsequent token updates so the user sees it grow live.
@@ -930,16 +963,29 @@ const CreateContentScreen = () => {
                                                 pressed && styles.btnPressed,
                                             ]}
                                             onPress={() => setMagicTarget("caption")}
+                                            disabled={captionGenerating}
                                         >
-                                            <FontAwesomeIcon
-                                                icon={faMagicWandSparkles}
-                                                size={16}
-                                                color={colors.primary}
-                                            />
+                                            {captionGenerating ? (
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            ) : (
+                                                <FontAwesomeIcon
+                                                    icon={faMagicWandSparkles}
+                                                    size={16}
+                                                    color={colors.primary}
+                                                />
+                                            )}
                                         </Pressable>
                                     ) : null}
                                 </View>
                             </View>
+                            {captionGenerating ? (
+                                <View style={styles.aiHintWrap}>
+                                    <AIGeneratingHint
+                                        title={contentType === "text" ? "Writing your post…" : "Writing your caption…"}
+                                        subtitle="You can keep working — it'll drop in here automatically when it's ready."
+                                    />
+                                </View>
+                            ) : null}
                         </View>
 
                         {/* ── Hashtags ──────────────────────────────────────────── */}
@@ -963,16 +1009,29 @@ const CreateContentScreen = () => {
                                                 pressed && styles.btnPressed,
                                             ]}
                                             onPress={() => setMagicTarget("hashtags")}
+                                            disabled={hashtagGenerating}
                                         >
-                                            <FontAwesomeIcon
-                                                icon={faMagicWandSparkles}
-                                                size={16}
-                                                color={colors.primary}
-                                            />
+                                            {hashtagGenerating ? (
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            ) : (
+                                                <FontAwesomeIcon
+                                                    icon={faMagicWandSparkles}
+                                                    size={16}
+                                                    color={colors.primary}
+                                                />
+                                            )}
                                         </Pressable>
                                     ) : null}
                                 </View>
                             </View>
+                            {hashtagGenerating ? (
+                                <View style={styles.aiHintWrap}>
+                                    <AIGeneratingHint
+                                        title="Finding the best hashtags…"
+                                        subtitle="You can keep working — they'll fill in automatically when they're ready."
+                                    />
+                                </View>
+                            ) : null}
                         </View>
 
                         {/* ── Reel Collab CTA ───────────────────────────────────── */}
@@ -1118,7 +1177,6 @@ const CreateContentScreen = () => {
                         ? "E.g. punchy and playful, highlight free shipping…"
                         : "E.g. orthopedic sandals for women, wellness niche…"
                 }
-                loading={magicGenerating}
                 onClose={() => setMagicTarget(null)}
                 onGenerate={handleMagicGenerate}
             />
@@ -1363,6 +1421,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexDirection: "row",
                     gap: 8,
                     alignItems: "flex-start",
+                },
+                aiHintWrap: {
+                    marginTop: 10,
                 },
                 wandBtn: {
                     width: 42,
