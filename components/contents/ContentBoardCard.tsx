@@ -1,6 +1,6 @@
 import { CONTENT_TYPE_LABELS, contentTypeColor } from "@/components/content-calendar/types";
 import Colors from "@/shared-uis/constants/Colors";
-import { faImage, faLayerGroup, faVideo } from "@fortawesome/free-solid-svg-icons";
+import { faAlignLeft, faImage, faLayerGroup, faVideo } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -17,6 +17,8 @@ function typeGlyph(type: ContentItem["type"]): IconDefinition {
         case "reel":
         case "live":
             return faVideo;
+        case "text":
+            return faAlignLeft;
         default:
             return faImage;
     }

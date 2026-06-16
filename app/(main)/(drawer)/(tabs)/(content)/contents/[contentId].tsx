@@ -28,6 +28,7 @@ import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu"
 import ShareModal from "@/components/sharing/ShareModal";
 import { View } from "@/components/theme/Themed";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import ReadMore from "@/shared-uis/components/ReadMore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
@@ -834,6 +835,14 @@ const CreateContentScreen = () => {
                                 </View>
                             </View>
 
+                            {idea ? (
+                                <ReadMore
+                                    text={idea}
+                                    lineCount={1}
+                                    style={styles.ideaText}
+                                />
+                            ) : null}
+
                             {mediaSpec.kind !== "none" && (
                                 <MediaStage
                                     contentType={contentType}
@@ -1248,13 +1257,19 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 10,
-                    marginBottom: 12,
+                    marginBottom: 8,
                 },
                 contentTitle: {
                     flexShrink: 1,
                     fontSize: 18,
                     fontWeight: "700",
                     color: colors.text,
+                },
+                ideaText: {
+                    fontSize: 14,
+                    lineHeight: 20,
+                    color: colors.textSecondary,
+                    marginBottom: 4,
                 },
                 sectionLabel: {
                     fontSize: 11,

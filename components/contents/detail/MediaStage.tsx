@@ -47,6 +47,7 @@ const SUBTITLE: Record<ContentType, string> = {
     carousel: "Add slides in order — upload or generate each one.",
     story: "Upload an image or generate one with AI.",
     live: "",
+    text: "",
 };
 
 const MediaStage: React.FC<MediaStageProps> = ({

@@ -79,6 +79,16 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         canGenerate: false,
         hasScript: true,
     },
+    text: {
+        // Plain-text post (Facebook / LinkedIn / X) — the caption IS the content,
+        // so there's no media area and no separate script.
+        kind: "none",
+        multi: false,
+        aspectLabel: "",
+        aspectRatios: [],
+        canGenerate: false,
+        hasScript: false,
+    },
 };
 
 /** Closest common label for a measured ratio, for friendly error messages. */
