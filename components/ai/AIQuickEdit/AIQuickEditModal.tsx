@@ -1,8 +1,11 @@
+import { useBreakpoints } from "@/hooks";
 import { useAIQuickEdit } from "@/hooks/use-ai-quick-edit";
 import Colors from "@/shared-uis/constants/Colors";
+import { ensureHtml } from "@/utils/rich-text";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import RenderHTML from "react-native-render-html";
 
 interface Props {
     visible: boolean;
@@ -27,7 +30,9 @@ const AIQuickEditModal: React.FC<Props> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+    const { width: screenWidth } = useBreakpoints();
     const styles = useMemo(() => makeStyles(colors), [colors]);
+    const htmlContentWidth = Math.min(screenWidth - 32, 560) - 32;
     const [prompt, setPrompt] = useState(initialPrompt ?? "");
     const { result, isStreaming, runEdit, reset } = useAIQuickEdit();
 
@@ -66,63 +71,75 @@ const AIQuickEditModal: React.FC<Props> = ({
                             if (Platform.OS !== "web") Keyboard.dismiss();
                         }}
                     >
-                    <Text style={styles.title}>Edit with AI</Text>
+                        <Text style={styles.title}>Edit with AI</Text>
 
-                    {selectedText.length > 0 && (
-                        <View style={styles.selectedPreview}>
-                            {/* Accent strip — using a child View instead of borderLeft per project rules */}
-                            <View style={styles.selectedAccent} />
-                            <View style={styles.selectedContent}>
-                                <Text style={styles.selectedLabel}>Selected text</Text>
-                                <ScrollView style={styles.selectedScroll}>
-                                    <Text style={styles.selectedText}>{selectedText}</Text>
-                                </ScrollView>
+                        {selectedText.length > 0 && (
+                            <View style={styles.selectedPreview}>
+                                {/* Accent strip — using a child View instead of borderLeft per project rules */}
+                                <View style={styles.selectedAccent} />
+                                <View style={styles.selectedContent}>
+                                    <Text style={styles.selectedLabel}>Selected text</Text>
+                                    <ScrollView style={styles.selectedScroll}>
+                                        <RenderHTML
+                                            contentWidth={htmlContentWidth}
+                                            source={{ html: ensureHtml(selectedText) }}
+                                            baseStyle={styles.selectedText}
+                                        />
+                                    </ScrollView>
+                                </View>
                             </View>
-                        </View>
-                    )}
+                        )}
 
-                    <Text style={styles.label}>Instruction</Text>
-                    <TextInput
-                        style={styles.promptInput}
-                        value={prompt}
-                        onChangeText={setPrompt}
-                        placeholder="e.g. Make it more punchy and add a CTA"
-                        placeholderTextColor={colors.textSecondary}
-                        multiline
-                    />
-                    <Pressable
-                        style={({ pressed }) => [styles.runBtn, !prompt.trim() && styles.runBtnDisabled, pressed && styles.runBtnPressed]}
-                        onPress={run}
-                        disabled={!prompt.trim() || isStreaming}
-                    >
-                        <Text style={styles.runText}>{isStreaming ? "Generating…" : "Generate"}</Text>
-                    </Pressable>
-
-                    <View style={styles.resultHeader}>
-                        <Text style={styles.label}>Result</Text>
-                        {isStreaming ? <ActivityIndicator size="small" color={colors.primary} /> : null}
-                    </View>
-                    <ScrollView style={styles.resultBox}>
-                        <Text style={styles.resultText}>{result || "—"}</Text>
-                    </ScrollView>
-
-                    <View style={styles.actionsRow}>
-                        <Pressable style={[styles.actionBtn, styles.discardBtn]} onPress={onClose}>
-                            <Text style={styles.discardText}>Discard</Text>
-                        </Pressable>
+                        <Text style={styles.label}>Instruction</Text>
+                        <TextInput
+                            style={styles.promptInput}
+                            value={prompt}
+                            onChangeText={setPrompt}
+                            placeholder="e.g. Make it more punchy and add a CTA"
+                            placeholderTextColor={colors.textSecondary}
+                            multiline
+                        />
                         <Pressable
-                            style={[styles.actionBtn, styles.acceptBtn, (!result || isStreaming) && styles.acceptDisabled]}
-                            onPress={() => {
-                                if (result) {
-                                    onAccept(result);
-                                    onClose();
-                                }
-                            }}
-                            disabled={!result || isStreaming}
+                            style={({ pressed }) => [styles.runBtn, !prompt.trim() && styles.runBtnDisabled, pressed && styles.runBtnPressed]}
+                            onPress={run}
+                            disabled={!prompt.trim() || isStreaming}
                         >
-                            <Text style={styles.acceptText}>Accept</Text>
+                            <Text style={styles.runText}>{isStreaming ? "Generating…" : "Generate"}</Text>
                         </Pressable>
-                    </View>
+
+                        <View style={styles.resultHeader}>
+                            <Text style={styles.label}>Result</Text>
+                            {isStreaming ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+                        </View>
+                        <ScrollView style={styles.resultBox}>
+                            {result ? (
+                                <RenderHTML
+                                    contentWidth={htmlContentWidth}
+                                    source={{ html: ensureHtml(result) }}
+                                    baseStyle={styles.resultText}
+                                />
+                            ) : (
+                                <Text style={styles.resultText}>—</Text>
+                            )}
+                        </ScrollView>
+
+                        <View style={styles.actionsRow}>
+                            <Pressable style={[styles.actionBtn, styles.discardBtn]} onPress={onClose}>
+                                <Text style={styles.discardText}>Discard</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.actionBtn, styles.acceptBtn, (!result || isStreaming) && styles.acceptDisabled]}
+                                onPress={() => {
+                                    if (result) {
+                                        onAccept(result);
+                                        onClose();
+                                    }
+                                }}
+                                disabled={!result || isStreaming}
+                            >
+                                <Text style={styles.acceptText}>Accept</Text>
+                            </Pressable>
+                        </View>
                     </Pressable>
                 </Pressable>
             </KeyboardAvoidingView>
