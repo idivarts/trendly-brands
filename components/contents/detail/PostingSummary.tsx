@@ -1,4 +1,4 @@
-import { ISocialAccount } from "@/contexts/brand-social-context.provider";
+import { ISocialAccount, socialAccountLabel } from "@/contexts/brand-social-context.provider";
 import {
     POPULAR_POSTING_TIMES,
     ScheduleMode,
@@ -76,6 +76,7 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
                                 a.platform === "instagram"
                                     ? colors.socialInstagram
                                     : colors.socialFacebook;
+                            const label = socialAccountLabel(a);
                             return (
                                 <View key={a.id} style={styles.destChip}>
                                     {a.profileImageURL ? (
@@ -83,13 +84,13 @@ const PostingSummary: React.FC<PostingSummaryProps> = ({
                                     ) : (
                                         <View style={[styles.avatar, styles.avatarFallback]}>
                                             <Text style={styles.avatarInitial}>
-                                                {(a.username || "?").charAt(0).toUpperCase()}
+                                                {(label || "?").charAt(0).toUpperCase()}
                                             </Text>
                                         </View>
                                     )}
                                     <View style={[styles.platformDot, { backgroundColor: dot }]} />
                                     <Text style={styles.destName} numberOfLines={1}>
-                                        {a.username}
+                                        {label}
                                     </Text>
                                 </View>
                             );

@@ -29,6 +29,23 @@ export interface ISocialAccount {
     rawProfile?: Record<string, unknown>;
 }
 
+/**
+ * Human label for a connected social account.
+ *
+ * Facebook accounts store the numeric Page id in `username` and the Page's real
+ * name in `displayName`, so for Facebook we must surface the page name — never
+ * the raw id. Instagram (and the rest) keep the recognisable @handle in
+ * `username`, which is the most identifiable label there.
+ */
+export function socialAccountLabel(
+    account: Pick<ISocialAccount, "platform" | "username" | "displayName">
+): string {
+    if (account.platform === "facebook") {
+        return account.displayName || account.username;
+    }
+    return account.username || account.displayName;
+}
+
 interface BrandSocialContextProps {
     socialAccounts: ISocialAccount[];
     isFetchingSocials: boolean;
