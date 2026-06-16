@@ -16,7 +16,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-type PreviewPlatform = "instagram" | "facebook";
+type PreviewPlatform = "instagram" | "facebook" | "linkedin";
 
 interface PreviewPanelProps {
     contentType: ContentType;
@@ -29,6 +29,19 @@ interface PreviewPanelProps {
 const PLATFORM_LABEL: Record<PreviewPlatform, string> = {
     instagram: "Instagram",
     facebook: "Facebook",
+    linkedin: "LinkedIn",
+};
+
+// Brand colour for a platform's dot / accent.
+const platformColor = (platform: PreviewPlatform, colors: ReturnType<typeof Colors>) => {
+    switch (platform) {
+        case "instagram":
+            return colors.socialInstagram;
+        case "linkedin":
+            return colors.socialLinkedin;
+        default:
+            return colors.socialFacebook;
+    }
 };
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
@@ -52,7 +65,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const platforms = useMemo<PreviewPlatform[]>(() => {
         const present = new Set<PreviewPlatform>();
         socialAccounts.forEach((a) => {
-            if (a.platform === "instagram" || a.platform === "facebook") present.add(a.platform);
+            if (a.platform === "instagram" || a.platform === "facebook" || a.platform === "linkedin")
+                present.add(a.platform as PreviewPlatform);
         });
         if (isText) present.delete("instagram");
         const list = Array.from(present);
@@ -73,7 +87,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const isVideo = attachments.some((a) => a.type === "video" || a.type === "reel");
     const slideCount = attachments.length;
 
-    const accentColor = active === "instagram" ? colors.socialInstagram : colors.socialFacebook;
+    const accentColor = platformColor(active, colors);
 
     const mediaBox = (tall: boolean) => (
         <View style={[styles.media, tall ? styles.mediaTall : styles.mediaSquare]}>
@@ -131,7 +145,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 <View style={styles.tabs}>
                     {platforms.map((p) => {
                         const on = p === active;
-                        const dot = p === "instagram" ? colors.socialInstagram : colors.socialFacebook;
+                        const dot = platformColor(p, colors);
                         return (
                             <Pressable
                                 key={p}
