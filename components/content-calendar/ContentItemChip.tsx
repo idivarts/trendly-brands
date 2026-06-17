@@ -1,10 +1,19 @@
+import {
+    CONTENT_STATUS_LABELS,
+    contentStatusColors,
+} from "@/components/contents/types";
 import Colors from "@/shared-uis/constants/Colors";
-import { faComment, faCrosshairs } from "@fortawesome/free-solid-svg-icons";
+import {
+    faCircleCheck,
+    faClock,
+    faComment,
+    faCrosshairs,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { CalendarItem, CONTENT_TYPE_LABELS } from "./types";
+import { CalendarItem, CONTENT_TYPE_LABELS, contentTypeColor } from "./types";
 
 /**
  * On web, surface the full (possibly truncated) title as a native browser
@@ -36,15 +45,14 @@ interface ContentItemChipProps {
     onComment: (item: CalendarItem) => void;
     /** Tapping the chip body opens the content details page for editing. */
     onOpen?: (item: CalendarItem) => void;
+    /**
+     * Show the comment + AI-focus action buttons in the footer. Defaults to true.
+     * MonthView turns these off for the cramped inline chips on mobile (`!xl`),
+     * where there's no room for them — the actions stay reachable by opening the
+     * item or via the day popover.
+     */
+    showActions?: boolean;
 }
-
-const TYPE_COLORS: Record<string, string> = {
-    reel: "rgb(83, 139, 166)",
-    post: "rgb(5, 68, 99)",
-    story: "rgb(157, 213, 134)",
-    carousel: "rgb(236, 214, 148)",
-    live: "rgb(232, 185, 49)",
-};
 
 /**
  * Tint an `rgb(...)` token to a translucent `rgba(...)`. The old code appended
@@ -65,11 +73,25 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
     onFocusChat,
     onComment,
     onOpen,
+    showActions = true,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const typeColor = TYPE_COLORS[item.type] ?? colors.primary;
-    const styles = useStyles(colors, typeColor, compact);
+    const typeColor = contentTypeColor(item.type, colors);
+    // A lifecycle marker is shown only for the two "committed" states —
+    // `scheduled` and `posted`. Working states (draft / in-progress / etc.)
+    // stay unmarked so these two stand out as the exception.
+    const status = item.status;
+    const showStatus = status === "scheduled" || status === "posted";
+    const statusPalette = showStatus ? contentStatusColors(status!, colors) : null;
+    const statusIcon = status === "posted" ? faCircleCheck : faClock;
+    const styles = useStyles(
+        colors,
+        typeColor,
+        compact,
+        statusPalette?.fg ?? null,
+        statusPalette?.bg ?? null
+    );
 
     return (
         <TitleTooltip text={item.title}>
@@ -87,42 +109,63 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
                     {item.title}
                 </Text>
                 <View style={styles.footer}>
-                    <View style={styles.typeBadge}>
-                        <View style={styles.typeDot} />
-                        <Text style={styles.typeText} numberOfLines={1}>
-                            {CONTENT_TYPE_LABELS[item.type]}
-                        </Text>
+                    <View style={styles.footerLeft}>
+                        {showStatus && statusPalette && (
+                            <View style={styles.statusBadge}>
+                                <FontAwesomeIcon
+                                    icon={statusIcon}
+                                    size={compact ? 9 : 10}
+                                    color={statusPalette.fg}
+                                />
+                                {!compact && (
+                                    <Text
+                                        style={styles.statusText}
+                                        numberOfLines={1}
+                                    >
+                                        {CONTENT_STATUS_LABELS[status!]}
+                                    </Text>
+                                )}
+                            </View>
+                        )}
+                        <View style={styles.typeBadge}>
+                            <View style={styles.typeDot} />
+                            <Text style={styles.typeText} numberOfLines={1}>
+                                {CONTENT_TYPE_LABELS[item.type]}
+                            </Text>
+                        </View>
                     </View>
-                    <View style={styles.actions}>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.actionBtn,
-                                pressed && styles.actionBtnPressed,
-                            ]}
-                            onPress={() => onComment(item)}
-                            hitSlop={6}
-                        >
-                            <FontAwesomeIcon
-                                icon={faComment}
-                                size={16}
-                                color={colors.textSecondary}
-                            />
-                        </Pressable>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.actionBtn,
-                                pressed && styles.actionBtnPressed,
-                            ]}
-                            onPress={() => onFocusChat(item)}
-                            hitSlop={6}
-                        >
-                            <FontAwesomeIcon
-                                icon={faCrosshairs}
-                                size={16}
-                                color={colors.primary}
-                            />
-                        </Pressable>
-                    </View>
+                    {showActions && (
+                        <View style={styles.actions}>
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.actionBtn,
+                                    pressed && styles.actionBtnPressed,
+                                ]}
+                                onPress={() => onComment(item)}
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faComment}
+                                    size={16}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.actionBtn,
+                                    pressed && styles.actionBtnPressed,
+                                ]}
+                                onPress={() => onFocusChat(item)}
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faCrosshairs}
+                                    size={16}
+                                    color={colors.primary}
+                                />
+                            </Pressable>
+                        </View>
+                    )}
                 </View>
             </View>
         </Pressable>
@@ -133,7 +176,9 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
 function useStyles(
     colors: ReturnType<typeof Colors>,
     typeColor: string,
-    compact: boolean
+    compact: boolean,
+    statusFg: string | null,
+    statusBg: string | null
 ) {
     return useMemo(
         () =>
@@ -174,6 +219,27 @@ function useStyles(
                     alignItems: "center",
                     justifyContent: "space-between",
                 },
+                footerLeft: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    flexShrink: 1,
+                    minWidth: 0,
+                },
+                statusBadge: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 3,
+                    backgroundColor: statusBg ?? "transparent",
+                    paddingHorizontal: compact ? 4 : 6,
+                    paddingVertical: 2,
+                    borderRadius: 4,
+                },
+                statusText: {
+                    fontSize: compact ? 9 : 10,
+                    fontWeight: "700",
+                    color: statusFg ?? colors.text,
+                },
                 typeBadge: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -205,7 +271,7 @@ function useStyles(
                     opacity: 0.6,
                 },
             }),
-        [colors, typeColor, compact]
+        [colors, typeColor, compact, statusFg, statusBg]
     );
 }
 

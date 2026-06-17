@@ -238,6 +238,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 8,
                     borderRadius: 18,
                     backgroundColor: colors.tag,
+                    maxWidth: "100%",
+                    flexShrink: 1,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
                     shadowRadius: 3,
@@ -252,7 +254,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     shadowOpacity: 0.3,
                     elevation: 3,
                 },
-                chipText: { fontSize: 13, fontWeight: "600", color: colors.text },
+                chipText: { fontSize: 13, fontWeight: "600", color: colors.text, flexShrink: 1, flexWrap: "wrap" },
                 chipTextActive: { color: colors.onPrimary },
                 inputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
                 // Validation-error border is an allowed exception to the no-border rule.

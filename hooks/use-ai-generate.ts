@@ -209,6 +209,12 @@ export function useAIGenerate() {
         contextId?: string;
         /** Carousel (append) vs single-image (replace) content type. */
         multi?: boolean;
+        /**
+         * Focused carousel slide (0-based) the prompt should act on. The backend
+         * decides edit-focused-slide vs add-new-slide; this is the edit target /
+         * base slide. Omit for single-image types.
+         */
+        focusedSlideIndex?: number;
         model?: string;
     }) => {
         if (!brandId) return;
@@ -228,6 +234,7 @@ export function useAIGenerate() {
                 aspectRatio: args.aspectRatio ?? "1:1",
                 count: args.count ?? 1,
                 multi: args.multi ?? false,
+                focusedSlideIndex: args.focusedSlideIndex,
             },
         });
     }, [brandId]);

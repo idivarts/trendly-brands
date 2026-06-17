@@ -12,6 +12,7 @@ import {
     faChevronLeft,
     faChevronRight,
     faClockRotateLeft,
+    faImage,
     faLock,
     faPaperPlane,
     faPenToSquare,
@@ -24,8 +25,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
     ActivityIndicator,
     FlatList,
+    Image,
     Keyboard,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -35,6 +38,8 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
+import { pickMedia } from "@/shared-libs/utils/media-picker";
 
 // ─── Public types (kept for backward compatibility with existing screens) ─────
 
@@ -44,6 +49,8 @@ export interface ChatMessage {
     text: string;
     timestamp: number;
     control?: AIControl;
+    /** Image URLs attached to (user) or produced by (assistant) this message. */
+    images?: string[];
 }
 
 export interface FocusItem {
@@ -284,6 +291,51 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
     const listRef = useRef<FlatList>(null);
+    const { uploadFileUri } = useAWSContext();
+
+    // Pending attachments for the next message: picked locally, uploaded to S3,
+    // shown as chips until the message is sent. Send is blocked while uploading.
+    type PendingImage = { key: string; uri: string; url?: string; uploading: boolean; failed?: boolean };
+    const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+    const uploadingImages = pendingImages.some((p) => p.uploading);
+    const readyImageUrls = useMemo(
+        () => pendingImages.filter((p) => p.url).map((p) => p.url as string),
+        [pendingImages]
+    );
+
+    // Full-screen image preview (tap any thumbnail to zoom).
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+    const handleAttach = useCallback(async () => {
+        if (readOnly || tokensExhausted || busy) return;
+        try {
+            const picked = await pickMedia("image");
+            if (!picked) return;
+            const key = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            setPendingImages((prev) => [...prev, { key, uri: picked.uri, uploading: true }]);
+            try {
+                const uploaded = await uploadFileUri({
+                    id: picked.assetId ?? picked.uri,
+                    localUri: picked.uri,
+                    uri: picked.uri,
+                    type: picked.type,
+                });
+                setPendingImages((prev) =>
+                    prev.map((p) => (p.key === key ? { ...p, url: uploaded.imageUrl, uploading: false } : p))
+                );
+            } catch {
+                setPendingImages((prev) =>
+                    prev.map((p) => (p.key === key ? { ...p, uploading: false, failed: true } : p))
+                );
+            }
+        } catch {
+            // picker error — ignore
+        }
+    }, [readOnly, tokensExhausted, busy, uploadFileUri]);
+
+    const removePendingImage = useCallback((key: string) => {
+        setPendingImages((prev) => prev.filter((p) => p.key !== key));
+    }, []);
 
     // ── Adapt AIMessage[] (+ live stream) to ChatMessage[] for rendering ────
     const messages: ChatMessage[] = useMemo(() => {
@@ -297,6 +349,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             text: m.content,
             timestamp: m.timestamp,
             control: m.control,
+            images: m.images && m.images.length > 0
+                ? m.images
+                : m.imageUrl
+                    ? [m.imageUrl]
+                    : undefined,
         }));
         if (isStreaming && streamingContent) {
             out.push({
@@ -333,15 +390,20 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // ── Send handler ─────────────────────────────────────────────────────────
     const handleSend = () => {
         const trimmed = input.trim();
-        if (readOnly || tokensExhausted || !trimmed || isStreaming || busy) return;
+        if (readOnly || tokensExhausted || isStreaming || busy || uploadingImages) return;
+        if (!trimmed && readyImageUrls.length === 0) return;
         const focusedText =
             focusItems.length > 0
                 ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
                 : undefined;
-        sendMessage(trimmed, focusedText, selectedModel);
+        sendMessage(trimmed, focusedText, selectedModel, readyImageUrls.length > 0 ? readyImageUrls : undefined);
         setInput("");
+        setPendingImages([]);
         focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
     };
+
+    const canSend =
+        !isStreaming && !busy && !uploadingImages && (!!input.trim() || readyImageUrls.length > 0);
 
     // ── History view helpers ─────────────────────────────────────────────────
     useEffect(() => {
@@ -383,6 +445,22 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     </View>
                 )}
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
+                    {item.images && item.images.length > 0 && (
+                        <View style={[styles.imageGrid, isAI ? styles.imageGridAI : styles.imageGridUser]}>
+                            {item.images.map((url, idx) => (
+                                <Pressable
+                                    key={`${url}-${idx}`}
+                                    onPress={() => setLightboxUrl(url)}
+                                    style={styles.imageThumb}
+                                    accessibilityRole="imagebutton"
+                                    accessibilityLabel="View image"
+                                >
+                                    <Image source={{ uri: url }} style={styles.imageThumbImg} resizeMode="cover" />
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
+                    {!!item.text && (
                     <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
                         {isAI ? (
                             <MarkdownMessage content={item.text} compact={isCompact} />
@@ -392,6 +470,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             </Text>
                         )}
                     </View>
+                    )}
                     {showControl && item.control && (
                         <AIAnswerControl
                             control={item.control}
@@ -575,7 +654,53 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                 <TokenMeterBar tokens={tokens} />
                             </View>
 
+                            {/* Pending image attachments — chips with upload spinner + remove */}
+                            {pendingImages.length > 0 && (
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.attachBar}
+                                    contentContainerStyle={styles.attachBarContent}
+                                >
+                                    {pendingImages.map((p) => (
+                                        <View key={p.key} style={styles.attachChip}>
+                                            <Image source={{ uri: p.uri }} style={styles.attachThumb} resizeMode="cover" />
+                                            {p.uploading && (
+                                                <View style={styles.attachOverlay}>
+                                                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                                                </View>
+                                            )}
+                                            {p.failed && (
+                                                <View style={styles.attachOverlay}>
+                                                    <Text style={styles.attachFailedText}>!</Text>
+                                                </View>
+                                            )}
+                                            <Pressable
+                                                onPress={() => removePendingImage(p.key)}
+                                                style={styles.attachRemove}
+                                                hitSlop={6}
+                                                accessibilityLabel="Remove attachment"
+                                            >
+                                                <FontAwesomeIcon icon={faXmark} size={9} color={colors.onPrimary} />
+                                            </Pressable>
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                            )}
+
                             <View style={styles.inputArea}>
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.attachBtn,
+                                        pressed && styles.attachBtnPressed,
+                                        busy && styles.sendBtnDisabled,
+                                    ]}
+                                    onPress={handleAttach}
+                                    disabled={busy}
+                                    accessibilityLabel="Attach image"
+                                >
+                                    <FontAwesomeIcon icon={faImage} size={16} color={colors.primary} />
+                                </Pressable>
                                 <TextInput
                                     style={styles.input}
                                     placeholder={busy ? "Getting ready…" : placeholder}
@@ -602,10 +727,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                     style={({ pressed }) => [
                                         styles.sendBtn,
                                         pressed && styles.sendBtnPressed,
-                                        (!input.trim() || isStreaming || busy) && styles.sendBtnDisabled,
+                                        !canSend && styles.sendBtnDisabled,
                                     ]}
                                     onPress={handleSend}
-                                    disabled={!input.trim() || isStreaming || busy}
+                                    disabled={!canSend}
                                 >
                                     <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
                                 </Pressable>
@@ -615,6 +740,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 </>
             )}
         </KeyboardAvoidingView>
+
+        {/* Full-screen image preview */}
+        <Modal visible={!!lightboxUrl} transparent animationType="fade" onRequestClose={() => setLightboxUrl(null)}>
+            <Pressable style={styles.lightboxBackdrop} onPress={() => setLightboxUrl(null)}>
+                {lightboxUrl && (
+                    <Image source={{ uri: lightboxUrl }} style={styles.lightboxImage} resizeMode="contain" />
+                )}
+                <View style={styles.lightboxClose}>
+                    <FontAwesomeIcon icon={faXmark} size={18} color={colors.onPrimary} />
+                </View>
+            </Pressable>
+        </Modal>
         </View>
     );
 };
@@ -844,6 +981,94 @@ function useStyles(
                 },
                 sendBtnPressed: { opacity: 0.75 },
                 sendBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
+                // ── Attach button + pending image chips ──────────────────────
+                attachBtn: {
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: colors.tag,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                attachBtnPressed: { opacity: 0.7 },
+                attachBar: { flexShrink: 0, maxHeight: 76, marginHorizontal: 12, marginBottom: 6 },
+                attachBarContent: { gap: 8, alignItems: "center", paddingVertical: 4 },
+                attachChip: {
+                    width: 60,
+                    height: 60,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.06,
+                    elevation: 1,
+                },
+                attachThumb: { width: "100%", height: "100%" },
+                attachOverlay: {
+                    ...StyleSheet.absoluteFillObject,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.backdropStrong,
+                },
+                attachFailedText: { color: colors.onPrimary, fontWeight: "800", fontSize: 16 },
+                attachRemove: {
+                    position: "absolute",
+                    top: 3,
+                    right: 3,
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.backdropStrong,
+                },
+                // ── Message image thumbnails + lightbox ──────────────────────
+                imageGrid: {
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    maxWidth: "100%",
+                },
+                imageGridAI: { justifyContent: "flex-start" },
+                imageGridUser: { justifyContent: "flex-end" },
+                imageThumb: {
+                    width: 132,
+                    height: 132,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.08,
+                    elevation: 2,
+                },
+                imageThumbImg: { width: "100%", height: "100%" },
+                lightboxBackdrop: {
+                    flex: 1,
+                    backgroundColor: colors.backdropStrong,
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
+                lightboxImage: { width: "92%", height: "80%" },
+                lightboxClose: {
+                    position: "absolute",
+                    top: 50,
+                    right: 24,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.backdropStrong,
+                },
                 // ── Read-only footer (finalized strategy) ────────────────────
                 readOnlyFooter: {
                     flexDirection: "row",
