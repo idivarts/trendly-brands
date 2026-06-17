@@ -8,7 +8,13 @@ import {
 } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
-import { faCalendarDays, faXmark } from "@fortawesome/free-solid-svg-icons";
+import TitleTooltip from "@/components/contents/TitleTooltip";
+import {
+    faCalendarDays,
+    faCheck,
+    faCircleInfo,
+    faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
@@ -151,6 +157,10 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     };
     // Contents view only: whether the optional date field has been revealed.
     const [showOptionalDate, setShowOptionalDate] = useState(false);
+    // Whether the "why are some platforms disabled?" hint is expanded inline.
+    // Kept collapsed by default so the section stays light; the info icon also
+    // surfaces the same text as a hover tooltip on web (see TitleTooltip).
+    const [showPlatformHint, setShowPlatformHint] = useState(false);
 
     // The modal stays mounted and is toggled via `visible`, so the useState
     // initialiser only runs once. Re-sync the date each time the modal opens (or
@@ -379,11 +389,30 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                                 ))}
                             </View>
 
-                            <Text style={styles.label}>Platforms</Text>
-                            <Text style={styles.helperText}>
-                                Where you plan to post this. Options not supported by the
-                                selected content type are disabled.
-                            </Text>
+                            <View style={styles.labelRow}>
+                                <Text style={styles.labelInline}>Platforms</Text>
+                                <TitleTooltip text="Options not supported by the selected content type are disabled.">
+                                    <Pressable
+                                        onPress={() => setShowPlatformHint((v) => !v)}
+                                        hitSlop={8}
+                                        style={styles.infoBtn}
+                                        accessibilityLabel="Why are some platforms disabled?"
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={faCircleInfo}
+                                            size={13}
+                                            color={colors.textSecondary}
+                                        />
+                                    </Pressable>
+                                </TitleTooltip>
+                                <Text style={styles.selectAllHint}>Select all that apply</Text>
+                            </View>
+                            {showPlatformHint && (
+                                <Text style={styles.helperText}>
+                                    Options not supported by the selected content type are
+                                    disabled.
+                                </Text>
+                            )}
                             <View style={styles.typeRow}>
                                 {SOCIAL_PLATFORMS.map((meta) => {
                                     const p = meta.key as Platform;
@@ -394,13 +423,22 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                                             key={p}
                                             disabled={!compatible}
                                             style={({ pressed }) => [
-                                                styles.typeChip,
+                                                styles.platformChip,
                                                 selected && styles.typeChipActive,
                                                 !compatible && styles.typeChipDisabled,
                                                 pressed && compatible && styles.typeChipPressed,
                                             ]}
                                             onPress={() => togglePlatform(p)}
                                         >
+                                            <FontAwesomeIcon
+                                                icon={meta.icon}
+                                                size={14}
+                                                color={
+                                                    selected
+                                                        ? colors.onPrimary
+                                                        : colors[meta.colorKey]
+                                                }
+                                            />
                                             <Text
                                                 style={[
                                                     styles.typeChipText,
@@ -409,6 +447,13 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                                             >
                                                 {SOCIAL_PLATFORM_MAP[p]?.label ?? meta.label}
                                             </Text>
+                                            {selected && (
+                                                <FontAwesomeIcon
+                                                    icon={faCheck}
+                                                    size={11}
+                                                    color={colors.onPrimary}
+                                                />
+                                            )}
                                         </Pressable>
                                     );
                                 })}
@@ -526,6 +571,28 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     marginBottom: 6,
                     marginTop: 12,
                 },
+                labelRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 12,
+                    marginBottom: 6,
+                },
+                labelInline: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                infoBtn: {
+                    padding: 2,
+                },
+                selectAllHint: {
+                    marginLeft: "auto",
+                    fontSize: 11,
+                    fontWeight: "500",
+                    color: colors.textSecondary,
+                    opacity: 0.8,
+                },
                 dateRow: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -627,6 +694,21 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 typeChip: {
                     paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                platformChip: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 7,
+                    paddingLeft: 12,
+                    paddingRight: 13,
                     paddingVertical: 8,
                     borderRadius: 20,
                     backgroundColor: colors.tag,
