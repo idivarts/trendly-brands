@@ -131,6 +131,9 @@ const CreateContentScreen = () => {
     const [unscheduling, setUnscheduling] = useState(false);
     const [scriptAiPrompt, setScriptAiPrompt] = useState("");
     const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
+    // The platforms this content is planned for (publishing intent). Editable
+    // from the Content details modal; hydrated from the live item below.
+    const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
@@ -158,6 +161,7 @@ const CreateContentScreen = () => {
         setDestinations(seedItem.destinations ?? []);
         setScheduleMode(seedItem.scheduleMode ?? "scheduled");
         setTimeOfPosting(seedItem.timeOfPosting ?? "");
+        setTargetPlatforms(seedItem.platforms ?? []);
         if (seedItem.date) {
             setDate(new Date(seedItem.date + "T00:00:00"));
         }
@@ -175,7 +179,7 @@ const CreateContentScreen = () => {
             return;
         }
         setDirty(true);
-    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, scheduleMode, date]);
+    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, scheduleMode, date, targetPlatforms]);
 
     // ── Right side panel (comments + AI chat) ────────────────────────────────
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
@@ -209,9 +213,6 @@ const CreateContentScreen = () => {
     const isReel = contentType === "reel";
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
-
-    // The platforms this content is planned for (publishing intent).
-    const targetPlatforms = seedItem?.platforms ?? [];
 
     // Platforms a destination may use: the content's targeted platforms (or all,
     // for legacy docs with none) that also support the chosen format. This is the
@@ -281,6 +282,7 @@ const CreateContentScreen = () => {
                 script,
                 imagePrompt,
                 attachments,
+                platforms: targetPlatforms,
                 postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
             });
         } catch (e) {
@@ -293,7 +295,7 @@ const CreateContentScreen = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
         return true;
-    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date]);
+    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date, targetPlatforms]);
 
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
@@ -336,6 +338,12 @@ const CreateContentScreen = () => {
             });
 
             // 2. Trigger publish-now or schedule on the backend.
+            // Publishing locally flips `status`, a watched dependency of the
+            // dirty-tracking effect. Suppress that next run so the effect does
+            // not re-flag the content as dirty after we've just saved + published
+            // (mirrors handleUnschedule). Set BEFORE the setStatus calls so the
+            // single batched re-render is the one that gets skipped.
+            skipDirtyRef.current = true;
             if (scheduleMode === "now") {
                 const res = await HttpWrapper.fetch(
                     `/api/v2/brands/${brandId}/contents/${contentId}/publish`,
@@ -1237,9 +1245,12 @@ const CreateContentScreen = () => {
                 idea={idea}
                 status={status}
                 typeLabel={CONTENT_TYPE_LABELS[contentType]}
+                contentType={contentType}
+                platforms={targetPlatforms}
                 onChangeTitle={setTitle}
                 onChangeIdea={setIdea}
                 onChangeStatus={setStatus}
+                onChangePlatforms={setTargetPlatforms}
                 onClose={() => setShowInfoModal(false)}
                 readOnly={locked}
             />

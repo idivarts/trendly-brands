@@ -49,6 +49,7 @@ const SUBTITLE: Record<ContentType, string> = {
     story: "Upload an image or generate one with AI.",
     live: "",
     text: "",
+    video: ""
 };
 
 const MediaStage: React.FC<MediaStageProps> = ({
@@ -233,53 +234,53 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
             {/* Actions — hidden when the content is locked (scheduled / posted) */}
             {!readOnly ? (
-            <View style={styles.actionRow}>
-                <Pressable
-                    style={({ pressed }) => [styles.uploadBtn, pressed && styles.pressed]}
-                    onPress={handleUpload}
-                    disabled={uploading}
-                >
-                    {uploading ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                        <FontAwesomeIcon icon={faArrowUpFromBracket} size={13} color={colors.primary} />
-                    )}
-                    <Text style={styles.uploadBtnText}>
-                        {uploading
-                            ? "Uploading…"
-                            : spec.multi
-                                ? "Upload slide"
-                                : spec.kind === "video"
-                                    ? "Upload video"
-                                    : "Upload image"}
-                    </Text>
-                </Pressable>
-
-                {spec.canGenerate ? (
+                <View style={styles.actionRow}>
                     <Pressable
-                        style={({ pressed }) => [
-                            styles.genToggleBtn,
-                            showPrompt && styles.genToggleBtnActive,
-                            pressed && styles.pressed,
-                        ]}
-                        onPress={() => setShowPrompt(true)}
+                        style={({ pressed }) => [styles.uploadBtn, pressed && styles.pressed]}
+                        onPress={handleUpload}
+                        disabled={uploading}
                     >
-                        <FontAwesomeIcon
-                            icon={faMagicWandSparkles}
-                            size={13}
-                            color={showPrompt ? colors.onPrimary : colors.primary}
-                        />
-                        <Text
-                            style={[
-                                styles.genToggleText,
-                                showPrompt && styles.genToggleTextActive,
-                            ]}
-                        >
-                            {generateLabel}
+                        {uploading ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                            <FontAwesomeIcon icon={faArrowUpFromBracket} size={13} color={colors.primary} />
+                        )}
+                        <Text style={styles.uploadBtnText}>
+                            {uploading
+                                ? "Uploading…"
+                                : spec.multi
+                                    ? "Upload slide"
+                                    : spec.kind === "video"
+                                        ? "Upload video"
+                                        : "Upload image"}
                         </Text>
                     </Pressable>
-                ) : null}
-            </View>
+
+                    {spec.canGenerate ? (
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.genToggleBtn,
+                                showPrompt && styles.genToggleBtnActive,
+                                pressed && styles.pressed,
+                            ]}
+                            onPress={() => setShowPrompt(true)}
+                        >
+                            <FontAwesomeIcon
+                                icon={faMagicWandSparkles}
+                                size={13}
+                                color={showPrompt ? colors.onPrimary : colors.primary}
+                            />
+                            <Text
+                                style={[
+                                    styles.genToggleText,
+                                    showPrompt && styles.genToggleTextActive,
+                                ]}
+                            >
+                                {generateLabel}
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                </View>
             ) : null}
 
             {/* AI generation prompt — floating gradient box (web) / modal (mobile) */}

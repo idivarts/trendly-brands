@@ -4,6 +4,12 @@ import {
     EDITABLE_CONTENT_STATUSES,
     contentStatusColors,
 } from "@/components/contents/types";
+import { SOCIAL_PLATFORMS, SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
+import {
+    ContentFormat,
+    isFormatPlatformCompatible,
+} from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
 import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -31,11 +37,16 @@ export interface ContentInfoModalProps {
     idea: string;
     status: ContentStatus;
     typeLabel: string;
+    /** Content format — drives which platforms are selectable. */
+    contentType: ContentFormat;
+    /** Platforms this content is planned for (publishing intent). */
+    platforms: Platform[];
     onChangeTitle: (v: string) => void;
     onChangeIdea: (v: string) => void;
     onChangeStatus: (s: ContentStatus) => void;
+    onChangePlatforms: (next: Platform[]) => void;
     onClose: () => void;
-    /** When true, status/title/idea are locked (content is scheduled or posted). */
+    /** When true, status/title/idea/platforms are locked (content is scheduled or posted). */
     readOnly?: boolean;
 }
 
@@ -45,9 +56,12 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
     idea,
     status,
     typeLabel,
+    contentType,
+    platforms,
     onChangeTitle,
     onChangeIdea,
     onChangeStatus,
+    onChangePlatforms,
     onClose,
     readOnly = false,
 }) => {
@@ -55,6 +69,15 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors, xl);
+
+    const togglePlatform = (p: Platform) => {
+        if (readOnly || !isFormatPlatformCompatible(contentType, p)) return;
+        onChangePlatforms(
+            platforms.includes(p)
+                ? platforms.filter((x) => x !== p)
+                : [...platforms, p]
+        );
+    };
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -144,6 +167,86 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                                 );
                             })}
                         </View>
+                        )}
+
+                        <Text style={[styles.label, styles.mt18]} nativeID="ci-platforms">Platforms</Text>
+                        {readOnly ? (
+                            platforms.length > 0 ? (
+                                <View style={styles.statusRow}>
+                                    {platforms.map((p) => (
+                                        <View key={p} style={[styles.platformChip, styles.platformChipActive]}>
+                                            <View
+                                                style={[
+                                                    styles.platformDot,
+                                                    {
+                                                        backgroundColor:
+                                                            colors[SOCIAL_PLATFORM_MAP[p]?.colorKey] ??
+                                                            colors.textSecondary,
+                                                    },
+                                                ]}
+                                            />
+                                            <Text style={[styles.platformChipText, styles.platformChipTextActive]}>
+                                                {SOCIAL_PLATFORM_MAP[p]?.label ?? p}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <Text style={styles.lockNote}>No platforms selected.</Text>
+                            )
+                        ) : (
+                            <>
+                                <Text style={[styles.helperText, styles.mb8]}>
+                                    Where you plan to post this. Options not supported by this
+                                    content type are disabled.
+                                </Text>
+                                <View
+                                    style={styles.statusRow}
+                                    accessibilityLabel="Platforms"
+                                    accessibilityRole="list"
+                                >
+                                    {SOCIAL_PLATFORMS.map((meta) => {
+                                        const p = meta.key as Platform;
+                                        const compatible = isFormatPlatformCompatible(contentType, p);
+                                        const selected = platforms.includes(p);
+                                        return (
+                                            <Pressable
+                                                key={p}
+                                                disabled={!compatible}
+                                                style={({ pressed }) => [
+                                                    styles.platformChip,
+                                                    selected && styles.platformChipActive,
+                                                    !compatible && styles.platformChipDisabled,
+                                                    pressed && compatible && styles.pressed,
+                                                ]}
+                                                onPress={() => togglePlatform(p)}
+                                                accessibilityRole="checkbox"
+                                                accessibilityState={{ checked: selected, disabled: !compatible }}
+                                                accessibilityLabel={SOCIAL_PLATFORM_MAP[p]?.label ?? meta.label}
+                                            >
+                                                <View
+                                                    style={[
+                                                        styles.platformDot,
+                                                        {
+                                                            backgroundColor:
+                                                                colors[SOCIAL_PLATFORM_MAP[p]?.colorKey] ??
+                                                                colors.textSecondary,
+                                                        },
+                                                    ]}
+                                                />
+                                                <Text
+                                                    style={[
+                                                        styles.platformChipText,
+                                                        selected && styles.platformChipTextActive,
+                                                    ]}
+                                                >
+                                                    {SOCIAL_PLATFORM_MAP[p]?.label ?? meta.label}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
+                            </>
                         )}
 
                         <Text style={[styles.label, styles.mt18]} nativeID="ci-title">Title</Text>
@@ -269,6 +372,49 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         },
         mt8: {
             marginTop: 8,
+        },
+        mb8: {
+            marginBottom: 8,
+        },
+        helperText: {
+            fontSize: 12,
+            color: colors.textSecondary,
+            lineHeight: 17,
+            marginTop: -2,
+        },
+        platformChip: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            minHeight: 44,
+            paddingHorizontal: 14,
+            borderRadius: 10,
+            backgroundColor: colors.tag,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        platformChipActive: {
+            backgroundColor: colors.aliceBlue,
+        },
+        platformChipDisabled: {
+            opacity: 0.4,
+        },
+        platformDot: {
+            width: 9,
+            height: 9,
+            borderRadius: 5,
+        },
+        platformChipText: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.textSecondary,
+        },
+        platformChipTextActive: {
+            color: colors.primary,
+            fontWeight: "700",
         },
         lockNote: {
             fontSize: 12,
