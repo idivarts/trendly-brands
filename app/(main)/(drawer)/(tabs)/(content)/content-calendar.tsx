@@ -1,10 +1,11 @@
-import AddContentModal from "@/components/content-calendar/AddContentModal";
+import AddContentModal, { AddContentExtras } from "@/components/content-calendar/AddContentModal";
 import ContentDetailsModal from "@/components/content-calendar/ContentDetailsModal";
 import CalendarCommentsPanel from "@/components/content-calendar/CalendarCommentsPanel";
 import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
+import { ContentItem } from "@/components/contents/types";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -89,7 +90,7 @@ const ContentCalendarScreen = () => {
     const [addSource, setAddSource] = useState<"week" | "month">("month");
 
     // Item whose short-details preview modal is open (tapping a content card).
-    const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
+    const [detailItem, setDetailItem] = useState<ContentItem | null>(null);
 
     // ── Right panel ───────────────────────────────────────────────────────────
     // 'chat'     → AI chat panel (desktop default)
@@ -154,9 +155,14 @@ const ContentCalendarScreen = () => {
     );
 
     // Tapping a content chip body: first show a short-details preview modal.
-    const handleOpenItem = useCallback((item: CalendarItem) => {
-        setDetailItem(item);
-    }, []);
+    // Resolve the full ContentItem (the calendar list is widened to CalendarItem,
+    // but the preview needs status + platforms) by id.
+    const handleOpenItem = useCallback(
+        (item: CalendarItem) => {
+            setDetailItem(allContents.find((c) => c.id === item.id) ?? null);
+        },
+        [allContents]
+    );
 
     // From the preview modal: navigate to the full content page for editing.
     const handleGoToContentPage = useCallback(
@@ -172,8 +178,8 @@ const ContentCalendarScreen = () => {
     );
 
     const handleAddItem = useCallback(
-        async (newItem: Omit<CalendarItem, "id">) => {
-            await addContent(newItem);
+        async (newItem: Omit<CalendarItem, "id">, extras: AddContentExtras) => {
+            await addContent(newItem, { platforms: extras.platforms });
         },
         [addContent]
     );

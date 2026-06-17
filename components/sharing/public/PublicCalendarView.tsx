@@ -20,7 +20,8 @@ interface PublicCalendarItem {
     id: string;
     title: string;
     contentFormat?: string;
-    platform?: string;
+    platforms?: string[];
+    platform?: string; // deprecated legacy single platform
     status?: string;
     postingTimeStamp?: number;
     imageUrl?: string;
@@ -137,11 +138,19 @@ const PublicCalendarView: React.FC<Props> = ({ share }) => {
                                 <Text style={styles.itemTitle} numberOfLines={2}>
                                     {item.title}
                                 </Text>
-                                {(item.contentFormat || item.platform) && (
-                                    <Text style={styles.itemMeta}>
-                                        {[item.contentFormat, item.platform].filter(Boolean).join(" · ")}
-                                    </Text>
-                                )}
+                                {(() => {
+                                    const platformLabel =
+                                        item.platforms?.length
+                                            ? item.platforms.join(", ")
+                                            : item.platform;
+                                    return item.contentFormat || platformLabel ? (
+                                        <Text style={styles.itemMeta}>
+                                            {[item.contentFormat, platformLabel]
+                                                .filter(Boolean)
+                                                .join(" · ")}
+                                        </Text>
+                                    ) : null;
+                                })()}
                             </View>
                         </View>
                     ))

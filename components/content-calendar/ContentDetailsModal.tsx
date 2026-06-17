@@ -1,3 +1,9 @@
+import {
+    CONTENT_STATUS_LABELS,
+    ContentItem,
+    contentStatusColors,
+} from "@/components/contents/types";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import Colors from "@/shared-uis/constants/Colors";
 import { faArrowRight, faCommentDots, faRobot, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -9,7 +15,7 @@ import { CalendarItem, CONTENT_TYPE_LABELS } from "./types";
 
 interface ContentDetailsModalProps {
     visible: boolean;
-    item: CalendarItem | null;
+    item: ContentItem | null;
     onClose: () => void;
     /** Navigate to the full content page for editing. */
     onOpenContentPage: (item: CalendarItem) => void;
@@ -48,6 +54,9 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
           })
         : "—";
 
+    const statusColorSet = contentStatusColors(item.status, colors);
+    const platforms = item.platforms ?? [];
+
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <View style={styles.backdrop}>
@@ -73,8 +82,42 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
                                     {CONTENT_TYPE_LABELS[item.type]}
                                 </Text>
                             </View>
+                            <View
+                                style={[styles.statusPill, { backgroundColor: statusColorSet.bg }]}
+                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[item.status]}`}
+                            >
+                                <Text style={[styles.statusPillText, { color: statusColorSet.fg }]}>
+                                    {CONTENT_STATUS_LABELS[item.status]}
+                                </Text>
+                            </View>
+                            <View style={styles.metaSpacer} />
                             <Text style={styles.dateText}>{dateLabel}</Text>
                         </View>
+
+                        <Text style={styles.label}>Platforms</Text>
+                        {platforms.length > 0 ? (
+                            <View style={styles.platformRow}>
+                                {platforms.map((p) => (
+                                    <View key={p} style={styles.platformChip}>
+                                        <View
+                                            style={[
+                                                styles.platformDot,
+                                                {
+                                                    backgroundColor:
+                                                        colors[SOCIAL_PLATFORM_MAP[p]?.colorKey] ??
+                                                        colors.textSecondary,
+                                                },
+                                            ]}
+                                        />
+                                        <Text style={styles.platformChipText}>
+                                            {SOCIAL_PLATFORM_MAP[p]?.label ?? p}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        ) : (
+                            <Text style={styles.ideaText}>No platforms selected yet.</Text>
+                        )}
 
                         <Text style={styles.label}>Idea / Vision</Text>
                         <Text style={styles.ideaText}>
@@ -205,10 +248,46 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
+                statusPill: {
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 20,
+                },
+                statusPillText: {
+                    fontSize: 12,
+                    fontWeight: "700",
+                },
+                metaSpacer: {
+                    flex: 1,
+                },
                 dateText: {
                     fontSize: 13,
                     color: colors.textSecondary,
                     fontWeight: "500",
+                },
+                platformRow: {
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 8,
+                },
+                platformChip: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 7,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 16,
+                    backgroundColor: colors.tag,
+                },
+                platformDot: {
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                },
+                platformChipText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.text,
                 },
                 label: {
                     fontSize: 13,

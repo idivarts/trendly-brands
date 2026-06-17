@@ -3,6 +3,11 @@ import { ContentItem, ContentStatus, SocialDestination } from "@/components/cont
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
+    isFormatPlatformCompatible,
+    platformsForFormat,
+} from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { normalizePlatforms } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import {
     IContent,
     ContentStatus as FSContentStatus,
 } from "@/shared-libs/firestore/trendly-pro/models/contents";
@@ -42,6 +47,11 @@ function toContentItem(id: string, data: IContent): ContentItem {
         idea: data.description ?? "",
         date: epochToIsoDate(data.postingTimeStamp),
         type: (data.contentFormat as ContentType) ?? "post",
+        // Prefer the new `platforms` array; coerce a legacy single `platform`
+        // string (e.g. capitalised "Instagram") for old documents.
+        platforms: data.platforms?.length
+            ? data.platforms
+            : normalizePlatforms(data.platform ? [data.platform] : []),
         status: (data.status as ContentStatus) ?? "draft",
         caption: data.caption,
         hashtags: data.hashtags,
@@ -76,11 +86,18 @@ function toIContent(
         ? new Date(item.date + "T00:00:00Z").getTime()
         : undefined;
 
+    // Target platforms come from the create flow (extra.platforms). Clamp them to
+    // those that actually support the chosen format; fall back to every platform
+    // that supports the format when none were supplied.
+    const requested = normalizePlatforms(extra.platforms ?? []);
+    const compatible = requested.filter((p) => isFormatPlatformCompatible(item.type, p));
+    const platforms = compatible.length ? compatible : platformsForFormat(item.type);
+
     const doc: IContent = {
         title: item.title,
         managerId,
         description: item.idea,
-        platform: "Instagram", // Default — no platform selector in AddContentModal yet
+        platforms,
         contentFormat: item.type,
         status: FSContentStatus.Draft,
         isArchived: false,

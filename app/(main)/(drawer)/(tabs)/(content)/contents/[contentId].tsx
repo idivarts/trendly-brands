@@ -1,4 +1,7 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
+import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
@@ -207,26 +210,35 @@ const CreateContentScreen = () => {
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
 
-    // Instagram has no text-only post format, so a text post can only target
-    // Facebook / LinkedIn / X. Hide Instagram from the destination picker and
-    // prune any Instagram destination that may already be selected.
+    // The platforms this content is planned for (publishing intent).
+    const targetPlatforms = seedItem?.platforms ?? [];
+
+    // Platforms a destination may use: the content's targeted platforms (or all,
+    // for legacy docs with none) that also support the chosen format. This is the
+    // single source for both the publish picker and destination pruning, and
+    // replaces the old Instagram-only text-post special-case with the shared
+    // platform↔format matrix.
+    const allowedPlatforms = useMemo(() => {
+        const base = targetPlatforms.length ? targetPlatforms : ALL_PLATFORMS;
+        return new Set(base.filter((p) => isFormatPlatformCompatible(contentType, p)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [targetPlatforms.join(","), contentType]);
+
+    // Only offer connected accounts whose platform the content is targeting.
     const publishableAccounts = useMemo(
-        () =>
-            isTextPost
-                ? socialAccounts.filter((a) => a.platform !== "instagram")
-                : socialAccounts,
-        [socialAccounts, isTextPost]
+        () => socialAccounts.filter((a) => allowedPlatforms.has(a.platform)),
+        [socialAccounts, allowedPlatforms]
     );
 
-    // A text post can't go to Instagram — drop any Instagram destination if the
-    // type is (or becomes) text.
+    // Drop any destination whose platform is no longer allowed (e.g. the format
+    // changed, or the platform isn't targeted). Platform-level so it doesn't
+    // wipe destinations while connected socials are still loading.
     useEffect(() => {
-        if (!isTextPost) return;
         setDestinations((prev) => {
-            const next = prev.filter((d) => d.platform !== "instagram");
+            const next = prev.filter((d) => allowedPlatforms.has(d.platform));
             return next.length === prev.length ? prev : next;
         });
-    }, [isTextPost]);
+    }, [allowedPlatforms]);
 
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -509,7 +521,11 @@ const CreateContentScreen = () => {
         (prompt: string) => {
             const target = magicTarget;
             if (!target) return;
-            const platform = "Instagram";
+            // Use the content's primary targeted platform as prompt context.
+            const primaryPlatform = targetPlatforms[0];
+            const platform = primaryPlatform
+                ? SOCIAL_PLATFORM_MAP[primaryPlatform]?.label ?? "Instagram"
+                : "Instagram";
             // Pass the current (possibly unsaved) editor state so the AI writes
             // with the context of what's on screen right now, not the last save.
             const liveContent = {
@@ -544,7 +560,7 @@ const CreateContentScreen = () => {
                 });
             }
         },
-        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags]
+        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms]
     );
 
     const handleScriptAiEnhance = useCallback(() => {
@@ -787,9 +803,35 @@ const CreateContentScreen = () => {
                             </View>
                         </View>
                         {xl ? (
-                            <Text style={styles.headerTypeText}>
-                                {CONTENT_TYPE_LABELS[contentType]}
-                            </Text>
+                            <View style={styles.headerMetaRow}>
+                                <Text style={styles.headerTypeText}>
+                                    {CONTENT_TYPE_LABELS[contentType]}
+                                </Text>
+                                {targetPlatforms.length > 0 ? (
+                                    <>
+                                        <Text style={styles.headerMetaDot}>·</Text>
+                                        <View style={styles.headerPlatformRow}>
+                                            {targetPlatforms.map((p) => (
+                                                <View key={p} style={styles.headerPlatformChip}>
+                                                    <View
+                                                        style={[
+                                                            styles.headerPlatformDot,
+                                                            {
+                                                                backgroundColor:
+                                                                    colors[SOCIAL_PLATFORM_MAP[p]?.colorKey] ??
+                                                                    colors.textSecondary,
+                                                            },
+                                                        ]}
+                                                    />
+                                                    <Text style={styles.headerPlatformText}>
+                                                        {SOCIAL_PLATFORM_MAP[p]?.label ?? p}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </>
+                                ) : null}
+                            </View>
                         ) : null}
                     </View>
                 }
@@ -1106,6 +1148,7 @@ const CreateContentScreen = () => {
                             previewSlot={
                                 <PreviewPanel
                                     contentType={contentType}
+                                    targetPlatforms={targetPlatforms}
                                     attachments={attachments}
                                     caption={caption}
                                     hashtags={hashtags}
@@ -1142,6 +1185,7 @@ const CreateContentScreen = () => {
                     previewSlot={
                         <PreviewPanel
                             contentType={contentType}
+                            targetPlatforms={targetPlatforms}
                             attachments={attachments}
                             caption={caption}
                             hashtags={hashtags}
@@ -1328,6 +1372,39 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     color: colors.textSecondary,
                     marginTop: 2,
                     letterSpacing: 1,
+                },
+                headerMetaRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    marginTop: 2,
+                },
+                headerMetaDot: {
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: colors.textSecondary,
+                },
+                headerPlatformRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                },
+                headerPlatformChip: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 5,
+                },
+                headerPlatformDot: {
+                    width: 7,
+                    height: 7,
+                    borderRadius: 4,
+                },
+                headerPlatformText: {
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
                 },
                 // Secondary header button (Publish) — distinct from primary Save
                 publishHeaderBtn: {

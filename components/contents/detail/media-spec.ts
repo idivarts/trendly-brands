@@ -33,6 +33,8 @@ export interface MediaSpec {
 const PORTRAIT_9_16 = { min: 0.5, max: 0.65 };
 // 4:5 (0.8) → 1:1 (1.0); allow 0.78–1.02.
 const SQUARE_TO_45 = { min: 0.78, max: 1.02 };
+// Landscape 16:9 ≈ 1.777; allow 1.6–1.95.
+const LANDSCAPE_16_9 = { min: 1.6, max: 1.95 };
 
 export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
     reel: {
@@ -42,6 +44,16 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         aspectRatios: ["9:16"],
         aspectRange: PORTRAIT_9_16,
         canGenerate: false, // reel videos are produced externally and uploaded
+        hasScript: true,
+    },
+    video: {
+        // Landscape / long-form video (YouTube, Facebook, LinkedIn, X, IG feed).
+        kind: "video",
+        multi: false,
+        aspectLabel: "16:9",
+        aspectRatios: ["16:9"],
+        aspectRange: LANDSCAPE_16_9,
+        canGenerate: false, // produced externally and uploaded
         hasScript: true,
     },
     post: {
