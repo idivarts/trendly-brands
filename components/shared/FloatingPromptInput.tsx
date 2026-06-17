@@ -1,5 +1,5 @@
-import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     faArrowUp,
     faMagicWandSparkles,
@@ -129,7 +129,6 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                                 value={prompt}
                                 onChangeText={setPrompt}
                                 multiline
-                                maxLength={600}
                                 textAlignVertical="top"
                                 autoFocus
                                 onSubmitEditing={submit}
