@@ -88,7 +88,11 @@ const ContentGalleryCard: React.FC<ContentGalleryCardProps> = ({ item, onPress }
         [item.date, item.scheduledAt]
     );
 
-    const destinations = item.destinations ?? [];
+    // Prefer the content's targeted platforms (set at creation); fall back to the
+    // concrete destination platforms for older items that have no `platforms`.
+    const platformsToShow = item.platforms?.length
+        ? item.platforms
+        : (item.destinations ?? []).map((d) => d.platform);
 
     return (
         <Pressable
@@ -148,18 +152,18 @@ const ContentGalleryCard: React.FC<ContentGalleryCardProps> = ({ item, onPress }
                         <ContentUrgencyBadge item={item} />
                     </View>
 
-                    {destinations.length > 0 ? (
+                    {platformsToShow.length > 0 ? (
                         <View style={styles.destRow}>
-                            {destinations.slice(0, 3).map((d, i) => (
+                            {platformsToShow.slice(0, 3).map((p, i) => (
                                 <FontAwesomeIcon
-                                    key={`${d.socialAccountId}-${i}`}
-                                    icon={platformGlyph(d.platform)}
+                                    key={`${p}-${i}`}
+                                    icon={platformGlyph(p)}
                                     size={12}
                                     color={colors.textSecondary}
                                 />
                             ))}
-                            {destinations.length > 3 ? (
-                                <Text style={styles.destMore}>+{destinations.length - 3}</Text>
+                            {platformsToShow.length > 3 ? (
+                                <Text style={styles.destMore}>+{platformsToShow.length - 3}</Text>
                             ) : null}
                         </View>
                     ) : null}

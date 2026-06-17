@@ -1,5 +1,6 @@
 import { CalendarItem } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { IImageGeneration } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import Colors from "@/shared-uis/constants/Colors";
 
@@ -36,7 +37,7 @@ export interface MediaAsset {
 export interface SocialDestination {
     /** Matches `ISocialAccount.id` from `useBrandSocialContext`. */
     socialAccountId: string;
-    platform: "instagram" | "facebook" | "youtube" | "linkedin" | "twitter";
+    platform: Platform;
     /** Cached for display so the picker/preview don't need to re-query. */
     username?: string;
 }
@@ -45,6 +46,8 @@ export type ScheduleMode = "now" | "scheduled";
 
 export interface ContentItem extends CalendarItem {
     status: ContentStatus;
+    /** Platforms this content is planned for (publishing intent). Mirrors `IContent.platforms`. */
+    platforms: Platform[];
     caption?: string;
     hashtags?: string;
     timeOfPosting?: string; // "HH:MM"

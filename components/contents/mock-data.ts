@@ -11,6 +11,7 @@ function iso(year: number, month: number, day: number) {
 export const MOCK_CONTENT_ITEMS: ContentItem[] = [
     {
         id: "content-1",
+        platforms: ["instagram", "facebook"],
         title: "Founder Story Launch Reel",
         idea: "A 30-second reel where the founder shares the 'why' behind the brand — raw, personal, authentic.",
         date: iso(y, m, 3),
@@ -25,6 +26,7 @@ export const MOCK_CONTENT_ITEMS: ContentItem[] = [
     },
     {
         id: "content-2",
+        platforms: ["instagram", "linkedin"],
         title: "Product Benefits Carousel",
         idea: "5-slide carousel breaking down the top 5 benefits of our hero product with bold visuals.",
         date: iso(y, m, 7),
@@ -39,6 +41,7 @@ export const MOCK_CONTENT_ITEMS: ContentItem[] = [
     },
     {
         id: "content-3",
+        platforms: ["instagram", "facebook"],
         title: "Behind-the-Scenes Story",
         idea: "A Story series showing how the product is made — packaging, quality checks, team vibes.",
         date: iso(y, m, 10),
@@ -49,6 +52,7 @@ export const MOCK_CONTENT_ITEMS: ContentItem[] = [
     },
     {
         id: "content-4",
+        platforms: ["instagram", "facebook"],
         title: "Micro-Influencer Collab Post",
         idea: "Feature a micro-influencer using our product in their daily routine. Authentic + aspirational.",
         date: iso(y, m, 14),
@@ -59,6 +63,7 @@ export const MOCK_CONTENT_ITEMS: ContentItem[] = [
     },
     {
         id: "content-5",
+        platforms: ["instagram", "facebook"],
         title: "Q&A Live Session",
         idea: "Founder goes live to answer questions about the brand, product, and upcoming launches.",
         date: iso(y, m - 1, 17),
@@ -72,6 +77,7 @@ export const MOCK_CONTENT_ITEMS: ContentItem[] = [
     },
     {
         id: "content-6",
+        platforms: ["instagram"],
         title: "Customer Testimonial Reel",
         idea: "Short reel stitching together 3 real customer reviews — faces, quotes, and results.",
         date: iso(y, m - 1, 21),

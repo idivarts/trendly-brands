@@ -1,4 +1,12 @@
 import DateField, { formatDateForWebInput, parseWebInputDate } from "@/components/modals/DateField";
+import { SOCIAL_PLATFORM_MAP, SOCIAL_PLATFORMS } from "@/constants/Socials";
+import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import {
+    ALL_CONTENT_FORMATS,
+    isFormatPlatformCompatible,
+    platformsForFormat,
+} from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
 import { faCalendarDays, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -15,6 +23,11 @@ import {
 } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS, ContentType } from "./types";
 
+/** Extra (non-CalendarItem) fields the modal collects for a new content piece. */
+export interface AddContentExtras {
+    platforms: Platform[];
+}
+
 /**
  * Where the modal was opened from. This drives how the posting date is chosen:
  * - `month`    → a single date selector (the default calendar behaviour).
@@ -29,10 +42,10 @@ interface AddContentModalProps {
     /** Controls the date-selection UI. Defaults to the month-style selector. */
     source?: AddContentSource;
     onClose: () => void;
-    onAdd: (item: Omit<CalendarItem, "id">) => void;
+    onAdd: (item: Omit<CalendarItem, "id">, extras: AddContentExtras) => void;
 }
 
-const TYPES: ContentType[] = ["reel", "post", "story", "carousel", "live", "text"];
+const TYPES: ContentType[] = ALL_CONTENT_FORMATS;
 
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -73,6 +86,23 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
+    const { socialAccounts } = useBrandSocialContext();
+
+    // Platforms the brand has actually connected — used to seed a sensible
+    // default target set for new content.
+    const connectedPlatforms = useMemo<Platform[]>(
+        () => Array.from(new Set(socialAccounts.map((a) => a.platform))),
+        [socialAccounts]
+    );
+
+    // The default target platforms for a given format: the brand's connected
+    // platforms that support the format, falling back to every platform that
+    // supports it when the brand has none of them connected.
+    const defaultPlatformsFor = (t: ContentType): Platform[] => {
+        const supported = platformsForFormat(t);
+        const fromConnected = connectedPlatforms.filter((p) => supported.includes(p));
+        return fromConnected.length ? fromConnected : supported;
+    };
 
     // The days shown as pills in the weekly view: the 7 days starting at the
     // tapped week's start (or today's week when opened from the header).
@@ -99,8 +129,26 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
 
     const [date, setDate] = useState<Date | null>(() => computeInitialDate());
     const [type, setType] = useState<ContentType>("reel");
+    const [platforms, setPlatforms] = useState<Platform[]>(() => defaultPlatformsFor("reel"));
     const [title, setTitle] = useState("");
     const [idea, setIdea] = useState("");
+
+    // Switching format prunes any now-incompatible platforms; if that empties
+    // the selection, fall back to the format's default target set.
+    const handleTypeChange = (t: ContentType) => {
+        setType(t);
+        setPlatforms((prev) => {
+            const pruned = prev.filter((p) => isFormatPlatformCompatible(t, p));
+            return pruned.length ? pruned : defaultPlatformsFor(t);
+        });
+    };
+
+    const togglePlatform = (p: Platform) => {
+        if (!isFormatPlatformCompatible(type, p)) return; // disabled chip
+        setPlatforms((prev) =>
+            prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+        );
+    };
     // Contents view only: whether the optional date field has been revealed.
     const [showOptionalDate, setShowOptionalDate] = useState(false);
 
@@ -114,12 +162,14 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
         if (!visible) return;
         setDate(computeInitialDate());
         setShowOptionalDate(false);
+        setPlatforms(defaultPlatformsFor(type));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible, initialDate, source]);
 
     const reset = () => {
         setDate(computeInitialDate());
         setType("reel");
+        setPlatforms(defaultPlatformsFor("reel"));
         setTitle("");
         setIdea("");
         setShowOptionalDate(false);
@@ -131,20 +181,23 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     };
 
     const handleAdd = () => {
-        if (!title.trim()) return;
-        onAdd({
-            title: title.trim(),
-            idea: idea.trim(),
-            // Contents view may save with no posting date — the calendar simply
-            // won't show it until a date is assigned later.
-            date: date ? formatDateForWebInput(date) : "",
-            type,
-        });
+        if (!title.trim() || platforms.length === 0) return;
+        onAdd(
+            {
+                title: title.trim(),
+                idea: idea.trim(),
+                // Contents view may save with no posting date — the calendar simply
+                // won't show it until a date is assigned later.
+                date: date ? formatDateForWebInput(date) : "",
+                type,
+            },
+            { platforms }
+        );
         reset();
         onClose();
     };
 
-    const canSubmit = title.trim().length > 0;
+    const canSubmit = title.trim().length > 0 && platforms.length > 0;
 
     return (
         <>
@@ -312,7 +365,7 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                                             type === t && styles.typeChipActive,
                                             pressed && styles.typeChipPressed,
                                         ]}
-                                        onPress={() => setType(t)}
+                                        onPress={() => handleTypeChange(t)}
                                     >
                                         <Text
                                             style={[
@@ -324,6 +377,41 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                                         </Text>
                                     </Pressable>
                                 ))}
+                            </View>
+
+                            <Text style={styles.label}>Platforms</Text>
+                            <Text style={styles.helperText}>
+                                Where you plan to post this. Options not supported by the
+                                selected content type are disabled.
+                            </Text>
+                            <View style={styles.typeRow}>
+                                {SOCIAL_PLATFORMS.map((meta) => {
+                                    const p = meta.key as Platform;
+                                    const compatible = isFormatPlatformCompatible(type, p);
+                                    const selected = platforms.includes(p);
+                                    return (
+                                        <Pressable
+                                            key={p}
+                                            disabled={!compatible}
+                                            style={({ pressed }) => [
+                                                styles.typeChip,
+                                                selected && styles.typeChipActive,
+                                                !compatible && styles.typeChipDisabled,
+                                                pressed && compatible && styles.typeChipPressed,
+                                            ]}
+                                            onPress={() => togglePlatform(p)}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.typeChipText,
+                                                    selected && styles.typeChipTextActive,
+                                                ]}
+                                            >
+                                                {SOCIAL_PLATFORM_MAP[p]?.label ?? meta.label}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
                             </View>
 
                             <Text style={styles.label}>Title</Text>
@@ -558,6 +646,15 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 typeChipPressed: {
                     opacity: 0.75,
+                },
+                typeChipDisabled: {
+                    opacity: 0.35,
+                },
+                helperText: {
+                    fontSize: 11,
+                    color: colors.textSecondary,
+                    marginBottom: 8,
+                    marginTop: -2,
                 },
                 typeChipText: {
                     fontSize: 13,

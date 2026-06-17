@@ -1,5 +1,8 @@
 import { ContentType } from "@/components/content-calendar/types";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { socialAccountLabel, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -16,36 +19,27 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-type PreviewPlatform = "instagram" | "facebook" | "linkedin";
+type PreviewPlatform = Platform;
 
 interface PreviewPanelProps {
     contentType: ContentType;
+    /** The platforms this content is targeting — drives which previews are shown. */
+    targetPlatforms: Platform[];
     attachments: Attachment[];
     caption: string;
     hashtags: string;
     onCollapse?: () => void;
 }
 
-const PLATFORM_LABEL: Record<PreviewPlatform, string> = {
-    instagram: "Instagram",
-    facebook: "Facebook",
-    linkedin: "LinkedIn",
-};
-
-// Brand colour for a platform's dot / accent.
+// Brand colour for a platform's dot / accent (from the central palette).
 const platformColor = (platform: PreviewPlatform, colors: ReturnType<typeof Colors>) => {
-    switch (platform) {
-        case "instagram":
-            return colors.socialInstagram;
-        case "linkedin":
-            return colors.socialLinkedin;
-        default:
-            return colors.socialFacebook;
-    }
+    const key = SOCIAL_PLATFORM_MAP[platform]?.colorKey;
+    return (key && colors[key]) || colors.socialFacebook;
 };
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
     contentType,
+    targetPlatforms,
     attachments,
     caption,
     hashtags,
@@ -56,23 +50,16 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const styles = useStyles(colors);
     const { socialAccounts } = useBrandSocialContext();
 
-    // A text post is plain text for Facebook / LinkedIn / X — Instagram has no
-    // text-only format, so it's never previewed (or published) as Instagram.
-    const isText = contentType === "text";
-
-    // Publishable platforms the brand actually has connected. Instagram is
-    // excluded for text posts (it can't carry them); fall back accordingly.
+    // Only preview the platforms this content actually targets, and only those
+    // that can carry the chosen format. Fall back to a single sensible platform
+    // when the content has no (compatible) target yet.
     const platforms = useMemo<PreviewPlatform[]>(() => {
-        const present = new Set<PreviewPlatform>();
-        socialAccounts.forEach((a) => {
-            if (a.platform === "instagram" || a.platform === "facebook" || a.platform === "linkedin")
-                present.add(a.platform as PreviewPlatform);
-        });
-        if (isText) present.delete("instagram");
-        const list = Array.from(present);
+        const list = Array.from(new Set(targetPlatforms)).filter((p) =>
+            isFormatPlatformCompatible(contentType, p)
+        );
         if (list.length) return list;
-        return isText ? ["facebook"] : ["instagram"];
-    }, [socialAccounts, isText]);
+        return [contentType === "text" ? "facebook" : "instagram"];
+    }, [targetPlatforms, contentType]);
 
     const [platform, setPlatform] = useState<PreviewPlatform>(platforms[0]);
     const active = platforms.includes(platform) ? platform : platforms[0];
@@ -82,15 +69,27 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const username = account ? socialAccountLabel(account) : "yourbrand";
     const avatar = account?.profileImageURL;
 
+    const isText = contentType === "text";
+    // Portrait 9:16 frame for vertical formats; landscape 16:9 for `video`.
     const isStory = contentType === "story" || contentType === "reel";
+    const isLandscape = contentType === "video";
     const firstImage = attachments.find((a) => a.imageUrl)?.imageUrl;
     const isVideo = attachments.some((a) => a.type === "video" || a.type === "reel");
     const slideCount = attachments.length;
 
     const accentColor = platformColor(active, colors);
 
-    const mediaBox = (tall: boolean) => (
-        <View style={[styles.media, tall ? styles.mediaTall : styles.mediaSquare]}>
+    const mediaBox = (shape: "tall" | "square" | "landscape") => (
+        <View
+            style={[
+                styles.media,
+                shape === "tall"
+                    ? styles.mediaTall
+                    : shape === "landscape"
+                        ? styles.mediaLandscape
+                        : styles.mediaSquare,
+            ]}
+        >
             {firstImage ? (
                 <Image source={{ uri: firstImage }} style={styles.mediaImg} resizeMode="cover" />
             ) : isVideo ? (
@@ -158,7 +157,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                             >
                                 <View style={[styles.tabDot, { backgroundColor: dot }]} />
                                 <Text style={[styles.tabText, on && styles.tabTextActive]}>
-                                    {PLATFORM_LABEL[p]}
+                                    {SOCIAL_PLATFORM_MAP[p]?.label ?? p}
                                 </Text>
                             </Pressable>
                         );
@@ -198,7 +197,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 ) : isStory ? (
                     // Story / Reel — full-bleed 9:16 with overlaid chrome
                     <View style={styles.storyFrame}>
-                        {mediaBox(true)}
+                        {mediaBox("tall")}
                         <View style={styles.storyTop}>
                             {avatarNode}
                             <Text style={styles.storyUser} numberOfLines={1}>{username}</Text>
@@ -217,7 +216,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                             <Text style={styles.postUser} numberOfLines={1}>{username}</Text>
                             <Text style={styles.postDots}>•••</Text>
                         </View>
-                        {mediaBox(false)}
+                        {mediaBox(isLandscape ? "landscape" : "square")}
                         <View style={styles.actions}>
                             <FontAwesomeIcon icon={faHeart} size={18} color={colors.text} />
                             <FontAwesomeIcon icon={faComment} size={18} color={colors.text} />
@@ -365,6 +364,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         mediaTall: {
             aspectRatio: 9 / 16,
+        },
+        mediaLandscape: {
+            aspectRatio: 16 / 9,
         },
         mediaImg: {
             width: "100%",

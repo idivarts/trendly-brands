@@ -1,4 +1,4 @@
-import AddContentModal from "@/components/content-calendar/AddContentModal";
+import AddContentModal, { AddContentExtras } from "@/components/content-calendar/AddContentModal";
 import { CalendarItem } from "@/components/content-calendar/types";
 import ContentBoard from "@/components/contents/ContentBoard";
 import ContentGallery from "@/components/contents/ContentGallery";
@@ -77,8 +77,11 @@ const ContentsScreen = () => {
         return [...filtered].sort((a, b) => postingTime(a) - postingTime(b));
     }, [activeItems, stateFilter]);
 
-    const handleAddFromFresh = async (calItem: Omit<CalendarItem, "id">) => {
-        const newId = await addContent(calItem);
+    const handleAddFromFresh = async (
+        calItem: Omit<CalendarItem, "id">,
+        extras: AddContentExtras
+    ) => {
+        const newId = await addContent(calItem, { platforms: extras.platforms });
         if (!newId) return;
         router.push({
             pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,

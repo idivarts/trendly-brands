@@ -110,7 +110,14 @@ const PublicContentView: React.FC<Props> = ({ share, tier, viewerId, viewerName 
             <View style={styles.doc}>
                 <Text style={styles.title}>{content.title}</Text>
                 <Text style={styles.meta}>
-                    {content.contentFormat} · {content.platform}
+                    {[
+                        content.contentFormat,
+                        content.platforms?.length
+                            ? content.platforms.join(", ")
+                            : content.platform,
+                    ]
+                        .filter(Boolean)
+                        .join(" · ")}
                 </Text>
 
                 {heroImage ? (
