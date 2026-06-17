@@ -338,6 +338,12 @@ const CreateContentScreen = () => {
             });
 
             // 2. Trigger publish-now or schedule on the backend.
+            // Publishing locally flips `status`, a watched dependency of the
+            // dirty-tracking effect. Suppress that next run so the effect does
+            // not re-flag the content as dirty after we've just saved + published
+            // (mirrors handleUnschedule). Set BEFORE the setStatus calls so the
+            // single batched re-render is the one that gets skipped.
+            skipDirtyRef.current = true;
             if (scheduleMode === "now") {
                 const res = await HttpWrapper.fetch(
                     `/api/v2/brands/${brandId}/contents/${contentId}/publish`,
