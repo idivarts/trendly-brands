@@ -51,7 +51,14 @@ export interface AIMessage {
     content: string;
     model?: string;
     focusedText?: string;
+    /** Legacy single-image field (kept for back-compat). New code uses `images`. */
     imageUrl?: string;
+    /**
+     * Image URLs (S3/CloudFront) attached to this message. On a user message
+     * these are vision input the user attached; on an assistant message they are
+     * images the AI generated or referenced. Mirrors backend AIMessage.Images.
+     */
+    images?: string[];
     tokenCount?: number;
     timestamp: number;
     control?: AIControl;
@@ -321,12 +328,14 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
                 setIsStreaming(false);
                 // Linger the finished assistant turn until Firestore delivers the
                 // committed doc (matched by messageId), so it never flickers.
-                if (finalContent || control) {
+                const doneImages = Array.isArray(msg.images) ? (msg.images as string[]) : undefined;
+                if (finalContent || control || (doneImages && doneImages.length > 0)) {
                     setLingerAssistant({
                         id: msg.messageId,
                         role: "assistant",
                         content: finalContent,
                         control: control ?? undefined,
+                        images: doneImages,
                         timestamp: Date.now(),
                     });
                 }
@@ -356,7 +365,7 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
     }, [activeThreadId]);
 
     const sendMessage = useCallback(
-        async (content: string, focusedText?: string, model?: string) => {
+        async (content: string, focusedText?: string, model?: string, images?: string[]) => {
             if (!brandId || !manager?.id) return;
             let convId = activeThreadId;
             if (!convId) {
@@ -364,10 +373,11 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
                 if (!convId) return;
             }
             const clientMsgId = newClientMsgId();
+            const imgs = images && images.length > 0 ? images : undefined;
             // Optimistic user bubble — dropped once its Firestore doc syncs.
             setPendingUsers((prev) => [
                 ...prev,
-                { role: "user", content, focusedText, clientMsgId, timestamp: Date.now() },
+                { role: "user", content, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
             ]);
             streamingRef.current = "";
             setStreamingContent("");
@@ -380,6 +390,7 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
                 content,
                 focusedText,
                 model,
+                images: imgs,
             });
         },
         [brandId, manager?.id, activeThreadId, createThread]

@@ -147,12 +147,18 @@ const MonthView: React.FC<MonthViewProps> = ({
         onMoveItem?.(itemId, newDate);
     };
 
+    // The inline month cells are cramped on mobile (`!xl`), so we drop the
+    // comment + AI-focus actions there. They remain reachable by tapping the
+    // chip (opens details) or via the day popover, which keeps its actions.
+    const inlineActions = xl;
+
     const renderChip = (item: CalendarItem) =>
         dndEnabled ? (
             <DraggableChip
                 key={item.id}
                 item={item}
                 titleLines={titleLines}
+                showActions={inlineActions}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpenItem}
@@ -163,6 +169,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                 item={item}
                 compact
                 titleLines={titleLines}
+                showActions={inlineActions}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpenItem}
@@ -459,10 +466,11 @@ const DroppableDayCell: React.FC<{
 const DraggableChip: React.FC<{
     item: CalendarItem;
     titleLines?: number;
+    showActions?: boolean;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
     onOpen: (item: CalendarItem) => void;
-}> = ({ item, titleLines, onFocusChat, onComment, onOpen }) => {
+}> = ({ item, titleLines, showActions, onFocusChat, onComment, onOpen }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } =
         useDraggable({ id: item.id });
     const { tabIndex, role, ...restAttributes } = attributes as any;
@@ -484,6 +492,7 @@ const DraggableChip: React.FC<{
                 item={item}
                 compact
                 titleLines={titleLines}
+                showActions={showActions}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpen}

@@ -80,6 +80,17 @@ import {
 const localDateToUtcMidnight = (d: Date): number =>
     Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
 
+// Order-sensitive equality for two attachment lists (by media URL), so the AI
+// image reconciliation can no-op when the server state already matches local.
+const sameAttachments = (a: Attachment[], b: Attachment[]): boolean => {
+    if (a.length !== b.length) return false;
+    const key = (x: Attachment) => x.imageUrl ?? x.playUrl ?? x.appleUrl ?? "";
+    for (let i = 0; i < a.length; i++) {
+        if (key(a[i]) !== key(b[i])) return false;
+    }
+    return true;
+};
+
 const CreateContentScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -300,16 +311,18 @@ const CreateContentScreen = () => {
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
     // schedule endpoint (functions/trendly_v2 → internal/trendlyapis/publishing).
-    const handlePublish = useCallback(async () => {
+    const handlePublish = useCallback(async (mode: ScheduleMode = scheduleMode) => {
         if (!contentId || publishing || destinations.length === 0 || locked) return;
         const brandId = selectedBrand?.id;
         if (!brandId) return;
+        // Persist the chosen mode so the saved content reflects how it went out.
+        if (mode !== scheduleMode) setScheduleMode(mode);
         setPublishing(true);
 
         // Derive the precise publish epoch: "now" → current time; otherwise the
         // selected date combined with the chosen HH:MM (defaulting to 09:00).
         let scheduledAt = Date.now();
-        if (scheduleMode === "scheduled") {
+        if (mode === "scheduled") {
             const d = new Date(date);
             if (/^\d{1,2}:\d{2}$/.test(timeOfPosting)) {
                 const [hh, mm] = timeOfPosting.split(":").map(Number);
@@ -332,7 +345,7 @@ const CreateContentScreen = () => {
                 attachments,
                 timeOfPosting,
                 destinations,
-                scheduleMode,
+                scheduleMode: mode,
                 scheduledAt,
                 postingTimeStamp: localDateToUtcMidnight(date),
             });
@@ -344,7 +357,7 @@ const CreateContentScreen = () => {
             // (mirrors handleUnschedule). Set BEFORE the setStatus calls so the
             // single batched re-render is the one that gets skipped.
             skipDirtyRef.current = true;
-            if (scheduleMode === "now") {
+            if (mode === "now") {
                 const res = await HttpWrapper.fetch(
                     `/api/v2/brands/${brandId}/contents/${contentId}/publish`,
                     { method: "POST" }
@@ -591,7 +604,7 @@ const CreateContentScreen = () => {
         });
     }, [scriptAiPrompt, isReel, title, idea, contentType, caption, hashtags, contentId, generateScript]);
 
-    const handleImageGenerate = useCallback((promptArg?: string) => {
+    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
         setImagePrompt(p);
@@ -602,6 +615,8 @@ const CreateContentScreen = () => {
             count: 1,
             contextId: contentId,
             multi: MEDIA_SPEC[contentType].multi,
+            // Carousel: which slide to act on. Backend decides edit-vs-add.
+            focusedSlideIndex,
         });
     }, [imagePrompt, contentType, contentId, generateImage]);
 
@@ -660,53 +675,43 @@ const CreateContentScreen = () => {
         }
     }, [aiScript, scriptStreaming, isGeneratingScript]);
 
-    // Image (websocket fast-path): when connected, apply the streamed result to
-    // the gallery immediately for snappy feedback. The backend has already
-    // persisted it to the content doc, so no manual Save is needed.
+    // Image (websocket fast-path): once the stream settles, just release the local
+    // generating flag for snappy feedback. The displayed gallery is reconciled
+    // from the content doc below (the backend persists results there), so we do
+    // NOT mutate attachments here — append/replace-last would be wrong for an
+    // in-place slide edit. Firestore (onSnapshot) is the source of truth.
     useEffect(() => {
         if (!isGeneratingImage) return;
         if (imagesStreaming) return;
         if (aiImages.length === 0) return;
-        const latest = aiImages[aiImages.length - 1];
-        if (!latest?.s3Url) return;
-        const asset: Attachment = { type: "image", imageUrl: latest.s3Url };
-        setAttachments((prev) => {
-            // De-dupe — the Firestore reconciliation below may also surface it.
-            if (prev.some((a) => a.imageUrl === latest.s3Url)) return prev;
-            return MEDIA_SPEC[contentType].multi ? [...prev, asset] : [asset];
-        });
         setIsGeneratingImage(false);
-    }, [aiImages, imagesStreaming, isGeneratingImage, contentType]);
+    }, [aiImages, imagesStreaming, isGeneratingImage]);
 
     // Image (backend-driven reconciliation): the job's status + result live on the
     // content doc, so a generation survives a websocket drop or a page reload.
-    // Pull any server-persisted images not yet reflected locally, and clear the
-    // generating flag once the backend job resolves.
+    // On each generation tick (and on done/error) adopt the server's attachments
+    // WHOLESALE — index-correct for generate, enhance-edit-at-index, and
+    // enhance-add alike. Keyed off the job signature so it fires only while a job
+    // progresses, never reverting the user's own later manual edits.
+    const lastGenSyncRef = useRef<string>("");
     useEffect(() => {
         const gen = seedItem?.imageGeneration;
-        const status = gen?.status;
+        if (!gen) return;
+        const sig = `${gen.startedAt ?? 0}-${gen.status}-${gen.completedCount ?? 0}`;
+        if (lastGenSyncRef.current === sig) return;
+        lastGenSyncRef.current = sig;
 
-        if (status === "done" || status === "error") {
+        if (gen.status === "done" || gen.status === "error") {
             setIsGeneratingImage(false);
         }
-        if (!gen) return;
-
         const serverAtt = seedItem?.attachments ?? [];
         setAttachments((local) => {
-            const localUrls = new Set(
-                local.map((a) => a.imageUrl).filter(Boolean) as string[]
-            );
-            const missing = serverAtt.filter(
-                (a) => a.type === "image" && a.imageUrl && !localUrls.has(a.imageUrl)
-            );
-            if (missing.length === 0) return local;
+            if (sameAttachments(local, serverAtt)) return local;
             // Backend already persisted these — don't flag the form as dirty.
             skipDirtyRef.current = true;
-            return MEDIA_SPEC[contentType].multi
-                ? [...local, ...missing]
-                : [missing[missing.length - 1]];
+            return serverAtt;
         });
-    }, [seedItem?.imageGeneration, seedItem?.attachments, contentType]);
+    }, [seedItem?.imageGeneration, seedItem?.attachments]);
 
     // Derived image-generation UI state: show progress while either the local
     // request or the backend job is running; surface backend errors.
@@ -1282,8 +1287,6 @@ const CreateContentScreen = () => {
                 socialAccounts={publishableAccounts}
                 destinations={destinations}
                 onDestinationsChange={setDestinations}
-                scheduleMode={scheduleMode}
-                onScheduleModeChange={setScheduleMode}
                 formattedDate={formattedDate}
                 dateValue={date}
                 onDateChange={setDate}

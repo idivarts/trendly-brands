@@ -3,6 +3,9 @@ import {
     ContentFormat,
 } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
 import Colors from "@/shared-uis/constants/Colors";
+// Type-only import — erased at compile time, so the contents/types ↔ content-calendar/types
+// cycle never exists at runtime.
+import type { ContentStatus } from "@/components/contents/types";
 
 /**
  * UI alias for the canonical {@link ContentFormat} enum (the single source of
@@ -19,6 +22,12 @@ export interface CalendarItem {
     type: ContentType;
     /** Cached comment count — incremented on the content doc when a comment is added */
     commentCount?: number;
+    /**
+     * Lifecycle status. Present on every calendar item at runtime (the calendar is
+     * fed full `ContentItem`s), but optional here so lighter `CalendarItem` callers
+     * needn't supply it. The chip surfaces a marker only for `scheduled` / `posted`.
+     */
+    status?: ContentStatus;
 }
 
 export type CalendarView = "week" | "month";

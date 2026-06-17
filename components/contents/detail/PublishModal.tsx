@@ -21,14 +21,12 @@ export interface PublishModalProps {
     socialAccounts: ISocialAccount[];
     destinations: SocialDestination[];
     onDestinationsChange: (next: SocialDestination[]) => void;
-    scheduleMode: ScheduleMode;
-    onScheduleModeChange: (m: ScheduleMode) => void;
     formattedDate: string;
     dateValue: Date;
     onDateChange: (next: Date) => void;
     timeOfPosting: string;
     onTimeChange: (t: string) => void;
-    onPublish: () => void;
+    onPublish: (mode: ScheduleMode) => void;
     publishing: boolean;
 }
 
@@ -86,7 +84,7 @@ const PublishModal: React.FC<PublishModalProps> = ({
                                 />
                             </View>
                         ) : null}
-                        <ScheduleBar embedded alwaysEditing {...scheduleProps} />
+                        <ScheduleBar embedded {...scheduleProps} />
                     </ScrollView>
                 </View>
             </View>

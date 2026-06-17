@@ -7,8 +7,8 @@ import {
     faCalendarDays,
     faCheck,
     faClock,
-    faPaperPlane,
-    faPen,
+    faPenToSquare,
+    faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -22,26 +22,23 @@ import {
     TextInput,
     View,
 } from "react-native";
+import PublishNowConfirmModal from "./PublishNowConfirmModal";
 
 interface ScheduleBarProps {
     socialAccounts: ISocialAccount[];
     destinations: SocialDestination[];
     onDestinationsChange: (next: SocialDestination[]) => void;
-    scheduleMode: ScheduleMode;
-    onScheduleModeChange: (m: ScheduleMode) => void;
     formattedDate: string;
     /** The currently-selected posting date (drives the inline picker). */
     dateValue: Date;
     onDateChange: (next: Date) => void;
     timeOfPosting: string;
     onTimeChange: (t: string) => void;
-    onPublish: () => void;
+    /** Fire the publish/schedule request for the given mode. */
+    onPublish: (mode: ScheduleMode) => void;
     publishing: boolean;
     /** When true, renders without its own card chrome (sits inside a parent card). */
     embedded?: boolean;
-    /** When true, both blocks stay fully expanded with no summary/Edit toggles
-     *  (used inside the publish modal, where editing is the whole point). */
-    alwaysEditing?: boolean;
 }
 
 // Only these platforms are publishable from Trendly today.
@@ -63,8 +60,6 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     socialAccounts,
     destinations,
     onDestinationsChange,
-    scheduleMode,
-    onScheduleModeChange,
     formattedDate,
     dateValue,
     onDateChange,
@@ -73,7 +68,6 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     onPublish,
     publishing,
     embedded = false,
-    alwaysEditing = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -103,42 +97,12 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     const isCustomTime =
         !!timeOfPosting && !POPULAR_POSTING_TIMES.some((t) => t.value === timeOfPosting);
     const [showCustom, setShowCustom] = useState(isCustomTime);
+    const [confirmNow, setConfirmNow] = useState(false);
 
-    // ── Collapsed-by-default editing: show a compact summary, reveal the pickers
-    //    only when the user taps "Edit". Destinations stay open until at least
-    //    one account is chosen (you can't publish without one).
-    const [editDest, setEditDest] = useState(false);
-    const [editWhen, setEditWhen] = useState(false);
-    const showDestPicker = alwaysEditing || editDest || destinations.length === 0;
-    const showWhenControls = alwaysEditing || editWhen;
+    const count = destinations.length;
+    const canPublish = count > 0 && !publishing;
 
-    const timeLabel = useMemo(() => {
-        if (!timeOfPosting) return "default time";
-        const popular = POPULAR_POSTING_TIMES.find((t) => t.value === timeOfPosting);
-        return popular ? popular.label : timeOfPosting;
-    }, [timeOfPosting]);
-
-    const whenSummary =
-        scheduleMode === "now" ? "Publish now" : `${formattedDate} · ${timeLabel}`;
-
-    const selected = useMemo(
-        () =>
-            destinations
-                .map((d) => accounts.find((a) => a.id === d.socialAccountId) ?? null)
-                .filter(Boolean) as ISocialAccount[],
-        [destinations, accounts]
-    );
-
-    const canPublish = destinations.length > 0 && !publishing;
-    const publishLabel = publishing
-        ? scheduleMode === "now"
-            ? "Publishing…"
-            : "Scheduling…"
-        : scheduleMode === "now"
-            ? "Publish now"
-            : "Schedule post";
-
-    const renderAccountChip = (a: ISocialAccount, on: boolean, onPress?: () => void) => {
+    const renderAccountChip = (a: ISocialAccount, on: boolean) => {
         const dot = platformDotColor(a.platform, colors);
         const label = socialAccountLabel(a);
         return (
@@ -147,11 +111,12 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 style={({ pressed }) => [
                     styles.accountChip,
                     on && styles.accountChipOn,
-                    !onPress && styles.accountChipStatic,
-                    pressed && onPress && styles.pressed,
+                    pressed && styles.pressed,
                 ]}
-                onPress={onPress}
-                disabled={!onPress}
+                onPress={() => toggle(a)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={`${on ? "Selected" : "Not selected"}: ${label}`}
             >
                 {a.profileImageURL ? (
                     <Image source={{ uri: a.profileImageURL }} style={styles.accountAvatar} />
@@ -169,9 +134,13 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 >
                     {label}
                 </Text>
-                {on && onPress ? (
-                    <FontAwesomeIcon icon={faCheck} size={11} color={colors.onPrimary} />
-                ) : null}
+                <View style={[styles.selectMark, on && styles.selectMarkOn]}>
+                    <FontAwesomeIcon
+                        icon={on ? faCheck : faPlus}
+                        size={9}
+                        color={on ? colors.onPrimary : colors.textSecondary}
+                    />
+                </View>
             </Pressable>
         );
     };
@@ -181,20 +150,10 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
             {/* ── Destinations ─────────────────────────────────────────── */}
             <View style={styles.blockHead}>
                 <Text style={styles.blockLabel}>Send to</Text>
-                {!alwaysEditing && accounts.length > 0 && destinations.length > 0 ? (
-                    <Pressable
-                        style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-                        onPress={() => setEditDest((v) => !v)}
-                        accessibilityRole="button"
-                        accessibilityLabel={editDest ? "Done editing accounts" : "Edit accounts"}
-                    >
-                        <FontAwesomeIcon
-                            icon={faPen}
-                            size={10}
-                            color={colors.primary}
-                        />
-                        <Text style={styles.editText}>{editDest ? "Done" : "Edit"}</Text>
-                    </Pressable>
+                {accounts.length > 0 ? (
+                    <Text style={[styles.countBadge, count > 0 && styles.countBadgeOn]}>
+                        {count} selected
+                    </Text>
                 ) : null}
             </View>
 
@@ -202,172 +161,138 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 <Text style={styles.emptyAccounts}>
                     No connected accounts yet. Connect Instagram, Facebook or LinkedIn to publish.
                 </Text>
-            ) : showDestPicker ? (
-                <View style={styles.accountRow}>
-                    {accounts.map((a) => renderAccountChip(a, isSelected(a.id), () => toggle(a)))}
-                </View>
-            ) : (
-                <View style={styles.accountRow}>
-                    {selected.map((a) => renderAccountChip(a, true))}
-                </View>
-            )}
-
-            {/* ── When ─────────────────────────────────────────────────── */}
-            <View style={styles.softDivider} />
-            <View style={styles.blockHead}>
-                <Text style={styles.blockLabel}>When</Text>
-                {!alwaysEditing ? (
-                    <Pressable
-                        style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
-                        onPress={() => setEditWhen((v) => !v)}
-                        accessibilityRole="button"
-                        accessibilityLabel={editWhen ? "Done editing schedule" : "Edit schedule"}
-                    >
-                        <FontAwesomeIcon icon={faPen} size={10} color={colors.primary} />
-                        <Text style={styles.editText}>{editWhen ? "Done" : "Edit"}</Text>
-                    </Pressable>
-                ) : null}
-            </View>
-
-            {!showWhenControls ? (
-                <View style={styles.whenSummaryRow}>
-                    <FontAwesomeIcon
-                        icon={scheduleMode === "now" ? faBolt : faCalendarDays}
-                        size={12}
-                        color={colors.primary}
-                    />
-                    <Text style={styles.whenSummaryText}>{whenSummary}</Text>
-                </View>
             ) : (
                 <>
-                    <View style={styles.modeRow}>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.modeBtn,
-                                scheduleMode === "now" && styles.modeBtnOn,
-                                pressed && styles.pressed,
-                            ]}
-                            onPress={() => onScheduleModeChange("now")}
-                        >
-                            <FontAwesomeIcon
-                                icon={faBolt}
-                                size={12}
-                                color={scheduleMode === "now" ? colors.onPrimary : colors.textSecondary}
-                            />
-                            <Text style={[styles.modeText, scheduleMode === "now" && styles.modeTextOn]}>
-                                Publish now
-                            </Text>
-                        </Pressable>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.modeBtn,
-                                scheduleMode === "scheduled" && styles.modeBtnOn,
-                                pressed && styles.pressed,
-                            ]}
-                            onPress={() => onScheduleModeChange("scheduled")}
-                        >
-                            <FontAwesomeIcon
-                                icon={faClock}
-                                size={12}
-                                color={scheduleMode === "scheduled" ? colors.onPrimary : colors.textSecondary}
-                            />
-                            <Text style={[styles.modeText, scheduleMode === "scheduled" && styles.modeTextOn]}>
-                                Schedule
-                            </Text>
-                        </Pressable>
+                    <View style={styles.accountRow}>
+                        {accounts.map((a) => renderAccountChip(a, isSelected(a.id)))}
                     </View>
-
-                    {scheduleMode === "scheduled" ? (
-                        <View style={styles.scheduleArea}>
-                            <DateField
-                                value={dateValue}
-                                onChange={onDateChange}
-                                title="Date of Posting"
-                                style={styles.dateBtn}
-                            >
-                                <FontAwesomeIcon icon={faCalendarDays} size={12} color={colors.primary} />
-                                <Text style={styles.dateBtnText}>{formattedDate}</Text>
-                            </DateField>
-
-                            <View style={styles.timeRow}>
-                                {POPULAR_POSTING_TIMES.map((t) => {
-                                    const on = timeOfPosting === t.value && !showCustom;
-                                    return (
-                                        <Pressable
-                                            key={t.value}
-                                            style={({ pressed }) => [
-                                                styles.timeChip,
-                                                on && styles.timeChipOn,
-                                                pressed && styles.pressed,
-                                            ]}
-                                            onPress={() => {
-                                                setShowCustom(false);
-                                                onTimeChange(t.value);
-                                            }}
-                                        >
-                                            <Text style={[styles.timeChipText, on && styles.timeChipTextOn]}>
-                                                {t.label}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.timeChip,
-                                        showCustom && styles.timeChipOn,
-                                        pressed && styles.pressed,
-                                    ]}
-                                    onPress={() => {
-                                        setShowCustom(true);
-                                        onTimeChange("");
-                                    }}
-                                >
-                                    <Text style={[styles.timeChipText, showCustom && styles.timeChipTextOn]}>
-                                        Custom
-                                    </Text>
-                                </Pressable>
-                            </View>
-
-                            {showCustom ? (
-                                <TextInput
-                                    style={styles.customInput}
-                                    placeholder="HH:MM (e.g. 08:30)"
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={timeOfPosting}
-                                    onChangeText={onTimeChange}
-                                    maxLength={5}
-                                    keyboardType="numbers-and-punctuation"
-                                />
-                            ) : null}
-                        </View>
+                    {count === 0 ? (
+                        <Text style={styles.pickHint}>Tap an account to choose where this goes.</Text>
                     ) : null}
                 </>
             )}
 
-            {/* ── Primary action ───────────────────────────────────────── */}
+            {/* ── When ─────────────────────────────────────────────────── */}
+            <View style={styles.softDivider} />
+            <Text style={styles.blockLabel}>When</Text>
+
+            <DateField
+                value={dateValue}
+                onChange={onDateChange}
+                title="Date of Posting"
+                style={styles.dateStatement}
+            >
+                <FontAwesomeIcon icon={faCalendarDays} size={14} color={colors.primary} />
+                <View style={styles.dateStatementText}>
+                    <Text style={styles.dateStatementLabel}>Scheduled for</Text>
+                    <Text style={styles.dateStatementValue}>{formattedDate}</Text>
+                </View>
+                <View style={styles.changePill}>
+                    <FontAwesomeIcon icon={faPenToSquare} size={10} color={colors.primary} />
+                    <Text style={styles.changePillText}>Change</Text>
+                </View>
+            </DateField>
+
+            <Text style={styles.timeQuestion}>What time?</Text>
+            <View style={styles.timeRow}>
+                {POPULAR_POSTING_TIMES.map((t) => {
+                    const on = timeOfPosting === t.value && !showCustom;
+                    return (
+                        <Pressable
+                            key={t.value}
+                            style={({ pressed }) => [
+                                styles.timeChip,
+                                on && styles.timeChipOn,
+                                pressed && styles.pressed,
+                            ]}
+                            onPress={() => {
+                                setShowCustom(false);
+                                onTimeChange(t.value);
+                            }}
+                        >
+                            <Text style={[styles.timeChipText, on && styles.timeChipTextOn]}>
+                                {t.label}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.timeChip,
+                        showCustom && styles.timeChipOn,
+                        pressed && styles.pressed,
+                    ]}
+                    onPress={() => {
+                        setShowCustom(true);
+                        onTimeChange("");
+                    }}
+                >
+                    <Text style={[styles.timeChipText, showCustom && styles.timeChipTextOn]}>
+                        Custom
+                    </Text>
+                </Pressable>
+            </View>
+
+            {showCustom ? (
+                <TextInput
+                    style={styles.customInput}
+                    placeholder="HH:MM (e.g. 08:30)"
+                    placeholderTextColor={colors.textSecondary}
+                    value={timeOfPosting}
+                    onChangeText={onTimeChange}
+                    maxLength={5}
+                    keyboardType="numbers-and-punctuation"
+                />
+            ) : null}
+
+            <Text style={styles.tzHint}>Times shown in your local timezone.</Text>
+
+            {/* ── Actions ──────────────────────────────────────────────── */}
             <Pressable
                 style={({ pressed }) => [
                     styles.publishBtn,
                     !canPublish && styles.publishBtnDisabled,
                     pressed && styles.pressed,
                 ]}
-                onPress={onPublish}
+                onPress={() => onPublish("scheduled")}
                 disabled={!canPublish}
             >
                 {publishing ? (
                     <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
-                    <FontAwesomeIcon
-                        icon={scheduleMode === "now" ? faPaperPlane : faClock}
-                        size={14}
-                        color={colors.onPrimary}
-                    />
+                    <FontAwesomeIcon icon={faClock} size={14} color={colors.onPrimary} />
                 )}
-                <Text style={styles.publishBtnText}>{publishLabel}</Text>
+                <Text style={styles.publishBtnText}>
+                    {publishing ? "Working…" : "Schedule post"}
+                </Text>
             </Pressable>
-            {destinations.length === 0 ? (
+
+            <Pressable
+                style={({ pressed }) => [
+                    styles.publishNowLink,
+                    !canPublish && styles.publishNowLinkDisabled,
+                    pressed && styles.pressed,
+                ]}
+                onPress={() => setConfirmNow(true)}
+                disabled={!canPublish}
+                accessibilityRole="button"
+                accessibilityLabel="Publish now instead of scheduling"
+            >
+                <FontAwesomeIcon icon={faBolt} size={12} color={colors.primary} />
+                <Text style={styles.publishNowText}>Publish now instead</Text>
+            </Pressable>
+
+            {count === 0 ? (
                 <Text style={styles.hint}>Select at least one account to continue.</Text>
             ) : null}
+
+            <PublishNowConfirmModal
+                visible={confirmNow}
+                count={count}
+                publishing={publishing}
+                onConfirm={() => onPublish("now")}
+                onCancel={() => setConfirmNow(false)}
+            />
         </View>
     );
 };
@@ -398,22 +323,22 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontWeight: "600",
             color: colors.textSecondary,
         },
-        editBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 7,
-            backgroundColor: colors.aliceBlue,
-        },
-        editText: {
+        countBadge: {
             fontSize: 12,
             fontWeight: "700",
-            color: colors.primary,
+            color: colors.textSecondary,
+            backgroundColor: colors.tag,
+            paddingHorizontal: 10,
+            paddingVertical: 3,
+            borderRadius: 11,
+            overflow: "hidden",
+        },
+        countBadgeOn: {
+            color: colors.onPrimary,
+            backgroundColor: colors.primary,
         },
         softDivider: {
-            height: 16,
+            height: 18,
         },
         emptyAccounts: {
             fontSize: 12,
@@ -430,7 +355,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             alignItems: "center",
             gap: 7,
             paddingLeft: 6,
-            paddingRight: 12,
+            paddingRight: 8,
             paddingVertical: 6,
             borderRadius: 20,
             backgroundColor: colors.tag,
@@ -442,12 +367,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             shadowRadius: 8,
             shadowOpacity: 0.3,
             elevation: 3,
-        },
-        accountChipStatic: {
-            // Summary chips read as a value, not a toggle — keep them quiet.
-            backgroundColor: colors.aliceBlue,
-            shadowOpacity: 0,
-            elevation: 0,
         },
         accountAvatar: {
             width: 24,
@@ -480,66 +399,66 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             color: colors.onPrimary,
             fontWeight: "700",
         },
-        whenSummaryRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            paddingVertical: 2,
-        },
-        whenSummaryText: {
-            fontSize: 14,
-            fontWeight: "600",
-            color: colors.text,
-        },
-        modeRow: {
-            flexDirection: "row",
-            gap: 8,
-        },
-        modeBtn: {
-            flex: 1,
-            flexDirection: "row",
+        selectMark: {
+            width: 18,
+            height: 18,
+            borderRadius: 9,
             alignItems: "center",
             justifyContent: "center",
-            gap: 7,
-            paddingVertical: 10,
-            borderRadius: 10,
-            backgroundColor: colors.tag,
+            backgroundColor: colors.card,
         },
-        modeBtnOn: {
-            backgroundColor: colors.primary,
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 3 },
-            shadowRadius: 8,
-            shadowOpacity: 0.3,
-            elevation: 3,
+        selectMarkOn: {
+            backgroundColor: colors.onPrimary + "33",
         },
-        modeText: {
-            fontSize: 13,
+        pickHint: {
+            fontSize: 11,
+            color: colors.textSecondary,
+            marginTop: 8,
+        },
+        dateStatement: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 11,
+            borderRadius: 11,
+            backgroundColor: colors.aliceBlue,
+            marginTop: 10,
+        },
+        dateStatementText: {
+            flex: 1,
+        },
+        dateStatementLabel: {
+            fontSize: 11,
             fontWeight: "600",
             color: colors.textSecondary,
         },
-        modeTextOn: {
-            color: colors.onPrimary,
+        dateStatementValue: {
+            fontSize: 14,
             fontWeight: "700",
+            color: colors.text,
+            marginTop: 1,
         },
-        scheduleArea: {
-            marginTop: 12,
-            gap: 12,
-        },
-        dateBtn: {
+        changePill: {
             flexDirection: "row",
             alignItems: "center",
-            alignSelf: "flex-start",
-            gap: 7,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderRadius: 9,
-            backgroundColor: colors.aliceBlue,
+            gap: 5,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 8,
+            backgroundColor: colors.card,
         },
-        dateBtnText: {
+        changePillText: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.primary,
+        },
+        timeQuestion: {
             fontSize: 13,
             fontWeight: "600",
-            color: colors.primary,
+            color: colors.textSecondary,
+            marginTop: 16,
+            marginBottom: 10,
         },
         timeRow: {
             flexDirection: "row",
@@ -575,18 +494,24 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             paddingVertical: 12,
             fontSize: 14,
             color: colors.text,
+            marginTop: 12,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 1 },
             shadowRadius: 3,
             shadowOpacity: 0.04,
             elevation: 1,
         },
+        tzHint: {
+            fontSize: 11,
+            color: colors.textSecondary,
+            marginTop: 10,
+        },
         publishBtn: {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            marginTop: 16,
+            marginTop: 18,
             paddingVertical: 13,
             borderRadius: 11,
             backgroundColor: colors.primary,
@@ -605,6 +530,23 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontSize: 14,
             fontWeight: "700",
             color: colors.onPrimary,
+        },
+        publishNowLink: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            marginTop: 10,
+            paddingVertical: 9,
+            borderRadius: 9,
+        },
+        publishNowLinkDisabled: {
+            opacity: 0.45,
+        },
+        publishNowText: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.primary,
         },
         hint: {
             fontSize: 11,

@@ -16,7 +16,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -34,7 +34,11 @@ interface MediaStageProps {
     /** AI image-generation prompt (only used when the type supports generation). */
     imagePrompt: string;
     onImagePromptChange: (v: string) => void;
-    onGenerateImage: (prompt?: string) => void;
+    /**
+     * Kick off generation/enhancement. `focusedSlideIndex` (carousel only) is the
+     * slide the prompt should act on; the backend decides edit-vs-add.
+     */
+    onGenerateImage: (prompt?: string, focusedSlideIndex?: number) => void;
     isGeneratingImage: boolean;
     /** Backend image-generation error to surface (e.g. after a failed job). */
     generationError?: string | null;
@@ -72,6 +76,19 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPrompt, setShowPrompt] = useState(false);
+    // Carousel: which slide an enhance prompt acts on. Tap a slide to focus it.
+    const [focusedSlideIndex, setFocusedSlideIndex] = useState<number | null>(null);
+
+    // Once an image exists (AI-generated OR uploaded), generation becomes an
+    // image-to-image "Enhance" on the current image(s). Video types never enhance.
+    const isEnhance = spec.kind === "image" && attachments.length > 0;
+
+    // Keep the focused slide valid as slides are added/removed.
+    useEffect(() => {
+        if (focusedSlideIndex !== null && focusedSlideIndex >= attachments.length) {
+            setFocusedSlideIndex(null);
+        }
+    }, [attachments.length, focusedSlideIndex]);
 
     const handleUpload = useCallback(async () => {
         setError(null);
@@ -119,7 +136,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
         [attachments, onAttachmentsChange]
     );
 
-    const generateLabel = spec.kind === "video" ? "Generate" : "Generate with AI";
+    const generateLabel =
+        spec.kind === "video" ? "Generate" : isEnhance ? "Enhance with AI" : "Generate with AI";
 
     return (
         <View style={styles.card}>
@@ -140,9 +158,15 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 <View style={styles.gallery}>
                     {attachments.map((a, i) => {
                         const isVideo = a.type === "video" || a.type === "reel";
+                        const canFocus = spec.multi && !readOnly;
+                        const isFocused = spec.multi && focusedSlideIndex === i;
                         return (
                             <View key={`${a.imageUrl ?? a.playUrl ?? a.appleUrl ?? "a"}-${i}`} style={styles.tileWrap}>
-                                <View style={styles.tile}>
+                                <Pressable
+                                    style={[styles.tile, isFocused && styles.tileFocused]}
+                                    onPress={canFocus ? () => setFocusedSlideIndex((cur) => (cur === i ? null : i)) : undefined}
+                                    disabled={!canFocus}
+                                >
                                     {isVideo ? (
                                         <View style={styles.videoTile}>
                                             <FontAwesomeIcon icon={faPlay} size={18} color={colors.onPrimary} />
@@ -171,7 +195,13 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                             <Text style={styles.orderBadgeText}>{i + 1}</Text>
                                         </View>
                                     ) : null}
-                                </View>
+
+                                    {isFocused ? (
+                                        <View style={styles.editingBadge}>
+                                            <Text style={styles.editingBadgeText}>Editing</Text>
+                                        </View>
+                                    ) : null}
+                                </Pressable>
 
                                 {/* Reorder controls — carousel only */}
                                 {!readOnly && spec.multi && attachments.length > 1 ? (
@@ -232,6 +262,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 <Text style={styles.errorText}>{error || generationError}</Text>
             ) : null}
 
+            {!readOnly && isEnhance && spec.multi ? (
+                <Text style={styles.focusHint}>
+                    {focusedSlideIndex !== null
+                        ? `Editing slide ${focusedSlideIndex + 1}. Tap it again to deselect.`
+                        : "Tap a slide to enhance it — or just describe a new slide to add."}
+                </Text>
+            ) : null}
+
             {/* Actions — hidden when the content is locked (scheduled / posted) */}
             {!readOnly ? (
                 <View style={styles.actionRow}>
@@ -287,15 +325,32 @@ const MediaStage: React.FC<MediaStageProps> = ({
             {!readOnly && spec.canGenerate ? (
                 <FloatingPromptInput
                     visible={showPrompt}
-                    title={spec.multi ? "Generate a slide with AI" : "Generate an image with AI"}
-                    subtitle="Describe the visual — style, subject, brand colours…"
+                    title={
+                        isEnhance
+                            ? spec.multi
+                                ? focusedSlideIndex !== null
+                                    ? `Enhance slide ${focusedSlideIndex + 1}`
+                                    : "Enhance or add a slide"
+                                : "Enhance this image with AI"
+                            : spec.multi
+                                ? "Generate a slide with AI"
+                                : "Generate an image with AI"
+                    }
+                    subtitle={
+                        isEnhance
+                            ? "Describe the change — the AI edits your current image, keeping the rest consistent."
+                            : "Describe the visual — style, subject, brand colours…"
+                    }
                     placeholder="E.g. minimalist flat-lay of orthopedic sandals on a warm beige background…"
-                    ctaLabel={spec.multi ? "Generate slide" : "Generate image"}
+                    ctaLabel={isEnhance ? "Enhance" : spec.multi ? "Generate slide" : "Generate image"}
                     initialValue={imagePrompt}
                     onClose={() => setShowPrompt(false)}
                     onGenerate={(prompt) => {
                         onImagePromptChange(prompt);
-                        onGenerateImage(prompt);
+                        onGenerateImage(
+                            prompt,
+                            spec.multi && focusedSlideIndex !== null ? focusedSlideIndex : undefined
+                        );
                     }}
                 />
             ) : null}
@@ -366,9 +421,37 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             shadowOpacity: 0.06,
             elevation: 1,
         },
+        tileFocused: {
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowRadius: 10,
+            shadowOpacity: 0.6,
+            elevation: 6,
+        },
         tileImg: {
             width: "100%",
             height: "100%",
+        },
+        editingBadge: {
+            position: "absolute",
+            top: 5,
+            left: 5,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 6,
+            backgroundColor: colors.primary,
+        },
+        editingBadgeText: {
+            fontSize: 9,
+            fontWeight: "800",
+            letterSpacing: 0.3,
+            color: colors.onPrimary,
+        },
+        focusHint: {
+            fontSize: 11.5,
+            color: colors.textSecondary,
+            fontStyle: "italic",
+            marginBottom: 10,
         },
         videoTile: {
             flex: 1,
