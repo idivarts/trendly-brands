@@ -165,9 +165,11 @@ const ConnectedAccounts: React.FC = () => {
                                             style={styles.accountHandle}
                                             numberOfLines={1}
                                         >
-                                            {/* Facebook's `username` is the numeric Page id, not a
-                                                handle — don't surface it; show just the platform. */}
-                                            {account.platform === "facebook"
+                                            {/* Facebook's `username` is the numeric Page id and
+                                                LinkedIn's is the OpenID `sub` member id — neither is a
+                                                handle, so don't surface it; show just the platform. */}
+                                            {account.platform === "facebook" ||
+                                            account.platform === "linkedin"
                                                 ? (meta?.label ?? account.platform)
                                                 : `@${account.username} · ${meta?.label ?? account.platform}`}
                                         </Text>

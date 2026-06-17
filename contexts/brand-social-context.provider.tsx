@@ -30,17 +30,28 @@ export interface ISocialAccount {
 }
 
 /**
+ * Platforms whose `username` is an opaque id rather than a human-readable
+ * handle, so the label must come from `displayName`:
+ *  - Facebook stores the numeric Page id in `username`.
+ *  - LinkedIn stores the OpenID `sub` member id (e.g. "Au3Lx1cikz") in `username`.
+ */
+const OPAQUE_USERNAME_PLATFORMS: ISocialAccount["platform"][] = [
+    "facebook",
+    "linkedin",
+];
+
+/**
  * Human label for a connected social account.
  *
- * Facebook accounts store the numeric Page id in `username` and the Page's real
- * name in `displayName`, so for Facebook we must surface the page name — never
- * the raw id. Instagram (and the rest) keep the recognisable @handle in
- * `username`, which is the most identifiable label there.
+ * For platforms in {@link OPAQUE_USERNAME_PLATFORMS} the `username` is a raw id,
+ * so we surface `displayName` (the real name) — never the id. Instagram (and the
+ * rest) keep the recognisable @handle in `username`, which is the most
+ * identifiable label there.
  */
 export function socialAccountLabel(
     account: Pick<ISocialAccount, "platform" | "username" | "displayName">
 ): string {
-    if (account.platform === "facebook") {
+    if (OPAQUE_USERNAME_PLATFORMS.includes(account.platform)) {
         return account.displayName || account.username;
     }
     return account.username || account.displayName;
