@@ -19,7 +19,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+    KeyboardAvoidingView,
     Modal,
+    Platform as RNPlatform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -217,7 +219,10 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                 animationType="fade"
                 onRequestClose={handleClose}
             >
-                <View style={styles.backdrop}>
+                <KeyboardAvoidingView
+                    style={styles.backdrop}
+                    behavior={RNPlatform.OS === "ios" ? "padding" : undefined}
+                >
                     <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
                     <View style={styles.sheet}>
                         <View style={styles.header}>
@@ -505,7 +510,7 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                             </Pressable>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </>
     );
