@@ -24,7 +24,6 @@ import {
     faGears,
     faGem,
     faHandshake,
-    faInbox,
     faLock,
     faPenToSquare,
     faPeopleGroup,
@@ -330,12 +329,6 @@ const Menu = () => {
                     label="Playground"
                     theme={theme}
                     onPress={() => navigate("/playground")}
-                />
-                <QuickChip
-                    icon={faInbox}
-                    label="Inbox"
-                    theme={theme}
-                    onPress={() => navigate("/inbox")}
                 />
                 <QuickChip
                     icon={faComment}
